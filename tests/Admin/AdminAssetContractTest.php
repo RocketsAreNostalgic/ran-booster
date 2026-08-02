@@ -527,7 +527,16 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '@media screen and (max-width: 1100px)', $css );
 		self::assertStringContainsString( '@media screen and (max-width: 782px)', $css );
 		self::assertStringContainsString( '@media screen and (max-width: 480px)', $css );
-		self::assertStringContainsString( '@media screen and (max-width: 1250px)', $packageCss );
+		self::assertMatchesRegularExpression(
+			'/\.ran-booster-package-list-search input\[type="search"\],\s+\.ran-booster-admin \.ran-booster-package-list-search \.button \{\s+min-block-size: 40px;\s+\}/',
+			$packageCss
+		);
+		self::assertStringContainsString( 'line-height: 38px;', $packageCss );
+		self::assertMatchesRegularExpression(
+			'/@media screen and \(max-width: 1100px\) \{\s+\.ran-booster-admin \.ran-booster-package-list-controls \{\s+align-items: stretch;\s+flex-direction: column;/',
+			$packageCss
+		);
+		self::assertStringNotContainsString( '@media screen and (max-width: 1250px)', $packageCss );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-package-toolbar\\.tablenav\\.top \\.actions \\{\\s+display: flex;/',
 			$packageCss

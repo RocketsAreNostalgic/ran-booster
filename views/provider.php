@@ -225,7 +225,7 @@ foreach ( $credential_profiles as $profileIndex => $profile ) {
 		)
 		: __( 'Usage unavailable', 'ran-booster' );
 	$healthLabel      = $profile['configured']
-		? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Saved', 'ran-booster' ) )
+		? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Stored · Validity checked on use', 'ran-booster' ) )
 		: __( 'Not configured', 'ran-booster' );
 	$statusKey        = $profile['configured']
 		&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'error' )

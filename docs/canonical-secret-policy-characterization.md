@@ -3,9 +3,8 @@
 **Status:** Phase-zero evidence began at Core
 `51a9e63fe5a414c63ef5ce086739d09e690e49b8`. The bounded internal
 implementation is frozen on `codex/p0-canonical-structural-hardening` at
-`7ebcfdb63e674e69c358c352e928804941126939`. It is not yet integrated or
-release-authorized and makes no API, schema, persistence, provider-account or
-remote change.
+`7ebcfdb63e674e69c358c352e928804941126939`. It is not release-authorized and
+makes no API, schema, persistence, provider-account or remote change.
 
 ## Decision
 
@@ -85,6 +84,15 @@ pre-change `0ad9dba0de5ac26eb26cebd1d916f67e71f7ac84` implementation, read and
 rewrote it with `7ebcfdb63e674e69c358c352e928804941126939`, then read the result again
 with the pre-change implementation. All three readbacks passed and the
 temporary fixture was removed.
+
+The release archive built successfully from documentation head `206ee70` with
+SHA-256
+`f67d4b2f89e79685b828f8a6f9a03636391a4f291ac3fc61ca6842a15318f782`.
+Its exact updater dependency was `v1.6.0-beta.1` at
+`c5880a949355567b7e58efb7720962a0282fee20`. The archive activated,
+deactivated and reactivated successfully in a disposable WordPress 7.0.2 and
+MySQL 8.4 fixture; final plugin state was active. The isolated database and
+filesystem fixtures were then removed without touching the shared Local site.
 
 ## Traced source paths
 

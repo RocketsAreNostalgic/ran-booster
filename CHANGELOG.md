@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.0-beta.2](https://github.com/RocketsAreNostalgic/ran-booster/compare/v0.1.0-beta.1...v0.1.0-beta.2) (2026-08-02)
+
+
+### Features
+
+* add repository webhook detail routes ([6318077](https://github.com/RocketsAreNostalgic/ran-booster/commit/63180776fadb8da073678abe9b05230ba2c73b60))
+* **admin:** collapse package danger zone ([d44b43a](https://github.com/RocketsAreNostalgic/ran-booster/commit/d44b43abb8db3b143aad1e58d12ddbe157c6d5ca))
+
+
+### Bug Fixes
+
+* align managed package list controls ([1fc484f](https://github.com/RocketsAreNostalgic/ran-booster/commit/1fc484ff1e9f78d9a8c3bfb776c2133135860c21))
+* keep development notice styling consistent ([30e1ba7](https://github.com/RocketsAreNostalgic/ran-booster/commit/30e1ba7e8a2913a242c4952f0cf3c03db647d857))
+* open advanced settings from webhook rows ([d36ae82](https://github.com/RocketsAreNostalgic/ran-booster/commit/d36ae82d9637cf59bbe172903a59389857e9ccf7))
+* remove primary tabs from package pages ([d19ec06](https://github.com/RocketsAreNostalgic/ran-booster/commit/d19ec064a19dc8e9adc837cf5a1b454ea713b5f4))
+* trim aggregate webhook actions ([980e7eb](https://github.com/RocketsAreNostalgic/ran-booster/commit/980e7ebf8649b016023f49cceac4729a640048a3))
+
 ## 0.1.0-beta.1 (2026-08-02)
 
 

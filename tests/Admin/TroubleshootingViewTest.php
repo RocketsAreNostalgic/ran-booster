@@ -800,8 +800,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Assisted Hooks add-on not active.', $html );
 		self::assertStringContainsString( 'Fixture webhooks', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
-		self::assertStringContainsString( 'Manage webhook', $html );
-		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42', $html );
+		self::assertStringNotContainsString( '>Manage webhook', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text">: plugin/example.php</span>', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__details"', $html );
 		self::assertStringContainsString( 'Assisted hook status', $html );

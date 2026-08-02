@@ -1007,24 +1007,6 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 								$releaseReasonId = $isReleaseSource && '' !== $consequence ? $reasonId . '-release-source' : '';
 								$describedBy     = array_filter( array( $providerAssistanceDescriptionId, $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $webhookAssistanceSiteReady && ! $isReleaseSource ? $reasonId . '-site' : '' ) );
 								$actions         = array();
-								if ( ! $isReleaseSource && '' !== $repositoryId && '' === $requestedRepositoryId ) {
-									$actions['core:manage-repository'] = array(
-										'key'           => 'core:manage-repository',
-										'label'         => __( 'Manage webhook', 'ran-booster' ),
-										'type'          => 'link',
-										'url'           => $providerUrl(
-											array(
-												'panel' => 'repositories',
-												'repository' => $repositoryId,
-											)
-										),
-										'hidden'        => array(),
-										'disabled'      => false,
-										'external'      => false,
-										'described_by'  => '',
-										'screen_reader' => $repositoryLocator,
-									);
-								}
 								if ( null !== $providerWebhookAssistance ) {
 									$actions = array_merge(
 										$actions,

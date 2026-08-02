@@ -47,6 +47,7 @@ use RAN\GitHub\RepositoryBrowser as GitHubRepositoryBrowser;
 use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\GitHubProvider;
 use RAN\RepositoryProvider\GitHubWebhookNormalizer;
+use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -95,7 +96,6 @@ final class BoosterServiceProvider {
 		}
 		$debugCapture = new TemporaryDebugCapture( $secrets->path() );
 		BoosterLogger::configureCapture( $debugCapture );
-		$githubBrowser    = new GitHubRepositoryBrowser( $secrets );
 		$adminInteraction = new CoreAdminInteractionFacade();
 		$adminInteraction->register();
 
@@ -244,20 +244,24 @@ final class BoosterServiceProvider {
 				);
 			}
 		);
-		$githubWebhooks = new GitHubWebhookNormalizer(
-			$secrets,
-			$container->make( DeploymentAttemptRepository::class )
+		$providers = new ProviderRegistry(
+			array(),
+			$secretPolicies,
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
 		);
-		$container->bind(
-			ProviderRegistry::class,
-			new ProviderRegistry(
-				array(
-					new GitHubProvider( $secrets, $githubBrowser, $githubWebhooks ),
-				),
-				$secretPolicies,
-				static fn ( \RAN\RepositoryProvider\ProviderCode $code ): \RAN\RepositoryProvider\ProviderCredentialStore => $secrets->credentialsFor( $code )
-			)
+		$providers->registerWithCredentialStore(
+			'gh',
+			static function ( ProviderCredentialStore $credentials ) use ( $container ): GitHubProvider {
+				$browser  = new GitHubRepositoryBrowser( $credentials );
+				$webhooks = new GitHubWebhookNormalizer(
+					$credentials,
+					$container->make( DeploymentAttemptRepository::class )
+				);
+
+				return new GitHubProvider( $credentials, $browser, $webhooks );
+			}
 		);
+		$container->bind( ProviderRegistry::class, $providers );
 		$expiryReminders = new CredentialExpiryReminder(
 			$container->make( ProviderRegistry::class ),
 			$secrets,

@@ -45,7 +45,7 @@ RAN Booster supports custom git vendors through the
 `ran_booster_register_providers` action. Use it to register a new provider,
 define its metadata and capability contracts, and wire in diagnostics,
 credential policy, repository browsing, and webhook handling as needed.
-Provider plugins must require exact Provider API 7. Core publishes no add-on
+Provider plugins must require exact Provider API 8. Core publishes no add-on
 logging facade; providers return bounded diagnostics and operation results
 instead of forwarding their messages or exceptions into Core logs.
 
@@ -133,12 +133,14 @@ work is in neither record.
 - **Assisted Hooks add-on** — optionally sets up, checks, reconfigures and
   removes GitHub repository webhooks using a fine-grained token with Webhooks:
   Read and write permission. An administrator can paste a request-only token,
-  or select an eligible saved Core GitHub credential; Core passes the selected
-  secret into that one operation without granting the add-on sidecar access.
-  Core Add-on API 13 supplies the add-on with its narrow operation facade and
-  lets it enrich Core's existing GitHub repository
-  table and append a selected-repository operation panel through documented
-  WordPress hooks. When the add-on is absent, Core keeps the Assisted Hooks
+  or select an eligible saved Core GitHub credential; the matching provider
+  resolves a saved token only inside its fixed operation, without granting the
+  add-on sidecar access. Core Add-on API 14 supplies the add-on with explicit
+  setup, check, reconfigure and remove methods; none accepts a callback that
+  could receive a saved credential or signing secret. The add-on can enrich
+  Core's existing GitHub repository table and append a selected-repository
+  operation panel through documented WordPress hooks. When the add-on is absent,
+  Core keeps the Assisted Hooks
   affordance visible but disabled. Core and the add-on use the same
   provider-scoped, display-safe site and repository readiness result, including
   public HTTPS, repository identity and local signing-secret coverage. GitHub

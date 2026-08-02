@@ -137,16 +137,16 @@ authenticate an extension publisher.
   credential-bearing registration route is trusted with its provider
   namespace.
 - The same bootstrap publishes purpose-specific facades on the Admin
-  Interaction, Portability, Release Tracking, Prospective Release, Webhook
-  Assistance and Webhook Cleanup ready hooks. It also publishes the Logging
-  facade on several ready hooks.
+  Interaction, Portability, Release Tracking, Prospective Release and Webhook
+  Assistance ready hooks. The former Webhook Cleanup and Logging delivery
+  seams are absent.
 - `RAN/Admin/AdminAddOnRegistry.php` admits only Core-owned named facade
   entries. `RAN/Admin/AdminAddOnContext.php` hands one selected facade and the
   Logging facade to one capability-checked administrator tab; neither type is
   an identity boundary against hostile PHP.
 - The safe ordinary-add-on baseline is executable in
   `tests/Security/SecretBoundaryNegativeConformanceTest.php`: Admin Interaction,
-  Portability, Release Tracking, Prospective Release and Webhook Cleanup may
+  Portability, Release Tracking, Prospective Release and Webhook Assistance may
   not acquire secret-authority types or methods.
 
 ### Phase-zero ordinary-add-on exceptions
@@ -157,7 +157,8 @@ baseline shape so a change could not be mistaken for completed proof; the
 current test now records the closed subset explicitly.
 
 Items 1–3 are closed by the checkpoint above. Item 6 is closed by the Logging
-API removal checkpoint below. Items 4–5 remain downstream acceptance gates.
+API removal checkpoint below. Items 4–5 are closed by the fixed provider
+operation checkpoint below.
 
 1. `ran-booster.php` defines `ran_booster()`, which returns
    `Booster::getInstance()`.
@@ -177,6 +178,24 @@ API removal checkpoint below. Items 4–5 remain downstream acceptance gates.
    and excludes exception messages/traces, but does not detect arbitrary secret
    values in an allowed string or the message itself.
 
+### Fixed provider operation checkpoint
+
+Add-on API 14 replaces `withCredential()`, `provision()` and callback-based
+`reconfigure()` with explicit assess/setup/check/reconfigure/remove methods.
+Provider API 8 adds the exact optional
+`repository-webhook-management/1` fitness and management capabilities. A saved
+PAT is resolved only by the matching provider through its bound credential
+store; a Core-held signing secret reaches only the provider's fixed setup or
+reconfigure call. The ordinary add-on receives neither plaintext value.
+
+The former `WebhookCleanupFacade`, marker and ready hook are removed. Cleanup is
+now the private remove workflow: Core revalidates the exact target, profile,
+revision, hook ID and canonical callback URL, and releases a Core-created local
+profile only after the provider confirms remote `404` absence. Typed results
+preserve failed, partial and ambiguous outcomes and contain no raw response,
+headers, vendor messages or secret-derived material. This is a supported
+capability boundary, not hostile same-process PHP confidentiality.
+
 ### Logging API removal checkpoint
 
 The coordinated Phase 1 closure removes the public ordinary-add-on Logging API
@@ -184,7 +203,7 @@ instead of replacing it with another general-purpose vocabulary. Core keeps its
 private, bounded operational logging, while add-on and provider contracts no
 longer receive a logger, expose `ProviderRegistry::logging()`, or publish the
 `RAN_BOOSTER_LOGGING_API_VERSION` marker. The coordinated compatibility cut is
-Add-on API 13, Provider API 7, Portability API 2, and Admin Interaction API 2;
+Add-on API 14, Provider API 8, Portability API 2, and Admin Interaction API 2;
 Prospective Release API remains 4.
 
 This closes the supported free-form path. It does not claim that same-process
@@ -201,7 +220,7 @@ rendered, logged, returned in a result or converted to a reusable handle, and
 does not gain generic execution authority. Clearing a local variable after the
 call is defense in depth, not revocation or same-process erasure.
 
-The later saved-profile path has a different claim: an ordinary add-on may
+The saved-profile path has a different claim: an ordinary add-on may
 submit a display-safe profile ID, while Core binds and the matching provider
 uses the saved PAT inside one fixed operation. No saved plaintext crosses into
 the add-on. The request-only fallback must not be used to weaken that claim.
@@ -273,9 +292,10 @@ assertions only when one coordinated change proves all of the following:
    storage path or encrypted sidecar.
 3. **Complete:** `SecretsFile::credentialMaterials()` is removed; only one
    exact provider-bound material read remains in the provider contract.
-4. Webhook Assistance no longer publishes `withCredential()` or any callback
-   carrying a saved PAT or webhook secret. Setup/reconfigure secret use stays
-   inside the matching provider's separately typed fixed operation.
+4. **Complete in Core:** Webhook Assistance no longer publishes
+   `withCredential()` or any callback carrying a saved PAT or webhook secret.
+   Setup/reconfigure secret use stays inside the matching provider's separately
+   typed fixed operation.
 5. The add-on logging seam is removed where Core can log its own events or is
    replaced with a closed Core-owned event/result schema after an exact API
    cut. No open message or arbitrary context compatibility adapter remains.

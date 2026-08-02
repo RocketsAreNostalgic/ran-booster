@@ -9,7 +9,6 @@ use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
-use RAN\AddOn\WebhookAssistance\WebhookCleanupFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Booster;
 use RAN\Internal\CoreContainer;
@@ -30,7 +29,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		PortabilityFacade::class,
 		ProspectiveReleaseFacade::class,
 		ReleaseTrackingFacade::class,
-		WebhookCleanupFacade::class,
+		WebhookAssistanceFacade::class,
 	);
 
 	/** @var list<string> */
@@ -102,17 +101,11 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 	}
 
 	public function testGlobalAndBulkAcquisitionPathsAreClosed(): void {
-		$webhookAssistance  = new ReflectionClass( WebhookAssistanceFacade::class );
-		$sensitiveCallbacks = array_map(
-			static fn ( ReflectionMethod $method ): string => $method->name,
-			array_filter(
-				$webhookAssistance->getMethods( ReflectionMethod::IS_PUBLIC ),
-				static fn ( ReflectionMethod $method ): bool => str_contains( (string) $method->getDocComment(), 'SensitiveParameter' )
-			)
-		);
-		sort( $sensitiveCallbacks );
-
-		self::assertSame( array( 'provision', 'reconfigure', 'withCredential' ), $sensitiveCallbacks );
+		$webhookAssistance = new ReflectionClass( WebhookAssistanceFacade::class );
+		foreach ( array( 'provision', 'releaseProfile', 'withCredential' ) as $removedMethod ) {
+			self::assertFalse( $webhookAssistance->hasMethod( $removedMethod ) );
+		}
+		self::assertFalse( interface_exists( 'RAN\\AddOn\\WebhookAssistance\\WebhookCleanupFacade' ) );
 
 		$booster = new ReflectionClass( Booster::class );
 		self::assertFalse( $booster->hasMethod( 'getInstance' ) );

@@ -17,7 +17,7 @@ add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-			|| 13 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+			|| 14 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 			return;
 		}
 

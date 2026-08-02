@@ -1,12 +1,35 @@
 # Provider-owned repository-webhook fitness characterization
 
-**Decision:** GO for a later, coordinated Alpha contract replacement within the
-budgets below. NO-GO for implementing or releasing it until the Webhook V1
-slice is merged, the secret-policy characterization decision is complete, and
-Core plus Assisted Hooks are updated against one exact API tuple. This document
-is evidence and a budget, not runtime authorization.
+**Decision:** Core implementation landed for the coordinated Alpha contract
+replacement within the frozen budgets below. Release remains gated on the
+Assisted Hooks migration and combined compatibility proof against the exact
+Provider API 8 / Add-on API 14 tuple.
 
-## Current Core boundary
+## Core implementation checkpoint
+
+Core now publishes the exact `repository-webhook-management/1` fitness and
+management capabilities, four bounded non-secret results/interfaces, and one
+private GitHub webhook client. The former callback result types, secret-bearing
+Webhook Assistance callbacks, Webhook Cleanup facade, marker and ready hook are
+absent. No persistence, schema, option, hook, background, JavaScript or CSS
+surface was added.
+
+The management `check()` and `remove()` methods deliberately include Core's
+canonical callback URL. The earlier sketch omitted it, but hook ID alone cannot
+prove that the remote object belongs to the selected Core endpoint before
+readback or deletion. This tightens exact-target ownership without exposing a
+generic URL or transport capability: Core derives the URL and the GitHub client
+still fixes origin, path shapes, methods, headers and byte/call ceilings.
+
+The remaining join must prove the migrated Assisted Hooks consumer, old/new
+tuple failures, both load orders, secret canaries and deterministic release
+artifacts before release.
+
+## Pre-implementation Core boundary
+
+The following evidence records the baseline that justified the coordinated
+cut. It is retained for review history; the implementation checkpoint above is
+the current contract.
 
 Core already owns the safety envelope needed by the replacement:
 

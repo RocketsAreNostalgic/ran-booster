@@ -34,7 +34,7 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 7 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+      || 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 

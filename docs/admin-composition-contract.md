@@ -34,14 +34,14 @@ attaching its callbacks:
 
 ```php
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-	|| 13 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+	|| 14 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 	return;
 }
 ```
 
-Add-on API 13 publishes only the named facade needed by each ready action. Core
+Add-on API 14 publishes only the named facade needed by each ready action. Core
 does not deliver an add-on logging facade, generic resolver or container.
-Provider API 7 remains a separate contract. Provider add-ons must continue to
+Provider API 8 remains a separate contract. Provider add-ons must continue to
 perform the exact checks described in the
 [Provider extension contract](provider-extension-contract.md).
 
@@ -87,9 +87,16 @@ facades for the current request and perform no remote work in the ready
 callback. A late listener is not replayed. Core catches a failed ready listener
 and continues without exposing its exception to the administrator.
 
+Webhook Assistance mutations and assessments use the exact nonce action
+`ran_booster_repository_webhook_{action}_{providerCode}_{repositoryId}`, where
+`action` is one of `setup`, `check`, `reconfigure` or `remove`. The add-on
+creates that WordPress nonce for its form and passes the submitted value to the
+matching facade method. Core independently re-derives the action from the
+current target and rejects a stale or mismatched nonce before provider work.
+
 Portability API 2 is an independently versioned adoption-only contract for a
 trusted source bridge. Its consumer checks exact Portability API 2, not Add-on
-API 13. The separate
+API 14. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.
 
@@ -287,7 +294,7 @@ control-plane route for a compatible supporter manager, not a second dashboard
 tab or a general add-on-page API. Its parent, label, capability and slug are
 always `ran-booster`, `Pro`, `manage_options` and `ran-booster-pro`.
 
-An add-on may render the page body only after it has checked exact Add-on API 13
+An add-on may render the page body only after it has checked exact Add-on API 14
 above, by attaching a normal WordPress action:
 
 ```php

@@ -43,11 +43,19 @@ The production change is +143/-198 PHP lines, net -55, with zero new production
 type, public seam, API marker, hook, schema, option, durable state or remote
 call. Tests add 91 net PHP lines and release/CI guards add 33 lines. The focused
 boundary suite passes 64 tests/559 assertions; the full source gate passes 1,835
-tests/11,115 assertions and 123 asset tests. Immutable archive and isolated
-WordPress/load-order evidence is recorded at the later integration checkpoint.
-The remaining Phase-one work is logging closure, provider trust/conformance and
-the fixed-operation Assisted Hooks migration; this checkpoint makes no claim
-that those seams are already closed.
+tests/11,115 assertions and 123 asset tests. The deterministic release archive
+has SHA-256
+`6e8207c087184de6bbfc44fc74f504b84a0cd24e694266a3c51a0560fbed1ae8`, pins
+the shared updater at `v1.6.0-beta.1` / commit
+`c5880a949355567b7e58efb7720962a0282fee20`, and passes its exact-inventory,
+secret-path/content and 328-file PHP syntax gates. That archive activates,
+deactivates and reactivates on an isolated WordPress 7.0.2/MySQL 8.4 fixture;
+the database storage smoke passes, and the external credential-bearing fixture
+provider registers, resolves, diagnoses and presents with both provider-before-
+Core and Core-before-provider plugin load orders. No shared Local runtime was
+used. The remaining Phase-one work is logging closure, provider
+trust/conformance and the fixed-operation Assisted Hooks migration; this
+checkpoint makes no claim that those seams are already closed.
 
 ## Frozen trust tiers
 

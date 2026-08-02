@@ -22,7 +22,7 @@ use RAN\Secrets\SecretsStorageUnavailable;
 use RuntimeException;
 
 /**
- * Freezes the current schema-v2 extension-policy timing without changing it.
+ * Proves schema-v2 structural validation and exact provider-policy boundaries.
  *
  * Secret values are reduced to booleans at the instrumentation boundary so a
  * failed assertion cannot print them.
@@ -64,22 +64,18 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function testDisplayExactAndStorageReadsRenormalizeEveryActiveStoredRecordUnderLock(): void {
+	public function testStructuralStorageReadsNeverInvokeProviderPolicy(): void {
 		$this->seedRepresentativeDocument();
 
 		$operations = array(
-			'file-backed credential profiles' => fn (): array => $this->secrets->credentialProfiles( 'alpha' ),
-			'exact file-backed credential'    => fn (): ?array => $this->secrets->credentialMaterial( 'alpha', 'alpha-credential' ),
-			'file-backed webhook profiles'    => fn (): array => $this->secrets->webhookProfiles( 'alpha' ),
-			'webhook candidates'              => fn (): array => $this->secrets->webhookMaterials( 'alpha' ),
-			'managed-storage readiness'       => function (): null {
+			'managed-storage readiness' => function (): null {
 				$this->secrets->assertManagedStorageReady();
 
 				return null;
 			},
-			'healthy-storage check'           => fn (): bool => $this->secrets->hasHealthyManagedStorage(),
-			'permission/storage verification' => fn (): bool => $this->secrets->verifyAndSecure(),
-			'deletion preflight'              => function (): null {
+			'healthy-storage check'     => fn (): bool => $this->secrets->hasHealthyManagedStorage(),
+			'storage verification'      => fn (): bool => $this->secrets->verifyAndSecure(),
+			'deletion preflight'        => function (): null {
 				$this->secrets->assertManagedStorageDeletable();
 
 				return null;
@@ -89,27 +85,105 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		foreach ( $operations as $label => $operation ) {
 			$this->calls->reset();
 			$operation();
-			$expected = array(
-				'alpha:credential:normalize' => 1,
-				'alpha:webhook:normalize'    => 2,
-				'beta:credential:normalize'  => 1,
-				'beta:webhook:normalize'     => 1,
-			) + ( str_contains( $label, 'credential' )
-				? array( 'alpha:credential:constants' => 1 )
-				: ( str_contains( $label, 'webhook' ) ? array( 'alpha:webhook:constants' => 1 ) : array() ) );
-			ksort( $expected, SORT_STRING );
-
-			self::assertSame(
-				$expected,
-				$this->calls->counts(),
-				$label
-			);
-			self::assertTrue( $this->calls->allNormalizationsSawPlaintext(), $label );
-			self::assertTrue( $this->calls->allNormalizationsRanUnderLock(), $label );
+			self::assertSame( array(), $this->calls->counts(), $label );
+			self::assertSame( 0, $this->calls->eventsUnderLock(), $label );
 		}
 	}
 
-	public function testCredentialReplaceRenormalizesTheWholeDocumentThreeTimesPlusTheChangedRecord(): void {
+	public function testDisplayReadsUseOnlyTheRequestedConstantOverlay(): void {
+		$this->seedRepresentativeDocument();
+		$this->calls->reset();
+
+		self::assertArrayHasKey( 'alpha-credential', $this->secrets->credentialProfiles( 'alpha' ) );
+		self::assertSame( array( 'alpha:credential:constants' => 1 ), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+
+		$this->calls->reset();
+		self::assertCount( 2, $this->secrets->webhookProfiles( 'alpha' ) );
+		self::assertSame( array( 'alpha:webhook:constants' => 1 ), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+	}
+
+	public function testExactCredentialReadRevalidatesOnlyTheSelectedRecordOutsideLock(): void {
+		$this->seedRepresentativeDocument();
+		$this->calls->reset();
+
+		self::assertSame( 'file', $this->secrets->credentialMaterial( 'alpha', 'alpha-credential' )['source'] );
+		self::assertSame( array( 'alpha:credential:normalize' => 1 ), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+
+		$this->calls->reset();
+		self::assertNull( $this->secrets->credentialMaterial( 'alpha', 'missing-credential' ) );
+		self::assertSame( array(), $this->calls->counts() );
+	}
+
+	public function testDefaultCredentialRevalidatesOnlyOneStructurallySelectedStoredRecord(): void {
+		$this->seedRepresentativeDocument();
+		$this->calls->reset();
+
+		self::assertSame( 'alpha-credential', $this->secrets->credentialMaterial( 'alpha' )['id'] );
+		self::assertSame(
+			array(
+				'alpha:credential:constants' => 1,
+				'alpha:credential:normalize' => 1,
+			),
+			$this->calls->counts()
+		);
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+	}
+
+	public function testAmbiguousDefaultCredentialReturnsNullWithoutStoredPolicyCallbacks(): void {
+		$this->seedRepresentativeDocument();
+		$this->secrets->saveCredential(
+			'alpha',
+			'another-credential',
+			$this->credentialMetadata( 'Another credential' ),
+			'synthetic-another-value'
+		);
+		$this->calls->reset();
+
+		self::assertNull( $this->secrets->credentialMaterial( 'alpha' ) );
+		self::assertSame( array( 'alpha:credential:constants' => 1 ), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+	}
+
+	public function testDefaultConstantCredentialPrecedesStoredMaterialWithoutStoredPolicyCallbacks(): void {
+		$this->seedRepresentativeDocument();
+		$before        = hash_file( 'sha256', $this->path );
+		$this->secrets = $this->newSecrets(
+			array( 'RAN_BOOSTER_ALPHA_TOKEN' => 'synthetic-alpha-overlay-value' ),
+			$this->policies
+		);
+		$this->calls->reset();
+
+		self::assertSame( 'constant', $this->secrets->credentialMaterial( 'alpha' )['source'] );
+		self::assertSame(
+			array(
+				'alpha:credential:constants' => 1,
+				'alpha:credential:normalize' => 1,
+			),
+			$this->calls->counts()
+		);
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+	}
+
+	public function testRequestedWebhookReadRevalidatesOnlyItsBoundedCandidatesOutsideLock(): void {
+		$this->seedRepresentativeDocument();
+		$this->calls->reset();
+
+		self::assertCount( 2, $this->secrets->webhookMaterials( 'alpha' ) );
+		self::assertSame(
+			array(
+				'alpha:webhook:constants' => 1,
+				'alpha:webhook:normalize' => 2,
+			),
+			$this->calls->counts()
+		);
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+	}
+
+	public function testCredentialReplaceNormalizesOnlyTheChangedRecordOutsideLock(): void {
 		$this->seedRepresentativeDocument();
 		$this->calls->reset();
 
@@ -121,19 +195,14 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		);
 
 		self::assertSame(
-			array(
-				'alpha:credential:normalize' => 4,
-				'alpha:webhook:normalize'    => 6,
-				'beta:credential:normalize'  => 3,
-				'beta:webhook:normalize'     => 3,
-			),
+			array( 'alpha:credential:normalize' => 1 ),
 			$this->calls->counts()
 		);
 		self::assertTrue( $this->calls->allNormalizationsSawPlaintext() );
-		self::assertTrue( $this->calls->allNormalizationsRanUnderLock() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 	}
 
-	public function testWebhookReplaceRenormalizesTheWholeDocumentThreeTimesPlusTheChangedRecord(): void {
+	public function testWebhookReplaceNormalizesOnlyTheChangedRecordOutsideLock(): void {
 		$this->seedRepresentativeDocument();
 		$this->calls->reset();
 
@@ -145,16 +214,11 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		);
 
 		self::assertSame(
-			array(
-				'alpha:credential:normalize' => 3,
-				'alpha:webhook:normalize'    => 7,
-				'beta:credential:normalize'  => 3,
-				'beta:webhook:normalize'     => 3,
-			),
+			array( 'alpha:webhook:normalize' => 1 ),
 			$this->calls->counts()
 		);
 		self::assertTrue( $this->calls->allNormalizationsSawPlaintext() );
-		self::assertTrue( $this->calls->allNormalizationsRanUnderLock() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 	}
 
 	public function testEmptyReadsCallOnlyTheRequestedOverlayPolicyAndDoNotCreateStorage(): void {
@@ -177,7 +241,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertFileDoesNotExist( $this->path . '.lock' );
 	}
 
-	public function testMaximumWebhookCandidateReadInvokesOnlyTheRequestedOverlayThenSixteenStoredNormalizations(): void {
+	public function testMaximumWebhookCandidateReadRevalidatesSixteenRequestedRecordsOutsideLock(): void {
 		foreach ( range( 1, SecretsFile::MAX_WEBHOOK_PROFILES ) as $index ) {
 			$this->secrets->saveWebhook(
 				'alpha',
@@ -196,8 +260,8 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 			),
 			$this->calls->counts()
 		);
-		self::assertSame( SecretsFile::MAX_WEBHOOK_PROFILES, $this->calls->normalizationsUnderLock() );
-		self::assertSame( 0, $this->calls->normalizationsOutsideLock() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+		self::assertSame( SecretsFile::MAX_WEBHOOK_PROFILES, $this->calls->normalizationsOutsideLock() );
 	}
 
 	public function testConstantOverlaysReceiveOnlyRequestedDeclaredNamesOutsideTheLockAndNeverPersist(): void {
@@ -236,11 +300,8 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		);
 		self::assertSame(
 			array(
-				'alpha:credential:normalize' => 1,
-				'alpha:webhook:constants'    => 1,
-				'alpha:webhook:normalize'    => 3,
-				'beta:credential:normalize'  => 1,
-				'beta:webhook:normalize'     => 1,
+				'alpha:webhook:constants' => 1,
+				'alpha:webhook:normalize' => 3,
 			),
 			$this->calls->counts()
 		);
@@ -249,6 +310,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 			$this->calls->constantNames( 'alpha', 'webhook' )
 		);
 		self::assertFalse( $this->calls->providerWasCalled( 'beta', 'constants' ) );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 
 		$after = hash_file( 'sha256', $this->path );
 		self::assertSame( $before, $after );
@@ -278,8 +340,6 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertSame(
 			array(
 				'beta:credential:constants' => 1,
-				'beta:credential:normalize' => 1,
-				'beta:webhook:normalize'    => 1,
 			),
 			$activeCalls->counts()
 		);
@@ -302,15 +362,13 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 			$this->recordDigest( $after[ SecretsFile::WEBHOOKS ]['alpha'] )
 		);
 		self::assertSame(
-			array(
-				'beta:credential:normalize' => 4,
-				'beta:webhook:normalize'    => 3,
-			),
+			array( 'beta:credential:normalize' => 1 ),
 			$activeCalls->counts()
 		);
+		self::assertSame( 0, $activeCalls->eventsUnderLock() );
 	}
 
-	public function testSelfDestructFilteringAndPurgeInvokePolicyBeforeWithholdingOrDeletion(): void {
+	public function testSelfDestructFilteringAndPurgeRemainCoreStructuralOperations(): void {
 		$this->secrets->saveCredential(
 			'alpha',
 			'expired-credential',
@@ -329,16 +387,21 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		$this->calls->reset();
 
 		self::assertArrayNotHasKey( 'expired-credential', $this->secrets->credentialProfiles( 'alpha' ) );
-		self::assertSame( 2, $this->calls->count( 'alpha', 'credential', 'normalize' ) );
-		self::assertTrue( $this->calls->allNormalizationsSawPlaintext() );
+		self::assertSame( array( 'alpha:credential:constants' => 1 ), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
+
+		$this->calls->reset();
+		self::assertNull( $this->secrets->credentialMaterial( 'alpha', 'expired-credential' ) );
+		self::assertSame( array(), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 
 		$this->calls->reset();
 		self::assertSame( array( 'alpha' => array( 'expired-credential' ) ), $this->secrets->purgeExpiredCredentials() );
-		self::assertSame( 4, $this->calls->count( 'alpha', 'credential', 'normalize' ) );
-		self::assertTrue( $this->calls->allNormalizationsRanUnderLock() );
+		self::assertSame( array(), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 	}
 
-	public function testPortabilityValidatesBeforeLockThenRenormalizesAtReadWriteAndReadbackBoundaries(): void {
+	public function testPortabilityValidatesOnceOutsideLockOnFirstAndIdempotentImport(): void {
 		$this->secrets->saveCredential(
 			'alpha',
 			'alpha-credential',
@@ -377,18 +440,18 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 
 		$ids = $this->secrets->importCredentialsIfAbsent( $blueprint, $credential );
 		self::assertCount( 1, $ids );
-		self::assertSame( 6, $this->calls->count( 'alpha', 'credential', 'normalize' ) );
+		self::assertSame( 1, $this->calls->count( 'alpha', 'credential', 'normalize' ) );
 		self::assertSame( 1, $this->calls->normalizationsOutsideLock() );
-		self::assertSame( 5, $this->calls->normalizationsUnderLock() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 
 		$this->calls->reset();
 		self::assertSame( $ids, $this->secrets->importCredentialsIfAbsent( $blueprint, $credential ) );
-		self::assertSame( 3, $this->calls->count( 'alpha', 'credential', 'normalize' ) );
+		self::assertSame( 1, $this->calls->count( 'alpha', 'credential', 'normalize' ) );
 		self::assertSame( 1, $this->calls->normalizationsOutsideLock() );
-		self::assertSame( 2, $this->calls->normalizationsUnderLock() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 	}
 
-	public function testTamperingFailsBeforePolicyButAuthenticatedNonCanonicalInputReachesPolicyBeforeFailure(): void {
+	public function testTamperedAndAuthenticatedNonCanonicalDocumentsFailBeforePolicy(): void {
 		$this->seedRepresentativeDocument();
 		$canonicalEnvelope = (string) file_get_contents( $this->path );
 		$tampered          = json_decode( $canonicalEnvelope, true, 4, JSON_THROW_ON_ERROR );
@@ -415,16 +478,8 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		$this->calls->reset();
 
 		$this->expectStorageFailure( fn (): bool => $this->secrets->hasHealthyManagedStorage() );
-		self::assertSame(
-			array(
-				'alpha:credential:normalize' => 1,
-				'alpha:webhook:normalize'    => 2,
-				'beta:credential:normalize'  => 1,
-				'beta:webhook:normalize'     => 1,
-			),
-			$this->calls->counts()
-		);
-		self::assertTrue( $this->calls->allNormalizationsRanUnderLock() );
+		self::assertSame( array(), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 	}
 
 	public function testAuthenticatedMalformedShapeFailsBeforeAnyPolicyCallback(): void {
@@ -440,9 +495,10 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 
 		$this->expectStorageFailure( fn (): bool => $this->secrets->hasHealthyManagedStorage() );
 		self::assertSame( array(), $this->calls->counts() );
+		self::assertSame( 0, $this->calls->eventsUnderLock() );
 	}
 
-	public function testPolicyVersionDriftCanMakeAnAuthenticatedStoredRecordUnreadableWithoutRewritingIt(): void {
+	public function testPolicyDriftFailsOnlyAtExactCredentialUseWithoutRewriting(): void {
 		$this->secrets->saveCredential(
 			'alpha',
 			'alpha-credential',
@@ -461,16 +517,175 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		);
 		$drifted = $this->newSecrets( array(), $driftPolicies );
 
-		$this->expectStorageFailure( fn (): array => $drifted->credentialProfiles( 'alpha' ) );
+		self::assertArrayHasKey( 'alpha-credential', $drifted->credentialProfiles( 'alpha' ) );
+		self::assertSame(
+			array( 'alpha:credential:constants' => 1 ),
+			$driftCalls->counts()
+		);
+
+		$driftCalls->reset();
+		$this->expectRuntimeFailure( fn (): ?array => $drifted->credentialMaterial( 'alpha', 'alpha-credential' ) );
+		self::assertSame( array( 'alpha:credential:normalize' => 1 ), $driftCalls->counts() );
+		self::assertSame( 0, $driftCalls->eventsUnderLock() );
+		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+	}
+
+	public function testPolicyDriftFailsOnlyWhenRequestedWebhookCandidatesAreUsed(): void {
+		$this->secrets->saveWebhook(
+			'alpha',
+			'alpha-owner-one',
+			$this->webhookMetadata( 'Alpha owner one', 'owner-one' ),
+			str_repeat( 'a', 32 )
+		);
+		$before = hash_file( 'sha256', $this->path );
+		self::assertIsString( $before );
+
+		$driftCalls    = new CanonicalPolicyCallRecorder( $this->path . '.lock' );
+		$driftPolicies = new ProviderSecretPolicyCatalog();
+		$driftPolicies->register(
+			ProviderCode::parse( 'alpha' ),
+			null,
+			new RecordingWebhookPolicy( 'alpha', $driftCalls, true )
+		);
+		$drifted = $this->newSecrets( array(), $driftPolicies );
+
+		self::assertArrayHasKey( 'alpha-owner-one', $drifted->webhookProfiles( 'alpha' ) );
+		self::assertSame( array( 'alpha:webhook:constants' => 1 ), $driftCalls->counts() );
+
+		$driftCalls->reset();
+		$this->expectRuntimeFailure( fn (): array => $drifted->webhookMaterials( 'alpha' ) );
 		self::assertSame(
 			array(
-				'alpha:credential:constants' => 1,
-				'alpha:credential:normalize' => 1,
+				'alpha:webhook:constants' => 1,
+				'alpha:webhook:normalize' => 1,
 			),
 			$driftCalls->counts()
 		);
-		self::assertTrue( $driftCalls->allNormalizationsRanUnderLock() );
+		self::assertSame( 0, $driftCalls->eventsUnderLock() );
 		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+	}
+
+	public function testCredentialReplacementRejectsAnExactTargetRaceWithoutHoldingTheLock(): void {
+		$this->secrets->saveCredential(
+			'alpha',
+			'alpha-credential',
+			$this->credentialMetadata( 'Alpha credential' ),
+			'synthetic-alpha-value'
+		);
+		$racer     = $this->newSecrets( array(), $this->policies );
+		$raceCalls = new CanonicalPolicyCallRecorder( $this->path . '.lock' );
+		$policies  = new ProviderSecretPolicyCatalog();
+		$policies->register(
+			ProviderCode::parse( 'alpha' ),
+			new RecordingCredentialPolicy(
+				'alpha',
+				$raceCalls,
+				false,
+				function () use ( $racer ): void {
+					$racer->saveCredential(
+						'alpha',
+						'alpha-credential',
+						$this->credentialMetadata( 'Raced credential' ),
+						'synthetic-raced-value'
+					);
+				}
+			),
+			null
+		);
+		$raced = $this->newSecrets( array(), $policies );
+
+		$this->expectRuntimeFailure(
+			fn (): string => $raced->saveCredential(
+				'alpha',
+				'alpha-credential',
+				$this->credentialMetadata( 'Outer credential' ),
+				'synthetic-outer-value'
+			)
+		);
+
+		self::assertSame( 'Raced credential', $this->decodedDocument()[ SecretsFile::CREDENTIALS ]['alpha']['alpha-credential']['label'] );
+		self::assertSame( array( 'alpha:credential:normalize' => 1 ), $raceCalls->counts() );
+		self::assertSame( 0, $raceCalls->eventsUnderLock() );
+	}
+
+	public function testCredentialCreationRejectsAnExactTargetRaceWithoutHoldingTheLock(): void {
+		$racer     = $this->newSecrets( array(), $this->policies );
+		$raceCalls = new CanonicalPolicyCallRecorder( $this->path . '.lock' );
+		$policies  = new ProviderSecretPolicyCatalog();
+		$policies->register(
+			ProviderCode::parse( 'alpha' ),
+			new RecordingCredentialPolicy(
+				'alpha',
+				$raceCalls,
+				false,
+				function () use ( $racer ): void {
+					$racer->saveCredential(
+						'alpha',
+						'new-credential',
+						$this->credentialMetadata( 'Raced creation' ),
+						'synthetic-raced-value'
+					);
+				}
+			),
+			null
+		);
+		$raced = $this->newSecrets( array(), $policies );
+
+		$this->expectRuntimeFailure(
+			fn (): string => $raced->saveCredential(
+				'alpha',
+				'new-credential',
+				$this->credentialMetadata( 'Outer creation' ),
+				'synthetic-outer-value'
+			)
+		);
+
+		self::assertSame( 'Raced creation', $this->decodedDocument()[ SecretsFile::CREDENTIALS ]['alpha']['new-credential']['label'] );
+		self::assertSame( array( 'alpha:credential:normalize' => 1 ), $raceCalls->counts() );
+		self::assertSame( 0, $raceCalls->eventsUnderLock() );
+	}
+
+	public function testWebhookReplacementRejectsAnExactTargetRaceWithoutHoldingTheLock(): void {
+		$this->secrets->saveWebhook(
+			'alpha',
+			'alpha-owner-one',
+			$this->webhookMetadata( 'Alpha owner one', 'owner-one' ),
+			str_repeat( 'a', 32 )
+		);
+		$racer     = $this->newSecrets( array(), $this->policies );
+		$raceCalls = new CanonicalPolicyCallRecorder( $this->path . '.lock' );
+		$policies  = new ProviderSecretPolicyCatalog();
+		$policies->register(
+			ProviderCode::parse( 'alpha' ),
+			null,
+			new RecordingWebhookPolicy(
+				'alpha',
+				$raceCalls,
+				false,
+				function () use ( $racer ): void {
+					$racer->saveWebhook(
+						'alpha',
+						'alpha-owner-one',
+						$this->webhookMetadata( 'Raced owner', 'owner-one' ),
+						str_repeat( 'r', 32 )
+					);
+				}
+			)
+		);
+		$raced = $this->newSecrets( array(), $policies );
+
+		$this->expectRuntimeFailure(
+			fn (): string => $raced->saveWebhook(
+				'alpha',
+				'alpha-owner-one',
+				$this->webhookMetadata( 'Outer owner', 'owner-one' ),
+				str_repeat( 'o', 32 )
+			)
+		);
+
+		self::assertSame( 'Raced owner', $this->decodedDocument()[ SecretsFile::WEBHOOKS ]['alpha']['alpha-owner-one']['label'] );
+		self::assertSame( array( 'alpha:webhook:normalize' => 1 ), $raceCalls->counts() );
+		self::assertSame( 0, $raceCalls->eventsUnderLock() );
 	}
 
 	public function testCanonicalWritesSortProvidersAndIdsAndReplaceTheCiphertextAtomically(): void {
@@ -621,6 +836,16 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 			self::assertSame( 'local_secret_store_unavailable', $failure->getDiagnosticId() );
 		}
 	}
+
+	/** @param callable(): mixed $operation */
+	private function expectRuntimeFailure( callable $operation ): void {
+		try {
+			$operation();
+			self::fail( 'The bounded operation must fail closed.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertNotSame( '', $failure->getMessage() );
+		}
+	}
 }
 
 final class CanonicalPolicyCallRecorder {
@@ -721,6 +946,15 @@ final class CanonicalPolicyCallRecorder {
 			);
 	}
 
+	public function eventsUnderLock(): int {
+		return count(
+			array_filter(
+				$this->events,
+				static fn ( array $event ): bool => $event['lock_held']
+			)
+		);
+	}
+
 	public function normalizationsUnderLock(): int {
 		return count(
 			array_filter(
@@ -767,7 +1001,8 @@ final readonly class RecordingCredentialPolicy implements ProviderCredentialPoli
 	public function __construct(
 		private string $provider,
 		private CanonicalPolicyCallRecorder $calls,
-		private bool $rejectStoredMaterial = false
+		private bool $rejectStoredMaterial = false,
+		private ?\Closure $beforeNormalize = null
 	) {
 	}
 
@@ -777,6 +1012,9 @@ final readonly class RecordingCredentialPolicy implements ProviderCredentialPoli
 
 	public function normalizeCredential( array $metadata, mixed $secret ): array {
 		$this->calls->record( $this->provider, 'credential', 'normalize', is_string( $secret ) && '' !== $secret );
+		if ( null !== $this->beforeNormalize ) {
+			( $this->beforeNormalize )();
+		}
 		if ( $this->rejectStoredMaterial ) {
 			throw new RuntimeException( 'The upgraded synthetic policy rejects the stored record.' );
 		}
@@ -817,7 +1055,9 @@ final readonly class RecordingWebhookPolicy implements ProviderWebhookPolicy {
 
 	public function __construct(
 		private string $provider,
-		private CanonicalPolicyCallRecorder $calls
+		private CanonicalPolicyCallRecorder $calls,
+		private bool $rejectStoredMaterial = false,
+		private ?\Closure $beforeNormalize = null
 	) {
 	}
 
@@ -835,6 +1075,12 @@ final readonly class RecordingWebhookPolicy implements ProviderWebhookPolicy {
 
 	public function normalizeWebhook( array $metadata, mixed $secret ): array {
 		$this->calls->record( $this->provider, 'webhook', 'normalize', is_string( $secret ) && '' !== $secret );
+		if ( null !== $this->beforeNormalize ) {
+			( $this->beforeNormalize )();
+		}
+		if ( $this->rejectStoredMaterial ) {
+			throw new RuntimeException( 'The upgraded synthetic policy rejects the stored webhook.' );
+		}
 
 		return array(
 			'label'        => is_string( $metadata['label'] ?? null ) ? trim( $metadata['label'] ) : '',

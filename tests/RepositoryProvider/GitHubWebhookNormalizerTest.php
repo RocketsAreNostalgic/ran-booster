@@ -635,6 +635,13 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 			/**
 			 * @return list<array<string, mixed>>
 			 */
+			public function webhookProfiles( ProviderCode|string $provider ): array {
+				return $this->profiles;
+			}
+
+			/**
+			 * @return list<array<string, mixed>>
+			 */
 			public function webhookMaterials( ProviderCode|string $provider ): array {
 				++$this->calls;
 

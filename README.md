@@ -193,7 +193,9 @@ work is in neither record.
   use automatic setup. For containers or uncommon layouts, define an absolute
   `secrets.json` path outside the public web root on durable local storage whose
   immediate parent is owned by PHP, readable and writable by PHP, and mode
-  `0700`.
+  `0700`. File-backed profiles are structurally validated for display; their
+  current provider validity is checked only when the selected credential or
+  bounded webhook candidates are used.
 - A credentials restore requires the matching encrypted sidecar and
   `ran_booster_secrets_key_v1` database option from the same backup. Neither
   half is useful alone.

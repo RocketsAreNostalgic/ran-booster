@@ -247,7 +247,11 @@ constants that provider understands, and converts those constants into the same
 canonical credential record. This keeps the sidecar's file operations atomic
 and provider-neutral while preventing unknown provider IDs from reaching file
 inclusion or secret decoding. Credential policy lookup during registration is a
-local, non-I/O operation.
+local, non-I/O operation. File-backed display and storage checks are Core-only
+structural operations. Core revalidates only the selected, non-expired stored
+credential under its current provider policy immediately before delivery, and
+provider callbacks never run while Core holds the sidecar lock. A displayed
+file-backed profile is stored; its provider validity is checked on use.
 
 Webhook support remains optional. A webhook-capable provider implements
 `WebhookNormalizer`, whose `getWebhookPolicy()` returns its
@@ -257,6 +261,11 @@ declares any supported deployment constants. Signature ambiguity and semantic
 header validation remain inside the provider normalizer. Booster retains no
 authorization or unplanned request headers, and it passes only the selected
 provider's declared headers to that normalizer.
+
+Core structurally reads webhook profiles for display. Before signature
+verification it revalidates only the requested provider's bounded candidate set
+under the current webhook policy, outside the sidecar lock. Each provider
+remains limited to 16 stored webhook profiles.
 
 Webhook signing-secret scope codes are universally `owner` or `repository`.
 Providers may relabel `owner` for their interface—for example **GitHub Owner**

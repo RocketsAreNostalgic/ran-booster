@@ -1,8 +1,11 @@
 # Canonical secret-policy characterization
 
-**Status:** Phase-zero source and executable evidence at Core
-`51a9e63fe5a414c63ef5ce086739d09e690e49b8`. This document authorizes no
-runtime, API, schema, persistence, provider-account or release change.
+**Status:** Phase-zero evidence began at Core
+`51a9e63fe5a414c63ef5ce086739d09e690e49b8`. The bounded internal
+implementation is frozen on `codex/p0-canonical-structural-hardening` at
+`7ebcfdb63e674e69c358c352e928804941126939`. It is not yet integrated or
+release-authorized and makes no API, schema, persistence, provider-account or
+remote change.
 
 ## Decision
 
@@ -37,6 +40,51 @@ path, lock, provider collections and public contracts unchanged:
 
 No generic validator registry, schema kind, owner/pool abstraction, plaintext
 cache or compatibility layer is warranted.
+
+## Implementation checkpoint — 2026-08-02
+
+The conditional attempt is a verified **GO** within its frozen bounds:
+
+- authenticated document reads use Core-only structural validators and exact
+  canonical equality; provider policy is not invoked by storage, health,
+  deletion, file-backed display or atomic readback paths;
+- explicit credentials revalidate one non-expired selected stored record;
+  default resolution chooses the constant first, otherwise revalidates only one
+  structurally unambiguous temporary/file candidate and returns `null` without
+  stored callbacks when selection is ambiguous;
+- webhook material revalidates only the requested provider's at-most-16
+  candidates before signature verification;
+- credential and webhook saves snapshot one exact target, normalize outside the
+  lock and compare that target strictly inside the exclusive mutation. Creation
+  and replacement races fail closed without retrying or overwriting the winner;
+- policy drift leaves stored/display data readable but rejects exact material
+  use when the current policy rejects or changes the canonical record; and
+- credential rows say “Stored · Validity checked on use” unless a more specific
+  expiry badge applies.
+
+Actual production delta is +157 net PHP lines, four private helpers and zero new
+type, public signature, API marker, hook, schema field, table, option, durable
+state or remote call. Tests are +254 net PHP lines; production JavaScript/CSS is
+unchanged.
+
+The focused implementation suite passes 23 tests/171 assertions. Full Core
+verification passes 1,833 tests/11,099 assertions with the one pre-existing PHP
+8.5 deprecation, plus 123 asset tests and PHPCS. Independent review found no
+remaining actionable defect.
+
+A 100-iteration local PHP 8.5 synthetic readback recorded representative
+storage-lock operation mean/p95/max of 0.135/0.235/0.680 ms, exact credential
+0.134/0.254/0.626 ms and two-webhook use 0.196/0.445/0.596 ms. The maximum
+16-webhook fixture recorded storage-lock mean/p95/max of
+0.179/0.369/0.477 ms and total candidate use 0.516/0.725/1.440 ms, with at most
+2 MiB additional process peak allocation. Each read performs one sidecar
+decrypt; every observed extension callback was outside the lock.
+
+Synthetic rollback proof created schema-v2 credential/webhook material with the
+pre-change `0ad9dba0de5ac26eb26cebd1d916f67e71f7ac84` implementation, read and
+rewrote it with `7ebcfdb63e674e69c358c352e928804941126939`, then read the result again
+with the pre-change implementation. All three readbacks passed and the
+temporary fixture was removed.
 
 ## Traced source paths
 
@@ -84,7 +132,7 @@ repository picking, troubleshooting, credential expiry, portability,
 Webhook Assistance and `SignedWebhookVerifier`. A structural split must not
 move provider semantics into those callers.
 
-## Exact executable call counts and timing
+## Phase-zero executable call counts and timing
 
 The representative authenticated document contains one credential for each of
 `alpha` and `beta`, two `alpha` webhook profiles and one `beta` webhook profile.
@@ -92,24 +140,24 @@ The instrumented policies reduce secret observation to booleans; they retain no
 plaintext. “Under lock” was observed by a second non-blocking exclusive lock
 attempt from inside each callback.
 
-| Operation | Exact current policy calls | Timing |
-| --- | --- | --- |
-| Empty `credentialProfiles(alpha)` | `alpha credential constants` 1; no normalization | Outside lock; no sidecar/key/lock created |
-| Empty `webhookProfiles(alpha)` | `alpha webhook constants` 1; no normalization | Outside lock; no sidecar/key/lock created |
-| File-backed credential profiles or exact credential | requested credential-constant policy 1; all stored records normalized `1/2/1/1` | Overlay outside lock; all stored plaintext callbacks under shared lock |
-| File-backed webhook profiles or candidates | requested webhook-constant policy 1; all stored records normalized `1/2/1/1` | Overlay outside lock; all stored plaintext callbacks under shared lock |
-| Explicit credential constant | requested credential-constant policy 1 plus requested credential normalization 1 | Both outside lock; zero sidecar decrypt/write |
-| Maximum requested-provider webhook set | requested webhook-constant policy 1 plus exactly 16 requested webhook normalizations | Overlay outside lock; 16 stored callbacks under shared lock; collection bound enforced |
-| Readiness, health, permission verification or deletion preflight | all stored records normalized `1/2/1/1`; no constant callback | Under the method's shared or exclusive lock |
-| Replace representative credential | credential/webhook calls `4/6/3/3` | Initial full read + exact changed record + full prewrite + full readback, all under exclusive lock |
-| Replace one of two representative webhooks | credential/webhook calls `3/7/3/3` | Initial full read + exact changed record + full prewrite + full readback, all under exclusive lock |
-| First portability import with one existing same-provider credential | target credential normalization 6 | 1 before lock; 1 initial read + 2 prewrite + 2 readback under exclusive lock |
-| Idempotent portability retry with two stored credentials | target credential normalization 3 | 1 before lock; 2 initial-read callbacks under exclusive lock; no write/readback |
-| Display read with one expired and one live credential | credential normalization 2 | Both under shared lock before expired record is withheld |
-| Purge one expired record while one remains | credential normalization 4 | 2 initial read + 1 prewrite + 1 readback under exclusive lock |
-| Tampered ciphertext | 0 | Authentication fails before policy code |
-| Authenticated malformed collection shape | 0 | Core shape check fails before policy code |
-| Authenticated, semantically valid but noncanonical top-level order | all stored records normalized `1/2/1/1` | Under shared lock before canonical-order rejection |
+| Operation                                                           | Exact phase-zero baseline policy calls                                               | Timing                                                                                             |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Empty `credentialProfiles(alpha)`                                   | `alpha credential constants` 1; no normalization                                     | Outside lock; no sidecar/key/lock created                                                          |
+| Empty `webhookProfiles(alpha)`                                      | `alpha webhook constants` 1; no normalization                                        | Outside lock; no sidecar/key/lock created                                                          |
+| File-backed credential profiles or exact credential                 | requested credential-constant policy 1; all stored records normalized `1/2/1/1`      | Overlay outside lock; all stored plaintext callbacks under shared lock                             |
+| File-backed webhook profiles or candidates                          | requested webhook-constant policy 1; all stored records normalized `1/2/1/1`         | Overlay outside lock; all stored plaintext callbacks under shared lock                             |
+| Explicit credential constant                                        | requested credential-constant policy 1 plus requested credential normalization 1     | Both outside lock; zero sidecar decrypt/write                                                      |
+| Maximum requested-provider webhook set                              | requested webhook-constant policy 1 plus exactly 16 requested webhook normalizations | Overlay outside lock; 16 stored callbacks under shared lock; collection bound enforced             |
+| Readiness, health, permission verification or deletion preflight    | all stored records normalized `1/2/1/1`; no constant callback                        | Under the method's shared or exclusive lock                                                        |
+| Replace representative credential                                   | credential/webhook calls `4/6/3/3`                                                   | Initial full read + exact changed record + full prewrite + full readback, all under exclusive lock |
+| Replace one of two representative webhooks                          | credential/webhook calls `3/7/3/3`                                                   | Initial full read + exact changed record + full prewrite + full readback, all under exclusive lock |
+| First portability import with one existing same-provider credential | target credential normalization 6                                                    | 1 before lock; 1 initial read + 2 prewrite + 2 readback under exclusive lock                       |
+| Idempotent portability retry with two stored credentials            | target credential normalization 3                                                    | 1 before lock; 2 initial-read callbacks under exclusive lock; no write/readback                    |
+| Display read with one expired and one live credential               | credential normalization 2                                                           | Both under shared lock before expired record is withheld                                           |
+| Purge one expired record while one remains                          | credential normalization 4                                                           | 2 initial read + 1 prewrite + 1 readback under exclusive lock                                      |
+| Tampered ciphertext                                                 | 0                                                                                    | Authentication fails before policy code                                                            |
+| Authenticated malformed collection shape                            | 0                                                                                    | Core shape check fails before policy code                                                          |
+| Authenticated, semantically valid but noncanonical top-level order  | all stored records normalized `1/2/1/1`                                              | Under shared lock before canonical-order rejection                                                 |
 
 The focused 13-test characterization currently completes in less than one
 tenth of a second on the local PHP 8.5 CLI fixture. That suite duration is not a
@@ -159,17 +207,17 @@ values and prove:
 
 ## Implementation budget and abandonment rule
 
-| Budget | Hard limit for the later schema-v2 attempt |
-| --- | --- |
-| Production PHP | At most 180 net new lines, confined to `SecretsFile` and existing direct wiring; zero production JavaScript/CSS |
-| Production concepts | Zero new classes/interfaces/DTOs/services/registries; at most four private helper methods |
-| Tests | At most 800 net new/changed PHP lines beyond this characterization, using synthetic fixtures only |
-| Documentation | At most 200 net lines across the canonical secret-storage/provider contract updates |
-| Public seam | Zero new or changed public method signatures, API markers, hooks, facades or provider interfaces |
-| Persistence | Zero schema-version, field, table, option, sidecar-meaning or migration changes |
-| Remote calls | Zero; validation remains local and provider operations keep their existing remote budgets |
-| Read/decrypt | Display/storage checks: at most one sidecar decrypt. Exact credential: at most one decrypt and one requested-policy normalization. Webhook verification: at most one decrypt and at most 16 requested-policy normalizations. |
-| Extension callbacks under lock | Zero after the split, including create/replace, readback, portability, self-destruction, health and deletion paths |
+| Budget                         | Hard limit for the later schema-v2 attempt                                                                                                                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Production PHP                 | At most 180 net new lines, confined to `SecretsFile` and existing direct wiring; zero production JavaScript/CSS                                                                                                              |
+| Production concepts            | Zero new classes/interfaces/DTOs/services/registries; at most four private helper methods                                                                                                                                    |
+| Tests                          | At most 800 net new/changed PHP lines beyond this characterization, using synthetic fixtures only                                                                                                                            |
+| Documentation                  | At most 200 net lines across the canonical secret-storage/provider contract updates                                                                                                                                          |
+| Public seam                    | Zero new or changed public method signatures, API markers, hooks, facades or provider interfaces                                                                                                                             |
+| Persistence                    | Zero schema-version, field, table, option, sidecar-meaning or migration changes                                                                                                                                              |
+| Remote calls                   | Zero; validation remains local and provider operations keep their existing remote budgets                                                                                                                                    |
+| Read/decrypt                   | Display/storage checks: at most one sidecar decrypt. Exact credential: at most one decrypt and one requested-policy normalization. Webhook verification: at most one decrypt and at most 16 requested-policy normalizations. |
+| Extension callbacks under lock | Zero after the split, including create/replace, readback, portability, self-destruction, health and deletion paths                                                                                                           |
 
 The implementation must use optimistic exact-record comparison when validation
 needs existing secret material: structurally read and snapshot the record,

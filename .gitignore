@@ -6,6 +6,8 @@ boosterlog
 /.ran-booster-workbench/
 /.dex/
 /.agents/plans/
+/.agents/decks/
+/.agents/blueprints/
 /.agents/skills/ran-booster-dex/
 /docs/plans/
 /docs/reviews/

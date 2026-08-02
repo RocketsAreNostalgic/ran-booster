@@ -10,11 +10,44 @@ storage, schema, public APIs, API markers, provider accounts or remote state.
 **GO:** use the trust tiers, allowed/forbidden contract and negative-conformance
 matrix below as the entry gate for the later coordinated Alpha contract cut.
 
-**NO-GO:** do not claim that the current Alpha already closes ordinary add-on
-plaintext or global-container access. The current exceptions are enumerated
-below. Do not publish a Core/add-on compatibility claim until the later cut
-removes those exceptions, updates the exact API tuple and proves every output
-surface from immutable artifacts.
+**Phase-zero NO-GO:** the baseline did not close ordinary add-on plaintext or
+global-container access. The global/container and bulk enumerator portion is now
+closed by the implementation checkpoint below; saved-secret Webhook Assistance
+callbacks and the open logging contract remain. Do not publish a Core/add-on
+compatibility claim until those remaining exceptions are removed, the exact API
+tuple is updated and every output surface is proven from immutable artifacts.
+
+## Global and bulk closure checkpoint — 2026-08-02
+
+Core runtime commit `f25a09d614aec004cc9190423db8c79a1652d3d2`
+removes the supported global/singleton container path and the unused plural
+credential-plaintext enumerator:
+
+- the live `Booster` instance and update-request filter are scoped inside the
+  bootstrap closure, while WordPress callbacks retain only the references they
+  require;
+- `ran_booster()`, static singleton state, `getInstance()`, `setInstance()` and
+  the container's self-binding are absent with no compatibility wrapper;
+- `Booster::make()` and `bind()` remain public only for existing Core
+  composition and are explicitly internal-by-contract. Making the entire
+  container private was rejected as high-churn and does not provide hostile
+  same-process confidentiality while Core implementation classes remain
+  directly constructible;
+- `PluginRepository::fromSlug()` now hydrates `Plugin` directly; and
+- `SecretsFile::credentialMaterials()` is deleted rather than replaced with a
+  private generic iterator. Display-safe profiles, one exact/default material
+  read, the three-method provider-bound store and Core's bounded requested-
+  provider webhook candidates remain unchanged.
+
+The production change is +143/-198 PHP lines, net -55, with zero new production
+type, public seam, API marker, hook, schema, option, durable state or remote
+call. Tests add 91 net PHP lines and release/CI guards add 33 lines. The focused
+boundary suite passes 64 tests/559 assertions; the full source gate passes 1,835
+tests/11,115 assertions and 123 asset tests. Immutable archive and isolated
+WordPress/load-order evidence is recorded at the later integration checkpoint.
+The remaining Phase-one work is logging closure, provider trust/conformance and
+the fixed-operation Assisted Hooks migration; this checkpoint makes no claim
+that those seams are already closed.
 
 ## Frozen trust tiers
 
@@ -29,7 +62,7 @@ First-party status does not change a tier. The administrator's installation and
 activation decision is the trust decision; Core does not cryptographically
 authenticate an extension publisher.
 
-## Supported call-site inventory
+## Phase-zero supported call-site inventory
 
 ### Core storage and internal consumers
 
@@ -37,7 +70,7 @@ authenticate an extension publisher.
   current container and supplies provider-bound stores to `ProviderRegistry`.
 - `RAN/Secrets/SecretsFile.php` owns credential and webhook persistence,
   constant overlays, temporary request material, the encrypted document and
-  its storage path. Its current public `credentialMaterial()`,
+  its storage path. Its baseline public `credentialMaterial()`,
   `credentialMaterials()`, `webhookMaterials()` and `path()` methods are Core
   implementation surfaces, not safe ordinary add-on contracts.
 - `RAN/Secrets/BoundProviderCredentialStore.php` fixes a `ProviderCode` in its
@@ -72,11 +105,15 @@ authenticate an extension publisher.
   Portability, Release Tracking, Prospective Release and Webhook Cleanup may
   not acquire secret-authority types or methods.
 
-### Current ordinary-add-on exceptions
+### Phase-zero ordinary-add-on exceptions
 
 The following are present at the baseline and must be removed or closed by the
-later coordinated Alpha cut. The characterization test intentionally asserts
-their exact current shape so a change cannot be mistaken for completed proof.
+later coordinated Alpha cut. The original characterization asserted their exact
+baseline shape so a change could not be mistaken for completed proof; the
+current test now records the closed subset explicitly.
+
+Items 1–3 are closed by the checkpoint above. Items 4–6 remain downstream
+acceptance gates.
 
 1. `ran-booster.php` defines `ran_booster()`, which returns
    `Booster::getInstance()`.
@@ -166,18 +203,19 @@ detection. The later Alpha cut must inject every transform into each real
 result/log/notice/support/archive fixture and prove rejection from the exact
 coordinated artifacts.
 
-## Exact future acceptance delta
+## Coordinated cut acceptance delta
 
 The later Core secret/provider runtime lane may replace the current-exposure
 assertions only when one coordinated change proves all of the following:
 
-1. `ran_booster()` and the supported global singleton/container acquisition
-   path are absent, with no compatibility wrapper.
-2. No published ordinary add-on context/hook/facade resolves the container,
+1. **Complete:** `ran_booster()` and the supported global singleton/container
+   acquisition path are absent, with no compatibility wrapper.
+2. **Complete for the container slice:** no published ordinary add-on
+   context/hook/facade resolves the container,
    registry, provider object, credential store, `SecretsFile`, site key, codec,
    storage path or encrypted sidecar.
-3. `SecretsFile::credentialMaterials()` is private or removed; only one exact
-   provider-bound material read remains in the provider contract.
+3. **Complete:** `SecretsFile::credentialMaterials()` is removed; only one
+   exact provider-bound material read remains in the provider contract.
 4. Webhook Assistance no longer publishes `withCredential()` or any callback
    carrying a saved PAT or webhook secret. Setup/reconfigure secret use stays
    inside the matching provider's separately typed fixed operation.

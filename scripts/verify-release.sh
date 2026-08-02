@@ -137,6 +137,24 @@ for removed_api_marker in \
 	fi
 done
 
+if grep -Eq 'function[[:space:]]+ran_booster[[:space:]]*\(' <<< "$bootstrap_source"; then
+	fail 'release ref retains the removed global Core container accessor.'
+fi
+booster_source=$(git show "$commit:RAN/Booster.php")
+service_provider_source=$(git show "$commit:RAN/BoosterServiceProvider.php")
+for removed_singleton_method in getInstance setInstance; do
+	if grep -Eq "function[[:space:]]+${removed_singleton_method}[[:space:]]*\\(" <<< "$booster_source"; then
+		fail "release ref retains the removed Core singleton method: $removed_singleton_method"
+	fi
+done
+if grep -Eq -- "->bind\([[:space:]]*('RAN\\\\Booster'|Booster::class)" <<< "$service_provider_source"; then
+	fail 'release ref retains the removed Core self-binding.'
+fi
+secrets_source=$(git show "$commit:RAN/Secrets/SecretsFile.php")
+if grep -Eq 'function[[:space:]]+credentialMaterials[[:space:]]*\(' <<< "$secrets_source"; then
+	fail 'release ref retains the removed bulk credential-plaintext enumerator.'
+fi
+
 expected_version=${2:-$plugin_version}
 [[ "$expected_version" == "$plugin_version" ]] \
 	|| fail "expected version ($expected_version) does not match release ref ($plugin_version)."

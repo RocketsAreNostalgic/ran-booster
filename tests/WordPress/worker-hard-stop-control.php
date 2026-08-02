@@ -13,7 +13,8 @@ if ( ! is_string( $mode ) || preg_match( '/^[a-f0-9]{24}$/D', (string) $run_id )
 	throw new RuntimeException( 'The hard-stop control arguments are invalid.' );
 }
 global $wpdb;
-$attempts   = ran_booster()->make( RAN\Deployment\DeploymentAttemptRepository::class );
+$booster    = require __DIR__ . '/core-container-fixture.php';
+$attempts   = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
 $table      = RAN\Storage\Database::attemptTableName();
 $manualSlug = 'hard-stop-' . $phase . '-' . $run_id;
 $webhookSlug = 'hard-stop-webhook-' . $phase . '-' . $run_id;
@@ -91,7 +92,7 @@ if ( 'replace-core-lock' === $mode ) {
 
 if ( 'reconcile' === $mode ) {
 	$coreBefore = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	$result = ran_booster()->make( RAN\Deployment\DeploymentCoordinator::class )->reconcileConfirmedStopped( (int) $row['id'], (string) $row['correlation_id'] );
+	$result = $booster->make( RAN\Deployment\DeploymentCoordinator::class )->reconcileConfirmedStopped( (int) $row['id'], (string) $row['correlation_id'] );
 	$expectedState = 'pre' === $phase ? 'failed' : 'needs_attention';
 	$expectedCode  = 'pre' === $phase ? 'worker_stopped' : 'interrupted';
 	if ( $expectedState !== $result->getState()->value || $expectedCode !== $result->getOutcome()?->getCode() ) {

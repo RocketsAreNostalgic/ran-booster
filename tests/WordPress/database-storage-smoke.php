@@ -13,7 +13,7 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	throw new RuntimeException( 'This proof must run through WP-CLI.' );
 }
 
-$booster = ran_booster();
+$booster = require __DIR__ . '/core-container-fixture.php';
 if ( ! $booster instanceof \RAN\Booster ) {
 	throw new RuntimeException( 'RAN Booster is not active.' );
 }

@@ -94,7 +94,10 @@ deactivated and reactivated successfully in a disposable WordPress 7.0.2 and
 MySQL 8.4 fixture; final plugin state was active. The isolated database and
 filesystem fixtures were then removed without touching the shared Local site.
 
-## Traced source paths
+## Phase-zero traced source paths
+
+The call graph below records the pre-split baseline. The implementation
+checkpoint above is authoritative for the current structural/policy behavior.
 
 The canonical path is concentrated in `RAN/Secrets/SecretsFile.php`:
 
@@ -276,10 +279,13 @@ Before the later GO can land, prove all of the following:
 - Schema 3, generic extension records, owner/pool identity, automatic repair,
   plaintext caches and external secret brokers are deferred and receive no seam
   here.
-- `SecretsFile::credentialMaterials()` and ordinary add-on secret exposure are
-  owned by the separate secret-boundary lane. Webhook controller, processor,
-  route, HMAC ordering and request-cost files are owned by the webhook stream.
-  This lane requires no edit to either surface.
+- The subsequent secret-boundary slice removed
+  `SecretsFile::credentialMaterials()` at
+  `f25a09d614aec004cc9190423db8c79a1652d3d2`; exact credential use and bounded
+  requested-provider webhook candidates are unchanged. Saved-secret Assisted
+  Hooks callbacks and logging remain owned by their later coordinated lanes.
+  Webhook controller, processor, route, HMAC ordering and request-cost files
+  remain owned by the webhook stream.
 
 ## Evidence
 

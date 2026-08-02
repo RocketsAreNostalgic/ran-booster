@@ -49,6 +49,12 @@ Provider plugins must require exact Provider API 6 and Logging API 1; Core
 always supplies the concrete logging facade when it constructs the provider
 registry.
 
+Core publishes no global service-container accessor and no bulk credential
+plaintext enumerator. Ordinary add-ons receive only purpose-specific facades;
+credential-bearing providers receive the existing read-only store permanently
+bound to their own provider code. These supported-contract limits do not claim
+confidentiality from hostile PHP running in the same WordPress process.
+
 Start with the [custom git vendor setup guide](docs/custom-git-vendors.md).
 
 GitHub recommends fine-grained personal access tokens for scripted and automated

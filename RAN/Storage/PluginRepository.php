@@ -54,7 +54,7 @@ class PluginRepository extends AbstractPackageRepository {
 			$currentSlug = $tmp[0];
 
 			if ( $currentSlug === $slug ) {
-				return ran_booster()->make( 'RAN\Plugin' )->fromWpArray( $file, $pluginInfo );
+				return Plugin::fromWpArray( $file, $pluginInfo );
 			}
 		}
 

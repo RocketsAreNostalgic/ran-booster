@@ -99,7 +99,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		self::assertFalse( $reflection->hasMethod( 'path' ) );
 	}
 
-	public function testCurrentLegacyOrdinaryAddOnExposureRegisterIsExact(): void {
+	public function testGlobalAndBulkAcquisitionPathsAreClosed(): void {
 		$webhookAssistance  = new ReflectionClass( WebhookAssistanceFacade::class );
 		$sensitiveCallbacks = array_map(
 			static fn ( ReflectionMethod $method ): string => $method->name,
@@ -113,21 +113,33 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		self::assertSame( array( 'provision', 'reconfigure', 'withCredential' ), $sensitiveCallbacks );
 
 		$booster = new ReflectionClass( Booster::class );
-		self::assertTrue( $booster->getMethod( 'getInstance' )->isPublic() );
-		self::assertTrue( $booster->getMethod( 'make' )->isPublic() );
+		self::assertFalse( $booster->hasMethod( 'getInstance' ) );
+		self::assertFalse( $booster->hasMethod( 'setInstance' ) );
+		foreach ( array( 'bind', 'make' ) as $method ) {
+			self::assertTrue( $booster->getMethod( $method )->isPublic() );
+			self::assertStringContainsString(
+				'@internal Core composition only; this is not an extension API.',
+				(string) $booster->getMethod( $method )->getDocComment()
+			);
+		}
 
 		$secrets = new ReflectionClass( SecretsFile::class );
-		foreach ( array( 'credentialMaterial', 'credentialMaterials', 'path', 'webhookMaterials' ) as $method ) {
+		self::assertFalse( $secrets->hasMethod( 'credentialMaterials' ) );
+		foreach ( array( 'credentialMaterial', 'path', 'webhookMaterials' ) as $method ) {
 			self::assertTrue( $secrets->getMethod( $method )->isPublic() );
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source inspection is the contract under test.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
+		self::assertDoesNotMatchRegularExpression( '/function\s+ran_booster\s*\(/', $bootstrap );
+		self::assertStringNotContainsString( 'Booster::getInstance', $bootstrap );
+		self::assertStringNotContainsString( "\$GLOBALS['ran_booster_instance']", $bootstrap );
+		self::assertStringNotContainsString( "->bind( 'RAN\\Booster'", $bootstrap );
 		self::assertMatchesRegularExpression(
-			'/function\s+ran_booster\s*\(\s*\)\s*\{\s*return\s+\\\\RAN\\\\Booster::getInstance\(\);/s',
+			'/\( static function \(\) use \([^\n]+\): void \{\s+\$ran_booster_instance\s+=\s+new Booster\(\);/s',
 			$bootstrap,
-			'The current global-container exception changed without updating the frozen register.'
+			'The live Core container must remain scoped inside the bootstrap closure.'
 		);
 	}
 

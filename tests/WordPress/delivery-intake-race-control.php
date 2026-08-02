@@ -14,7 +14,8 @@ if ( ! is_string( $mode ) || ! is_string( $run_id ) || preg_match( '/^[a-f0-9]{2
 }
 
 global $wpdb;
-$repository  = ran_booster()->make( RAN\Deployment\DeploymentAttemptRepository::class );
+$booster     = require __DIR__ . '/core-container-fixture.php';
+$repository  = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
 $table       = RAN\Storage\Database::attemptTableName();
 $provider    = 'fixture-provider';
 $delivery_id = 'delivery-intake-race-' . $run_id;

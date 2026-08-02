@@ -28,11 +28,10 @@ credential-plaintext enumerator:
   require;
 - `ran_booster()`, static singleton state, `getInstance()`, `setInstance()` and
   the container's self-binding are absent with no compatibility wrapper;
-- `Booster::make()` and `bind()` remain public only for existing Core
-  composition and are explicitly internal-by-contract. Making the entire
-  container private was rejected as high-churn and does not provide hostile
-  same-process confidentiality while Core implementation classes remain
-  directly constructible;
+- at this checkpoint, `Booster::make()` and `bind()` remained public only for
+  existing Core composition and were explicitly internal-by-contract. The
+  supplemental separation below removes them from `Booster` without claiming
+  hostile same-process confidentiality;
 - `PluginRepository::fromSlug()` now hydrates `Plugin` directly; and
 - `SecretsFile::credentialMaterials()` is deleted rather than replaced with a
   private generic iterator. Display-safe profiles, one exact/default material
@@ -56,6 +55,43 @@ Core and Core-before-provider plugin load orders. No shared Local runtime was
 used. The remaining Phase-one work is logging closure, provider
 trust/conformance and the fixed-operation Assisted Hooks migration; this
 checkpoint makes no claim that those seams are already closed.
+
+## Supplemental Core container separation — 2026-08-02
+
+Core runtime commit `8c314cb053f312f147502b746affa5a59dfc4169`
+turns the internal-by-contract distinction above into a structural capability
+boundary:
+
+- `Booster` no longer exposes `make()`, `bind()` or `resolve()`; its runtime
+  methods can reach composition only through a private container reference;
+- final `RAN\Internal\CoreContainer` owns the unchanged request-local binding
+  and reflection-resolution semantics and marks its class and public
+  composition methods `@internal`;
+- bootstrap constructs the container and runtime locally, gives both only to
+  the Core service provider, and publishes named facades or the provider-bound
+  registration contract to extensions;
+- the live runtime is deliberately not self-bound, and architecture tests
+  reject `CoreContainer` and `Booster` in ordinary add-on contract signatures;
+  and
+- the WP-CLI-only source fixture recovers the container from a lifecycle
+  callback for integration proofs, while deterministic release packaging
+  continues to exclude all `tests/` paths.
+
+This buys API isolation and misuse resistance: cooperative extensions no
+longer encounter a supported-looking generic resolver on the runtime object.
+It is not a sandbox or a malicious-plugin confidentiality claim. Installed PHP
+can still construct internal classes, use reflection or inspect same-process
+state, so secret safety continues to depend on narrow supported contracts and
+the absence of convenient bulk-secret capabilities.
+
+The mechanical extraction changes exactly five production PHP files at
++298/-298 lines (net zero), adds one final class and removes one obsolete
+interface (zero net production types), and changes 12 test PHP files at
++195/-172 lines (net +23). It changes no service lifetime, hook, extension API
+marker, schema, option, durable state or remote call. The full source gates pass
+1,835 tests/11,120 assertions (with one existing deprecation), all 32
+characterization checks, the updater bootstrap smoke, PHP coding standards and
+123 asset tests.
 
 ## Frozen trust tiers
 

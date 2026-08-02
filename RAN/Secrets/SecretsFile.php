@@ -198,45 +198,6 @@ class SecretsFile {
 	}
 
 	/**
-	 * Return complete credential records for internal provider adapters only.
-	 *
-	 * @return array<string, array<string, mixed>>
-	 */
-	public function credentialMaterials( ProviderCode|string $provider ): array {
-		$this->assertAvailable();
-		$policy       = $this->providerPolicies->credentialPolicy( $provider );
-		$providerCode = $this->providerValue( $provider );
-		$records      = array();
-		$constant     = $this->constantCredential( $providerCode, $policy );
-
-		if ( null !== $constant ) {
-			$records[ self::CONSTANT_PROFILE ] = $constant;
-		}
-
-		foreach ( $this->temporaryCredentials[ $providerCode ] ?? array() as $id => $record ) {
-			$records[ $id ] = $record;
-		}
-
-		$document = $this->fileDocument();
-		$stored   = $document[ self::CREDENTIALS ][ $providerCode ] ?? array();
-
-		foreach ( $stored as $id => $record ) {
-			$runtime = $this->runtimeCredentialRecord( $providerCode, $id, $record );
-			if ( $this->credentialDestroyed( $runtime ) ) {
-				continue;
-			}
-			$validated      = $this->revalidateStoredCredential( $providerCode, $id, $record );
-			$records[ $id ] = $this->runtimeCredentialRecord(
-				$providerCode,
-				$id,
-				$validated
-			);
-		}
-
-		return $records;
-	}
-
-	/**
 	 * Return one secret-bearing credential, or the provider default when ID is null.
 	 *
 	 * @return array<string, mixed>|null

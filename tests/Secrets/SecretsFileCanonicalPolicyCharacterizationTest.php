@@ -117,6 +117,19 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertSame( array(), $this->calls->counts() );
 	}
 
+	public function testProviderBoundStoreCannotSelectOrEnumerateAnotherProvider(): void {
+		$this->seedRepresentativeDocument();
+		$store    = $this->secrets->credentialsFor( 'alpha' );
+		$material = $store->credentialMaterial( 'alpha-credential' );
+		$profiles = $store->credentialProfiles();
+
+		self::assertSame( 'alpha', $material['provider'] ?? null );
+		self::assertSame( 'alpha-credential', $store->credentialMaterial()['id'] ?? null );
+		self::assertNull( $store->credentialMaterial( 'beta-credential' ) );
+		self::assertSame( array( 'alpha-credential' ), array_keys( $profiles ) );
+		self::assertArrayNotHasKey( 'secret', $profiles['alpha-credential'] );
+	}
+
 	public function testDefaultCredentialRevalidatesOnlyOneStructurallySelectedStoredRecord(): void {
 		$this->seedRepresentativeDocument();
 		$this->calls->reset();

@@ -35,21 +35,11 @@ class Booster {
 		'ran-booster_page_ran-booster-themes',
 	);
 
-	private static $instance;
-
 	public $boosterPath;
 
 	public $boosterUrl;
 
 	protected $services = array();
-
-	public static function getInstance() {
-		return static::$instance;
-	}
-
-	public static function setInstance( Booster $booster ) {
-		static::$instance = $booster;
-	}
 
 	public function init() {
 		add_action( 'admin_init', array( $this->make( \RAN\Admin\CredentialSelfDestructPurger::class ), 'purge' ), 1 );
@@ -668,6 +658,8 @@ class Booster {
 	/**
 	 * Bind a service to the container.
 	 *
+	 * @internal Core composition only; this is not an extension API.
+	 *
 	 * @param $alias
 	 * @param $concrete
 	 * @return mixed
@@ -678,6 +670,8 @@ class Booster {
 
 	/**
 	 * Request a service from the container.
+	 *
+	 * @internal Core composition only; this is not an extension API.
 	 *
 	 * @param $alias
 	 * @return mixed

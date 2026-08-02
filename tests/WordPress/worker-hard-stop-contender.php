@@ -11,12 +11,13 @@ if ( ! in_array( $phase, array( 'pre', 'post', 'foreign' ), true )
 	throw new RuntimeException( 'The contender marker path is invalid.' );
 }
 
-$attempts = ran_booster()->make( RAN\Deployment\DeploymentAttemptRepository::class );
+$booster  = require __DIR__ . '/core-container-fixture.php';
+$attempts = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
 $attempt  = $attempts->claimNext();
 if ( null === $attempt ) {
 	throw new RuntimeException( 'The contender could not claim the second attempt.' );
 }
-$coordinator = ran_booster()->make( RAN\Deployment\DeploymentCoordinator::class );
+$coordinator = $booster->make( RAN\Deployment\DeploymentCoordinator::class );
 $acquire     = new ReflectionMethod( $coordinator, 'acquireCoreLock' );
 $release     = new ReflectionMethod( $coordinator, 'releaseCoreLock' );
 $suffix      = '';

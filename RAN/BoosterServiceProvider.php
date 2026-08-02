@@ -147,8 +147,6 @@ final class BoosterServiceProvider implements ProviderInterface {
 			}
 		);
 
-		// Bind the Booster instance itself to the container
-		$booster->bind( 'RAN\Booster', $booster );
 		$booster->bind( Database::class, $database );
 		$booster->bind( LoggingFacade::class, $logging );
 		$booster->bind( AdminInteractionFacade::class, $adminInteraction );

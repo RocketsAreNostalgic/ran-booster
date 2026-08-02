@@ -151,6 +151,21 @@ jobs:
                   wp plugin install "$GITHUB_WORKSPACE/${{ steps.archive.outputs.path }}" --path=build/wordpress --activate
                   wp plugin is-active ran-booster --path=build/wordpress
 
+            - name: Prove global Core container isolation
+              run: |
+                  wp eval '
+                    if ( function_exists( "ran_booster" ) || array_key_exists( "ran_booster_instance", $GLOBALS ) ) {
+                      throw new RuntimeException( "The removed global Core container acquisition path is available." );
+                    }
+                    if ( method_exists( RAN\Booster::class, "getInstance" ) || method_exists( RAN\Booster::class, "setInstance" ) ) {
+                      throw new RuntimeException( "The removed Core singleton acquisition path is available." );
+                    }
+                    if ( method_exists( RAN\Secrets\SecretsFile::class, "credentialMaterials" ) ) {
+                      throw new RuntimeException( "The removed bulk credential enumerator is available." );
+                    }
+                    WP_CLI::success( "No global Core container or bulk credential enumerator is published." );
+                  ' --path=build/wordpress
+
             - name: Prove shared updater registration
               shell: bash
               run: |

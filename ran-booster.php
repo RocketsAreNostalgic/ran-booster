@@ -143,141 +143,65 @@ add_action(
 	PHP_INT_MIN + 1
 );
 
-$ran_booster_instance = new Booster();
-$ran_booster_instance->setInstance( $ran_booster_instance );
-$ran_booster_instance->boosterPath = plugin_dir_path( __FILE__ );
-$ran_booster_instance->boosterUrl  = plugin_dir_url( __FILE__ );
-$ran_booster_instance->register( new BoosterServiceProvider() );
-$ran_booster_instance->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
-$ran_booster_instance->bind(
-	CoreSelfUpdateStatus::class,
-	new CoreSelfUpdateStatus(
-		$ran_booster_self_update_policy,
-		$GLOBALS['ran_booster_release_updater']
-	)
-);
-
-// Release targets must join the package broker before its earliest
-// plugins_loaded callback fixes the request-local runtime selection.
-try {
-	$ran_booster_instance->make( ManagedReleaseTargetRegistrar::class )->register();
-} catch ( Throwable $exception ) {
-	\RAN\Logging\BoosterLogger::logException(
-		'managed release target registration unavailable',
-		$exception,
-		array( 'step' => 'managed_release_target_registration' )
+( static function () use ( $ran_booster_self_update_policy, &$ran_booster_updater_prospective_api_version ): void {
+	$ran_booster_instance              = new Booster();
+	$ran_booster_instance->boosterPath = plugin_dir_path( __FILE__ );
+	$ran_booster_instance->boosterUrl  = plugin_dir_url( __FILE__ );
+	$ran_booster_instance->register( new BoosterServiceProvider() );
+	$ran_booster_instance->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
+	$ran_booster_instance->bind(
+		CoreSelfUpdateStatus::class,
+		new CoreSelfUpdateStatus(
+			$ran_booster_self_update_policy,
+			$GLOBALS['ran_booster_release_updater']
+		)
 	);
-}
 
-register_activation_hook( __FILE__, array( $ran_booster_instance, 'activate' ) );
-register_deactivation_hook( __FILE__, array( $ran_booster_instance, 'deactivate' ) );
-
-add_action(
-	'plugins_loaded',
-	static function () use ( $ran_booster_instance, &$ran_booster_updater_prospective_api_version ): void {
-		// All plugins have now had an opportunity to attach their provider
-		// registration callback. No provider consumer is resolved before this
-		// extension seam closes and the registry is sealed.
-		$providerRegistry = $ran_booster_instance->make( ProviderRegistry::class );
-		do_action( 'ran_booster_register_providers', $providerRegistry );
-		$providerRegistry->seal();
-		$webhookAssistance = $ran_booster_instance->make( WebhookAssistanceFacade::class );
-		$webhookCleanup    = $ran_booster_instance->make( WebhookCleanupFacade::class );
-		$releaseTracking   = $ran_booster_instance->make( ReleaseTrackingFacade::class );
-		$portability       = $ran_booster_instance->make( PortabilityFacade::class );
-		$logging           = $ran_booster_instance->make( LoggingFacade::class );
-		$adminInteraction  = $ran_booster_instance->make( AdminInteractionFacade::class );
-		$addOnRegistry     = new AdminAddOnRegistry(
-			$logging,
-			array(
-				'webhook_assistance' => $webhookAssistance,
-				'release_tracking'   => $releaseTracking,
-			),
-			RAN_BOOSTER_ADDON_API_VERSION,
-			RAN_BOOSTER_ADDON_API_VERSION
+	// Release targets must join the package broker before its earliest
+	// plugins_loaded callback fixes the request-local runtime selection.
+	try {
+		$ran_booster_instance->make( ManagedReleaseTargetRegistrar::class )->register();
+	} catch ( Throwable $exception ) {
+		\RAN\Logging\BoosterLogger::logException(
+			'managed release target registration unavailable',
+			$exception,
+			array( 'step' => 'managed_release_target_registration' )
 		);
-		do_action( 'ran_booster_register_admin_tabs', $addOnRegistry );
-		$addOnRegistry->seal();
-		$ran_booster_instance->bind( AdminAddOnRegistry::class, $addOnRegistry );
+	}
 
-		try {
-			do_action( 'ran_booster_admin_interaction_ready', $adminInteraction, $logging );
-		} catch ( Throwable $failure ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'add-on service listener failed',
-				$failure,
+	register_activation_hook( __FILE__, array( $ran_booster_instance, 'activate' ) );
+	register_deactivation_hook( __FILE__, array( $ran_booster_instance, 'deactivate' ) );
+
+	add_action(
+		'plugins_loaded',
+		static function () use ( $ran_booster_instance, &$ran_booster_updater_prospective_api_version ): void {
+			// All plugins have now had an opportunity to attach their provider
+			// registration callback. No provider consumer is resolved before this
+			// extension seam closes and the registry is sealed.
+			$providerRegistry = $ran_booster_instance->make( ProviderRegistry::class );
+			do_action( 'ran_booster_register_providers', $providerRegistry );
+			$providerRegistry->seal();
+			$webhookAssistance = $ran_booster_instance->make( WebhookAssistanceFacade::class );
+			$webhookCleanup    = $ran_booster_instance->make( WebhookCleanupFacade::class );
+			$releaseTracking   = $ran_booster_instance->make( ReleaseTrackingFacade::class );
+			$portability       = $ran_booster_instance->make( PortabilityFacade::class );
+			$logging           = $ran_booster_instance->make( LoggingFacade::class );
+			$adminInteraction  = $ran_booster_instance->make( AdminInteractionFacade::class );
+			$addOnRegistry     = new AdminAddOnRegistry(
+				$logging,
 				array(
-					'source' => 'admin',
-					'step'   => 'add_on_service_ready',
-					'event'  => 'ran_booster_admin_interaction_ready',
-				)
+					'webhook_assistance' => $webhookAssistance,
+					'release_tracking'   => $releaseTracking,
+				),
+				RAN_BOOSTER_ADDON_API_VERSION,
+				RAN_BOOSTER_ADDON_API_VERSION
 			);
-		}
+			do_action( 'ran_booster_register_admin_tabs', $addOnRegistry );
+			$addOnRegistry->seal();
+			$ran_booster_instance->bind( AdminAddOnRegistry::class, $addOnRegistry );
 
-		try {
-			do_action( 'ran_booster_portability_ready', $portability, $logging );
-		} catch ( Throwable $failure ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'add-on service listener failed',
-				$failure,
-				array(
-					'source' => 'admin',
-					'step'   => 'add_on_service_ready',
-					'event'  => 'ran_booster_portability_ready',
-				)
-			);
-		}
-
-		try {
-			do_action( 'ran_booster_webhook_assistance_ready', $webhookAssistance, $logging );
-		} catch ( Throwable $failure ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'add-on service listener failed',
-				$failure,
-				array(
-					'source' => 'admin',
-					'step'   => 'add_on_service_ready',
-					'event'  => 'ran_booster_webhook_assistance_ready',
-				)
-			);
-		}
-
-		try {
-			do_action( 'ran_booster_webhook_cleanup_ready', $webhookCleanup );
-		} catch ( Throwable $failure ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'add-on service listener failed',
-				$failure,
-				array(
-					'source' => 'admin',
-					'step'   => 'add_on_service_ready',
-					'event'  => 'ran_booster_webhook_cleanup_ready',
-				)
-			);
-		}
-
-		try {
-			do_action( 'ran_booster_release_tracking_ready', $releaseTracking, $logging );
-		} catch ( Throwable $failure ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'add-on service listener failed',
-				$failure,
-				array(
-					'source' => 'admin',
-					'step'   => 'add_on_service_ready',
-					'event'  => 'ran_booster_release_tracking_ready',
-				)
-			);
-		}
-
-		if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-				=== $ran_booster_updater_prospective_api_version
-				&& defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' )
-				&& ProspectiveReleaseFacade::API_VERSION
-				=== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
 			try {
-				$prospectiveRelease = $ran_booster_instance->make( ProspectiveReleaseFacade::class );
-				do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease, $logging );
+				do_action( 'ran_booster_admin_interaction_ready', $adminInteraction, $logging );
 			} catch ( Throwable $failure ) {
 				\RAN\Logging\BoosterLogger::logException(
 					'add-on service listener failed',
@@ -285,32 +209,100 @@ add_action(
 					array(
 						'source' => 'admin',
 						'step'   => 'add_on_service_ready',
-						'event'  => 'ran_booster_prospective_release_ready',
+						'event'  => 'ran_booster_admin_interaction_ready',
 					)
 				);
 			}
-		}
 
-		$ran_booster_instance->bind( Dashboard::class, $ran_booster_instance->make( Dashboard::class ) );
-		$ran_booster_instance->init();
-	},
-	100
-);
+			try {
+				do_action( 'ran_booster_portability_ready', $portability, $logging );
+			} catch ( Throwable $failure ) {
+				\RAN\Logging\BoosterLogger::logException(
+					'add-on service listener failed',
+					$failure,
+					array(
+						'source' => 'admin',
+						'step'   => 'add_on_service_ready',
+						'event'  => 'ran_booster_portability_ready',
+					)
+				);
+			}
 
-$ran_booster_update_request_filter = new WordPressOrgUpdateRequestFilter(
-	$ran_booster_instance->make( Database::class ),
-	$ran_booster_instance->make( 'RAN\Storage\PluginRepository' ),
-	$ran_booster_instance->make( 'RAN\Storage\ThemeRepository' ),
-	plugin_basename( __FILE__ )
-);
-add_filter( 'http_request_args', array( $ran_booster_update_request_filter, 'plugins' ), 5, 2 );
-add_filter( 'http_request_args', array( $ran_booster_update_request_filter, 'themes' ), 5, 2 );
+			try {
+				do_action( 'ran_booster_webhook_assistance_ready', $webhookAssistance, $logging );
+			} catch ( Throwable $failure ) {
+				\RAN\Logging\BoosterLogger::logException(
+					'add-on service listener failed',
+					$failure,
+					array(
+						'source' => 'admin',
+						'step'   => 'add_on_service_ready',
+						'event'  => 'ran_booster_webhook_assistance_ready',
+					)
+				);
+			}
 
-if ( ! function_exists( 'ran_booster' ) ) {
-	/**
-	 * @return \RAN\Booster
-	 */
-	function ran_booster() {
-		return \RAN\Booster::getInstance();
-	}
-}
+			try {
+				do_action( 'ran_booster_webhook_cleanup_ready', $webhookCleanup );
+			} catch ( Throwable $failure ) {
+				\RAN\Logging\BoosterLogger::logException(
+					'add-on service listener failed',
+					$failure,
+					array(
+						'source' => 'admin',
+						'step'   => 'add_on_service_ready',
+						'event'  => 'ran_booster_webhook_cleanup_ready',
+					)
+				);
+			}
+
+			try {
+				do_action( 'ran_booster_release_tracking_ready', $releaseTracking, $logging );
+			} catch ( Throwable $failure ) {
+				\RAN\Logging\BoosterLogger::logException(
+					'add-on service listener failed',
+					$failure,
+					array(
+						'source' => 'admin',
+						'step'   => 'add_on_service_ready',
+						'event'  => 'ran_booster_release_tracking_ready',
+					)
+				);
+			}
+
+			if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
+				=== $ran_booster_updater_prospective_api_version
+				&& defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' )
+				&& ProspectiveReleaseFacade::API_VERSION
+				=== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
+				try {
+					$prospectiveRelease = $ran_booster_instance->make( ProspectiveReleaseFacade::class );
+					do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease, $logging );
+				} catch ( Throwable $failure ) {
+					\RAN\Logging\BoosterLogger::logException(
+						'add-on service listener failed',
+						$failure,
+						array(
+							'source' => 'admin',
+							'step'   => 'add_on_service_ready',
+							'event'  => 'ran_booster_prospective_release_ready',
+						)
+					);
+				}
+			}
+
+			$ran_booster_instance->bind( Dashboard::class, $ran_booster_instance->make( Dashboard::class ) );
+			$ran_booster_instance->init();
+		},
+		100
+	);
+
+	$ran_booster_update_request_filter = new WordPressOrgUpdateRequestFilter(
+		$ran_booster_instance->make( Database::class ),
+		$ran_booster_instance->make( 'RAN\Storage\PluginRepository' ),
+		$ran_booster_instance->make( 'RAN\Storage\ThemeRepository' ),
+		plugin_basename( __FILE__ )
+	);
+	add_filter( 'http_request_args', array( $ran_booster_update_request_filter, 'plugins' ), 5, 2 );
+	add_filter( 'http_request_args', array( $ran_booster_update_request_filter, 'themes' ), 5, 2 );
+} )();

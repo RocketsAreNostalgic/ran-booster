@@ -156,8 +156,8 @@ later coordinated Alpha cut. The original characterization asserted their exact
 baseline shape so a change could not be mistaken for completed proof; the
 current test now records the closed subset explicitly.
 
-Items 1–3 are closed by the checkpoint above. Items 4–6 remain downstream
-acceptance gates.
+Items 1–3 are closed by the checkpoint above. Item 6 is closed by the Logging
+API removal checkpoint below. Items 4–5 remain downstream acceptance gates.
 
 1. `ran-booster.php` defines `ran_booster()`, which returns
    `Booster::getInstance()`.
@@ -176,6 +176,19 @@ acceptance gates.
    messages and context. `RAN/Logging/BoosterLogger.php` allowlists context keys
    and excludes exception messages/traces, but does not detect arbitrary secret
    values in an allowed string or the message itself.
+
+### Logging API removal checkpoint
+
+The coordinated Phase 1 closure removes the public ordinary-add-on Logging API
+instead of replacing it with another general-purpose vocabulary. Core keeps its
+private, bounded operational logging, while add-on and provider contracts no
+longer receive a logger, expose `ProviderRegistry::logging()`, or publish the
+`RAN_BOOSTER_LOGGING_API_VERSION` marker. The coordinated compatibility cut is
+Add-on API 13, Provider API 7, Portability API 2, and Admin Interaction API 2;
+Prospective Release API remains 4.
+
+This closes the supported free-form path. It does not claim that same-process
+PHP prevents a hostile plugin from observing or invoking unrelated callbacks.
 
 These are current exposure facts, not permissions for new consumers.
 

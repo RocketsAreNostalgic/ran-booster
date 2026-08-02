@@ -39,9 +39,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	public function testPluginLoadedBeforeTheApiMarkerRegistersOnTheLaterHook(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) );
-		self::assertFalse( defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 6 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 7 );
 
 		list( $registry, , $path ) = $this->registry();
 		$this->runRegistrationHook( $registry );
@@ -53,8 +51,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterTheApiMarkerExercisesTheCompleteProviderContract(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 6 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 7 );
 		$this->loadFixturePlugin();
 		list( $registry, $secrets, $path ) = $this->registry();
 
@@ -171,7 +168,7 @@ final class ExternalFixturePluginTest extends TestCase {
 
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
-	public function testPluginDoesNotRegisterWithoutLoggingApi(): void {
+	public function testPluginDoesNotRegisterWithAnOlderProviderApi(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 6 );
 		$this->loadFixturePlugin();
 		list( $registry, , $path ) = $this->registry();
@@ -208,7 +205,6 @@ final class ExternalFixturePluginTest extends TestCase {
 		$secretPolicies = new ProviderSecretPolicyCatalog();
 		$secrets        = SecretsFileTestFactory::create( $path, array(), $secretPolicies );
 		$registry       = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$secretPolicies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )

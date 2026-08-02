@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use LogicException;
-use RAN\AddOn\Logging\LoggingFacade;
 
 /**
  * The small, capability-checked context handed to a rendered add-on tab.
@@ -19,8 +18,7 @@ final readonly class AdminAddOnContext {
 		private int $coreApiVersion,
 		private int $addOnApiVersion,
 		/** @var array<string, object> */
-		private array $facades,
-		private LoggingFacade $logger
+		private array $facades
 	) {
 	}
 
@@ -30,7 +28,6 @@ final readonly class AdminAddOnContext {
 		string $scope,
 		int $coreApiVersion,
 		int $addOnApiVersion,
-		LoggingFacade $logger,
 		array $facades = array()
 	): self {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -60,8 +57,7 @@ final readonly class AdminAddOnContext {
 			$scope,
 			$coreApiVersion,
 			$addOnApiVersion,
-			$facades,
-			$logger
+			$facades
 		);
 	}
 
@@ -83,10 +79,6 @@ final readonly class AdminAddOnContext {
 
 	public function addOnApiVersion(): int {
 		return $this->addOnApiVersion;
-	}
-
-	public function logger(): LoggingFacade {
-		return $this->logger;
 	}
 
 	public function facade( string $name ): ?object {

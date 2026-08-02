@@ -211,7 +211,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
 		$provider = new TemporaryCredentialProvider( $secrets->credentialsFor( 'gh' ), $anonymousFailure, $providerRepositoryId );
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ), $catalog );
+		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
 		return array( new BlueprintRepositoryVerifier( $registry, $secrets ), $provider, $secrets );
 	}

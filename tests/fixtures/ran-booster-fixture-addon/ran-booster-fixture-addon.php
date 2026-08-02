@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: RAN Booster Fixture Add-on
- * Description: Test-only Booster Add-on API 12 conformance fixture.
+ * Description: Test-only Booster Add-on API 13 conformance fixture.
  * Version: 0.0.0
  * Requires PHP: 8.2
  * License: GPL-2.0-only
@@ -17,17 +17,14 @@ add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-			|| 12 !== RAN_BOOSTER_ADDON_API_VERSION
-			|| ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-			|| 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+			|| 13 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 			return;
 		}
 
 		add_action(
 			'ran_booster_webhook_assistance_ready',
-			static function ( object $facade, object $logging ): void {
-				if ( ! $facade instanceof \RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade
-					|| ! $logging instanceof \RAN\AddOn\Logging\LoggingFacade ) {
+			static function ( object $facade ): void {
+				if ( ! $facade instanceof \RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade ) {
 					return;
 				}
 
@@ -61,7 +58,7 @@ add_action(
 				);
 			},
 			10,
-			2
+			1
 		);
 	}
 );

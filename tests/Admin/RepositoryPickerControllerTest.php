@@ -555,7 +555,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		}
 
 		return new RepositoryPickerController(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ),
+			new ProviderRegistry( array( $provider ) ),
 			new RepositoryPickerSecretsFile( array( $providerCode => $profiles ), $storageUnavailable ),
 			$this->publicLookupProfiles
 		);

@@ -56,7 +56,6 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$secrets        = SecretsFileTestFactory::create( $path, array(), $secretPolicies );
 		$provider       = null;
 		$registry       = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$secretPolicies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
@@ -162,7 +161,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			}
 		};
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 
 		try {
 			// @phpstan-ignore-next-line Deliberately prove the typed public boundary.
@@ -191,7 +190,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			}
 		};
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 
 		try {
 			$registry->register( $provider );
@@ -211,7 +210,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 	public function testSelectedProviderDiagnosticsDoNotSweepTheSealedRegistry(): void {
 		$selected = new ExternalFixtureProvider( 'selected' );
 		$idle     = new ExternalFixtureProvider( 'idle' );
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $selected, $idle ) );
+		$registry = new ProviderRegistry( array( $selected, $idle ) );
 		$registry->seal();
 
 		$provider = $registry->get( 'selected' );
@@ -240,7 +239,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 				throw new \LogicException( 'Diagnostics must not be requested after sealing.' );
 			}
 		};
-		$registry      = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new ExternalFixtureProvider() ) );
+		$registry      = new ProviderRegistry( array( new ExternalFixtureProvider() ) );
 		$registry->seal();
 
 		try {
@@ -304,7 +303,6 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			}
 		};
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static function () use ( $callback ): ProviderCredentialStore {
@@ -582,7 +580,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 
 	public function testFixtureWithoutWebhooksFailsPushToDeployExplicitly(): void {
 		$resolver = new PackageRepositoryRequestResolver(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new ExternalFixtureProvider() ) )
+			new ProviderRegistry( array( new ExternalFixtureProvider() ) )
 		);
 
 		$this->expectException( UnsupportedProviderCapability::class );
@@ -597,7 +595,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 	}
 
 	public function testFixtureWithoutWebhooksCannotContributeWebhookReadiness(): void {
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new ExternalFixtureProvider() ) );
+		$registry = new ProviderRegistry( array( new ExternalFixtureProvider() ) );
 
 		$this->expectException( UnsupportedProviderCapability::class );
 

@@ -11,8 +11,6 @@ use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
-use RAN\AddOn\Logging\LoggingFacade;
-use Tests\Support\NullLoggingFacade;
 use RAN\Admin\AdminAddOnContext;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminAddOnTab;
@@ -27,20 +25,23 @@ final class AdminAddOnRegistryTest extends TestCase {
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
 	}
 
-	public function testAddOnApiSevenRequiresLoggingAtBothConstructionBoundaries(): void {
-		$registryLogging = ( new ReflectionMethod( AdminAddOnRegistry::class, '__construct' ) )->getParameters()[0];
-		$contextLogging  = ( new ReflectionMethod( AdminAddOnContext::class, 'forCurrentAdministrator' ) )->getParameters()[5];
+	public function testAddOnApiSevenConstructionBoundariesDoNotExposeGenericLogging(): void {
+		$registryParameters = array_map(
+			static fn ( \ReflectionParameter $parameter ): string => $parameter->getName(),
+			( new ReflectionMethod( AdminAddOnRegistry::class, '__construct' ) )->getParameters()
+		);
+		$contextParameters  = array_map(
+			static fn ( \ReflectionParameter $parameter ): string => $parameter->getName(),
+			( new ReflectionMethod( AdminAddOnContext::class, 'forCurrentAdministrator' ) )->getParameters()
+		);
 
-		self::assertSame( LoggingFacade::class, (string) $registryLogging->getType() );
-		self::assertFalse( $registryLogging->isOptional() );
-		self::assertSame( LoggingFacade::class, (string) $contextLogging->getType() );
-		self::assertFalse( $contextLogging->isOptional() );
+		self::assertNotContains( 'logging', $registryParameters );
+		self::assertNotContains( 'logger', $contextParameters );
 	}
 
 	public function testSealedRegistryProvidesOneTrustedCallableTab(): void {
 		$facade   = new \stdClass();
-		$logging  = new NullLoggingFacade();
-		$registry = new AdminAddOnRegistry( $logging, array( 'example_service' => $facade ), 7, 7 );
+		$registry = new AdminAddOnRegistry( array( 'example_service' => $facade ), 7, 7 );
 		$rendered = array();
 		$tab      = new AdminAddOnTab(
 			'ran-booster-example',
@@ -70,8 +71,6 @@ final class AdminAddOnRegistryTest extends TestCase {
 		self::assertSame( array( 'example' ), $rendered );
 		self::assertSame( 'site', $context->scope() );
 		self::assertSame( $facade, $context->facade( 'example_service' ) );
-		self::assertInstanceOf( LoggingFacade::class, $context->logger() );
-		self::assertSame( $logging, $context->logger() );
 		self::assertNull( $context->facade( 'not_available' ) );
 	}
 
@@ -94,7 +93,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 	}
 
 	public function testRegistryRejectsDuplicateAndLateRegistration(): void {
-		$registry = new AdminAddOnRegistry( new NullLoggingFacade() );
+		$registry = new AdminAddOnRegistry();
 		$registry->register( $this->tab( 'first' ) );
 
 		try {
@@ -110,7 +109,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 	}
 
 	public function testRegistryAllowsOnlyOneTabPerAddOn(): void {
-		$registry = new AdminAddOnRegistry( new NullLoggingFacade() );
+		$registry = new AdminAddOnRegistry();
 		$registry->register( $this->tab( 'first' ) );
 
 		$this->expectException( LogicException::class );
@@ -118,7 +117,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 	}
 
 	public function testRegistryRejectsUndeclaredFacadeAndIncompatibleGeneration(): void {
-		$registry = new AdminAddOnRegistry( new NullLoggingFacade(), array(), 7, 7 );
+		$registry = new AdminAddOnRegistry( array(), 7, 7 );
 
 		try {
 			$registry->register(
@@ -173,8 +172,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 			'https://example.test/wp-admin/admin.php?page=ran-booster',
 			'site',
 			$coreApiVersion,
-			$addOnApiVersion,
-			new NullLoggingFacade()
+			$addOnApiVersion
 		);
 	}
 }

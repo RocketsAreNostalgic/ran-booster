@@ -160,7 +160,7 @@ final class WebhookControllerTest extends TestCase {
 
 	private function processor( WebhookControllerProvider $provider, WebhookControllerCoordinator $coordinator ): WebhookProcessor {
 		return new WebhookProcessor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ),
+			new ProviderRegistry( array( $provider ) ),
 			$coordinator,
 			new SignedWebhookVerifier(
 				new class() extends SecretsFile {

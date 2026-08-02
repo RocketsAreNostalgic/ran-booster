@@ -84,7 +84,7 @@ final class PackageEditProviderGuardDispatcherTest extends TestCase {
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
 		$submitted            = new ExternalFixtureProvider( 'gh' );
-		$providers            = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $submitted ) );
+		$providers            = new ProviderRegistry( array( $submitted ) );
 		$_POST['ran_booster'] = array_merge( array( 'action' => $action ), $request );
 
 		$dashboard = $this->createMock( Dashboard::class );
@@ -108,7 +108,7 @@ final class PackageEditProviderGuardDispatcherTest extends TestCase {
 		$package              = EditBoundaryPackage::make( 'fixture/fixture.php', 'temporarily-offline' );
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
-		$providers            = new ProviderRegistry( new \Tests\Support\NullLoggingFacade() );
+		$providers            = new ProviderRegistry();
 		$unlinkInput          = array(
 			'action' => 'unlink-plugin',
 			'file'   => 'fixture/fixture.php',
@@ -128,7 +128,7 @@ final class PackageEditProviderGuardDispatcherTest extends TestCase {
 		$package              = EditBoundaryPackage::make( 'fixture-theme', 'temporarily-offline' );
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
-		$providers            = new ProviderRegistry( new \Tests\Support\NullLoggingFacade() );
+		$providers            = new ProviderRegistry();
 		$unlinkInput          = array(
 			'action'     => 'unlink-theme',
 			'stylesheet' => 'fixture-theme',

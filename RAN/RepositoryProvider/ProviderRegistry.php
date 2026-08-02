@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use LogicException;
-use RAN\AddOn\Logging\LoggingFacade;
 use RAN\Logging\BoosterLogger;
 use RAN\Provider\ProviderCapability as ProviderCapabilityContract;
 use RAN\RepositoryProvider\Admin\ProviderNavigationOrderer;
@@ -25,18 +24,15 @@ final class ProviderRegistry {
 	private bool $registrationInProgress = false;
 	private ProviderSecretPolicyCatalog $secretPolicies;
 	private ?\Closure $credentialStoreFactory;
-	private LoggingFacade $logging;
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
 	 */
 	public function __construct(
-		LoggingFacade $logging,
 		iterable $providers = array(),
 		?ProviderSecretPolicyCatalog $secretPolicies = null,
 		?callable $credentialStoreFactory = null
 	) {
-		$this->logging                = $logging;
 		$this->secretPolicies         = $secretPolicies ?? new ProviderSecretPolicyCatalog();
 		$this->credentialStoreFactory = null === $credentialStoreFactory
 			? null
@@ -168,10 +164,6 @@ final class ProviderRegistry {
 
 	public function isSealed(): bool {
 		return $this->sealed;
-	}
-
-	public function logging(): LoggingFacade {
-		return $this->logging;
 	}
 
 	public function get( ProviderCode|string $code ): RepositoryProvider {

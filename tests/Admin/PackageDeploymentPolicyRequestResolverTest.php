@@ -54,7 +54,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 		};
-		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$this->expectException( UnsupportedProviderCapability::class );
 		try {
@@ -101,7 +101,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 		};
-		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$result = $resolver->resolve(
 			array(

@@ -15,8 +15,7 @@ final class ExternalFixtureDocumentationPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPluginRegistersOneStructuredProviderDocumentationFilter(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 
@@ -40,7 +39,7 @@ final class ExternalFixtureDocumentationPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginIsHarmlessWhenBoosterIsAbsentOrLoggingIsUnavailable(): void {
+	public function testPluginIsHarmlessWhenBoosterIsAbsentOrTheApiIsIncompatible(): void {
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_after_provider_gh', $GLOBALS['ran_booster_external_fixture_addon_actions'] );

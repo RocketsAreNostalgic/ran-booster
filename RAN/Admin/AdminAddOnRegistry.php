@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use LogicException;
-use RAN\AddOn\Logging\LoggingFacade;
 
 /**
  * One-request registry for trusted add-on dashboard tabs.
@@ -23,17 +22,12 @@ final class AdminAddOnRegistry {
 	/** @var array<string, object> */
 	private array $facades;
 
-	private LoggingFacade $logging;
-
 	/** @param array<string, object> $facades Core-owned allowlisted facade map. */
 	public function __construct(
-		LoggingFacade $logging,
 		array $facades = array(),
 		private int $coreApiVersion = 1,
 		private int $addOnApiVersion = 1
 	) {
-		$this->logging = $logging;
-
 		if ( $this->coreApiVersion < 1 || $this->addOnApiVersion < 1 ) {
 			throw new LogicException( 'Add-on API versions must be positive integers.' );
 		}
@@ -106,7 +100,6 @@ final class AdminAddOnRegistry {
 			$scope,
 			$this->coreApiVersion,
 			$this->addOnApiVersion,
-			$this->logging,
 			$facades
 		);
 	}

@@ -62,7 +62,8 @@ $assert( DeploymentState::NEEDS_ATTENTION === $unsafe->getState(), 'Interrupted 
 $source = file_get_contents( dirname( __DIR__ ) . '/ran-booster.php' );
 $assert( is_string( $source ) && ! str_contains( $source, 'WorkerCliCommand' ), 'Bootstrap must not expose a second executor.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'ActionHandlerProvider' ), 'Bootstrap must not restore the inherited action bus.' );
-$assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_PROVIDER_API_VERSION', 6" ), 'Provider API 6 must remain explicit.' );
+$assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_PROVIDER_API_VERSION', 7" ), 'Provider API 7 must remain explicit.' );
+$assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_LOGGING_API_VERSION' ), 'The removed Logging API marker must stay absent.' );
 $updaterRegistration = is_string( $source ) ? strpos( $source, 'GitHubReleaseUpdaterBootstrap::register' ) : false;
 $pluginsLoaded       = is_string( $source ) ? strpos( $source, "'plugins_loaded'" ) : false;
 $assert( false !== $updaterRegistration, 'Bootstrap must register the shared release updater.' );

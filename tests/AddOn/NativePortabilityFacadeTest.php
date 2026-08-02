@@ -23,7 +23,6 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use ReflectionClass;
 use Tests\Portability\TemporaryCredentialProvider;
-use Tests\Support\NullLoggingFacade;
 
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
@@ -45,10 +44,10 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 
 		self::assertIsString( $bootstrap );
-		self::assertSame( 1, NativePortabilityFacade::API_VERSION );
+		self::assertSame( 2, NativePortabilityFacade::API_VERSION );
 		self::assertStringContainsString( "'RAN_BOOSTER_PORTABILITY_API_VERSION'", $bootstrap );
 		self::assertStringContainsString(
-			"do_action( 'ran_booster_portability_ready', \$portability, \$logging )",
+			"do_action( 'ran_booster_portability_ready', \$portability )",
 			$bootstrap
 		);
 		$runtimeGate = strpos( $bootstrap, 'if ( ! $ran_booster_runtime_support->allowsManagedOperations() )' );
@@ -168,7 +167,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 			'repository-id',
 			$providerPrivate
 		);
-		$registry       = new ProviderRegistry( new NullLoggingFacade(), array( $this->provider ), $catalog );
+		$registry       = new ProviderRegistry( array( $this->provider ), $catalog );
 		$service        = new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),
 			new BlueprintRepositoryVerifier( $registry, $secrets ),

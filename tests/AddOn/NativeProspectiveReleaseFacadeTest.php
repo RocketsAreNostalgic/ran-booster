@@ -48,7 +48,6 @@ namespace Tests\AddOn;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveInspectionFixture;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseCandidatePreflight;
 	use RuntimeException;
-	use Tests\Support\NullLoggingFacade;
 
 	// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused collaborators stay with the facade contract tests.
 
@@ -819,7 +818,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	): NativeProspectiveReleaseFacade {
 		$provider          = new ProspectiveRepositoryProvider();
 		$resolver          = new PackageRepositoryRequestResolver(
-			new ProviderRegistry( new NullLoggingFacade(), array( $provider ) )
+			new ProviderRegistry( array( $provider ) )
 		);
 		$secrets           = new SecretsFile( sys_get_temp_dir() . '/ran-booster-prospective-secrets.php', array() );
 		$executor->plugins = $plugins;

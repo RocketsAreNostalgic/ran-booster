@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin\Interaction;
 
 /**
- * Additive Admin Interaction API 1 capability for one Transporter source row.
+ * Additive Admin Interaction API 2 capability for one Transporter source row.
  *
  * Consumers must feature-detect this interface with instanceof. It deliberately
  * does not change the existing AdminInteractionFacade API 1 interface.

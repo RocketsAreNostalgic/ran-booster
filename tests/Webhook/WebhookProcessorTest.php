@@ -41,7 +41,7 @@ final class WebhookProcessorTest extends TestCase {
 				'headers' => array(),
 			);
 		};
-		$processor    = $this->processor( new ProviderRegistry( new \Tests\Support\NullLoggingFacade() ), new WebhookProcessorCoordinator() );
+		$processor    = $this->processor( new ProviderRegistry(), new WebhookProcessorCoordinator() );
 
 		self::assertSame( 404, $processor->handle( 'bb', $request )->getStatus() );
 
@@ -54,7 +54,7 @@ final class WebhookProcessorTest extends TestCase {
 			}
 		};
 		$processor    = $this->processor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $metadataOnly ) ),
+			new ProviderRegistry( array( $metadataOnly ) ),
 			new WebhookProcessorCoordinator()
 		);
 
@@ -69,7 +69,7 @@ final class WebhookProcessorTest extends TestCase {
 			}
 		);
 		$processor = $this->processor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ),
+			new ProviderRegistry( array( $provider ) ),
 			new WebhookProcessorCoordinator()
 		);
 
@@ -89,7 +89,7 @@ final class WebhookProcessorTest extends TestCase {
 			}
 		);
 		$processor = $this->processor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ),
+			new ProviderRegistry( array( $provider ) ),
 			new WebhookProcessorCoordinator()
 		);
 
@@ -107,13 +107,13 @@ final class WebhookProcessorTest extends TestCase {
 		$coordinator = new WebhookProcessorCoordinator( null, $spy );
 
 		$probe = $this->processor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) ),
+			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) ),
 			$coordinator
 		);
 		self::assertSame( 200, $probe->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) )->getStatus() );
 
 		$ignored = $this->processor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::ignored() ) ) ),
+			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::ignored() ) ) ),
 			$coordinator
 		);
 		self::assertSame( 202, $ignored->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) )->getStatus() );
@@ -200,7 +200,7 @@ final class WebhookProcessorTest extends TestCase {
 		$event     = new PushEvent( ProviderCode::parse( 'gh' ), 'other/repository', 'other-id', 'main', str_repeat( 'a', 40 ), 'delivery-one' );
 		$spy       = new WebhookProcessorCoordinatorSpy();
 		$processor = $this->processor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) ) ),
+			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) ) ),
 			new WebhookProcessorCoordinator( null, $spy ),
 			array(
 				'allowed-profile' => array(
@@ -274,7 +274,7 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function testAmbiguousRetainedHeadersAreRejectedSafely(): void {
 		$processor = $this->processor(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::ignored() ) ) ),
+			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::ignored() ) ) ),
 			new WebhookProcessorCoordinator()
 		);
 
@@ -300,7 +300,6 @@ final class WebhookProcessorTest extends TestCase {
 		}
 		$processor = $this->processor(
 			new ProviderRegistry(
-				new \Tests\Support\NullLoggingFacade(),
 				array(
 					new WebhookProcessorProvider(
 						static function () use ( &$normalizerCalls ): WebhookEnvelope {
@@ -344,7 +343,6 @@ final class WebhookProcessorTest extends TestCase {
 		$coordinator = new WebhookProcessorCoordinator( null, $spy );
 		$processor   = $this->processor(
 			new ProviderRegistry(
-				new \Tests\Support\NullLoggingFacade(),
 				array(
 					new WebhookProcessorProvider(
 						static fn ( WebhookRequest $request ): WebhookEnvelope => $normalizer->normalizeWebhook( $request )
@@ -378,7 +376,6 @@ final class WebhookProcessorTest extends TestCase {
 		$coordinator = new WebhookProcessorCoordinator( null, $spy );
 		$processor   = $this->processor(
 			new ProviderRegistry(
-				new \Tests\Support\NullLoggingFacade(),
 				array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( ...$events ) ) )
 			),
 			$coordinator
@@ -419,7 +416,6 @@ final class WebhookProcessorTest extends TestCase {
 		);
 		$processor   = $this->processor(
 			new ProviderRegistry(
-				new \Tests\Support\NullLoggingFacade(),
 				array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) )
 			),
 			$coordinator,
@@ -485,7 +481,6 @@ final class WebhookProcessorTest extends TestCase {
 
 		return $this->processor(
 			new ProviderRegistry(
-				new \Tests\Support\NullLoggingFacade(),
 				array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) )
 			),
 			$coordinator

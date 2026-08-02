@@ -34,9 +34,7 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 6 !== RAN_BOOSTER_PROVIDER_API_VERSION
-      || ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-      || 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+      || 7 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
@@ -49,11 +47,14 @@ add_action(
 ```
 
 Use `registerWithCredentialStore()` when the provider reads stored credentials.
-The supplied store is limited to that provider's credentials and the boolean
-`hasWebhookProfile()` diagnostic readiness check; it cannot read profile
-records, signing material, paths, other providers, or write state. The factory
-must remain local and non-I/O, and the returned provider must use exactly the
-code that was requested.
+The supplied store exposes display-safe profiles, one selected or default
+credential under that provider code and the boolean `hasWebhookProfile()`
+diagnostic readiness check. It cannot select another provider, read signing
+material, inspect paths or write state. The factory must remain local and
+non-I/O, and the returned provider must use exactly the code that was requested.
+Activating a credential-bearing provider therefore trusts it with credentials
+saved under its code; registration order is not publisher authentication, and
+Core cannot control the provider's private code after authorized disclosure.
 
 ## Core contract
 

@@ -213,7 +213,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 	}
 
 	private function monitor(): BackgroundDeploymentFailureMonitor {
-		return new BackgroundDeploymentFailureMonitor( $this->attempts, new ProviderRegistry( new \Tests\Support\NullLoggingFacade() ) );
+		return new BackgroundDeploymentFailureMonitor( $this->attempts, new ProviderRegistry() );
 	}
 
 	private function plugin(): Plugin {

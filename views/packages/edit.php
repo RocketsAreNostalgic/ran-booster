@@ -13,6 +13,9 @@ $defaultProviderCode              = $packageProviderSettings['default_provider']
 $submittedPackage                 = isset( $_POST['ran_booster'] ) && is_array( $_POST['ran_booster'] )
 	? $_POST['ran_booster']
 	: array();
+$submittedAction                  = isset( $submittedPackage['action'] ) && is_scalar( $submittedPackage['action'] )
+	? sanitize_key( wp_unslash( (string) $submittedPackage['action'] ) )
+	: '';
 $selectedCredentialId             = isset( $_POST['ran_booster']['credential_id'] )
 	? sanitize_text_field( (string) $_POST['ran_booster']['credential_id'] )
 	: $package->getCredentialId();
@@ -110,6 +113,11 @@ $packageRepositoryReady   = true;
 $packageAdvancedOpen      = isset( $_POST['ran_booster'] )
 	|| true === ( $packageSource['advanced_open'] ?? false )
 	|| $packageSourceView !== $packageCurrentSource;
+$packageDangerOpen        = in_array(
+	$submittedAction,
+	array( $packageView->getAction( 'unlink' ), $packageView->getAction( 'unlink-delete' ) ),
+	true
+);
 
 if ( $providerUnavailable ) {
 	$selectedCredentialId  = $package->getCredentialId();

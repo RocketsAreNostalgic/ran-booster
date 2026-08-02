@@ -74,7 +74,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-settings-fields', $html );
 		self::assertStringNotContainsString( 'class="form-table"', $html );
 		$repositoryPosition = strpos( $html, 'id="ran-booster-package-configuration-heading"' );
-		$advancedPosition   = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-advanced-source-settings"' );
+		$advancedPosition   = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
 		$operationPosition  = strpos( $html, 'id="ran-booster-package-operation-heading"' );
 		$automationPosition = strpos( $html, 'name="ran_booster[deployment_policy]"' );
 		$linkPosition       = strpos( $html, 'name="ran_booster[dry-run]"' );
@@ -93,7 +93,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$packageView->getType()
 		);
 		self::assertStringNotContainsString(
-			'<details id="ran-booster-advanced-source-settings" class="ran-booster-advanced-source-settings" data-ran-booster-advanced-source-settings open',
+			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 			$html
 		);
 		self::assertStringContainsString( 'Branch · provider default', $html );
@@ -171,7 +171,7 @@ final class RepeatPackageViewTest extends TestCase {
 				'<a href="https://github.com/owner/example" class="ran-booster-repository-link"',
 				$html
 			);
-			$advancedPosition    = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-advanced-source-settings"' );
+			$advancedPosition    = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
 			$advancedEnd         = strpos( $html, '</details>', $advancedPosition );
 			$readinessPosition   = strpos( $html, 'id="ran-booster-branch-readiness"', $advancedPosition );
 			$automationPosition  = strpos( $html, 'name="ran_booster[deployment_policy]"' );
@@ -220,6 +220,9 @@ final class RepeatPackageViewTest extends TestCase {
 
 		$dangerZone = $this->dangerZone( $html );
 		$type       = $packageView->getType();
+		self::assertStringStartsWith( '<details id="ran-booster-package-danger-zone"', $dangerZone );
+		self::assertStringNotContainsString( 'data-ran-booster-package-disclosure open', $dangerZone );
+		self::assertLessThan( strpos( $dangerZone, '<form' ), strpos( $dangerZone, '<summary>' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-confirmed-package-removal' ) );
 		self::assertStringContainsString(
 			'name="ran_booster[action]" value="' . $packageView->getAction( 'unlink' ) . '"',
@@ -254,6 +257,37 @@ final class RepeatPackageViewTest extends TestCase {
 		);
 	}
 
+	public function testSubmittedRemovalActionsReopenDangerZoneForNativeFailures(): void {
+		foreach ( array( PackageViewConfig::plugin(), PackageViewConfig::theme() ) as $packageView ) {
+			foreach ( array( 'unlink', 'unlink-delete' ) as $action ) {
+				$package                 = $this->package( $packageView );
+				$packageProviderSettings = $this->providerSettings( true );
+				$_POST['ran_booster']    = array( 'action' => $packageView->getAction( $action ) );
+
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+				$html = (string) ob_get_clean();
+
+				self::assertStringContainsString(
+					'data-ran-booster-package-disclosure open',
+					$this->dangerZone( $html ),
+					$packageView->getType() . ' ' . $action
+				);
+			}
+
+			$_POST['ran_booster'] = array( 'action' => $packageView->getAction( 'edit' ) );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			$html = (string) ob_get_clean();
+
+			self::assertStringNotContainsString(
+				'data-ran-booster-package-disclosure open',
+				$this->dangerZone( $html ),
+				$packageView->getType()
+			);
+		}
+	}
+
 	public function testExplicitSourceViewOpensStableAdvancedDisclosureForPluginsAndThemes(): void {
 		foreach ( array( PackageViewConfig::plugin(), PackageViewConfig::theme() ) as $packageView ) {
 			$package                 = $this->package( $packageView );
@@ -265,7 +299,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			self::assertStringContainsString(
-				'<details id="ran-booster-advanced-source-settings" class="ran-booster-advanced-source-settings" data-ran-booster-advanced-source-settings open',
+				'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 				$html,
 				$packageView->getType()
 			);
@@ -425,7 +459,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	private function dangerZone( string $html ): string {
-		$start = strpos( $html, '<section class="ran-booster-settings-section ran-booster-package-danger-zone"' );
+		$start = strpos( $html, '<details id="ran-booster-package-danger-zone" class="ran-booster-settings-disclosure ran-booster-package-danger-zone"' );
 		self::assertNotFalse( $start, 'The package settings page should include the danger zone.' );
 
 		return substr( $html, $start );

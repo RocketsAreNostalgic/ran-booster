@@ -11,12 +11,12 @@ $packageAdvancedBody    = isset( $packageAdvancedBody ) && is_string( $packageAd
 	: '';
 
 ?>
-<details id="ran-booster-advanced-source-settings" class="ran-booster-advanced-source-settings" data-ran-booster-advanced-source-settings <?php echo $packageAdvancedOpen ? 'open' : ''; ?>>
+<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings <?php echo $packageAdvancedOpen ? 'open' : ''; ?>>
 	<summary>
-		<h3 class="ran-booster-section__title ran-booster-advanced-source-settings__label"><?php esc_html_e( 'Advanced settings', 'ran-booster' ); ?></h3>
+		<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Advanced settings', 'ran-booster' ); ?></h3>
 		<small data-ran-booster-advanced-source-summary><?php echo esc_html( $packageAdvancedSummary ); ?></small>
 	</summary>
-	<div class="ran-booster-advanced-source-settings__body">
+	<div class="ran-booster-settings-disclosure__body">
 		<?php echo $packageAdvancedBody; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core and bounded registered add-ons rendered this body. ?>
 	</div>
 </details>

@@ -61,11 +61,15 @@
 		}
 
 		function captureInteractionState(form) {
-			const advancedSettings = document.querySelector(
-				'[data-ran-booster-advanced-source-settings]'
-			);
 			pendingInteractionState = {
-				advancedSettingsOpen: advancedSettings?.open ?? null,
+				disclosureStates: Object.fromEntries(
+					Array.from(
+						document.querySelectorAll(
+							'[data-ran-booster-package-disclosure]'
+						),
+						(disclosure) => [disclosure.id, disclosure.open]
+					).filter(([id]) => id)
+				),
 				form,
 				scrollY: window.scrollY,
 				successMessage: '',
@@ -78,15 +82,16 @@
 				return;
 			}
 
-			const advancedSettings = document.querySelector(
-				'[data-ran-booster-advanced-source-settings]'
-			);
-			if (
-				advancedSettings &&
-				typeof state.advancedSettingsOpen === 'boolean'
-			) {
-				advancedSettings.open = state.advancedSettingsOpen;
-			}
+			Array.from(
+				document.querySelectorAll(
+					'[data-ran-booster-package-disclosure]'
+				)
+			).forEach(function (disclosure) {
+				const open = state.disclosureStates?.[disclosure.id];
+				if (typeof open === 'boolean') {
+					disclosure.open = open;
+				}
+			});
 			if (!complete) {
 				return;
 			}

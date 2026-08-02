@@ -85,7 +85,10 @@ function fixture() {
 	const replacedUrls = [];
 	const scrollCalls = [];
 	const timeouts = [];
-	let advancedDetails = { open: false };
+	let packageDisclosures = [
+		{ id: 'ran-booster-advanced-source-settings', open: false },
+		{ id: 'ran-booster-package-danger-zone', open: false },
+	];
 	const errorAttributes = new Map();
 	const formAttributes = new Map();
 	const buttonAttributes = new Map();
@@ -260,14 +263,13 @@ function fixture() {
 			if (selector === '[data-ran-booster-feedback-toast]') {
 				return toast;
 			}
-			if (selector === '[data-ran-booster-advanced-source-settings]') {
-				return advancedDetails;
-			}
 
 			return null;
 		},
-		querySelectorAll() {
-			return [];
+		querySelectorAll(selector) {
+			return selector === '[data-ran-booster-package-disclosure]'
+				? packageDisclosures
+				: [];
 		},
 	};
 	const window = {
@@ -319,8 +321,8 @@ function fixture() {
 		replacedUrls,
 		secondary,
 		scrollCalls,
-		setAdvancedDetails(details) {
-			advancedDetails = details;
+		setPackageDisclosures(disclosures) {
+			packageDisclosures = disclosures;
 		},
 		swapTarget,
 		sourceLink,
@@ -432,22 +434,36 @@ test('an external enhanced submitter does not continue with a native form submis
 	assert.equal(prevented, true);
 });
 
-test('enhanced mutations preserve viewport and Advanced settings disclosure state', () => {
-	for (const open of [true, false]) {
+test('enhanced mutations preserve viewport and package disclosure states', () => {
+	for (const open of [
+		[false, false],
+		[true, true],
+		[true, false],
+		[false, true],
+	]) {
 		const state = fixture();
 		const init = loadFunction('initEnhancedMutationFeedback', {
 			document: state.document,
 			window: state.window,
 		});
-		const replacementDetails = { open: !open };
+		const ids = [
+			'ran-booster-advanced-source-settings',
+			'ran-booster-package-danger-zone',
+		];
+		const replacementDetails = open.map((value, index) => ({
+			id: ids[index],
+			open: !value,
+		}));
 		state.window.scrollY = 512;
-		state.setAdvancedDetails({ open });
+		state.setPackageDisclosures(
+			open.map((value, index) => ({ id: ids[index], open: value }))
+		);
 
 		init();
 		state.listeners.get('htmx:beforeRequest')({
 			detail: { elt: state.form },
 		});
-		state.setAdvancedDetails(replacementDetails);
+		state.setPackageDisclosures(replacementDetails);
 		state.window.scrollY = 900;
 		state.listeners.get('htmx:afterSwap')({
 			detail: {
@@ -456,7 +472,10 @@ test('enhanced mutations preserve viewport and Advanced settings disclosure stat
 			},
 		});
 
-		assert.equal(replacementDetails.open, open);
+		assert.deepEqual(
+			replacementDetails.map((details) => details.open),
+			open
+		);
 		assert.deepEqual(state.scrollCalls, []);
 
 		state.listeners.get('htmx:afterSettle')({
@@ -467,6 +486,40 @@ test('enhanced mutations preserve viewport and Advanced settings disclosure stat
 		state.animationFrames.shift()();
 		assert.deepEqual(state.scrollCalls, [{ x: 0, y: 512 }]);
 	}
+});
+
+test('enhanced disclosure restoration is keyed by stable IDs and ignores absent replacements', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	const reversedReplacement = [
+		{ id: 'ran-booster-package-danger-zone', open: false },
+		{ id: 'ran-booster-advanced-source-settings', open: true },
+	];
+
+	state.setPackageDisclosures([
+		{ id: 'ran-booster-advanced-source-settings', open: false },
+		{ id: 'ran-booster-package-danger-zone', open: true },
+	]);
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.setPackageDisclosures(reversedReplacement);
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+
+	assert.deepEqual(
+		reversedReplacement.map((details) => details.open),
+		[true, false]
+	);
+	state.setPackageDisclosures([]);
+	assert.doesNotThrow(() =>
+		state.listeners.get('htmx:afterSwap')({
+			detail: { elt: state.swapTarget, xhr: { status: 200 } },
+		})
+	);
 });
 
 test('enhanced mutation feedback rejects a duplicate request from its busy form', () => {

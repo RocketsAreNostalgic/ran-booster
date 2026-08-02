@@ -49,19 +49,22 @@
 	padding: var(--ran-booster-space-20);
 }
 
-.ran-booster-admin .ran-booster-advanced-source-settings {
-	margin-block-start: var(--ran-booster-space-18);
+.ran-booster-admin .ran-booster-settings-disclosure {
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface);
 }
 
-.ran-booster-admin .ran-booster-advanced-source-settings > summary:hover {
+.ran-booster-admin .ran-booster-advanced-source-settings {
+	margin-block-start: var(--ran-booster-space-18);
+}
+
+.ran-booster-admin .ran-booster-settings-disclosure > summary:hover {
 	background: var(--ran-booster-color-blue-100);
 	color: var(--ran-booster-brand);
 }
 
-.ran-booster-admin .ran-booster-advanced-source-settings > summary {
+.ran-booster-admin .ran-booster-settings-disclosure > summary {
 	display: grid;
 	grid-template-columns: 10px minmax(0, 1fr) auto;
 	align-items: center;
@@ -72,17 +75,17 @@
 	list-style: none;
 }
 
-.ran-booster-admin .ran-booster-advanced-source-settings__label {
+.ran-booster-admin .ran-booster-settings-disclosure__label {
 	color: inherit;
 }
 
 .ran-booster-admin
-	.ran-booster-advanced-source-settings
+	.ran-booster-settings-disclosure
 	> summary::-webkit-details-marker {
 	display: none;
 }
 
-.ran-booster-admin .ran-booster-advanced-source-settings > summary::before {
+.ran-booster-admin .ran-booster-settings-disclosure > summary::before {
 	inline-size: 7px;
 	block-size: 7px;
 	border-inline-end: 2px solid currentcolor;
@@ -93,28 +96,24 @@
 	transition: transform 100ms ease-in-out;
 }
 
-.ran-booster-admin
-	.ran-booster-advanced-source-settings[open]
-	> summary::before {
+.ran-booster-admin .ran-booster-settings-disclosure[open] > summary::before {
 	transform: rotate(45deg);
 }
 
-.ran-booster-admin
-	.ran-booster-advanced-source-settings
-	> summary:focus-visible {
+.ran-booster-admin .ran-booster-settings-disclosure > summary:focus-visible {
 	border-radius: var(--ran-booster-radius-control);
 	outline: 2px solid var(--ran-booster-link-strong);
 	outline-offset: 2px;
 }
 
-.ran-booster-admin .ran-booster-advanced-source-settings > summary small {
+.ran-booster-admin .ran-booster-settings-disclosure > summary small {
 	color: var(--ran-booster-text-subtle);
 	font-size: var(--ran-booster-font-size-xs);
 	font-weight: 400;
 	text-align: end;
 }
 
-.ran-booster-admin .ran-booster-advanced-source-settings__body {
+.ran-booster-admin .ran-booster-settings-disclosure__body {
 	padding: var(--ran-booster-space-20);
 	border-block-start: 1px solid var(--ran-booster-border);
 	background: var(--ran-booster-surface);
@@ -561,6 +560,7 @@
 }
 
 .ran-booster-admin .ran-booster-package-danger-zone {
+	margin-block-end: var(--ran-booster-space-18);
 	border-radius: var(--ran-booster-radius-surface);
 	border-color: var(--ran-booster-status-error-border);
 	border-width: var(--ran-booster-radius-control);

@@ -10,12 +10,12 @@ $deleteDescription = 'plugin' === $packageView->getType()
 	: __( 'WordPress will delete the inactive theme before Booster unlinks it. Active, parent and depended-on themes are protected. Theme deletion is not a database rollback.', 'ran-booster' );
 
 ?>
-<section class="ran-booster-settings-section ran-booster-package-danger-zone" aria-labelledby="ran-booster-package-danger-zone-heading">
-	<header class="ran-booster-settings-section__header">
-		<h3 id="ran-booster-package-danger-zone-heading" class="ran-booster-section__title"><?php esc_html_e( 'Danger zone', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop Booster managing this %s, with or without deleting it from WordPress.', 'ran-booster' ), $packageTypeLabel ) ); ?></p>
-	</header>
-	<div class="ran-booster-settings-section__body ran-booster-package-danger-zone__actions">
+<details id="ran-booster-package-danger-zone" class="ran-booster-settings-disclosure ran-booster-package-danger-zone" data-ran-booster-package-disclosure <?php echo $packageDangerOpen ? 'open' : ''; ?> aria-labelledby="ran-booster-package-danger-zone-heading">
+	<summary>
+		<h3 id="ran-booster-package-danger-zone-heading" class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Danger zone', 'ran-booster' ); ?></h3>
+		<small><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop Booster managing this %s, with or without deleting it from WordPress.', 'ran-booster' ), $packageTypeLabel ) ); ?></small>
+	</summary>
+	<div class="ran-booster-settings-disclosure__body ran-booster-package-danger-zone__actions">
 		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation>
 			<?php wp_nonce_field( $packageView->getAction( 'unlink' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'unlink' ) ); ?>">
@@ -48,4 +48,4 @@ $deleteDescription = 'plugin' === $packageView->getType()
 			</button>
 		</form>
 	</div>
-</section>
+</details>

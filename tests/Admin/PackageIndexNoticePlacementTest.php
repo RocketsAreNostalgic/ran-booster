@@ -58,6 +58,13 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 			'items'       => array(),
 			'unavailable' => false,
 		);
+		$tabs                    = array(
+			array(
+				'label'  => 'Overview',
+				'url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster',
+				'active' => false,
+			),
+		);
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
@@ -88,5 +95,6 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( 'data-queued="2" data-skipped="1"', $html );
 		self::assertStringContainsString( 'data-ran-booster-update-summary-message', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-package-success', $html );
+		self::assertStringNotContainsString( 'class="nav-tab-wrapper"', $html );
 	}
 }

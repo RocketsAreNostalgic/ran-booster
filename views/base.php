@@ -31,7 +31,7 @@ $footerPluginAuthorLink = esc_url( $footerPluginAuthorUrl );
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>
 
-	<?php if ( isset( $tabs ) && is_array( $tabs ) && array() !== $tabs ) { ?>
+	<?php if ( ! str_starts_with( $view, 'packages/' ) && isset( $tabs ) && is_array( $tabs ) && array() !== $tabs ) { ?>
 		<nav class="nav-tab-wrapper" aria-label="<?php esc_attr_e( 'RAN Booster sections', 'ran-booster' ); ?>">
 			<?php foreach ( $tabs as $adminTab ) { ?>
 				<a href="<?php echo esc_url( $adminTab['url'] ); ?>" class="nav-tab<?php echo $adminTab['active'] ? ' nav-tab-active' : ''; ?>"<?php echo $adminTab['active'] ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $adminTab['label'] ); ?></a>

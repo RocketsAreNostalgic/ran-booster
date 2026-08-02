@@ -465,6 +465,7 @@ final class AdminAssetContractTest extends TestCase {
 			"'packages/index' === \$view ? ' ran-booster-admin--package-index' : ''",
 			$base
 		);
+		self::assertStringContainsString( "! str_starts_with( \$view, 'packages/' )", $base );
 		self::assertStringContainsString( 'ran-booster-package-table', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__name', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__repo', $view );

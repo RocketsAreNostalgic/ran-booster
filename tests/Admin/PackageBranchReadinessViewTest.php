@@ -26,6 +26,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'callback_url' => 'https://site.example/wp-json/ran-booster/v1/webhooks/gh',
 			),
 			'repository'           => array(
+				'repository_id'         => 'repo-42',
 				'repository'            => 'owner/example',
 				'status'                => 'ready',
 				'reason_codes'          => array(),
@@ -43,6 +44,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'Remote webhook', $html );
 		self::assertStringContainsString( 'Booster cannot verify the remote webhook here.', $html );
 		self::assertStringContainsString( 'Manage repository webhook', $html );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42', $html );
 		self::assertStringContainsString( 'href="https://github.com/owner/example/settings/hooks"', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringNotContainsString( 'Manage signing secrets', $html );
@@ -83,6 +85,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'callback_url' => 'http://localhost/wp-json/ran-booster/v1/webhooks/gh',
 			),
 			'repository'           => array(
+				'repository_id'         => 'repo-42',
 				'repository'            => 'owner/example',
 				'status'                => 'blocked',
 				'reason_codes'          => array(),
@@ -103,7 +106,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/options-general.php"', $html );
 		self::assertStringContainsString( 'Review WordPress URLs', $html );
 		self::assertStringContainsString( 'Manage signing secrets', $html );
-		self::assertStringContainsString( 'view=secrets', $html );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42', $html );
 		self::assertStringContainsString( 'Manage repository webhooks', $html );
 		self::assertStringNotContainsString( 'The local webhook endpoint needs attention.', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );

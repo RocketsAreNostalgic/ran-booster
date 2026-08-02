@@ -36,6 +36,7 @@ final class RepositoryTableRenderer {
 								<?php $this->renderManagementDetail( $row ); ?>
 							</strong>
 							<?php $this->renderConsequence( $row ); ?>
+							<?php $this->renderStatusLinks( $this->items( $row, 'status_links' ) ); ?>
 							<?php $this->renderPackageReferences( $this->strings( $row, 'package_references' ) ); ?>
 						</div>
 						<div class="ran-booster-repository-record__actions">
@@ -48,6 +49,20 @@ final class RepositoryTableRenderer {
 				</article>
 			<?php } ?>
 		</div>
+		<?php
+	}
+
+	/** @param list<array<string, mixed>> $links */
+	private function renderStatusLinks( array $links ): void {
+		if ( array() === $links ) {
+			return;
+		}
+		?>
+		<p class="ran-booster-repository-record__status-links">
+			<?php foreach ( $links as $link ) { ?>
+				<a href="<?php echo esc_url( (string) ( $link['url'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $link['label'] ?? '' ) ); ?></a>
+			<?php } ?>
+		</p>
 		<?php
 	}
 

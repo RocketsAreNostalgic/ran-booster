@@ -800,6 +800,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Assisted Hooks add-on not active.', $html );
 		self::assertStringContainsString( 'Fixture webhooks', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
+		self::assertStringContainsString( 'Manage webhook', $html );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text">: plugin/example.php</span>', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__details"', $html );
 		self::assertStringContainsString( 'Assisted hook status', $html );
@@ -821,6 +823,29 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'A secure 64-character webhook secret was generated.', $html );
 		self::assertStringContainsString( 'Copy the secret before saving.', $html );
 		self::assertStringContainsString( 'saving it here does not create or verify the remote webhook', $html );
+
+		$_GET['repository'] = 'repo-42';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$repositoryHtml = (string) ob_get_clean();
+		unset( $_GET['repository'] );
+
+		self::assertStringContainsString( '>Repository webhook</h4>', $repositoryHtml );
+		self::assertStringContainsString( 'Back to managed repositories', $repositoryHtml );
+		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $repositoryHtml );
+		self::assertSame( 1, substr_count( $repositoryHtml, 'data-ran-booster-provider-repository' ) );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42&amp;add_webhook_secret=1', $repositoryHtml );
+		self::assertStringContainsString( '>Add repository secret</a>', $repositoryHtml );
+		self::assertStringNotContainsString( "\n\t\t\tManage webhook", $repositoryHtml );
+
+		$_GET['repository'] = 'stale-repository';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$staleRepositoryHtml = (string) ob_get_clean();
+		unset( $_GET['repository'] );
+
+		self::assertStringContainsString( 'That managed repository is no longer available.', $staleRepositoryHtml );
+		self::assertSame( 0, substr_count( $staleRepositoryHtml, 'data-ran-booster-provider-repository' ) );
 
 		$GLOBALS['ran_booster_admin_view_filters'] = array();
 		ob_start();

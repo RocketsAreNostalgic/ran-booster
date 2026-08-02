@@ -816,18 +816,38 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 								</details>
 							<?php } ?>
 				</section>
-			<?php } else { ?>
+				<?php } else { ?>
+					<?php
+					$requestedRepositoryId = '';
+				// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only selection; every operation has its own nonce.
+					$requestedRepositoryValue = $_GET['repository'] ?? $_GET['assisted_repository'] ?? null;
+					if ( is_string( $requestedRepositoryValue ) ) {
+						$candidate = trim( wp_unslash( $requestedRepositoryValue ) );
+						if ( '' !== $candidate && strlen( $candidate ) <= 191 && 1 !== preg_match( '/[\x00-\x1F\x7F]/', $candidate ) ) {
+							$requestedRepositoryId = $candidate;
+						}
+					}
+				// phpcs:enable WordPress.Security.NonceVerification.Recommended
+					?>
 				<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="repositories" aria-labelledby="ran-booster-managed-webhook-repositories-heading">
 							<div class="ran-booster-provider-task-panel__heading">
 								<div>
-									<h4 id="ran-booster-managed-webhook-repositories-heading" class="ran-booster-section__title"><?php esc_html_e( 'Managed repositories', 'ran-booster' ); ?></h4>
+									<h4 id="ran-booster-managed-webhook-repositories-heading" class="ran-booster-section__title"><?php echo esc_html( '' === $requestedRepositoryId ? __( 'Managed repositories', 'ran-booster' ) : __( 'Repository webhook', 'ran-booster' ) ); ?></h4>
 									<p class="ran-booster-section__description"><?php echo esc_html( $repositoryWebhookDescription ); ?></p>
 								</div>
 							</div>
 							<?php
 							$repositoryTableRows   = array();
 							$repositoryProjections = array();
-							$providerReturnUrl     = $taskUrl( 'repositories' );
+							$repositoryListUrl     = $taskUrl( 'repositories' );
+							$providerReturnUrl     = '' === $requestedRepositoryId
+								? $repositoryListUrl
+								: $providerUrl(
+									array(
+										'panel'      => 'repositories',
+										'repository' => $requestedRepositoryId,
+									)
+								);
 							foreach ( $providerRepositories['repositories'] as $repositoryIndex => $repository ) {
 								$managedRepositoryId = is_string( $repository['repository_id'] ?? null ) ? $repository['repository_id'] : '';
 								$repositoryLocator   = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
@@ -987,11 +1007,32 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 								$releaseReasonId = $isReleaseSource && '' !== $consequence ? $reasonId . '-release-source' : '';
 								$describedBy     = array_filter( array( $providerAssistanceDescriptionId, $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $webhookAssistanceSiteReady && ! $isReleaseSource ? $reasonId . '-site' : '' ) );
 								$actions         = array();
+								if ( ! $isReleaseSource && '' !== $repositoryId && '' === $requestedRepositoryId ) {
+									$actions['core:manage-repository'] = array(
+										'key'           => 'core:manage-repository',
+										'label'         => __( 'Manage webhook', 'ran-booster' ),
+										'type'          => 'link',
+										'url'           => $providerUrl(
+											array(
+												'panel' => 'repositories',
+												'repository' => $repositoryId,
+											)
+										),
+										'hidden'        => array(),
+										'disabled'      => false,
+										'external'      => false,
+										'described_by'  => '',
+										'screen_reader' => $repositoryLocator,
+									);
+								}
 								if ( null !== $providerWebhookAssistance ) {
-									$actions = $repositoryComposition->dormantAssistanceAction(
-										$providerWebhookAssistance,
-										$repositoryLocator,
-										$describedBy
+									$actions = array_merge(
+										$actions,
+										$repositoryComposition->dormantAssistanceAction(
+											$providerWebhookAssistance,
+											$repositoryLocator,
+											$describedBy
+										)
 									);
 								}
 								if ( $isReleaseSource && in_array( $coverage, array( 'repository', 'shared' ), true ) ) {
@@ -1057,6 +1098,42 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 										'screen_reader' => $packageReference,
 									);
 								}
+								$secretTarget                   = 'shared' === $coverage
+									? (string) strtok( $repositoryLocator, '/' )
+									: $repositoryLocator;
+								$secretLink                     = 'none' === $coverage
+									? array(
+										'label'  => __( 'Add repository secret', 'ran-booster' ),
+										'url'    => $providerUrl(
+											array_filter(
+												array(
+													'panel'             => 'repositories',
+													'repository'        => $repositoryId,
+													'add_webhook_secret' => 1,
+													'webhook_scope'     => 'repository',
+													'webhook_target'    => $repositoryLocator,
+												),
+												static fn ( mixed $value ): bool => '' !== $value
+											)
+										),
+										'modal'  => 'webhook',
+										'scope'  => 'repository',
+										'target' => $repositoryLocator,
+									)
+									: ( in_array( $coverage, array( 'repository', 'shared' ), true )
+										? array(
+											'label'  => 'shared' === $coverage ? __( 'Review shared owner secret', 'ran-booster' ) : __( 'Review repository secret', 'ran-booster' ),
+											'url'    => $providerUrl(
+												array(
+													'view' => 'secrets',
+													's'    => $secretTarget,
+												)
+											),
+											'modal'  => '',
+											'scope'  => '',
+											'target' => '',
+										)
+										: null );
 								$repositoryTableRows[ $rowKey ] = array(
 									'key'                => $rowKey,
 									'provider_code'      => $provider['code'],
@@ -1077,22 +1154,7 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 									'policies'           => $policyBadges,
 									'package_references' => $packageReferences,
 									'statuses'           => $statuses,
-									'status_links'       => 'none' === $coverage ? array(
-										array(
-											'label'  => __( 'Set webhook secret', 'ran-booster' ),
-											'url'    => $providerUrl(
-												array(
-													'panel' => 'repositories',
-													'add_webhook_secret' => 1,
-													'webhook_scope' => 'repository',
-													'webhook_target' => $repositoryLocator,
-												)
-											) . '#ran-booster-webhook-secrets-heading',
-											'modal'  => 'webhook',
-											'scope'  => 'repository',
-											'target' => $repositoryLocator,
-										),
-									) : array(),
+									'status_links'       => null === $secretLink ? array() : array( $secretLink ),
 									'actions'            => $actions,
 								);
 								if ( ! $isReleaseSource ) {
@@ -1114,12 +1176,29 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 									);
 								}
 							}
-							$repositoryTableRows = $repositoryComposition->rows( $repositoryTableRows, $provider['code'], $repositoryProjections, $providerReturnUrl );
+							$repositoryTableRows   = $repositoryComposition->rows( $repositoryTableRows, $provider['code'], $repositoryProjections, $providerReturnUrl );
+							$selectedRepositoryRow = null;
+							if ( '' !== $requestedRepositoryId ) {
+								foreach ( $repositoryTableRows as $repositoryRow ) {
+									if ( false === ( $repositoryRow['historical'] ?? false )
+										&& $requestedRepositoryId === ( $repositoryRow['repository_id'] ?? null ) ) {
+										$selectedRepositoryRow = $repositoryRow;
+										break;
+									}
+								}
+							}
 							?>
 							<?php if ( null !== $providerWebhookAssistance ) { ?>
 								<?php $repositoryComposition->renderAssistanceNote( $providerWebhookAssistance, $provider['code'], $providerAssistanceDescriptionId ); ?>
 							<?php } ?>
-							<?php if ( array() !== $repositoryTableRows ) { ?>
+							<?php if ( '' !== $requestedRepositoryId ) { ?>
+								<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to managed repositories', 'ran-booster' ); ?></a></p>
+								<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
+									<?php ( new \RAN\Admin\Component\RepositoryTableRenderer() )->render( 'ran-booster-managed-webhook-repositories-heading', array( $selectedRepositoryRow ) ); ?>
+								<?php } else { ?>
+									<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+								<?php } ?>
+							<?php } elseif ( array() !== $repositoryTableRows ) { ?>
 								<?php
 								$repositoryRowCount = count( $repositoryTableRows );
 								/* translators: %d is the number of repository rows shown. */
@@ -1148,16 +1227,9 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 								<p class="description"><?php esc_html_e( 'Managed repository status is temporarily unavailable.', 'ran-booster' ); ?></p>
 							<?php } ?>
 							<?php
-							$selectedAssistedRepository = '';
-							// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only selection; every operation has its own nonce.
-							if ( isset( $_GET['assisted_repository'] ) && is_string( $_GET['assisted_repository'] ) ) {
-								// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only selection; every operation has its own nonce.
-								$candidate = trim( wp_unslash( $_GET['assisted_repository'] ) );
-								if ( '' !== $candidate && strlen( $candidate ) <= 191 && 1 !== preg_match( '/[\x00-\x1F\x7F]/', $candidate ) ) {
-									$selectedAssistedRepository = $candidate;
-								}
+							if ( is_array( $selectedRepositoryRow ) ) {
+								$repositoryComposition->renderPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
 							}
-							$repositoryComposition->renderPanel( $provider['code'], $selectedAssistedRepository, $providerReturnUrl );
 							?>
 				</section>
 			<?php } ?>

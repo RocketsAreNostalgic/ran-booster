@@ -424,6 +424,28 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		);
 	}
 
+	public function testCoreWebhookProfileRequestPreservesBoundedRepositoryDetail(): void {
+		$_GET = array(
+			'panel'      => 'repositories',
+			'repository' => 'repository:42/example',
+		);
+
+		$request = $this->facade()->providerProfileRequest( 'save-webhook-profile', 'fixture' );
+
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture&panel=repositories&repository=repository:42/example',
+			$request->canonicalUrl
+		);
+
+		$_GET['repository'] = str_repeat( 'a', 192 );
+		$request            = $this->facade()->providerProfileRequest( 'save-webhook-profile', 'fixture' );
+
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture&panel=repositories',
+			$request->canonicalUrl
+		);
+	}
+
 	public function testCoreProviderProfileFailureIsLocalForHtmxAndPrgForNoJavaScript(): void {
 		$facade                           = $this->facade();
 		$_GET['view']                     = 'secrets';

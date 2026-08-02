@@ -81,6 +81,8 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'Disabled', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--ok">Owner secret</span>', $html );
 		self::assertStringContainsString( '<p>Push-to-Deploy disabled; pushes are ignored.</p>', $html );
+		self::assertStringContainsString( 'class="ran-booster-repository-record__status-links"', $html );
+		self::assertStringContainsString( 'href="https://example.test/secret">Set webhook secret</a>', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__policies', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__status-badges', $html );
 		self::assertStringContainsString( '2 packages use this repository', $html );

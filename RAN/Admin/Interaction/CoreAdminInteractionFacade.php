@@ -143,6 +143,12 @@ final class CoreAdminInteractionFacade implements
 			$panel = $this->queryValue( 'panel' );
 			if ( in_array( $panel, array( 'setup', 'repositories' ), true ) ) {
 				$args['panel'] = $panel;
+				if ( 'repositories' === $panel ) {
+					$repository = $this->queryText( 'repository', 191 );
+					if ( '' !== $repository ) {
+						$args['repository'] = $repository;
+					}
+				}
 			}
 		} else {
 			if ( $contract['view'] !== $view ) {
@@ -298,6 +304,19 @@ final class CoreAdminInteractionFacade implements
 		$value = $_GET[ $key ] ?? null;
 
 		return is_string( $value ) ? sanitize_key( wp_unslash( $value ) ) : '';
+	}
+
+	private function queryText( string $key, int $maximumLength ): string {
+		// Read-only provider presentation state does not authorize mutation.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$value = $_GET[ $key ] ?? null;
+		$value = is_string( $value ) ? trim( wp_unslash( $value ) ) : '';
+
+		return '' !== $value
+			&& strlen( $value ) <= $maximumLength
+			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $value )
+				? $value
+				: '';
 	}
 
 	/** @return array<string, int|string> */

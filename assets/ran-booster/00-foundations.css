@@ -1,0 +1,139 @@
+/* Base styles */
+
+/*
+ * Booster admin foundations.
+ *
+ * This stylesheet is loaded only for Booster admin screens. Root scope keeps
+ * these prefixed primitives available to the repository picker, which is
+ * appended directly to document.body.
+ *
+ * Responsive contracts: 480px is compact actions, 600px is compact
+ * diagnostics/documentation, 782px is the WordPress admin narrow layout, and
+ * 1100px/1101px is the managed-packages table boundary.
+ */
+
+:root {
+	--ran-booster-color-neutral-0: #fff;
+	--ran-booster-color-neutral-100: #f0f0f1;
+	--ran-booster-color-neutral-200: #dcdcde;
+	--ran-booster-color-neutral-300: #c3c4c7;
+	--ran-booster-color-neutral-400: #8c8f94;
+	--ran-booster-color-neutral-500: #646970;
+	--ran-booster-color-neutral-600: #50575e;
+	--ran-booster-color-neutral-700: #1d2327;
+	--ran-booster-color-blue-100: #e5f3ff;
+	--ran-booster-color-blue-200: #72aee6;
+	--ran-booster-color-blue-300: #2271b1;
+	--ran-booster-color-blue-400: #135e96;
+	--ran-booster-color-blue-500: #0a4b78;
+	--ran-booster-color-blue-600: #12395b;
+	--ran-booster-color-green-100: #edfaef;
+	--ran-booster-color-green-200: #68de7c;
+	--ran-booster-color-green-300: #00a32a;
+	--ran-booster-color-green-400: #008a20;
+	--ran-booster-color-amber-100: #fcf3e3;
+	--ran-booster-color-amber-200: #dba617;
+	--ran-booster-color-amber-300: #996800;
+	--ran-booster-color-red-100: #fbeaea;
+	--ran-booster-color-red-200: #d9534f;
+	--ran-booster-color-red-300: #c9302c;
+	--ran-booster-color-red-400: #b32d2e;
+	--ran-booster-color-red-500: #a00;
+	--ran-booster-color-red-600: #761c19;
+	--ran-booster-color-coral-100: rgb(255 99 71 / 50%);
+	--ran-booster-color-black-a04: rgb(0 0 0 / 4%);
+	--ran-booster-color-black-a15: rgb(0 0 0 / 15%);
+	--ran-booster-color-black-a40: rgb(0 0 0 / 40%);
+	--ran-booster-color-black-a60: rgb(0 0 0 / 60%);
+
+	/* Semantic aliases */
+	--ran-booster-border: var(--ran-booster-color-neutral-300);
+	--ran-booster-divider: var(--ran-booster-color-neutral-300);
+	--ran-booster-strong-divider: var(--ran-booster-color-neutral-400);
+	--ran-booster-surface: var(--ran-booster-color-neutral-0);
+	--ran-booster-surface-subtle: var(--ran-booster-color-neutral-100);
+	--ran-booster-text: var(--ran-booster-color-neutral-700);
+	--ran-booster-text-muted: var(--ran-booster-color-neutral-600);
+	--ran-booster-text-subtle: var(--ran-booster-color-neutral-500);
+	--ran-booster-link: var(--ran-booster-color-blue-600);
+	--ran-booster-accent: var(--ran-booster-color-blue-200);
+	--ran-booster-status-ok: var(--ran-booster-color-green-400);
+	--ran-booster-status-ok-border: var(--ran-booster-color-green-200);
+	--ran-booster-status-ok-background: var(--ran-booster-color-green-100);
+	--ran-booster-status-warning: var(--ran-booster-color-amber-300);
+	--ran-booster-status-warning-border: var(--ran-booster-color-amber-200);
+	--ran-booster-status-warning-background: var(--ran-booster-color-amber-100);
+	--ran-booster-status-error: var(--ran-booster-color-red-400);
+	--ran-booster-status-error-border: var(--ran-booster-color-red-300);
+	--ran-booster-status-error-background: var(--ran-booster-color-red-100);
+	--ran-booster-status-pending: var(--ran-booster-link-strong);
+	--ran-booster-status-pending-border: var(--ran-booster-accent);
+	--ran-booster-status-pending-background: var(--ran-booster-color-blue-100);
+	--ran-booster-status-neutral: var(--ran-booster-text-muted);
+	--ran-booster-status-neutral-background: var(--ran-booster-surface-subtle);
+	--ran-booster-space-1: 1px;
+	--ran-booster-space-2: 2px;
+	--ran-booster-space-3: 3px;
+	--ran-booster-space-4: 4px;
+	--ran-booster-space-5: 5px;
+	--ran-booster-space-6: 6px;
+	--ran-booster-space-7: 7px;
+	--ran-booster-space-8: 8px;
+	--ran-booster-space-9: 9px;
+	--ran-booster-space-10: 10px;
+	--ran-booster-space-12: 12px;
+	--ran-booster-space-14: 14px;
+	--ran-booster-space-16: 16px;
+	--ran-booster-space-18: 18px;
+	--ran-booster-space-20: 20px;
+	--ran-booster-space-22: 22px;
+	--ran-booster-space-24: 24px;
+	--ran-booster-space-30: 30px;
+	--ran-booster-table-cell-padding-block: var(--ran-booster-space-8);
+	--ran-booster-table-cell-padding-inline: var(--ran-booster-space-12);
+	--ran-booster-table-cell-padding: var(
+			--ran-booster-table-cell-padding-block
+		)
+		var(--ran-booster-table-cell-padding-inline);
+	--ran-booster-font-size-xs: 12px;
+	--ran-booster-font-size-sm: 13px;
+	--ran-booster-font-size-base: 14px;
+	--ran-booster-font-weight-semibold: 600;
+	--ran-booster-line-height-tight: 1.3;
+	--ran-booster-line-height-heading: 1.4;
+	--ran-booster-line-height-base: 1.5;
+	--ran-booster-line-height-relaxed: 1.6;
+	--ran-booster-radius-control: 2px;
+	--ran-booster-radius-surface: 3px;
+	--ran-booster-radius-badge: 10px;
+	--ran-booster-radius-circle: 50%;
+	--ran-booster-radius-pill: 999px;
+	--ran-booster-layer-modal: 100000;
+	--ran-booster-brand: var(--ran-booster-color-blue-600);
+	--ran-booster-link-strong: var(--ran-booster-color-blue-400);
+	--ran-booster-danger: var(--ran-booster-color-red-200);
+	--ran-booster-danger-strong: var(--ran-booster-color-red-300);
+	--ran-booster-danger-hover-border: var(--ran-booster-color-red-600);
+	--ran-booster-danger-muted: var(--ran-booster-color-neutral-300);
+	--ran-booster-text-danger: var(--ran-booster-color-red-500);
+	--ran-booster-text-success: var(--ran-booster-color-green-400);
+	--ran-booster-status-ok-indicator: var(--ran-booster-color-green-300);
+	--ran-booster-surface-info: var(--ran-booster-color-blue-100);
+	--ran-booster-text-info-strong: var(--ran-booster-color-blue-500);
+	--ran-booster-overlay: var(--ran-booster-color-black-a60);
+	--ran-booster-shadow-overlay: var(--ran-booster-color-black-a40);
+	--ran-booster-shadow-surface: 0 1px 1px var(--ran-booster-color-black-a04);
+	--ran-booster-shadow-modal: 0 3px 30px var(--ran-booster-shadow-overlay);
+	--ran-booster-shadow-toast: 0 3px 5px var(--ran-booster-shadow-overlay);
+	--ran-booster-shadow-delete-button:
+		inset 0 1px 0 var(--ran-booster-color-coral-100),
+		0 1px 0 var(--ran-booster-color-black-a15);
+}
+
+.ran-booster-admin {
+	max-inline-size: 1050px;
+}
+
+.notice-info {
+	background-color: var(--ran-booster-color-blue-100);
+}

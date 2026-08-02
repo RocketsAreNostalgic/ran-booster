@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace RAN\Admin;
+
+function current_user_can( string $capability ): bool {
+	$capabilities = $GLOBALS['ran_booster_repository_admin_capabilities'] ?? null;
+	if ( is_array( $capabilities ) && array_key_exists( $capability, $capabilities ) ) {
+		return (bool) $capabilities[ $capability ];
+	}
+
+	return (bool) ( $GLOBALS['ran_booster_repository_admin_allowed'] ?? true );
+}
+
+function check_ajax_referer( string $action, string $queryArg, bool $stop ): bool {
+	unset( $action, $queryArg, $stop );
+
+	return (bool) ( $GLOBALS['ran_booster_repository_admin_nonce_valid'] ?? true );
+}
+
+function is_uploaded_file( string $filename ): bool {
+	return in_array( $filename, $GLOBALS['ran_booster_repository_admin_uploaded_files'] ?? array(), true );
+}
+
+/**
+ * @param array<string, mixed> $data
+ * @return array{success: false, data: array<string, mixed>, status: int|null}
+ */
+function wp_send_json_error( array $data, ?int $statusCode = null ): array {
+	return array(
+		'success' => false,
+		'data'    => $data,
+		'status'  => $statusCode,
+	);
+}
+
+/**
+ * @param array<string, mixed> $data
+ * @return array{success: true, data: array<string, mixed>}
+ */
+function wp_send_json_success( array $data ): array {
+	return array(
+		'success' => true,
+		'data'    => $data,
+	);
+}
+
+function get_current_user_id(): int {
+	return (int) ( $GLOBALS['ran_booster_repository_admin_user_id'] ?? 1 );
+}
+
+function update_user_meta( int $userId, string $key, mixed $value ): int|bool {
+	if ( (bool) ( $GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] ?? false ) ) {
+		return false;
+	}
+
+	$GLOBALS['ran_booster_repository_admin_user_meta'][ $userId ][ $key ] = $value;
+
+	return 1;
+}
+
+function get_user_meta( int $userId, string $key, bool $single ): mixed {
+	unset( $single );
+
+	return $GLOBALS['ran_booster_repository_admin_user_meta'][ $userId ][ $key ] ?? '';
+}
+
+function wp_unslash( mixed $value ): mixed {
+	return $value;
+}
+
+function sanitize_key( mixed $value ): string {
+	return (string) preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $value ) );
+}
+
+function sanitize_text_field( mixed $value ): string {
+	return trim( (string) preg_replace( '/<[^>]*>/', '', (string) $value ) );
+}

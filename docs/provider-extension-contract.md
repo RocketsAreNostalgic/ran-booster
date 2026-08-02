@@ -1,0 +1,285 @@
+# Provider extension contract
+
+RAN Booster Provider API 6 accepts trusted repository providers through its late
+registration action. A provider plugin attaches a callback from its main plugin
+file during normal plugin loading:
+
+```php
+add_action(
+	'ran_booster_register_providers',
+	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
+		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
+			|| 6 !== RAN_BOOSTER_PROVIDER_API_VERSION
+			|| ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
+			|| 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+			return;
+		}
+
+		$logging = $registry->logging();
+
+		$registry->registerWithCredentialStore(
+			'example',
+			static fn ( \RAN\RepositoryProvider\ProviderCredentialStore $credentials ): ExampleProvider => new ExampleProvider( $credentials )
+		);
+	}
+);
+```
+
+Provider API 6 and Logging API 1 are separate from the administration
+composition contract. Logging API 1 exposes the shared
+`ProviderRegistry::logging()` seam and returns the narrow
+`RAN\AddOn\Logging\LoggingFacade` supplied to operational add-ons through their
+service-ready actions. Use it for bounded operational failures and outcomes
+only. It preserves Core's
+`WP_DEBUG_LOG` gate, temporary capture and safe context allowlist; it does not
+write Deployment Activity records and must never receive credentials, tokens,
+webhook payloads or raw upstream responses.
+
+Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
+registration action can run. The callback must check for exact Provider API 6
+and Logging API 1. Provider API 6 makes `LoggingFacade` the first required
+`ProviderRegistry` constructor dependency; Core never constructs the registry
+with a missing or implicit no-op logger.
+Booster fires the action once on `plugins_loaded` at priority 100, after plugin
+files have loaded and before the dashboard, dispatcher, repository picker or
+webhook controller is resolved. It then seals the registry. This works whether
+the provider plugin file loads before or after Booster because both attach
+their callbacks before `plugins_loaded` runs. Registration after sealing fails;
+a newly activated provider becomes available on the next request.
+
+`registerWithCredentialStore()` is the required path for a provider that reads
+stored credentials. Booster verifies that the requested code is novel before it
+issues a read-only store bound to that code, then verifies that the returned
+provider uses the same code before atomic registration. The store has no
+provider argument, write methods, path access, profile-record access or
+webhook-secret access. It exposes only `hasWebhookProfile()` for display-safe
+diagnostic readiness, so a retained store cannot cross provider namespaces. The
+factory and provider
+constructor must remain local and non-I/O and must not read the store during
+construction: its provider policy becomes active only after the factory returns
+successfully. Validators, discovery clients and archive clients may retain the
+store and read it after registration; they then use the same live sidecar graph
+as Booster's admin credential forms.
+
+Registration failures expose fixed, redacted messages and retain no upstream
+exception. A rejected provider publishes neither provider nor policy state, so
+the same provider code may be corrected and registered again during the same
+registration window.
+
+## Required provider surface
+
+Every provider implements `RepositoryProvider`. That contract directly requires
+metadata, a bounded diagnostics object, repository resolution and immutable
+archive preparation: every registered provider therefore has a useful manual
+install/update path. Metadata supplies an open, stable `ProviderCode`; IDs start
+with a lowercase ASCII letter and may be followed by up to 31 lowercase ASCII
+letters, digits or hyphens.
+The built-in page IDs `documentation` and `troubleshooting` are reserved.
+
+Provider admin metadata is rendered directly after construction, so its typed
+constructors enforce the display-safety boundary. Labels are limited to 160
+bytes, summaries to 2,000 bytes, and placeholders, descriptions and webhook
+guidance to 500 bytes. Credential-kind, credential-field and webhook-scope
+identifiers retain their lowercase letters, numbers, underscores and hyphens
+syntax and are limited to 64 bytes. Required text must be non-empty; optional
+text may be empty. All raw display text and URLs must be single-line and free
+of control characters, including before surrounding whitespace is trimmed.
+Documentation links are limited to 2,048 bytes and must be public HTTPS URLs
+without username or password components; query strings and fragments are
+allowed. The repository URL base remains stricter and permits neither query
+strings nor fragments. Providers should treat constructor rejection as a
+registration-time metadata error rather than attempting to sanitize unsafe
+content later.
+
+Provider metadata supplies concise setup and webhook guidance; it does not
+register or render a full add-on guide. A provider add-on that contributes
+non-interactive documentation attaches separately to the provider-specific
+structured WordPress filter:
+
+```php
+add_filter(
+	'ran_booster_documentation_sections_after_provider_' . $providerCode,
+	$callback,
+	10,
+	3
+);
+```
+
+That callback belongs to the
+[WordPress-native administration composition contract](admin-composition-contract.md),
+not the Provider API. It receives the current structured section list,
+canonical Documentation URL and administration scope, not the provider
+registry or provider implementation.
+
+Repository locators are provider-owned opaque strings. Booster preserves their
+accepted bytes, rejecting all-whitespace values, control characters and values
+longer than 512 bytes, but does not impose an `owner/repository` shape.
+`resolveRepository()` must return a
+`RepositoryDescriptor` containing the provider code, canonical locator, stable
+provider repository ID, privacy, default branch, selected credential ID and a
+single safe package slug for the initial WordPress installation. Stable
+repository IDs and package slugs are limited to 191 bytes. Providers with
+nested namespaces may therefore accept locators such as
+`group/subgroup/package` without core changes.
+
+Lookup, browse and archive-reference inputs are receiver-bound and therefore do
+not repeat the selected provider code. Core selects one registered provider
+before constructing them. Provider identity remains mandatory on descriptors,
+webhook events and stored package/deployment data because those values cross
+back into provider-neutral Core. Core rejects a descriptor whose provider does
+not match the selected aggregate; add-ons must not dispatch these input values
+to a provider without first selecting it through `ProviderRegistry`.
+
+The provider package slug is transient: Booster uses it only to relocate and
+find the package during initial installation. Managed plugin updates derive the
+slug from the installed WordPress plugin file; managed theme updates derive it
+from the installed stylesheet. The package table persists the provider code,
+opaque locator and stable repository ID, not a provider-specific slug or legacy
+host alias.
+
+Archive preparers must return an HTTPS URL with a host and without URL
+userinfo or fragments. Providers must not place reusable credentials,
+authorization material or long-lived secrets in archive URLs, including query
+parameters. Booster applies this generic safety floor before streaming the
+archive into its private preflight file; WordPress receives only that verified
+local file. Providers remain responsible for any stricter origin, path and
+signed query policy required by their service.
+
+`prepareArchive()` resolves the requested branch, tag or commit exactly once to
+an immutable commit and builds the archive URL from that resolved value.
+`PreparedArchive::getResolvedRef()` exposes it to the deployment journal. For an
+automatic request with an expected branch, the provider checks the branch while
+preparing and supplies `verifyCurrentHead()` to repeat that fixed provider-owned
+check immediately before WordPress mutates the package. Manual preparations use
+a no-op verification. Provider resolution and head verification are limited to
+three 15-second requests in total. Private authentication applies only to the
+exact first archive request and must be removed before any redirect.
+
+If a provider add-on is deactivated, Booster retains those stored identities
+and presents the package as unavailable. It must not substitute another
+provider. Deployment and provider actions remain disabled until the same code
+is registered again; unlinking the management record remains available.
+
+The supplied `ProviderDiagnostics` object owns a fixed, bounded set of checks
+including credential configuration/authentication and repository
+reachability/scope. A provider may add a bespoke prerequisite while remaining
+within the coordinator's overall check, call and deadline limits. It must use
+the same provider client, credential loader, validator and resolver as discovery
+and deployment. It returns only `ProviderDiagnosticResult` objects containing:
+
+- `status`: `pass`, `warning`, `fail` or `not_configured`;
+- a stable machine code;
+- a safe, single-line message; and
+- safe remediation text.
+
+The request permits at most five remote calls and has a monotonic deadline of
+ten seconds. Provider code calls `claimRemoteCall()` immediately before each
+request and passes the returned remaining timeout to its production client.
+Raw responses, headers, exceptions and credentials must not be returned.
+Supplying the diagnostics object during registration must be a local,
+non-network operation; remote work starts only from `diagnose()`.
+
+## Optional capabilities
+
+Repository browsing, credential-form validation and webhook normalization are
+separate optional capabilities. In particular, a provider may omit
+`WebhookNormalizer`; manual deployment remains available and Push-to-Deploy
+fails with the normal unsupported-capability result. A provider that omits
+webhooks must also publish no webhook scopes in its admin metadata.
+
+`RepositoryWebhookSettingsLink` is an independent display capability. It maps
+one provider-owned repository locator to that repository's stable HTTPS webhook
+settings screen. Core treats locators as opaque, validates the returned URL, and
+shows plain repository text when the capability is absent, throws, or returns
+an unsafe URL.
+
+`CredentialValidationResult::valid()` accepts no argument when expiry is not
+reported. A validator may instead return bounded expiry metadata:
+
+```php
+return CredentialValidationResult::valid(
+	CredentialExpiryReport::known( '2026-12-31T23:59:59Z' )
+);
+```
+
+Use `CredentialExpiryReport::unknown()` only when the provider performed a
+successful check but supplied no trustworthy expiry value. Leave the result's
+expiry property `null` when the provider does not implement expiry reporting.
+Core stores only the normalized UTC timestamp and provider-check time; providers
+must never return or persist raw response headers. Provider-reported expiry
+takes precedence over Booster's optional manual profile date. A provider that
+does not report expiry remains fully compatible and receives the same manual
+fallback, row status, and administrator notice behavior.
+
+A provider that implements `RepositoryBrowser` receives one public-owner or
+one selected-credential `RepositoryBrowseRequest`. It must claim every remote
+call from that request, apply its response-size limit and return a
+`RepositoryBrowseResult`. It may follow provider-owned opaque pagination only
+while the request has capacity. Results stop at the shared 200-item limit; if a
+later page fails, the provider returns the already validated rows with one of
+the result's fixed partial reasons. Providers must not scan every saved
+credential, expose cursors, retry requests or return upstream response text.
+The current per-picker budget is five calls and eight seconds, with 256 KiB per
+response and 1 MiB across the request.
+
+`CredentialedPublicRepositoryBrowser` is a narrower, additive browsing
+capability. It allows a public-owner request to carry one provider-local access
+profile ID and returns typed metadata stating whether one profile may be
+configured as the provider-wide default. Core requests this capability before
+forwarding any authenticated Public-mode request; a provider that implements
+only `RepositoryBrowser` continues to receive anonymous public-owner requests
+and rejects forged credentialed-public requests through the normal
+unsupported-capability path.
+
+Credentialed public browsing remains public-only. Providers must not return
+private descriptors or attach the selected lookup profile to result
+descriptors. The profile authorizes only repository browsing and exact
+server-side save verification; it is not a durable package credential. During
+that exact verification, `RepositoryLookupRequest::$publicOnly` is `true`.
+Providers may use that context to relax a restriction that applies only to
+durable private access, but must then reject any private exact result. All
+ordinary, Accessible-mode and deployment lookups receive `false`.
+
+Credential-bearing providers implement `ProviderCredentialPolicySupplier` and
+return a provider-owned `ProviderCredentialPolicy`. The policy normalizes the
+provider's credential kinds and configuration, declares only the deployment
+constants that provider understands, and converts those constants into the same
+canonical credential record. This keeps the sidecar's file operations atomic
+and provider-neutral while preventing unknown provider IDs from reaching file
+inclusion or secret decoding. Credential policy lookup during registration is a
+local, non-I/O operation.
+
+Webhook support remains optional. A webhook-capable provider implements
+`WebhookNormalizer`, whose `getWebhookPolicy()` returns its
+`ProviderWebhookPolicy`. That policy declares the small allowlist of request
+headers Booster may retain, normalizes provider-owned webhook scope records and
+declares any supported deployment constants. Signature ambiguity and semantic
+header validation remain inside the provider normalizer. Booster retains no
+authorization or unplanned request headers, and it passes only the selected
+provider's declared headers to that normalizer.
+
+Webhook signing-secret scope codes are universally `owner` or `repository`.
+Providers may relabel `owner` for their interface—for example **GitHub Owner**
+or **Bitbucket Workspace**—but may not introduce additional logical scopes.
+
+Published-release candidate discovery is not a Provider API capability. It is
+owned by Core's separately versioned prospective-release facade and the selected
+shared updater runtime. `supportedProviderCodes()` exposes the current bounded,
+request-local provider allowlist for plugins or themes without resolving a
+repository, reading credentials or making a remote request. Registering a
+provider does not imply published-release support. Core rejects a prospective
+operation with `unsupported_provider` before repository resolution when the
+selected provider is not in that list.
+
+The physically separate conformance plugin in
+`tests/fixtures/ran-booster-fixture-provider/` registers a novel provider ID,
+supplies a provider-owned diagnostics object, resolves a nested repository
+locator, saves and validates its own credential through the provider-bound live
+sidecar, prepares an archive and deliberately omits repository browsing and
+webhooks. `tests/RepositoryProvider/ExternalFixturePluginTest.php` exercises the
+contract without loading the fixture as core code, while
+`tests/WordPress/fixture-provider-smoke.php` proves both plugin load orders,
+package-form presentation, selected-provider diagnostics and explicit
+unsupported-capability behavior in WordPress. The fixture is excluded from the
+runtime release archive and requires no provider-name branches in Booster,
+GitHub or Bitbucket code.

@@ -1,0 +1,46 @@
+.DS_Store
+.idea
+boosterlog
+
+# Private planning, review and task state lives in the nested workbench.
+/.ran-booster-workbench/
+/.dex/
+/.agents/plans/
+/.agents/skills/ran-booster-dex/
+/docs/plans/
+/docs/reviews/
+/docs/proposals/
+/docs/proofs/
+/docs/decks/
+/docs/blueprints/
+/docs/*-decision-register.md
+/docs/*-phase[0-9]-evidence.md
+/docs/executive-roadmap.md
+
+# Secrets and local environment overrides.
+.env*
+/secrets.json
+/secrets.json.lock
+/.ran-booster/
+
+# Logs, caches, and generated test output.
+*.log
+/logs/
+/cache/
+/.cache/
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpcs-cache
+/.eslintcache
+/.stylelintcache
+/coverage/
+
+# Generated dependencies and release archives.
+/node_modules/
+/build/
+/.plugin-check/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+vendor

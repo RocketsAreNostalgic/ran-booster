@@ -1,0 +1,11 @@
+packages:
+  - '.'
+
+enableGlobalVirtualStore: false
+pmOnFail: error
+updateNotifier: false
+verifyDepsBeforeRun: error
+
+allowBuilds:
+  core-js: false
+  unrs-resolver: false

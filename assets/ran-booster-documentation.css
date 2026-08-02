@@ -1,0 +1,136 @@
+.ran-booster-admin .ran-booster-documentation {
+	max-inline-size: 1080px;
+}
+
+.ran-booster-admin .ran-booster-documentation__sections {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-documentation__section {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-documentation__section summary {
+	padding-block: var(--ran-booster-space-16);
+	padding-inline: var(--ran-booster-space-18);
+	color: var(--ran-booster-text);
+	cursor: pointer;
+	font-size: 15px;
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
+.ran-booster-admin .ran-booster-documentation__section summary:hover {
+	color: var(--ran-booster-link-strong);
+}
+
+.ran-booster-admin .ran-booster-documentation__section summary:focus-visible {
+	border-radius: var(--ran-booster-radius-control);
+	outline: 2px solid var(--ran-booster-color-blue-300);
+	outline-offset: -2px;
+}
+
+.ran-booster-admin .ran-booster-documentation__section[open] summary {
+	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-documentation__content {
+	max-inline-size: 860px;
+	padding-block: var(--ran-booster-space-4) var(--ran-booster-space-20);
+	padding-inline: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-documentation__content p,
+.ran-booster-admin .ran-booster-documentation__content li,
+.ran-booster-admin .ran-booster-documentation__content dd {
+	line-height: var(--ran-booster-line-height-relaxed);
+}
+
+.ran-booster-admin .ran-booster-documentation__content ol,
+.ran-booster-admin .ran-booster-documentation__content ul {
+	margin-inline-start: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-documentation__content li + li {
+	margin-block-start: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-documentation__content code {
+	padding-block: var(--ran-booster-space-2);
+	padding-inline: var(--ran-booster-space-6);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-surface-subtle);
+	font-size: var(--ran-booster-font-size-sm);
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin
+	.ran-booster-documentation__content
+	.ran-booster-documentation__inline-links {
+	display: flex;
+	margin-block: var(--ran-booster-space-8) 0;
+	margin-inline: 0;
+	padding: 0;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+	list-style: none;
+}
+
+.ran-booster-admin
+	.ran-booster-documentation__content
+	.ran-booster-documentation__inline-links
+	li {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-documentation__provider-webhook {
+	margin-block-start: var(--ran-booster-space-18);
+	padding-block-start: var(--ran-booster-space-4);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-documentation__provider-webhook h3 {
+	margin-block-end: var(--ran-booster-space-10);
+}
+
+.ran-booster-admin .ran-booster-documentation__provider-webhook dl {
+	display: grid;
+	grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+	margin: 0;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-18);
+}
+
+.ran-booster-admin .ran-booster-documentation__provider-webhook dt {
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-documentation__provider-webhook dd {
+	min-inline-size: 0;
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-documentation__provider-webhook code {
+	overflow-wrap: anywhere;
+}
+
+@media screen and (max-width: 600px) {
+	.ran-booster-admin .ran-booster-documentation__section summary {
+		padding: var(--ran-booster-space-14);
+	}
+
+	.ran-booster-admin .ran-booster-documentation__content {
+		padding-block: var(--ran-booster-space-2) var(--ran-booster-space-16);
+		padding-inline: var(--ran-booster-space-14);
+	}
+
+	.ran-booster-admin .ran-booster-documentation__provider-webhook dl {
+		grid-template-columns: 1fr;
+		gap: var(--ran-booster-space-2);
+	}
+
+	.ran-booster-admin .ran-booster-documentation__provider-webhook dd + dt {
+		margin-block-start: var(--ran-booster-space-8);
+	}
+}

@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<ruleset name="RAN Booster Coding Standards">
+	<description>WordPress and PHP compatibility checks for RAN Booster.</description>
+
+	<config name="minimum_supported_wp_version" value="7.0"/>
+	<config name="testVersion" value="8.2-"/>
+
+	<file>.</file>
+	<exclude-pattern>/vendor/</exclude-pattern>
+	<exclude-pattern>/node_modules/</exclude-pattern>
+	<exclude-pattern>/.ran-booster-workbench/</exclude-pattern>
+	<exclude-pattern>/.phpunit.cache/</exclude-pattern>
+	<exclude-pattern>/.phpcs-cache</exclude-pattern>
+	<exclude-pattern>/.plugin-check/</exclude-pattern>
+	<exclude-pattern>/coverage/</exclude-pattern>
+
+	<arg name="basepath" value="."/>
+	<arg name="colors"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="4"/>
+	<arg value="sp"/>
+
+	<rule ref="PHPCompatibilityWP"/>
+	<rule ref="WordPress-Extra">
+		<!-- This single-file characterization harness intentionally declares WordPress fixtures inline. -->
+		<exclude-pattern>/tests/characterization.php</exclude-pattern>
+		<!-- The RAN namespace is PSR-4 autoloaded, so class files retain class-case names. -->
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+		<!-- Preserve the inherited camelCase OOP API and its local implementation variables. -->
+		<exclude name="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid"/>
+		<exclude name="WordPress.NamingConventions.ValidVariableName"/>
+		<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->
+		<exclude name="WordPress.PHP.YodaConditions"/>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>/tests/</exclude-pattern>
+		<!-- Template locals are passed into included view files; they are not plugin globals. -->
+		<exclude-pattern>/views/</exclude-pattern>
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="ran_booster"/>
+				<!-- The namespace separator makes the three-character RAN namespace a valid WPCS prefix. -->
+				<element value="RAN\"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- WPCS 3.4 hard-codes a four-character minimum; this inherited plugin's namespace is RAN. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound">
+		<severity>0</severity>
+	</rule>
+
+	<!-- Hook and inherited API signatures intentionally retain required or legacy parameter names. -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<severity>0</severity>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UselessOverridingMethod">
+		<severity>0</severity>
+	</rule>
+	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
+		<severity>0</severity>
+	</rule>
+
+	<!-- The focused container unit test keeps its tiny fixture classes beside the assertions. -->
+	<rule ref="Generic.Files.OneObjectStructurePerFile">
+		<exclude-pattern>/tests/Container/ContainerTest.php</exclude-pattern>
+	</rule>
+
+	<!--
+		SecretsFile uses a site-owned encrypted JSON sidecar and atomic temp-file + rename writes.
+		WP_Filesystem cannot provide the same same-directory atomic replacement contract.
+	-->
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.NoSilencedErrors">
+		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DevelopmentFunctions.error_log_var_export">
+		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="ran-booster"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

@@ -1,0 +1,5 @@
+assets/dist/
+assets/lib/
+node_modules/
+vendor/
+CHANGELOG.md

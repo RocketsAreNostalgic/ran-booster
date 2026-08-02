@@ -1,0 +1,92 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Admin;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use RAN\Admin\PackageViewConfig;
+
+require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+
+final class PackageIndexNoticePlacementTest extends TestCase {
+
+	public function testStructuredContentionInfoNoticeKeepsItsProtectedActivityLink(): void {
+		$messages = array(
+			array(
+				'type'    => 'info',
+				'code'    => 'ran_booster_deployment_active',
+				'message' => 'A deployment is active. <a href="https://example.test/activity?attempt=42">Review activity</a>.',
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/notices.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'notice notice-info inline', $html );
+		self::assertStringContainsString( 'attempt=42', $html );
+		self::assertStringContainsString( 'Review activity', $html );
+	}
+
+	/** @return array<string, array{PackageViewConfig, string}> */
+	public static function packageTypes(): array {
+		return array(
+			'plugins' => array( PackageViewConfig::plugin(), 'Managed Plugins' ),
+			'themes'  => array( PackageViewConfig::theme(), 'Managed Themes' ),
+		);
+	}
+
+	#[DataProvider( 'packageTypes' )]
+	public function testPackageIndexPlacesNoticesAfterItsHeadingAndDescription( PackageViewConfig $packageView, string $heading ): void {
+		$messages                = array(
+			array(
+				'type'            => 'success',
+				'message'         => 'Scoped package result.',
+				'code'            => 'bulk_update_queue',
+				'queued_updates'  => 2,
+				'skipped_updates' => 1,
+			),
+		);
+		$name                    = 'RAN Booster';
+		$view                    = 'packages/index';
+		$developmentSafetyNotice = true;
+		$packages                = array();
+		$packageProviders        = array();
+		$packageActivity         = array(
+			'items'       => array(),
+			'unavailable' => false,
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/base.php';
+		$html = (string) ob_get_clean();
+
+		$mastheadPosition    = strpos( $html, 'Safe, portable and extensible repository deployment' );
+		$headingPosition     = strpos( $html, $heading );
+		$descriptionPosition = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
+		$resultPosition      = strpos( $html, 'Scoped package result.' );
+		$safetyPosition      = strpos( $html, '<strong>Development safety:</strong>' );
+		$tablePosition       = strpos( $html, 'ran-booster-package-table' );
+
+		foreach ( array( $mastheadPosition, $headingPosition, $descriptionPosition, $resultPosition, $safetyPosition, $tablePosition ) as $position ) {
+			self::assertIsInt( $position );
+		}
+		self::assertTrue( $mastheadPosition < $headingPosition );
+		self::assertTrue( $headingPosition < $descriptionPosition );
+		self::assertTrue( $descriptionPosition < $resultPosition );
+		self::assertTrue( $resultPosition < $safetyPosition );
+		self::assertTrue( $safetyPosition < $tablePosition );
+		self::assertSame( 1, substr_count( $html, 'Scoped package result.' ) );
+		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
+		self::assertSame( 1, substr_count( $html, 'class="ran-booster-package-intro"' ) );
+		self::assertSame( 1, substr_count( $html, 'notice notice-warning inline is-dismissible' ) );
+		self::assertSame( 2, substr_count( $html, 'is-dismissible' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-development-safety' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-update-summary data-queued' ) );
+		self::assertStringContainsString( 'data-queued="2" data-skipped="1"', $html );
+		self::assertStringContainsString( 'data-ran-booster-update-summary-message', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-package-success', $html );
+	}
+}

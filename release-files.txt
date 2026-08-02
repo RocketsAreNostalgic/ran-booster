@@ -1,0 +1,22 @@
+# Runtime files and directories included in the release ZIP.
+#
+# Core paths are read from the selected release commit. Vendor paths are copied
+# from a clean --no-dev Composer install of that commit's composer.json and
+# composer.lock. ran-booster-release.json is generated only in the temporary
+# archive stage from the selected version and immutable commit. The build and
+# verification scripts reject every path outside this exact allowlist.
+NOTICE.md
+RAN
+assets
+autoload.php
+index.php
+license.txt
+ran-booster.php
+ran-booster-release.json
+readme.txt
+uninstall.php
+vendor/ran/wp-github-release-updater/LICENSE
+vendor/ran/wp-github-release-updater/bootstrap.php
+vendor/ran/wp-github-release-updater/runtime.php
+vendor/ran/wp-github-release-updater/src
+views

@@ -1,0 +1,170 @@
+/*
+ * Shared Booster admin primitives.
+ *
+ * These classes communicate reusable visual roles. Feature classes remain
+ * responsible for placement, content, state and interaction hooks.
+ */
+
+.ran-booster-admin .ran-booster-eyebrow {
+	margin-block: 0 var(--ran-booster-space-6);
+	margin-inline: 0;
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.ran-booster-admin .ran-booster-eyebrow--compact {
+	color: var(--ran-booster-text-subtle);
+	font-size: 11px;
+	letter-spacing: 0.06em;
+}
+
+.ran-booster-admin .ran-booster-panel {
+	overflow: hidden;
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-surface);
+	box-shadow: var(--ran-booster-shadow-surface);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-page-shell {
+	margin-block: var(--ran-booster-space-16) var(--ran-booster-space-24);
+	margin-inline: 0;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-page-shell__header {
+	padding-block: var(--ran-booster-space-22) var(--ran-booster-space-20);
+	padding-inline: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin .ran-booster-page-shell__body {
+	padding-block-end: var(--ran-booster-space-24);
+	padding-inline: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin .ran-booster-action-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-action-row > form {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-section__title {
+	margin: 0;
+	color: var(--ran-booster-text);
+	font-size: 16px;
+	line-height: 1.5;
+}
+
+.ran-booster-admin .ran-booster-section__description {
+	margin-block: var(--ran-booster-space-4) 0;
+	margin-inline: 0;
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-page-heading__title {
+	margin: 0;
+	font-size: 23px;
+	line-height: 1.3;
+}
+
+.ran-booster-admin .ran-booster-page-heading__description {
+	max-inline-size: 760px;
+	margin-block: var(--ran-booster-space-6) 0;
+	margin-inline: 0;
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-base);
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-page-shell__header,
+	.ran-booster-admin .ran-booster-page-shell__body {
+		padding-inline: var(--ran-booster-space-18);
+	}
+}
+
+/*
+ * Repository pickers are portalled directly to document.body so they can
+ * cover the WordPress admin chrome. Dialog primitives therefore own their
+ * namespaced scope rather than relying on the Booster page wrapper.
+ */
+
+.ran-booster-dialog[hidden] {
+	display: none;
+}
+
+.ran-booster-dialog {
+	position: fixed;
+	z-index: var(--ran-booster-layer-modal);
+	inset: 0;
+	display: flex;
+	box-sizing: border-box;
+	align-items: center;
+	justify-content: center;
+	padding: var(--ran-booster-space-20);
+	background: var(--ran-booster-overlay);
+}
+
+.ran-booster-dialog__surface {
+	overflow: hidden;
+	border: 1px solid var(--ran-booster-strong-divider);
+	border-radius: var(--ran-booster-radius-control);
+	box-shadow: var(--ran-booster-shadow-modal);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-dialog__header {
+	display: flex;
+	align-items: center;
+	min-block-size: 56px;
+	padding-inline-start: var(--ran-booster-space-20);
+	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-dialog__title {
+	margin: 0;
+	flex: 1;
+	font-size: 20px;
+	line-height: 1.3;
+}
+
+.ran-booster-dialog__close {
+	inline-size: 56px;
+	block-size: 56px;
+	padding: 0;
+	border: 0;
+	border-inline-start: 1px solid var(--ran-booster-divider);
+	background: transparent;
+	color: var(--ran-booster-text-muted);
+	cursor: pointer;
+	font-size: 32px;
+	line-height: 1;
+}
+
+.ran-booster-dialog__close:focus,
+.ran-booster-dialog__close:hover {
+	background: var(--ran-booster-surface-subtle);
+	color: var(--ran-booster-link-strong);
+}
+
+.ran-booster-dialog__close:focus {
+	outline: 2px solid var(--ran-booster-link);
+	outline-offset: -2px;
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-dialog {
+		padding: var(--ran-booster-space-10);
+	}
+
+	.ran-booster-dialog__surface {
+		max-block-size: calc(100vh - 20px);
+	}
+}

@@ -1,0 +1,169 @@
+body.ran-booster-repository-picker-open {
+	overflow: hidden;
+}
+
+.ran-booster-repository-picker__dialog {
+	display: flex;
+	inline-size: min(720px, 100%);
+	block-size: min(720px, calc(100vh - 40px));
+	max-block-size: min(720px, calc(100vh - 40px));
+	flex-direction: column;
+}
+
+.ran-booster-repository-picker__body {
+	display: flex;
+	overflow-y: auto;
+	min-block-size: 0;
+	padding: var(--ran-booster-space-20);
+	flex: 1 1 auto;
+	flex-direction: column;
+}
+
+.ran-booster-repository-picker__modes {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	margin-block-end: var(--ran-booster-space-18);
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-repository-picker__public-search {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
+.ran-booster-repository-picker__public-search > label,
+.ran-booster-repository-picker__profile-options label {
+	display: block;
+	margin-block-end: var(--ran-booster-space-6);
+	font-weight: 600;
+}
+
+.ran-booster-repository-picker__profile-options {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
+.ran-booster-repository-picker__public-limit-notice {
+	margin-block: 0 var(--ran-booster-space-16);
+}
+
+.ran-booster-repository-picker__credential,
+.ran-booster-repository-picker__public-profile {
+	inline-size: 100%;
+	max-inline-size: none;
+}
+
+.ran-booster-repository-picker__public-search-fields {
+	display: flex;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-repository-picker__owner {
+	inline-size: 100%;
+	max-inline-size: none;
+}
+
+.ran-booster-repository-picker__filter[hidden],
+.ran-booster-repository-picker__public-search[hidden],
+.ran-booster-repository-picker__accessible-options[hidden] {
+	display: none;
+}
+
+.ran-booster-repository-picker__search {
+	inline-size: 100%;
+	max-inline-size: none;
+}
+
+.ran-booster-repository-picker__status {
+	min-block-size: 42px;
+	margin-block: var(--ran-booster-space-10);
+	margin-inline: 0;
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-repository-picker__status--error {
+	color: var(--ran-booster-status-error);
+}
+
+.ran-booster-repository-picker__list {
+	position: relative;
+	overflow-y: auto;
+	min-block-size: min(184px, 30vh);
+	max-block-size: min(368px, 42vh);
+	flex: 1 1 368px;
+	border: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-repository-picker__list::before {
+	position: absolute;
+	z-index: 2;
+	inset-block-start: -1px;
+	inset-inline: 0;
+	block-size: 3px;
+	background-color: var(--ran-booster-link-strong);
+	background-image: repeating-linear-gradient(
+		-45deg,
+		var(--ran-booster-link-strong) 0,
+		var(--ran-booster-link-strong) 8px,
+		var(--ran-booster-surface-info) 8px,
+		var(--ran-booster-surface-info) 16px
+	);
+	background-size: 23px 23px;
+	content: "";
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 100ms ease-in-out;
+}
+
+.ran-booster-repository-picker__list.is-checking::before {
+	animation: ran-booster-update-stripes 0.8s linear infinite;
+	opacity: 1;
+}
+
+.ran-booster-repository-picker__repository {
+	display: flex;
+	inline-size: 100%;
+	min-block-size: 46px;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-20);
+	padding-block: var(--ran-booster-space-12);
+	padding-inline: var(--ran-booster-space-14);
+	border: 0;
+	border-block-end: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface);
+	color: var(--ran-booster-text);
+	cursor: pointer;
+	text-align: start;
+}
+
+.ran-booster-repository-picker__repository:last-child {
+	border-block-end: 0;
+}
+
+.ran-booster-repository-picker__repository:focus,
+.ran-booster-repository-picker__repository:hover {
+	position: relative;
+	z-index: 1;
+	background: var(--ran-booster-surface-info);
+	color: var(--ran-booster-link-strong);
+	outline: 2px solid var(--ran-booster-link);
+	outline-offset: -2px;
+}
+
+.ran-booster-repository-picker__repository-name {
+	overflow-wrap: anywhere;
+	font-weight: 600;
+}
+
+.ran-booster-repository-picker__repository-details {
+	flex: 0 0 auto;
+	color: var(--ran-booster-text-subtle);
+	font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ran-booster-repository-picker__list::before {
+		animation: none;
+		transition: none;
+	}
+}

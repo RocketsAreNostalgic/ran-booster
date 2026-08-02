@@ -1,0 +1,135 @@
+/*
+ * Shared status utilities.
+ *
+ * Pills communicate compact state and tiles communicate stable labelled facts.
+ * WordPress-native notices remain the standard alert component.
+ */
+
+.ran-booster-admin
+	:is(.ran-booster-pill, .ran-booster-badge, .ran-booster-tile) {
+	--ran-booster-status-utility-border: var(--ran-booster-border);
+	--ran-booster-status-utility-background: var(
+		--ran-booster-status-neutral-background
+	);
+	--ran-booster-status-utility-color: var(--ran-booster-status-neutral);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-pill--info,
+		.ran-booster-badge--info,
+		.ran-booster-tile--info
+	) {
+	--ran-booster-status-utility-border: var(--ran-booster-accent);
+	--ran-booster-status-utility-background: var(--ran-booster-surface-info);
+	--ran-booster-status-utility-color: var(--ran-booster-text-info-strong);
+}
+
+.ran-booster-admin
+	:is(.ran-booster-pill--ok, .ran-booster-badge--ok, .ran-booster-tile--ok) {
+	--ran-booster-status-utility-border: var(--ran-booster-status-ok-border);
+	--ran-booster-status-utility-background: var(
+		--ran-booster-status-ok-background
+	);
+	--ran-booster-status-utility-color: var(--ran-booster-status-ok);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-pill--warning,
+		.ran-booster-badge--warning,
+		.ran-booster-tile--warning
+	) {
+	--ran-booster-status-utility-border: var(
+		--ran-booster-status-warning-border
+	);
+	--ran-booster-status-utility-background: var(
+		--ran-booster-status-warning-background
+	);
+	--ran-booster-status-utility-color: var(--ran-booster-status-warning);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-pill--error,
+		.ran-booster-badge--error,
+		.ran-booster-tile--error
+	) {
+	--ran-booster-status-utility-border: var(--ran-booster-status-error-border);
+	--ran-booster-status-utility-background: var(
+		--ran-booster-status-error-background
+	);
+	--ran-booster-status-utility-color: var(--ran-booster-status-error);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-pill--pending,
+		.ran-booster-badge--pending,
+		.ran-booster-tile--pending
+	) {
+	--ran-booster-status-utility-border: var(
+		--ran-booster-status-pending-border
+	);
+	--ran-booster-status-utility-background: var(
+		--ran-booster-status-pending-background
+	);
+	--ran-booster-status-utility-color: var(--ran-booster-status-pending);
+}
+
+.ran-booster-admin :is(.ran-booster-pill, .ran-booster-badge) {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ran-booster-space-4);
+	padding-block: var(--ran-booster-space-2);
+	padding-inline: var(--ran-booster-space-10);
+	border: 1px solid var(--ran-booster-status-utility-border);
+	border-radius: var(--ran-booster-radius-pill);
+	background: var(--ran-booster-status-utility-background);
+	color: var(--ran-booster-status-utility-color);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: 1.7;
+	white-space: nowrap;
+}
+
+.ran-booster-admin :is(.ran-booster-pill, .ran-booster-badge)::before {
+	content: "";
+	inline-size: 6px;
+	block-size: 6px;
+	flex: 0 0 auto;
+	border-radius: var(--ran-booster-radius-circle);
+	background: currentcolor;
+}
+
+.ran-booster-admin .ran-booster-pill--label {
+	min-block-size: 28px;
+	white-space: normal;
+}
+
+.ran-booster-admin .ran-booster-pill--label::before {
+	display: none;
+}
+
+.ran-booster-admin .ran-booster-tile {
+	display: inline-flex;
+	align-items: baseline;
+	gap: var(--ran-booster-space-4);
+	padding-block: var(--ran-booster-space-3);
+	padding-inline: var(--ran-booster-space-10);
+	border: 1px solid var(--ran-booster-status-utility-border);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-status-utility-background);
+	font-size: var(--ran-booster-font-size-xs);
+	line-height: var(--ran-booster-line-height-base);
+}
+
+.ran-booster-admin .ran-booster-tile__label {
+	color: var(--ran-booster-text-subtle);
+}
+
+.ran-booster-admin .ran-booster-tile__value {
+	overflow-wrap: anywhere;
+	color: var(--ran-booster-text);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}

@@ -1,0 +1,170 @@
+/* Buttons */
+.wp-core-ui .ran-booster-admin .button-delete {
+	background-color: var(--ran-booster-danger);
+	border-color: var(--ran-booster-danger-strong);
+	color: var(--ran-booster-surface);
+	-webkit-box-shadow: var(--ran-booster-shadow-delete-button);
+	box-shadow: var(--ran-booster-shadow-delete-button);
+}
+
+.wp-core-ui .ran-booster-admin .button-delete:active,
+.wp-core-ui .ran-booster-admin .button-delete:focus,
+.wp-core-ui .ran-booster-admin .button-delete:hover {
+	background-color: var(--ran-booster-danger-strong);
+	border-color: var(--ran-booster-danger-hover-border);
+	color: var(--ran-booster-surface);
+}
+
+.wp-core-ui .ran-booster-admin .button-delete.disabled,
+.wp-core-ui .ran-booster-admin .button-delete:disabled {
+	background-color: var(--ran-booster-surface-subtle);
+	border-color: var(--ran-booster-divider);
+	box-shadow: none;
+	color: var(--ran-booster-danger-muted);
+	cursor: default;
+}
+
+.wp-core-ui .ran-booster-admin .button-update-package {
+	min-inline-size: 136px;
+	white-space: nowrap;
+}
+
+.wp-core-ui .ran-booster-admin .ran-booster-portability__progress-button {
+	display: inline-grid;
+	grid-template-areas: "label";
+	white-space: nowrap;
+}
+
+.wp-core-ui .ran-booster-admin .ran-booster-portability__progress-button::after,
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button
+	[data-portability-preview-label],
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button
+	[data-portability-apply-label] {
+	grid-area: label;
+}
+
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button::after {
+	content: attr(data-busy-label);
+	visibility: hidden;
+}
+
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button.ran-booster-update-is-active::after {
+	content: attr(data-idle-label);
+}
+
+.wp-core-ui
+	.ran-booster-admin
+	.button-update-package.ran-booster-update-is-active,
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-enhanced-mutation__submitter--busy.ran-booster-update-is-active,
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button.ran-booster-update-is-active {
+	overflow: hidden;
+	position: relative;
+}
+
+.wp-core-ui
+	.ran-booster-admin
+	.button-update-package.ran-booster-update-is-active::before,
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-enhanced-mutation__submitter--busy.ran-booster-update-is-active::before,
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button.ran-booster-update-is-active::before {
+	animation: ran-booster-update-stripes 0.8s linear infinite;
+	background-image: repeating-linear-gradient(
+		-45deg,
+		var(--ran-booster-strong-divider) 0,
+		var(--ran-booster-strong-divider) 8px,
+		var(--ran-booster-divider) 8px,
+		var(--ran-booster-divider) 16px
+	);
+	background-size: 23px 23px;
+	content: "";
+	inset: 0;
+	opacity: 0.1;
+	pointer-events: none;
+	position: absolute;
+	z-index: 0;
+}
+
+.wp-core-ui
+	.ran-booster-admin
+	.button-update-package.ran-booster-update-is-active
+	[data-ran-booster-update-label],
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button.ran-booster-update-is-active
+	[data-portability-preview-label],
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-portability__progress-button.ran-booster-update-is-active
+	[data-portability-apply-label] {
+	position: relative;
+	z-index: 1;
+}
+
+@keyframes ran-booster-update-stripes {
+	to {
+		background-position: 23px 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-core-ui
+		.ran-booster-admin
+		.button-update-package.ran-booster-update-is-active::before,
+	.wp-core-ui
+		.ran-booster-admin
+		.ran-booster-enhanced-mutation__submitter--busy.ran-booster-update-is-active::before,
+	.wp-core-ui
+		.ran-booster-admin
+		.ran-booster-portability__progress-button.ran-booster-update-is-active::before {
+		animation: none;
+	}
+}
+
+.ran-booster-admin .ran-booster-button-group {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	gap: var(--ran-booster-space-6);
+	white-space: normal;
+}
+
+.ran-booster-admin .ran-booster-button-group > form {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-code {
+	font-size: 11px;
+	background-color: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-red {
+	border-color: var(--ran-booster-danger);
+	color: var(--ran-booster-text-danger);
+}
+
+.ran-booster-admin .ran-booster-green {
+	border-color: var(--ran-booster-success);
+	color: var(--ran-booster-text-success);
+}
+
+.ran-booster-admin .ran-booster-repository-field {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+}

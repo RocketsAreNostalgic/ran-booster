@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>RAN Booster Multisite recovery</title>
+		<style>
+			body {
+				box-sizing: border-box;
+				max-width: 52rem;
+				margin: 0 auto;
+				padding: 2rem;
+				color: #1d2327;
+				background: #f0f0f1;
+				font: 16px/1.6 system-ui, sans-serif;
+			}
+			main {
+				padding: clamp(1.5rem, 4vw, 3rem);
+				border: 1px solid #c3c4c7;
+				background: #fff;
+			}
+			h1,
+			h2 {
+				line-height: 1.25;
+			}
+			code {
+				overflow-wrap: anywhere;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>RAN Booster Multisite recovery</h1>
+			<p>
+				RAN Booster 0.1 does not support WordPress Multisite. If an existing
+				single-site installation is converted or restored as a network while
+				Booster is active, Booster enters a safety mode. Managed package
+				controls, deployments, webhooks and add-ons remain unavailable.
+			</p>
+
+			<h2>Before recovery</h2>
+			<p>Create and verify a complete backup of:</p>
+			<ul>
+				<li>the WordPress database;</li>
+				<li><code>wp-config.php</code> and the WordPress installation;</li>
+				<li>the private encrypted Booster secrets file and its directory; and</li>
+				<li>the infrastructure needed to restore the site.</li>
+			</ul>
+			<p>
+				Do not delete Booster tables, the
+				<code>ran_booster_secrets_key_v1</code> option, the encrypted secrets
+				file, or its locks as a workaround. These pieces authenticate one
+				another. Partial deletion can prevent safe recovery or removal.
+			</p>
+
+			<h2>Recommended recovery</h2>
+			<ol>
+				<li>Use WordPress Network Plugins to deactivate RAN Booster network-wide.</li>
+				<li>
+					Either leave Booster disabled or restore an already-supported
+					single-site snapshot.
+				</li>
+				<li>
+					Confirm the database, configuration, private Booster storage and
+					installed package files match the backup.
+				</li>
+				<li>
+					After returning to single-site WordPress, reactivate Booster and
+					review Troubleshooting and every package before resuming Automatic
+					operation.
+				</li>
+			</ol>
+			<p>
+				If a future Booster release explicitly supports Multisite, follow that
+				release's migration instructions. An available update or this Network
+				Admin warning does not by itself mean Multisite is supported.
+			</p>
+
+			<h2>Updating Booster itself</h2>
+			<p>
+				Safety mode retains only Booster's isolated manual WordPress update
+				route. Use the native WordPress Updates screen to check for a newer
+				Booster release. Managed plugins and themes are not checked, installed
+				or reinstalled in this mode.
+			</p>
+
+			<h2>Deliberate removal</h2>
+			<p>
+				After verifying the backup, deactivate Booster network-wide and use
+				WordPress's normal Delete action only if all preserved Core state should
+				be removed permanently. Uninstall authenticates and removes only the
+				exact Core-owned key, encrypted sidecar, locks, schedules, options and
+				tables. It does not scan every subsite or remove add-on-owned data.
+			</p>
+			<p>
+				If ownership is incomplete or ambiguous, uninstall stops and WordPress
+				retains the plugin files. Restore the missing material from backup or
+				return to single-site WordPress before trying again. Do not manually
+				delete whichever piece remains.
+			</p>
+		</main>
+	</body>
+</html>

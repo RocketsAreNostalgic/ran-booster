@@ -1,0 +1,17 @@
+{
+	"extends": "@wordpress/stylelint-config",
+	"ignoreFiles": [
+		"node_modules/**/*",
+		"vendor/**/*"
+	],
+	"rules": {
+		"selector-class-pattern": null,
+		"no-descending-specificity": null,
+		"rule-empty-line-before": [
+			"always-multi-line",
+			{
+				"except": ["after-single-line-comment", "first-nested"]
+			}
+		]
+	}
+}

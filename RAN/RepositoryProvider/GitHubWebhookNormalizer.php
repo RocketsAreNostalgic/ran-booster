@@ -6,7 +6,6 @@ namespace RAN\RepositoryProvider;
 
 use JsonException;
 use RAN\Logging\BoosterLogger;
-use RAN\Secrets\SecretsFile;
 
 final readonly class GitHubWebhookNormalizer implements WebhookNormalizer {
 	private const MAX_EVENT_BYTES    = 64;
@@ -15,7 +14,7 @@ final readonly class GitHubWebhookNormalizer implements WebhookNormalizer {
 	private GitHubWebhookPolicy $policy;
 
 	public function __construct(
-		private SecretsFile $secrets,
+		private ProviderWebhookProfileReader $webhookProfiles,
 		private AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
 	) {
 		$this->policy = new GitHubWebhookPolicy();
@@ -27,7 +26,7 @@ final readonly class GitHubWebhookNormalizer implements WebhookNormalizer {
 
 	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
 		try {
-			if ( array() === $this->secrets->webhookProfiles( ProviderCode::parse( 'gh' ) ) ) {
+			if ( ! $this->webhookProfiles->hasWebhookProfile() ) {
 				return new ProviderDiagnosticResult(
 					ProviderDiagnosticResult::NOT_CONFIGURED,
 					'gh.webhook.not_configured',

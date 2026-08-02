@@ -13,22 +13,21 @@ use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
 use RAN\RepositoryProvider\Admin\ProviderSetupMetadata;
 use RAN\RepositoryProvider\Admin\ProviderWebhookAssistanceMetadata;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
-use RAN\Secrets\SecretsFile;
 use RuntimeException;
 
 final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizer, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink {
 
 	private ProviderMetadata $metadata;
 
-	private SecretsFile $secrets;
+	private ProviderCredentialStore $credentials;
 
 	private GitHubRepositoryBrowser $browser;
 	private GitHubWebhookNormalizer $webhooks;
 	private GitHubDiagnostics $diagnostics;
 	private GitHubCredentialPolicy $credentialPolicy;
 
-	public function __construct( SecretsFile $secrets, GitHubRepositoryBrowser $browser, GitHubWebhookNormalizer $webhooks ) {
-		$this->secrets          = $secrets;
+	public function __construct( ProviderCredentialStore $credentials, GitHubRepositoryBrowser $browser, GitHubWebhookNormalizer $webhooks ) {
+		$this->credentials      = $credentials;
 		$this->browser          = $browser;
 		$this->webhooks         = $webhooks;
 		$this->diagnostics      = new GitHubDiagnostics( $browser );
@@ -244,7 +243,7 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 		}
 
 		$credentialId = $repository->credentialId;
-		$credential   = $this->secrets->credentialMaterial( ProviderCode::parse( 'gh' ), $credentialId );
+		$credential   = $this->credentials->credentialMaterial( $credentialId );
 		$token        = is_array( $credential ) ? $credential['secret'] : '';
 
 		if ( ! is_string( $token ) || '' === trim( $token ) ) {

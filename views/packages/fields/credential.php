@@ -28,8 +28,9 @@ $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayo
 				}
 			}
 			?>
-		</select>
-		<p class="description">Choose the saved credential that can access this repository. Public repositories can use the default option.</p>
+			</select>
+			<p class="description">Choose the saved credential that can access this repository. Public repositories can use the default option.</p>
+			<p class="description"><?php esc_html_e( 'The active provider can read every credential saved under its provider code, not only the selected profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
 <?php if ( $packageFieldGrid ) { ?>
 	</div>
 <?php } else { ?>

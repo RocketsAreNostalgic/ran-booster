@@ -207,6 +207,7 @@ $repositoryPlaceholder = array() === $locatorExamples
 						?>
 					</select>
 					<span class="description"><?php esc_html_e( 'Choose a saved credential only to check private-repository access. This is not a personal access token; Booster never displays the token here.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></span>
 				</p>
 				<p>
 					<label for="ran-booster-troubleshooting-repository"><?php esc_html_e( 'Repository', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>

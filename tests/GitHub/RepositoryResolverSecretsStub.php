@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\GitHub;
 
-use RAN\RepositoryProvider\ProviderCode;
-use RAN\Secrets\SecretsFile;
+use RAN\RepositoryProvider\ProviderCredentialStore;
 
-final class RepositoryResolverSecretsStub extends SecretsFile {
+final class RepositoryResolverSecretsStub implements ProviderCredentialStore {
 
-	/** @var list<array{string, string|null}> */
+	/** @var list<string|null> */
 	public array $lookups = array();
 
 	/**
@@ -18,11 +17,14 @@ final class RepositoryResolverSecretsStub extends SecretsFile {
 	public function __construct( private array $tokens = array() ) {
 	}
 
-	public function credentialMaterial( ProviderCode|string $provider, ?string $id = null ): ?array {
-		$providerCode    = $provider instanceof ProviderCode ? $provider->value : $provider;
-		$this->lookups[] = array( $providerCode, $id );
+	public function credentialProfiles(): array {
+		return array();
+	}
 
-		if ( ProviderCode::parse( 'gh' )->value !== $providerCode || null === $id || ! isset( $this->tokens[ $id ] ) ) {
+	public function credentialMaterial( ?string $id = null ): ?array {
+		$this->lookups[] = $id;
+
+		if ( null === $id || ! isset( $this->tokens[ $id ] ) ) {
 			return null;
 		}
 
@@ -33,7 +35,7 @@ final class RepositoryResolverSecretsStub extends SecretsFile {
 
 		return array(
 			'id'            => $id,
-			'provider'      => ProviderCode::parse( 'gh' )->value,
+			'provider'      => 'gh',
 			'label'         => 'Test credential',
 			'kind'          => $kind,
 			'configuration' => array( 'owner' => $owner ),
@@ -41,5 +43,9 @@ final class RepositoryResolverSecretsStub extends SecretsFile {
 			'source'        => 'test',
 			'immutable'     => false,
 		);
+	}
+
+	public function hasWebhookProfile(): bool {
+		return false;
 	}
 }

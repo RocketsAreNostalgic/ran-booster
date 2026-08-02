@@ -338,7 +338,7 @@ final class WebhookProcessorTest extends TestCase {
 				return array();
 			}
 		};
-		$normalizer  = new GitHubWebhookNormalizer( $secrets, new EmptyAuthenticatedWebhookDeliveryEvidenceReader() );
+		$normalizer  = new GitHubWebhookNormalizer( $secrets->credentialsFor( 'gh' ), new EmptyAuthenticatedWebhookDeliveryEvidenceReader() );
 		$spy         = new WebhookProcessorCoordinatorSpy();
 		$coordinator = new WebhookProcessorCoordinator( null, $spy );
 		$processor   = $this->processor(

@@ -45,9 +45,9 @@ RAN Booster supports custom git vendors through the
 `ran_booster_register_providers` action. Use it to register a new provider,
 define its metadata and capability contracts, and wire in diagnostics,
 credential policy, repository browsing, and webhook handling as needed.
-Provider plugins must require exact Provider API 6 and Logging API 1; Core
-always supplies the concrete logging facade when it constructs the provider
-registry.
+Provider plugins must require exact Provider API 7. Core publishes no add-on
+logging facade; providers return bounded diagnostics and operation results
+instead of forwarding their messages or exceptions into Core logs.
 
 Core publishes no global service-container accessor and no bulk credential
 plaintext enumerator. Ordinary add-ons receive only purpose-specific facades;
@@ -135,7 +135,7 @@ work is in neither record.
   Read and write permission. An administrator can paste a request-only token,
   or select an eligible saved Core GitHub credential; Core passes the selected
   secret into that one operation without granting the add-on sidecar access.
-  Core Add-on API 12 supplies the add-on with its narrow operation facade and
+  Core Add-on API 13 supplies the add-on with its narrow operation facade and
   lets it enrich Core's existing GitHub repository
   table and append a selected-repository operation panel through documented
   WordPress hooks. When the add-on is absent, Core keeps the Assisted Hooks

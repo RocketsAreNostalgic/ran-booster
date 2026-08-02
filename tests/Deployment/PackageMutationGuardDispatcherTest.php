@@ -288,7 +288,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		Dashboard $dashboard,
 		bool $interceptRedirect = false
 	): Dispatcher {
-		$providers = new ProviderRegistry( new \Tests\Support\NullLoggingFacade() );
+		$providers = new ProviderRegistry();
 		$secrets   = new SecretsFile( null, array() );
 		$plugins   = $this->createStub( PluginRepository::class );
 		$themes    = $this->createStub( ThemeRepository::class );

@@ -47,7 +47,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 		$policies        = new ProviderSecretPolicyCatalog();
 		$this->secrets   = SecretsFileTestFactory::create( $this->path, array(), $policies );
-		$this->providers = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new ExpiryReminderProvider() ), $policies );
+		$this->providers = new ProviderRegistry( array( new ExpiryReminderProvider() ), $policies );
 
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;

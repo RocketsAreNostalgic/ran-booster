@@ -99,7 +99,7 @@ final class DeploymentCoordinatorTest extends TestCase {
 		$this->plugins      = new CoordinatorPluginRepository();
 		$this->themes       = new CoordinatorThemeRepository();
 		$this->provider     = new CoordinatorProvider();
-		$this->providers    = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $this->provider ) );
+		$this->providers    = new ProviderRegistry( array( $this->provider ) );
 		$this->preflight    = new CoordinatorPreflight();
 		$this->executor     = new CoordinatorExecutor();
 		$this->failureEmail = new CoordinatorFailureEmail();

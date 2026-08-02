@@ -12,7 +12,7 @@ use JsonException;
  */
 abstract class PortabilityFacade {
 
-	public const API_VERSION = 1;
+	public const API_VERSION = 2;
 
 	/**
 	 * Derive a bounded action for a review or Apply WordPress nonce.

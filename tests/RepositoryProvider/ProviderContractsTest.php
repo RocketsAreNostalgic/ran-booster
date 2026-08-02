@@ -133,7 +133,7 @@ final class ProviderContractsTest extends TestCase {
 				return $this->archive;
 			}
 		};
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) );
+		$registry = new ProviderRegistry( array( $provider ) );
 		$request  = new ArchiveRequest(
 			new RepositoryReference( 'owner/repository', '42', true, 'credential-one' ),
 			'abcdef'

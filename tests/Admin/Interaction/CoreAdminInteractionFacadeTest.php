@@ -53,10 +53,10 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 3 ) . '/ran-booster.php' );
 
 		self::assertIsString( $bootstrap );
-		self::assertSame( 1, AdminInteractionFacade::API_VERSION );
-		self::assertStringContainsString( "RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 1", $bootstrap );
+		self::assertSame( 2, AdminInteractionFacade::API_VERSION );
+		self::assertStringContainsString( "RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2", $bootstrap );
 		self::assertStringContainsString(
-			"do_action( 'ran_booster_admin_interaction_ready', \$adminInteraction, \$logging )",
+			"do_action( 'ran_booster_admin_interaction_ready', \$adminInteraction )",
 			$bootstrap
 		);
 	}

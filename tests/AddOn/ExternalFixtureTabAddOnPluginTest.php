@@ -9,7 +9,6 @@ require_once __DIR__ . '/../Support/ExternalFixtureAddOnWordPressFunctions.php';
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\NullLoggingFacade;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminAddOnTab;
 
@@ -20,8 +19,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 	public function testPluginLoadedBeforeCoreRegistersAndRendersOneTab(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
 
 		$registry = $this->register();
 		$tab      = $registry->get( 'fixture-tab' );
@@ -38,8 +36,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterCoreUsesTheSameTabContract(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
 		$this->loadFixturePlugin();
 
 		$registry = $this->register();
@@ -49,7 +46,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginIsHarmlessWhenCoreIsAbsentOrLoggingIsUnavailable(): void {
+	public function testPluginIsHarmlessWhenCoreOrItsApiVersionIsUnavailable(): void {
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_register_admin_tabs', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
@@ -69,7 +66,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 
 	private function register(): AdminAddOnRegistry {
 		$this->runHook( 'plugins_loaded' );
-		$registry = new AdminAddOnRegistry( new NullLoggingFacade(), array(), 7, 7 );
+		$registry = new AdminAddOnRegistry( array(), 7, 7 );
 		$this->runHook( 'ran_booster_register_admin_tabs', $registry );
 		$registry->seal();
 

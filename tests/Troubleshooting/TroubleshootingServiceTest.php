@@ -38,7 +38,7 @@ final class TroubleshootingServiceTest extends TestCase {
 				),
 			)
 		);
-		$payload  = ( new TroubleshootingService( $local, new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ), null, $secrets ) )->formPayload();
+		$payload  = ( new TroubleshootingService( $local, new ProviderRegistry( array( $provider ) ), null, $secrets ) )->formPayload();
 
 		self::assertFalse( $payload['ran'] );
 		self::assertSame( array( 'gh' => 'GitHub fixture' ), $payload['providers'] );
@@ -67,7 +67,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$idle     = new TroubleshootingProviderFixture( 'bb', static fn(): array => array() );
 		$service  = new TroubleshootingService(
 			new TroubleshootingLocalFixture( $this->localResults() ),
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $selected, $idle ) )
+			new ProviderRegistry( array( $selected, $idle ) )
 		);
 
 		$payload = $service->diagnose( 'gh', 'private-profile', 'owner/repository' );
@@ -96,7 +96,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$provider = new TroubleshootingProviderFixture( 'gh', static fn(): array => array() );
 		$service  = new TroubleshootingService(
 			new TroubleshootingLocalFixture( $this->localResults() ),
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) )
+			new ProviderRegistry( array( $provider ) )
 		);
 
 		$payload = $service->diagnose( 'gh', str_repeat( 'a', 129 ), null );
@@ -110,7 +110,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$provider = new TroubleshootingProviderFixture( 'gh', static fn(): array => array() );
 		$service  = new TroubleshootingService(
 			new TroubleshootingLocalFixture( array( $this->diagnosticResult( 'local.multisite' ) ), true ),
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) )
+			new ProviderRegistry( array( $provider ) )
 		);
 
 		$payload = $service->diagnose( 'gh', null, null );
@@ -132,7 +132,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		);
 		$service  = new TroubleshootingService(
 			$local,
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ),
+			new ProviderRegistry( array( $provider ) ),
 			static function () use ( &$now ): float {
 				return $now;
 			}
@@ -234,7 +234,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		);
 		$service  = new TroubleshootingService(
 			new TroubleshootingLocalFixture( $this->localResults() ),
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ),
+			new ProviderRegistry( array( $provider ) ),
 			static function () use ( &$now ): float {
 				return $now;
 			}
@@ -260,7 +260,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		);
 		$service  = new TroubleshootingService(
 			new TroubleshootingLocalFixture( $this->localResults() ),
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ),
+			new ProviderRegistry( array( $provider ) ),
 			static function () use ( &$now ): float {
 				return $now;
 			}
@@ -307,7 +307,7 @@ final class TroubleshootingServiceTest extends TestCase {
 	private function service( ?TroubleshootingProviderFixture $provider = null ): TroubleshootingService {
 		return new TroubleshootingService(
 			new TroubleshootingLocalFixture( $this->localResults() ),
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ?? new TroubleshootingProviderFixture( 'gh', static fn(): array => array() ) ) )
+			new ProviderRegistry( array( $provider ?? new TroubleshootingProviderFixture( 'gh', static fn(): array => array() ) ) )
 		);
 	}
 }

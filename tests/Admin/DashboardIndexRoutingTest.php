@@ -9,7 +9,6 @@ namespace Tests\Admin;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
-use Tests\Support\NullLoggingFacade;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminAddOnTab;
 use RAN\Admin\BulkPackageAction;
@@ -173,7 +172,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	public function testSelectedAddOnUsesTheRegisteredTabAndSafeContext(): void {
-		$registry = new AdminAddOnRegistry( new NullLoggingFacade(), array(), 7, 7 );
+		$registry = new AdminAddOnRegistry( array(), 7, 7 );
 		$registry->register(
 			new AdminAddOnTab(
 				'ran-booster-fixture',
@@ -1266,7 +1265,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	private function providers(): ProviderRegistry {
 		return new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(
 				$this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ),
 				$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ),

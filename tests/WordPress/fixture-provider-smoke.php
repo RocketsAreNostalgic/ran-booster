@@ -3,12 +3,12 @@
 // Executed by WP-CLI inside a disposable WordPress installation.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 6 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'Provider API 6 is unavailable.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 7 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'Provider API 7 is unavailable.' );
 }
 
-if ( ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) || 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
-	throw new RuntimeException( 'Logging API 1 is unavailable.' );
+if ( defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) ) {
+	throw new RuntimeException( 'The removed Logging API marker is available.' );
 }
 
 if ( function_exists( 'ran_booster' )

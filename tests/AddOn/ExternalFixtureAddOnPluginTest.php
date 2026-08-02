@@ -11,7 +11,6 @@ require_once __DIR__ . '/../Support/ExternalFixtureAddOnWordPressFunctions.php';
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\NullLoggingFacade;
 use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\ProvisioningResult;
@@ -25,8 +24,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 	public function testPluginLoadedBeforeCoreComposesTheReservedGitHubAction(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
 
 		$facade = new FixtureAddOnFacade( array( $this->target() ) );
 		$rows   = $this->compose( $facade );
@@ -40,8 +38,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterCoreUsesTheSamePublishedHooks(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
 		$this->loadFixturePlugin();
 
 		$facade = new FixtureAddOnFacade();
@@ -54,7 +51,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginIsHarmlessWhenBoosterIsAbsentOrLoggingIsUnavailable(): void {
+	public function testPluginIsHarmlessWhenBoosterIsAbsentOrItsApiVersionIsUnavailable(): void {
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_webhook_assistance_ready', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
@@ -69,8 +66,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testUnavailableFacadeLeavesTheCoreActionDisabled(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
 		$this->loadFixturePlugin();
 
 		$rows = $this->compose( new FixtureAddOnFacade( failure: true ) );
@@ -86,7 +82,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 	/** @return array<string, array<string, mixed>> */
 	private function compose( FixtureAddOnFacade $facade ): array {
 		$this->runHook( 'plugins_loaded' );
-		$this->runHook( 'ran_booster_webhook_assistance_ready', $facade, new NullLoggingFacade() );
+		$this->runHook( 'ran_booster_webhook_assistance_ready', $facade );
 
 		return $this->runFilter(
 			'ran_booster_admin_provider_repository_rows',

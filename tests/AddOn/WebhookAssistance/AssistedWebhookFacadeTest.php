@@ -35,7 +35,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 3 ) . '/ran-booster.php' );
 
 		self::assertIsString( $bootstrap );
-		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 12", $bootstrap );
+		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 13", $bootstrap );
 		self::assertStringContainsString( "RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION', 1", $bootstrap );
 		self::assertStringContainsString( "do_action( 'ran_booster_webhook_cleanup_ready', \$webhookCleanup )", $bootstrap );
 	}

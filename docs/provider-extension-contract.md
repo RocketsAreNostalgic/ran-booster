@@ -1,6 +1,6 @@
 # Provider extension contract
 
-RAN Booster Provider API 6 accepts trusted repository providers through its late
+RAN Booster Provider API 7 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading:
 
@@ -9,13 +9,9 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 6 !== RAN_BOOSTER_PROVIDER_API_VERSION
-			|| ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-			|| 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+			|| 7 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
-
-		$logging = $registry->logging();
 
 		$registry->registerWithCredentialStore(
 			'example',
@@ -25,21 +21,11 @@ add_action(
 );
 ```
 
-Provider API 6 and Logging API 1 are separate from the administration
-composition contract. Logging API 1 exposes the shared
-`ProviderRegistry::logging()` seam and returns the narrow
-`RAN\AddOn\Logging\LoggingFacade` supplied to operational add-ons through their
-service-ready actions. Use it for bounded operational failures and outcomes
-only. It preserves Core's
-`WP_DEBUG_LOG` gate, temporary capture and safe context allowlist; it does not
-write Deployment Activity records and must never receive credentials, tokens,
-webhook payloads or raw upstream responses.
-
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 6
-and Logging API 1. Provider API 6 makes `LoggingFacade` the first required
-`ProviderRegistry` constructor dependency; Core never constructs the registry
-with a missing or implicit no-op logger.
+registration action can run. The callback must check for exact Provider API 7.
+Provider API 7 publishes no logging facade, generic resolver or Core container.
+Providers report bounded diagnostics and operation results; Core owns logging
+for failures inside Core-owned code.
 Booster fires the action once on `plugins_loaded` at priority 100, after plugin
 files have loaded and before the dashboard, dispatcher, repository picker or
 webhook controller is resolved. It then seals the registry. This works whether
@@ -51,10 +37,14 @@ a newly activated provider becomes available on the next request.
 stored credentials. Booster verifies that the requested code is novel before it
 issues a read-only store bound to that code, then verifies that the returned
 provider uses the same code before atomic registration. The store has no
-provider argument, write methods, path access, profile-record access or
-webhook-secret access. It exposes only `hasWebhookProfile()` for display-safe
-diagnostic readiness, so a retained store cannot cross provider namespaces. The
-factory and provider
+provider argument, write methods, path access or webhook-secret access. It
+exposes display-safe `credentialProfiles()`, one selected/default
+`credentialMaterial()` read and boolean `hasWebhookProfile()` readiness, so a
+retained store cannot cross provider namespaces. Repeated exact reads mean an
+activated credential-bearing provider is trusted with all credentials saved
+under its code. Core does not authenticate the provider publisher, and cannot
+control private provider logging or exfiltration after authorized disclosure.
+The factory and provider
 constructor must remain local and non-I/O and must not read the store during
 construction: its provider policy becomes active only after the factory returns
 successfully. Validators, discovery clients and archive clients may retain the

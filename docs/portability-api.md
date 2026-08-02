@@ -1,6 +1,6 @@
-# Portability API 1
+# Portability API 2
 
-Portability API 1 is Core's narrow, request-local adoption boundary for a
+Portability API 2 is Core's narrow, request-local adoption boundary for a
 trusted source bridge. It reviews one already-installed plugin or theme and may
 adopt that package into Booster with deployment policy forced to Disabled.
 
@@ -10,29 +10,26 @@ the separate Blueprint V1 ZIP workflow.
 
 ## Version and service delivery
 
-A consumer must require exact Portability API 1 and Logging API 1:
+A consumer must require exact Portability API 2:
 
 ```php
 add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )
-			|| 1 !== RAN_BOOSTER_PORTABILITY_API_VERSION
-			|| ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-			|| 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+			|| 2 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
 			return;
 		}
 
 		add_action(
 			'ran_booster_portability_ready',
 			static function (
-				\RAN\AddOn\Portability\PortabilityFacade $portability,
-				\RAN\AddOn\Logging\LoggingFacade $logging
+				\RAN\AddOn\Portability\PortabilityFacade $portability
 			): void {
-				// Retain these request-local facades only for this request.
+				// Retain this request-local facade only for this request.
 			},
 			10,
-			2
+			1
 		);
 	}
 );
@@ -40,12 +37,12 @@ add_action(
 
 The ready action fires once on `plugins_loaded` at priority 100, after provider
 registration is sealed and before Core binds its dashboard. A late listener is
-not replayed. The callback receives only the two facades; it does not receive
+not replayed. The callback receives only the portability facade; it does not receive
 Core's container, repositories, provider clients, credential store, filesystem
 paths, or cleanup authority.
 
-Portability API 1 is independently versioned. A source bridge does not need
-Add-on API 12 or Provider API 6, although Core continues to use its registered
+Portability API 2 is independently versioned. A source bridge does not need
+Add-on API 13 or Provider API 7, although Core continues to use its registered
 providers internally.
 
 A source bridge may separately feature-detect Core's additive
@@ -53,7 +50,7 @@ A source bridge may separately feature-detect Core's additive
 row without a page refresh. Core derives the target from bounded presentation
 identity based on the installed candidate, never from a source row ID, source
 key or source revision. This presentation transport does not change
-Portability API 1 authorization, review, Apply, target verification or
+Portability API 2 authorization, review, Apply, target verification or
 source-cleanup ownership. See
 [Enhanced administration interaction API](enhanced-admin-interactions.md).
 
@@ -174,7 +171,7 @@ reconcile from the two live authorities.
 
 ## Deliberate limits
 
-Portability API 1 does not provide:
+Portability API 2 does not provide:
 
 - package installation, file replacement, activation, or deployment enablement;
 - credential creation, transfer, display, validation, or deletion;

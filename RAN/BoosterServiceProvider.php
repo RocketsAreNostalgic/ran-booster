@@ -10,8 +10,6 @@ use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
-use RAN\AddOn\Logging\CoreLoggingFacade;
-use RAN\AddOn\Logging\LoggingFacade;
 use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\WebhookAssistance\WebhookCleanupFacade;
@@ -97,7 +95,6 @@ final class BoosterServiceProvider {
 		}
 		$debugCapture = new TemporaryDebugCapture( $secrets->path() );
 		BoosterLogger::configureCapture( $debugCapture );
-		$logging          = new CoreLoggingFacade();
 		$githubBrowser    = new GitHubRepositoryBrowser( $secrets );
 		$adminInteraction = new CoreAdminInteractionFacade();
 		$adminInteraction->register();
@@ -151,7 +148,6 @@ final class BoosterServiceProvider {
 		);
 
 		$container->bind( Database::class, $database );
-		$container->bind( LoggingFacade::class, $logging );
 		$container->bind( AdminInteractionFacade::class, $adminInteraction );
 		$container->bind( CoreProviderProfileInteraction::class, $adminInteraction );
 		$container->bind(
@@ -255,7 +251,6 @@ final class BoosterServiceProvider {
 		$container->bind(
 			ProviderRegistry::class,
 			new ProviderRegistry(
-				$logging,
 				array(
 					new GitHubProvider( $secrets, $githubBrowser, $githubWebhooks ),
 				),

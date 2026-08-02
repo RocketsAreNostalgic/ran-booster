@@ -19,7 +19,6 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\Support\NullLoggingFacade;
 
 final class CredentialValidationHtmxDispatcherTest extends TestCase {
 
@@ -106,7 +105,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 
 	private function dispatcher( Dashboard $dashboard, CredentialValidationResult $result ): HtmxCredentialValidationTestDispatcher {
 		$provider  = new CredentialValidationProvider( $result );
-		$providers = new ProviderRegistry( new NullLoggingFacade(), array( $provider ) );
+		$providers = new ProviderRegistry( array( $provider ) );
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
 		$lock      = $this->createMock( WordPressUpdaterLock::class );

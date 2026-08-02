@@ -23,21 +23,15 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 6 );
-} elseif ( 6 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Provider API 6 conflicts with an existing API version marker.' );
+	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 7 );
+} elseif ( 7 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new LogicException( 'RAN Booster Provider API 7 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );
-} elseif ( 12 !== RAN_BOOSTER_ADDON_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Add-on API 12 conflicts with an existing API version marker.' );
-}
-
-if ( ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
-} elseif ( 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Logging API 1 conflicts with an existing API version marker.' );
+	define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
+} elseif ( 13 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+	throw new LogicException( 'RAN Booster Add-on API 13 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION' ) ) {
@@ -47,9 +41,9 @@ if ( ! defined( 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION' ) ) {
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 1 );
-} elseif ( 1 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Admin Interaction API 1 conflicts with an existing API version marker.' );
+	define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+} elseif ( 2 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
+	throw new LogicException( 'RAN Booster Admin Interaction API 2 conflicts with an existing API version marker.' );
 }
 
 require __DIR__ . '/autoload.php';
@@ -59,7 +53,6 @@ use RAN\AddOn\WebhookAssistance\WebhookCleanupFacade;
 use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
-use RAN\AddOn\Logging\LoggingFacade;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\GitHubReleaseUpdateNotice;
@@ -111,7 +104,7 @@ if ( ! $ran_booster_runtime_support->allowsManagedOperations() ) {
 if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );
 } elseif ( PortabilityFacade::API_VERSION !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Portability API 1 conflicts with an existing API version marker.' );
+	throw new LogicException( 'RAN Booster Portability API 2 conflicts with an existing API version marker.' );
 }
 ( new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy ) )->register();
 
@@ -187,10 +180,8 @@ add_action(
 			$webhookCleanup    = $ran_booster_container->make( WebhookCleanupFacade::class );
 			$releaseTracking   = $ran_booster_container->make( ReleaseTrackingFacade::class );
 			$portability       = $ran_booster_container->make( PortabilityFacade::class );
-			$logging           = $ran_booster_container->make( LoggingFacade::class );
 			$adminInteraction  = $ran_booster_container->make( AdminInteractionFacade::class );
 			$addOnRegistry     = new AdminAddOnRegistry(
-				$logging,
 				array(
 					'webhook_assistance' => $webhookAssistance,
 					'release_tracking'   => $releaseTracking,
@@ -203,7 +194,7 @@ add_action(
 			$ran_booster_container->bind( AdminAddOnRegistry::class, $addOnRegistry );
 
 			try {
-				do_action( 'ran_booster_admin_interaction_ready', $adminInteraction, $logging );
+				do_action( 'ran_booster_admin_interaction_ready', $adminInteraction );
 			} catch ( Throwable $failure ) {
 				\RAN\Logging\BoosterLogger::logException(
 					'add-on service listener failed',
@@ -217,7 +208,7 @@ add_action(
 			}
 
 			try {
-				do_action( 'ran_booster_portability_ready', $portability, $logging );
+				do_action( 'ran_booster_portability_ready', $portability );
 			} catch ( Throwable $failure ) {
 				\RAN\Logging\BoosterLogger::logException(
 					'add-on service listener failed',
@@ -231,7 +222,7 @@ add_action(
 			}
 
 			try {
-				do_action( 'ran_booster_webhook_assistance_ready', $webhookAssistance, $logging );
+				do_action( 'ran_booster_webhook_assistance_ready', $webhookAssistance );
 			} catch ( Throwable $failure ) {
 				\RAN\Logging\BoosterLogger::logException(
 					'add-on service listener failed',
@@ -259,7 +250,7 @@ add_action(
 			}
 
 			try {
-				do_action( 'ran_booster_release_tracking_ready', $releaseTracking, $logging );
+				do_action( 'ran_booster_release_tracking_ready', $releaseTracking );
 			} catch ( Throwable $failure ) {
 				\RAN\Logging\BoosterLogger::logException(
 					'add-on service listener failed',
@@ -279,7 +270,7 @@ add_action(
 				=== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
 				try {
 					$prospectiveRelease = $ran_booster_container->make( ProspectiveReleaseFacade::class );
-					do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease, $logging );
+					do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease );
 				} catch ( Throwable $failure ) {
 					\RAN\Logging\BoosterLogger::logException(
 						'add-on service listener failed',

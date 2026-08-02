@@ -142,6 +142,9 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
 		self::assertDoesNotMatchRegularExpression( '/function\s+ran_booster\s*\(/', $bootstrap );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_LOGGING_API_VERSION', $bootstrap );
+		self::assertFalse( interface_exists( 'RAN\\AddOn\\Logging\\LoggingFacade' ) );
+		self::assertFalse( class_exists( 'RAN\\AddOn\\Logging\\CoreLoggingFacade' ) );
 		self::assertStringNotContainsString( 'Booster::getInstance', $bootstrap );
 		self::assertStringNotContainsString( "\$GLOBALS['ran_booster_instance']", $bootstrap );
 		self::assertDoesNotMatchRegularExpression( '/->bind\(\s*(?:[\'\"]RAN\\\\Booster[\'\"]|Booster::class)/', $bootstrap );
@@ -150,6 +153,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 			$bootstrap,
 			'The live Core container and runtime must remain scoped inside the bootstrap closure.'
 		);
+		self::assertStringNotContainsString( ', $logging', $bootstrap );
 	}
 
 	public function testSyntheticCanaryMatrixCoversEveryRequiredSurfaceAndTransform(): void {

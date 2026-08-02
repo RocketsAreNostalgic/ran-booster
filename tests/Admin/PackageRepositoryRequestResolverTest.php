@@ -72,7 +72,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'bitbucket-deploy'
 			)
 		);
-		$resolver      = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver      = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$result = $resolver->resolve(
 			array(
@@ -132,7 +132,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			),
 			ProviderCode::parse( 'gh' )
 		);
-		$resolver  = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver  = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 		$result    = $resolver->resolve(
 			array(
 				'provider'   => 'gh',
@@ -161,7 +161,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			),
 			ProviderCode::parse( 'gh' )
 		);
-		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$result = $resolver->resolve(
 			array(
@@ -200,7 +200,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				throw new RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 		};
-		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		try {
 			$resolver->resolve(
@@ -229,7 +229,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			),
 			ProviderCode::parse( 'bb' )
 		);
-		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'mismatched repository identity' );
@@ -254,7 +254,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'public_lookup'
 			)
 		);
-		$result   = ( new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) ) )->resolve(
+		$result   = ( new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) ) )->resolve(
 			array(
 				'provider'                            => 'gh',
 				'repository'                          => 'owner/repository',
@@ -284,7 +284,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'public_lookup'
 			)
 		);
-		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		foreach (
 			array(
@@ -325,7 +325,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'public_lookup'
 			)
 		);
-		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ) ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'mismatched repository identity' );

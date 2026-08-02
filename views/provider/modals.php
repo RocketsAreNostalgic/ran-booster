@@ -26,10 +26,11 @@ if ( $hasCredentialSettings ) {
 			</div>
 			<form method="post" action="" class="ran-booster-credential-modal__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-access-profile-error" data-ran-booster-interaction-operation="core:save-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'save-access-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
-				<input type="hidden" name="ran_booster[action]" value="save-access-profile">
-				<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
-				<input type="hidden" name="ran_booster[id]" value="">
-				<p><label>Label <input type="text" name="ran_booster[label]" class="regular-text" required placeholder="e.g. Deployment access"></label></p>
+					<input type="hidden" name="ran_booster[action]" value="save-access-profile">
+					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
+					<input type="hidden" name="ran_booster[id]" value="">
+					<p class="description"><?php echo esc_html( sprintf( /* translators: 1: provider label, 2: provider code. */ __( 'Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider['label'], $provider['code'] ) ); ?></p>
+					<p><label>Label <input type="text" name="ran_booster[label]" class="regular-text" required placeholder="e.g. Deployment access"></label></p>
 				<p><label>Credential type <select name="ran_booster[kind]" class="ran-booster-credential-kind">
 					<?php foreach ( $provider['credential_kinds'] as $kind ) { ?>
 						<option value="<?php echo esc_attr( $kind['code'] ); ?>" data-secret-label="<?php echo esc_attr( $kind['secret_label'] ); ?>" data-secret-placeholder="<?php echo esc_attr( $kind['secret_placeholder'] ); ?>"><?php echo esc_html( $kind['label'] ); ?></option>

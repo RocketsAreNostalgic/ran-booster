@@ -9,13 +9,13 @@ use DateTimeZone;
 use InvalidArgumentException;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\RepositoryProvider\GitReferenceSyntax;
-use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\CredentialValidationResult;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\RepositoryBrowseMode;
 use RAN\RepositoryProvider\RepositoryBrowseRequest;
 use RAN\RepositoryProvider\RepositoryBrowseResult;
 use RAN\RepositoryProvider\RepositoryDescriptor;
-use RAN\Secrets\SecretsFile;
 use RuntimeException;
 
 /**
@@ -32,10 +32,10 @@ class RepositoryBrowser {
 	const PER_PAGE         = 30;
 	const HTTP_DATE_FORMAT = 'D, d M Y H:i:s \G\M\T';
 
-	private SecretsFile $secrets;
+	private ProviderCredentialStore $credentials;
 
-	public function __construct( SecretsFile $secrets ) {
-		$this->secrets = $secrets;
+	public function __construct( ProviderCredentialStore $credentials ) {
+		$this->credentials = $credentials;
 	}
 
 	/**
@@ -57,7 +57,7 @@ class RepositoryBrowser {
 		$headers  = $this->requestHeaders();
 
 		if ( null !== $credentialId || $authenticateDefault ) {
-			$credential = $this->secrets->credentialMaterial( ProviderCode::parse( 'gh' ), $credentialId );
+			$credential = $this->credentials->credentialMaterial( $credentialId );
 			$token      = is_array( $credential ) && isset( $credential['secret'] ) && is_string( $credential['secret'] )
 				? trim( $credential['secret'] )
 				: '';
@@ -297,7 +297,7 @@ class RepositoryBrowser {
 	}
 
 	public function validateCredential( string $credentialId, float $timeout = 15.0 ): CredentialValidationResult {
-		$credential = $this->secrets->credentialMaterial( ProviderCode::parse( 'gh' ), $credentialId );
+		$credential = $this->credentials->credentialMaterial( $credentialId );
 		$token      = is_array( $credential ) && is_string( $credential['secret'] ?? null )
 			? trim( $credential['secret'] )
 			: '';
@@ -397,7 +397,7 @@ class RepositoryBrowser {
 
 	private function browseAccessible( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 		$credentialId = (string) $request->getCredentialId();
-		$credential   = $this->secrets->credentialMaterial( ProviderCode::parse( 'gh' ), $credentialId );
+		$credential   = $this->credentials->credentialMaterial( $credentialId );
 		$token        = is_array( $credential ) && is_string( $credential['secret'] ?? null )
 			? trim( $credential['secret'] )
 			: '';
@@ -427,7 +427,7 @@ class RepositoryBrowser {
 		$credentialId = $request->getCredentialId();
 		$headers      = $this->requestHeaders();
 		if ( null !== $credentialId ) {
-			$credential = $this->secrets->credentialMaterial( ProviderCode::parse( 'gh' ), $credentialId );
+			$credential = $this->credentials->credentialMaterial( $credentialId );
 			$token      = is_array( $credential ) && is_string( $credential['secret'] ?? null )
 				? trim( $credential['secret'] )
 				: '';
@@ -636,7 +636,7 @@ class RepositoryBrowser {
 			return $headers;
 		}
 
-		$credential = $this->secrets->credentialMaterial( ProviderCode::parse( 'gh' ), $credentialId );
+		$credential = $this->credentials->credentialMaterial( $credentialId );
 		$token      = is_array( $credential ) && is_string( $credential['secret'] ?? null )
 			? trim( $credential['secret'] )
 			: '';

@@ -67,6 +67,7 @@ $hasActionableRows       = array() !== array_filter(
 									<?php endforeach; ?>
 								</select>
 								<p class="description"><?php esc_html_e( 'Selecting a credential reviews the Transporter Blueprint again automatically.', 'ran-booster' ); ?></p>
+								<p class="description"><?php esc_html_e( 'The active target provider can read every credential saved under its provider code, not only the selected profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
 							<?php else : ?>
 								<p><?php esc_html_e( 'No saved target credentials are available for this provider.', 'ran-booster' ); ?></p>
 							<?php endif; ?>

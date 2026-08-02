@@ -605,10 +605,11 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 	<?php if ( 'overview' === $providerView ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
 		<section class="ran-booster-provider-section" aria-labelledby="ran-booster-access-tokens-heading">
-			<header class="ran-booster-provider-section__header">
-				<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
-				<p class="ran-booster-section__description"><?php echo esc_html( $provider['capabilities']['browse'] ? __( 'Saved credentials provide access to private repositories. Public repository discovery does not require one.', 'ran-booster' ) : __( 'Saved credentials provide access to private repositories entered manually.', 'ran-booster' ) ); ?></p>
-			</header>
+				<header class="ran-booster-provider-section__header">
+					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
+					<p class="ran-booster-section__description"><?php echo esc_html( $provider['capabilities']['browse'] ? __( 'Saved credentials provide access to private repositories. Public repository discovery does not require one.', 'ran-booster' ) : __( 'Saved credentials provide access to private repositories entered manually.', 'ran-booster' ) ); ?></p>
+					<p class="ran-booster-section__description"><?php echo esc_html( sprintf( /* translators: 1: provider label, 2: provider code. */ __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider['label'], $provider['code'] ) ); ?></p>
+				</header>
 			<div class="ran-booster-provider-section__body">
 				<?php
 				$statusSummaryRenderer->render(

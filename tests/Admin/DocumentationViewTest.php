@@ -37,6 +37,14 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Push-to-Deploy</summary>', $html );
 		self::assertStringContainsString( 'id="ran-booster-push-to-deploy"', $html );
 		self::assertStringContainsString( 'configured separately on every target site', $html );
+		self::assertStringContainsString( 'HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection', $html );
+		self::assertStringContainsString( 'the pretty /wp-json/ route or the equivalent ?rest_route= query route', $html );
+		self::assertStringContainsString( 'does not trust or parse Content-Length as transport protection', $html );
+		self::assertStringContainsString( 'GitHub does not automatically redeliver failed deliveries', $html );
+		self::assertStringContainsString( 'enable Request History before you need it', $html );
+		self::assertStringContainsString( 'do not assume it remains stable across automatic attempts', $html );
+		self::assertStringContainsString( 'Provider request ID shown on a webhook attempt in Booster Activity', $html );
+		self::assertStringContainsString( 'Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-webhook-cleanup">Retained webhook setup and cleanup</h3>', $html );
 		self::assertStringContainsString( 'Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup', $html );
 		self::assertStringContainsString( 'any branch-managed package using the same repository can continue to need the webhook', $html );

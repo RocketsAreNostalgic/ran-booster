@@ -66,6 +66,19 @@ secret. The token is used only for the submitted operation and is never saved.
 Assisted Hooks never enables Automatic deployment, and manual webhook setup
 remains available without it.
 
+Webhook signatures authorize deployment after WordPress accepts a request;
+they do not protect the host, PHP workers, or WordPress bootstrap from traffic.
+Use public HTTPS with certificate verification, the provider's JSON delivery
+option, one unique generated secret per repository, and only the required push
+event. Do not cache, challenge, redirect, or transform either the `/wp-json/`
+callback or its `?rest_route=` form. Provider delivery history is authoritative
+for timeouts and response status. GitHub does not automatically redeliver failed
+deliveries. Enable Bitbucket Request History in advance and use its request UUID
+only as a cross-reference; do not assume it is stable across automatic attempts.
+Compare the provider identifier with the Provider request ID shown for webhook
+attempts in Booster Activity; absence from Activity is inconclusive for probes,
+ignored events, and zero targets.
+
 Switching a package from Branch to Published releases does not remove an
 existing repository webhook or local signing-secret setup. The release-managed
 package ignores pushes, but another branch-managed package using the same
@@ -102,8 +115,8 @@ WordPress, theme, and other-plugin messages.
    permissions.
 4. For Push-to-Deploy, use the selected provider tab to save and copy an
    appropriately scoped webhook secret. Add the displayed Payload URL, event,
-   and same secret to the repository, test delivery, and only then deliberately
-   set the package to Automatic.
+   JSON content type, and same secret to the repository, test delivery, and only
+   then deliberately set the package to Automatic.
 
 == Supported beta operations ==
 

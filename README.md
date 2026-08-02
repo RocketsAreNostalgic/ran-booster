@@ -276,6 +276,23 @@ current product.
 | Diagnostics        | —                | On-demand, per-provider checks in Troubleshooting; nothing is persisted       |
 | Deployment history | —                | Bounded Deployment activity with a stable support reference for every attempt |
 
+For a webhook attempt, Activity also shows the provider's existing delivery
+identifier as **Provider request ID**. Use that only to cross-reference GitHub
+or Bitbucket delivery history, which remains authoritative for duration,
+response status, timeout, and redelivery. A timeout can occur after Booster has
+durably admitted work, while probes, ignored events, and zero-target deliveries
+may create no Activity row.
+
+GitHub does not automatically redeliver failed deliveries. For Bitbucket,
+enable Request History before you need it and treat its request UUID only as a
+cross-reference; do not assume it remains stable across automatic attempts.
+
+HMAC protects deployment authority after WordPress accepts the request; it does
+not protect the network, web server, PHP workers, or WordPress bootstrap from
+traffic. Keep both WordPress REST callback forms uncached and untransformed.
+Optional host or trusted-edge limits and current provider IP ranges are defence
+in depth and never replace HMAC.
+
 Switching a package from Branch to Published releases does not remove an
 existing provider webhook or local signing-secret setup. The release-managed
 package ignores pushes, but another branch-managed package using the same
@@ -326,8 +343,9 @@ a truthful history and a named support reference regardless of outcome:
   calls, and ten seconds. Its optional Logging capture is a single bounded,
   temporary file beside the credential sidecar, not a durable operational
   logging subsystem. Deployment activity shows bounded, redacted attempt
-  history. None of these surfaces stores raw webhook bodies, headers, or
-  credentials.
+  history and the existing Provider request ID for webhook attempts. None of
+  these surfaces stores raw webhook bodies, headers, provider-observed timing,
+  or credentials.
 
 The [package update orchestration guide](docs/package-update-orchestration.md)
 maps every release and branch trigger and Booster-to-WordPress handoff. The

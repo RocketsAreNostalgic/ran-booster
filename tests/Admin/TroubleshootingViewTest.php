@@ -251,6 +251,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<dt>Origin</dt><dd>Repository webhook</dd>', $html );
+		self::assertStringContainsString( '<dt>Provider request ID</dt><dd><code>delivery-7</code></dd>', $html );
 		self::assertStringContainsString( 'name="_wpnonce" value="ran-booster-resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[attempt_id]" value="7"', $html );
@@ -349,6 +350,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Booster did not retain which final-state check could not be proved.', $html );
 		self::assertStringContainsString( 'activity #8', $html );
 		self::assertStringContainsString( 'Acknowledge historical uncertainty', $html );
+		self::assertStringNotContainsString( 'Provider request ID', $html );
 	}
 
 	public function testActivityRendersBlockedRetriesAsTimestampOrderedFailures(): void {
@@ -823,6 +825,17 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'A secure 64-character webhook secret was generated.', $html );
 		self::assertStringContainsString( 'Copy the secret before saving.', $html );
 		self::assertStringContainsString( 'saving it here does not create or verify the remote webhook', $html );
+
+		$providerTask = 'setup';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$setupHtml    = (string) ob_get_clean();
+		$providerTask = 'repositories';
+
+		self::assertStringContainsString( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', $setupHtml );
+		self::assertStringContainsString( 'unique generated repository secret', $setupHtml );
+		self::assertStringContainsString( 'Provider request ID in Booster Activity', $setupHtml );
+		self::assertStringContainsString( 'tab=documentation#ran-booster-push-to-deploy', html_entity_decode( $setupHtml ) );
 
 		$_GET['repository'] = 'repo-42';
 		ob_start();

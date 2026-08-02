@@ -794,6 +794,7 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 								<article><span>2</span><strong><?php echo esc_html( $createProviderWebhookLabel ); ?></strong><p><?php esc_html_e( 'Paste the payload URL and shared secret, keep SSL verification enabled, and select the configured push event.', 'ran-booster' ); ?></p></article>
 								<article><span>3</span><strong><?php esc_html_e( 'Verify before enabling', 'ran-booster' ); ?></strong><p><?php esc_html_e( 'Send a real delivery, confirm a successful provider response, then enable Automatic from package settings.', 'ran-booster' ); ?></p></article>
 							</div>
+							<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare provider delivery history with the Provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' ) ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p></div>
 							<dl class="ran-booster-webhook-endpoint">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>

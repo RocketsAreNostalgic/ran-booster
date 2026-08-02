@@ -200,19 +200,6 @@ class Booster {
 	}
 
 	public function registerWebhookRoutes(): void {
-		try {
-			$this->make( 'RAN\Storage\Database' )->maybeUpgrade();
-		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure $failure ) {
-			// Keep the authenticated route present; guarded storage returns a
-			// retry-safe unavailable response without touching custom tables.
-			BoosterLogger::log(
-				'webhook route retained in database safe state',
-				array(
-					'step'   => 'webhook_route_registration',
-					'reason' => $failure->reason(),
-				)
-			);
-		}
 		$this->make( 'RAN\Webhook\WebhookController' )->registerRoutes();
 	}
 

@@ -155,6 +155,12 @@ if ( ! function_exists( 'wp_kses_post' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_unslash' ) ) {
+	function wp_unslash( mixed $value ): mixed {
+		return $value;
+	}
+}
+
 if ( ! function_exists( 'apply_filters' ) ) {
 	function apply_filters( string $hook, mixed $value, mixed ...$arguments ): mixed {
 		foreach ( $GLOBALS['ran_booster_admin_view_filters'][ $hook ] ?? array() as $callback ) {

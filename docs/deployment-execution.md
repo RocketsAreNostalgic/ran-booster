@@ -216,7 +216,9 @@ The key fields are:
 - `provider` and `provider_repository_id`: the provider identity pair
 - `requested_ref` and `resolved_ref`: the requested ref and the provider-verified
   immutable ref
-- `delivery_id` and `delivery_digest`: web hook delivery identity when relevant
+- `delivery_id` and `delivery_digest`: webhook delivery identity when relevant;
+  administrator-only Activity displays `delivery_id` as **Provider request ID**
+  for cross-reference with provider delivery history
 - `state`: the current `DeploymentState`
 - `mutation_started_at`: the mutation fence
 - `outcome_code`: the closed terminal result code
@@ -225,6 +227,41 @@ The key fields are:
 `DeploymentAttempt::fromDatabase()` enforces the integrity rules for those
 fields. For example, queued rows cannot already contain a mutation fence, and a
 terminal row must contain both an outcome and a finished timestamp.
+
+Core does not retain the raw webhook body, signature headers, or provider-side
+duration. A provider timeout can occur after durable admission, so GitHub or
+Bitbucket delivery history remains authoritative for status and timing. Probes,
+ignored events, and zero-target deliveries may create no attempt; absence from
+Activity is therefore inconclusive.
+
+## Request-wide bootstrap characterization
+
+Every supported single-site request loads the same Core bootstrap before
+WordPress can distinguish a frontend, REST, admin, cron, WP-CLI, or updater
+consumer. Managed release registration performs two package-list queries, then
+one exact release-configuration query for each eligible release-managed target;
+it also checks and hydrates returned package paths. Saved credential material
+remains lazy and is not read merely to register those targets.
+
+That eager registration is required before the updater broker fixes its
+request-local target selection at the earliest `plugins_loaded` callback.
+Deferring it based on `REST_REQUEST`, URI shape, admin, cron, or WP-CLI state
+would make native update interception depend on an incomplete request
+classifier. The Webhook V1 decision is therefore:
+
+- **GO:** route registration itself performs no database lifecycle check and no
+  failure log write. Storage readiness remains enforced when an authenticated
+  delivery reaches admission.
+- **NO-GO:** do not add request-wide lazy loading, caching, or context gates.
+  The two list queries plus per-release-target lookups remain an acknowledged
+  request-wide cost until an updater-owned contract can prove a smaller safe
+  boundary.
+
+For unrelated REST requests, this removes the only extra webhook-specific
+bootstrap operation: the former schema check and possible repeated failure log.
+For matched webhooks, the route now proceeds directly to bounded provider,
+request, signature, and storage handling. No option, schema, cache, public API,
+or persistent state is added by this decision.
 
 ## Recovery behavior
 

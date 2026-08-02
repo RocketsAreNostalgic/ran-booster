@@ -32,9 +32,18 @@ final class WebhookProcessorTest extends TestCase {
 	public const WEBHOOK_SECRET = 'processor-test-webhook-secret-0001';
 
 	public function testUnknownAndUnsupportedProvidersFailClosed(): void {
-		$processor = $this->processor( new ProviderRegistry( new \Tests\Support\NullLoggingFacade() ), new WebhookProcessorCoordinator() );
+		$requestCalls = 0;
+		$request      = static function () use ( &$requestCalls ): array {
+			++$requestCalls;
 
-		self::assertSame( 404, $processor->handle( 'bb', '{}', array() )->getStatus() );
+			return array(
+				'body'    => '{}',
+				'headers' => array(),
+			);
+		};
+		$processor    = $this->processor( new ProviderRegistry( new \Tests\Support\NullLoggingFacade() ), new WebhookProcessorCoordinator() );
+
+		self::assertSame( 404, $processor->handle( 'bb', $request )->getStatus() );
 
 		$metadataOnly = new class() implements RepositoryProvider {
 
@@ -49,7 +58,8 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator()
 		);
 
-		self::assertSame( 501, $processor->handle( 'gh', '{}', array() )->getStatus() );
+		self::assertSame( 404, $processor->handle( 'gh', $request )->getStatus() );
+		self::assertSame( 0, $requestCalls );
 	}
 
 	public function testProviderExceptionsNeverReachTheResponse(): void {
@@ -63,7 +73,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator()
 		);
 
-		$response = $processor->handle( 'gh', 'body-canary', $this->signedHeaders( 'body-canary' ) );
+		$response = $processor->handle( 'gh', $this->request( 'body-canary', $this->signedHeaders( 'body-canary' ) ) );
 		$data     = implode( ' ', array_map( 'strval', $response->getData() ) );
 
 		self::assertSame( 500, $response->getStatus() );
@@ -83,7 +93,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator()
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 		$data     = implode( ' ', array_map( 'strval', $response->getData() ) );
 
 		self::assertSame( 401, $response->getStatus() );
@@ -100,13 +110,13 @@ final class WebhookProcessorTest extends TestCase {
 			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) ),
 			$coordinator
 		);
-		self::assertSame( 200, $probe->handle( 'gh', '{}', $this->signedHeaders( '{}' ) )->getStatus() );
+		self::assertSame( 200, $probe->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) )->getStatus() );
 
 		$ignored = $this->processor(
 			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::ignored() ) ) ),
 			$coordinator
 		);
-		self::assertSame( 202, $ignored->handle( 'gh', '{}', $this->signedHeaders( '{}' ) )->getStatus() );
+		self::assertSame( 202, $ignored->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) )->getStatus() );
 		self::assertSame( 0, $spy->calls );
 	}
 
@@ -117,7 +127,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( self::admissionResult( 'accepted', $correlationId, 1, 'scheduled' ) )
 		);
 
-		$response = $processor->handle( 'gh', $body, $this->signedHeaders( $body ) );
+		$response = $processor->handle( 'gh', $this->request( $body, $this->signedHeaders( $body ) ) );
 
 		self::assertSame( 202, $response->getStatus() );
 		self::assertSame(
@@ -142,7 +152,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( self::admissionResult( 'duplicate', $correlationId, 1, 'already_scheduled' ) )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 202, $response->getStatus() );
 		self::assertSame( 'duplicate', $response->getData()['status'] );
@@ -155,7 +165,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::deliveryConflict() )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 409, $response->getStatus() );
 		self::assertSame( 'Webhook delivery conflict.', $response->getData()['message'] );
@@ -167,7 +177,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::unsupportedDatabase() )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 503, $response->getStatus() );
 		self::assertSame( 'Webhook processing is temporarily unavailable.', $response->getData()['message'] );
@@ -179,7 +189,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::capacityExhausted() )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 503, $response->getStatus() );
 		self::assertSame( 'Webhook processing is temporarily unavailable.', $response->getData()['message'] );
@@ -202,7 +212,7 @@ final class WebhookProcessorTest extends TestCase {
 			)
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 401, $response->getStatus() );
 		self::assertSame( 0, $spy->calls );
@@ -213,7 +223,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( self::admissionResult( 'accepted', str_repeat( 'd', 32 ), 1, 'unavailable' ) )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 202, $response->getStatus() );
 		self::assertSame( 'accepted', $response->getData()['status'] );
@@ -225,7 +235,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( self::admissionResult( 'accepted', str_repeat( 'e', 32 ), 0, 'not_required' ) )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 202, $response->getStatus() );
 		self::assertSame( 0, $response->getData()['accepted_targets'] );
@@ -238,7 +248,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( self::admissionResult( 'duplicate', $correlationId, 0, 'not_required' ) )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 202, $response->getStatus() );
 		self::assertSame( 'duplicate', $response->getData()['status'] );
@@ -252,7 +262,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator( null, null, new RuntimeException( 'db-canary secret-canary raw-body-canary' ) )
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 		$rendered = implode( ' ', array_map( 'strval', $response->getData() ) );
 
 		self::assertSame( 500, $response->getStatus() );
@@ -270,11 +280,49 @@ final class WebhookProcessorTest extends TestCase {
 
 		$response = $processor->handle(
 			'gh',
-			'{}',
-			array( 'X-GitHub-Event' => array( 'push', 'ping' ) )
+			$this->request( '{}', array( 'X-GitHub-Event' => array( 'push', 'ping' ) ) )
 		);
 
 		self::assertSame( 400, $response->getStatus() );
+	}
+
+	public function testFalseSignatureStopsBeforeNormalizationAndIntake(): void {
+		$normalizerCalls = 0;
+		$spy             = new WebhookProcessorCoordinatorSpy();
+		$materials       = array();
+		foreach ( range( 1, 16 ) as $index ) {
+			$materials[ 'profile-' . $index ] = array(
+				'scope'        => 'owner',
+				'target'       => 'owner',
+				'authority_id' => '',
+				'secret'       => sprintf( 'processor-test-webhook-secret-%04d', $index ),
+			);
+		}
+		$processor = $this->processor(
+			new ProviderRegistry(
+				new \Tests\Support\NullLoggingFacade(),
+				array(
+					new WebhookProcessorProvider(
+						static function () use ( &$normalizerCalls ): WebhookEnvelope {
+							++$normalizerCalls;
+
+							return WebhookEnvelope::ignored();
+						}
+					),
+				)
+			),
+			new WebhookProcessorCoordinator( null, $spy ),
+			$materials
+		);
+
+		$response = $processor->handle(
+			'gh',
+			$this->request( '{}', array( 'X-Hub-Signature-256' => 'sha256=' . str_repeat( '0', 64 ) ) )
+		);
+
+		self::assertSame( 401, $response->getStatus() );
+		self::assertSame( 0, $normalizerCalls );
+		self::assertSame( 0, $spy->calls );
 	}
 
 	public function testOversizedGitHubRequestDoesNotLoadSecretsOrInvokeIntake(): void {
@@ -306,7 +354,7 @@ final class WebhookProcessorTest extends TestCase {
 			$coordinator
 		);
 
-		$response = $processor->handle( 'gh', str_repeat( 'x', 262145 ), array() );
+		$response = $processor->handle( 'gh', $this->request( str_repeat( 'x', 262145 ), array() ) );
 
 		self::assertSame( 413, $response->getStatus() );
 		self::assertSame( 'Webhook request is too large.', $response->getData()['message'] );
@@ -336,7 +384,7 @@ final class WebhookProcessorTest extends TestCase {
 			$coordinator
 		);
 
-		$response = $processor->handle( 'gh', '{}', $this->signedHeaders( '{}' ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
 
 		self::assertSame( 400, $response->getStatus() );
 		self::assertSame( 0, $spy->calls );
@@ -378,7 +426,7 @@ final class WebhookProcessorTest extends TestCase {
 			$materials
 		);
 
-		$response = $processor->handle( 'gh', $body, $this->signedHeaders( $body ) );
+		$response = $processor->handle( 'gh', $this->request( $body, $this->signedHeaders( $body ) ) );
 
 		self::assertSame( 202, $response->getStatus() );
 		self::assertSame( 1, $spy->calls );
@@ -441,6 +489,17 @@ final class WebhookProcessorTest extends TestCase {
 				array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) )
 			),
 			$coordinator
+		);
+	}
+
+	/**
+	 * @param array<string, string|list<string>> $headers
+	 * @return callable(): array{body: string, headers: array<string, string|list<string>>}
+	 */
+	private function request( string $body, array $headers ): callable {
+		return static fn (): array => array(
+			'body'    => $body,
+			'headers' => $headers,
 		);
 	}
 

@@ -261,7 +261,7 @@ try {
 		throw new RuntimeException( 'The database smoke could not create its disposable plugin.' );
 	}
 
-	$packages      = $booster->make( PluginRepository::class );
+	$packages      = $container->make( PluginRepository::class );
 	$fixturePlugin = $packages->installedPluginFromFile( $identifier );
 	$fixturePlugin->setRepository( new ManagedRepository( 'gh', 'example/database-smoke', 'database-smoke', 'main' ) );
 	$fixturePlugin->setDeploymentPolicy( DeploymentPolicy::DISABLED );
@@ -272,7 +272,7 @@ try {
 	}
 	$packages->unlink( $identifier )->requireSuccess();
 
-	$attempts = $booster->make( DeploymentAttemptRepository::class );
+	$attempts = $container->make( DeploymentAttemptRepository::class );
 	$request  = new DeploymentRequest(
 		'example/database-smoke',
 		null,

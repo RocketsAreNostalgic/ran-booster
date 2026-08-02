@@ -6,6 +6,7 @@ namespace Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
+use RAN\Internal\CoreContainer;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
@@ -157,31 +158,28 @@ final class ProPageTest extends TestCase {
 	}
 
 	private function booster(): Booster {
-		return new class() extends Booster {
+		$container = new CoreContainer();
+		$container->bind(
+			'RAN\\Dashboard',
+			new class() {
 
-			public function make( $alias ) {
-				if ( 'RAN\\Dashboard' === $alias ) {
-					return new class() {
-
-						public function getIndex(): void {
-						}
-
-						public function getPluginsCreate(): void {
-						}
-
-						public function getPlugins(): void {
-						}
-
-						public function getThemesCreate(): void {
-						}
-
-						public function getThemes(): void {
-						}
-					};
+				public function getIndex(): void {
 				}
 
-				return parent::make( $alias );
+				public function getPluginsCreate(): void {
+				}
+
+				public function getPlugins(): void {
+				}
+
+				public function getThemesCreate(): void {
+				}
+
+				public function getThemes(): void {
+				}
 			}
-		};
+		);
+
+		return new Booster( $container );
 	}
 }

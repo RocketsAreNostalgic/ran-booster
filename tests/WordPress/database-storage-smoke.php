@@ -4,6 +4,7 @@ use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
+use RAN\Internal\CoreContainer;
 use RAN\ManagedRepository;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -13,12 +14,12 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	throw new RuntimeException( 'This proof must run through WP-CLI.' );
 }
 
-$booster = require __DIR__ . '/core-container-fixture.php';
-if ( ! $booster instanceof \RAN\Booster ) {
+$container = require __DIR__ . '/core-container-fixture.php';
+if ( ! $container instanceof CoreContainer ) {
 	throw new RuntimeException( 'RAN Booster is not active.' );
 }
 
-$database = $booster->make( Database::class );
+$database = $container->make( Database::class );
 $database->requireSupported();
 $database->install();
 

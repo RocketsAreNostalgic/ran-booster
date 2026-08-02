@@ -67,6 +67,7 @@ use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Booster;
 use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
+use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedMultisiteBootstrap;
@@ -144,12 +145,13 @@ add_action(
 );
 
 ( static function () use ( $ran_booster_self_update_policy, &$ran_booster_updater_prospective_api_version ): void {
-	$ran_booster_instance              = new Booster();
-	$ran_booster_instance->boosterPath = plugin_dir_path( __FILE__ );
-	$ran_booster_instance->boosterUrl  = plugin_dir_url( __FILE__ );
-	$ran_booster_instance->register( new BoosterServiceProvider() );
-	$ran_booster_instance->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
-	$ran_booster_instance->bind(
+	$ran_booster_container            = new CoreContainer();
+	$ran_booster_runtime              = new Booster( $ran_booster_container );
+	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
+	$ran_booster_runtime->boosterUrl  = plugin_dir_url( __FILE__ );
+	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime );
+	$ran_booster_container->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
+	$ran_booster_container->bind(
 		CoreSelfUpdateStatus::class,
 		new CoreSelfUpdateStatus(
 			$ran_booster_self_update_policy,
@@ -160,7 +162,7 @@ add_action(
 	// Release targets must join the package broker before its earliest
 	// plugins_loaded callback fixes the request-local runtime selection.
 	try {
-		$ran_booster_instance->make( ManagedReleaseTargetRegistrar::class )->register();
+		$ran_booster_container->make( ManagedReleaseTargetRegistrar::class )->register();
 	} catch ( Throwable $exception ) {
 		\RAN\Logging\BoosterLogger::logException(
 			'managed release target registration unavailable',
@@ -169,24 +171,24 @@ add_action(
 		);
 	}
 
-	register_activation_hook( __FILE__, array( $ran_booster_instance, 'activate' ) );
-	register_deactivation_hook( __FILE__, array( $ran_booster_instance, 'deactivate' ) );
+	register_activation_hook( __FILE__, array( $ran_booster_runtime, 'activate' ) );
+	register_deactivation_hook( __FILE__, array( $ran_booster_runtime, 'deactivate' ) );
 
 	add_action(
 		'plugins_loaded',
-		static function () use ( $ran_booster_instance, &$ran_booster_updater_prospective_api_version ): void {
+		static function () use ( $ran_booster_container, $ran_booster_runtime, &$ran_booster_updater_prospective_api_version ): void {
 			// All plugins have now had an opportunity to attach their provider
 			// registration callback. No provider consumer is resolved before this
 			// extension seam closes and the registry is sealed.
-			$providerRegistry = $ran_booster_instance->make( ProviderRegistry::class );
+			$providerRegistry = $ran_booster_container->make( ProviderRegistry::class );
 			do_action( 'ran_booster_register_providers', $providerRegistry );
 			$providerRegistry->seal();
-			$webhookAssistance = $ran_booster_instance->make( WebhookAssistanceFacade::class );
-			$webhookCleanup    = $ran_booster_instance->make( WebhookCleanupFacade::class );
-			$releaseTracking   = $ran_booster_instance->make( ReleaseTrackingFacade::class );
-			$portability       = $ran_booster_instance->make( PortabilityFacade::class );
-			$logging           = $ran_booster_instance->make( LoggingFacade::class );
-			$adminInteraction  = $ran_booster_instance->make( AdminInteractionFacade::class );
+			$webhookAssistance = $ran_booster_container->make( WebhookAssistanceFacade::class );
+			$webhookCleanup    = $ran_booster_container->make( WebhookCleanupFacade::class );
+			$releaseTracking   = $ran_booster_container->make( ReleaseTrackingFacade::class );
+			$portability       = $ran_booster_container->make( PortabilityFacade::class );
+			$logging           = $ran_booster_container->make( LoggingFacade::class );
+			$adminInteraction  = $ran_booster_container->make( AdminInteractionFacade::class );
 			$addOnRegistry     = new AdminAddOnRegistry(
 				$logging,
 				array(
@@ -198,7 +200,7 @@ add_action(
 			);
 			do_action( 'ran_booster_register_admin_tabs', $addOnRegistry );
 			$addOnRegistry->seal();
-			$ran_booster_instance->bind( AdminAddOnRegistry::class, $addOnRegistry );
+			$ran_booster_container->bind( AdminAddOnRegistry::class, $addOnRegistry );
 
 			try {
 				do_action( 'ran_booster_admin_interaction_ready', $adminInteraction, $logging );
@@ -276,7 +278,7 @@ add_action(
 				&& ProspectiveReleaseFacade::API_VERSION
 				=== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
 				try {
-					$prospectiveRelease = $ran_booster_instance->make( ProspectiveReleaseFacade::class );
+					$prospectiveRelease = $ran_booster_container->make( ProspectiveReleaseFacade::class );
 					do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease, $logging );
 				} catch ( Throwable $failure ) {
 					\RAN\Logging\BoosterLogger::logException(
@@ -291,16 +293,16 @@ add_action(
 				}
 			}
 
-			$ran_booster_instance->bind( Dashboard::class, $ran_booster_instance->make( Dashboard::class ) );
-			$ran_booster_instance->init();
+			$ran_booster_container->bind( Dashboard::class, $ran_booster_container->make( Dashboard::class ) );
+			$ran_booster_runtime->init();
 		},
 		100
 	);
 
 	$ran_booster_update_request_filter = new WordPressOrgUpdateRequestFilter(
-		$ran_booster_instance->make( Database::class ),
-		$ran_booster_instance->make( 'RAN\Storage\PluginRepository' ),
-		$ran_booster_instance->make( 'RAN\Storage\ThemeRepository' ),
+		$ran_booster_container->make( Database::class ),
+		$ran_booster_container->make( 'RAN\Storage\PluginRepository' ),
+		$ran_booster_container->make( 'RAN\Storage\ThemeRepository' ),
 		plugin_basename( __FILE__ )
 	);
 	add_filter( 'http_request_args', array( $ran_booster_update_request_filter, 'plugins' ), 5, 2 );

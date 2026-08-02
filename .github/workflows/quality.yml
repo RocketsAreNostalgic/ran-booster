@@ -157,7 +157,7 @@ jobs:
                     if ( function_exists( "ran_booster" ) || array_key_exists( "ran_booster_instance", $GLOBALS ) ) {
                       throw new RuntimeException( "The removed global Core container acquisition path is available." );
                     }
-                    if ( method_exists( RAN\Booster::class, "getInstance" ) || method_exists( RAN\Booster::class, "setInstance" ) ) {
+                    if ( method_exists( RAN\Booster::class, "getInstance" ) || method_exists( RAN\Booster::class, "setInstance" ) || method_exists( RAN\Booster::class, "make" ) || method_exists( RAN\Booster::class, "bind" ) ) {
                       throw new RuntimeException( "The removed Core singleton acquisition path is available." );
                     }
                     if ( method_exists( RAN\Secrets\SecretsFile::class, "credentialMaterials" ) ) {

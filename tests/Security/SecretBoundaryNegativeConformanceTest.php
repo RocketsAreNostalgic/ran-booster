@@ -12,6 +12,7 @@ use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\WebhookAssistance\WebhookCleanupFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Booster;
+use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\Secrets\SecretsFile;
 use ReflectionClass;
@@ -35,6 +36,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 	/** @var list<string> */
 	private const FORBIDDEN_AUTHORITY_TYPES = array(
 		Booster::class,
+		CoreContainer::class,
 		ProviderCredentialStore::class,
 		SecretsFile::class,
 		'RAN\\RepositoryProvider\\ProviderRegistry',
@@ -115,13 +117,20 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		$booster = new ReflectionClass( Booster::class );
 		self::assertFalse( $booster->hasMethod( 'getInstance' ) );
 		self::assertFalse( $booster->hasMethod( 'setInstance' ) );
+		foreach ( array( 'bind', 'make', 'resolve' ) as $method ) {
+			self::assertFalse( $booster->hasMethod( $method ) );
+		}
+
+		$container = new ReflectionClass( CoreContainer::class );
+		self::assertTrue( $container->isFinal() );
 		foreach ( array( 'bind', 'make' ) as $method ) {
-			self::assertTrue( $booster->getMethod( $method )->isPublic() );
+			self::assertTrue( $container->getMethod( $method )->isPublic() );
 			self::assertStringContainsString(
 				'@internal Core composition only; this is not an extension API.',
-				(string) $booster->getMethod( $method )->getDocComment()
+				(string) $container->getMethod( $method )->getDocComment()
 			);
 		}
+		self::assertTrue( $container->getMethod( 'resolve' )->isPrivate() );
 
 		$secrets = new ReflectionClass( SecretsFile::class );
 		self::assertFalse( $secrets->hasMethod( 'credentialMaterials' ) );
@@ -135,11 +144,11 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/function\s+ran_booster\s*\(/', $bootstrap );
 		self::assertStringNotContainsString( 'Booster::getInstance', $bootstrap );
 		self::assertStringNotContainsString( "\$GLOBALS['ran_booster_instance']", $bootstrap );
-		self::assertStringNotContainsString( "->bind( 'RAN\\Booster'", $bootstrap );
+		self::assertDoesNotMatchRegularExpression( '/->bind\(\s*(?:[\'\"]RAN\\\\Booster[\'\"]|Booster::class)/', $bootstrap );
 		self::assertMatchesRegularExpression(
-			'/\( static function \(\) use \([^\n]+\): void \{\s+\$ran_booster_instance\s+=\s+new Booster\(\);/s',
+			'/\( static function \(\) use \([^\n]+\): void \{\s+\$ran_booster_container\s+=\s+new CoreContainer\(\);\s+\$ran_booster_runtime\s+=\s+new Booster\( \$ran_booster_container \);/s',
 			$bootstrap,
-			'The live Core container must remain scoped inside the bootstrap closure.'
+			'The live Core container and runtime must remain scoped inside the bootstrap closure.'
 		);
 	}
 

@@ -61,7 +61,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 			strpos( $bootstrap, '$providerRegistry->seal()' )
 		);
 		self::assertLessThan(
-			strpos( $bootstrap, '$ran_booster_instance->bind( Dashboard::class' ),
+			strpos( $bootstrap, '$ran_booster_container->bind( Dashboard::class' ),
 			strpos( $bootstrap, "do_action( 'ran_booster_portability_ready'" )
 		);
 	}

@@ -13,6 +13,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\WordPressWorkerWakeup;
+use RAN\Internal\CoreContainer;
 use RAN\Logging\TemporaryDebugCapture;
 
 final class WordPressWorkerWakeupTest extends TestCase {
@@ -74,11 +75,12 @@ final class WordPressWorkerWakeupTest extends TestCase {
 	}
 
 	public function testActivationInstallsSchemaBeforeRequestingWakeup(): void {
-		$wakeup  = new WordPressWorkerWakeupActivationWakeup();
-		$schema  = new WordPressWorkerWakeupSchema( $wakeup );
-		$booster = new Booster();
-		$booster->bind( 'RAN\Storage\Database', $schema );
-		$booster->bind( WordPressWorkerWakeup::class, $wakeup );
+		$wakeup    = new WordPressWorkerWakeupActivationWakeup();
+		$schema    = new WordPressWorkerWakeupSchema( $wakeup );
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( 'RAN\Storage\Database', $schema );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
 		$booster->activate();
 		self::assertSame( 1, $schema->installs );
@@ -91,11 +93,12 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		$directory = sys_get_temp_dir() . '/ran-booster-deactivation-capture-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );
-		$capture = new TemporaryDebugCapture( $directory . '/secrets.json' );
-		$wakeup  = new WordPressWorkerWakeupActivationWakeup();
-		$booster = new Booster();
-		$booster->bind( TemporaryDebugCapture::class, $capture );
-		$booster->bind( WordPressWorkerWakeup::class, $wakeup );
+		$capture   = new TemporaryDebugCapture( $directory . '/secrets.json' );
+		$wakeup    = new WordPressWorkerWakeupActivationWakeup();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( TemporaryDebugCapture::class, $capture );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
 		try {
 			$capture->start();
@@ -123,12 +126,13 @@ final class WordPressWorkerWakeupTest extends TestCase {
 	public function testActivationFailureUsesSafeActionableWpDieAndDoesNotRequestWakeup(): void {
 		$wakeup          = new WordPressWorkerWakeupActivationWakeup();
 		$schema          = new WordPressWorkerWakeupSchema( $wakeup );
-		$booster         = new Booster();
+		$container       = new CoreContainer();
+		$booster         = new Booster( $container );
 		$schema->failure = new \Error(
 			'Database error for token secret-token at /srv/private/wp-content/db.php.'
 		);
-		$booster->bind( 'RAN\Storage\Database', $schema );
-		$booster->bind( WordPressWorkerWakeup::class, $wakeup );
+		$container->bind( 'RAN\Storage\Database', $schema );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
 		try {
 			$booster->activate();

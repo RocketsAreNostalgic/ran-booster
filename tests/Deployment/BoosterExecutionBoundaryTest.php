@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\Deployment\DeploymentWorker;
+use RAN\Internal\CoreContainer;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -16,10 +17,11 @@ use RAN\Webhook\WebhookController;
 final class BoosterExecutionBoundaryTest extends TestCase {
 
 	public function testCronCallbackUpgradesSchemaBeforeRunningWorker(): void {
-		$calls   = array();
-		$booster = new Booster();
-		$booster->bind( Database::class, new ExecutionBoundaryDatabase( $calls ) );
-		$booster->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
+		$calls     = array();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( Database::class, new ExecutionBoundaryDatabase( $calls ) );
+		$container->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
 
 		$booster->runDeploymentWorker();
 
@@ -27,9 +29,10 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 	}
 
 	public function testRestCallbackRegistersRoutesWithoutTouchingSchema(): void {
-		$calls   = array();
-		$booster = new Booster();
-		$booster->bind( WebhookController::class, new ExecutionBoundaryWebhookController( $calls ) );
+		$calls     = array();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( WebhookController::class, new ExecutionBoundaryWebhookController( $calls ) );
 
 		$booster->registerWebhookRoutes();
 
@@ -48,10 +51,11 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 	public function testDatabaseSafeStateStopsWorkerWithoutLeakingTheFailure(
 		DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
 	): void {
-		$calls   = array();
-		$booster = new Booster();
-		$booster->bind( Database::class, new BlockedExecutionBoundaryDatabase( $calls, $failure ) );
-		$booster->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
+		$calls     = array();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( Database::class, new BlockedExecutionBoundaryDatabase( $calls, $failure ) );
+		$container->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
 
 		$booster->runDeploymentWorker();
 

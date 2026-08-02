@@ -6,6 +6,7 @@
 // phpcs:disable
 
 use RAN\Booster;
+use RAN\Internal\CoreContainer;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	throw new RuntimeException( 'The Core container fixture is restricted to source-owned WP-CLI proofs.' );
@@ -25,7 +26,10 @@ foreach ( $callbacks as $priority_callbacks ) {
 			&& ( $callback[0] ?? null ) instanceof Booster
 			&& 'activate' === ( $callback[1] ?? null )
 		) {
-			return $callback[0];
+			$container = ( new ReflectionProperty( Booster::class, 'container' ) )->getValue( $callback[0] );
+			if ( $container instanceof CoreContainer ) {
+				return $container;
+			}
 		}
 	}
 }

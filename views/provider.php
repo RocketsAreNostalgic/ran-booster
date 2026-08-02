@@ -1067,12 +1067,16 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 									if ( ! $isPlugin && 1 !== preg_match( '/^[A-Za-z0-9_.-]+$/', $packageReference ) ) {
 										continue;
 									}
+									$packageSettingsUrl = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $packageReference ) );
+									if ( ! $isReleaseSource ) {
+										$packageSettingsUrl = add_query_arg( 'source_view', 'branch', $packageSettingsUrl ) . '#ran-booster-branch-readiness';
+									}
 									$actionKey             = 'core:package-' . substr( hash( 'sha256', $packageReference ), 0, 16 );
 									$actions[ $actionKey ] = array(
 										'key'           => $actionKey,
 										'label'         => $isPlugin ? __( 'Plugin settings', 'ran-booster' ) : __( 'Theme settings', 'ran-booster' ),
 										'type'          => 'link',
-										'url'           => admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $packageReference ) ),
+										'url'           => $packageSettingsUrl,
 										'hidden'        => array(),
 										'disabled'      => false,
 										'external'      => false,

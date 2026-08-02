@@ -800,6 +800,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Assisted Hooks add-on not active.', $html );
 		self::assertStringContainsString( 'Fixture webhooks', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
+		self::assertStringContainsString( 'source_view=branch#ran-booster-branch-readiness', html_entity_decode( $html ) );
 		self::assertStringNotContainsString( '>Manage webhook', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text">: plugin/example.php</span>', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__details"', $html );
@@ -831,6 +832,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( '>Repository webhook</h4>', $repositoryHtml );
 		self::assertStringContainsString( 'Back to managed repositories', $repositoryHtml );
+		self::assertStringContainsString( 'source_view=branch#ran-booster-branch-readiness', html_entity_decode( $repositoryHtml ) );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $repositoryHtml );
 		self::assertSame( 1, substr_count( $repositoryHtml, 'data-ran-booster-provider-repository' ) );
 		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42&amp;add_webhook_secret=1', $repositoryHtml );
@@ -934,6 +936,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'webhook_cleanup=1#ran-booster-webhook-cleanup', html_entity_decode( $html ) );
 		self::assertStringContainsString( 'Theme settings', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=release-theme', $html );
+		self::assertStringNotContainsString( 'source_view=branch', $html );
+		self::assertStringNotContainsString( '#ran-booster-branch-readiness', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 
 		$provider_repositories['repositories'][0]['retained_webhook']['local_secret_coverage'] = 'none';

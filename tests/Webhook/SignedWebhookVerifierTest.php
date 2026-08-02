@@ -53,26 +53,42 @@ final class SignedWebhookVerifierTest extends TestCase {
 	}
 
 	#[DataProvider( 'invalidSignatureProvider' )]
-	public function testMissingMalformedUppercaseAndWrongSignaturesFailUniformly( ?string $signature ): void {
+	public function testMissingMalformedUppercaseAndWrongSignaturesFailUniformly( ?string $signature, int $expectedSecretReads ): void {
 		$headers = array();
 		if ( null !== $signature ) {
 			$headers['X-Hub-Signature-256'] = $signature;
 		}
+		$secrets  = new class( array( 'profile-one' => $this->profile() ) ) extends SecretsFile {
+			public int $calls = 0;
+
+			/** @param array<string, array<string, mixed>> $profiles */
+			public function __construct( private array $profiles ) {
+				parent::__construct( '/unused/signed-verifier-secrets.php', array() );
+			}
+
+			public function webhookMaterials( ProviderCode|string $provider ): array {
+				++$this->calls;
+
+				return $this->profiles;
+			}
+		};
+		$verifier = new SignedWebhookVerifier( $secrets );
 
 		$this->assertAuthenticationFailed(
-			fn () => $this->verifier()->verify(
+			fn () => $verifier->verify(
 				new WebhookRequest( ProviderCode::parse( 'gh' ), '{}', $headers, ( new GitHubWebhookPolicy() )->getRetainedHeaders() ),
 				new GitHubWebhookPolicy()
 			)
 		);
+		self::assertSame( $expectedSecretReads, $secrets->calls );
 	}
 
-	/** @return iterable<string, array{?string}> */
+	/** @return iterable<string, array{?string, int}> */
 	public static function invalidSignatureProvider(): iterable {
-		yield 'missing' => array( null );
-		yield 'wrong' => array( 'sha256=' . str_repeat( '0', 64 ) );
-		yield 'uppercase digest' => array( 'sha256=' . str_repeat( 'A', 64 ) );
-		yield 'uppercase algorithm' => array( 'SHA256=' . str_repeat( 'a', 64 ) );
+		yield 'missing' => array( null, 0 );
+		yield 'wrong' => array( 'sha256=' . str_repeat( '0', 64 ), 1 );
+		yield 'uppercase digest' => array( 'sha256=' . str_repeat( 'A', 64 ), 0 );
+		yield 'uppercase algorithm' => array( 'SHA256=' . str_repeat( 'a', 64 ), 0 );
 	}
 
 	public function testOversizedAndMalformedProfileSetsFailClosed(): void {
@@ -86,6 +102,27 @@ final class SignedWebhookVerifierTest extends TestCase {
 		$this->assertAuthenticationFailed(
 			fn () => $this->verifier( array( 'invalid' => $invalid ) )->verify( $this->request( '{}' ), new GitHubWebhookPolicy() )
 		);
+	}
+
+	public function testSixteenProfilesCanMatchTheLastBoundedSecret(): void {
+		$body      = '{"bounded":true}';
+		$materials = array();
+		foreach ( range( 1, 16 ) as $index ) {
+			$id                         = sprintf( 'profile-%02d', $index );
+			$materials[ $id ]           = $this->profile();
+			$materials[ $id ]['secret'] = sprintf( 'signed-webhook-verifier-secret-%04d', $index );
+		}
+		$policy  = new GitHubWebhookPolicy();
+		$request = new WebhookRequest(
+			ProviderCode::parse( 'gh' ),
+			$body,
+			array( 'X-Hub-Signature-256' => 'sha256=' . hash_hmac( 'sha256', $body, $materials['profile-16']['secret'] ) ),
+			$policy->getRetainedHeaders()
+		);
+
+		$profiles = $this->verifier( $materials )->verify( $request, $policy )->getProfiles();
+
+		self::assertSame( array( 'profile-16' ), array_column( $profiles, 'id' ) );
 	}
 
 	public function testHeaderAndBodyBudgetsRejectBeforeVerification(): void {

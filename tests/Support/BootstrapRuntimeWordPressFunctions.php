@@ -10,6 +10,7 @@ $GLOBALS['ran_booster_activation_callbacks']   = array();
 $GLOBALS['ran_booster_deactivation_callbacks'] = array();
 $GLOBALS['ran_booster_cleared_cron_hooks']     = array();
 $GLOBALS['ran_booster_fired_actions']          = array();
+$GLOBALS['ran_booster_rest_routes']            = array();
 
 function is_multisite(): bool {
 	return true;
@@ -56,6 +57,12 @@ function register_activation_hook( string $file, callable $callback ): void {
 
 function register_deactivation_hook( string $file, callable $callback ): void {
 	$GLOBALS['ran_booster_deactivation_callbacks'][ $file ] = $callback;
+}
+
+function register_rest_route( string $namespace, string $route, array $arguments ): bool {
+	$GLOBALS['ran_booster_rest_routes'][] = compact( 'namespace', 'route', 'arguments' );
+
+	return true;
 }
 
 function get_file_data( string $file, array $headers, string $context = '' ): array {

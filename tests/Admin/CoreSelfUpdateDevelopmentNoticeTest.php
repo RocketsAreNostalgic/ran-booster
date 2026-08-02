@@ -14,11 +14,15 @@ use RAN\WordPress\CoreSelfUpdatePolicy;
 final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 
 	protected function setUp(): void {
-		$GLOBALS['ran_booster_repository_admin_allowed'] = true;
+		$GLOBALS['ran_booster_repository_admin_allowed']       = true;
+		$GLOBALS['ran_booster_repository_admin_inline_styles'] = array();
 	}
 
 	protected function tearDown(): void {
-		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
+		unset(
+			$GLOBALS['ran_booster_repository_admin_allowed'],
+			$GLOBALS['ran_booster_repository_admin_inline_styles']
+		);
 	}
 
 	public function testSourceCheckoutRendersOneFriendlyScopedNotice(): void {
@@ -41,6 +45,21 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 	}
 
+	public function testSourceCheckoutLoadsItsScopedTintOnEveryAllowedScreen(): void {
+		$policy = CoreSelfUpdatePolicy::detect(
+			dirname( __DIR__, 2 ) . '/ran-booster.php',
+			'0.1.0-alpha.23'
+		);
+		$notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' );
+
+		$notice->enqueueStyle();
+
+		self::assertSame(
+			array( '[data-ran-booster-core-development-notice] { background-color: #e5f3ff; }' ),
+			$GLOBALS['ran_booster_repository_admin_inline_styles']['common']
+		);
+	}
+
 	public function testUnverifiedNonSourceUnauthorizedAndUnrelatedScreensRenderNothing(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-development-notice-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
@@ -60,9 +79,10 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		);
 
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
-		self::assertFalse(
-			( new CoreSelfUpdateDevelopmentNotice( $source, 'plugins' ) )->shouldRender()
-		);
+		$unauthorized                                    = new CoreSelfUpdateDevelopmentNotice( $source, 'plugins' );
+		self::assertFalse( $unauthorized->shouldRender() );
+		$unauthorized->enqueueStyle();
+		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_inline_styles'] );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.
 		rmdir( $directory );

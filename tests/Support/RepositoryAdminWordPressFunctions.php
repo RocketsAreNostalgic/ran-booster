@@ -13,6 +13,12 @@ function current_user_can( string $capability ): bool {
 	return (bool) ( $GLOBALS['ran_booster_repository_admin_allowed'] ?? true );
 }
 
+function wp_add_inline_style( string $handle, string $css ): bool {
+	$GLOBALS['ran_booster_repository_admin_inline_styles'][ $handle ][] = $css;
+
+	return true;
+}
+
 function check_ajax_referer( string $action, string $queryArg, bool $stop ): bool {
 	unset( $action, $queryArg, $stop );
 

@@ -77,6 +77,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertSame( 1, substr_count( $css, 'rgb(0 0 0 / 60%)' ) );
 		self::assertStringContainsString( '.ran-booster-badge--error,', $css );
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $css );
+		self::assertStringNotContainsString( "\n.notice-info {", $css );
 		self::assertStringNotContainsString( '.ran-booster-admin .theme-screenshot .content', $css );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-welcome-panel', $css );
 		self::assertStringNotContainsString( "\n.ran-booster-credential-modal {", $css );

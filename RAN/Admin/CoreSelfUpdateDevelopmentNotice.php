@@ -20,8 +20,15 @@ final class CoreSelfUpdateDevelopmentNotice {
 	}
 
 	public function register(): void {
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueStyle' ) );
 		add_action( 'admin_notices', array( $this, 'render' ) );
 		add_action( 'network_admin_notices', array( $this, 'render' ) );
+	}
+
+	public function enqueueStyle(): void {
+		if ( $this->shouldRender() ) {
+			wp_add_inline_style( 'common', '[data-ran-booster-core-development-notice] { background-color: #e5f3ff; }' );
+		}
 	}
 
 	public function shouldRender(): bool {

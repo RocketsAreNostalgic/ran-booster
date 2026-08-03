@@ -51,18 +51,16 @@ jobs:
                   tag="v${version}"
                   manifest_changed=true
                   git diff --quiet HEAD^ HEAD -- .release-please-manifest.json && manifest_changed=false
-                  if release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" 2>&1)"; then
+                  release_pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+                  if release_json="$(jq -cer --arg tag "$tag" 'add | .[] | select(.tag_name == $tag)' <<< "$release_pages")"; then
                       if [[ "$(jq -er '.draft' <<< "$release_json")" == false ]]; then
                           if [[ "$manifest_changed" == false || "$(jq -er '.immutable' <<< "$release_json")" == true ]]; then exit 0; fi
                           echo '::error::The published release is not immutable and cannot be accepted.'
                           exit 1
                       fi
                       state=draft
-                  elif [[ "$release_json" == *'(HTTP 404)'* ]]; then
-                      state=absent
                   else
-                      printf '%s\n' "$release_json" >&2
-                      exit 1
+                      state=absent
                   fi
                   release_commit="$(git log -1 --format=%H -- .release-please-manifest.json)"
                   test "$(git show "${release_commit}:.release-please-manifest.json" | jq -er '."."')" = "$version"

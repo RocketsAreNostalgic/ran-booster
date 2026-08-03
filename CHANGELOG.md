@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-beta.4](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-08-03)
+
+
+### Bug Fixes
+
+* **deps:** adopt updater beta.3 continuity fix ([3a493e8](https://github.com/RocketsAreNostalgic/ran-booster/commit/3a493e89efa5c3795245a732af92419343f03cec))
+* **deps:** adopt updater beta.3 continuity fix ([4d7bb9e](https://github.com/RocketsAreNostalgic/ran-booster/commit/4d7bb9e3ee904b52591eac279818570e8571b777))
+
 ## [1.0.0-beta.3](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-08-03)
 
 

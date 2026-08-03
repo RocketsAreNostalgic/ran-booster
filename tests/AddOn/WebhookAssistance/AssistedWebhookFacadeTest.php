@@ -4,818 +4,658 @@ declare(strict_types=1);
 
 namespace Tests\AddOn\WebhookAssistance;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused service fakes remain beside their contract test.
+// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused fixtures stay beside the facade contract tests.
 
 require_once __DIR__ . '/WebhookAssistanceWordPressFunctions.php';
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
-use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
-use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
-use RAN\AddOn\WebhookAssistance\ProvisioningCallbackResult;
+use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
-use RAN\AddOn\WebhookAssistance\WebhookProfileMetadata;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
-use RAN\PackageSource;
+use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\PreparedArchive;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderDiagnosticRequest;
+use RAN\RepositoryProvider\ProviderDiagnostics;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryDescriptor;
+use RAN\RepositoryProvider\RepositoryLookupRequest;
+use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryWebhookFitness;
+use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
+use RAN\RepositoryProvider\RepositoryWebhookManagement;
+use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
-use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
-use RuntimeException;
 
-#[CoversClass( AssistedWebhookFacade::class )]
 final class AssistedWebhookFacadeTest extends TestCase {
 
-	public function testCorePublishesAddOnApiSevenForProviderAwareWebhookAssistance(): void {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local bootstrap contract.
+	public function testBootstrapPublishesTheExactCutAndRemovesCleanup(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source contract inspection.
 		$bootstrap = file_get_contents( dirname( __DIR__, 3 ) . '/ran-booster.php' );
-
 		self::assertIsString( $bootstrap );
-		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 13", $bootstrap );
-		self::assertStringContainsString( "RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION', 1", $bootstrap );
-		self::assertStringContainsString( "do_action( 'ran_booster_webhook_cleanup_ready', \$webhookCleanup )", $bootstrap );
+		self::assertStringContainsString( "RAN_BOOSTER_PROVIDER_API_VERSION', 8", $bootstrap );
+		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 14", $bootstrap );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION', $bootstrap );
+		self::assertStringNotContainsString( 'ran_booster_webhook_cleanup_ready', $bootstrap );
+		self::assertFalse( interface_exists( 'RAN\\AddOn\\WebhookAssistance\\WebhookCleanupFacade' ) );
+		self::assertFalse( class_exists( 'RAN\\AddOn\\WebhookAssistance\\ProvisioningCallbackResult' ) );
 	}
 
-	public function testSafeProfileMetadataRejectsInvalidPublicStates(): void {
-		foreach ( array(
-			array( 'invalid', 'gh', 'repository', 'owner/example', '101', 1, 'created', 'file', false ),
-			array( 'wh_' . str_repeat( 'a', 24 ), 'invalid provider', 'repository', 'owner/example', '101', 1, 'created', 'file', false ),
-			array( 'wh_' . str_repeat( 'a', 24 ), 'gh', 'global', 'owner/example', '101', 1, 'created', 'file', false ),
-			array( 'wh_' . str_repeat( 'a', 24 ), 'gh', 'repository', 'owner/example', '101', 0, 'created', 'file', false ),
-			array( 'wh_' . str_repeat( 'a', 24 ), 'gh', 'owner', 'owner', '', 1, 'created', 'file', false ),
-			array( 'wh_' . str_repeat( 'a', 24 ), 'gh', 'repository', 'owner/example', '', 1, 'reused', 'file', false ),
-			array( 'wh_' . str_repeat( 'a', 24 ), 'gh', 'repository', "owner/exam\nple", '101', 1, 'reused', 'file', false ),
-			array( 'wh_' . str_repeat( 'a', 24 ), 'gh', 'repository', 'owner/example', '101', 1, 'reused', 'constant', true ),
-		) as $arguments ) {
-			try {
-				new WebhookProfileMetadata( ...$arguments );
-				self::fail( 'Invalid public webhook metadata must be rejected.' );
-			} catch ( \InvalidArgumentException $exception ) {
-				self::assertSame( 'Webhook profile metadata is invalid.', $exception->getMessage() );
-			}
-		}
-	}
-
-	public function testReadinessIncludesGitHubCandidatesPoliciesAndLocalSecretCoverage(): void {
-		$secrets           = new FacadeSecretsFile();
-		$secrets->profiles = array(
-			'owner'      => array(
-				'scope'        => 'owner',
-				'target'       => 'owner',
-				'authority_id' => '',
-			),
-			'repository' => array(
-				'scope'        => 'repository',
-				'target'       => 'owner/example',
-				'authority_id' => '101',
-			),
-		);
-		$plugins           = new FacadePluginRepository(
-			$this->package( 'plugin/example.php', 'owner/example', '101', DeploymentPolicy::MANUAL ),
-			$this->package( 'plugin/other.php', 'owner/example', '101', DeploymentPolicy::AUTOMATIC ),
-			$this->package( 'plugin/disabled.php', 'owner/example', '101', DeploymentPolicy::DISABLED ),
-			$this->package( 'plugin/ignored.php', 'owner/ignored', '102', DeploymentPolicy::MANUAL, 'bb' )
-		);
-		$themes            = new FacadeThemeRepository( $this->package( 'example-theme', 'owner/example', '101', DeploymentPolicy::MANUAL ) );
-		$facade            = $this->facade( $plugins, $themes, $secrets );
-
-		$readiness = $facade->readiness( 'gh' )->toArray();
-
-		self::assertSame(
-			array(
-				'status'       => 'ready',
-				'reason_codes' => array(),
-				'callback_url' => 'https://site.example/wp-json/ran-booster/v1/webhooks/gh',
-			),
-			$readiness['site']
-		);
-		self::assertCount( 1, $readiness['repositories'] );
-		self::assertSame(
-			array(
-				'provider_code'         => 'gh',
-				'repository_id'         => '101',
-				'repository'            => 'owner/example',
-				'label'                 => 'owner/example',
-				'package_references'    => array( 'example-theme', 'plugin/disabled.php', 'plugin/example.php', 'plugin/other.php' ),
-				'deployment_policies'   => array(
-					'automatic' => 1,
-					'manual'    => 2,
-					'disabled'  => 1,
-				),
-				'status'                => 'ready',
-				'reason_codes'          => array(),
-				'local_secret_coverage' => 'repository',
-				'eligible'              => true,
-			),
-			$readiness['repositories'][0]
-		);
-	}
-
-	public function testUnsupportedDatabaseFailsBeforePackageStorageIsRead(): void {
-		$plugins  = new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) );
-		$database = new FacadeDatabase( false );
-		$facade   = $this->facade( $plugins, new FacadeThemeRepository(), database: $database );
-
-		$readiness = $facade->readiness( 'gh' )->toArray();
-
-		self::assertSame( 'blocked', $readiness['site']['status'] );
-		self::assertSame( array( 'database_unavailable' ), $readiness['site']['reason_codes'] );
-		self::assertSame( array(), $readiness['repositories'] );
-		self::assertSame( 0, $plugins->reads );
-	}
-
-	public function testPackageStorageReadFailureHasAPathlessSiteReason(): void {
-		$plugins          = new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) );
-		$plugins->failure = new RuntimeException( 'storage canary' );
-		$facade           = $this->facade( $plugins, new FacadeThemeRepository() );
-
-		$readiness = $facade->readiness( 'gh' )->toArray();
-
-		self::assertSame( array( 'managed_packages_unavailable' ), $readiness['site']['reason_codes'] );
-		self::assertSame( array(), $readiness['repositories'] );
-		self::assertNull( $facade->target( 'gh', '101' ) );
-	}
-
-	public function testUnsafeCallbackBlocksButStillDescribesManagedCandidates(): void {
-		$plugins = new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) );
-		$themes  = new FacadeThemeRepository();
-		$secrets = new FacadeSecretsFile();
-		$facade  = new AssistedWebhookFacade(
-			new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new FacadeDatabase( true ), static fn (): bool => true ),
-			$secrets,
-			static fn (): bool => true,
-			static fn ( string $providerCode ): string => 'https://127.0.0.1/wp-json/ran-booster/v1/webhooks/' . $providerCode
-		);
-
-		$readiness = $facade->readiness( 'gh' )->toArray();
-
-		self::assertSame( array( 'callback_requires_public_https' ), $readiness['site']['reason_codes'] );
-		self::assertCount( 1, $readiness['repositories'] );
-		self::assertSame( 'blocked', $readiness['repositories'][0]['status'] );
-		self::assertSame( array(), $readiness['repositories'][0]['reason_codes'] );
-		self::assertFalse( $readiness['repositories'][0]['eligible'] );
-		self::assertSame( 1, $plugins->reads );
-	}
-
-	public function testProfileMetadataRemainsReadableWhenCallbackReadinessIsBlocked(): void {
-		$profileId         = 'wh_' . str_repeat( 'a', 24 );
-		$plugins           = new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) );
-		$secrets           = new FacadeSecretsFile();
-		$secrets->profiles = array(
-			$profileId => $this->storedProfile( 'repository', 'owner/example', '101', 5, 'assisted', str_repeat( 'a', 32 ) ),
-		);
-		$facade            = new AssistedWebhookFacade(
-			new WebhookAssistanceReadinessEvaluator( $plugins, new FacadeThemeRepository(), $secrets, new FacadeDatabase( true ), static fn (): bool => true ),
-			$secrets,
-			static fn (): bool => true,
-			static fn ( string $providerCode ): string => 'https://127.0.0.1/wp-json/ran-booster/v1/webhooks/' . $providerCode
-		);
-
-		self::assertNull( $facade->target( 'gh', '101' ) );
-		$metadata = $facade->profile( 'gh', '101', $profileId );
-		self::assertNotNull( $metadata );
-		self::assertSame( 5, $metadata->revision() );
-		self::assertSame( 'created', $metadata->disposition() );
-	}
-
-	public function testEveryOperationReauthorisesManageOptions(): void {
-		$plugins = new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) );
-		$facade  = $this->facade( $plugins, new FacadeThemeRepository(), canManage: static fn (): bool => false );
-		$target  = new AssistanceTarget(
-			'gh',
-			'101',
-			'owner/example',
-			'owner/example',
-			array( 'plugin/example.php' ),
-			array(
-				'automatic' => 0,
-				'manual'    => 1,
-				'disabled'  => 0,
-			),
-			'https://site.example/wp-json/ran-booster/v1/webhooks/gh'
-		);
-
-		$readiness = $facade->readiness( 'gh' )->toArray();
-		self::assertSame( array( 'managed_packages_unavailable' ), $readiness['site']['reason_codes'] );
-		self::assertNull( $facade->target( 'gh', '101' ) );
-		self::assertSame( 'forbidden', $facade->provision( $target, static fn (): ProvisioningCallbackResult => ProvisioningCallbackResult::succeeded() )->code() );
-		self::assertNull( $facade->profile( 'gh', '101', 'wh_' . str_repeat( 'a', 24 ) ) );
-		self::assertSame( 'forbidden', $facade->reconfigure( $target, 'wh_' . str_repeat( 'a', 24 ), static fn (): ProvisioningCallbackResult => ProvisioningCallbackResult::succeeded() )->code() );
-		self::assertFalse( $facade->releaseProfile( 'gh', '101', 'wh_' . str_repeat( 'a', 24 ) ) );
-		self::assertSame( 0, $plugins->reads );
-	}
-
-	public function testReadinessReportsIdentityAndLocatorFailuresWithoutDroppingCandidates(): void {
-		$plugins = new FacadePluginRepository(
-			$this->package( 'plugin/missing.php', 'owner/missing', null ),
-			$this->package( 'plugin/first.php', 'owner/conflict', '101' ),
-			$this->package( 'plugin/second.php', 'owner/conflict', '102' ),
-			$this->package( 'plugin/invalid.php', 'https://example.test/owner/repository', '103' ),
-			$this->package( 'plugin/reused-a.php', 'owner/reused-a', '104' ),
-			$this->package( 'plugin/reused-b.php', 'owner/reused-b', '104' )
-		);
-
-		$repositories = $this->facade( $plugins, new FacadeThemeRepository() )->readiness( 'gh' )->toArray()['repositories'];
-		$reasons      = array_column( $repositories, 'reason_codes', 'repository' );
-
-		self::assertSame( array( 'repository_identity_unavailable' ), $reasons['owner/missing'] );
-		self::assertSame( array( 'repository_identity_conflict' ), $reasons['owner/conflict'] );
-		self::assertSame( array( 'repository_locator_invalid' ), $reasons['https://example.test/owner/repository'] );
-		self::assertSame( array( 'repository_identity_conflict' ), $reasons['owner/reused-a'] );
-		self::assertSame( array( 'repository_identity_conflict' ), $reasons['owner/reused-b'] );
-	}
-
-	public function testReadinessDistinguishesSharedNoneAndUnknownSecretCoverage(): void {
-		$plugins                    = new FacadePluginRepository(
-			$this->package( 'plugin/shared.php', 'owner/shared', '101' ),
-			$this->package( 'plugin/none.php', 'other/none', '102' )
-		);
-		$secrets                    = new FacadeSecretsFile();
-		$secrets->profiles['owner'] = array(
-			'scope'        => 'owner',
-			'target'       => 'owner',
-			'authority_id' => '',
-		);
-
-		$repositories = $this->facade( $plugins, new FacadeThemeRepository(), $secrets )->readiness( 'gh' )->toArray()['repositories'];
-		self::assertSame(
-			array(
-				'other/none'   => AssistanceReadiness::SECRET_NONE,
-				'owner/shared' => AssistanceReadiness::SECRET_SHARED,
-			),
-			array_column( $repositories, 'local_secret_coverage', 'repository' )
-		);
-
-		$secrets->storageReady = false;
-		$blocked               = $this->facade( $plugins, new FacadeThemeRepository(), $secrets )->readiness( 'gh' )->toArray();
-		self::assertContains( 'secrets_storage_unavailable', $blocked['site']['reason_codes'] );
-		self::assertSame(
-			array( AssistanceReadiness::SECRET_UNKNOWN, AssistanceReadiness::SECRET_UNKNOWN ),
-			array_column( $blocked['repositories'], 'local_secret_coverage' )
-		);
-	}
-
-	public function testSharedEvaluatorScopesCandidatesToTheRequestedProvider(): void {
-		$plugins   = new FacadePluginRepository(
-			$this->package( 'plugin/github.php', 'owner/github', '101' ),
-			$this->package( 'plugin/bitbucket.php', 'owner/bitbucket', '102', provider: 'bb' )
-		);
-		$secrets   = new FacadeSecretsFile();
-		$evaluator = new WebhookAssistanceReadinessEvaluator(
-			$plugins,
-			new FacadeThemeRepository(),
-			$secrets,
-			new FacadeDatabase( true ),
-			static fn (): bool => true
-		);
-
-		$repositories = $evaluator->evaluate( 'bb', 'https://site.example/wp-json/ran-booster/v1/webhooks/bb' )->toArray()['repositories'];
-
-		self::assertCount( 1, $repositories );
-		self::assertSame( 'bb', $repositories[0]['provider_code'] );
-		self::assertSame( 'owner/bitbucket', $repositories[0]['repository'] );
-	}
-
-	public function testSharedEvaluatorExcludesPublishedReleasePackagesFromBranchWebhookReadiness(): void {
-		$branch  = $this->package( 'plugin/branch.php', 'owner/branch', '101' );
-		$release = $this->package( 'plugin/release.php', 'owner/release', '102' );
-		$release->setSource( PackageSource::RELEASE_ASSET, 2 );
-		$evaluator = new WebhookAssistanceReadinessEvaluator(
-			new FacadePluginRepository( $branch, $release ),
-			new FacadeThemeRepository(),
-			new FacadeSecretsFile(),
-			new FacadeDatabase( true ),
-			static fn (): bool => true
-		);
-
-		$repositories = $evaluator->evaluate( 'gh', 'https://site.example/wp-json/ran-booster/v1/webhooks/gh' )->toArray()['repositories'];
-
-		self::assertSame( array( 'owner/branch' ), array_column( $repositories, 'repository' ) );
-	}
-
-	public function testCleanupTargetIsReleaseOnlyAndRejectsMixedBranchConsumers(): void {
-		$release = $this->package( 'plugin/release.php', 'owner/release', '102' );
-		$release->setSource( PackageSource::RELEASE_ASSET, 2 );
-		$facade = $this->facade(
-			new FacadePluginRepository( $release ),
-			new FacadeThemeRepository()
-		);
-
-		$target = $facade->cleanupTarget( 'gh', '102' );
-
+	public function testSetupKeepsBothSecretsInsideCoreAndProvider(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
 		self::assertInstanceOf( AssistanceTarget::class, $target );
-		self::assertSame( array( 'plugin/release.php' ), $target->toArray()['package_references'] );
 
-		$branch = $this->package( 'plugin/branch.php', 'owner/release', 'different-id' );
-		$mixed  = $this->facade(
-			new FacadePluginRepository( $release, $branch ),
-			new FacadeThemeRepository()
-		);
-
-		self::assertNull( $mixed->cleanupTarget( 'gh', '102' ) );
-	}
-
-	public function testCleanupProfileLifecycleReauthorisesTheReleaseTarget(): void {
-		$profileId = 'wh_' . str_repeat( 'd', 24 );
-		$release   = $this->package( 'plugin/release.php', 'owner/release', '102' );
-		$release->setSource( PackageSource::RELEASE_ASSET, 2 );
-		$secrets           = new FacadeSecretsFile();
-		$secrets->profiles = array(
-			$profileId => $this->storedProfile( 'repository', 'owner/release', '102', 1, 'assisted', str_repeat( 's', 32 ) ),
-		);
-		$facade            = $this->facade(
-			new FacadePluginRepository( $release ),
-			new FacadeThemeRepository(),
-			$secrets
-		);
-		$target            = $facade->cleanupTarget( 'gh', '102' );
-
-		self::assertInstanceOf( AssistanceTarget::class, $target );
-		self::assertSame( $profileId, $facade->cleanupProfile( $target, $profileId )?->id() );
-
-		$release->setSource( PackageSource::BRANCH, 3 );
-
-		self::assertNull( $facade->cleanupProfile( $target, $profileId ) );
-		self::assertFalse( $facade->releaseCleanupProfile( $target, $profileId ) );
-		self::assertSame( array(), $secrets->deleted );
-	}
-
-	public function testFacadeCarriesTheProviderThroughTargetProfileAndSecretLifecycle(): void {
-		$secrets = new FacadeSecretsFile();
-		$facade  = $this->facade(
-			new FacadePluginRepository( $this->package( 'plugin/bitbucket.php', 'workspace/example', '202', provider: 'bb' ) ),
-			new FacadeThemeRepository(),
-			$secrets
-		);
-		$target  = $facade->target( 'bb', '202' );
-
-		self::assertInstanceOf( AssistanceTarget::class, $target );
-		self::assertSame( 'bb', $target->providerCode() );
-		self::assertSame( 'bb', $target->toArray()['provider_code'] );
-		self::assertSame( 'https://site.example/wp-json/ran-booster/v1/webhooks/bb', $target->endpoint() );
-
-		$result = $facade->provision(
-			$target,
-			static fn (): ProvisioningCallbackResult => ProvisioningCallbackResult::succeeded()
-		);
+		$result = $facade->setup( $target, 'profile_1', 'good' );
 
 		self::assertTrue( $result->succeeded() );
-		self::assertSame( array( 'bb' ), $secrets->savedProviders );
-		$profileId = (string) $result->profileId();
-		$metadata  = $facade->profile( 'bb', '202', $profileId );
-		self::assertInstanceOf( WebhookProfileMetadata::class, $metadata );
-		self::assertSame( 'bb', $metadata->providerCode() );
-		self::assertSame( 'bb', $metadata->toArray()['provider_code'] );
-		self::assertNull( $facade->profile( 'gh', '202', $profileId ) );
-		self::assertTrue( $facade->releaseProfile( 'bb', '202', $profileId ) );
-		self::assertSame( array( 'bb' ), $secrets->deletedProviders );
+		self::assertSame( '55', $result->hookId() );
+		self::assertNotNull( $result->profile() );
+		self::assertSame( $secrets->savedSecret, $provider->signingSecret );
+		self::assertSame( 'profile_1', $provider->credentialId );
+		self::assertNull( $provider->requestCredential );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( $secrets->savedSecret, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
 	}
 
-	public function testProviderBearingPublicValuesRejectInvalidProviderCodes(): void {
-		$this->expectException( \InvalidArgumentException::class );
-		new AssistanceTarget(
-			'invalid provider',
-			'101',
-			'owner/example',
-			'owner/example',
-			array( 'plugin/example.php' ),
-			array(
-				'automatic' => 0,
-				'manual'    => 1,
-				'disabled'  => 0,
-			),
-			'https://site.example/wp-json/ran-booster/v1/webhooks/gh'
-		);
-	}
+	public function testRequestCredentialIsOneExplicitInput(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
 
-	public function testPublicHttpsGateRejectsStructurallyUnsafeCallbackUrls(): void {
-		$evaluator = new WebhookAssistanceReadinessEvaluator(
-			new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) ),
-			new FacadeThemeRepository(),
-			new FacadeSecretsFile(),
-			new FacadeDatabase( true ),
-			static fn (): bool => true
-		);
-
-		foreach ( array(
-			'http://site.example/webhook',
-			'https://localhost/webhook',
-			'https://site.local/webhook',
-			'https://10.0.0.1/webhook',
-			'https://[::1]/webhook',
-			'https://[fd00::1]/webhook',
-			'https://user@site.example/webhook',
-			'https://site.example:8443/webhook',
-			'https://site.example/webhook?token=value',
-		) as $endpoint ) {
-			self::assertContains(
-				'callback_requires_public_https',
-				$evaluator->evaluate( 'gh', $endpoint )->toArray()['site']['reason_codes'],
-				$endpoint
-			);
-		}
-
-		self::assertSame(
-			array(),
-			$evaluator->evaluate( 'gh', 'https://site.example/webhook' )->toArray()['site']['reason_codes']
-		);
-	}
-
-	public function testProvisionPassesGeneratedSecretOnlyToTheCallbackAndReturnsOnlyProfileIdentity(): void {
-		$secrets = new FacadeSecretsFile();
-		$facade  = $this->facade( new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) ), new FacadeThemeRepository(), $secrets );
-		$target  = $facade->target( 'gh', '101' );
-		self::assertInstanceOf( AssistanceTarget::class, $target );
-		$callbackSecret = '';
-
-		$result = $facade->provision(
-			$target,
-			static function ( string $profileId, string $secret, int $revision ) use ( &$callbackSecret ): ProvisioningCallbackResult {
-				self::assertSame( 'wh_' . str_repeat( 'a', 24 ), $profileId );
-				self::assertSame( 1, $revision );
-				$callbackSecret = $secret;
-
-				return ProvisioningCallbackResult::succeeded();
-			}
-		);
+		$result = $facade->setup( $target, null, 'good', 'request-only-canary' );
 
 		self::assertTrue( $result->succeeded() );
-		self::assertSame( 'wh_' . str_repeat( 'a', 24 ), $result->profileId() );
-		self::assertSame( 'succeeded', $result->code() );
-		self::assertSame( $callbackSecret, $secrets->savedSecret );
-		self::assertSame( 64, strlen( $callbackSecret ) );
-		self::assertSame(
-			array(
-				'label'        => 'Assisted hook for owner/example',
-				'scope'        => 'repository',
-				'target'       => 'owner/example',
-				'authority_id' => '101',
-				'origin'       => 'assisted',
-			),
-			$secrets->savedMetadata
-		);
-		self::assertSame(
-			array(
-				'code'       => 'succeeded',
-				'profile_id' => 'wh_' . str_repeat( 'a', 24 ),
-			),
-			array(
-				'code'       => $result->code(),
-				'profile_id' => $result->profileId(),
-			)
-		);
-		self::assertSame( 'repository', $result->scope() );
-		self::assertSame( 1, $result->revision() );
-		self::assertSame( 'created', $result->disposition() );
+		self::assertNull( $provider->credentialId );
+		self::assertSame( 'request-only-canary', $provider->requestCredential );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( 'request-only-canary', json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+		self::assertSame( 'operation_unauthorized', $facade->setup( $target, 'profile_1', 'good', 'also-present' )->code() );
 	}
 
-	public function testFailedRemoteCreationDeletesTheNewExactProfile(): void {
-		$secrets = new FacadeSecretsFile();
-		$facade  = $this->facade( new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) ), new FacadeThemeRepository(), $secrets );
-		$target  = $facade->target( 'gh', '101' );
-		self::assertInstanceOf( AssistanceTarget::class, $target );
+	public function testRequestCredentialCanBeAssessedWithoutPersistence(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
 
-		$result = $facade->provision( $target, static fn (): ProvisioningCallbackResult => ProvisioningCallbackResult::failed() );
+		$result = $facade->assessSetup( $target, null, 'good', 'request-fitness-canary' );
 
-		self::assertSame( 'remote_configuration_failed', $result->code() );
-		self::assertNull( $result->profileId() );
-		self::assertSame( array( 'wh_' . str_repeat( 'a', 24 ) ), $secrets->deleted );
+		self::assertSame( 'supported', $result->toArray()['support'] );
+		self::assertNull( $provider->credentialId );
+		self::assertSame( 'request-fitness-canary', $provider->requestCredential );
+		self::assertSame( array(), $secrets->profiles );
 	}
 
-	public function testProvisionReusesRepositoryBeforeCurrentOwnerWithoutRotatingSecret(): void {
-		$repositoryId      = 'wh_' . str_repeat( 'a', 24 );
-		$ownerId           = 'wh_' . str_repeat( 'b', 24 );
-		$repositorySecret  = str_repeat( 'r', 32 );
-		$secrets           = new FacadeSecretsFile();
-		$secrets->profiles = array(
-			$ownerId      => $this->storedProfile( 'owner', 'owner', '', 2, 'manual', str_repeat( 'o', 32 ) ),
-			$repositoryId => $this->storedProfile( 'repository', 'owner/example', '101', 4, 'manual', $repositorySecret ),
-		);
-		$facade            = $this->facade( new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) ), new FacadeThemeRepository(), $secrets );
-		$target            = $facade->target( 'gh', '101' );
-		self::assertInstanceOf( AssistanceTarget::class, $target );
+	public function testSetupExceptionAfterProviderInvocationRetainsRecoveryProfile(): void {
+		$secrets              = new FixedFacadeSecretsFile();
+		$provider             = new FixedWebhookProvider();
+		$provider->throwSetup = true;
+		$facade               = $this->facade( $secrets, $provider );
+		$target               = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
 
-		$result = $facade->provision(
-			$target,
-			static function ( string $profileId, string $secret, int $revision ) use ( $repositoryId, $repositorySecret ): ProvisioningCallbackResult {
-				self::assertSame( $repositoryId, $profileId );
-				self::assertSame( $repositorySecret, $secret );
-				self::assertSame( 4, $revision );
+		$result = $facade->setup( $target, 'profile_1', 'good' );
 
-				return ProvisioningCallbackResult::succeeded();
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'setup_outcome_unknown', $result->code() );
+		self::assertNotNull( $result->profile() );
+		self::assertCount( 1, $secrets->profiles );
+	}
+
+	public function testFailedSetupCannotDeleteAProfileRotatedDuringTheProviderRequest(): void {
+		$secrets              = new FixedFacadeSecretsFile();
+		$provider             = new FixedWebhookProvider();
+		$provider->setupState = 'failed';
+		$facade               = $this->facade( $secrets, $provider );
+		$target               = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$provider->duringSetup = static function () use ( $secrets ): void {
+			$profileId                        = (string) array_key_first( $secrets->profiles );
+			$rotated                          = $secrets->profile( $profileId, 2, 'rotated-secret' );
+			$secrets->profiles[ $profileId ]  = $rotated;
+			$secrets->materials[ $profileId ] = $rotated;
+		};
+
+		$result = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'profile_cleanup_failed', $result->code() );
+		self::assertSame( 2, $result->profile()?->revision() );
+		self::assertSame( 'rotated-secret', $secrets->materials[ $result->profile()?->id() ]['secret'] ?? null );
+	}
+
+	public function testPreProviderFailureCannotDeleteAProfileRotatedAfterCreation(): void {
+		$secrets                         = new FixedFacadeSecretsFile();
+		$secrets->throwMaterialAfterSave = true;
+		$provider                        = new FixedWebhookProvider();
+		$facade                          = $this->facade( $secrets, $provider );
+		$target                          = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+
+		$result = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'profile_cleanup_failed', $result->code() );
+		self::assertSame( 2, $result->profile()?->revision() );
+		self::assertSame( 1, $provider->calls, 'Only the identity assessment may run before the local snapshot failure.' );
+		self::assertCount( 1, $secrets->profiles );
+	}
+
+	public function testSameTargetSetupCannotOverlapWithAReusableNonce(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$held     = false;
+		$facade   = $this->facade(
+			$secrets,
+			$provider,
+			static function () use ( &$held ): bool {
+				if ( $held ) {
+					return false;
+				}
+				$held = true;
+
+				return true;
+			},
+			static function () use ( &$held ): bool {
+				$held = false;
+
+				return true;
 			}
 		);
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$nested                = null;
+		$provider->duringSetup = static function () use ( $facade, $target, &$nested ): void {
+			$nested = $facade->setup( $target, 'profile_1', 'good' );
+		};
 
-		self::assertSame( 'reused', $result->disposition() );
-		self::assertSame( 'repository', $result->scope() );
-		self::assertSame( array(), $secrets->savedMetadata );
+		$first = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertTrue( $first->succeeded() );
+		self::assertInstanceOf( RepositoryWebhookOperationResult::class, $nested );
+		self::assertSame( 'operation_busy', $nested->code() );
+		self::assertCount( 1, $secrets->profiles );
+		self::assertFalse( $held );
 	}
 
-	public function testReconfigureRejectsStaleOwnerButKeepsStableRepositoryAcrossTransfer(): void {
-		$staleOwnerId      = 'wh_' . str_repeat( 'a', 24 );
-		$repositoryId      = 'wh_' . str_repeat( 'b', 24 );
-		$currentOwnerId    = 'wh_' . str_repeat( 'c', 24 );
-		$repositorySecret  = str_repeat( 'r', 32 );
-		$secrets           = new FacadeSecretsFile();
-		$secrets->profiles = array(
-			$staleOwnerId   => $this->storedProfile( 'owner', 'old-owner', '', 1, 'manual', str_repeat( 's', 32 ) ),
-			$repositoryId   => $this->storedProfile( 'repository', 'old-owner/old-slug', '101', 7, 'manual', $repositorySecret ),
-			$currentOwnerId => $this->storedProfile( 'owner', 'new-owner', '', 3, 'manual', str_repeat( 'n', 32 ) ),
-		);
-		$facade            = $this->facade( new FacadePluginRepository( $this->package( 'plugin/example.php', 'new-owner/new-slug', '101' ) ), new FacadeThemeRepository(), $secrets );
-		$target            = $facade->target( 'gh', '101' );
-		self::assertInstanceOf( AssistanceTarget::class, $target );
-
-		$result = $facade->reconfigure(
-			$target,
-			$staleOwnerId,
-			static function ( string $profileId, string $secret, int $revision ) use ( $repositoryId, $repositorySecret ): ProvisioningCallbackResult {
-				self::assertSame( $repositoryId, $profileId );
-				self::assertSame( $repositorySecret, $secret );
-				self::assertSame( 7, $revision );
-
-				return ProvisioningCallbackResult::succeeded();
+	public function testSeparateRequestFacadesContendOnTheSameTargetLock(): void {
+		$secrets     = new FixedFacadeSecretsFile();
+		$provider    = new FixedWebhookProvider();
+		$held        = false;
+		$acquire     = static function () use ( &$held ): bool {
+			if ( $held ) {
+				return false;
 			}
-		);
+			$held = true;
 
-		self::assertSame( $repositoryId, $result->profileId() );
-		self::assertSame( 'reused', $result->disposition() );
+			return true;
+		};
+		$release     = static function () use ( &$held ): bool {
+			$held = false;
+
+			return true;
+		};
+		$firstFacade = $this->facade( $secrets, $provider, $acquire, $release );
+		$otherFacade = $this->facade( $secrets, $provider, $acquire, $release );
+		$firstTarget = $firstFacade->target( 'gh', '101' );
+		$otherTarget = $otherFacade->target( 'gh', '101' );
+		self::assertNotNull( $firstTarget );
+		self::assertNotNull( $otherTarget );
+		$nested                = null;
+		$provider->duringSetup = static function () use ( $otherFacade, $otherTarget, &$nested ): void {
+			$nested = $otherFacade->setup( $otherTarget, 'profile_1', 'good' );
+		};
+
+		self::assertTrue( $firstFacade->setup( $firstTarget, 'profile_1', 'good' )->succeeded() );
+		self::assertInstanceOf( RepositoryWebhookOperationResult::class, $nested );
+		self::assertSame( 'operation_busy', $nested->code() );
+		self::assertCount( 1, $secrets->profiles );
+		self::assertFalse( $held );
 	}
 
-	public function testReconfigureFallsBackToTheCurrentCanonicalOwner(): void {
-		$staleOwnerId      = 'wh_' . str_repeat( 'a', 24 );
-		$currentOwnerId    = 'wh_' . str_repeat( 'b', 24 );
-		$currentSecret     = str_repeat( 'n', 32 );
-		$secrets           = new FacadeSecretsFile();
-		$secrets->profiles = array(
-			$staleOwnerId   => $this->storedProfile( 'owner', 'old-owner', '', 1, 'manual', str_repeat( 's', 32 ) ),
-			$currentOwnerId => $this->storedProfile( 'owner', 'new-owner', '', 3, 'manual', $currentSecret ),
-		);
-		$facade            = $this->facade( new FacadePluginRepository( $this->package( 'plugin/example.php', 'new-owner/new-slug', '101' ) ), new FacadeThemeRepository(), $secrets );
-		$target            = $facade->target( 'gh', '101' );
-		self::assertInstanceOf( AssistanceTarget::class, $target );
+	public function testLockReleaseFailureDoesNotOverwriteAmbiguousRecoveryEvidence(): void {
+		$secrets               = new FixedFacadeSecretsFile();
+		$provider              = new FixedWebhookProvider();
+		$provider->removeState = 'ambiguous';
+		$facade                = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
+		$target                = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                       = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ] = $secrets->profile( $profileId, 1 );
 
-		$result = $facade->reconfigure(
-			$target,
-			$staleOwnerId,
-			static function ( string $profileId, string $secret, int $revision ) use ( $currentOwnerId, $currentSecret ): ProvisioningCallbackResult {
-				self::assertSame( $currentOwnerId, $profileId );
-				self::assertSame( $currentSecret, $secret );
-				self::assertSame( 3, $revision );
+		$result = $facade->remove( $target, 'profile_1', '55', $profileId, 1, 'good' );
 
-				return ProvisioningCallbackResult::succeeded();
-			}
-		);
-
-		self::assertSame( 'owner', $result->scope() );
-		self::assertSame( $currentOwnerId, $result->profileId() );
-		self::assertTrue( $facade->releaseProfile( 'gh', '101', $staleOwnerId ) );
-		self::assertSame( array(), $secrets->deleted );
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'remove_ambiguous', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertSame( $profileId, $result->profile()?->id() );
+		self::assertArrayHasKey( $profileId, $secrets->profiles );
 	}
 
-	public function testProfileMetadataAndReleaseKeepManualProfilesButDeleteAssistedRepositoryProfiles(): void {
-		$secrets           = new FacadeSecretsFile();
-		$secrets->profiles = array(
-			'wh_' . str_repeat( 'a', 24 ) => array(
-				'source'       => 'file',
-				'immutable'    => false,
-				'scope'        => 'repository',
-				'authority_id' => '101',
-				'target'       => 'owner/example',
-				'revision'     => 3,
-				'origin'       => 'manual',
-				'configured'   => true,
-				'secret'       => str_repeat( 'm', 32 ),
-			),
-			'wh_' . str_repeat( 'b', 24 ) => array(
-				'source'       => 'file',
-				'immutable'    => false,
-				'scope'        => 'repository',
-				'authority_id' => '101',
-				'target'       => 'owner/other',
-				'revision'     => 1,
-				'origin'       => 'assisted',
-				'configured'   => true,
-				'secret'       => str_repeat( 'a', 32 ),
-			),
-			'wh_' . str_repeat( 'c', 24 ) => array(
-				'source'       => 'file',
-				'immutable'    => false,
-				'scope'        => 'repository',
-				'authority_id' => '999',
-				'target'       => 'owner/example',
-				'revision'     => 1,
-				'origin'       => 'assisted',
-				'configured'   => true,
-				'secret'       => str_repeat( 's', 32 ),
-			),
-		);
-		$facade            = $this->facade( new FacadePluginRepository( $this->package( 'plugin/example.php', 'owner/example', '101' ) ), new FacadeThemeRepository(), $secrets );
-		$matchingProfileId = 'wh_' . str_repeat( 'a', 24 );
-		$assistedProfileId = 'wh_' . str_repeat( 'b', 24 );
-		$staleProfileId    = 'wh_' . str_repeat( 'c', 24 );
+	public function testLockReleaseFailureDoesNotOverwritePartialSetupRecoveryEvidence(): void {
+		$secrets              = new FixedFacadeSecretsFile();
+		$provider             = new FixedWebhookProvider();
+		$provider->throwSetup = true;
+		$facade               = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
+		$target               = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
 
-		self::assertSame( 3, $facade->profile( 'gh', '101', $matchingProfileId )?->revision() );
-		self::assertSame( 'gh', $facade->profile( 'gh', '101', $matchingProfileId )?->providerCode() );
-		self::assertSame( 'reused', $facade->profile( 'gh', '101', $matchingProfileId )?->disposition() );
-		self::assertTrue( $facade->releaseProfile( 'gh', '101', $matchingProfileId ) );
-		self::assertSame( array(), $secrets->deleted );
-		self::assertTrue( $facade->releaseProfile( 'gh', '101', $assistedProfileId ) );
-		self::assertSame( array( $assistedProfileId ), $secrets->deleted );
-		self::assertTrue( $facade->releaseProfile( 'gh', '101', $assistedProfileId ) );
-		self::assertFalse( $facade->releaseProfile( 'gh', '101', $staleProfileId ) );
-		self::assertSame( array( $assistedProfileId ), $secrets->deleted );
+		$result = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'setup_outcome_unknown', $result->code() );
+		self::assertNotNull( $result->profile() );
+		self::assertCount( 1, $secrets->profiles );
 	}
 
-	private function facade(
-		FacadePluginRepository $plugins,
-		FacadeThemeRepository $themes,
-		?FacadeSecretsFile $secrets = null,
-		?FacadeDatabase $database = null,
-		?callable $canManage = null
-	): AssistedWebhookFacade {
-		$secrets     = $secrets ?? new FacadeSecretsFile();
-		$database    = $database ?? new FacadeDatabase( true );
-		$canManage ??= static fn (): bool => true;
+	public function testLockReleaseFailurePreservesConfirmedAbsenceAfterProfileCleanup(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                       = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ] = $secrets->profile( $profileId, 1 );
+
+		$result = $facade->remove( $target, 'profile_1', '55', $profileId, 1, 'good' );
+
+		self::assertTrue( $result->confirmsAbsence() );
+		self::assertSame( 'absence_confirmed', $result->code() );
+		self::assertArrayNotHasKey( $profileId, $secrets->profiles );
+	}
+
+	public function testLockReleaseFailureIsReportedAfterAnOtherwiseSuccessfulSetup(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+
+		$result = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'operation_lock_release_failed', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertNotNull( $result->profile() );
+	}
+
+	public function testMutationStopsWhenSameRequestFitnessCannotRebindRepositoryIdentity(): void {
+		$secrets                      = new FixedFacadeSecretsFile();
+		$provider                     = new FixedWebhookProvider();
+		$provider->fitnessSuitability = 'insufficient';
+		$facade                       = $this->facade( $secrets, $provider );
+		$target                       = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+
+		$result = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertSame( 'repository_identity_unconfirmed', $result->code() );
+		self::assertSame( 1, $provider->calls, 'Only the read-only identity assessment may run.' );
+		self::assertSame( '', $provider->signingSecret );
+		self::assertSame( array(), $secrets->profiles );
+	}
+
+	public function testReconfigureUsesMetadataAndSecretFromOneMaterialSnapshot(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                        = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ]  = $secrets->profile( $profileId, 1, 'old-secret' );
+		$secrets->materials[ $profileId ] = $secrets->profile( $profileId, 2, 'rotated-secret' );
+
+		$result = $facade->reconfigure( $target, 'profile_1', '55', $profileId, 2, 'good' );
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 2, $result->profile()?->revision() );
+		self::assertSame( 'rotated-secret', $provider->signingSecret );
+	}
+
+	public function testStaleTargetNonceAndProfileFailBeforeProviderWork(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$setup = $facade->setup( $target, 'profile_1', 'bad' );
+		self::assertSame( 'operation_unauthorized', $setup->code() );
+		self::assertSame( 0, $provider->calls );
+
+		$profileId                       = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ] = $secrets->profile( $profileId, 2 );
+		$checked                         = $facade->check( $target, 'profile_1', '55', $profileId, 1, 'good' );
+		self::assertSame( 'operation_unauthorized', $checked->code() );
+		self::assertSame( 0, $provider->calls );
+	}
+
+	public function testRemoveReleasesOnlyAfterAuthoritativeAbsence(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                       = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ] = $secrets->profile( $profileId, 1 );
+
+		$provider->removeState = 'ambiguous';
+		self::assertSame( 'ambiguous', $facade->remove( $target, 'profile_1', '55', $profileId, 1, 'good' )->state() );
+		self::assertArrayHasKey( $profileId, $secrets->profiles );
+
+		$provider->removeState = 'succeeded';
+		self::assertTrue( $facade->remove( $target, 'profile_1', '55', $profileId, 1, 'good' )->confirmsAbsence() );
+		self::assertArrayNotHasKey( $profileId, $secrets->profiles );
+	}
+
+	public function testRemoveDoesNotDeleteAProfileRotatedWhileTheProviderRequestWasInFlight(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                        = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ]  = $secrets->profile( $profileId, 1, 'original-secret' );
+		$secrets->materials[ $profileId ] = $secrets->profiles[ $profileId ];
+		$provider->duringRemove           = static function () use ( $secrets, $profileId ): void {
+			$rotated                          = $secrets->profile( $profileId, 2, 'rotated-secret' );
+			$secrets->profiles[ $profileId ]  = $rotated;
+			$secrets->materials[ $profileId ] = $rotated;
+		};
+
+		$result = $facade->remove( $target, 'profile_1', '55', $profileId, 1, 'good' );
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'local_profile_release_failed', $result->code() );
+		self::assertSame( 2, $secrets->profiles[ $profileId ]['revision'] );
+		self::assertSame( 'rotated-secret', $secrets->materials[ $profileId ]['secret'] );
+	}
+
+	public function testFitnessIsExplicitAndBoundToTheSavedProfile(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$result = $facade->assessSetup( $target, 'profile_1', 'good' )->toArray();
+		self::assertSame( 'supported', $result['support'] );
+		self::assertSame( 1, $provider->calls );
+		self::assertSame( 'assessment_unauthorized', $facade->assessSetup( $target, 'missing', 'good' )->toArray()['code'] );
+		self::assertSame( 1, $provider->calls );
+	}
+
+	private function facade( FixedFacadeSecretsFile $secrets, FixedWebhookProvider $provider, ?callable $acquireLock = null, ?callable $releaseLock = null ): AssistedWebhookFacade {
+		$registry = new ProviderRegistry( array( $provider ) );
+		$package  = new FixedFacadePackage( new ManagedRepository( 'gh', 'owner/example', '101', 'main' ) );
 
 		return new AssistedWebhookFacade(
-			new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, $database, $canManage ),
+			new WebhookAssistanceReadinessEvaluator( new FixedPluginRepository( $package ), new FixedThemeRepository(), $secrets, new FixedDatabase(), static fn (): bool => true ),
 			$secrets,
-			$canManage,
-			static fn ( string $providerCode ): string => 'https://site.example/wp-json/ran-booster/v1/webhooks/' . $providerCode
+			$registry,
+			static fn (): bool => true,
+			static fn (): string => 'https://site.example/wp-json/ran-booster/v1/webhooks/gh',
+			static fn ( string $nonce ): bool => 'good' === $nonce,
+			$acquireLock ?? static fn (): bool => true,
+			$releaseLock ?? static fn (): bool => true
 		);
 	}
+}
 
-	private function package(
-		string $identifier,
-		string $repository,
-		?string $repositoryId,
-		DeploymentPolicy $policy = DeploymentPolicy::MANUAL,
-		string $provider = 'gh'
-	): FacadePackage {
-		return new FacadePackage(
-			$identifier,
-			new ManagedRepository( $provider, $repository, $repositoryId ?? 'missing', 'main' ),
-			$policy,
-			$repositoryId
-		);
+final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhookFitness, RepositoryWebhookManagement {
+	public const OPERATION            = 'repository-webhook-management';
+	public const VERSION              = 1;
+	public int $calls                 = 0;
+	public ?string $credentialId      = null;
+	public ?string $requestCredential = null;
+	public string $signingSecret      = '';
+	public string $removeState        = 'succeeded';
+	public string $setupState         = 'succeeded';
+	public string $fitnessSuitability = 'unknown';
+	public bool $throwSetup           = false;
+	/** @var callable(): void|null */
+	public $duringSetup = null;
+	/** @var callable(): void|null */
+	public $duringRemove = null;
+
+	public function getMetadata(): ProviderMetadata {
+		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub fixture', 'https://example.test/', 'Owner' );
 	}
 
-	/** @return array<string, mixed> */
-	private function storedProfile(
-		string $scope,
-		string $target,
-		string $authorityId,
-		int $revision,
-		string $origin,
-		string $secret
-	): array {
+	public function getProviderDiagnostics(): ProviderDiagnostics {
+		return new class() implements ProviderDiagnostics {
+			public function diagnose( ProviderDiagnosticRequest $request ): array {
+				return array();
+			}
+		};
+	}
+
+	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		throw new \RuntimeException( 'not used' );
+	}
+
+	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		throw new \RuntimeException( 'not used' );
+	}
+
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
+	}
+
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
+	}
+
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
+	}
+
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
+	}
+
+	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
+		++$this->calls;
+		$this->credentialId      = $credentialProfileId;
+		$this->requestCredential = $requestCredential;
+		$this->signingSecret     = $signingSecret;
+		if ( null !== $this->duringSetup ) {
+			$callback          = $this->duringSetup;
+			$this->duringSetup = null;
+			$callback();
+		}
+		if ( $this->throwSetup ) {
+			throw new \RuntimeException( 'Provider response was lost after invocation.' );
+		}
+
+		return $this->operation( $this->setupState, 'succeeded' === $this->setupState ? 'configured_pending_delivery' : 'setup_failed' );
+	}
+
+	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential ): RepositoryWebhookOperationResult {
+		++$this->calls;
+
+		return $this->operation( 'succeeded', 'configuration_confirmed' );
+	}
+
+	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
+		++$this->calls;
+		$this->signingSecret = $signingSecret;
+
+		return $this->operation( 'succeeded', 'configured_pending_delivery' );
+	}
+
+	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential ): RepositoryWebhookOperationResult {
+		++$this->calls;
+		if ( null !== $this->duringRemove ) {
+			$callback           = $this->duringRemove;
+			$this->duringRemove = null;
+			$callback();
+		}
+
+		return $this->operation( $this->removeState, 'succeeded' === $this->removeState ? 'absence_confirmed' : 'remove_ambiguous', 'succeeded' === $this->removeState ? 'absent' : 'unknown' );
+	}
+
+	private function fitness( ?string $credentialId, ?string $requestCredential ): RepositoryWebhookFitnessResult {
+		++$this->calls;
+		$this->credentialId      = $credentialId;
+		$this->requestCredential = $requestCredential;
+
+		return new RepositoryWebhookFitnessResult( 'supported', $this->fitnessSuitability, 'unknown', 'unknown_by_design', 'authority_unknown', '2026-08-02T00:00:00Z', 'Confirm the exact operation before continuing.' );
+	}
+
+	private function operation( string $state, string $code, string $delivery = 'configured_pending_delivery' ): RepositoryWebhookOperationResult {
+		return new RepositoryWebhookOperationResult(
+			$state,
+			$code,
+			'2026-08-02T00:00:00Z',
+			'55',
+			array(
+				'endpoint'     => 'matched',
+				'events'       => 'matched',
+				'content_type' => 'matched',
+				'active'       => 'matched',
+			),
+			$delivery,
+			'Review the bounded result.'
+		);
+	}
+}
+
+final class FixedFacadeSecretsFile extends SecretsFile {
+	/** @var array<string,array<string,mixed>> */
+	public array $profiles = array();
+	/** @var array<string,array<string,mixed>> */
+	public array $materials             = array();
+	public string $savedSecret          = '';
+	public bool $throwMaterialAfterSave = false;
+
+	public function assertManagedStorageReady(): void {
+	}
+
+	public function credentialProfiles( ProviderCode|string $provider ): array {
 		return array(
+			'profile_1' => array(
+				'id'         => 'profile_1',
+				'source'     => 'file',
+				'immutable'  => false,
+				'label'      => 'Fixture',
+				'kind'       => 'fine-grained',
+				'destroy_on' => null,
+			),
+		);
+	}
+
+	public function webhookProfiles( ProviderCode|string $provider ): array {
+		return $this->profiles;
+	}
+
+	public function webhookMaterials( ProviderCode|string $provider ): array {
+		if ( $this->throwMaterialAfterSave && array() !== $this->profiles ) {
+			$this->throwMaterialAfterSave  = false;
+			$profileId                     = (string) array_key_first( $this->profiles );
+			$rotated                       = $this->profile( $profileId, 2, 'rotated-before-snapshot' );
+			$this->profiles[ $profileId ]  = $rotated;
+			$this->materials[ $profileId ] = $rotated;
+			throw new \RuntimeException( 'Material snapshot failed after concurrent rotation.' );
+		}
+
+		return array() === $this->materials ? $this->profiles : $this->materials;
+	}
+
+	public function saveWebhook( ProviderCode|string $provider, ?string $id, array $metadata, ?string $secret ): string {
+		$id                  ??= 'wh_' . str_repeat( 'a', 24 );
+		$this->savedSecret     = (string) $secret;
+		$this->profiles[ $id ] = $metadata + array(
+			'id'         => $id,
+			'revision'   => 1,
+			'source'     => 'file',
+			'immutable'  => false,
+			'configured' => true,
+			'secret'     => $secret,
+		);
+
+		return $id;
+	}
+
+	public function deleteWebhook( ProviderCode|string $provider, string $id ): bool {
+		unset( $this->profiles[ $id ] );
+		unset( $this->materials[ $id ] );
+
+		return true;
+	}
+
+	public function deleteWebhookIfRevision( ProviderCode|string $provider, string $id, int $expectedRevision ): bool {
+		$current = $this->webhookMaterials( $provider )[ $id ] ?? null;
+		if ( ! is_array( $current ) || $expectedRevision !== (int) ( $current['revision'] ?? 0 ) ) {
+			return false;
+		}
+
+		return $this->deleteWebhook( $provider, $id );
+	}
+
+	/** @return array<string,mixed> */
+	public function profile( string $id, int $revision, string $secret = 'ssssssssssssssssssssssssssssssss' ): array {
+		return array(
+			'id'           => $id,
+			'scope'        => 'repository',
+			'target'       => 'owner/example',
+			'authority_id' => '101',
+			'revision'     => $revision,
+			'origin'       => 'assisted',
 			'source'       => 'file',
 			'immutable'    => false,
-			'scope'        => $scope,
-			'target'       => $target,
-			'authority_id' => $authorityId,
-			'revision'     => $revision,
-			'origin'       => $origin,
 			'configured'   => true,
 			'secret'       => $secret,
 		);
 	}
 }
 
-final class FacadePluginRepository extends PluginRepository {
-	public int $reads           = 0;
-	public ?\Throwable $failure = null;
-	/** @var list<FacadePackage> */
-	private array $packages;
-
-	/** @param FacadePackage ...$packages */
-	public function __construct( FacadePackage ...$packages ) {
-		$this->packages = $packages;
+final class FixedPluginRepository extends PluginRepository {
+	public function __construct( private FixedFacadePackage $package ) {
 	}
 
 	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
-		++$this->reads;
-		if ( null !== $this->failure ) {
-			throw $this->failure;
-		}
-
-		return $this->packages;
+		return array( $this->package );
 	}
 }
 
-final class FacadeThemeRepository extends ThemeRepository {
-	/** @var list<FacadePackage> */
-	private array $packages;
-
-	/** @param FacadePackage ...$packages */
-	public function __construct( FacadePackage ...$packages ) {
-		$this->packages = $packages;
-	}
-
+final class FixedThemeRepository extends ThemeRepository {
 	public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
-		return $this->packages;
+		return array();
 	}
 }
 
-final class FacadePackage extends AbstractPackage {
-	public function __construct(
-		private string $identifier,
-		ManagedRepository $repository,
-		DeploymentPolicy $policy,
-		private ?string $repositoryId = null
-	) {
+final class FixedFacadePackage extends AbstractPackage {
+	public function __construct( ManagedRepository $repository ) {
 		$this->repository       = $repository;
-		$this->deploymentPolicy = $policy;
+		$this->deploymentPolicy = DeploymentPolicy::MANUAL;
 	}
 
 	public function getIdentifier(): mixed {
-		return $this->identifier;
+		return 'plugin/example.php';
 	}
 
 	public function getProviderRepositoryId(): ?string {
-		return $this->repositoryId;
+		return '101';
 	}
 
 	protected function runtimeSlug(): string {
-		return 'fixture';
+		return 'example';
 	}
 }
 
-final class FacadeSecretsFile extends SecretsFile {
-	/** @var array<string, array<string, mixed>> */
-	public array $profiles = array();
-	/** @var list<string> */
-	public array $deleted = array();
-	/** @var array<string, mixed> */
-	public array $savedMetadata = array();
-	/** @var list<string> */
-	public array $savedProviders = array();
-	/** @var list<string> */
-	public array $deletedProviders = array();
-	public string $savedSecret     = '';
-	public bool $storageReady      = true;
-
-	public function assertManagedStorageReady(): void {
-		if ( ! $this->storageReady ) {
-			throw new \RAN\Secrets\SecretsStorageUnavailable( 'storage unavailable' );
-		}
-	}
-
-	public function saveWebhook( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id, array $metadata, ?string $secret ): string {
-		$providerCode           = $provider instanceof \RAN\RepositoryProvider\ProviderCode ? $provider->value : $provider;
-		$this->savedProviders[] = $providerCode;
-		$this->savedMetadata    = $metadata;
-		$this->savedSecret      = (string) $secret;
-		$id                   ??= 'wh_' . str_repeat( 'a', 24 );
-		$this->profiles[ $id ] = $metadata + array(
-			'id'         => $id,
-			'provider'   => $providerCode,
-			'revision'   => 1,
-			'origin'     => 'manual',
-			'source'     => 'file',
-			'immutable'  => false,
-			'configured' => true,
-			'secret'     => (string) $secret,
-		);
-
-		return $id;
-	}
-
-	public function webhookProfiles( \RAN\RepositoryProvider\ProviderCode|string $provider ): array {
-		return $this->profiles;
-	}
-
-	public function webhookMaterials( \RAN\RepositoryProvider\ProviderCode|string $provider ): array {
-		return $this->profiles;
-	}
-
-	public function deleteWebhook( \RAN\RepositoryProvider\ProviderCode|string $provider, string $id ): bool {
-		$providerCode             = $provider instanceof \RAN\RepositoryProvider\ProviderCode ? $provider->value : $provider;
-		$this->deleted[]          = $id;
-		$this->deletedProviders[] = $providerCode;
-		unset( $this->profiles[ $id ] );
-
-		return true;
-	}
-}
-
-final class FacadeDatabase extends Database {
-	public function __construct( private bool $supported ) {
-	}
-
-	public function requireSupported(): void {
-		if ( ! $this->supported ) {
-			throw new DatabaseCompatibilityFailure( 'unsupported_version' );
-		}
-	}
-
+final class FixedDatabase extends Database {
 	public function requireReady(): void {
-		$this->requireSupported();
 	}
 }

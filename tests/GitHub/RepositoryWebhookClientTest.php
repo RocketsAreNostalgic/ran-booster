@@ -1,0 +1,137 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\GitHub;
+
+require_once __DIR__ . '/RepositoryResolverWordPressFunctions.php';
+
+use PHPUnit\Framework\TestCase;
+use RAN\GitHub\RepositoryWebhookClient;
+
+final class RepositoryWebhookClientTest extends TestCase {
+
+	private const TOKEN  = 'request-token-canary';
+	private const SECRET = 'webhook-signing-canary-which-must-not-return';
+
+	public function testFitnessUsesOneBoundedReadAndReturnsNoCredential(): void {
+		\RAN\GitHub\repository_resolver_http_queue(
+			array( $this->response( 200, array( 'id' => 101 ) ) )
+		);
+		$result   = ( new RepositoryWebhookClient() )->assessSetup( '101', 'owner/example', self::TOKEN );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertCount( 1, $requests );
+		self::assertSame( 65536, $requests[0]['arguments']['limit_response_size'] );
+		self::assertSame( 0, $requests[0]['arguments']['redirection'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+	}
+
+	public function testSetupUsesAtMostFiveSuccessfulCallsAcrossThreePages(): void {
+		$page = array();
+		for ( $id = 1; $id <= 100; ++$id ) {
+			$page[] = $this->hook( $id, 'https://other.example/' . $id );
+		}
+		$created = $this->hook( 999, 'https://site.example/hook' );
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $page ),
+				$this->response( 200, $page ),
+				$this->response( 200, array( $this->hook( 301, 'https://other.example/301' ) ) ),
+				$this->response( 201, $created ),
+				$this->response( 200, $created ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'configured_pending_delivery', $result->code() );
+		self::assertCount( 5, $requests );
+		self::assertSame( array( 'GET', 'GET', 'GET', 'POST', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+		self::assertSame( array( 262144, 262144, 262144, 65536, 65536 ), array_column( array_column( $requests, 'arguments' ), 'limit_response_size' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( self::SECRET, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+	}
+
+	public function testThirdFullDiscoveryPageStopsBeforeMutation(): void {
+		$page = array();
+		for ( $id = 1; $id <= 100; ++$id ) {
+			$page[] = $this->hook( $id, 'https://other.example/' . $id );
+		}
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $page ), $this->response( 200, $page ), $this->response( 200, $page ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'hook_inventory_incomplete', $result->code() );
+		self::assertCount( 3, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
+	public function testSetupDoesNotAdoptAnExistingEndpointWithAnUnreadableSecret(): void {
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, array( $this->hook( 55, 'https://site.example/hook' ) ) ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'existing_hook_requires_reconfigure', $result->code() );
+		self::assertNull( $result->hookId(), 'An unowned hook ID must not seed a later remove operation.' );
+		self::assertCount( 1, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
+	public function testRemoveRequiresAbsenceReadbackWithinThreeCalls(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $hook ), $this->response( 204, array() ), $this->response( 404, array() ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->remove( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertTrue( $result->confirmsAbsence() );
+		self::assertCount( 3, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
+	public function testReconfigureRefusesAHookOwnedByAnotherEndpoint(): void {
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://other.example/hook' ) ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->reconfigure( 'owner/example', '55', 'https://site.example/hook', self::TOKEN, self::SECRET );
+
+		self::assertSame( 'failed', $result->state() );
+		self::assertSame( 'hook_ownership_mismatch', $result->code() );
+		self::assertCount( 1, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
+	public function testCheckCannotConfirmAnIncompleteReadback(): void {
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, array( 'id' => 55 ) ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->check( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'hook_readback_invalid', $result->code() );
+	}
+
+	/** @return array<string,mixed> */
+	private function hook( int $id, string $url ): array {
+		return array(
+			'id'     => $id,
+			'active' => true,
+			'events' => array( 'push' ),
+			'config' => array(
+				'url'          => $url,
+				'content_type' => 'json',
+			),
+		);
+	}
+
+	/** @param mixed $body @return array<string,mixed> */
+	private function response( int $status, mixed $body ): array {
+		return array(
+			'response' => array( 'code' => $status ),
+			'headers'  => array(),
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test transport fixture.
+			'body'     => json_encode( $body, JSON_THROW_ON_ERROR ),
+		);
+	}
+}

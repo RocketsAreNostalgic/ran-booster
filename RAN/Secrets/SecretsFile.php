@@ -652,6 +652,34 @@ class SecretsFile {
 		);
 	}
 
+	/**
+	 * Delete a webhook only when the stored material still has the expected revision.
+	 *
+	 * @internal Core operation recovery only.
+	 */
+	public function deleteWebhookIfRevision( ProviderCode|string $provider, string $id, int $expectedRevision ): bool {
+		$this->assertAvailable();
+		$providerCode = $this->providerValue( $provider );
+		$this->assertWritableId( $id );
+		if ( $expectedRevision < 1 ) {
+			throw new RuntimeException( 'Webhook secret revision must be positive.' );
+		}
+
+		return $this->mutate(
+			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $expectedRevision ): array {
+				$record = $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null;
+				if ( ! is_array( $record ) || $expectedRevision !== (int) ( $record['revision'] ?? 0 ) ) {
+					return array( $document, false, false );
+				}
+
+				unset( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] );
+				$this->removeEmptyProvider( $document[ self::WEBHOOKS ], $providerCode );
+
+				return array( $document, true );
+			}
+		);
+	}
+
 	public function path(): ?string {
 		return $this->path;
 	}

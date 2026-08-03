@@ -15,21 +15,25 @@ use RAN\RepositoryProvider\Admin\ProviderWebhookAssistanceMetadata;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizer, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink {
+final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizer, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement {
+	public const OPERATION = 'repository-webhook-management';
+	public const VERSION   = 1;
 
 	private ProviderMetadata $metadata;
 
 	private ProviderCredentialStore $credentials;
 
 	private GitHubRepositoryBrowser $browser;
+	private \RAN\GitHub\RepositoryWebhookClient $webhookClient;
 	private GitHubWebhookNormalizer $webhooks;
 	private GitHubDiagnostics $diagnostics;
 	private GitHubCredentialPolicy $credentialPolicy;
 
-	public function __construct( ProviderCredentialStore $credentials, GitHubRepositoryBrowser $browser, GitHubWebhookNormalizer $webhooks ) {
+	public function __construct( ProviderCredentialStore $credentials, GitHubRepositoryBrowser $browser, GitHubWebhookNormalizer $webhooks, ?\RAN\GitHub\RepositoryWebhookClient $webhookClient = null ) {
 		$this->credentials      = $credentials;
 		$this->browser          = $browser;
 		$this->webhooks         = $webhooks;
+		$this->webhookClient    = $webhookClient ?? new \RAN\GitHub\RepositoryWebhookClient();
 		$this->diagnostics      = new GitHubDiagnostics( $browser );
 		$this->credentialPolicy = new GitHubCredentialPolicy();
 		$this->metadata         = new ProviderMetadata(
@@ -225,6 +229,87 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 
 	public function repositoryWebhookSettingsUrl( string $locator ): string {
 		return 'https://github.com/' . $this->encodeRepositoryName( $locator ) . '/settings/hooks';
+	}
+
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->webhookClient->assessSetup( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+	}
+
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		$this->assertHookId( $hookId );
+
+		return $this->webhookClient->assessCheck( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+	}
+
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		$this->assertHookId( $hookId );
+
+		return $this->webhookClient->assessReconfigure( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+	}
+
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		$this->assertHookId( $hookId );
+
+		return $this->webhookClient->assessRemove( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+	}
+
+	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential, #[\SensitiveParameter] string $signingSecret ): RepositoryWebhookOperationResult {
+		$this->assertRepositoryId( $repositoryId );
+
+		return $this->webhookClient->setup( $repository, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ), $signingSecret );
+	}
+
+	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential ): RepositoryWebhookOperationResult {
+		$this->assertRepositoryId( $repositoryId );
+
+		return $this->webhookClient->check( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ) );
+	}
+
+	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential, #[\SensitiveParameter] string $signingSecret ): RepositoryWebhookOperationResult {
+		$this->assertRepositoryId( $repositoryId );
+
+		return $this->webhookClient->reconfigure( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ), $signingSecret );
+	}
+
+	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential ): RepositoryWebhookOperationResult {
+		$this->assertRepositoryId( $repositoryId );
+
+		return $this->webhookClient->remove( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ) );
+	}
+
+	private function credential( ?string $credentialProfileId, ?string $requestCredential ): string {
+		$credentialProfileId = null === $credentialProfileId ? null : trim( $credentialProfileId );
+		$requestCredential   = null === $requestCredential ? null : trim( $requestCredential );
+		if ( ( null === $credentialProfileId || '' === $credentialProfileId ) === ( null === $requestCredential || '' === $requestCredential ) ) {
+			throw new RuntimeException( 'Select exactly one GitHub credential source.', 400 );
+		}
+		if ( null !== $requestCredential && '' !== $requestCredential ) {
+			if ( strlen( $requestCredential ) > 512 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $requestCredential ) ) {
+				throw new RuntimeException( 'The request-only GitHub credential is invalid.', 400 );
+			}
+
+			return $requestCredential;
+		}
+
+		$material = $this->credentials->credentialMaterial( $credentialProfileId );
+		$secret   = is_array( $material ) && is_string( $material['secret'] ?? null ) ? trim( $material['secret'] ) : '';
+		if ( '' === $secret ) {
+			throw new RuntimeException( 'The selected GitHub credential is unavailable.', 400 );
+		}
+
+		return $secret;
+	}
+
+	private function assertRepositoryId( string $repositoryId ): void {
+		if ( '' === trim( $repositoryId ) || strlen( $repositoryId ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ) {
+			throw new RuntimeException( 'The GitHub repository identity is invalid.', 400 );
+		}
+	}
+
+	private function assertHookId( string $hookId ): void {
+		if ( 1 !== preg_match( '/\A[1-9][0-9]{0,18}\z/D', $hookId ) ) {
+			throw new RuntimeException( 'The GitHub hook identity is invalid.', 400 );
+		}
 	}
 
 	private function encodeRepositoryName( string $fullName ): string {

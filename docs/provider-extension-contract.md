@@ -1,6 +1,6 @@
 # Provider extension contract
 
-RAN Booster Provider API 7 accepts trusted repository providers through its late
+RAN Booster Provider API 8 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading:
 
@@ -9,7 +9,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 7 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
@@ -22,8 +22,8 @@ add_action(
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 7.
-Provider API 7 publishes no logging facade, generic resolver or Core container.
+registration action can run. The callback must check for exact Provider API 8.
+Provider API 8 publishes no logging facade, generic resolver or Core container.
 Providers report bounded diagnostics and operation results; Core owns logging
 for failures inside Core-owned code.
 Booster fires the action once on `plugins_loaded` at priority 100, after plugin
@@ -55,6 +55,54 @@ Registration failures expose fixed, redacted messages and retain no upstream
 exception. A rejected provider publishes neither provider nor policy state, so
 the same provider code may be corrected and registered again during the same
 registration window.
+
+### Optional repository-webhook operation
+
+A provider may implement both `RepositoryWebhookFitness` and
+`RepositoryWebhookManagement` for the exact operation
+`repository-webhook-management/1`. These interfaces expose only the four
+closed actions `setup`, `check`, `reconfigure` and `remove`, with matching
+read-only `assess*` methods. There is no operation dispatcher, callable,
+provider client, transport or credential handle in the public contract.
+
+Saved credential IDs are display-safe inputs. The provider resolves their
+plaintext only through its already-bound `ProviderCredentialStore` and only
+inside the selected fixed call. A request-only credential is a separate
+explicit sensitive parameter for both assessment and execution of that call and
+is never persisted or returned. Exactly one saved ID or request-only value is
+accepted. Only setup and reconfigure receive the Core-held signing secret.
+
+Immediately before each management call, Core invokes the matching read-only
+assessment with the same credential source. The provider must remotely compare
+the repository locator with the stable repository ID supplied by Core. Execution
+continues only for `supported`, `suitable|unknown` and
+`observed|inferred|unknown_by_design` evidence. A mismatch is `insufficient`;
+unavailable or stale evidence fails closed before remote mutation. Fitness does
+not otherwise grant execution authority, and its one-call budget remains
+separate from the fixed management budget.
+
+Check and remove deliberately receive Core's canonical callback URL as well as
+the recorded hook ID. This is the minimum input needed for the provider to
+prove that the exact remote hook is owned by the selected Core target before
+readback or mutation; the URL is not a configurable transport seam.
+
+`RepositoryWebhookFitnessResult` and `RepositoryWebhookOperationResult` admit
+only bounded, closed, non-secret evidence. Setup and reconfigure can establish
+`configured_pending_delivery`, not delivery verification. Remove confirms
+success only after exact `404` absence readback. Providers must preserve the
+documented call, byte and timeout ceilings in the
+[fitness characterization](characterization/provider-owned-repository-webhook-fitness.md).
+
+Core serializes each target's assisted operations with a nonblocking advisory
+database lock keyed by provider code and stable repository ID. The lock has no
+table, option, file or durable record; contention fails before local or remote
+mutation. If explicit release is uncertain, primary failed, ambiguous, partial
+or confirmed-absence evidence is preserved; only an otherwise successful
+non-absence result becomes `operation_lock_release_failed`. A sole existing
+endpoint found during setup is not adopted because
+its signing secret is unreadable. The result is recovery-required and omits the
+hook ID so it cannot seed a later assisted removal; only explicit reconfigure
+may replace that secret.
 
 ## Required provider surface
 

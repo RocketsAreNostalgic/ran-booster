@@ -20,7 +20,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 1 );
 
 		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'RAN Booster Provider API 7 conflicts with an existing API version marker.' );
+		$this->expectExceptionMessage( 'RAN Booster Provider API 8 conflicts with an existing API version marker.' );
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 	}

@@ -12,7 +12,6 @@ use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
-use RAN\AddOn\WebhookAssistance\WebhookCleanupFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\CoreProviderProfileInteraction;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
@@ -44,6 +43,7 @@ use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\GitHub\RepositoryBrowser as GitHubRepositoryBrowser;
+use RAN\GitHub\RepositoryWebhookClient as GitHubRepositoryWebhookClient;
 use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\GitHubProvider;
 use RAN\RepositoryProvider\GitHubWebhookNormalizer;
@@ -159,20 +159,6 @@ final class BoosterServiceProvider {
 				$container->make( Database::class )
 			)
 		);
-		$container->bind(
-			WebhookAssistanceFacade::class,
-			static fn ( CoreContainer $container ): WebhookAssistanceFacade => new AssistedWebhookFacade(
-				$container->make( WebhookAssistanceReadinessEvaluator::class ),
-				$container->make( SecretsFile::class ),
-			)
-		);
-		$container->bind(
-			WebhookCleanupFacade::class,
-			static fn ( CoreContainer $container ): WebhookCleanupFacade => new AssistedWebhookFacade(
-				$container->make( WebhookAssistanceReadinessEvaluator::class ),
-				$container->make( SecretsFile::class ),
-			)
-		);
 		$expiryObservations = new CredentialExpiryObservationStore();
 		$container->bind( SecretsFile::class, $secrets );
 		$container->bind( SecretsRuntimeAvailability::class, $secretsRuntime );
@@ -258,10 +244,18 @@ final class BoosterServiceProvider {
 					$container->make( DeploymentAttemptRepository::class )
 				);
 
-				return new GitHubProvider( $credentials, $browser, $webhooks );
+				return new GitHubProvider( $credentials, $browser, $webhooks, new GitHubRepositoryWebhookClient() );
 			}
 		);
 		$container->bind( ProviderRegistry::class, $providers );
+		$container->bind(
+			WebhookAssistanceFacade::class,
+			static fn ( CoreContainer $container ): WebhookAssistanceFacade => new AssistedWebhookFacade(
+				$container->make( WebhookAssistanceReadinessEvaluator::class ),
+				$container->make( SecretsFile::class ),
+				$container->make( ProviderRegistry::class )
+			)
+		);
 		$expiryReminders = new CredentialExpiryReminder(
 			$container->make( ProviderRegistry::class ),
 			$secrets,

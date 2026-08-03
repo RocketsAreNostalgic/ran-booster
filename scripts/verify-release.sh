@@ -116,8 +116,8 @@ done
 
 bootstrap_source=$(git show "$commit:ran-booster.php")
 for required_api_marker in \
-	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 7 );" \
-	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );" \
+	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 8 );" \
+	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );" \
 	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );" \
 	"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );"; do
 	grep -Fq "$required_api_marker" <<< "$bootstrap_source" \
@@ -128,6 +128,7 @@ grep -Fq 'public const API_VERSION = 2;' <<< "$portability_facade_source" \
 	|| fail 'release ref is missing exact Portability API 2.'
 for removed_api_marker in \
 	RAN_BOOSTER_LOGGING_API_VERSION \
+	RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION \
 	RAN_BOOSTER_DOCUMENTATION_API_VERSION \
 	RAN_BOOSTER_PACKAGE_EXTENSION_API_VERSION \
 	RAN_BOOSTER_PROVIDER_ADMIN_EXTENSION_API_VERSION \
@@ -140,6 +141,31 @@ done
 if git ls-tree -r --name-only "$commit" -- RAN/AddOn/Logging | grep -q .; then
 	fail 'release ref retains the removed public add-on Logging API.'
 fi
+
+for removed_webhook_type in \
+	RAN/AddOn/WebhookAssistance/ProvisioningCallbackResult.php \
+	RAN/AddOn/WebhookAssistance/ProvisioningResult.php \
+	RAN/AddOn/WebhookAssistance/WebhookCleanupFacade.php; do
+	if git cat-file -e "$commit:$removed_webhook_type" 2>/dev/null; then
+		fail "release ref retains removed webhook assistance type: $removed_webhook_type"
+	fi
+done
+
+for required_webhook_type in \
+	RAN/RepositoryProvider/RepositoryWebhookFitness.php \
+	RAN/RepositoryProvider/RepositoryWebhookFitnessResult.php \
+	RAN/RepositoryProvider/RepositoryWebhookManagement.php \
+	RAN/RepositoryProvider/RepositoryWebhookOperationResult.php; do
+	git cat-file -e "$commit:$required_webhook_type" 2>/dev/null \
+		|| fail "release ref is missing fixed webhook operation type: $required_webhook_type"
+done
+
+webhook_facade_source=$(git show "$commit:RAN/AddOn/WebhookAssistance/WebhookAssistanceFacade.php")
+for removed_webhook_method in withCredential provision releaseProfile; do
+	if grep -Eq "function[[:space:]]+${removed_webhook_method}[[:space:]]*\\(" <<< "$webhook_facade_source"; then
+		fail "release ref retains removed secret-bearing webhook method: $removed_webhook_method"
+	fi
+done
 
 if grep -Eq 'function[[:space:]]+ran_booster[[:space:]]*\(' <<< "$bootstrap_source"; then
 	fail 'release ref retains the removed global Core container accessor.'

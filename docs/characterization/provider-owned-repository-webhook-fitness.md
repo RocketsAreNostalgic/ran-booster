@@ -1,12 +1,35 @@
 # Provider-owned repository-webhook fitness characterization
 
-**Decision:** GO for a later, coordinated Alpha contract replacement within the
-budgets below. NO-GO for implementing or releasing it until the Webhook V1
-slice is merged, the secret-policy characterization decision is complete, and
-Core plus Assisted Hooks are updated against one exact API tuple. This document
-is evidence and a budget, not runtime authorization.
+**Decision:** Core implementation landed for the coordinated Alpha contract
+replacement within the frozen budgets below. Release remains gated on the
+Assisted Hooks migration and combined compatibility proof against the exact
+Provider API 8 / Add-on API 14 tuple.
 
-## Current Core boundary
+## Core implementation checkpoint
+
+Core now publishes the exact `repository-webhook-management/1` fitness and
+management capabilities, four bounded non-secret results/interfaces, and one
+private GitHub webhook client. The former callback result types, secret-bearing
+Webhook Assistance callbacks, Webhook Cleanup facade, marker and ready hook are
+absent. No persistence, schema, option, hook, background, JavaScript or CSS
+surface was added.
+
+The management `check()` and `remove()` methods deliberately include Core's
+canonical callback URL. The earlier sketch omitted it, but hook ID alone cannot
+prove that the remote object belongs to the selected Core endpoint before
+readback or deletion. This tightens exact-target ownership without exposing a
+generic URL or transport capability: Core derives the URL and the GitHub client
+still fixes origin, path shapes, methods, headers and byte/call ceilings.
+
+The remaining join must prove the migrated Assisted Hooks consumer, old/new
+tuple failures, both load orders, secret canaries and deterministic release
+artifacts before release.
+
+## Pre-implementation Core boundary
+
+The following evidence records the baseline that justified the coordinated
+cut. It is retained for review history; the implementation checkpoint above is
+the current contract.
 
 Core already owns the safety envelope needed by the replacement:
 
@@ -78,10 +101,10 @@ or `execute( operation, payload )` dispatcher.
 
 ```text
 RepositoryWebhookFitness
-  assessSetup(authority, credentialProfileId)
-  assessCheck(authority, credentialProfileId, hookId)
-  assessReconfigure(authority, credentialProfileId, hookId)
-  assessRemove(authority, credentialProfileId, hookId)
+  assessSetup(authority, credentialProfileId?, requestCredential?)
+  assessCheck(authority, credentialProfileId?, hookId, requestCredential?)
+  assessReconfigure(authority, credentialProfileId?, hookId, requestCredential?)
+  assessRemove(authority, credentialProfileId?, hookId, requestCredential?)
 
 RepositoryWebhookManagement
   setup(authority, credentialProfileId, signingSecret)
@@ -96,8 +119,11 @@ general credential input, provider SDK or authenticated transport.
 
 Fitness and execution are separate. `RepositoryWebhookFitness` is read-only,
 cannot receive a signing secret, cannot mutate or compensate, and never grants
-execution authority. `RepositoryWebhookManagement` independently reauthorizes
-the complete binding before resolving one credential.
+general execution authority. Each management call nevertheless repeats the
+matching fitness read in the same request, with the same single saved or
+request-only credential source, to remotely rebind Core's stable repository ID
+to the locator immediately before execution. The fitness and execution call
+budgets remain independent.
 
 Provider-specific permission names, token kinds, GitHub endpoints, request
 bodies, pagination, error interpretation, compensation and readback stay in
@@ -177,10 +203,29 @@ an unavailable assessment never proceeds into mutation.
 | reconfigure | at most 1 call / 64 KiB |         3 calls / 192 KiB |                 3 calls / 192 KiB | Pre-mutation ownership read, patch, exact readback. Uncertain readback is ambiguous; do not invent rollback of a secret GitHub cannot return.                                                                  |
 | remove      | at most 1 call / 64 KiB |         3 calls / 128 KiB |                 3 calls / 128 KiB | Pre-delete ownership read, delete, then exact absence readback. Release local profile/record only after confirmed absence.                                                                                     |
 
-Assessment may reuse evidence already returned by the same explicit operation
-without another call, but no cached verdict authorizes work. No call occurs on
+The UI may present an assessment already returned by its explicit read action,
+but execution never treats a cached verdict as current proof: it repeats the
+one-call identity assessment immediately before management. No call occurs on
 ordinary bootstrap, dashboard rendering, credential-list rendering or public
 webhook ingress.
+
+Assisted execution is serialized by a nonblocking target-keyed MySQL/MariaDB
+advisory lock. It adds no option, table, file or durable state. Contention fails
+before profile or provider mutation; authorization, target and profile evidence
+are re-read inside the lock. Signing-profile metadata and material come from one
+authenticated canonical `webhookMaterials()` snapshot. If provider setup throws
+after invocation begins, Core retains that snapshot and reports recovery-required
+partial evidence instead of deleting the signing profile. Any cleanup after a
+definitive setup failure deletes only the exact revision used by that operation;
+a concurrent rotation is retained and returned as recovery evidence.
+
+If advisory-lock release is uncertain, an otherwise successful non-absence
+operation becomes the bounded `operation_lock_release_failed` partial result.
+Existing failed, ambiguous or partial evidence takes precedence and remains
+unchanged. Confirmed remote absence also remains successful after its exact
+profile cleanup, preventing a consumer from creating a false removal-pending
+record for material that Core has already deleted. The connection-local lock is
+released when the request's database connection ends.
 
 ## Production and concept budget
 
@@ -217,6 +262,27 @@ Tests may add up to 1,500 lines across both repositories for external-provider
 proof, pagination/call ceilings, mixed versions, secret canaries, compensation
 and result mapping. Documentation may add up to 700 lines across both
 repositories. Neither offsets production growth.
+
+### Implementation reconciliation
+
+The coordinated Core cut lands at **+584 net production PHP lines** against its
+authorized base, 164 lines above the original planning cap. The owner approved
+this modest variance after review found no smaller existing primitive that
+preserved the required failure semantics. The additional code is limited to:
+
+- request-only credential assessment and a same-request stable repository-ID
+  rebind before each mutation;
+- a target-keyed, zero-persistence advisory lock (the existing updater lock was
+  global, while attempt rows and sidecar locking would add state or hold secret
+  storage across provider HTTP calls); and
+- recovery-safe setup retention, non-adoption of an unreadable existing hook,
+  one-snapshot metadata/material selection, and revision-conditional cleanup so
+  a concurrent signing-secret rotation cannot be deleted.
+
+The variance adds no JavaScript/CSS, schema, option, sidecar field, cache,
+background process, facade, registry, generic dispatcher, public result type or
+concrete production type. The original concept and persistence caps remain
+unchanged.
 
 ## Rejected shapes
 

@@ -78,6 +78,29 @@ final class WebhookControllerTest extends TestCase {
 		self::assertSame( 0, $request->bodyCalls );
 	}
 
+	public function testNullAndEmptyMethodOverrideHeadersAreAbsent(): void {
+		$controller = new WebhookController( $this->processor( new WebhookControllerProvider(), new WebhookControllerCoordinator() ) );
+		$body       = '{}';
+		$signature  = 'sha256=' . hash_hmac( 'sha256', $body, self::WEBHOOK_SECRET );
+		$requests   = array(
+			new \WP_REST_Request( array( 'provider' => 'gh' ), array(), $body, array( 'x-fixture-signature' => $signature ) ),
+			new \WP_REST_Request(
+				array( 'provider' => 'gh' ),
+				array(),
+				$body,
+				array(
+					'x-http-method-override' => '',
+					'x-fixture-signature'    => $signature,
+				)
+			),
+		);
+
+		self::assertNull( $requests[0]->get_header( 'x-http-method-override' ) );
+		foreach ( $requests as $request ) {
+			self::assertSame( 200, $controller->receive( $request )->get_status() );
+		}
+	}
+
 	public function testOnlyTheExactQueryStyleRouteMetadataIsAccepted(): void {
 		$controller = new WebhookController( $this->processor( new WebhookControllerProvider(), new WebhookControllerCoordinator() ) );
 		$route      = '/ran-booster/v1/webhooks/gh';

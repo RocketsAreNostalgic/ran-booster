@@ -184,6 +184,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		if ( null !== $preflight && ! $preflight->ready() ) {
 			$failureCode = $preflight->code();
 		}
+		$versionRelationship = $preflight?->versionRelationship()
+			?? ( is_string( $diagnostics['version_relationship'] ?? null )
+				? $diagnostics['version_relationship']
+				: 'invalid' );
 		if ( '' === $failureCode
 			&& in_array( $diagnostics['state'] ?? null, array( 'error', 'failed' ), true )
 			&& is_string( $diagnostics['code'] ?? null ) ) {
@@ -202,9 +206,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$packageRoot,
 			$package->getVersion(),
 			$latestVersion,
-			'' !== $latestVersion
-				&& ( null === $preflight || $preflight->ready() )
-				&& version_compare( $latestVersion, $package->getVersion(), '>' ),
+			'newer' === $versionRelationship
+				&& '' !== $latestVersion
+				&& ( null === $preflight || $preflight->ready() ),
 			$this->diagnosticTime( $diagnostics['last_check'] ?? null ),
 			$this->diagnosticTime( $diagnostics['next_check'] ?? null ),
 			$failureCode,
@@ -705,7 +709,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$validation['release_version'],
 				$this->releaseUrl( $repository, $validation['release_tag'] ),
 				$validation['release_tag'],
-				$validation['package_header_version'] ?? ''
+				$validation['package_header_version'] ?? '',
+				is_string( $diagnostics['version_relationship'] ?? null )
+					? $diagnostics['version_relationship']
+					: 'invalid'
 			);
 		} catch ( InvalidArgumentException ) {
 			return null;

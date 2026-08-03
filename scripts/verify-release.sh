@@ -54,6 +54,8 @@ committed_entries=(
 	'views'
 )
 package_root='vendor/ran/wp-github-release-updater'
+updater_version='v1.6.0-beta.1'
+updater_commit='c5880a949355567b7e58efb7720962a0282fee20'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
@@ -249,9 +251,9 @@ if ! package_lock_record=$(
 		$contentHash = $lock["content-hash"] ?? null;
 		if (
 			"ran/wp-github-release-updater" !== $name
-			|| "v1.6.0-beta.1" !== $version
+			|| $argv[2] !== $version
 			|| ! is_string( $source )
-			|| 1 !== preg_match( "/^[0-9a-f]{40}$/", $source )
+			|| ! hash_equals( $argv[3], $source )
 			|| $source !== $dist
 			|| ! is_string( $contentHash )
 			|| 1 !== preg_match( "/^[0-9a-f]{32}$/", $contentHash )
@@ -259,9 +261,9 @@ if ! package_lock_record=$(
 			exit( 1 );
 		}
 		echo implode( "\t", array( $name, $version, $source, $contentHash ) );
-	' "$composer_dir/composer.lock"
+	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"
 ); then
-	fail 'composer.lock must contain only ran/wp-github-release-updater v1.6.0-beta.1 as a production package.'
+	fail "composer.lock must contain only ran/wp-github-release-updater $updater_version at $updater_commit as a production package."
 fi
 IFS=$'\t' read -r package_name package_version package_commit lock_content_hash <<< "$package_lock_record"
 

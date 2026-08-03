@@ -521,7 +521,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		if ( in_array(
 			$code,
 			array(
-				'github_updater_release_not_on_default_branch',
 				'github_updater_prerelease_not_allowed',
 				'github_updater_invalid_preflight_target',
 				'github_updater_invalid_package_identity_target',

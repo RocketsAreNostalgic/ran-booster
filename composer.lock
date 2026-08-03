@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ac313e2a510dd41cfb53b1b83a4a71f2",
+    "content-hash": "be163d3815322267cf4463cd15b87f39",
     "packages": [
         {
             "name": "ran/wp-github-release-updater",
@@ -2491,7 +2491,8 @@
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2",
-        "ext-sodium": "*"
+        "ext-sodium": "*",
+        "ext-zip": "*"
     },
     "platform-dev": {},
     "platform-overrides": {

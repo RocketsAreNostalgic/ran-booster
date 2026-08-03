@@ -777,12 +777,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			new RuntimeUpdaterLock(),
 			static fn ( mixed ...$options ): object => new RuntimeUpdaterFacade(
 				diagnostics: array(
-					'state'             => 'ready',
-					'code'              => 'release_available',
-					'offered_version'   => '2.0.0',
-					'last_check'        => 1_700_000_000,
-					'next_check'        => 1_700_003_600,
-					'installed_version' => '1.0.0',
+					'state'                => 'ready',
+					'code'                 => 'release_available',
+					'offered_version'      => '2.0.0',
+					'last_check'           => 1_700_000_000,
+					'next_check'           => 1_700_003_600,
+					'installed_version'    => '1.0.0',
+					'version_relationship' => 'newer',
 				)
 			),
 		);

@@ -50,6 +50,8 @@ committed_entries=(
 	'views'
 )
 package_root='vendor/ran/wp-github-release-updater'
+updater_version='v1.6.0-beta.1'
+updater_commit='c5880a949355567b7e58efb7720962a0282fee20'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
@@ -239,15 +241,15 @@ if ! php -r '
 		$source = $package["source"]["reference"] ?? null;
 		if (
 			"ran/wp-github-release-updater" !== ( $package["name"] ?? null )
-			|| "v1.6.0-beta.1" !== ( $package["version"] ?? null )
+			|| $argv[2] !== ( $package["version"] ?? null )
 			|| ! is_string( $source )
-			|| 1 !== preg_match( "/^[0-9a-f]{40}$/", $source )
+			|| ! hash_equals( $argv[3], $source )
 			|| $source !== ( $package["dist"]["reference"] ?? null )
 		) {
 			exit( 1 );
 		}
-	' "$composer_dir/composer.lock"; then
-	fail 'composer.lock must contain only ran/wp-github-release-updater v1.6.0-beta.1 as a production package.'
+	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"; then
+	fail "composer.lock must contain only ran/wp-github-release-updater $updater_version at $updater_commit as a production package."
 fi
 
 for package_entry in LICENSE bootstrap.php runtime.php src; do

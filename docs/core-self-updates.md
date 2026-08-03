@@ -263,9 +263,11 @@ The dependency order is:
 8. prove both source/runtime-only and official/manual-only behavior in
    disposable WordPress installations.
 
-Release Please owns version sources, tags, changelogs, and GitHub Releases. It
-does not create the WordPress ZIP. The release scripts build and verify that
-artifact from the immutable release commit.
+Release Please owns version proposals, version sources and changelogs. It does
+not create the WordPress ZIP or publish the GitHub release directly. After the
+proposal merges, the release workflow builds and verifies the exact commit,
+creates or resumes a draft, attaches and byte-verifies the ZIP, and publishes
+only under the explicitly enabled immutable-release contract.
 
 The completed native-ZIP set is updater `v1.6.0-beta.1`, Core
 `v0.1.0-alpha.29` and Release Deployments `v0.1.0-alpha.4`. Exact commits,

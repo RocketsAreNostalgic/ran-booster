@@ -119,7 +119,7 @@ $assert(
 $assert(
 	RAN\WordPress\GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
 		=== RAN\WordPress\GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $facade ),
-	'Core and the selected updater must agree on the prospective API generation.'
+	'Core updater adapter and the selected updater must agree on updater prospective API 4.'
 );
 
 printf( "GitHub release updater bootstrap smoke passed.\n" );

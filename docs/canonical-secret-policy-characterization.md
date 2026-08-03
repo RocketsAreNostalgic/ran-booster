@@ -15,13 +15,13 @@ separate authorization.
 semantic validation within every budget and invariant below. This decision did
 not authorize release publication.
 
-The current behavior gives every active credential or webhook policy plaintext
-for every stored record in its provider namespace whenever the authenticated
-document is read or canonically rewritten. Calls happen while Core holds the
-sidecar lock. This includes display-safe reads, exact material for another
-provider, storage verification, health checks, self-destruction, portability,
-uninstall preflight and canonical write readback. The behavior is stricter than
-structural validation requires and makes unrelated reads depend on current
+The phase-zero, pre-split behavior gave every active credential or webhook
+policy plaintext for every stored record in its provider namespace whenever the
+authenticated document was read or canonically rewritten. Calls happened while
+Core held the sidecar lock. This included display-safe reads, exact material for
+another provider, storage verification, health checks, self-destruction,
+portability, uninstall preflight and canonical write readback. The behavior was
+stricter than structural validation required and made unrelated reads depend on
 provider-policy behavior.
 
 The smallest credible replacement keeps schema version 2, the envelope, key,
@@ -238,7 +238,8 @@ release the lock, normalize outside the lock, then fail closed if the record
 changed before the exclusive commit. It must not trade away atomic replacement
 or silently overwrite a concurrent change.
 
-Abandon the split and retain the characterized current behavior if it requires
+The conditional plan would have abandoned the split and retained the
+characterized pre-split behavior if implementation had required
 schema 3, record repair, credential re-entry, a generic two-phase transaction
 framework, more than the budgets above, provider callbacks under lock, an
 unbounded retry loop, or any webhook-owned runtime edit. Rollback after a

@@ -101,7 +101,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		$provider   = new TemporaryCredentialProvider( $targetSecrets->credentialsFor( 'gh' ), 0, 'repository-id' );
 		$catalog    = new ProviderSecretPolicyCatalog();
 		$verifier   = new BlueprintRepositoryVerifier(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ), $catalog ),
+			new ProviderRegistry( array( $provider ), $catalog ),
 			$targetSecrets
 		);
 		$source     = null;

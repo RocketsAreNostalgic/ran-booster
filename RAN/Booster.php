@@ -2,9 +2,9 @@
 
 namespace RAN;
 
-use ReflectionClass;
 use RAN\Deployment\DeploymentWorker;
 use RAN\Deployment\WordPressWorkerWakeup;
+use RAN\Internal\CoreContainer;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Portability\WpPusherCoexistencePolicy;
@@ -14,6 +14,7 @@ use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
 
 class Booster {
+	private CoreContainer $container;
 
 	private const ADMIN_PAGE_HOOKS = array(
 		'toplevel_page_ran-booster',
@@ -35,58 +36,51 @@ class Booster {
 		'ran-booster_page_ran-booster-themes',
 	);
 
-	private static $instance;
-
 	public $boosterPath;
 
 	public $boosterUrl;
 
-	protected $services = array();
-
-	public static function getInstance() {
-		return static::$instance;
-	}
-
-	public static function setInstance( Booster $booster ) {
-		static::$instance = $booster;
+	/** @internal Core constructs the live runtime with its request-local container. */
+	public function __construct( ?CoreContainer $container = null ) {
+		$this->container = $container ?? new CoreContainer();
 	}
 
 	public function init() {
-		add_action( 'admin_init', array( $this->make( \RAN\Admin\CredentialSelfDestructPurger::class ), 'purge' ), 1 );
+		add_action( 'admin_init', array( $this->service( \RAN\Admin\CredentialSelfDestructPurger::class ), 'purge' ), 1 );
 		add_action( 'admin_init', array( $this, 'maybeUpgradeDatabase' ) );
 		add_action( 'admin_init', array( $this, 'registerPluginActionLinks' ) );
-		add_action( 'admin_init', array( $this->make( 'RAN\Dispatcher' ), 'dispatchPostRequests' ) );
+		add_action( 'admin_init', array( $this->service( 'RAN\Dispatcher' ), 'dispatchPostRequests' ) );
 		add_action(
 			'wp_ajax_' . \RAN\Admin\RepositoryPickerController::AJAX_ACTION,
-			array( $this->make( 'RAN\Admin\RepositoryPickerController' ), 'handle' )
+			array( $this->service( 'RAN\Admin\RepositoryPickerController' ), 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
-			array( $this->make( \RAN\Admin\DevelopmentSafetyNoticeController::class ), 'handle' )
+			array( $this->service( \RAN\Admin\DevelopmentSafetyNoticeController::class ), 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\CredentialExpiryNoticeController::AJAX_ACTION,
-			array( $this->make( \RAN\Admin\CredentialExpiryNoticeController::class ), 'handle' )
+			array( $this->service( \RAN\Admin\CredentialExpiryNoticeController::class ), 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\BackgroundDeploymentFailureNoticeController::AJAX_ACTION,
-			array( $this->make( \RAN\Admin\BackgroundDeploymentFailureNoticeController::class ), 'handle' )
+			array( $this->service( \RAN\Admin\BackgroundDeploymentFailureNoticeController::class ), 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PackageUpdateProgressController::AJAX_ACTION,
-			array( $this->make( \RAN\Admin\PackageUpdateProgressController::class ), 'handle' )
+			array( $this->service( \RAN\Admin\PackageUpdateProgressController::class ), 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::EXPORT_ACTION,
-			array( $this->make( \RAN\Admin\PortabilityController::class ), 'handleExport' )
+			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handleExport' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::PREVIEW_ACTION,
-			array( $this->make( \RAN\Admin\PortabilityController::class ), 'handlePreview' )
+			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handlePreview' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::APPLY_ACTION,
-			array( $this->make( \RAN\Admin\PortabilityController::class ), 'handleApply' )
+			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handleApply' )
 		);
 		add_action( 'activate_plugin', array( WpPusherCoexistencePolicy::class, 'blockWpPusherActivation' ) );
 		add_action( 'rest_api_init', array( $this, 'registerWebhookRoutes' ) );
@@ -102,19 +96,19 @@ class Booster {
 		add_action( 'admin_enqueue_scripts', array( $this, 'loadScripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'loadCredentialExpiryNoticeScript' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'loadBackgroundDeploymentFailureNoticeScript' ) );
-		$expiryNotice = $this->make( \RAN\Admin\CredentialExpiryNotice::class );
+		$expiryNotice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
 		add_action( 'admin_notices', array( $expiryNotice, 'render' ) );
 		add_action( 'network_admin_notices', array( $expiryNotice, 'render' ) );
-		$failureNotice = $this->make( \RAN\Admin\BackgroundDeploymentFailureNotice::class );
+		$failureNotice = $this->service( \RAN\Admin\BackgroundDeploymentFailureNotice::class );
 		add_action( 'admin_notices', array( $failureNotice, 'render' ) );
 		add_action( 'network_admin_notices', array( $failureNotice, 'render' ) );
-		$runtimeNotice = $this->make( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class );
+		$runtimeNotice = $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class );
 		add_action( 'admin_notices', array( $runtimeNotice, 'render' ) );
 		add_action( 'network_admin_notices', array( $runtimeNotice, 'render' ) );
-		$databaseNotice = $this->make( \RAN\Admin\DatabaseCompatibilityNotice::class );
+		$databaseNotice = $this->service( \RAN\Admin\DatabaseCompatibilityNotice::class );
 		add_action( 'admin_notices', array( $databaseNotice, 'render' ) );
 		add_action( 'network_admin_notices', array( $databaseNotice, 'render' ) );
-		add_action( 'load-plugins.php', array( $this->make( \RAN\Admin\ManagedPluginFailureRows::class ), 'register' ) );
+		add_action( 'load-plugins.php', array( $this->service( \RAN\Admin\ManagedPluginFailureRows::class ), 'register' ) );
 	}
 
 	public function activate() {
@@ -147,7 +141,7 @@ class Booster {
 		}
 
 		try {
-			$this->make( 'RAN\Storage\Database' )->install();
+			$this->service( 'RAN\Storage\Database' )->install();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure $exception ) {
 			BoosterLogger::logException( 'plugin activation database unsupported', $exception, array( 'step' => 'plugin_activation' ) );
 			wp_die( esc_html( $exception->getMessage() ) );
@@ -165,7 +159,7 @@ class Booster {
 			return;
 		}
 
-		$this->make( WordPressWorkerWakeup::class )->request();
+		$this->service( WordPressWorkerWakeup::class )->request();
 	}
 
 	protected function sodiumAvailable(): bool {
@@ -180,48 +174,35 @@ class Booster {
 
 	public function deactivate(): void {
 		try {
-			$this->make( TemporaryDebugCapture::class )->stop();
+			$this->service( TemporaryDebugCapture::class )->stop();
 		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Deactivation must continue when the optional capture is unavailable.
 		} catch ( \Throwable ) {
 			// Deactivation must continue when an optional capture is unavailable.
 		}
 
-		$this->make( WordPressWorkerWakeup::class )->clear();
+		$this->service( WordPressWorkerWakeup::class )->clear();
 	}
 
 	public function runDeploymentWorker(): void {
 		try {
-			$this->make( 'RAN\Storage\Database' )->maybeUpgrade();
+			$this->service( 'RAN\Storage\Database' )->maybeUpgrade();
 		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- An active incompatible site must remain bootable without running the worker.
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			return;
 		}
-		$this->make( DeploymentWorker::class )->runOnce();
+		$this->service( DeploymentWorker::class )->runOnce();
 	}
 
 	public function registerWebhookRoutes(): void {
-		try {
-			$this->make( 'RAN\Storage\Database' )->maybeUpgrade();
-		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure $failure ) {
-			// Keep the authenticated route present; guarded storage returns a
-			// retry-safe unavailable response without touching custom tables.
-			BoosterLogger::log(
-				'webhook route retained in database safe state',
-				array(
-					'step'   => 'webhook_route_registration',
-					'reason' => $failure->reason(),
-				)
-			);
-		}
-		$this->make( 'RAN\Webhook\WebhookController' )->registerRoutes();
+		$this->service( 'RAN\Webhook\WebhookController' )->registerRoutes();
 	}
 
 	public function adminMenu() {
-		add_menu_page( $this->getName(), $this->getName(), 'manage_options', 'ran-booster', array( $this->make( 'RAN\Dashboard' ), 'getIndex' ), $this->getMenuIcon() );
-		add_submenu_page( 'ran-booster', 'Install Plugin', 'Install Plugin', 'manage_options', 'ran-booster-plugins-create', array( $this->make( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
-		add_submenu_page( 'ran-booster', 'Managed Plugins', 'Plugins', 'manage_options', 'ran-booster-plugins', array( $this->make( 'RAN\Dashboard' ), 'getPlugins' ) );
-		add_submenu_page( 'ran-booster', 'Install Theme', 'Install Theme', 'manage_options', 'ran-booster-themes-create', array( $this->make( 'RAN\Dashboard' ), 'getThemesCreate' ) );
-		add_submenu_page( 'ran-booster', 'Managed Themes', 'Themes', 'manage_options', 'ran-booster-themes', array( $this->make( 'RAN\Dashboard' ), 'getThemes' ) );
+		add_menu_page( $this->getName(), $this->getName(), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ), $this->getMenuIcon() );
+		add_submenu_page( 'ran-booster', 'Install Plugin', 'Install Plugin', 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
+		add_submenu_page( 'ran-booster', 'Managed Plugins', 'Plugins', 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
+		add_submenu_page( 'ran-booster', 'Install Theme', 'Install Theme', 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
+		add_submenu_page( 'ran-booster', 'Managed Themes', 'Themes', 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
 		add_submenu_page( 'ran-booster', 'Pro', 'Pro', 'manage_options', 'ran-booster-pro', array( $this, 'renderProPage' ) );
 	}
 
@@ -319,12 +300,12 @@ class Booster {
 		}
 
 		try {
-			$this->make( 'RAN\Storage\Database' )->requireReady();
+			$this->service( 'RAN\Storage\Database' )->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			return;
 		}
 
-		$repository = $this->make( 'RAN\Storage\PluginRepository' );
+		$repository = $this->service( 'RAN\Storage\PluginRepository' );
 		$plugins    = $repository->allBoosterPlugins();
 		$url        = is_multisite()
 			? network_admin_url( 'admin.php?page=ran-booster-plugins' )
@@ -356,7 +337,7 @@ class Booster {
 		}
 
 		try {
-			$this->make( 'RAN\Storage\Database' )->maybeUpgrade();
+			$this->service( 'RAN\Storage\Database' )->maybeUpgrade();
 		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- The persistent notice reports the active safe state.
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			// An active plugin stays active but enters the storage-safe state.
@@ -398,10 +379,6 @@ class Booster {
 			: 'diagnostics';
 
 		return ! in_array( $panel, array( 'activity', 'deployment-activity' ), true );
-	}
-
-	public function register( ProviderInterface $provider ) {
-		$provider->register( $this );
 	}
 
 	public function loadScripts( $hook ) {
@@ -521,7 +498,7 @@ class Booster {
 		}
 
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
-			$packageSettings = $this->make( 'RAN\\Admin\\ProviderSettingsPresenter' )->buildPackageForm();
+			$packageSettings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->buildPackageForm();
 
 			wp_localize_script(
 				'ran-booster-packages',
@@ -601,7 +578,7 @@ class Booster {
 		}
 
 		try {
-			foreach ( $this->make( ProviderRegistry::class )->administrationMetadata() as $metadata ) {
+			foreach ( $this->service( ProviderRegistry::class )->administrationMetadata() as $metadata ) {
 				if ( $metadata->code->equals( $code ) ) {
 					return true;
 				}
@@ -620,7 +597,7 @@ class Booster {
 	public function loadCredentialExpiryNoticeScript( $hook ): void {
 		unset( $hook );
 
-		$notice = $this->make( \RAN\Admin\CredentialExpiryNotice::class );
+		$notice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
 		if ( ! $notice->shouldLoadDismissalScript() ) {
 			return;
 		}
@@ -652,7 +629,7 @@ class Booster {
 	public function loadBackgroundDeploymentFailureNoticeScript( $hook ): void {
 		unset( $hook );
 
-		$notice = $this->make( \RAN\Admin\BackgroundDeploymentFailureNotice::class );
+		$notice = $this->service( \RAN\Admin\BackgroundDeploymentFailureNotice::class );
 		if ( ! $notice->shouldRender() ) {
 			return;
 		}
@@ -678,70 +655,7 @@ class Booster {
 		wp_enqueue_script( 'ran-booster-background-deployment-failure-notice' );
 	}
 
-	/**
-	 * Bind a service to the container.
-	 *
-	 * @param $alias
-	 * @param $concrete
-	 * @return mixed
-	 */
-	public function bind( $alias, $concrete ) {
-		$this->services[ $alias ] = $concrete;
-	}
-
-	/**
-	 * Request a service from the container.
-	 *
-	 * @param $alias
-	 * @return mixed
-	 */
-	public function make( $alias ) {
-		if ( isset( $this->services[ $alias ] ) && is_callable( $this->services[ $alias ] ) ) {
-			return call_user_func_array( $this->services[ $alias ], array( $this ) );
-		}
-
-		if ( isset( $this->services[ $alias ] ) && is_object( $this->services[ $alias ] ) ) {
-			return $this->services[ $alias ];
-		}
-
-		if ( isset( $this->services[ $alias ] ) && class_exists( $this->services[ $alias ] ) ) {
-			return $this->resolve( $this->services[ $alias ] );
-		}
-
-		return $this->resolve( $alias );
-	}
-
-	private function resolve( $class ) {
-		$reflection = new ReflectionClass( $class );
-
-		$constructor = $reflection->getConstructor();
-
-		// Constructor is null
-		if ( ! $constructor ) {
-			return new $class();
-		}
-
-		// Constructor with no parameters
-		$params = $constructor->getParameters();
-
-		if ( count( $params ) === 0 ) {
-			return new $class();
-		}
-
-		$newInstanceParams = array();
-
-		foreach ( $params as $param ) {
-			$type = $param->getType();
-			if ( null === $type ) {
-				$newInstanceParams[] = null;
-				continue;
-			}
-
-			$newInstanceParams[] = $this->make( $type->getName() );
-		}
-
-		return $reflection->newInstanceArgs(
-			$newInstanceParams
-		);
+	private function service( $alias ) {
+		return $this->container->make( $alias );
 	}
 }

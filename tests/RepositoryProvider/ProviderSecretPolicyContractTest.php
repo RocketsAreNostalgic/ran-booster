@@ -42,7 +42,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 	public function testPolicyFailureLeavesBothRegistryAndCatalogUnchanged(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 		$code     = ProviderCode::parse( 'atomic-fixture' );
 		$provider = new AtomicPolicyProvider(
 			$code,
@@ -64,7 +64,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 	public function testCredentialPolicyIdentityFailureIsRedactedAndAtomic(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 		$code     = ProviderCode::parse( 'atomic-fixture' );
 		$provider = new AtomicPolicyProvider(
 			$code,
@@ -89,7 +89,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 	public function testWebhookPolicyIdentityFailureIsRedactedAndAtomic(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 		$code     = ProviderCode::parse( 'atomic-fixture' );
 		$provider = new AtomicPolicyProvider(
 			$code,
@@ -135,7 +135,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		};
 
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 
 		try {
 			$registry->register( $provider );
@@ -166,7 +166,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			}
 		};
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 
 		try {
 			$registry->register( $provider );
@@ -184,7 +184,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$provider = null;
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
@@ -208,7 +207,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 	public function testCredentialStoreFactoryFailuresAreRedactedAndLeaveRegistrationUnchanged(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static function (): ProviderCredentialStore {
@@ -235,7 +233,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
@@ -263,7 +260,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
@@ -294,7 +290,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 	public function testDirectRegistrationMetadataFailureIsRedactedAndRetryable(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $catalog );
+		$registry = new ProviderRegistry( array(), $catalog );
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -322,7 +318,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
@@ -353,7 +348,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array( new ExternalFixtureProvider( 'fixture' ) ),
 			$catalog,
 			static function ( ProviderCode $code ) use ( $secrets, &$issued ): ProviderCredentialStore {
@@ -381,7 +375,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$providerCalls        = 0;
 		$catalog              = new ProviderSecretPolicyCatalog();
 		$registry             = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static function ( ProviderCode $code ) use ( &$credentialStoreCalls ): ProviderCredentialStore {
@@ -417,7 +410,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
@@ -443,7 +435,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$provider = new AlternatingMetadataProvider();
 		$registry = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
@@ -468,7 +459,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$policy   = new AlternatingCredentialPolicy();
 		$provider = new MutablePolicyProvider( $policy );
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ), $catalog );
+		$registry = new ProviderRegistry( array( $provider ), $catalog );
 		$secrets  = SecretsFileTestFactory::create( $path, array(), $catalog );
 
 		$secrets->saveCredential(
@@ -514,7 +505,6 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$activeCatalog = ShippedSecretPolicyCatalog::create();
 		$activeSecrets = SecretsFileTestFactory::create( $path, array(), $activeCatalog );
 		$registry      = new ProviderRegistry(
-			new \Tests\Support\NullLoggingFacade(),
 			array(),
 			$activeCatalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $activeSecrets->credentialsFor( $code )

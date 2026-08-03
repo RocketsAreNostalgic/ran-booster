@@ -574,7 +574,7 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 				throw new \RuntimeException( 'github-webhook-secret-canary' );
 			}
 		};
-		$result  = ( new GitHubWebhookNormalizer( $secrets, new EmptyAuthenticatedWebhookDeliveryEvidenceReader() ) )->diagnoseWebhookReadiness();
+		$result  = ( new GitHubWebhookNormalizer( $secrets->credentialsFor( 'gh' ), new EmptyAuthenticatedWebhookDeliveryEvidenceReader() ) )->diagnoseWebhookReadiness();
 		$output  = implode( ' ', $result->toArray() );
 
 		self::assertSame( ProviderDiagnosticResult::FAILED, $result->status );
@@ -635,6 +635,13 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 			/**
 			 * @return list<array<string, mixed>>
 			 */
+			public function webhookProfiles( ProviderCode|string $provider ): array {
+				return $this->profiles;
+			}
+
+			/**
+			 * @return list<array<string, mixed>>
+			 */
 			public function webhookMaterials( ProviderCode|string $provider ): array {
 				++$this->calls;
 
@@ -642,7 +649,7 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 			}
 		};
 
-		return array( new GitHubWebhookNormalizer( $secrets, $deliveries ), $secrets );
+		return array( new GitHubWebhookNormalizer( $secrets->credentialsFor( 'gh' ), $deliveries ), $secrets );
 	}
 
 	private function deliveryReader( ?AuthenticatedWebhookDeliveryEvidence $evidence ): AuthenticatedWebhookDeliveryEvidenceReader {

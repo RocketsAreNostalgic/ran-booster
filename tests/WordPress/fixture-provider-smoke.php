@@ -3,15 +3,26 @@
 // Executed by WP-CLI inside a disposable WordPress installation.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 6 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'Provider API 6 is unavailable.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'Provider API 8 is unavailable.' );
 }
 
-if ( ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) || 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
-	throw new RuntimeException( 'Logging API 1 is unavailable.' );
+if ( defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) ) {
+	throw new RuntimeException( 'The removed Logging API marker is available.' );
 }
 
-$registry = ran_booster()->make( RAN\RepositoryProvider\ProviderRegistry::class );
+if ( function_exists( 'ran_booster' )
+	|| array_key_exists( 'ran_booster_instance', $GLOBALS )
+	|| method_exists( RAN\Booster::class, 'getInstance' )
+	|| method_exists( RAN\Booster::class, 'setInstance' )
+	|| method_exists( RAN\Booster::class, 'make' )
+	|| method_exists( RAN\Booster::class, 'bind' )
+) {
+	throw new RuntimeException( 'The removed global Core container acquisition path is available.' );
+}
+
+$container = require __DIR__ . '/core-container-fixture.php';
+$registry  = $container->make( RAN\RepositoryProvider\ProviderRegistry::class );
 $provider = $registry->get( 'fixture-provider' );
 if ( 0 !== $provider->getClient()->getRequestCount() ) {
 	throw new RuntimeException( 'Provider registration must not contact the provider client.' );
@@ -25,7 +36,7 @@ if ( ! $registry->isSealed()
 	throw new RuntimeException( 'The external fixture provider contract is not active.' );
 }
 
-$package_form     = ran_booster()->make( RAN\Admin\ProviderSettingsPresenter::class )->buildPackageForm( 'fixture-provider' );
+$package_form     = $container->make( RAN\Admin\ProviderSettingsPresenter::class )->buildPackageForm( 'fixture-provider' );
 $package_provider = array_column( $package_form['providers'], null, 'code' )['fixture-provider'] ?? null;
 
 if ( 'fixture-provider' !== $package_form['default_provider']
@@ -89,7 +100,7 @@ foreach ( $provider->getClient()->getDiagnosticTimeouts() as $timeout ) {
 	}
 }
 
-$troubleshooting = ran_booster()->make( RAN\Troubleshooting\TroubleshootingService::class )->diagnose(
+$troubleshooting = $container->make( RAN\Troubleshooting\TroubleshootingService::class )->diagnose(
 	'fixture-provider',
 	null,
 	'group/subgroup/package'

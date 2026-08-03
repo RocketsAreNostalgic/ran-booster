@@ -10,11 +10,8 @@ use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
-use RAN\AddOn\Logging\CoreLoggingFacade;
-use RAN\AddOn\Logging\LoggingFacade;
 use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
-use RAN\AddOn\WebhookAssistance\WebhookCleanupFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\CoreProviderProfileInteraction;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
@@ -46,8 +43,11 @@ use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\GitHub\RepositoryBrowser as GitHubRepositoryBrowser;
+use RAN\GitHub\RepositoryWebhookClient as GitHubRepositoryWebhookClient;
+use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\GitHubProvider;
 use RAN\RepositoryProvider\GitHubWebhookNormalizer;
+use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -75,7 +75,7 @@ use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\ManagedReleasePreflight;
 use RAN\WordPress\WordPressUpdaterLock;
 
-final class BoosterServiceProvider implements ProviderInterface {
+final class BoosterServiceProvider {
 	private readonly ?\Closure $secretsFactory;
 
 	/** @param callable(ProviderSecretPolicyCatalog): SecretsFile|null $secretsFactory */
@@ -83,7 +83,8 @@ final class BoosterServiceProvider implements ProviderInterface {
 		$this->secretsFactory = null === $secretsFactory ? null : \Closure::fromCallable( $secretsFactory );
 	}
 
-	public function register( Booster $booster ): void {
+	/** @internal Core bootstrap composition only. */
+	public function register( CoreContainer $container, Booster $runtime ): void {
 		$database       = new Database();
 		$secretsRuntime = new SecretsRuntimeAvailability();
 		$secretPolicies = new ProviderSecretPolicyCatalog();
@@ -95,14 +96,12 @@ final class BoosterServiceProvider implements ProviderInterface {
 		}
 		$debugCapture = new TemporaryDebugCapture( $secrets->path() );
 		BoosterLogger::configureCapture( $debugCapture );
-		$logging          = new CoreLoggingFacade();
-		$githubBrowser    = new GitHubRepositoryBrowser( $secrets );
 		$adminInteraction = new CoreAdminInteractionFacade();
 		$adminInteraction->register();
 
 		add_action(
 			'admin_init',
-			static function () use ( $booster, $secrets, $debugCapture ): void {
+			static function () use ( $container, $runtime, $secrets, $debugCapture ): void {
 				// Validate only when an administrator opens Booster. Routine front-end
 				// requests and unrelated admin/AJAX traffic must remain read-only.
 				if ( ! current_user_can( 'manage_options' ) || wp_doing_ajax() ) {
@@ -128,14 +127,15 @@ final class BoosterServiceProvider implements ProviderInterface {
 					// The troubleshooting panel reports capture availability.
 				}
 
-				if ( $booster->isPassiveTroubleshootingRequest() ) {
+				if ( $runtime->isPassiveTroubleshootingRequest() ) {
 					return;
 				}
 
 				try {
 					$secrets->verifyAndSecure();
 				} catch ( \Throwable $exception ) {
-					$booster->make( Dashboard::class )->addFailureMessage(
+					$runtimeDashboard = $container->make( Dashboard::class );
+					$runtimeDashboard->addFailureMessage(
 						new \WP_Error(
 							'ran_booster_secrets_validation_error',
 							__( 'Booster could not validate the credentials sidecar.', 'ran-booster' )
@@ -147,82 +147,65 @@ final class BoosterServiceProvider implements ProviderInterface {
 			}
 		);
 
-		// Bind the Booster instance itself to the container
-		$booster->bind( 'RAN\Booster', $booster );
-		$booster->bind( Database::class, $database );
-		$booster->bind( LoggingFacade::class, $logging );
-		$booster->bind( AdminInteractionFacade::class, $adminInteraction );
-		$booster->bind( CoreProviderProfileInteraction::class, $adminInteraction );
-		$booster->bind(
+		$container->bind( Database::class, $database );
+		$container->bind( AdminInteractionFacade::class, $adminInteraction );
+		$container->bind( CoreProviderProfileInteraction::class, $adminInteraction );
+		$container->bind(
 			WebhookAssistanceReadinessEvaluator::class,
-			static fn ( Booster $booster ): WebhookAssistanceReadinessEvaluator => new WebhookAssistanceReadinessEvaluator(
-				$booster->make( PluginRepository::class ),
-				$booster->make( ThemeRepository::class ),
-				$booster->make( SecretsFile::class ),
-				$booster->make( Database::class )
-			)
-		);
-		$booster->bind(
-			WebhookAssistanceFacade::class,
-			static fn ( Booster $booster ): WebhookAssistanceFacade => new AssistedWebhookFacade(
-				$booster->make( WebhookAssistanceReadinessEvaluator::class ),
-				$booster->make( SecretsFile::class ),
-			)
-		);
-		$booster->bind(
-			WebhookCleanupFacade::class,
-			static fn ( Booster $booster ): WebhookCleanupFacade => new AssistedWebhookFacade(
-				$booster->make( WebhookAssistanceReadinessEvaluator::class ),
-				$booster->make( SecretsFile::class ),
+			static fn ( CoreContainer $container ): WebhookAssistanceReadinessEvaluator => new WebhookAssistanceReadinessEvaluator(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
+				$container->make( SecretsFile::class ),
+				$container->make( Database::class )
 			)
 		);
 		$expiryObservations = new CredentialExpiryObservationStore();
-		$booster->bind( SecretsFile::class, $secrets );
-		$booster->bind( SecretsRuntimeAvailability::class, $secretsRuntime );
-		$booster->bind(
+		$container->bind( SecretsFile::class, $secrets );
+		$container->bind( SecretsRuntimeAvailability::class, $secretsRuntime );
+		$container->bind(
 			SecretsStorageProvisioner::class,
 			new SecretsStorageProvisioner( secrets: $secrets )
 		);
-		$booster->bind( SecretsRuntimeAvailabilityNotice::class, new SecretsRuntimeAvailabilityNotice( $secretsRuntime ) );
-		$booster->bind( DatabaseCompatibilityNotice::class, new DatabaseCompatibilityNotice( $database ) );
-		$booster->bind( TemporaryDebugCapture::class, $debugCapture );
-		$booster->bind( CredentialExpiryObservationStore::class, $expiryObservations );
-		$booster->bind(
+		$container->bind( SecretsRuntimeAvailabilityNotice::class, new SecretsRuntimeAvailabilityNotice( $secretsRuntime ) );
+		$container->bind( DatabaseCompatibilityNotice::class, new DatabaseCompatibilityNotice( $database ) );
+		$container->bind( TemporaryDebugCapture::class, $debugCapture );
+		$container->bind( CredentialExpiryObservationStore::class, $expiryObservations );
+		$container->bind(
 			CredentialSelfDestructPurger::class,
-			static fn ( Booster $booster ): CredentialSelfDestructPurger => new CredentialSelfDestructPurger(
-				$booster->make( SecretsFile::class ),
-				$booster->make( CredentialExpiryObservationStore::class ),
-				$booster->make( PublicRepositoryLookupProfileStore::class )
+			static fn ( CoreContainer $container ): CredentialSelfDestructPurger => new CredentialSelfDestructPurger(
+				$container->make( SecretsFile::class ),
+				$container->make( CredentialExpiryObservationStore::class ),
+				$container->make( PublicRepositoryLookupProfileStore::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			ManagedPackageBlueprintExporter::class,
-			static fn ( Booster $booster ): ManagedPackageBlueprintExporter => new ManagedPackageBlueprintExporter(
-				$booster->make( PluginRepository::class ),
-				$booster->make( ThemeRepository::class ),
-				$booster->make( SecretsFile::class )
+			static fn ( CoreContainer $container ): ManagedPackageBlueprintExporter => new ManagedPackageBlueprintExporter(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
+				$container->make( SecretsFile::class )
 			)
 		);
-		$booster->bind( BlueprintArchive::class, new BlueprintArchive() );
-		$booster->bind(
+		$container->bind( BlueprintArchive::class, new BlueprintArchive() );
+		$container->bind(
 			BlueprintReviewer::class,
-			static fn ( Booster $booster ): BlueprintReviewer => new BlueprintReviewer(
-				$booster->make( PluginRepository::class ),
-				$booster->make( ThemeRepository::class )
+			static fn ( CoreContainer $container ): BlueprintReviewer => new BlueprintReviewer(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			BlueprintRepositoryVerifier::class,
-			static fn ( Booster $booster ): BlueprintRepositoryVerifier => new BlueprintRepositoryVerifier(
-				$booster->make( ProviderRegistry::class ),
-				$booster->make( SecretsFile::class )
+			static fn ( CoreContainer $container ): BlueprintRepositoryVerifier => new BlueprintRepositoryVerifier(
+				$container->make( ProviderRegistry::class ),
+				$container->make( SecretsFile::class )
 			)
 		);
-		$booster->bind( CredentialUsageReader::class, new CredentialUsageReader( null, null, $database ) );
-		$booster->bind( SignedWebhookVerifier::class, new SignedWebhookVerifier( $secrets ) );
-		$booster->bind(
+		$container->bind( CredentialUsageReader::class, new CredentialUsageReader( null, null, $database ) );
+		$container->bind( SignedWebhookVerifier::class, new SignedWebhookVerifier( $secrets ) );
+		$container->bind(
 			DeploymentAttemptRepository::class,
-			static function ( Booster $booster ): DeploymentAttemptRepository {
+			static function ( CoreContainer $container ): DeploymentAttemptRepository {
 				global $wpdb;
 
 				return new DeploymentAttemptRepository(
@@ -230,202 +213,213 @@ final class BoosterServiceProvider implements ProviderInterface {
 					Database::attemptTableName(),
 					null,
 					null,
-					$booster->make( Database::class )
+					$container->make( Database::class )
 				);
 			}
 		);
-		$booster->bind(
+		$container->bind(
 			RejectedAdmissionAuditRepository::class,
-			static function ( Booster $booster ): RejectedAdmissionAuditRepository {
+			static function ( CoreContainer $container ): RejectedAdmissionAuditRepository {
 				global $wpdb;
 
 				return new RejectedAdmissionAuditRepository(
 					$wpdb,
 					Database::rejectedAdmissionAuditTableName(),
 					null,
-					$booster->make( Database::class )
+					$container->make( Database::class )
 				);
 			}
 		);
-		$githubWebhooks = new GitHubWebhookNormalizer(
-			$secrets,
-			$booster->make( DeploymentAttemptRepository::class )
+		$providers = new ProviderRegistry(
+			array(),
+			$secretPolicies,
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
 		);
-		$booster->bind(
-			ProviderRegistry::class,
-			new ProviderRegistry(
-				$logging,
-				array(
-					new GitHubProvider( $secrets, $githubBrowser, $githubWebhooks ),
-				),
-				$secretPolicies,
-				static fn ( \RAN\RepositoryProvider\ProviderCode $code ): \RAN\RepositoryProvider\ProviderCredentialStore => $secrets->credentialsFor( $code )
+		$providers->registerWithCredentialStore(
+			'gh',
+			static function ( ProviderCredentialStore $credentials ) use ( $container ): GitHubProvider {
+				$browser  = new GitHubRepositoryBrowser( $credentials );
+				$webhooks = new GitHubWebhookNormalizer(
+					$credentials,
+					$container->make( DeploymentAttemptRepository::class )
+				);
+
+				return new GitHubProvider( $credentials, $browser, $webhooks, new GitHubRepositoryWebhookClient() );
+			}
+		);
+		$container->bind( ProviderRegistry::class, $providers );
+		$container->bind(
+			WebhookAssistanceFacade::class,
+			static fn ( CoreContainer $container ): WebhookAssistanceFacade => new AssistedWebhookFacade(
+				$container->make( WebhookAssistanceReadinessEvaluator::class ),
+				$container->make( SecretsFile::class ),
+				$container->make( ProviderRegistry::class )
 			)
 		);
 		$expiryReminders = new CredentialExpiryReminder(
-			$booster->make( ProviderRegistry::class ),
+			$container->make( ProviderRegistry::class ),
 			$secrets,
 			$expiryObservations
 		);
-		$booster->bind( CredentialExpiryReminder::class, $expiryReminders );
-		$booster->bind( CredentialExpiryNotice::class, new CredentialExpiryNotice( $expiryReminders ) );
-		$booster->bind( CredentialExpiryNoticeController::class, new CredentialExpiryNoticeController( $expiryReminders ) );
+		$container->bind( CredentialExpiryReminder::class, $expiryReminders );
+		$container->bind( CredentialExpiryNotice::class, new CredentialExpiryNotice( $expiryReminders ) );
+		$container->bind( CredentialExpiryNoticeController::class, new CredentialExpiryNoticeController( $expiryReminders ) );
 		$backgroundFailureMonitor = new BackgroundDeploymentFailureMonitor(
-			$booster->make( DeploymentAttemptRepository::class ),
-			$booster->make( ProviderRegistry::class )
+			$container->make( DeploymentAttemptRepository::class ),
+			$container->make( ProviderRegistry::class )
 		);
-		$booster->bind( BackgroundDeploymentFailureMonitor::class, $backgroundFailureMonitor );
-		$booster->bind( BackgroundDeploymentFailureNotice::class, new BackgroundDeploymentFailureNotice( $backgroundFailureMonitor ) );
-		$booster->bind( BackgroundDeploymentFailureNoticeController::class, new BackgroundDeploymentFailureNoticeController( $backgroundFailureMonitor ) );
-		$booster->bind( BackgroundDeploymentFailureEmail::class, new BackgroundDeploymentFailureEmail() );
-		$booster->bind(
+		$container->bind( BackgroundDeploymentFailureMonitor::class, $backgroundFailureMonitor );
+		$container->bind( BackgroundDeploymentFailureNotice::class, new BackgroundDeploymentFailureNotice( $backgroundFailureMonitor ) );
+		$container->bind( BackgroundDeploymentFailureNoticeController::class, new BackgroundDeploymentFailureNoticeController( $backgroundFailureMonitor ) );
+		$container->bind( BackgroundDeploymentFailureEmail::class, new BackgroundDeploymentFailureEmail() );
+		$container->bind(
 			ManagedPluginFailureRows::class,
 			new ManagedPluginFailureRows(
-				$booster->make( PluginRepository::class ),
+				$container->make( PluginRepository::class ),
 				$backgroundFailureMonitor
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			PackageUpdateProgressController::class,
-			static fn ( Booster $booster ): PackageUpdateProgressController => new PackageUpdateProgressController(
-				$booster->make( DeploymentAttemptRepository::class )
+			static fn ( CoreContainer $container ): PackageUpdateProgressController => new PackageUpdateProgressController(
+				$container->make( DeploymentAttemptRepository::class )
 			)
 		);
-		$booster->bind( DeploymentArchivePreflight::class, new DeploymentArchivePreflight() );
-		$booster->bind( CorePackageExecutor::class, new CorePackageExecutor() );
-		$booster->bind( WordPressUpdaterLock::class, new WordPressUpdaterLock() );
-		$booster->bind(
+		$container->bind( DeploymentArchivePreflight::class, new DeploymentArchivePreflight() );
+		$container->bind( CorePackageExecutor::class, new CorePackageExecutor() );
+		$container->bind( WordPressUpdaterLock::class, new WordPressUpdaterLock() );
+		$container->bind(
 			WordPressWorkerWakeup::class,
-			static fn ( Booster $booster ): WordPressWorkerWakeup => new WordPressWorkerWakeup(
-				$booster->make( DeploymentAttemptRepository::class )
+			static fn ( CoreContainer $container ): WordPressWorkerWakeup => new WordPressWorkerWakeup(
+				$container->make( DeploymentAttemptRepository::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			DeploymentCoordinator::class,
-			static function ( Booster $booster ): DeploymentCoordinator {
+			static function ( CoreContainer $container ): DeploymentCoordinator {
 				return new DeploymentCoordinator(
-					$booster->make( DeploymentAttemptRepository::class ),
-					$booster->make( PluginRepository::class ),
-					$booster->make( ThemeRepository::class ),
-					$booster->make( ProviderRegistry::class ),
-					$booster->make( DeploymentArchivePreflight::class ),
-					$booster->make( CorePackageExecutor::class ),
-					$booster->make( WordPressWorkerWakeup::class ),
+					$container->make( DeploymentAttemptRepository::class ),
+					$container->make( PluginRepository::class ),
+					$container->make( ThemeRepository::class ),
+					$container->make( ProviderRegistry::class ),
+					$container->make( DeploymentArchivePreflight::class ),
+					$container->make( CorePackageExecutor::class ),
+					$container->make( WordPressWorkerWakeup::class ),
 					ABSPATH . '.maintenance',
-					$booster->make( WordPressUpdaterLock::class ),
-					$booster->make( BackgroundDeploymentFailureEmail::class )
+					$container->make( WordPressUpdaterLock::class ),
+					$container->make( BackgroundDeploymentFailureEmail::class )
 				);
 			}
 		);
-		$booster->bind(
+		$container->bind(
 			DeploymentWorker::class,
-			static fn ( Booster $booster ): DeploymentWorker => new DeploymentWorker(
-				$booster->make( DeploymentAttemptRepository::class ),
-				$booster->make( DeploymentCoordinator::class ),
-				$booster->make( WordPressWorkerWakeup::class )
+			static fn ( CoreContainer $container ): DeploymentWorker => new DeploymentWorker(
+				$container->make( DeploymentAttemptRepository::class ),
+				$container->make( DeploymentCoordinator::class ),
+				$container->make( WordPressWorkerWakeup::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			PackageRemovalGateway::class,
 			new WordPressPackageRemovalGateway()
 		);
-		$booster->bind(
+		$container->bind(
 			PackageRemovalService::class,
-			static fn ( Booster $booster ): PackageRemovalService => new PackageRemovalService(
-				$booster->make( PluginRepository::class ),
-				$booster->make( ThemeRepository::class ),
-				$booster->make( PackageRemovalGateway::class ),
-				$booster->make( DeploymentAttemptRepository::class ),
-				$booster->make( WordPressUpdaterLock::class )
+			static fn ( CoreContainer $container ): PackageRemovalService => new PackageRemovalService(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
+				$container->make( PackageRemovalGateway::class ),
+				$container->make( DeploymentAttemptRepository::class ),
+				$container->make( WordPressUpdaterLock::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			PackageOperationService::class,
-			static fn ( Booster $booster ): PackageOperationService => new PackageOperationService(
-				$booster->make( PluginRepository::class ),
-				$booster->make( ThemeRepository::class ),
-				$booster->make( DeploymentCoordinator::class ),
-				$booster->make( PackageRemovalService::class ),
-				$booster->make( WordPressUpdaterLock::class )
+			static fn ( CoreContainer $container ): PackageOperationService => new PackageOperationService(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
+				$container->make( DeploymentCoordinator::class ),
+				$container->make( PackageRemovalService::class ),
+				$container->make( WordPressUpdaterLock::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			BulkPackageActionService::class,
-			static fn ( Booster $booster ): BulkPackageActionService => new BulkPackageActionService(
-				$booster->make( PluginRepository::class ),
-				$booster->make( ThemeRepository::class ),
-				$booster->make( ProviderRegistry::class ),
-				$booster->make( SecretsFile::class ),
-				$booster->make( DeploymentCoordinator::class ),
-				$booster->make( WordPressUpdaterLock::class )
+			static fn ( CoreContainer $container ): BulkPackageActionService => new BulkPackageActionService(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
+				$container->make( ProviderRegistry::class ),
+				$container->make( SecretsFile::class ),
+				$container->make( DeploymentCoordinator::class ),
+				$container->make( WordPressUpdaterLock::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			TroubleshootingService::class,
-			static function ( Booster $booster ): TroubleshootingService {
+			static function ( CoreContainer $container ): TroubleshootingService {
 				return new TroubleshootingService(
-					$booster->make( LocalTroubleshootingService::class ),
-					$booster->make( ProviderRegistry::class ),
+					$container->make( LocalTroubleshootingService::class ),
+					$container->make( ProviderRegistry::class ),
 					null,
-					$booster->make( SecretsFile::class ),
-					$booster->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class )
+					$container->make( SecretsFile::class ),
+					$container->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class )
 				);
 			}
 		);
-		$booster->bind(
+		$container->bind(
 			PortabilityApplicationService::class,
-			static fn ( Booster $booster ): PortabilityApplicationService => new PortabilityApplicationService(
-				$booster->make( BlueprintReviewer::class ),
-				$booster->make( BlueprintRepositoryVerifier::class ),
-				$booster->make( PackageOperationService::class ),
-				$booster->make( SecretsFile::class )
+			static fn ( CoreContainer $container ): PortabilityApplicationService => new PortabilityApplicationService(
+				$container->make( BlueprintReviewer::class ),
+				$container->make( BlueprintRepositoryVerifier::class ),
+				$container->make( PackageOperationService::class ),
+				$container->make( SecretsFile::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			PortabilityFacade::class,
-			static fn ( Booster $booster ): PortabilityFacade => new NativePortabilityFacade(
-				$booster->make( PortabilityApplicationService::class )
+			static fn ( CoreContainer $container ): PortabilityFacade => new NativePortabilityFacade(
+				$container->make( PortabilityApplicationService::class )
 			)
 		);
-		$booster->bind(
+		$container->bind(
 			PortabilityController::class,
-			static fn ( Booster $booster ): PortabilityController => new PortabilityController(
-				$booster->make( ManagedPackageBlueprintExporter::class ),
-				$booster->make( BlueprintArchive::class ),
-				$booster->make( PortabilityApplicationService::class ),
-				$booster->make( ProviderSettingsPresenter::class )
+			static fn ( CoreContainer $container ): PortabilityController => new PortabilityController(
+				$container->make( ManagedPackageBlueprintExporter::class ),
+				$container->make( BlueprintArchive::class ),
+				$container->make( PortabilityApplicationService::class ),
+				$container->make( ProviderSettingsPresenter::class )
 			)
 		);
 		$releaseStore = new ManagedReleaseStore( null, $database );
-		$booster->bind( ManagedReleaseStore::class, $releaseStore );
+		$container->bind( ManagedReleaseStore::class, $releaseStore );
 		$releaseRegistrar = new ManagedReleaseTargetRegistrar(
-			$booster->make( PluginRepository::class ),
-			$booster->make( ThemeRepository::class ),
+			$container->make( PluginRepository::class ),
+			$container->make( ThemeRepository::class ),
 			$secrets,
 			$releaseStore,
-			$booster->make( WordPressUpdaterLock::class )
+			$container->make( WordPressUpdaterLock::class )
 		);
-		$booster->bind( ManagedReleaseTargetRegistrar::class, $releaseRegistrar );
+		$container->bind( ManagedReleaseTargetRegistrar::class, $releaseRegistrar );
 		$releaseFacade = new NativeReleaseTrackingFacade(
-			$booster->make( PluginRepository::class ),
-			$booster->make( ThemeRepository::class ),
+			$container->make( PluginRepository::class ),
+			$container->make( ThemeRepository::class ),
 			$releaseStore,
 			$releaseRegistrar,
-			$booster->make( WordPressUpdaterLock::class ),
+			$container->make( WordPressUpdaterLock::class ),
 			releasePreflight: new ManagedReleasePreflight( $secrets ),
 		);
-		$booster->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
-		$booster->bind( ReleaseTrackingFacade::class, $releaseFacade );
+		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
+		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
 		$prospectivePreflight = new ManagedReleasePreflight( $secrets );
 		$prospectiveFacade    = new NativeProspectiveReleaseFacade(
-			$booster->make( PackageRepositoryRequestResolver::class ),
+			$container->make( PackageRepositoryRequestResolver::class ),
 			$prospectivePreflight,
-			$booster->make( CorePackageExecutor::class ),
-			$booster->make( PluginRepository::class ),
-			$booster->make( ThemeRepository::class ),
-			$booster->make( WordPressUpdaterLock::class )
+			$container->make( CorePackageExecutor::class ),
+			$container->make( PluginRepository::class ),
+			$container->make( ThemeRepository::class ),
+			$container->make( WordPressUpdaterLock::class )
 		);
-		$booster->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
-		$booster->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );
+		$container->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
+		$container->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );
 	}
 }

@@ -23,11 +23,6 @@ use RAN\Secrets\SiteKeyStore;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
 use RAN\Uninstall\LocalDataRemover;
-use RAN\WPGitHubReleaseUpdater\V1\Artifact\ArtifactDescriptor;
-use RAN\WPGitHubReleaseUpdater\V1\Artifact\ExactReleaseRequest;
-use RAN\WPGitHubReleaseUpdater\V1\Artifact\ReleaseQuery;
-use RAN\WPGitHubReleaseUpdater\V1\WordPress\NativePluginUpdater;
-use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseArtifactClient;
 use RuntimeException;
 
 require_once __DIR__ . '/../Support/WPError.php';
@@ -43,9 +38,6 @@ final class LocalDataRemoverTest extends TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused database double.
 		$GLOBALS['wpdb'] = $this->database;
 
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Current updater cache identity fixture.
-		$GLOBALS['wp_version'] = '7.0.2';
-
 		$GLOBALS['ran_booster_uninstall_cron_result']                       = 1;
 		$GLOBALS['ran_booster_uninstall_cron_calls']                        = array();
 		$GLOBALS['ran_booster_uninstall_multisite']                         = false;
@@ -58,16 +50,14 @@ final class LocalDataRemoverTest extends TestCase {
 			WordPressWorkerWakeup::HOOK => true,
 			'unrelated_cron_hook'       => true,
 		);
-		$GLOBALS['ran_booster_uninstall_transients']                        = array_fill_keys(
-			$this->ownedUpdaterCacheKeys(),
-			'owned'
-		);
+		$GLOBALS['ran_booster_uninstall_transients']                        = array();
 		$GLOBALS['ran_booster_uninstall_transients']['auto_updater.lock']   = 'wordpress-lock';
 		$GLOBALS['ran_booster_uninstall_transients']['unrelated_transient'] = 'preserved';
 		$GLOBALS['ran_booster_uninstall_options']                           = array(
 			Database::VERSION_OPTION                      => '5.0',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),
+			$this->updaterAuthorityOption()               => 'owned-updater-state',
 			SiteKeyStore::OPTION_NAME                     => 'encoded-key',
 			'ran_booster_assisted_hooks_installations'    => array( 'owned-by-addon' ),
 			'unrelated_option'                            => 'preserved',
@@ -91,10 +81,7 @@ final class LocalDataRemoverTest extends TestCase {
 	public function testRemoveDeletesTheExactCoreInventoryAndCanBeRepeated(): void {
 		$this->setUp();
 		$GLOBALS['ran_booster_uninstall_multisite'] = true;
-		foreach ( $this->ownedUpdaterCacheKeys() as $cacheKey ) {
-			$GLOBALS['ran_booster_uninstall_options'][ '_site_transient_' . $cacheKey ]         = 'pre-conversion-cache';
-			$GLOBALS['ran_booster_uninstall_options'][ '_site_transient_timeout_' . $cacheKey ] = '1770000000';
-		}
+
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->method( 'path' )->willReturn( null );
 		$secrets->expects( self::exactly( 2 ) )
@@ -127,10 +114,7 @@ final class LocalDataRemoverTest extends TestCase {
 			),
 			$GLOBALS['ran_booster_uninstall_transients']
 		);
-		self::assertSame(
-			array_merge( $this->ownedUpdaterCacheKeys(), $this->ownedUpdaterCacheKeys() ),
-			$GLOBALS['ran_booster_uninstall_deleted_transients']
-		);
+		self::assertSame( array(), $GLOBALS['ran_booster_uninstall_deleted_transients'] );
 		self::assertSame( array( 'unrelated_cron_hook' => true ), $GLOBALS['ran_booster_uninstall_cron'] );
 		self::assertSame(
 			array(
@@ -419,84 +403,8 @@ final class LocalDataRemoverTest extends TestCase {
 		);
 	}
 
-	/** @return list<string> */
-	private function ownedUpdaterCacheKeys(): array {
-		$packageKeys     = array();
-		$pluginBasenames = array(
-			'ran-booster/ran-booster.php',
-			'renamed-booster/ran-booster.php',
-		);
-
-		foreach ( $pluginBasenames as $pluginBasename ) {
-			foreach ( array( 'stable', 'prerelease' ) as $channel ) {
-				$packageKeys[] = $this->bundledUpdaterCacheKey( $pluginBasename, $channel );
-			}
-		}
-
-		return $packageKeys;
-	}
-
-	private function bundledUpdaterCacheKey( string $pluginBasename, string $channel ): string {
-		require_once dirname( __DIR__, 2 ) . '/vendor/ran/wp-github-release-updater/runtime.php';
-
-		$originalBasename  = $GLOBALS['ran_booster_uninstall_plugin_basename'] ?? null;
-		$originalDeleted   = $GLOBALS['ran_booster_uninstall_deleted_transients'] ?? array();
-		$originalTransient = $GLOBALS['ran_booster_uninstall_transients'] ?? array();
-
-		$GLOBALS['ran_booster_uninstall_plugin_basename']    = $pluginBasename;
-		$GLOBALS['ran_booster_uninstall_deleted_transients'] = array();
-		$GLOBALS['ran_booster_uninstall_transients']         = array();
-
-		try {
-			$artifacts = new class() implements ReleaseArtifactClient {
-				public function listReleases( ReleaseQuery $query ) {
-					unset( $query );
-					throw new RuntimeException( 'Updater cache identity must not perform discovery.' );
-				}
-
-				public function describeExact( ExactReleaseRequest $request ) {
-					unset( $request );
-					throw new RuntimeException( 'Updater cache identity must not resolve releases.' );
-				}
-
-				public function acquireDescribed( ArtifactDescriptor $descriptor ) {
-					unset( $descriptor );
-					throw new RuntimeException( 'Updater cache identity must not acquire artifacts.' );
-				}
-			};
-			$updater   = NativePluginUpdater::fromTarget(
-				array(
-					'pluginFile'           => dirname( __DIR__, 2 ) . '/ran-booster.php',
-					'repository'           => 'RocketsAreNostalgic/ran-booster',
-					'pluginSlug'           => 'ran-booster',
-					'channel'              => $channel,
-					'accessToken'          => null,
-					'autoUpdatePolicy'     => 'forced-off',
-					'cacheDuration'        => 21_600,
-					'failureCacheDuration' => 900,
-					'targetType'           => 'plugin',
-				),
-				$artifacts
-			);
-			self::assertInstanceOf( NativePluginUpdater::class, $updater );
-			$updater->refreshCache();
-
-			$packageKeys = array_values(
-				array_filter(
-					$GLOBALS['ran_booster_uninstall_deleted_transients'],
-					static fn ( string $key ): bool => str_starts_with(
-						$key,
-						'ran_wp_gh_updater_v1_'
-					)
-				)
-			);
-			self::assertCount( 1, $packageKeys );
-
-			return $packageKeys[0];
-		} finally {
-			$GLOBALS['ran_booster_uninstall_plugin_basename']    = $originalBasename;
-			$GLOBALS['ran_booster_uninstall_deleted_transients'] = $originalDeleted;
-			$GLOBALS['ran_booster_uninstall_transients']         = $originalTransient;
-		}
+	private function updaterAuthorityOption(): string {
+		$target = implode( "\0", array( 'plugin', 'ran-booster', 'ran-booster.php' ) );
+		return 'ran_wp_gh_op_v1_' . substr( hash( 'sha256', $target ), 0, 32 );
 	}
 }

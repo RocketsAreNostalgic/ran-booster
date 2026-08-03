@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\BoosterServiceProvider;
 use RAN\Admin\CredentialSelfDestructPurger;
+use RAN\Internal\CoreContainer;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\SecretsFile;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -217,10 +218,34 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 
 	/** @return array{secrets: TrackingSecretsFile, database: TrackingDatabase, plugins: TrackingPluginRepository} */
 	private function registeredFixture(): array {
-		$secrets  = null;
-		$database = new TrackingDatabase();
-		$plugins  = new TrackingPluginRepository();
-		$booster  = new TroubleshootingHookBooster( $database, $plugins );
+		$secrets   = null;
+		$database  = new TrackingDatabase();
+		$plugins   = new TrackingPluginRepository();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( 'RAN\\Storage\\Database', $database );
+		$container->bind( 'RAN\\Storage\\PluginRepository', $plugins );
+		$container->bind(
+			'RAN\\Dispatcher',
+			new class() {
+				public function dispatchPostRequests(): void {
+				}
+			}
+		);
+		$container->bind(
+			'RAN\\Admin\\RepositoryPickerController',
+			new class() {
+				public function handle(): void {
+				}
+			}
+		);
+		$container->bind(
+			'RAN\\Webhook\\WebhookController',
+			new class() {
+				public function registerRoutes(): void {
+				}
+			}
+		);
 
 		( new BoosterServiceProvider(
 			static function ( ProviderSecretPolicyCatalog $policies ) use ( &$secrets ): TrackingSecretsFile {
@@ -228,9 +253,11 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 
 				return $secrets;
 			}
-		) )->register( $booster );
-		self::assertInstanceOf( CredentialUsageReader::class, $booster->make( CredentialUsageReader::class ) );
-		self::assertInstanceOf( TemporaryDebugCapture::class, $booster->make( TemporaryDebugCapture::class ) );
+		) )->register( $container, $booster );
+		$container->bind( 'RAN\\Storage\\Database', $database );
+		$container->bind( 'RAN\\Storage\\PluginRepository', $plugins );
+		self::assertInstanceOf( CredentialUsageReader::class, $container->make( CredentialUsageReader::class ) );
+		self::assertInstanceOf( TemporaryDebugCapture::class, $container->make( TemporaryDebugCapture::class ) );
 		$booster->init();
 		self::assertInstanceOf( TrackingSecretsFile::class, $secrets );
 
@@ -306,30 +333,5 @@ final class TrackingPluginRepository extends PluginRepository {
 		++$this->reads;
 
 		return array();
-	}
-}
-
-final class TroubleshootingHookBooster extends Booster {
-	public function __construct( private TrackingDatabase $database, private TrackingPluginRepository $plugins ) {
-	}
-
-	public function make( $alias ) {
-		return match ( $alias ) {
-			'RAN\\Storage\\Database'                => $this->database,
-			'RAN\\Storage\\PluginRepository'        => $this->plugins,
-			'RAN\\Dispatcher'                        => new class() {
-				public function dispatchPostRequests(): void {
-				}
-			},
-			'RAN\\Admin\\RepositoryPickerController' => new class() {
-				public function handle(): void {
-				}
-			},
-			'RAN\\Webhook\\WebhookController'       => new class() {
-				public function registerRoutes(): void {
-				}
-			},
-			default                                  => parent::make( $alias ),
-		};
 	}
 }

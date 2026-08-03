@@ -387,7 +387,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		?TemporaryDebugCapture $capture = null,
 		?DeploymentAttemptRepository $attempts = null
 	): Dispatcher {
-		$providers = new ProviderRegistry( new \Tests\Support\NullLoggingFacade() );
+		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
 
@@ -409,7 +409,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 	}
 
 	private function htmxDispatcher( Dashboard $dashboard, TemporaryDebugCapture $capture ): HtmxDebugCaptureTestDispatcher {
-		$providers = new ProviderRegistry( new \Tests\Support\NullLoggingFacade() );
+		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
 

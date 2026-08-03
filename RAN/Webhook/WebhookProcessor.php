@@ -27,10 +27,8 @@ final readonly class WebhookProcessor {
 	) {
 	}
 
-	/**
-	 * @param array<string, string|list<string>> $headers Native WordPress request headers.
-	 */
-	public function handle( string $provider, string $body, array $headers ): WebhookResponse {
+	/** @param callable(): array{body: string, headers: array<string, string|list<string>>} $request */
+	public function handle( string $provider, callable $request ): WebhookResponse {
 		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
 			return $this->response( 503, 'Webhook processing is unavailable on WordPress Multisite.' );
 		}
@@ -39,9 +37,10 @@ final readonly class WebhookProcessor {
 			$providerCode = ProviderCode::parse( $provider );
 			$normalizer   = $this->providers->requireCapability( $providerCode, WebhookNormalizer::class );
 			$policy       = $normalizer->getWebhookPolicy();
-			$request      = new WebhookRequest( $providerCode, $body, $headers, $policy->getRetainedHeaders() );
-			$verification = $this->verifier->verify( $request, $policy );
-			$envelope     = $normalizer->normalizeWebhook( $request->withVerification( $verification ) );
+			$input        = $request();
+			$webhook      = new WebhookRequest( $providerCode, $input['body'], $input['headers'], $policy->getRetainedHeaders() );
+			$verification = $this->verifier->verify( $webhook, $policy );
+			$envelope     = $normalizer->normalizeWebhook( $webhook->withVerification( $verification ) );
 			if ( count( $envelope->getEvents() ) > 32 ) {
 				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.' );
 			}
@@ -61,7 +60,7 @@ final readonly class WebhookProcessor {
 			}
 			$result = $this->coordinator->acceptWebhook(
 				$envelope->getEvents(),
-				hash( 'sha256', $request->getBody() )
+				hash( 'sha256', $webhook->getBody() )
 			);
 
 			if ( 'conflict' === $result['status'] ) {
@@ -79,7 +78,7 @@ final readonly class WebhookProcessor {
 		} catch ( InvalidProviderCode | UnknownProvider ) {
 			return $this->response( 404, 'Webhook provider not found.' );
 		} catch ( UnsupportedProviderCapability ) {
-			return $this->response( 501, 'Webhook provider is not available.' );
+			return $this->response( 404, 'Webhook provider not found.' );
 		} catch ( DeploymentStorageFailure $failure ) {
 			if ( $failure->isDeliveryConflict() ) {
 				return $this->response( 409, 'Webhook delivery conflict.' );

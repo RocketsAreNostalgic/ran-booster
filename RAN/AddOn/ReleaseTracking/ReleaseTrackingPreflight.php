@@ -26,7 +26,8 @@ final readonly class ReleaseTrackingPreflight {
 		private string $latestVersion = '',
 		private string $releaseUrl = '',
 		private string $releaseTag = '',
-		private string $packageHeaderVersion = ''
+		private string $packageHeaderVersion = '',
+		private string $versionRelationship = ''
 	) {
 		if ( ! in_array(
 			$this->code,
@@ -46,6 +47,7 @@ final readonly class ReleaseTrackingPreflight {
 			|| strlen( $this->releaseUrl ) > 512
 			|| strlen( $this->releaseTag ) > 128
 			|| strlen( $this->packageHeaderVersion ) > 64
+			|| ! in_array( $this->versionRelationship, array( '', 'newer', 'same', 'older', 'invalid' ), true )
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->releaseTag . $this->packageHeaderVersion )
 			|| ( '' !== $this->releaseUrl && ! $this->validReleaseUrl( $this->releaseUrl ) ) ) {
 			throw new InvalidArgumentException( 'Release tracking preflight is invalid.' );
@@ -78,6 +80,10 @@ final readonly class ReleaseTrackingPreflight {
 
 	public function packageHeaderVersion(): string {
 		return $this->packageHeaderVersion;
+	}
+
+	public function versionRelationship(): string {
+		return $this->versionRelationship;
 	}
 
 	private function validReleaseUrl( string $url ): bool {

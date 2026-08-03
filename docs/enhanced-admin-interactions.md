@@ -8,38 +8,33 @@ Compatible add-ons can opt an add-on-owned mutation into that experience
 without shipping an HTMX controller, toast implementation or DOM updater. The
 add-on continues to own the operation and its complete security boundary.
 
-This document is normative for Administration Interaction API 1.
+This document is normative for Administration Interaction API 2.
 
 ## Compatibility and service delivery
 
 Core publishes:
 
 ```php
-RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION === 1
+RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION === 2
 ```
 
-An add-on must require that exact generation before using the contract. Logging
-API 1 remains mandatory because Core delivers the concrete logging facade
-alongside the interaction facade:
+An add-on must require that exact generation before using the contract:
 
 ```php
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' )
-	|| 1 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION
-	|| ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-	|| 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+	|| 2 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
 	return;
 }
 
 add_action(
 	'ran_booster_admin_interaction_ready',
 	static function (
-		\RAN\Admin\Interaction\AdminInteractionFacade $interaction,
-		\RAN\AddOn\Logging\LoggingFacade $logging
+		\RAN\Admin\Interaction\AdminInteractionFacade $interaction
 	): void {
-		// Retain these request-local facades in the add-on's controller.
+		// Retain this request-local facade in the add-on's controller.
 	},
 	10,
-	2
+	1
 );
 ```
 
@@ -48,8 +43,8 @@ priority 100, after provider registration and before resolving the dashboard or
 request dispatcher. Register the listener during normal plugin loading. A late
 listener is not replayed.
 
-The supplied `AdminInteractionFacade` and `LoggingFacade` are request-local.
-Do not persist them and do not perform remote work in the ready callback. Core
+The supplied `AdminInteractionFacade` is request-local. Do not persist it and
+do not perform remote work in the ready callback. Core
 contains and redacts a failed listener so the remaining administration UI stays
 available.
 
@@ -82,7 +77,7 @@ Core-owned package forms that contain `ran_booster[action]` have an additional
 internal package-screen enhancement. That is not a public add-on contract and
 must not be used as a substitute for a structured action or this facade.
 
-## API 1 scope
+## Original API 1 scope retained by API 2
 
 API 1 exposes the Core-owned provider repositories refresh target:
 
@@ -115,8 +110,9 @@ enhanced refresh.
 
 Core may also implement the additive
 `TransporterRowAdminInteractionFacade`. Consumers must feature-detect that
-interface with `instanceof`; its presence does not change the API 1 marker or
-the existing `AdminInteractionFacade` interface.
+interface with `instanceof`. This additive capability advanced the exact Admin
+Interaction marker to API 2 without changing the existing
+`AdminInteractionFacade` interface.
 
 The additive capability declares one exact add-on-rendered Transporter source
 row:

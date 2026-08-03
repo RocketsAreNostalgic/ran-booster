@@ -263,14 +263,16 @@ The dependency order is:
 8. prove both source/runtime-only and official/manual-only behavior in
    disposable WordPress installations.
 
-Release Please owns version sources, tags, changelogs, and GitHub Releases. It
-does not create the WordPress ZIP. The release scripts build and verify that
-artifact from the immutable release commit.
+Release Please owns version proposals, version sources and changelogs. It does
+not create the WordPress ZIP or publish the GitHub release directly. After the
+proposal merges, the release workflow builds and verifies the exact commit,
+creates or resumes a draft, attaches and byte-verifies the ZIP, and publishes
+only under the explicitly enabled immutable-release contract.
 
 The completed native-ZIP set is updater `v1.6.0-beta.1`, Core
 `v0.1.0-alpha.29` and Release Deployments `v0.1.0-alpha.4`. Exact commits,
-assets, digests, hosted replacement proof and controlled-site cutover are in
-[Native ZIP Phase 5 evidence](native-zip-phase5-evidence.md).
+assets, digests, hosted replacement proof and controlled-site cutover are
+retained in the private release review archive.
 
 The hosted private-feed proof used a temporary process-only, host/path-scoped
 token shim and then removed it. That proves the released archive and WordPress
@@ -298,6 +300,5 @@ A releasable Core change proves:
   runtime, and generated marker allowlist.
 
 See [Package update orchestration](package-update-orchestration.md) for the
-larger managed-release and branch deployment model and the
-[decision register](package-update-orchestration-decision-register.md) for the
-historical alternatives and reconsideration triggers.
+larger managed-release and branch deployment model. Historical alternatives and
+reconsideration triggers remain in the private architecture review archive.

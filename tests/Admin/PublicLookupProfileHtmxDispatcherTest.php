@@ -26,7 +26,6 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
-use Tests\Support\NullLoggingFacade;
 
 final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 
@@ -132,7 +131,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	}
 
 	private function dispatcher( Dashboard $dashboard, InMemoryPublicRepositoryLookupProfileStore $store ): HtmxPublicLookupTestDispatcher {
-		$providers = new ProviderRegistry( new NullLoggingFacade(), array( $this->provider() ) );
+		$providers = new ProviderRegistry( array( $this->provider() ) );
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
 		$lock      = $this->createMock( WordPressUpdaterLock::class );

@@ -121,7 +121,7 @@ final class RepositoryResolverTest extends TestCase {
 			availability: new SecretsRuntimeAvailability( false, false )
 		);
 
-		$repository = ( new RepositoryBrowser( $secrets ) )->repository( 'rocketsarenostalgic/ran-booster' );
+		$repository = ( new RepositoryBrowser( $secrets->credentialsFor( 'gh' ) ) )->repository( 'rocketsarenostalgic/ran-booster' );
 
 		self::assertFalse( $repository->private );
 		self::assertNull( $repository->credentialId );
@@ -178,7 +178,7 @@ final class RepositoryResolverTest extends TestCase {
 		self::assertSame( 'develop', $repository->defaultBranch );
 		self::assertSame( '9223372036854775807123', $repository->providerRepositoryId );
 		self::assertSame( 'private-profile', $repository->credentialId );
-		self::assertSame( array( array( 'gh', 'private-profile' ) ), $secrets->lookups );
+		self::assertSame( array( 'private-profile' ), $secrets->lookups );
 		self::assertSame(
 			'Bearer ' . self::TOKEN,
 			$requests[0]['arguments']['headers']['Authorization']
@@ -370,7 +370,7 @@ final class RepositoryResolverTest extends TestCase {
 		);
 
 		self::assertCount( 30, $result->repositories );
-		self::assertSame( array( array( 'gh', $profileId ) ), $secrets->lookups );
+		self::assertSame( array( $profileId ), $secrets->lookups );
 		foreach ( $result->repositories as $repository ) {
 			self::assertFalse( $repository->private );
 			self::assertNull( $repository->credentialId );
@@ -396,7 +396,7 @@ final class RepositoryResolverTest extends TestCase {
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 400, $exception->getCode() );
 			self::assertStringNotContainsString( 'missing-profile', $exception->getMessage() );
-			self::assertSame( array( array( 'gh', 'missing-profile' ) ), $secrets->lookups );
+			self::assertSame( array( 'missing-profile' ), $secrets->lookups );
 			self::assertSame( array(), \RAN\GitHub\repository_resolver_http_requests() );
 		}
 	}
@@ -485,7 +485,7 @@ final class RepositoryResolverTest extends TestCase {
 		);
 
 		$browser->browse( RepositoryBrowseRequest::publicOwner( 'RocketsAreNostalgic', 'public-profile' ) );
-		self::assertSame( array( array( 'gh', 'public-profile' ) ), $secrets->lookups );
+		self::assertSame( array( 'public-profile' ), $secrets->lookups );
 		foreach ( \RAN\GitHub\repository_resolver_http_requests() as $request ) {
 			self::assertSame( 'Bearer ' . self::TOKEN, $request['arguments']['headers']['Authorization'] );
 		}
@@ -504,14 +504,14 @@ final class RepositoryResolverTest extends TestCase {
 		);
 		$browser->browse( RepositoryBrowseRequest::publicOwner( 'RocketsAreNostalgic' ) );
 
-		self::assertSame( array( array( 'gh', 'public-profile' ) ), $secrets->lookups );
+		self::assertSame( array( 'public-profile' ), $secrets->lookups );
 		foreach ( \RAN\GitHub\repository_resolver_http_requests() as $request ) {
 			self::assertArrayNotHasKey( 'Authorization', $request['arguments']['headers'] );
 		}
 
 		\RAN\GitHub\repository_resolver_http_reset( $this->repositoryIdentityResponse() );
 		$browser->repository( 'RocketsAreNostalgic/example-plugin' );
-		self::assertSame( array( array( 'gh', 'public-profile' ) ), $secrets->lookups );
+		self::assertSame( array( 'public-profile' ), $secrets->lookups );
 		self::assertArrayNotHasKey(
 			'Authorization',
 			\RAN\GitHub\repository_resolver_http_requests()[0]['arguments']['headers']
@@ -724,7 +724,7 @@ final class RepositoryResolverTest extends TestCase {
 
 		self::assertSame( 'Bearer ' . self::TOKEN, $requests[0]['arguments']['headers']['Authorization'] );
 		self::assertSame( 'Bearer ' . self::TOKEN, $requests[1]['arguments']['headers']['Authorization'] );
-		self::assertSame( array( array( 'gh', 'private-profile' ), array( 'gh', 'private-profile' ), array( 'gh', 'private-profile' ) ), $secrets->lookups );
+		self::assertSame( array( 'private-profile', 'private-profile', 'private-profile' ), $secrets->lookups );
 		self::assertCount( 1, \RAN\RepositoryProvider\authenticated_archive_filters( 'http_request_args' ) );
 		self::assertCount( 1, \RAN\RepositoryProvider\authenticated_archive_actions( AuthenticatedPreparedArchive::REDIRECT_HOOK ) );
 
@@ -1056,7 +1056,7 @@ final class RepositoryResolverTest extends TestCase {
 		self::assertSame( array(), \RAN\RepositoryProvider\authenticated_archive_filters( 'http_request_args' ) );
 		self::assertCount( 1, \RAN\RepositoryProvider\authenticated_archive_actions( AuthenticatedPreparedArchive::REDIRECT_HOOK ) );
 		self::assertSame(
-			array( array( 'gh', 'private-profile' ), array( 'gh', 'private-profile' ), array( 'gh', 'private-profile' ) ),
+			array( 'private-profile', 'private-profile', 'private-profile' ),
 			$secrets->lookups
 		);
 

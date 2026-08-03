@@ -4,45 +4,45 @@ declare(strict_types=1);
 
 namespace Tests\Container;
 
-use RAN\Booster;
+use RAN\Internal\CoreContainer;
 use Tests\RANBoosterTestCase;
 
 final class ContainerTest extends RANBoosterTestCase {
 
-	private Booster $booster;
+	private CoreContainer $container;
 
 	protected function setUp(): void {
-		$this->booster = new Booster();
+		$this->container = new CoreContainer();
 	}
 
 	public function testItCanResolveAClassWithNoDependencies(): void {
-		$db = $this->booster->make( DB::class );
+		$db = $this->container->make( DB::class );
 
 		$this->assertInstanceOf( DB::class, $db );
 	}
 
 	public function testItCanResolveAClassWithNestedDependencies(): void {
-		$manager = $this->booster->make( UserManager::class );
+		$manager = $this->container->make( UserManager::class );
 
 		$this->assertInstanceOf( UserManager::class, $manager );
 	}
 
 	public function testItCanBindAnAlias(): void {
-		$this->booster->bind( UserRepository::class, DBUserRepository::class );
+		$this->container->bind( UserRepository::class, DBUserRepository::class );
 
-		$repository = $this->booster->make( UserRepository::class );
+		$repository = $this->container->make( UserRepository::class );
 
 		$this->assertInstanceOf( DBUserRepository::class, $repository );
 	}
 
 	public function testItCanBindAClosure(): void {
-		$closure = function ( Booster $booster ): DB {
+		$closure = function ( CoreContainer $container ): DB {
 			return new DB();
 		};
 
-		$this->booster->bind( DB::class, $closure );
+		$this->container->bind( DB::class, $closure );
 
-		$db = $this->booster->make( DB::class );
+		$db = $this->container->make( DB::class );
 
 		$this->assertInstanceOf( DB::class, $db );
 	}
@@ -50,12 +50,12 @@ final class ContainerTest extends RANBoosterTestCase {
 	public function testItCanBindAnInstance(): void {
 		$dbInstance = new DB();
 
-		$this->booster->bind( DB::class, $dbInstance );
+		$this->container->bind( DB::class, $dbInstance );
 
-		$db = $this->booster->make( DB::class );
+		$db = $this->container->make( DB::class );
 
 		$this->assertSame( $dbInstance, $db );
-		$this->assertSame( $db, $this->booster->make( DB::class ) );
+		$this->assertSame( $db, $this->container->make( DB::class ) );
 	}
 }
 

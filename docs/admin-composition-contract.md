@@ -34,18 +34,15 @@ attaching its callbacks:
 
 ```php
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-	|| 12 !== RAN_BOOSTER_ADDON_API_VERSION
-	|| ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-	|| 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+	|| 14 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 	return;
 }
 ```
 
-Logging API 1 remains independently versioned, but it is mandatory for every
-Add-on API 12 and Provider API 6 consumer. Core always injects its concrete
-`LoggingFacade`; neither public API accepts a missing logger or substitutes an
-implicit no-op logger. Provider API 6 remains a separate contract. Provider
-add-ons must continue to perform the exact checks described in the
+Add-on API 14 publishes only the named facade needed by each ready action. Core
+does not deliver an add-on logging facade, generic resolver or container.
+Provider API 8 remains a separate contract. Provider add-ons must continue to
+perform the exact checks described in the
 [Provider extension contract](provider-extension-contract.md).
 
 Core fires these service-ready actions once on `plugins_loaded` at priority
@@ -55,37 +52,33 @@ request dispatcher:
 ```php
 do_action(
 	'ran_booster_portability_ready',
-	$portability,
-	$logging
+	$portability
 );
 
 do_action(
 	'ran_booster_webhook_assistance_ready',
-	$webhookAssistance,
-	$logging
+	$webhookAssistance
 );
 
 do_action(
 	'ran_booster_release_tracking_ready',
-	$releaseTracking,
-	$logging
+	$releaseTracking
 );
 
 // Delivered only when the selected updater runtime supplies the internal
-// prospective capability required by Core's public API 4.
+// prospective capability required by Core's public API 5.
 do_action(
 	'ran_booster_prospective_release_ready',
-	$prospectiveRelease,
-	$logging
+	$prospectiveRelease
 );
 ```
 
-The first argument is respectively a
+The first three arguments are respectively a
 `\RAN\AddOn\Portability\PortabilityFacade`,
 `\RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade` or
-`\RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade`. The optional third action
-supplies a `\RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade`. The final
-argument is a `\RAN\AddOn\Logging\LoggingFacade`.
+`\RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade`. The optional fourth action
+supplies only its named
+`\RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade`.
 
 These actions are request-local delivery points for exact, already-public safe
 facades. They are not view hooks or service locators. An add-on must attach its
@@ -94,9 +87,16 @@ facades for the current request and perform no remote work in the ready
 callback. A late listener is not replayed. Core catches a failed ready listener
 and continues without exposing its exception to the administrator.
 
-Portability API 1 is an independently versioned adoption-only contract for a
-trusted source bridge. Its consumer checks exact Portability API 1 and Logging
-API 1, not Add-on API 12. The separate
+Webhook Assistance mutations and assessments use the exact nonce action
+`ran_booster_repository_webhook_{action}_{providerCode}_{repositoryId}`, where
+`action` is one of `setup`, `check`, `reconfigure` or `remove`. The add-on
+creates that WordPress nonce for its form and passes the submitted value to the
+matching facade method. Core independently re-derives the action from the
+current target and rejects a stale or mismatched nonce before provider work.
+
+Portability API 2 is an independently versioned adoption-only contract for a
+trusted source bridge. Its consumer checks exact Portability API 2, not Add-on
+API 14. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.
 
@@ -190,8 +190,8 @@ does not install, downgrade or alter package files. `ReleaseTrackingStatus`
 exposes the canonical `stable` or `prerelease` channel.
 
 Prospective installation is a separate optional contract. Core defines
-`RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` as `4` only when its selected
-updater runtime publishes the complete internal API 2 capability required by
+`RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` as `5` only when its selected
+updater runtime publishes the complete internal API 4 capability required by
 Core, then delivers the facade through
 `ran_booster_prospective_release_ready`. The two version markers describe
 different boundaries and are deliberately independent.
@@ -257,7 +257,6 @@ add_action(
 				'example',
 				__( 'Example', 'example-addon' ),
 				static function ( \RAN\Admin\AdminAddOnContext $context ): void {
-					$logging = $context->logger();
 					// Render escaped, add-on-owned administration markup.
 				},
 				7,
@@ -278,8 +277,7 @@ for undeclared facades. Registered tabs appear after Core and provider tabs.
 When selected, Core creates an immutable `AdminAddOnContext` only after the
 `manage_options` check. The context supplies the tab key, canonical Booster
 URL, `site` or `network` administration scope, Core/Add-on API versions,
-the required Core-injected Logging API 1 facade and only the explicitly
-requested allowlisted facade. It
+and only the explicitly requested allowlisted facade. It
 does not expose the service container, repositories, credentials, secrets or
 arbitrary Core models. Core contains a renderer failure and keeps the remaining
 dashboard usable.
@@ -296,8 +294,8 @@ control-plane route for a compatible supporter manager, not a second dashboard
 tab or a general add-on-page API. Its parent, label, capability and slug are
 always `ran-booster`, `Pro`, `manage_options` and `ran-booster-pro`.
 
-An add-on may render the page body only after it has checked the exact Add-on
-API 12 and Logging API 1 versions above, by attaching a normal WordPress action:
+An add-on may render the page body only after it has checked exact Add-on API 14
+above, by attaching a normal WordPress action:
 
 ```php
 add_action(

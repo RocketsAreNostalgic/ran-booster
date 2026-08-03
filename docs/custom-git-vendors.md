@@ -34,9 +34,7 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 6 !== RAN_BOOSTER_PROVIDER_API_VERSION
-      || ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-      || 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+      || 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
@@ -49,11 +47,14 @@ add_action(
 ```
 
 Use `registerWithCredentialStore()` when the provider reads stored credentials.
-The supplied store is limited to that provider's credentials and the boolean
-`hasWebhookProfile()` diagnostic readiness check; it cannot read profile
-records, signing material, paths, other providers, or write state. The factory
-must remain local and non-I/O, and the returned provider must use exactly the
-code that was requested.
+The supplied store exposes display-safe profiles, one selected or default
+credential under that provider code and the boolean `hasWebhookProfile()`
+diagnostic readiness check. It cannot select another provider, read signing
+material, inspect paths or write state. The factory must remain local and
+non-I/O, and the returned provider must use exactly the code that was requested.
+Activating a credential-bearing provider therefore trusts it with credentials
+saved under its code; registration order is not publisher authentication, and
+Core cannot control the provider's private code after authorized disclosure.
 
 ## Core contract
 
@@ -135,6 +136,11 @@ them:
   normalization and signing policy.
 - `RAN\RepositoryProvider\RepositoryWebhookSettingsLink` to link a managed
   repository directly to its provider-owned webhook settings screen.
+- `RAN\RepositoryProvider\RepositoryWebhookFitness` and
+  `RAN\RepositoryProvider\RepositoryWebhookManagement` together for the exact
+  `repository-webhook-management/1` setup, check, reconfigure and remove
+  operation. The provider owns its fixed vendor calls; Core owns authorization,
+  binding, secret custody and bounded results.
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits a capability, Booster will keep the corresponding feature disabled rather
@@ -162,6 +168,11 @@ manual credential date.
 1. Add `RepositoryWebhookSettingsLink` only if the provider has a stable HTTPS
    webhook-settings route. Validate its repository locator inside the provider;
    Booster will omit invalid or unsafe URLs instead of guessing.
+1. Add `RepositoryWebhookFitness` and `RepositoryWebhookManagement` together
+   only when the provider implements the complete fixed webhook-management
+   operation, including bounded assessment, authoritative readback and
+   ambiguous/partial outcomes. Do not add an operation dispatcher or generic
+   authenticated transport.
 1. Add `RepositoryBrowser` only if you want in-WordPress repository discovery.
 1. Add `CredentialedPublicRepositoryBrowser` only if the provider can
    authenticate public-owner browsing without returning private repositories or
@@ -193,12 +204,14 @@ Common setup failures and what they mean:
   exceeded the 10 second deadline.
 - Stale branch head: archive preparation resolved a branch once, but the branch
   was no longer the current head before mutation.
-- Unsafe archive URL: the provider returned a non-HTTPS URL or included
-  credentials, query strings, fragments, or other disallowed components.
+- Unsafe archive URL: the provider returned a non-HTTPS URL, user information,
+  a fragment, reusable credentials or other authorization material. A
+  provider-owned signed query is allowed only under that provider's documented
+  origin and expiry policy.
 
 If the vendor registers in tests but not in WordPress, confirm that the callback
 runs on the active plugin load path and that `RAN_BOOSTER_PROVIDER_API_VERSION`
-is exactly `4`.
+is exactly `8`.
 
 ## Related types
 
@@ -216,6 +229,10 @@ The main types you will usually touch while adding a new vendor are:
 - `RAN\RepositoryProvider\RepositoryBrowser`
 - `RAN\RepositoryProvider\ProviderCredentialPolicySupplier`
 - `RAN\RepositoryProvider\ProviderWebhookPolicy`
+- `RAN\RepositoryProvider\RepositoryWebhookFitness`
+- `RAN\RepositoryProvider\RepositoryWebhookManagement`
+- `RAN\RepositoryProvider\RepositoryWebhookFitnessResult`
+- `RAN\RepositoryProvider\RepositoryWebhookOperationResult`
 - `RAN\RepositoryProvider\PreparedArchive`
 
 For a deeper discussion of the provider contract itself, see the

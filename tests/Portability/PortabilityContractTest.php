@@ -154,7 +154,7 @@ final class PortabilityContractTest extends TestCase {
 		);
 		sort( $methods );
 
-		self::assertSame( 1, PortabilityFacade::API_VERSION );
+		self::assertSame( 2, PortabilityFacade::API_VERSION );
 		self::assertSame( array( 'apply', 'nonceAction', 'review' ), $methods );
 		self::assertFalse( $reflection->hasMethod( 'prepare' ) );
 		self::assertFalse( $reflection->hasMethod( 'cancel' ) );

@@ -50,6 +50,21 @@ function wp_remote_get( string $url, array $arguments ): mixed {
 	return $response;
 }
 
+/** @param array<string,mixed> $arguments */
+function wp_remote_request( string $url, array $arguments ): mixed {
+	$GLOBALS['ran_booster_repository_resolver_requests'][] = array(
+		'url'       => $url,
+		'arguments' => $arguments,
+	);
+	$response = array_shift( $GLOBALS['ran_booster_repository_resolver_responses'] );
+	$limit    = $arguments['limit_response_size'] ?? null;
+	if ( is_array( $response ) && is_int( $limit ) && $limit >= 0 && is_string( $response['body'] ?? null ) && strlen( $response['body'] ) > $limit ) {
+		$response['body'] = substr( $response['body'], 0, $limit );
+	}
+
+	return $response;
+}
+
 function is_wp_error( mixed $response ): bool {
 	return $response instanceof RepositoryResolverWpError;
 }

@@ -54,6 +54,8 @@ committed_entries=(
 	'views'
 )
 package_root='vendor/ran/wp-github-release-updater'
+updater_version='v2.0.0-beta.1'
+updater_commit='b727e48660a71b2e7ae0db80c61ebbebfb1d30c9'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
@@ -116,18 +118,19 @@ done
 
 bootstrap_source=$(git show "$commit:ran-booster.php")
 for required_api_marker in \
-	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 6 );" \
-	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 12 );" \
-	"define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );" \
-	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 1 );" \
+	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 8 );" \
+	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );" \
+	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );" \
 	"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );"; do
 	grep -Fq "$required_api_marker" <<< "$bootstrap_source" \
 		|| fail "release ref is missing the coordinated API marker: $required_api_marker"
 done
 portability_facade_source=$(git show "$commit:RAN/AddOn/Portability/PortabilityFacade.php")
-grep -Fq 'public const API_VERSION = 1;' <<< "$portability_facade_source" \
-	|| fail 'release ref is missing exact Portability API 1.'
+grep -Fq 'public const API_VERSION = 2;' <<< "$portability_facade_source" \
+	|| fail 'release ref is missing exact Portability API 2.'
 for removed_api_marker in \
+	RAN_BOOSTER_LOGGING_API_VERSION \
+	RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION \
 	RAN_BOOSTER_DOCUMENTATION_API_VERSION \
 	RAN_BOOSTER_PACKAGE_EXTENSION_API_VERSION \
 	RAN_BOOSTER_PROVIDER_ADMIN_EXTENSION_API_VERSION \
@@ -136,6 +139,53 @@ for removed_api_marker in \
 		fail "release ref retains a removed or unimplemented API marker: $removed_api_marker"
 	fi
 done
+
+if git ls-tree -r --name-only "$commit" -- RAN/AddOn/Logging | grep -q .; then
+	fail 'release ref retains the removed public add-on Logging API.'
+fi
+
+for removed_webhook_type in \
+	RAN/AddOn/WebhookAssistance/ProvisioningCallbackResult.php \
+	RAN/AddOn/WebhookAssistance/ProvisioningResult.php \
+	RAN/AddOn/WebhookAssistance/WebhookCleanupFacade.php; do
+	if git cat-file -e "$commit:$removed_webhook_type" 2>/dev/null; then
+		fail "release ref retains removed webhook assistance type: $removed_webhook_type"
+	fi
+done
+
+for required_webhook_type in \
+	RAN/RepositoryProvider/RepositoryWebhookFitness.php \
+	RAN/RepositoryProvider/RepositoryWebhookFitnessResult.php \
+	RAN/RepositoryProvider/RepositoryWebhookManagement.php \
+	RAN/RepositoryProvider/RepositoryWebhookOperationResult.php; do
+	git cat-file -e "$commit:$required_webhook_type" 2>/dev/null \
+		|| fail "release ref is missing fixed webhook operation type: $required_webhook_type"
+done
+
+webhook_facade_source=$(git show "$commit:RAN/AddOn/WebhookAssistance/WebhookAssistanceFacade.php")
+for removed_webhook_method in withCredential provision releaseProfile; do
+	if grep -Eq "function[[:space:]]+${removed_webhook_method}[[:space:]]*\\(" <<< "$webhook_facade_source"; then
+		fail "release ref retains removed secret-bearing webhook method: $removed_webhook_method"
+	fi
+done
+
+if grep -Eq 'function[[:space:]]+ran_booster[[:space:]]*\(' <<< "$bootstrap_source"; then
+	fail 'release ref retains the removed global Core container accessor.'
+fi
+booster_source=$(git show "$commit:RAN/Booster.php")
+service_provider_source=$(git show "$commit:RAN/BoosterServiceProvider.php")
+for removed_singleton_method in getInstance setInstance; do
+	if grep -Eq "function[[:space:]]+${removed_singleton_method}[[:space:]]*\\(" <<< "$booster_source"; then
+		fail "release ref retains the removed Core singleton method: $removed_singleton_method"
+	fi
+done
+if grep -Eq -- "->bind\([[:space:]]*('RAN\\\\Booster'|Booster::class)" <<< "$service_provider_source"; then
+	fail 'release ref retains the removed Core self-binding.'
+fi
+secrets_source=$(git show "$commit:RAN/Secrets/SecretsFile.php")
+if grep -Eq 'function[[:space:]]+credentialMaterials[[:space:]]*\(' <<< "$secrets_source"; then
+	fail 'release ref retains the removed bulk credential-plaintext enumerator.'
+fi
 
 expected_version=${2:-$plugin_version}
 [[ "$expected_version" == "$plugin_version" ]] \
@@ -201,9 +251,9 @@ if ! package_lock_record=$(
 		$contentHash = $lock["content-hash"] ?? null;
 		if (
 			"ran/wp-github-release-updater" !== $name
-			|| "v1.6.0-beta.1" !== $version
+			|| $argv[2] !== $version
 			|| ! is_string( $source )
-			|| 1 !== preg_match( "/^[0-9a-f]{40}$/", $source )
+			|| ! hash_equals( $argv[3], $source )
 			|| $source !== $dist
 			|| ! is_string( $contentHash )
 			|| 1 !== preg_match( "/^[0-9a-f]{32}$/", $contentHash )
@@ -211,9 +261,9 @@ if ! package_lock_record=$(
 			exit( 1 );
 		}
 		echo implode( "\t", array( $name, $version, $source, $contentHash ) );
-	' "$composer_dir/composer.lock"
+	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"
 ); then
-	fail 'composer.lock must contain only ran/wp-github-release-updater v1.6.0-beta.1 as a production package.'
+	fail "composer.lock must contain only ran/wp-github-release-updater $updater_version at $updater_commit as a production package."
 fi
 IFS=$'\t' read -r package_name package_version package_commit lock_content_hash <<< "$package_lock_record"
 

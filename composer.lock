@@ -4,25 +4,26 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ac313e2a510dd41cfb53b1b83a4a71f2",
+    "content-hash": "2c4c011bf2214a788d696264d9385d44",
     "packages": [
         {
             "name": "ran/wp-github-release-updater",
-            "version": "v1.6.0-beta.1",
+            "version": "v2.0.0-beta.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater.git",
-                "reference": "c5880a949355567b7e58efb7720962a0282fee20"
+                "reference": "b727e48660a71b2e7ae0db80c61ebbebfb1d30c9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-github-release-updater/zipball/c5880a949355567b7e58efb7720962a0282fee20",
-                "reference": "c5880a949355567b7e58efb7720962a0282fee20",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-github-release-updater/zipball/b727e48660a71b2e7ae0db80c61ebbebfb1d30c9",
+                "reference": "b727e48660a71b2e7ae0db80c61ebbebfb1d30c9",
                 "shasum": ""
             },
             "require": {
                 "ext-hash": "*",
                 "ext-json": "*",
+                "ext-zip": "*",
                 "php": "^8.2"
             },
             "require-dev": {
@@ -42,6 +43,9 @@
                 "test": [
                     "phpunit --configuration phpunit.xml"
                 ],
+                "test:performance": [
+                    "php tests/Characterization/managed-preflight-performance.php"
+                ],
                 "lint": [
                     "phpcs --standard=phpcs.xml --report=summary"
                 ],
@@ -54,6 +58,7 @@
                 "check": [
                     "@validate:strict",
                     "@test",
+                    "@test:performance",
                     "@lint",
                     "@analyze"
                 ]
@@ -63,10 +68,10 @@
             ],
             "description": "GitHub Release update integration for WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/tree/v1.6.0-beta.1",
+                "source": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/tree/v2.0.0-beta.1",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/issues"
             },
-            "time": "2026-08-02T00:22:00+00:00"
+            "time": "2026-08-03T15:06:28+00:00"
         }
     ],
     "packages-dev": [
@@ -2491,7 +2496,8 @@
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2",
-        "ext-sodium": "*"
+        "ext-sodium": "*",
+        "ext-zip": "*"
     },
     "platform-dev": {},
     "platform-overrides": {

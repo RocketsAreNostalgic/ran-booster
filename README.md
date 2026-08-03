@@ -45,9 +45,19 @@ RAN Booster supports custom git vendors through the
 `ran_booster_register_providers` action. Use it to register a new provider,
 define its metadata and capability contracts, and wire in diagnostics,
 credential policy, repository browsing, and webhook handling as needed.
-Provider plugins must require exact Provider API 6 and Logging API 1; Core
-always supplies the concrete logging facade when it constructs the provider
-registry.
+Provider plugins must require exact Provider API 8. Core publishes no add-on
+logging facade; providers return bounded diagnostics and operation results
+instead of forwarding their messages or exceptions into Core logs.
+WordPress's `Requires Plugins` header can express the package dependency, but it
+does not prove contract compatibility. Every provider or ordinary add-on must
+also fail closed unless each API marker it consumes is present at the exact
+documented generation.
+
+Core publishes no global service-container accessor and no bulk credential
+plaintext enumerator. Ordinary add-ons receive only purpose-specific facades;
+credential-bearing providers receive the existing read-only store permanently
+bound to their own provider code. These supported-contract limits do not claim
+confidentiality from hostile PHP running in the same WordPress process.
 
 Start with the [custom git vendor setup guide](docs/custom-git-vendors.md).
 
@@ -127,13 +137,15 @@ work is in neither record.
 - **Assisted Hooks add-on** — optionally sets up, checks, reconfigures and
   removes GitHub repository webhooks using a fine-grained token with Webhooks:
   Read and write permission. An administrator can paste a request-only token,
-  or select an eligible saved Core GitHub credential; Core passes the selected
-  secret into that one operation without granting the add-on sidecar access.
-  Core Add-on API 12 supplies the add-on with its narrow operation facade and
-  lets it enrich Core's existing GitHub repository
-  table and append a selected-repository operation panel through documented
-  WordPress hooks. When the add-on is absent, Core keeps the Assisted Hooks
-  affordance visible but disabled. Core and the add-on use the same
+  or select an eligible saved Core GitHub credential; the matching provider
+  resolves a saved token only inside its fixed operation, without granting the
+  add-on sidecar access. Core Add-on API 14 supplies the add-on with explicit
+  setup, check, reconfigure and remove methods; none accepts a callback that
+  could receive a saved credential or signing secret. The add-on can enrich
+  Core's existing GitHub repository table and append a selected-repository
+  operation panel through documented WordPress hooks. When the add-on is absent,
+  Core keeps the Assisted Hooks affordance visible but disabled. Core and the
+  add-on use the same
   provider-scoped, display-safe site and repository readiness result, including
   public HTTPS, repository identity and local signing-secret coverage. GitHub
   signing secrets are either bound to a canonical GitHub organization or user
@@ -144,15 +156,17 @@ work is in neither record.
   Replacing a secret remains a separate Core action. A saved local secret does
   not prove that a remote hook exists, so the add-on labels remote state as
   last observed. The add-on never enables Automatic deployment; manual webhook
-  setup remains available without it.
+  setup remains available without it. Each assisted operation rechecks the
+  stable repository identity with the same saved or request-only credential and
+  takes a target-keyed, non-persistent database lock before remote work.
 - **Release Deployments add-on** — contributes release status and actions to
   Core's managed Plugins and Themes tables and appends package-specific
   settings through the same bounded WordPress-native composition contract.
   Core renders the shared rows and controls; the add-on owns capability- and
   nonce-checked WordPress handlers, while Core's facade independently
   reauthorizes and performs mutations. When the selected updater runtime
-  supplies its internal prospective capability, Core publishes Prospective
-  Release API 4. Its local `supportedProviderCodes()` projection lets callers
+  supplies updater prospective API 4, Core publishes its independent
+  Prospective Release API 5. Its local `supportedProviderCodes()` projection lets callers
   keep unsupported providers out of the prospective workflow before any
   repository check. Callers explicitly choose the bounded `stable` or
   `prerelease` channel for discovery, inspection and installation; discovery
@@ -177,7 +191,7 @@ work is in neither record.
   native **Update** path for eligible newer releases. Exact installed-release
   Reinstall is intentionally unavailable because a safe durable post-mutation
   recovery contract was not justified; see the
-  [package-update decision register](docs/package-update-orchestration-decision-register.md).
+  [package update orchestration guide](docs/package-update-orchestration.md).
 - **Confirmed package removal** — the settings-page **Danger zone** separates
   **Unlink** (stop Booster management while preserving files and WordPress
   activation) from **Unlink and delete**. The latter is separately confirmed,
@@ -193,7 +207,9 @@ work is in neither record.
   use automatic setup. For containers or uncommon layouts, define an absolute
   `secrets.json` path outside the public web root on durable local storage whose
   immediate parent is owned by PHP, readable and writable by PHP, and mode
-  `0700`.
+  `0700`. File-backed profiles are structurally validated for display; their
+  current provider validity is checked only when the selected credential or
+  bounded webhook candidates are used.
 - A credentials restore requires the matching encrypted sidecar and
   `ran_booster_secrets_key_v1` database option from the same backup. Neither
   half is useful alone.
@@ -276,6 +292,23 @@ current product.
 | Diagnostics        | —                | On-demand, per-provider checks in Troubleshooting; nothing is persisted       |
 | Deployment history | —                | Bounded Deployment activity with a stable support reference for every attempt |
 
+For a webhook attempt, Activity also shows the provider's existing delivery
+identifier as **Provider request ID**. Use that only to cross-reference GitHub
+or Bitbucket delivery history, which remains authoritative for duration,
+response status, timeout, and redelivery. A timeout can occur after Booster has
+durably admitted work, while probes, ignored events, and zero-target deliveries
+may create no Activity row.
+
+GitHub does not automatically redeliver failed deliveries. For Bitbucket,
+enable Request History before you need it and treat its request UUID only as a
+cross-reference; do not assume it remains stable across automatic attempts.
+
+HMAC protects deployment authority after WordPress accepts the request; it does
+not protect the network, web server, PHP workers, or WordPress bootstrap from
+traffic. Keep both WordPress REST callback forms uncached and untransformed.
+Optional host or trusted-edge limits and current provider IP ranges are defence
+in depth and never replace HMAC.
+
 Switching a package from Branch to Published releases does not remove an
 existing provider webhook or local signing-secret setup. The release-managed
 package ignores pushes, but another branch-managed package using the same
@@ -326,8 +359,9 @@ a truthful history and a named support reference regardless of outcome:
   calls, and ten seconds. Its optional Logging capture is a single bounded,
   temporary file beside the credential sidecar, not a durable operational
   logging subsystem. Deployment activity shows bounded, redacted attempt
-  history. None of these surfaces stores raw webhook bodies, headers, or
-  credentials.
+  history and the existing Provider request ID for webhook attempts. None of
+  these surfaces stores raw webhook bodies, headers, provider-observed timing,
+  or credentials.
 
 The [package update orchestration guide](docs/package-update-orchestration.md)
 maps every release and branch trigger and Booster-to-WordPress handoff. The

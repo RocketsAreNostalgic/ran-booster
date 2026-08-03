@@ -6,7 +6,7 @@ the code classifies, verifies, and moves package blueprints and optional
 credential briefcases.
 
 Blueprint V1 is the uploaded or exported ZIP contract. It is distinct from the
-request-local [Portability API 1](portability-api.md), which lets a trusted
+request-local [Portability API 2](portability-api.md), which lets a trusted
 source bridge review and adopt one already-installed package without an archive
 or credential transfer.
 
@@ -219,8 +219,7 @@ Use the following mapping when a Transporter operation fails:
 
 ## What to read next
 
-- [Portability API 1](portability-api.md)
-- [Portability decision register](portability-decision-register.md)
+- [Portability API 2](portability-api.md)
 - [Deployment execution](deployment-execution.md)
 - [Provider extension contract](provider-extension-contract.md)
 - [Custom git vendor setup](custom-git-vendors.md)

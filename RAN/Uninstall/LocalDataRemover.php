@@ -77,7 +77,7 @@ class LocalDataRemover {
 		$this->debugCapture->deleteManagedStorage();
 		$this->secrets->deleteManagedStorage();
 		$this->clearScheduledWork();
-		$this->clearUpdaterCaches();
+		$this->clearUpdaterState();
 		$this->clearUserMetadata();
 		$this->dropTables();
 		$this->deleteOptions();
@@ -101,61 +101,22 @@ class LocalDataRemover {
 		}
 	}
 
-	protected function clearUpdaterCaches(): void {
-		if ( ! function_exists( 'delete_site_transient' ) || ! function_exists( 'get_site_transient' ) ) {
-			throw new RuntimeException( 'Booster update caches could not be removed.' );
+	protected function clearUpdaterState(): void {
+		if ( ! function_exists( 'delete_option' ) || ! function_exists( 'get_option' ) ) {
+			throw new RuntimeException( 'Booster updater state could not be removed.' );
 		}
 
-		foreach ( $this->packageUpdaterCacheKeys() as $transient ) {
-			delete_site_transient( $transient );
-			if ( false !== get_site_transient( $transient ) ) {
-				throw new RuntimeException( 'Booster update caches could not be removed.' );
-			}
+		$missing = new \stdClass();
+		$option  = $this->packageUpdaterAuthorityOption();
+		delete_option( $option );
+		if ( $missing !== get_option( $option, $missing ) ) {
+			throw new RuntimeException( 'Booster updater state could not be removed.' );
 		}
 	}
 
-	/** @return list<string> */
-	private function packageUpdaterCacheKeys(): array {
-		$keys            = array();
-		$pluginBasenames = array( 'ran-booster/ran-booster.php' );
-		$pluginFile      = dirname( __DIR__, 2 ) . '/ran-booster.php';
-		$wpVersion       = is_string( $GLOBALS['wp_version'] ?? null )
-			? $GLOBALS['wp_version']
-			: '6.5';
-
-		if ( function_exists( 'plugin_basename' ) ) {
-			$pluginBasename = plugin_basename( $pluginFile );
-			if ( is_string( $pluginBasename ) && '' !== $pluginBasename ) {
-				$pluginBasenames[] = strtolower( str_replace( '\\', '/', $pluginBasename ) );
-			}
-		}
-
-		foreach ( array_unique( $pluginBasenames ) as $pluginBasename ) {
-			foreach ( array( 'stable', 'prerelease' ) as $channel ) {
-				// Keep this identity aligned with NativePluginUpdater::cacheKey().
-				$currentIdentity = implode(
-					"\0",
-					array(
-						'RocketsAreNostalgic/ran-booster',
-						'unmanaged',
-						'plugin',
-						$pluginBasename,
-						'ran-booster',
-						$channel,
-						PHP_VERSION,
-						$wpVersion,
-						'public',
-					)
-				);
-				$keys[]          = 'ran_wp_gh_updater_v1_' . substr(
-					hash( 'sha256', $currentIdentity ),
-					0,
-					32
-				);
-			}
-		}
-
-		return array_values( array_unique( $keys ) );
+	private function packageUpdaterAuthorityOption(): string {
+		$target = implode( "\0", array( 'plugin', 'ran-booster', 'ran-booster.php' ) );
+		return 'ran_wp_gh_op_v1_' . substr( hash( 'sha256', $target ), 0, 32 );
 	}
 
 	protected function clearUserMetadata(): void {
@@ -209,13 +170,6 @@ class LocalDataRemover {
 
 		$missing = new \stdClass();
 		$options = self::OPTION_NAMES;
-		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
-			foreach ( $this->packageUpdaterCacheKeys() as $transient ) {
-				$options[] = '_site_transient_' . $transient;
-				$options[] = '_site_transient_timeout_' . $transient;
-			}
-		}
-
 		foreach ( array_values( array_unique( $options ) ) as $option ) {
 			delete_option( $option );
 			if ( $missing !== get_option( $option, $missing ) ) {
@@ -247,8 +201,6 @@ class LocalDataRemover {
 
 	private function assertCleanupCapabilities(): void {
 		if ( ! function_exists( 'wp_clear_scheduled_hook' )
-			|| ! function_exists( 'delete_site_transient' )
-			|| ! function_exists( 'get_site_transient' )
 			|| ! function_exists( 'delete_option' )
 			|| ! function_exists( 'get_option' )
 			|| ! isset( $this->database->prefix, $this->database->usermeta )

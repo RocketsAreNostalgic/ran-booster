@@ -160,12 +160,26 @@ class SecretsFile {
 			return array();
 		}
 
-		$profiles = array();
+		$providerCode = $this->providerValue( $provider );
+		$profiles     = array();
+		$records      = array();
+		$constant     = $this->constantCredential(
+			$providerCode,
+			$this->providerPolicies->credentialPolicy( $provider )
+		);
+		if ( null !== $constant ) {
+			$records[ self::CONSTANT_PROFILE ] = $constant;
+		}
 
-		foreach ( $this->credentialMaterials( $provider ) as $id => $record ) {
-			if ( 'temporary' === ( $record['source'] ?? null ) ) {
-				continue;
+		$document = $this->fileDocument();
+		foreach ( $document[ self::CREDENTIALS ][ $providerCode ] ?? array() as $id => $record ) {
+			$runtime = $this->runtimeCredentialRecord( $providerCode, $id, $record );
+			if ( ! $this->credentialDestroyed( $runtime ) ) {
+				$records[ $id ] = $runtime;
 			}
+		}
+
+		foreach ( $records as $id => $record ) {
 			$profiles[ $id ] = array(
 				'id'            => $id,
 				'provider'      => $record['provider'],
@@ -181,40 +195,6 @@ class SecretsFile {
 		}
 
 		return $profiles;
-	}
-
-	/**
-	 * Return complete credential records for internal provider adapters only.
-	 *
-	 * @return array<string, array<string, mixed>>
-	 */
-	public function credentialMaterials( ProviderCode|string $provider ): array {
-		$this->assertAvailable();
-		$policy       = $this->providerPolicies->credentialPolicy( $provider );
-		$providerCode = $this->providerValue( $provider );
-		$records      = array();
-		$constant     = $this->constantCredential( $providerCode, $policy );
-
-		if ( null !== $constant ) {
-			$records[ self::CONSTANT_PROFILE ] = $constant;
-		}
-
-		foreach ( $this->temporaryCredentials[ $providerCode ] ?? array() as $id => $record ) {
-			$records[ $id ] = $record;
-		}
-
-		$document = $this->fileDocument();
-		$stored   = $document[ self::CREDENTIALS ][ $providerCode ] ?? array();
-
-		foreach ( $stored as $id => $record ) {
-			$runtime = $this->runtimeCredentialRecord( $providerCode, $id, $record );
-			if ( $this->credentialDestroyed( $runtime ) ) {
-				continue;
-			}
-			$records[ $id ] = $runtime;
-		}
-
-		return $records;
 	}
 
 	/**
@@ -243,21 +223,62 @@ class SecretsFile {
 			if ( isset( $this->temporaryCredentials[ $providerCode ][ $id ] ) ) {
 				return $this->temporaryCredentials[ $providerCode ][ $id ];
 			}
+
+			$document = $this->fileDocument();
+			$record   = $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null;
+			if ( ! is_array( $record ) ) {
+				return null;
+			}
+
+			$runtime = $this->runtimeCredentialRecord( $providerCode, $id, $record );
+			if ( $this->credentialDestroyed( $runtime ) ) {
+				return null;
+			}
+
+			$runtime = $this->runtimeCredentialRecord(
+				$providerCode,
+				$id,
+				$this->revalidateStoredCredential( $providerCode, $id, $record )
+			);
+
+			return $runtime;
 		}
 
-		$materials = $this->credentialMaterials( $provider );
-
-		if ( null !== $id && '' !== trim( $id ) ) {
-			$id = trim( $id );
-
-			return $materials[ $id ] ?? null;
+		$constant = $this->constantCredential(
+			$providerCode,
+			$this->providerPolicies->credentialPolicy( $provider )
+		);
+		if ( null !== $constant ) {
+			return $constant;
 		}
 
-		if ( isset( $materials[ self::CONSTANT_PROFILE ] ) ) {
-			return $materials[ self::CONSTANT_PROFILE ];
+		$candidates = $this->temporaryCredentials[ $providerCode ] ?? array();
+		$document   = $this->fileDocument();
+		foreach ( $document[ self::CREDENTIALS ][ $providerCode ] ?? array() as $storedId => $record ) {
+			$runtime = $this->runtimeCredentialRecord( $providerCode, $storedId, $record );
+			if ( ! $this->credentialDestroyed( $runtime ) ) {
+				$candidates[ $storedId ] = $runtime;
+			}
+		}
+		if ( 1 !== count( $candidates ) ) {
+			return null;
 		}
 
-		return 1 === count( $materials ) ? reset( $materials ) : null;
+		$selectedId = (string) array_key_first( $candidates );
+		$selected   = $candidates[ $selectedId ];
+		if ( 'file' !== ( $selected['source'] ?? null ) ) {
+			return $selected;
+		}
+
+		return $this->runtimeCredentialRecord(
+			$providerCode,
+			$selectedId,
+			$this->revalidateStoredCredential(
+				$providerCode,
+				$selectedId,
+				$document[ self::CREDENTIALS ][ $providerCode ][ $selectedId ]
+			)
+		);
 	}
 
 	/**
@@ -360,23 +381,26 @@ class SecretsFile {
 		$this->assertAvailable();
 		$providerCode = $this->providerValue( $provider );
 		$id           = $this->writableId( $id, 'cred' );
+		$document     = $this->fileDocument();
+		$existing     = $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null;
+		$retainSecret = null === $secret || '' === $secret;
+		if ( $retainSecret ) {
+			if ( is_array( $existing ) ) {
+				$secret = $existing['secret'];
+				if ( ! array_key_exists( 'provider_destroy_on', $metadata ) && isset( $existing['provider_destroy_on'] ) ) {
+					$metadata['provider_destroy_on'] = $existing['provider_destroy_on'];
+				}
+			}
+		}
+		$record = $this->validateCredential( $providerCode, $id, $metadata, $secret );
 
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $metadata, $secret ): array {
-				$existing = $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null;
-				if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
-					$secret = $existing['secret'];
-					if ( ! array_key_exists( 'provider_destroy_on', $metadata ) && isset( $existing['provider_destroy_on'] ) ) {
-						$metadata['provider_destroy_on'] = $existing['provider_destroy_on'];
-					}
+			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $record, $existing ): array {
+				if ( ( $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null ) !== $existing ) {
+					throw new RuntimeException( 'Credential material changed while it was being validated.' );
 				}
 
-				$document[ self::CREDENTIALS ][ $providerCode ][ $id ] = $this->validateCredential(
-					$providerCode,
-					$id,
-					$metadata,
-					$secret
-				);
+				$document[ self::CREDENTIALS ][ $providerCode ][ $id ] = $record;
 
 				return array( $document, $id );
 			}
@@ -467,9 +491,32 @@ class SecretsFile {
 		}
 
 		$profiles     = array();
-		$providerCode = $provider instanceof ProviderCode ? $provider->value : ProviderCode::parse( $provider )->value;
+		$providerCode = $this->providerValue( $provider );
+		$records      = array();
+		$constant     = $this->constantWebhook(
+			$providerCode,
+			$this->providerPolicies->webhookPolicy( $provider )
+		);
+		if ( null !== $constant ) {
+			$records[ self::CONSTANT_PROFILE ] = $constant + array(
+				'id'        => self::CONSTANT_PROFILE,
+				'provider'  => $providerCode,
+				'source'    => 'constant',
+				'immutable' => true,
+			);
+		}
 
-		foreach ( $this->webhookMaterials( $provider ) as $id => $record ) {
+		$document = $this->fileDocument();
+		foreach ( $document[ self::WEBHOOKS ][ $providerCode ] ?? array() as $id => $record ) {
+			$records[ $id ] = $record + array(
+				'id'        => $id,
+				'provider'  => $providerCode,
+				'source'    => 'file',
+				'immutable' => false,
+			);
+		}
+
+		foreach ( $records as $id => $record ) {
 			$profiles[ $id ] = array(
 				'id'           => $id,
 				'provider'     => $providerCode,
@@ -520,6 +567,7 @@ class SecretsFile {
 		$stored   = $document[ self::WEBHOOKS ][ $providerCode ] ?? array();
 
 		foreach ( $stored as $id => $record ) {
+			$record         = $this->revalidateStoredWebhook( $providerCode, $id, $record );
 			$records[ $id ] = array(
 				'id'           => $id,
 				'provider'     => $providerCode,
@@ -552,29 +600,27 @@ class SecretsFile {
 		$this->assertAvailable();
 		$providerCode = $this->providerValue( $provider );
 		$id           = $this->writableId( $id, 'wh' );
+		$document     = $this->fileDocument();
+		$existing     = $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null;
+		if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
+			$secret = $existing['secret'];
+		}
+		$record = $this->validateWebhook( $providerCode, $id, $metadata, $secret );
+		if ( is_array( $existing ) ) {
+			foreach ( array( 'scope', 'target', 'authority_id', 'origin' ) as $immutable ) {
+				if ( ! hash_equals( (string) $existing[ $immutable ], (string) $record[ $immutable ] ) ) {
+					throw new RuntimeException( 'Webhook secret scope, target, authority and origin are immutable.' );
+				}
+			}
+			$record['revision'] = hash_equals( (string) $existing['secret'], (string) $record['secret'] )
+				? (int) $existing['revision']
+				: (int) $existing['revision'] + 1;
+		}
 
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $metadata, $secret ): array {
-				$existing = $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null;
-				if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
-					$secret = $existing['secret'];
-				}
-
-				$record = $this->validateWebhook(
-					$providerCode,
-					$id,
-					$metadata,
-					$secret
-				);
-				if ( is_array( $existing ) ) {
-					foreach ( array( 'scope', 'target', 'authority_id', 'origin' ) as $immutable ) {
-						if ( ! hash_equals( (string) $existing[ $immutable ], (string) $record[ $immutable ] ) ) {
-							throw new RuntimeException( 'Webhook secret scope, target, authority and origin are immutable.' );
-						}
-					}
-					$record['revision'] = hash_equals( (string) $existing['secret'], (string) $record['secret'] )
-						? (int) $existing['revision']
-						: (int) $existing['revision'] + 1;
+			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $record, $existing ): array {
+				if ( ( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null ) !== $existing ) {
+					throw new RuntimeException( 'Webhook material changed while it was being validated.' );
 				}
 
 				$records        = $document[ self::WEBHOOKS ][ $providerCode ] ?? array();
@@ -595,6 +641,34 @@ class SecretsFile {
 		return $this->mutate(
 			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id ): array {
 				if ( ! isset( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ) ) {
+					return array( $document, false, false );
+				}
+
+				unset( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] );
+				$this->removeEmptyProvider( $document[ self::WEBHOOKS ], $providerCode );
+
+				return array( $document, true );
+			}
+		);
+	}
+
+	/**
+	 * Delete a webhook only when the stored material still has the expected revision.
+	 *
+	 * @internal Core operation recovery only.
+	 */
+	public function deleteWebhookIfRevision( ProviderCode|string $provider, string $id, int $expectedRevision ): bool {
+		$this->assertAvailable();
+		$providerCode = $this->providerValue( $provider );
+		$this->assertWritableId( $id );
+		if ( $expectedRevision < 1 ) {
+			throw new RuntimeException( 'Webhook secret revision must be positive.' );
+		}
+
+		return $this->mutate(
+			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $expectedRevision ): array {
+				$record = $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null;
+				if ( ! is_array( $record ) || $expectedRevision !== (int) ( $record['revision'] ?? 0 ) ) {
 					return array( $document, false, false );
 				}
 
@@ -1312,20 +1386,9 @@ class SecretsFile {
 					$this->assertWritableId( $id );
 					if ( self::CREDENTIALS === $collection ) {
 						$this->assertOnlyKeys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
-						$normalised[ $collection ][ $provider ][ $id ] = $this->validateCredential(
-							$provider,
-							$id,
-							$record,
-							$record['secret'] ?? null
-						);
+						$normalised[ $collection ][ $provider ][ $id ] = $this->validateStoredCredential( $record );
 					} else {
-						$this->assertOnlyKeys( $record, array( 'label', 'scope', 'target', 'authority_id', 'revision', 'origin', 'secret' ), 'A provider webhook secret contains unsupported fields.' );
-						$normalised[ $collection ][ $provider ][ $id ] = $this->validateWebhook(
-							$provider,
-							$id,
-							$record,
-							$record['secret'] ?? null
-						);
+						$normalised[ $collection ][ $provider ][ $id ] = $this->validateStoredWebhook( $record );
 					}
 				}
 				ksort( $normalised[ $collection ][ $provider ], SORT_STRING );
@@ -1337,6 +1400,89 @@ class SecretsFile {
 		}
 
 		return $normalised;
+	}
+
+	/** @param array<string, mixed> $record */
+	private function validateStoredCredential( #[\SensitiveParameter] array $record ): array {
+		$this->assertOnlyKeys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
+		if ( ! is_array( $record['configuration'] ?? null ) ) {
+			throw new RuntimeException( 'A provider credential contains invalid configuration.' );
+		}
+
+		$selfDestruct      = $record['self_destruct'] ?? false;
+		$manualDestroyOn   = $record['destroy_on'] ?? null;
+		$providerDestroyOn = $record['provider_destroy_on'] ?? null;
+		if ( ! is_bool( $selfDestruct ) ) {
+			throw new RuntimeException( 'Credential self-destruction setting is invalid.' );
+		}
+
+		$validated = array(
+			'label'         => $this->requiredString( $record['label'] ?? null, 'Credential label' ),
+			'kind'          => $this->requiredString( $record['kind'] ?? null, 'Credential kind' ),
+			'configuration' => $record['configuration'],
+			'secret'        => $this->requiredString( $record['secret'] ?? null, 'Credential secret' ),
+		);
+		if ( $selfDestruct ) {
+			if ( null !== $manualDestroyOn ) {
+				$this->requireDate( $manualDestroyOn, 'Credential self-destruction date' );
+			}
+			if ( null !== $providerDestroyOn ) {
+				$this->requireDate( $providerDestroyOn, 'Credential provider expiry' );
+			}
+			if ( null === $manualDestroyOn && null === $providerDestroyOn ) {
+				throw new RuntimeException( 'Credential self-destruction requires an expiry date.' );
+			}
+
+			$validated['self_destruct'] = true;
+			if ( is_string( $manualDestroyOn ) ) {
+				$validated['destroy_on'] = $manualDestroyOn;
+			}
+			if ( is_string( $providerDestroyOn ) ) {
+				$validated['provider_destroy_on'] = $providerDestroyOn;
+			}
+		}
+
+		return $validated;
+	}
+
+	/** @param array<string, mixed> $record */
+	private function validateStoredWebhook( #[\SensitiveParameter] array $record ): array {
+		$this->assertOnlyKeys( $record, array( 'label', 'scope', 'target', 'authority_id', 'revision', 'origin', 'secret' ), 'A provider webhook secret contains unsupported fields.' );
+		$revision = $record['revision'] ?? 1;
+		$origin   = $record['origin'] ?? 'manual';
+		if ( ! is_int( $revision ) || $revision < 1 || ! is_string( $origin ) || ! in_array( $origin, array( 'manual', 'assisted' ), true ) ) {
+			throw new RuntimeException( 'Webhook profile metadata is invalid.' );
+		}
+
+		return array(
+			'label'        => $this->requiredString( $record['label'] ?? null, 'Webhook secret label' ),
+			'scope'        => $this->webhookScope( $record['scope'] ?? null ),
+			'target'       => isset( $record['target'] ) && is_string( $record['target'] ) ? $record['target'] : '',
+			'authority_id' => isset( $record['authority_id'] ) && is_string( $record['authority_id'] ) ? $record['authority_id'] : '',
+			'revision'     => $revision,
+			'origin'       => $origin,
+			'secret'       => $this->webhookSecretValue( $record['secret'] ?? null ),
+		);
+	}
+
+	/** @param array<string, mixed> $record */
+	private function revalidateStoredCredential( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
+		$validated = $this->validateCredential( $provider, $id, $record, $record['secret'] ?? null );
+		if ( $validated !== $record ) {
+			throw new RuntimeException( 'Stored provider credential material is no longer canonical under the current policy.' );
+		}
+
+		return $validated;
+	}
+
+	/** @param array<string, mixed> $record */
+	private function revalidateStoredWebhook( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
+		$validated = $this->validateWebhook( $provider, $id, $record, $record['secret'] ?? null );
+		if ( $validated !== $record ) {
+			throw new RuntimeException( 'Stored provider webhook material is no longer canonical under the current policy.' );
+		}
+
+		return $validated;
 	}
 
 	/** @return array<string, mixed> */

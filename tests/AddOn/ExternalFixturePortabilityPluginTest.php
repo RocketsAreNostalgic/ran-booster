@@ -13,19 +13,17 @@ use RAN\AddOn\Portability\PortabilityApplyResult;
 use RAN\AddOn\Portability\PortabilityCandidate;
 use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\AddOn\Portability\PortabilityReviewResult;
-use Tests\Support\NullLoggingFacade;
 
 final class ExternalFixturePortabilityPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testFixtureLoadedBeforeCoreReceivesOnlyExactApiOneFacades(): void {
+	public function testFixtureLoadedBeforeCoreReceivesOnlyExactApiTwoFacade(): void {
 		$this->loadFixture();
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 1 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 
 		$this->runHook( 'plugins_loaded' );
-		$this->runHook( 'ran_booster_portability_ready', $this->facade(), new NullLoggingFacade() );
+		$this->runHook( 'ran_booster_portability_ready', $this->facade() );
 
 		$this->assertFixtureResults();
 	}
@@ -33,12 +31,11 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testFixtureLoadedAfterCoreUsesTheSameExactContract(): void {
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 1 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 		$this->loadFixture();
 
 		$this->runHook( 'plugins_loaded' );
-		$this->runHook( 'ran_booster_portability_ready', $this->facade(), new NullLoggingFacade() );
+		$this->runHook( 'ran_booster_portability_ready', $this->facade() );
 
 		$this->assertFixtureResults();
 	}
@@ -51,8 +48,7 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_portability_ready', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
-		define( 'RAN_BOOSTER_LOGGING_API_VERSION', 1 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 1 );
 		$this->loadFixture();
 		$this->runHook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_portability_ready', $GLOBALS['ran_booster_external_fixture_addon_actions'] );

@@ -12,7 +12,7 @@ use LogicException;
  */
 final class GitHubReleaseUpdaterBootstrap {
 
-	public const UPDATER_PROSPECTIVE_API_VERSION = 3;
+	public const UPDATER_PROSPECTIVE_API_VERSION = 4;
 
 	private const PACKAGE_BOOTSTRAP     = '/vendor/ran/wp-github-release-updater/bootstrap.php';
 	private const PROSPECTIVE_PREFLIGHT = 'RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\ReleaseCandidatePreflight';

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Storage;
 
 use PHPUnit\Framework\TestCase;
+use RAN\Plugin;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
 
@@ -18,8 +19,27 @@ final class PluginRepositoryTest extends TestCase {
 
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_plugin_repository_test_plugins'] = array(
-			'example/example.php' => array( 'Name' => 'Example' ),
+			'example/example.php' => array(
+				'Name'        => 'Example',
+				'PluginURI'   => 'https://example.test/plugin',
+				'Version'     => '1.0.0',
+				'Description' => 'Example plugin.',
+				'Author'      => 'Example',
+				'AuthorURI'   => 'https://example.test',
+				'TextDomain'  => 'example',
+				'DomainPath'  => '',
+				'Network'     => false,
+				'Title'       => 'Example',
+				'AuthorName'  => 'Example',
+			),
 		);
+	}
+
+	public function testSlugHydrationDoesNotRequireAGlobalContainer(): void {
+		$plugin = ( new PluginRepository() )->fromSlug( 'example' );
+
+		self::assertInstanceOf( Plugin::class, $plugin );
+		self::assertSame( 'example/example.php', $plugin->getIdentifier() );
 	}
 
 	public function testMissingSlugThrowsInsteadOfCreatingAnEmptyPluginIdentity(): void {

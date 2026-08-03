@@ -42,7 +42,6 @@ use Tests\Secrets\SecretsFileTestFactory;
 use Tests\Support\CredentialUsageDatabase;
 use Tests\Support\InMemoryCredentialExpiryObservationStore;
 use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
-use Tests\Support\NullLoggingFacade;
 
 // Direct local filesystem operations exercise the encrypted sidecar fixture.
 // phpcs:disable WordPress.WP.AlternativeFunctions
@@ -71,7 +70,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 		$policies        = new ProviderSecretPolicyCatalog();
 		$this->secrets   = SecretsFileTestFactory::create( $this->path, array(), $policies );
-		$this->providers = new ProviderRegistry( new NullLoggingFacade(), array( $this->provider() ), $policies );
+		$this->providers = new ProviderRegistry( array( $this->provider() ), $policies );
 
 		$this->updaterLock = $this->createStub( WordPressUpdaterLock::class );
 		$this->updaterLock->method( 'acquire' )->willReturn( 'credential-fixture-lock' );

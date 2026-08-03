@@ -13,6 +13,8 @@ use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\PackageUpdateProgressController;
 use RAN\Booster;
+use RAN\Internal\CoreContainer;
+use RAN\RepositoryProvider\ProviderRegistry;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
@@ -272,28 +274,25 @@ final class BoosterAssetsTest extends TestCase {
 	}
 
 	public function testProviderTabDetectionUsesRegisteredAdministrationMetadata(): void {
-		$booster = new class() extends Booster {
+		$container = new CoreContainer();
+		$container->bind(
+			ProviderRegistry::class,
+			new class() {
+
+				/** @return list<object> */
+				public function administrationMetadata(): array {
+					return array(
+						(object) array(
+							'code' => \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ),
+						),
+					);
+				}
+			}
+		);
+		$booster = new class( $container ) extends Booster {
 
 			public function providerTab( ?string $tab ): bool {
 				return $this->isProviderAdminTab( $tab );
-			}
-
-			public function make( $alias ) {
-				if ( \RAN\RepositoryProvider\ProviderRegistry::class === $alias ) {
-					return new class() {
-
-						/** @return list<object> */
-						public function administrationMetadata(): array {
-							return array(
-								(object) array(
-									'code' => \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ),
-								),
-							);
-						}
-					};
-				}
-
-				return parent::make( $alias );
 			}
 		};
 
@@ -414,7 +413,8 @@ final class BoosterAssetsTest extends TestCase {
 		bool $backgroundFailureNoticeVisible = false,
 		bool $expiryNoticeDismissible = true
 	): Booster {
-		$booster                                 = new class() extends Booster {
+		$container = new CoreContainer();
+		$booster   = new class( $container ) extends Booster {
 
 			public bool $expiryNoticeVisible            = false;
 			public bool $expiryNoticeDismissible        = true;
@@ -423,48 +423,41 @@ final class BoosterAssetsTest extends TestCase {
 			protected function isProviderAdminTab( ?string $tab ): bool {
 				return in_array( $tab, array( 'gh', 'bb' ), true );
 			}
-
-			public function make( $alias ) {
-				if ( CredentialExpiryNotice::class === $alias ) {
-					return new class( $this->expiryNoticeVisible, $this->expiryNoticeDismissible ) {
-
-						public function __construct( private bool $visible, private bool $dismissible ) {
-						}
-
-						public function shouldLoadDismissalScript(): bool {
-							return $this->visible && $this->dismissible;
-						}
-					};
-				}
-
-				if ( BackgroundDeploymentFailureNotice::class === $alias ) {
-					return new class( $this->backgroundFailureNoticeVisible ) {
-
-						public function __construct( private bool $visible ) {
-						}
-
-						public function shouldRender(): bool {
-							return $this->visible;
-						}
-					};
-				}
-
-				if ( 'RAN\\Admin\\ProviderSettingsPresenter' === $alias ) {
-					return new class() {
-
-						/** @return array{default_provider: string, providers: array<string, mixed>} */
-						public function buildPackageForm(): array {
-							return array(
-								'default_provider' => 'gh',
-								'providers'        => array( 'gh' => array( 'label' => 'GitHub' ) ),
-							);
-						}
-					};
-				}
-
-				return parent::make( $alias );
-			}
 		};
+		$container->bind(
+			CredentialExpiryNotice::class,
+			static fn (): object => new class( $booster->expiryNoticeVisible, $booster->expiryNoticeDismissible ) {
+				public function __construct( private bool $visible, private bool $dismissible ) {
+				}
+
+				public function shouldLoadDismissalScript(): bool {
+					return $this->visible && $this->dismissible;
+				}
+			}
+		);
+		$container->bind(
+			BackgroundDeploymentFailureNotice::class,
+			static fn (): object => new class( $booster->backgroundFailureNoticeVisible ) {
+				public function __construct( private bool $visible ) {
+				}
+
+				public function shouldRender(): bool {
+					return $this->visible;
+				}
+			}
+		);
+		$container->bind(
+			'RAN\\Admin\\ProviderSettingsPresenter',
+			new class() {
+				/** @return array{default_provider: string, providers: array<string, mixed>} */
+				public function buildPackageForm(): array {
+					return array(
+						'default_provider' => 'gh',
+						'providers'        => array( 'gh' => array( 'label' => 'GitHub' ) ),
+					);
+				}
+			}
+		);
 		$booster->boosterPath                    = dirname( __DIR__, 2 );
 		$booster->boosterUrl                     = 'https://example.test/wp-content/plugins/ran-booster';
 		$booster->expiryNoticeVisible            = $expiryNoticeVisible;

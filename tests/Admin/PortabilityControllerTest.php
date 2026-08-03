@@ -542,7 +542,7 @@ final class PortabilityControllerTest extends TestCase {
 		$themes->method( 'hasManagementRecord' )->willReturn( false );
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$provider = new TemporaryCredentialProvider( $secrets->credentialsFor( 'gh' ), 0, 'repository-id' );
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $provider ), $catalog );
+		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
 		$application = new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),

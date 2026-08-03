@@ -267,13 +267,19 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 	}
 
-	public function testWebhookProcessingAndRouteRegistrationStayUnavailable(): void {
+	public function testWebhookProcessingStaysUnavailableWhenAnInertRouteIsRegisteredDirectly(): void {
 		$processor = new WebhookProcessor(
 			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class ),
 			$this->blank( DeploymentCoordinator::class ),
 			$this->blank( SignedWebhookVerifier::class )
 		);
-		$response  = $processor->handle( 'gh', 'credential-canary', array() );
+		$response  = $processor->handle(
+			'gh',
+			static fn (): array => array(
+				'body'    => 'credential-canary',
+				'headers' => array(),
+			)
+		);
 
 		self::assertSame( 503, $response->getStatus() );
 		self::assertSame(
@@ -282,7 +288,8 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 
 		( new WebhookController( $processor ) )->registerRoutes();
-		self::assertTrue( true );
+		self::assertCount( 1, $GLOBALS['ran_booster_rest_routes'] );
+		self::assertSame( 'ran-booster/v1', $GLOBALS['ran_booster_rest_routes'][0]['namespace'] );
 	}
 
 	private function releaseTrackingFacade(): NativeReleaseTrackingFacade {

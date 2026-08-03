@@ -143,7 +143,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 	}
 
 	private function dispatcher( Dashboard $dashboard, SecretsStorageProvisioner $provisioner ): Dispatcher {
-		$providers = new ProviderRegistry( new \Tests\Support\NullLoggingFacade() );
+		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
 

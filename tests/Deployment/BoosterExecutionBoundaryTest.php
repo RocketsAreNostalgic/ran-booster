@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\Deployment\DeploymentWorker;
+use RAN\Internal\CoreContainer;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -16,25 +17,26 @@ use RAN\Webhook\WebhookController;
 final class BoosterExecutionBoundaryTest extends TestCase {
 
 	public function testCronCallbackUpgradesSchemaBeforeRunningWorker(): void {
-		$calls   = array();
-		$booster = new Booster();
-		$booster->bind( Database::class, new ExecutionBoundaryDatabase( $calls ) );
-		$booster->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
+		$calls     = array();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( Database::class, new ExecutionBoundaryDatabase( $calls ) );
+		$container->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
 
 		$booster->runDeploymentWorker();
 
 		self::assertSame( array( 'schema', 'worker' ), $calls );
 	}
 
-	public function testRestCallbackUpgradesSchemaBeforeRegisteringRoutes(): void {
-		$calls   = array();
-		$booster = new Booster();
-		$booster->bind( Database::class, new ExecutionBoundaryDatabase( $calls ) );
-		$booster->bind( WebhookController::class, new ExecutionBoundaryWebhookController( $calls ) );
+	public function testRestCallbackRegistersRoutesWithoutTouchingSchema(): void {
+		$calls     = array();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( WebhookController::class, new ExecutionBoundaryWebhookController( $calls ) );
 
 		$booster->registerWebhookRoutes();
 
-		self::assertSame( array( 'schema', 'routes' ), $calls );
+		self::assertSame( array( 'routes' ), $calls );
 	}
 
 	/** @return array<string, array{DatabaseCompatibilityFailure|DatabaseLifecycleFailure}> */
@@ -49,35 +51,15 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 	public function testDatabaseSafeStateStopsWorkerWithoutLeakingTheFailure(
 		DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
 	): void {
-		$calls   = array();
-		$booster = new Booster();
-		$booster->bind( Database::class, new BlockedExecutionBoundaryDatabase( $calls, $failure ) );
-		$booster->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
+		$calls     = array();
+		$container = new CoreContainer();
+		$booster   = new Booster( $container );
+		$container->bind( Database::class, new BlockedExecutionBoundaryDatabase( $calls, $failure ) );
+		$container->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
 
 		$booster->runDeploymentWorker();
 
 		self::assertSame( array( 'schema' ), $calls );
-	}
-
-	#[DataProvider( 'databaseSafeStateProvider' )]
-	public function testDatabaseSafeStateKeepsWebhookRouteRegisteredWhileStorageRemainsGuarded(
-		DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
-	): void {
-		$calls    = array();
-		$booster  = new Booster();
-		$database = new BlockedExecutionBoundaryDatabase( $calls, $failure );
-		$booster->bind( Database::class, $database );
-		$booster->bind( WebhookController::class, new ExecutionBoundaryWebhookController( $calls ) );
-
-		$booster->registerWebhookRoutes();
-
-		self::assertSame( array( 'schema', 'routes' ), $calls );
-		try {
-			$database->requireReady();
-			self::fail( 'The registered route must retain the shared storage safe state.' );
-		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure $guardFailure ) {
-			self::assertSame( $failure, $guardFailure );
-		}
 	}
 }
 

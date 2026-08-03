@@ -629,7 +629,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 	): BulkPackageActionService {
 		$policies = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( null, array(), $policies );
-		$registry = new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array(), $policies );
+		$registry = new ProviderRegistry( array(), $policies );
 		if ( $registerProvider ) {
 			$registry->register( new ExternalFixtureProvider( 'fixture' ) );
 		}

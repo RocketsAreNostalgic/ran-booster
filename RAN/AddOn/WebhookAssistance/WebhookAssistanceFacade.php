@@ -4,40 +4,30 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\WebhookAssistance;
 
+use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
+use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+
+/** Fixed ordinary-add-on surface for repository-webhook-management/1. */
 interface WebhookAssistanceFacade {
 
 	public function readiness( string $providerCode ): AssistanceReadiness;
-
 	public function target( string $providerCode, string $repositoryId ): ?AssistanceTarget;
-
-	/**
-	 * Return display-safe file-backed credentials available to this add-on.
-	 *
-	 * @return list<array{id:string,label:string,kind:string,destroy_on:?string}>
-	 */
+	/** @return list<array{id:string,label:string,kind:string,destroy_on:?string}> */
 	public function credentialChoices( string $providerCode ): array;
-
-	/**
-	 * Resolve one currently eligible saved credential only for the supplied
-	 * request callback. The secret must not be retained after the callback.
-	 *
-	 * @template TResult
-	 * @param callable(#[\SensitiveParameter] string): TResult $operation
-	 * @return TResult|null
-	 */
-	public function withCredential( string $providerCode, string $credentialId, callable $operation ): mixed;
-
-	/**
-	 * @param callable(string, #[\SensitiveParameter] string, int): ProvisioningCallbackResult $createRemoteHook
-	 */
-	public function provision( AssistanceTarget $target, callable $createRemoteHook ): ProvisioningResult;
-
 	public function profile( string $providerCode, string $repositoryId, string $profileId ): ?WebhookProfileMetadata;
+	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult;
 
-	/**
-	 * @param callable(string, #[\SensitiveParameter] string, int): ProvisioningCallbackResult $updateRemoteHook
-	 */
-	public function reconfigure( AssistanceTarget $target, string $recordedProfileId, callable $updateRemoteHook ): ProvisioningResult;
+	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult;
 
-	public function releaseProfile( string $providerCode, string $repositoryId, string $profileId ): bool;
+	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult;
+
+	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult;
+
+	public function setup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult;
+
+	public function check( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult;
+
+	public function reconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult;
+
+	public function remove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult;
 }

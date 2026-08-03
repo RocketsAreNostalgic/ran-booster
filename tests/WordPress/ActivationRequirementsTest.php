@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\Deployment\WordPressWorkerWakeup;
+use RAN\Internal\CoreContainer;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -33,11 +34,12 @@ final class ActivationRequirementsTest extends TestCase {
 
 	#[DataProvider( 'unsupportedEnvironmentProvider' )]
 	public function testUnsupportedFreshActivationStopsBeforeDatabaseOrWakeupSideEffects( bool $sodium, bool $multisite, string $message ): void {
-		$database = new ActivationRequirementsDatabase();
-		$wakeup   = new ActivationRequirementsWakeup();
-		$booster  = new ActivationRequirementsBooster( $sodium, $multisite );
-		$booster->bind( 'RAN\Storage\Database', $database );
-		$booster->bind( WordPressWorkerWakeup::class, $wakeup );
+		$database  = new ActivationRequirementsDatabase();
+		$wakeup    = new ActivationRequirementsWakeup();
+		$container = new CoreContainer();
+		$booster   = new ActivationRequirementsBooster( $container, $sodium, $multisite );
+		$container->bind( 'RAN\Storage\Database', $database );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
 		try {
 			$booster->activate();
@@ -62,11 +64,12 @@ final class ActivationRequirementsTest extends TestCase {
 	public function testDatabaseFailureStopsFreshActivationThroughWpDieBeforeWakeup(
 		DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
 	): void {
-		$database = new FailingActivationDatabase( $failure );
-		$wakeup   = new ActivationRequirementsWakeup();
-		$booster  = new ActivationRequirementsBooster( true, false );
-		$booster->bind( Database::class, $database );
-		$booster->bind( WordPressWorkerWakeup::class, $wakeup );
+		$database  = new FailingActivationDatabase( $failure );
+		$wakeup    = new ActivationRequirementsWakeup();
+		$container = new CoreContainer();
+		$booster   = new ActivationRequirementsBooster( $container, true, false );
+		$container->bind( Database::class, $database );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
 		try {
 			$booster->activate();
@@ -82,10 +85,11 @@ final class ActivationRequirementsTest extends TestCase {
 	public function testActiveWpPusherStopsActivationBeforeDatabaseOrWakeupSideEffects(): void {
 		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
 		$database                                        = new ActivationRequirementsDatabase();
-		$wakeup  = new ActivationRequirementsWakeup();
-		$booster = new ActivationRequirementsBooster( true, false );
-		$booster->bind( 'RAN\Storage\Database', $database );
-		$booster->bind( WordPressWorkerWakeup::class, $wakeup );
+		$wakeup    = new ActivationRequirementsWakeup();
+		$container = new CoreContainer();
+		$booster   = new ActivationRequirementsBooster( $container, true, false );
+		$container->bind( 'RAN\Storage\Database', $database );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
 		try {
 			$booster->activate();
@@ -101,9 +105,11 @@ final class ActivationRequirementsTest extends TestCase {
 
 final class ActivationRequirementsBooster extends Booster {
 	public function __construct(
+		CoreContainer $container,
 		private readonly bool $sodium,
 		private readonly bool $multisite
 	) {
+		parent::__construct( $container );
 	}
 
 	protected function sodiumAvailable(): bool {

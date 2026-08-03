@@ -21,7 +21,6 @@ final class AdminTabRegistryTest extends TestCase {
 	public function testRegistryCombinesProviderMetadataWithFixedPageDefinitions(): void {
 		$registry = new AdminTabRegistry(
 			new ProviderRegistry(
-				new \Tests\Support\NullLoggingFacade(),
 				array(
 					$this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ),
 					$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ),
@@ -60,7 +59,7 @@ final class AdminTabRegistryTest extends TestCase {
 	#[DataProvider( 'invalidRequestedTabProvider' )]
 	public function testInvalidRequestedTabsUseTheShippedDefaultWithoutFilenameDerivation( mixed $requested ): void {
 		$registry = new AdminTabRegistry(
-			new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ) ) )
+			new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ) ) )
 		);
 
 		$resolved = $registry->resolve( $requested );
@@ -78,7 +77,7 @@ final class AdminTabRegistryTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Metadata only', 'https://example.test/', 'Owner' );
 			}
 		};
-		$registry     = new AdminTabRegistry( new ProviderRegistry( new \Tests\Support\NullLoggingFacade(), array( $metadataOnly ) ) );
+		$registry     = new AdminTabRegistry( new ProviderRegistry( array( $metadataOnly ) ) );
 
 		self::assertSame(
 			array( 'overview', 'portability', 'documentation', 'troubleshooting' ),

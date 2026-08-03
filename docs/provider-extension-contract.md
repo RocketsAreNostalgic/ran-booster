@@ -1,6 +1,6 @@
 # Provider extension contract
 
-RAN Booster Provider API 6 accepts trusted repository providers through its late
+RAN Booster Provider API 8 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading:
 
@@ -9,13 +9,9 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 6 !== RAN_BOOSTER_PROVIDER_API_VERSION
-			|| ! defined( 'RAN_BOOSTER_LOGGING_API_VERSION' )
-			|| 1 !== RAN_BOOSTER_LOGGING_API_VERSION ) {
+			|| 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
-
-		$logging = $registry->logging();
 
 		$registry->registerWithCredentialStore(
 			'example',
@@ -25,21 +21,14 @@ add_action(
 );
 ```
 
-Provider API 6 and Logging API 1 are separate from the administration
-composition contract. Logging API 1 exposes the shared
-`ProviderRegistry::logging()` seam and returns the narrow
-`RAN\AddOn\Logging\LoggingFacade` supplied to operational add-ons through their
-service-ready actions. Use it for bounded operational failures and outcomes
-only. It preserves Core's
-`WP_DEBUG_LOG` gate, temporary capture and safe context allowlist; it does not
-write Deployment Activity records and must never receive credentials, tokens,
-webhook payloads or raw upstream responses.
-
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 6
-and Logging API 1. Provider API 6 makes `LoggingFacade` the first required
-`ProviderRegistry` constructor dependency; Core never constructs the registry
-with a missing or implicit no-op logger.
+registration action can run. The callback must check for exact Provider API 8.
+`Requires Plugins: ran-booster` only tells WordPress about the package
+dependency; it does not replace this exact runtime marker check or make a
+mismatched provider contract safe.
+Provider API 8 publishes no logging facade, generic resolver or Core container.
+Providers report bounded diagnostics and operation results; Core owns logging
+for failures inside Core-owned code.
 Booster fires the action once on `plugins_loaded` at priority 100, after plugin
 files have loaded and before the dashboard, dispatcher, repository picker or
 webhook controller is resolved. It then seals the registry. This works whether
@@ -51,10 +40,14 @@ a newly activated provider becomes available on the next request.
 stored credentials. Booster verifies that the requested code is novel before it
 issues a read-only store bound to that code, then verifies that the returned
 provider uses the same code before atomic registration. The store has no
-provider argument, write methods, path access, profile-record access or
-webhook-secret access. It exposes only `hasWebhookProfile()` for display-safe
-diagnostic readiness, so a retained store cannot cross provider namespaces. The
-factory and provider
+provider argument, write methods, path access or webhook-secret access. It
+exposes display-safe `credentialProfiles()`, one selected/default
+`credentialMaterial()` read and boolean `hasWebhookProfile()` readiness, so a
+retained store cannot cross provider namespaces. Repeated exact reads mean an
+activated credential-bearing provider is trusted with all credentials saved
+under its code. Core does not authenticate the provider publisher, and cannot
+control private provider logging or exfiltration after authorized disclosure.
+The factory and provider
 constructor must remain local and non-I/O and must not read the store during
 construction: its provider policy becomes active only after the factory returns
 successfully. Validators, discovery clients and archive clients may retain the
@@ -66,6 +59,54 @@ exception. A rejected provider publishes neither provider nor policy state, so
 the same provider code may be corrected and registered again during the same
 registration window.
 
+### Optional repository-webhook operation
+
+A provider may implement both `RepositoryWebhookFitness` and
+`RepositoryWebhookManagement` for the exact operation
+`repository-webhook-management/1`. These interfaces expose only the four
+closed actions `setup`, `check`, `reconfigure` and `remove`, with matching
+read-only `assess*` methods. There is no operation dispatcher, callable,
+provider client, transport or credential handle in the public contract.
+
+Saved credential IDs are display-safe inputs. The provider resolves their
+plaintext only through its already-bound `ProviderCredentialStore` and only
+inside the selected fixed call. A request-only credential is a separate
+explicit sensitive parameter for both assessment and execution of that call and
+is never persisted or returned. Exactly one saved ID or request-only value is
+accepted. Only setup and reconfigure receive the Core-held signing secret.
+
+Immediately before each management call, Core invokes the matching read-only
+assessment with the same credential source. The provider must remotely compare
+the repository locator with the stable repository ID supplied by Core. Execution
+continues only for `supported`, `suitable|unknown` and
+`observed|inferred|unknown_by_design` evidence. A mismatch is `insufficient`;
+unavailable or stale evidence fails closed before remote mutation. Fitness does
+not otherwise grant execution authority, and its one-call budget remains
+separate from the fixed management budget.
+
+Check and remove deliberately receive Core's canonical callback URL as well as
+the recorded hook ID. This is the minimum input needed for the provider to
+prove that the exact remote hook is owned by the selected Core target before
+readback or mutation; the URL is not a configurable transport seam.
+
+`RepositoryWebhookFitnessResult` and `RepositoryWebhookOperationResult` admit
+only bounded, closed, non-secret evidence. Setup and reconfigure can establish
+`configured_pending_delivery`, not delivery verification. Remove confirms
+success only after exact `404` absence readback. Providers must preserve the
+documented call, byte and timeout ceilings in the
+[fitness characterization](characterization/provider-owned-repository-webhook-fitness.md).
+
+Core serializes each target's assisted operations with a nonblocking advisory
+database lock keyed by provider code and stable repository ID. The lock has no
+table, option, file or durable record; contention fails before local or remote
+mutation. If explicit release is uncertain, primary failed, ambiguous, partial
+or confirmed-absence evidence is preserved; only an otherwise successful
+non-absence result becomes `operation_lock_release_failed`. A sole existing
+endpoint found during setup is not adopted because
+its signing secret is unreadable. The result is recovery-required and omits the
+hook ID so it cannot seed a later assisted removal; only explicit reconfigure
+may replace that secret.
+
 ## Required provider surface
 
 Every provider implements `RepositoryProvider`. That contract directly requires
@@ -74,7 +115,8 @@ archive preparation: every registered provider therefore has a useful manual
 install/update path. Metadata supplies an open, stable `ProviderCode`; IDs start
 with a lowercase ASCII letter and may be followed by up to 31 lowercase ASCII
 letters, digits or hyphens.
-The built-in page IDs `documentation` and `troubleshooting` are reserved.
+The built-in page IDs `overview`, `documentation`, `troubleshooting` and
+`portability` are reserved.
 
 Provider admin metadata is rendered directly after construction, so its typed
 constructors enforce the display-safety boundary. Labels are limited to 160
@@ -247,7 +289,11 @@ constants that provider understands, and converts those constants into the same
 canonical credential record. This keeps the sidecar's file operations atomic
 and provider-neutral while preventing unknown provider IDs from reaching file
 inclusion or secret decoding. Credential policy lookup during registration is a
-local, non-I/O operation.
+local, non-I/O operation. File-backed display and storage checks are Core-only
+structural operations. Core revalidates only the selected, non-expired stored
+credential under its current provider policy immediately before delivery, and
+provider callbacks never run while Core holds the sidecar lock. A displayed
+file-backed profile is stored; its provider validity is checked on use.
 
 Webhook support remains optional. A webhook-capable provider implements
 `WebhookNormalizer`, whose `getWebhookPolicy()` returns its
@@ -257,6 +303,11 @@ declares any supported deployment constants. Signature ambiguity and semantic
 header validation remain inside the provider normalizer. Booster retains no
 authorization or unplanned request headers, and it passes only the selected
 provider's declared headers to that normalizer.
+
+Core structurally reads webhook profiles for display. Before signature
+verification it revalidates only the requested provider's bounded candidate set
+under the current webhook policy, outside the sidecar lock. Each provider
+remains limited to 16 stored webhook profiles.
 
 Webhook signing-secret scope codes are universally `owner` or `repository`.
 Providers may relabel `owner` for their interface—for example **GitHub Owner**

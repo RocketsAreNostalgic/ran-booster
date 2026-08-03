@@ -12,7 +12,7 @@ namespace RAN\Admin\Interaction;
  */
 interface AdminInteractionFacade {
 
-	public const API_VERSION = 1;
+	public const API_VERSION = 2;
 
 	public function renderFormAttributes( AdminInteractionRequest $request ): void;
 

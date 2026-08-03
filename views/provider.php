@@ -225,7 +225,7 @@ foreach ( $credential_profiles as $profileIndex => $profile ) {
 		)
 		: __( 'Usage unavailable', 'ran-booster' );
 	$healthLabel      = $profile['configured']
-		? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Saved', 'ran-booster' ) )
+		? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Stored · Validity checked on use', 'ran-booster' ) )
 		: __( 'Not configured', 'ran-booster' );
 	$statusKey        = $profile['configured']
 		&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'error' )
@@ -605,10 +605,11 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 	<?php if ( 'overview' === $providerView ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
 		<section class="ran-booster-provider-section" aria-labelledby="ran-booster-access-tokens-heading">
-			<header class="ran-booster-provider-section__header">
-				<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
-				<p class="ran-booster-section__description"><?php echo esc_html( $provider['capabilities']['browse'] ? __( 'Saved credentials provide access to private repositories. Public repository discovery does not require one.', 'ran-booster' ) : __( 'Saved credentials provide access to private repositories entered manually.', 'ran-booster' ) ); ?></p>
-			</header>
+				<header class="ran-booster-provider-section__header">
+					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
+					<p class="ran-booster-section__description"><?php echo esc_html( $provider['capabilities']['browse'] ? __( 'Saved credentials provide access to private repositories. Public repository discovery does not require one.', 'ran-booster' ) : __( 'Saved credentials provide access to private repositories entered manually.', 'ran-booster' ) ); ?></p>
+					<p class="ran-booster-section__description"><?php echo esc_html( sprintf( /* translators: 1: provider label, 2: provider code. */ __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider['label'], $provider['code'] ) ); ?></p>
+				</header>
 			<div class="ran-booster-provider-section__body">
 				<?php
 				$statusSummaryRenderer->render(
@@ -794,6 +795,7 @@ $renderWebhookCell              = static function ( array $profile, string $colu
 								<article><span>2</span><strong><?php echo esc_html( $createProviderWebhookLabel ); ?></strong><p><?php esc_html_e( 'Paste the payload URL and shared secret, keep SSL verification enabled, and select the configured push event.', 'ran-booster' ); ?></p></article>
 								<article><span>3</span><strong><?php esc_html_e( 'Verify before enabling', 'ran-booster' ); ?></strong><p><?php esc_html_e( 'Send a real delivery, confirm a successful provider response, then enable Automatic from package settings.', 'ran-booster' ); ?></p></article>
 							</div>
+							<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare provider delivery history with the Provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' ) ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p></div>
 							<dl class="ran-booster-webhook-endpoint">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>

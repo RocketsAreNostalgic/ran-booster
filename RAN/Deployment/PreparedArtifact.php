@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use RAN\Logging\BoosterLogger;
+use RAN\WPGitHubReleaseUpdater\V1\Artifact\ClaimedArtifact;
 use RuntimeException;
 
 /**
@@ -13,6 +14,10 @@ use RuntimeException;
 final class PreparedArtifact {
 
 	private bool $cleaned = false;
+
+	private bool $verified = false;
+
+	private bool $transferred = false;
 
 	public function __construct(
 		private readonly string $path,
@@ -57,17 +62,12 @@ final class PreparedArtifact {
 	 * Prove that the caller is about to use the exact downloaded bytes.
 	 */
 	public function assertUnchanged(): void {
-		if ( $this->cleaned ) {
+		if ( $this->cleaned || $this->transferred ) {
 			throw new RuntimeException( 'The prepared deployment artifact has already been cleaned up.' );
 		}
+		$this->verified = false;
 
-		$identity = self::regularFileIdentity( $this->path );
-		if ( null === $identity
-			|| $identity['device'] !== $this->device
-			|| $identity['inode'] !== $this->inode
-			|| $identity['size'] !== $this->size
-			|| $identity['permissions'] !== $this->permissions
-			|| $identity['links'] !== $this->links ) {
+		if ( ! $this->hasOriginalIdentity() ) {
 			BoosterLogger::log(
 				'artifact integrity check failed before use',
 				array(
@@ -90,13 +90,39 @@ final class PreparedArtifact {
 			);
 			throw new RuntimeException( 'The prepared deployment artifact changed before use.' );
 		}
+
+		$this->verified = true;
+	}
+
+	/**
+	 * Transfer cleanup ownership to the shared updater without repeating the
+	 * digest check already performed by the pre-download boundary.
+	 */
+	public function claimForNativeUpdate( string $type, string $identifier ): ClaimedArtifact {
+		if ( $this->cleaned || $this->transferred || ! $this->verified ) {
+			throw new RuntimeException( 'The prepared deployment artifact is unavailable.' );
+		}
+		if ( ! $this->hasOriginalIdentity() ) {
+			throw new RuntimeException( 'The prepared deployment artifact changed before handoff.' );
+		}
+
+		$claim             = ClaimedArtifact::forCoreUpdate(
+			$this->path,
+			$this->digest,
+			$type,
+			$identifier,
+			$this->expectedVersion
+		);
+		$this->transferred = true;
+
+		return $claim;
 	}
 
 	/**
 	 * Delete only the unchanged file owned by this artifact.
 	 */
 	public function cleanup(): void {
-		if ( $this->cleaned ) {
+		if ( $this->cleaned || $this->transferred ) {
 			return;
 		}
 
@@ -112,6 +138,17 @@ final class PreparedArtifact {
 		}
 
 		$this->cleaned = true;
+	}
+
+	private function hasOriginalIdentity(): bool {
+		$identity = self::regularFileIdentity( $this->path );
+
+		return null !== $identity
+			&& $identity['device'] === $this->device
+			&& $identity['inode'] === $this->inode
+			&& $identity['size'] === $this->size
+			&& $identity['permissions'] === $this->permissions
+			&& $identity['links'] === $this->links;
 	}
 
 	/**

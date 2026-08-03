@@ -46,10 +46,10 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 			return $this->method;
 		}
 
-		public function get_header( string $name ): string {
+		public function get_header( string $name ): ?string {
 			$name = str_replace( '-', '_', strtolower( $name ) );
 
-			return (string) ( $this->headers[ $name ] ?? $this->headers[ str_replace( '_', '-', $name ) ] ?? '' );
+			return $this->headers[ $name ] ?? $this->headers[ str_replace( '_', '-', $name ) ] ?? null;
 		}
 
 		public function get_query_params(): array {

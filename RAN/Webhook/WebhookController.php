@@ -49,7 +49,7 @@ final readonly class WebhookController {
 		if ( ! is_string( $originalMethod )
 			|| 'POST' !== strtoupper( $originalMethod )
 			|| 'POST' !== strtoupper( $request->get_method() )
-			|| '' !== $request->get_header( 'x-http-method-override' )
+			|| ! in_array( $request->get_header( 'x-http-method-override' ), array( null, '' ), true )
 		) {
 			return false;
 		}

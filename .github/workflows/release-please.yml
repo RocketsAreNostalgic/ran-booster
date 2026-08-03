@@ -49,6 +49,7 @@ jobs:
                   version="$(jq -er '."." | select(type == "string")' .release-please-manifest.json)"
                   [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
                   tag="v${version}"
+                  if git diff --quiet HEAD^ HEAD -- .release-please-manifest.json; then exit 0; fi
                   if release_json="$(gh release view "$tag" --json isDraft,isImmutable,targetCommitish 2>&1)"; then
                       if [[ "$(jq -er '.isDraft' <<< "$release_json")" == false ]]; then
                           if [[ "$(jq -er '.isImmutable' <<< "$release_json")" == true ]]; then exit 0; fi
@@ -62,7 +63,6 @@ jobs:
                       printf '%s\n' "$release_json" >&2
                       exit 1
                   fi
-                  if [[ "$state" == absent ]] && git diff --quiet HEAD^ HEAD -- .release-please-manifest.json; then exit 0; fi
                   release_commit="$(git log -1 --format=%H -- .release-please-manifest.json)"
                   test "$(git show "${release_commit}:.release-please-manifest.json" | jq -er '."."')" = "$version"
                   if [[ "$state" == draft ]]; then

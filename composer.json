@@ -29,7 +29,7 @@
         "php": "^8.2",
         "ext-sodium": "*",
         "ext-zip": "*",
-        "ran/wp-github-release-updater": "2.0.0-beta.2"
+        "ran/wp-github-release-updater": "2.0.0-beta.3"
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",

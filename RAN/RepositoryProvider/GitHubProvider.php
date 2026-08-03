@@ -231,26 +231,26 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 		return 'https://github.com/' . $this->encodeRepositoryName( $locator ) . '/settings/hooks';
 	}
 
-	public function assessSetup( string $repositoryId, string $repository, string $credentialProfileId ): RepositoryWebhookFitnessResult {
-		return $this->webhookClient->assessSetup( $repositoryId, $repository, $this->credential( $credentialProfileId, null ) );
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->webhookClient->assessSetup( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		$this->assertHookId( $hookId );
 
-		return $this->webhookClient->assessCheck( $repositoryId, $repository, $this->credential( $credentialProfileId, null ) );
+		return $this->webhookClient->assessCheck( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		$this->assertHookId( $hookId );
 
-		return $this->webhookClient->assessReconfigure( $repositoryId, $repository, $this->credential( $credentialProfileId, null ) );
+		return $this->webhookClient->assessReconfigure( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		$this->assertHookId( $hookId );
 
-		return $this->webhookClient->assessRemove( $repositoryId, $repository, $this->credential( $credentialProfileId, null ) );
+		return $this->webhookClient->assessRemove( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
 	}
 
 	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential, #[\SensitiveParameter] string $signingSecret ): RepositoryWebhookOperationResult {

@@ -101,10 +101,10 @@ or `execute( operation, payload )` dispatcher.
 
 ```text
 RepositoryWebhookFitness
-  assessSetup(authority, credentialProfileId)
-  assessCheck(authority, credentialProfileId, hookId)
-  assessReconfigure(authority, credentialProfileId, hookId)
-  assessRemove(authority, credentialProfileId, hookId)
+  assessSetup(authority, credentialProfileId?, requestCredential?)
+  assessCheck(authority, credentialProfileId?, hookId, requestCredential?)
+  assessReconfigure(authority, credentialProfileId?, hookId, requestCredential?)
+  assessRemove(authority, credentialProfileId?, hookId, requestCredential?)
 
 RepositoryWebhookManagement
   setup(authority, credentialProfileId, signingSecret)
@@ -119,8 +119,11 @@ general credential input, provider SDK or authenticated transport.
 
 Fitness and execution are separate. `RepositoryWebhookFitness` is read-only,
 cannot receive a signing secret, cannot mutate or compensate, and never grants
-execution authority. `RepositoryWebhookManagement` independently reauthorizes
-the complete binding before resolving one credential.
+general execution authority. Each management call nevertheless repeats the
+matching fitness read in the same request, with the same single saved or
+request-only credential source, to remotely rebind Core's stable repository ID
+to the locator immediately before execution. The fitness and execution call
+budgets remain independent.
 
 Provider-specific permission names, token kinds, GitHub endpoints, request
 bodies, pagination, error interpretation, compensation and readback stay in
@@ -200,10 +203,19 @@ an unavailable assessment never proceeds into mutation.
 | reconfigure | at most 1 call / 64 KiB |         3 calls / 192 KiB |                 3 calls / 192 KiB | Pre-mutation ownership read, patch, exact readback. Uncertain readback is ambiguous; do not invent rollback of a secret GitHub cannot return.                                                                  |
 | remove      | at most 1 call / 64 KiB |         3 calls / 128 KiB |                 3 calls / 128 KiB | Pre-delete ownership read, delete, then exact absence readback. Release local profile/record only after confirmed absence.                                                                                     |
 
-Assessment may reuse evidence already returned by the same explicit operation
-without another call, but no cached verdict authorizes work. No call occurs on
+The UI may present an assessment already returned by its explicit read action,
+but execution never treats a cached verdict as current proof: it repeats the
+one-call identity assessment immediately before management. No call occurs on
 ordinary bootstrap, dashboard rendering, credential-list rendering or public
 webhook ingress.
+
+Assisted execution is serialized by a nonblocking target-keyed MySQL/MariaDB
+advisory lock. It adds no option, table, file or durable state. Contention fails
+before profile or provider mutation; authorization, target and profile evidence
+are re-read inside the lock. Signing-profile metadata and material come from one
+authenticated canonical `webhookMaterials()` snapshot. If provider setup throws
+after invocation begins, Core retains that snapshot and reports recovery-required
+partial evidence instead of deleting the signing profile.
 
 ## Production and concept budget
 
@@ -240,6 +252,27 @@ Tests may add up to 1,500 lines across both repositories for external-provider
 proof, pagination/call ceilings, mixed versions, secret canaries, compensation
 and result mapping. Documentation may add up to 700 lines across both
 repositories. Neither offsets production growth.
+
+### Implementation reconciliation
+
+The coordinated Core cut lands at **+577 net production PHP lines** against its
+authorized base, 157 lines above the original planning cap. The owner approved
+this modest variance after review found no smaller existing primitive that
+preserved the required failure semantics. The additional code is limited to:
+
+- request-only credential assessment and a same-request stable repository-ID
+  rebind before each mutation;
+- a target-keyed, zero-persistence advisory lock (the existing updater lock was
+  global, while attempt rows and sidecar locking would add state or hold secret
+  storage across provider HTTP calls); and
+- recovery-safe setup retention, non-adoption of an unreadable existing hook,
+  one-snapshot metadata/material selection, and revision-conditional cleanup so
+  a concurrent signing-secret rotation cannot be deleted.
+
+The variance adds no JavaScript/CSS, schema, option, sidecar field, cache,
+background process, facade, registry, generic dispatcher, public result type or
+concrete production type. The original concept and persistence caps remain
+unchanged.
 
 ## Rejected shapes
 

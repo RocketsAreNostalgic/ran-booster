@@ -140,8 +140,8 @@ work is in neither record.
   could receive a saved credential or signing secret. The add-on can enrich
   Core's existing GitHub repository table and append a selected-repository
   operation panel through documented WordPress hooks. When the add-on is absent,
-  Core keeps the Assisted Hooks
-  affordance visible but disabled. Core and the add-on use the same
+  Core keeps the Assisted Hooks affordance visible but disabled. Core and the
+  add-on use the same
   provider-scoped, display-safe site and repository readiness result, including
   public HTTPS, repository identity and local signing-secret coverage. GitHub
   signing secrets are either bound to a canonical GitHub organization or user
@@ -152,7 +152,9 @@ work is in neither record.
   Replacing a secret remains a separate Core action. A saved local secret does
   not prove that a remote hook exists, so the add-on labels remote state as
   last observed. The add-on never enables Automatic deployment; manual webhook
-  setup remains available without it.
+  setup remains available without it. Each assisted operation rechecks the
+  stable repository identity with the same saved or request-only credential and
+  takes a target-keyed, non-persistent database lock before remote work.
 - **Release Deployments add-on** — contributes release status and actions to
   Core's managed Plugins and Themes tables and appends package-specific
   settings through the same bounded WordPress-native composition contract.

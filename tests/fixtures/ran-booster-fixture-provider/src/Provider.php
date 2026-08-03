@@ -137,20 +137,20 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return $this->client;
 	}
 
-	public function assessSetup( string $repositoryId, string $repository, string $credentialProfileId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
 	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
@@ -177,8 +177,8 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return $this->operation( 'fixture_absence_confirmed', 'absent' );
 	}
 
-	private function fitness( string $credentialId ): RepositoryWebhookFitnessResult {
-		$this->credential( $credentialId, null );
+	private function fitness( ?string $credentialId, ?string $requestCredential ): RepositoryWebhookFitnessResult {
+		$this->credential( $credentialId, $requestCredential );
 
 		return new RepositoryWebhookFitnessResult( 'supported', 'suitable', 'appropriate', 'observed', 'fixture.permission.webhook_exact', gmdate( 'Y-m-d\TH:i:s\Z' ), 'No fixture remediation is required.' );
 	}

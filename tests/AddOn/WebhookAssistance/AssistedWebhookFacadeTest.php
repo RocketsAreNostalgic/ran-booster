@@ -84,6 +84,142 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 'operation_unauthorized', $facade->setup( $target, 'profile_1', 'good', 'also-present' )->code() );
 	}
 
+	public function testRequestCredentialCanBeAssessedWithoutPersistence(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+
+		$result = $facade->assessSetup( $target, null, 'good', 'request-fitness-canary' );
+
+		self::assertSame( 'supported', $result->toArray()['support'] );
+		self::assertNull( $provider->credentialId );
+		self::assertSame( 'request-fitness-canary', $provider->requestCredential );
+		self::assertSame( array(), $secrets->profiles );
+	}
+
+	public function testSetupExceptionAfterProviderInvocationRetainsRecoveryProfile(): void {
+		$secrets              = new FixedFacadeSecretsFile();
+		$provider             = new FixedWebhookProvider();
+		$provider->throwSetup = true;
+		$facade               = $this->facade( $secrets, $provider );
+		$target               = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+
+		$result = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'setup_outcome_unknown', $result->code() );
+		self::assertNotNull( $result->profile() );
+		self::assertCount( 1, $secrets->profiles );
+	}
+
+	public function testSameTargetSetupCannotOverlapWithAReusableNonce(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$held     = false;
+		$facade   = $this->facade(
+			$secrets,
+			$provider,
+			static function () use ( &$held ): bool {
+				if ( $held ) {
+					return false;
+				}
+				$held = true;
+
+				return true;
+			},
+			static function () use ( &$held ): bool {
+				$held = false;
+
+				return true;
+			}
+		);
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$nested                = null;
+		$provider->duringSetup = static function () use ( $facade, $target, &$nested ): void {
+			$nested = $facade->setup( $target, 'profile_1', 'good' );
+		};
+
+		$first = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertTrue( $first->succeeded() );
+		self::assertInstanceOf( RepositoryWebhookOperationResult::class, $nested );
+		self::assertSame( 'operation_busy', $nested->code() );
+		self::assertCount( 1, $secrets->profiles );
+		self::assertFalse( $held );
+	}
+
+	public function testSeparateRequestFacadesContendOnTheSameTargetLock(): void {
+		$secrets     = new FixedFacadeSecretsFile();
+		$provider    = new FixedWebhookProvider();
+		$held        = false;
+		$acquire     = static function () use ( &$held ): bool {
+			if ( $held ) {
+				return false;
+			}
+			$held = true;
+
+			return true;
+		};
+		$release     = static function () use ( &$held ): bool {
+			$held = false;
+
+			return true;
+		};
+		$firstFacade = $this->facade( $secrets, $provider, $acquire, $release );
+		$otherFacade = $this->facade( $secrets, $provider, $acquire, $release );
+		$firstTarget = $firstFacade->target( 'gh', '101' );
+		$otherTarget = $otherFacade->target( 'gh', '101' );
+		self::assertNotNull( $firstTarget );
+		self::assertNotNull( $otherTarget );
+		$nested                = null;
+		$provider->duringSetup = static function () use ( $otherFacade, $otherTarget, &$nested ): void {
+			$nested = $otherFacade->setup( $otherTarget, 'profile_1', 'good' );
+		};
+
+		self::assertTrue( $firstFacade->setup( $firstTarget, 'profile_1', 'good' )->succeeded() );
+		self::assertInstanceOf( RepositoryWebhookOperationResult::class, $nested );
+		self::assertSame( 'operation_busy', $nested->code() );
+		self::assertCount( 1, $secrets->profiles );
+		self::assertFalse( $held );
+	}
+
+	public function testMutationStopsWhenSameRequestFitnessCannotRebindRepositoryIdentity(): void {
+		$secrets                      = new FixedFacadeSecretsFile();
+		$provider                     = new FixedWebhookProvider();
+		$provider->fitnessSuitability = 'insufficient';
+		$facade                       = $this->facade( $secrets, $provider );
+		$target                       = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+
+		$result = $facade->setup( $target, 'profile_1', 'good' );
+
+		self::assertSame( 'repository_identity_unconfirmed', $result->code() );
+		self::assertSame( 1, $provider->calls, 'Only the read-only identity assessment may run.' );
+		self::assertSame( '', $provider->signingSecret );
+		self::assertSame( array(), $secrets->profiles );
+	}
+
+	public function testReconfigureUsesMetadataAndSecretFromOneMaterialSnapshot(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                        = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ]  = $secrets->profile( $profileId, 1, 'old-secret' );
+		$secrets->materials[ $profileId ] = $secrets->profile( $profileId, 2, 'rotated-secret' );
+
+		$result = $facade->reconfigure( $target, 'profile_1', '55', $profileId, 2, 'good' );
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 2, $result->profile()?->revision() );
+		self::assertSame( 'rotated-secret', $provider->signingSecret );
+	}
+
 	public function testStaleTargetNonceAndProfileFailBeforeProviderWork(): void {
 		$secrets  = new FixedFacadeSecretsFile();
 		$provider = new FixedWebhookProvider();
@@ -119,6 +255,29 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertArrayNotHasKey( $profileId, $secrets->profiles );
 	}
 
+	public function testRemoveDoesNotDeleteAProfileRotatedWhileTheProviderRequestWasInFlight(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                        = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ]  = $secrets->profile( $profileId, 1, 'original-secret' );
+		$secrets->materials[ $profileId ] = $secrets->profiles[ $profileId ];
+		$provider->duringRemove           = static function () use ( $secrets, $profileId ): void {
+			$rotated                          = $secrets->profile( $profileId, 2, 'rotated-secret' );
+			$secrets->profiles[ $profileId ]  = $rotated;
+			$secrets->materials[ $profileId ] = $rotated;
+		};
+
+		$result = $facade->remove( $target, 'profile_1', '55', $profileId, 1, 'good' );
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'local_profile_release_failed', $result->code() );
+		self::assertSame( 2, $secrets->profiles[ $profileId ]['revision'] );
+		self::assertSame( 'rotated-secret', $secrets->materials[ $profileId ]['secret'] );
+	}
+
 	public function testFitnessIsExplicitAndBoundToTheSavedProfile(): void {
 		$secrets  = new FixedFacadeSecretsFile();
 		$provider = new FixedWebhookProvider();
@@ -132,7 +291,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 1, $provider->calls );
 	}
 
-	private function facade( FixedFacadeSecretsFile $secrets, FixedWebhookProvider $provider ): AssistedWebhookFacade {
+	private function facade( FixedFacadeSecretsFile $secrets, FixedWebhookProvider $provider, ?callable $acquireLock = null, ?callable $releaseLock = null ): AssistedWebhookFacade {
 		$registry = new ProviderRegistry( array( $provider ) );
 		$package  = new FixedFacadePackage( new ManagedRepository( 'gh', 'owner/example', '101', 'main' ) );
 
@@ -142,7 +301,9 @@ final class AssistedWebhookFacadeTest extends TestCase {
 			$registry,
 			static fn (): bool => true,
 			static fn (): string => 'https://site.example/wp-json/ran-booster/v1/webhooks/gh',
-			static fn ( string $nonce ): bool => 'good' === $nonce
+			static fn ( string $nonce ): bool => 'good' === $nonce,
+			$acquireLock ?? static fn (): bool => true,
+			$releaseLock ?? static fn (): bool => true
 		);
 	}
 }
@@ -155,6 +316,12 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 	public ?string $requestCredential = null;
 	public string $signingSecret      = '';
 	public string $removeState        = 'succeeded';
+	public string $fitnessSuitability = 'unknown';
+	public bool $throwSetup           = false;
+	/** @var callable(): void|null */
+	public $duringSetup = null;
+	/** @var callable(): void|null */
+	public $duringRemove = null;
 
 	public function getMetadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub fixture', 'https://example.test/', 'Owner' );
@@ -176,20 +343,20 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		throw new \RuntimeException( 'not used' );
 	}
 
-	public function assessSetup( string $repositoryId, string $repository, string $credentialProfileId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId );
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId, $requestCredential );
 	}
 
 	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
@@ -197,6 +364,14 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		$this->credentialId      = $credentialProfileId;
 		$this->requestCredential = $requestCredential;
 		$this->signingSecret     = $signingSecret;
+		if ( null !== $this->duringSetup ) {
+			$callback          = $this->duringSetup;
+			$this->duringSetup = null;
+			$callback();
+		}
+		if ( $this->throwSetup ) {
+			throw new \RuntimeException( 'Provider response was lost after invocation.' );
+		}
 
 		return $this->operation( 'succeeded', 'configured_pending_delivery' );
 	}
@@ -209,21 +384,28 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 
 	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
 		++$this->calls;
+		$this->signingSecret = $signingSecret;
 
 		return $this->operation( 'succeeded', 'configured_pending_delivery' );
 	}
 
 	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential ): RepositoryWebhookOperationResult {
 		++$this->calls;
+		if ( null !== $this->duringRemove ) {
+			$callback           = $this->duringRemove;
+			$this->duringRemove = null;
+			$callback();
+		}
 
 		return $this->operation( $this->removeState, 'succeeded' === $this->removeState ? 'absence_confirmed' : 'remove_ambiguous', 'succeeded' === $this->removeState ? 'absent' : 'unknown' );
 	}
 
-	private function fitness( string $credentialId ): RepositoryWebhookFitnessResult {
+	private function fitness( ?string $credentialId, ?string $requestCredential ): RepositoryWebhookFitnessResult {
 		++$this->calls;
-		$this->credentialId = $credentialId;
+		$this->credentialId      = $credentialId;
+		$this->requestCredential = $requestCredential;
 
-		return new RepositoryWebhookFitnessResult( 'supported', 'unknown', 'unknown', 'unknown_by_design', 'authority_unknown', '2026-08-02T00:00:00Z', 'Confirm the exact operation before continuing.' );
+		return new RepositoryWebhookFitnessResult( 'supported', $this->fitnessSuitability, 'unknown', 'unknown_by_design', 'authority_unknown', '2026-08-02T00:00:00Z', 'Confirm the exact operation before continuing.' );
 	}
 
 	private function operation( string $state, string $code, string $delivery = 'configured_pending_delivery' ): RepositoryWebhookOperationResult {
@@ -246,7 +428,9 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 
 final class FixedFacadeSecretsFile extends SecretsFile {
 	/** @var array<string,array<string,mixed>> */
-	public array $profiles     = array();
+	public array $profiles = array();
+	/** @var array<string,array<string,mixed>> */
+	public array $materials    = array();
 	public string $savedSecret = '';
 
 	public function assertManagedStorageReady(): void {
@@ -270,7 +454,7 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 	}
 
 	public function webhookMaterials( ProviderCode|string $provider ): array {
-		return $this->profiles;
+		return array() === $this->materials ? $this->profiles : $this->materials;
 	}
 
 	public function saveWebhook( ProviderCode|string $provider, ?string $id, array $metadata, ?string $secret ): string {
@@ -290,12 +474,22 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 
 	public function deleteWebhook( ProviderCode|string $provider, string $id ): bool {
 		unset( $this->profiles[ $id ] );
+		unset( $this->materials[ $id ] );
 
 		return true;
 	}
 
+	public function deleteWebhookIfRevision( ProviderCode|string $provider, string $id, int $expectedRevision ): bool {
+		$current = $this->webhookMaterials( $provider )[ $id ] ?? null;
+		if ( ! is_array( $current ) || $expectedRevision !== (int) ( $current['revision'] ?? 0 ) ) {
+			return false;
+		}
+
+		return $this->deleteWebhook( $provider, $id );
+	}
+
 	/** @return array<string,mixed> */
-	public function profile( string $id, int $revision ): array {
+	public function profile( string $id, int $revision, string $secret = 'ssssssssssssssssssssssssssssssss' ): array {
 		return array(
 			'id'           => $id,
 			'scope'        => 'repository',
@@ -306,7 +500,7 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 			'source'       => 'file',
 			'immutable'    => false,
 			'configured'   => true,
-			'secret'       => str_repeat( 's', 32 ),
+			'secret'       => $secret,
 		);
 	}
 }

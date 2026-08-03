@@ -200,25 +200,25 @@ final class FixtureAddOnFacade implements WebhookAssistanceFacade {
 		return null;
 	}
 
-	public function assessSetup( AssistanceTarget $target, string $credentialProfileId, string $nonce ): RepositoryWebhookFitnessResult {
+	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		++$this->otherCalls;
 
 		return $this->fitness();
 	}
 
-	public function assessCheck( AssistanceTarget $target, string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
+	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		++$this->otherCalls;
 
 		return $this->fitness();
 	}
 
-	public function assessReconfigure( AssistanceTarget $target, string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
+	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		++$this->otherCalls;
 
 		return $this->fitness();
 	}
 
-	public function assessRemove( AssistanceTarget $target, string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
+	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		++$this->otherCalls;
 
 		return $this->fitness();

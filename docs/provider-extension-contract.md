@@ -68,8 +68,18 @@ provider client, transport or credential handle in the public contract.
 Saved credential IDs are display-safe inputs. The provider resolves their
 plaintext only through its already-bound `ProviderCredentialStore` and only
 inside the selected fixed call. A request-only credential is a separate
-explicit sensitive parameter for that call and is never persisted or returned.
-Only setup and reconfigure receive the Core-held signing secret.
+explicit sensitive parameter for both assessment and execution of that call and
+is never persisted or returned. Exactly one saved ID or request-only value is
+accepted. Only setup and reconfigure receive the Core-held signing secret.
+
+Immediately before each management call, Core invokes the matching read-only
+assessment with the same credential source. The provider must remotely compare
+the repository locator with the stable repository ID supplied by Core. Execution
+continues only for `supported`, `suitable|unknown` and
+`observed|inferred|unknown_by_design` evidence. A mismatch is `insufficient`;
+unavailable or stale evidence fails closed before remote mutation. Fitness does
+not otherwise grant execution authority, and its one-call budget remains
+separate from the fixed management budget.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
@@ -82,6 +92,14 @@ only bounded, closed, non-secret evidence. Setup and reconfigure can establish
 success only after exact `404` absence readback. Providers must preserve the
 documented call, byte and timeout ceilings in the
 [fitness characterization](characterization/provider-owned-repository-webhook-fitness.md).
+
+Core serializes each target's assisted operations with a nonblocking advisory
+database lock keyed by provider code and stable repository ID. The lock has no
+table, option, file or durable record; contention fails before local or remote
+mutation. A sole existing endpoint found during setup is not adopted because
+its signing secret is unreadable. The result is recovery-required and omits the
+hook ID so it cannot seed a later assisted removal; only explicit reconfigure
+may replace that secret.
 
 ## Required provider surface
 

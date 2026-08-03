@@ -53,7 +53,7 @@ final class RepositoryWebhookClient {
 			return $this->uncertain( 'matching_hooks_ambiguous' );
 		}
 		if ( 1 === count( $matches ) ) {
-			return $this->configuredResult( $matches[0][0], $matches[0][1] );
+			return $this->result( 'ambiguous', 'existing_hook_requires_reconfigure', null, $matches[0][1], 'unknown', 'An existing endpoint cannot prove the stored signing secret; inspect it and use explicit reconfiguration.' );
 		}
 		$created = $this->request( 'POST', $this->hooksPath( $repository ), $token, $this->payload( $callbackUrl, $secret ), self::READ_BYTES, $deadline );
 		if ( 201 !== $created['status'] ) {

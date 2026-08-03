@@ -56,6 +56,14 @@ final class ProviderContractsTest extends TestCase {
 		self::assertSame( 1, RepositoryWebhookFitness::VERSION );
 		self::assertSame( RepositoryWebhookFitness::OPERATION, RepositoryWebhookManagement::OPERATION );
 		self::assertSame( RepositoryWebhookFitness::VERSION, RepositoryWebhookManagement::VERSION );
+		self::assertSame(
+			array( 'repositoryId', 'repository', 'credentialProfileId', 'requestCredential' ),
+			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, ( new \ReflectionMethod( RepositoryWebhookFitness::class, 'assessSetup' ) )->getParameters() )
+		);
+		self::assertSame(
+			array( 'repositoryId', 'repository', 'credentialProfileId', 'hookId', 'requestCredential' ),
+			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, ( new \ReflectionMethod( RepositoryWebhookFitness::class, 'assessRemove' ) )->getParameters() )
+		);
 
 		foreach ( array( 'check', 'remove' ) as $method ) {
 			$names = array_map(

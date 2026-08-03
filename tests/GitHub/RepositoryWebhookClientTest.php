@@ -72,6 +72,17 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertCount( 3, \RAN\GitHub\repository_resolver_http_requests() );
 	}
 
+	public function testSetupDoesNotAdoptAnExistingEndpointWithAnUnreadableSecret(): void {
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, array( $this->hook( 55, 'https://site.example/hook' ) ) ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'existing_hook_requires_reconfigure', $result->code() );
+		self::assertNull( $result->hookId(), 'An unowned hook ID must not seed a later remove operation.' );
+		self::assertCount( 1, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
 	public function testRemoveRequiresAbsenceReadbackWithinThreeCalls(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
 		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $hook ), $this->response( 204, array() ), $this->response( 404, array() ) ) );

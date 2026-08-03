@@ -65,6 +65,21 @@ final class WebhookProfileStorageTest extends TestCase {
 		self::assertSame( str_repeat( 'b', 32 ), $this->secrets->webhookMaterials( 'gh' )[ $id ]['secret'] );
 	}
 
+	public function testConditionalDeleteCannotRemoveAConcurrentlyRotatedProfile(): void {
+		$id = $this->secrets->saveWebhook(
+			'gh',
+			null,
+			$this->repository( 'Repository', 'owner/example', '101', 'assisted' ),
+			str_repeat( 'a', 32 )
+		);
+		$this->secrets->saveWebhook( 'gh', $id, $this->repository( 'Repository', 'owner/example', '101', 'assisted' ), str_repeat( 'b', 32 ) );
+
+		self::assertFalse( $this->secrets->deleteWebhookIfRevision( 'gh', $id, 1 ) );
+		self::assertSame( 2, $this->secrets->webhookProfiles( 'gh' )[ $id ]['revision'] );
+		self::assertTrue( $this->secrets->deleteWebhookIfRevision( 'gh', $id, 2 ) );
+		self::assertArrayNotHasKey( $id, $this->secrets->webhookProfiles( 'gh' ) );
+	}
+
 	public function testScopeTargetAuthorityAndOriginAreImmutable(): void {
 		$id = $this->secrets->saveWebhook(
 			'gh',

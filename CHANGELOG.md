@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.0-beta.2](https://github.com/RocketsAreNostalgic/ran-booster/compare/v0.1.0-beta.2...v1.0.0-beta.2) (2026-08-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* adopt shared updater authority contract ([#4](https://github.com/RocketsAreNostalgic/ran-booster/issues/4))
+
+### Features
+
+* adopt shared updater authority contract ([#4](https://github.com/RocketsAreNostalgic/ran-booster/issues/4)) ([16198f7](https://github.com/RocketsAreNostalgic/ran-booster/commit/16198f78b9a860d97a3ca5c26c670b76e5956554))
+
+
+### Bug Fixes
+
+* **release:** gate publication on manifest changes ([#6](https://github.com/RocketsAreNostalgic/ran-booster/issues/6)) ([367647e](https://github.com/RocketsAreNostalgic/ran-booster/commit/367647ef7d4e01b2d985932bf4b9a157def40e83))
+
 ## [0.1.0-beta.2](https://github.com/RocketsAreNostalgic/ran-booster/compare/v0.1.0-beta.1...v0.1.0-beta.2) (2026-08-02)
 
 

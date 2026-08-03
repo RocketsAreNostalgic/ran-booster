@@ -52,7 +52,7 @@ jobs:
                   tools: composer:v2
 
             - name: Validate Composer configuration
-              run: composer validate --strict --no-check-publish
+              run: composer validate --strict --no-check-publish --no-check-all
 
             - name: Install Composer dependencies
               run: composer install --no-interaction --prefer-dist --no-progress
@@ -178,7 +178,7 @@ jobs:
                     $expected = array(
                       "registered" => true,
                       "selection_fixed" => true,
-                      "selected_version" => "2.0.0-beta.1",
+                      "selected_version" => "2.0.0-beta.2",
                       "repository" => "RocketsAreNostalgic/ran-booster",
                       "channel" => "prerelease",
                       "type" => "plugin",

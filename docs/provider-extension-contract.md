@@ -96,7 +96,10 @@ documented call, byte and timeout ceilings in the
 Core serializes each target's assisted operations with a nonblocking advisory
 database lock keyed by provider code and stable repository ID. The lock has no
 table, option, file or durable record; contention fails before local or remote
-mutation. A sole existing endpoint found during setup is not adopted because
+mutation. If explicit release is uncertain, primary failed, ambiguous, partial
+or confirmed-absence evidence is preserved; only an otherwise successful
+non-absence result becomes `operation_lock_release_failed`. A sole existing
+endpoint found during setup is not adopted because
 its signing secret is unreadable. The result is recovery-required and omits the
 hook ID so it cannot seed a later assisted removal; only explicit reconfigure
 may replace that secret.

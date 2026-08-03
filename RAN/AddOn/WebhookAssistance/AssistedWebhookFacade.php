@@ -238,6 +238,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		$providerStarted = false;
 		$metadata        = null;
 		$profileId       = null;
+		$createdRevision = null;
 		try {
 			if ( ! $this->identityConfirmed( 'setup', $current, $credentialId, $requestCredential ) ) {
 				return $this->failed( 'repository_identity_unconfirmed' );
@@ -245,7 +246,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			$provider  = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
 			$selection = $this->selectProfile( $current, null );
 			if ( null === $selection ) {
-				$profileId = $this->secrets->saveWebhook(
+				$profileId       = $this->secrets->saveWebhook(
 					$current->providerCode(),
 					null,
 					array(
@@ -257,8 +258,9 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 					),
 					bin2hex( random_bytes( 32 ) )
 				);
-				$created   = true;
-				$selection = $this->profileRecord( $current->providerCode(), $profileId );
+				$created         = true;
+				$createdRevision = 1;
+				$selection       = $this->profileRecord( $current->providerCode(), $profileId );
 			}
 			if ( null === $selection ) {
 				throw new \RuntimeException( 'The webhook profile snapshot is unavailable.' );
@@ -267,11 +269,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			$providerStarted         = true;
 			$result                  = $provider->setup( $current->repositoryId(), $current->repository(), $current->endpoint(), $credentialId, $requestCredential, $secret );
 			if ( $created && 'failed' === $result->state() ) {
-				if ( ! $this->deleteProfile( $current->providerCode(), $metadata->id() ) ) {
-					return $result->asPartial( 'profile_cleanup_failed', 'Retain the local profile and inspect both local and remote state.' )->withProfile( $metadata );
-				}
-
-				return $result;
+				return $this->cleanupCreatedProfile( $current->providerCode(), $metadata->id(), $metadata->revision(), $result, $metadata, 'Retain the local profile and inspect both local and remote state.' );
 			}
 
 			return $result->withProfile( $metadata );
@@ -279,11 +277,8 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			if ( $providerStarted && null !== $metadata ) {
 				return $this->failed( 'setup_outcome_unknown' )->asPartial( 'setup_outcome_unknown', 'Retain the local signing profile and inspect the provider before retrying.' )->withProfile( $metadata );
 			}
-			if ( $created && null !== $profileId && ! $this->deleteProfile( $current->providerCode(), $profileId ) ) {
-				$metadata ??= $this->profileRecord( $current->providerCode(), $profileId )[0] ?? null;
-				$result     = $this->failed( 'profile_cleanup_failed' )->asPartial( 'profile_cleanup_failed', 'Retain the local profile and inspect local state before retrying.' );
-
-				return null === $metadata ? $result : $result->withProfile( $metadata );
+			if ( $created && null !== $profileId && null !== $createdRevision ) {
+				return $this->cleanupCreatedProfile( $current->providerCode(), $profileId, $createdRevision, $this->failed( 'operation_failed' ), $metadata, 'Retain the local profile and inspect local state before retrying.' );
 			}
 
 			return $this->failed( 'operation_failed' );
@@ -336,7 +331,11 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			return $result;
 		}
 
-		return $result->asPartial( 'operation_lock_release_failed', 'Do not retry until the current database request has ended.' );
+		if ( 'succeeded' !== $result->state() || $result->confirmsAbsence() ) {
+			return $result;
+		}
+
+		return $result->asPartial( 'operation_lock_release_failed', 'The operation completed, but do not retry until the current database request has ended.' );
 	}
 
 	private function authorize( string $action, AssistanceTarget $submitted, string $nonce, bool $allowCleanup = false ): ?AssistanceTarget {
@@ -465,12 +464,20 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return new WebhookProfileMetadata( $profileId, $providerCode, (string) ( $profile['scope'] ?? '' ), (string) ( $profile['target'] ?? '' ), (string) ( $profile['authority_id'] ?? '' ), (int) ( $profile['revision'] ?? 1 ), $disposition, (string) ( $profile['source'] ?? 'file' ), ! empty( $profile['immutable'] ) );
 	}
 
-	private function deleteProfile( string $providerCode, string $profileId ): bool {
-		try {
-			return $this->secrets->deleteWebhook( $providerCode, $profileId );
-		} catch ( \Throwable ) {
-			return false;
+	private function cleanupCreatedProfile( string $providerCode, string $profileId, int $revision, RepositoryWebhookOperationResult $result, ?WebhookProfileMetadata $fallback, string $remediation ): RepositoryWebhookOperationResult {
+		if ( $this->deleteProfileIfRevision( $providerCode, $profileId, $revision ) ) {
+			return $result;
 		}
+		try {
+			$current = $this->profileRecord( $providerCode, $profileId )[0] ?? null;
+			$read    = true;
+		} catch ( \Throwable ) {
+			$current = null;
+			$read    = false;
+		}
+		$partial = $result->asPartial( 'profile_cleanup_failed', $remediation );
+
+		return null === $current && ( $read || null === $fallback ) ? $partial : $partial->withProfile( $current ?? $fallback );
 	}
 
 	private function deleteProfileIfRevision( string $providerCode, string $profileId, int $revision ): bool {

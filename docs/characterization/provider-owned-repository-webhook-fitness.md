@@ -215,7 +215,17 @@ before profile or provider mutation; authorization, target and profile evidence
 are re-read inside the lock. Signing-profile metadata and material come from one
 authenticated canonical `webhookMaterials()` snapshot. If provider setup throws
 after invocation begins, Core retains that snapshot and reports recovery-required
-partial evidence instead of deleting the signing profile.
+partial evidence instead of deleting the signing profile. Any cleanup after a
+definitive setup failure deletes only the exact revision used by that operation;
+a concurrent rotation is retained and returned as recovery evidence.
+
+If advisory-lock release is uncertain, an otherwise successful non-absence
+operation becomes the bounded `operation_lock_release_failed` partial result.
+Existing failed, ambiguous or partial evidence takes precedence and remains
+unchanged. Confirmed remote absence also remains successful after its exact
+profile cleanup, preventing a consumer from creating a false removal-pending
+record for material that Core has already deleted. The connection-local lock is
+released when the request's database connection ends.
 
 ## Production and concept budget
 
@@ -255,8 +265,8 @@ repositories. Neither offsets production growth.
 
 ### Implementation reconciliation
 
-The coordinated Core cut lands at **+577 net production PHP lines** against its
-authorized base, 157 lines above the original planning cap. The owner approved
+The coordinated Core cut lands at **+584 net production PHP lines** against its
+authorized base, 164 lines above the original planning cap. The owner approved
 this modest variance after review found no smaller existing primitive that
 preserved the required failure semantics. The additional code is limited to:
 

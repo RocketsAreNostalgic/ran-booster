@@ -180,5 +180,5 @@ Portability API 2 does not provide:
   or
 - safe active-active operation between Booster and a source deployment plugin.
 
-Material rejected approaches and their reconsideration triggers are preserved
-in the [Portability decision register](portability-decision-register.md).
+Material rejected approaches and their reconsideration triggers remain in the
+private architecture review archive; they are not public runtime contracts.

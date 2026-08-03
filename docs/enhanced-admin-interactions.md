@@ -77,7 +77,7 @@ Core-owned package forms that contain `ran_booster[action]` have an additional
 internal package-screen enhancement. That is not a public add-on contract and
 must not be used as a substitute for a structured action or this facade.
 
-## API 1 scope
+## Original API 1 scope retained by API 2
 
 API 1 exposes the Core-owned provider repositories refresh target:
 
@@ -110,8 +110,9 @@ enhanced refresh.
 
 Core may also implement the additive
 `TransporterRowAdminInteractionFacade`. Consumers must feature-detect that
-interface with `instanceof`; its presence does not change the API 1 marker or
-the existing `AdminInteractionFacade` interface.
+interface with `instanceof`. This additive capability advanced the exact Admin
+Interaction marker to API 2 without changing the existing
+`AdminInteractionFacade` interface.
 
 The additive capability declares one exact add-on-rendered Transporter source
 row:

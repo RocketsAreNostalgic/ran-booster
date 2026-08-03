@@ -25,11 +25,10 @@ operational history.
 ## Decision history
 
 Before proposing a new updater, installer, lock, receipt, credential lifecycle,
-public facade, or shared release/branch abstraction, review the
-[package update orchestration decision register](package-update-orchestration-decision-register.md).
-It preserves material NO-GO and deferred approaches, their evidence, and the
-specific triggers that would justify reconsideration. The register is an audit
-trail and does not override the current runtime behavior documented here.
+public facade, or shared release/branch abstraction, review the private package
+update decision register. It preserves material NO-GO and deferred approaches,
+their evidence, and the specific triggers that would justify reconsideration.
+That audit trail does not override the current runtime behavior documented here.
 In particular, the register is the durable history for the removed exact
 release Reinstall path and its receipt/finalizer NO-GO; this guide does not
 present that retired operation as current behavior.
@@ -65,7 +64,7 @@ behaviour.
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Release Deployments add-on    | Renders release state and actions and passes bounded intent to Core facades. It does not receive credentials, download archives, schedule updates, or mutate package files.                                                                   |
 | Booster Core                  | Owns package source and revision, deployment policy, credentials, facade authorization, prospective adoption, native-update authority snapshots and locking, branch admission/history, branch preflight, and final management postconditions. |
-| Shared GitHub release updater | Owns release discovery, channel selection, caching, stable repository-ID checks, exact release/ZIP/digest identity, package-header validation, archive custody, optional rejection-only assurance, and native WordPress update hooks.          |
+| Shared GitHub release updater | Owns release discovery, channel selection, caching, stable repository-ID checks, exact release/ZIP/digest identity, package-header validation, archive custody, optional rejection-only assurance, and native WordPress update hooks.         |
 | Repository provider           | Resolves a branch or authenticated webhook revision and prepares its authenticated archive URL, credentials, stable repository ID, immutable ref, and expected-head verifier when required.                                                   |
 | WordPress Core                | Triggers native checks and automatic updates, stores update transients, invokes the upgrader, extracts and replaces files, reports completion, and performs native restoration.                                                               |
 | Booster deployment worker     | Claims at most one queued branch attempt during a real WP-Cron run and invokes the same coordinator used by synchronous manual deployment.                                                                                                    |
@@ -266,15 +265,15 @@ stable GitHub repository ID.
 These are the native-ZIP contract's normal single-page, direct-success
 budgets:
 
-| Operation | Logical requests | ZIP downloads |
-| --------- | ---------------: | ------------: |
-| Native offer discovery and ZIP validation | 5 | 1 disposable validation ZIP |
-| Native fresh pre-install acquisition | 4 | 1 fresh installation ZIP |
-| Full fresh native Update | 9 | 2 |
-| Prospective candidate list | 2 | 0 |
-| Prospective exact review | 5 | 1 disposable validation ZIP |
-| Prospective exact acquisition | 5 | 1 installation ZIP |
-| Full prospective list, review and acquisition | 12 | 2 |
+| Operation                                     | Logical requests |               ZIP downloads |
+| --------------------------------------------- | ---------------: | --------------------------: |
+| Native offer discovery and ZIP validation     |                5 | 1 disposable validation ZIP |
+| Native fresh pre-install acquisition          |                4 |    1 fresh installation ZIP |
+| Full fresh native Update                      |                9 |                           2 |
+| Prospective candidate list                    |                2 |                           0 |
+| Prospective exact review                      |                5 | 1 disposable validation ZIP |
+| Prospective exact acquisition                 |                5 |          1 installation ZIP |
+| Full prospective list, review and acquisition |               12 |                           2 |
 
 Public and private targets have the same network-request count. A private
 target resolves its lazy credential once for each outgoing logical request; a
@@ -587,11 +586,11 @@ coalesce work for multiple packages, retain a downloaded archive, or replace
 several GitHub endpoints with a new protocol. They do not have the same
 freshness, credential, cleanup, or maintenance cost.
 
-| Status | Opportunity | Decision |
-| ------ | ----------- | -------- |
-| **Delivered** | Reuse an exact descriptor within the same synchronous operation. | Updater `v1.5.0-beta.11` uses `acquireDescribed()` after fresh reconstruction and continuity checks. This removed repeated requests from a full native Update and reduced production code. |
+| Status                    | Opportunity                                                                                                                    | Decision                                                                                                                                                                                                                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Delivered**             | Reuse an exact descriptor within the same synchronous operation.                                                               | Updater `v1.5.0-beta.11` uses `acquireDescribed()` after fresh reconstruction and continuity checks. This removed repeated requests from a full native Update and reduced production code.                                                                                                           |
 | **Conditional follow-up** | An expired ordinary release-list request returns `304`, but the updater downloads and scans the unchanged candidate ZIP again. | If separately authorized, design and test an updater-only cached-verdict path. Freshly re-describe the exact release and separately prove the live repository ID, then reuse the strict cached candidate-validation identity. Do not apply it to explicit **Check releases** or actual installation. |
-| **Measure first** | Reuse the richer list response rather than fetching the selected exact release once more during cold discovery. | This saves one small JSON request but would widen `ReleaseSummary` and blur the explicit list-to-exact continuity step. Consider it only if cold discovery is measured as material and the patch removes more code than it adds. |
+| **Measure first**         | Reuse the richer list response rather than fetching the selected exact release once more during cold discovery.                | This saves one small JSON request but would widen `ReleaseSummary` and blur the explicit list-to-exact continuity step. Consider it only if cold discovery is measured as material and the patch removes more code than it adds.                                                                     |
 
 If separately authorized, the expired-`304` candidate-verdict path is the only
 release optimization worth a bounded design-and-test spike now. It is not yet a
@@ -604,8 +603,7 @@ authorize Phase 2B.
 
 Discovery and installation ZIPs remain separate. Reconsider deferred
 optimizations and rejected pooling approaches against PU-006, PU-011, PU-012,
-and PU-024 through PU-026 in the
-[durable decision register](package-update-orchestration-decision-register.md)
+and PU-024 through PU-026 in the private durable decision register
 rather than reviving retired Reinstall plumbing or adding a generic request
 coordinator.
 

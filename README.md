@@ -48,6 +48,10 @@ credential policy, repository browsing, and webhook handling as needed.
 Provider plugins must require exact Provider API 8. Core publishes no add-on
 logging facade; providers return bounded diagnostics and operation results
 instead of forwarding their messages or exceptions into Core logs.
+WordPress's `Requires Plugins` header can express the package dependency, but it
+does not prove contract compatibility. Every provider or ordinary add-on must
+also fail closed unless each API marker it consumes is present at the exact
+documented generation.
 
 Core publishes no global service-container accessor and no bulk credential
 plaintext enumerator. Ordinary add-ons receive only purpose-specific facades;
@@ -187,7 +191,7 @@ work is in neither record.
   native **Update** path for eligible newer releases. Exact installed-release
   Reinstall is intentionally unavailable because a safe durable post-mutation
   recovery contract was not justified; see the
-  [package-update decision register](docs/package-update-orchestration-decision-register.md).
+  [package update orchestration guide](docs/package-update-orchestration.md).
 - **Confirmed package removal** — the settings-page **Danger zone** separates
   **Unlink** (stop Booster management while preserving files and WordPress
   activation) from **Unlink and delete**. The latter is separately confirmed,

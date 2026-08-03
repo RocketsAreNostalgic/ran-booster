@@ -269,8 +269,8 @@ artifact from the immutable release commit.
 
 The completed native-ZIP set is updater `v1.6.0-beta.1`, Core
 `v0.1.0-alpha.29` and Release Deployments `v0.1.0-alpha.4`. Exact commits,
-assets, digests, hosted replacement proof and controlled-site cutover are in
-[Native ZIP Phase 5 evidence](native-zip-phase5-evidence.md).
+assets, digests, hosted replacement proof and controlled-site cutover are
+retained in the private release review archive.
 
 The hosted private-feed proof used a temporary process-only, host/path-scoped
 token shim and then removed it. That proves the released archive and WordPress
@@ -298,6 +298,5 @@ A releasable Core change proves:
   runtime, and generated marker allowlist.
 
 See [Package update orchestration](package-update-orchestration.md) for the
-larger managed-release and branch deployment model and the
-[decision register](package-update-orchestration-decision-register.md) for the
-historical alternatives and reconsideration triggers.
+larger managed-release and branch deployment model. Historical alternatives and
+reconsideration triggers remain in the private architecture review archive.

@@ -220,7 +220,6 @@ Use the following mapping when a Transporter operation fails:
 ## What to read next
 
 - [Portability API 2](portability-api.md)
-- [Portability decision register](portability-decision-register.md)
 - [Deployment execution](deployment-execution.md)
 - [Provider extension contract](provider-extension-contract.md)
 - [Custom git vendor setup](custom-git-vendors.md)

@@ -141,20 +141,22 @@ authenticate an extension publisher.
   Assistance ready hooks. The former Webhook Cleanup and Logging delivery
   seams are absent.
 - `RAN/Admin/AdminAddOnRegistry.php` admits only Core-owned named facade
-  entries. `RAN/Admin/AdminAddOnContext.php` hands one selected facade and the
-  Logging facade to one capability-checked administrator tab; neither type is
-  an identity boundary against hostile PHP.
+  entries. `RAN/Admin/AdminAddOnContext.php` hands one selected named facade to
+  one capability-checked administrator tab. It supplies no Logging facade,
+  container or resolver; the remaining facade is not an identity boundary
+  against hostile PHP.
 - The safe ordinary-add-on baseline is executable in
   `tests/Security/SecretBoundaryNegativeConformanceTest.php`: Admin Interaction,
   Portability, Release Tracking, Prospective Release and Webhook Assistance may
   not acquire secret-authority types or methods.
 
-### Phase-zero ordinary-add-on exceptions
+### Phase-zero baseline exceptions and final disposition
 
-The following are present at the baseline and must be removed or closed by the
-later coordinated Alpha cut. The original characterization asserted their exact
-baseline shape so a change could not be mistaken for completed proof; the
-current test now records the closed subset explicitly.
+The following were present at the phase-zero baseline. They are retained here
+as historical evidence of what the coordinated Alpha cut had to remove, not as
+current extension guidance. The original characterization asserted their exact
+shape so a change could not be mistaken for completed proof; the current tests
+now reject every listed supported-looking path.
 
 Items 1–3 are closed by the checkpoint above. Item 6 is closed by the Logging
 API removal checkpoint below. Items 4–5 are closed by the fixed provider
@@ -209,7 +211,8 @@ Prospective Release API remains 4.
 This closes the supported free-form path. It does not claim that same-process
 PHP prevents a hostile plugin from observing or invoking unrelated callbacks.
 
-These are current exposure facts, not permissions for new consumers.
+These are baseline exposure facts, not current APIs or permissions for new
+consumers.
 
 ## Request-only PAT exception
 
@@ -279,10 +282,10 @@ detection. The later Alpha cut must inject every transform into each real
 result/log/notice/support/archive fixture and prove rejection from the exact
 coordinated artifacts.
 
-## Coordinated cut acceptance delta
+## Final coordinated cut acceptance
 
-The later Core secret/provider runtime lane may replace the current-exposure
-assertions only when one coordinated change proves all of the following:
+The final Core secret/provider runtime and add-on tuple proved all of the
+following:
 
 1. **Complete:** `ran_booster()` and the supported global singleton/container
    acquisition path are absent, with no compatibility wrapper.
@@ -296,16 +299,21 @@ assertions only when one coordinated change proves all of the following:
    `withCredential()` or any callback carrying a saved PAT or webhook secret.
    Setup/reconfigure secret use stays inside the matching provider's separately
    typed fixed operation.
-5. The add-on logging seam is removed where Core can log its own events or is
-   replaced with a closed Core-owned event/result schema after an exact API
-   cut. No open message or arbitrary context compatibility adapter remains.
-6. Old/new Core and add-on tuples, both load orders, missing/deactivated
+5. **Complete:** the add-on Logging API is removed. Core retains only its
+   private bounded logger, and no open message/context compatibility adapter
+   remains.
+6. **Complete:** old/new Core and add-on tuples, both load orders, missing/deactivated
    components, partial update and rollback all fail closed without remote work,
    state mutation or a legacy plaintext path.
-7. Every canary matrix cell passes against source and deterministic archives.
+7. **Complete:** every canary matrix cell passes against source and
+   deterministic archives.
 
-Until then, the current-exposure test must remain green and explicit rather
-than being weakened or silently deleted.
+The final compatible source tuple is Core
+`12a5a8cddea70c0f717e7ea0f30571d9568f6079`, Assisted Hooks
+`1e668e1e2ea40e6c137be222eefa650d9726b98b`, Bitbucket
+`fc3b9fc1fcc124179196ac8b976c33bf2c3343f4` and Release Deployments
+`e73d67ced2de58f72e46226960278b2abab91acd`. This records source compatibility,
+not release publication or provider-account mutation.
 
 ## Budgets and rollback
 

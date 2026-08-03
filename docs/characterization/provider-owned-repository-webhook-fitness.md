@@ -1,9 +1,9 @@
 # Provider-owned repository-webhook fitness characterization
 
-**Decision:** Core implementation landed for the coordinated Alpha contract
-replacement within the frozen budgets below. Release remains gated on the
-Assisted Hooks migration and combined compatibility proof against the exact
-Provider API 8 / Add-on API 14 tuple.
+**Decision:** Complete for the coordinated Alpha contract replacement. Core,
+the migrated Assisted Hooks consumer and the combined compatibility proof pass
+against exact Provider API 8 / Add-on API 14. Release publication remains a
+separate authorization.
 
 ## Core implementation checkpoint
 
@@ -21,9 +21,10 @@ readback or deletion. This tightens exact-target ownership without exposing a
 generic URL or transport capability: Core derives the URL and the GitHub client
 still fixes origin, path shapes, methods, headers and byte/call ceilings.
 
-The remaining join must prove the migrated Assisted Hooks consumer, old/new
-tuple failures, both load orders, secret canaries and deterministic release
-artifacts before release.
+The coordinated join proved the migrated Assisted Hooks consumer, old/new tuple
+failures, both load orders, secret canaries and deterministic artifacts from
+runtime Core `12a5a8cddea70c0f717e7ea0f30571d9568f6079` and Assisted Hooks
+`1e668e1e2ea40e6c137be222eefa650d9726b98b`.
 
 ## Pre-implementation Core boundary
 

@@ -23,6 +23,9 @@ add_action(
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
 registration action can run. The callback must check for exact Provider API 8.
+`Requires Plugins: ran-booster` only tells WordPress about the package
+dependency; it does not replace this exact runtime marker check or make a
+mismatched provider contract safe.
 Provider API 8 publishes no logging facade, generic resolver or Core container.
 Providers report bounded diagnostics and operation results; Core owns logging
 for failures inside Core-owned code.
@@ -112,7 +115,8 @@ archive preparation: every registered provider therefore has a useful manual
 install/update path. Metadata supplies an open, stable `ProviderCode`; IDs start
 with a lowercase ASCII letter and may be followed by up to 31 lowercase ASCII
 letters, digits or hyphens.
-The built-in page IDs `documentation` and `troubleshooting` are reserved.
+The built-in page IDs `overview`, `documentation`, `troubleshooting` and
+`portability` are reserved.
 
 Provider admin metadata is rendered directly after construction, so its typed
 constructors enforce the display-safety boundary. Labels are limited to 160

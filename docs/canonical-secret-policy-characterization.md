@@ -1,17 +1,19 @@
 # Canonical secret-policy characterization
 
-**Status:** Phase-zero evidence began at Core
-`51a9e63fe5a414c63ef5ce086739d09e690e49b8`. The bounded internal
-implementation is frozen on `codex/p0-canonical-structural-hardening` at
-`7ebcfdb63e674e69c358c352e928804941126939`. It is not release-authorized and
-makes no API, schema, persistence, provider-account or remote change.
+**Status:** Complete. Phase-zero evidence began at Core
+`51a9e63fe5a414c63ef5ce086739d09e690e49b8`; the bounded implementation commit
+`7ebcfdb63e674e69c358c352e928804941126939` is integrated at
+`54508af99aca92bb666b9f9c0e553da055aaaa97`. It changed no API, schema,
+persistence, provider account or remote behavior. Later coordinated work and
+Webhook V1 were proved from runtime head
+`12a5a8cddea70c0f717e7ea0f30571d9568f6079`. Release publication remains a
+separate authorization.
 
 ## Decision
 
-**GO** to a separate, bounded attempt to split schema-v2 structural validation
-from provider semantic validation. The implementation must stop and be
-abandoned if it cannot meet every budget and invariant below. This is a GO to
-attempt the internal hardening, not authorization to merge or release it.
+**GO completed:** schema-v2 structural validation is separated from provider
+semantic validation within every budget and invariant below. This decision did
+not authorize release publication.
 
 The current behavior gives every active credential or webhook policy plaintext
 for every stored record in its provider namespace whenever the authenticated
@@ -243,9 +245,9 @@ unbounded retry loop, or any webhook-owned runtime edit. Rollback after a
 landed attempt is a normal code/test/docs revert: no state or migration exists,
 and pre-change schema-v2 fixtures must remain readable by both revisions.
 
-## Required implementation proof
+## Completed implementation proof
 
-Before the later GO can land, prove all of the following:
+The landed implementation proves all of the following:
 
 - existing authenticated schema-v2 fixtures round-trip without record loss or
   meaning change;
@@ -282,10 +284,10 @@ Before the later GO can land, prove all of the following:
 - The subsequent secret-boundary slice removed
   `SecretsFile::credentialMaterials()` at
   `f25a09d614aec004cc9190423db8c79a1652d3d2`; exact credential use and bounded
-  requested-provider webhook candidates are unchanged. Saved-secret Assisted
-  Hooks callbacks and logging remain owned by their later coordinated lanes.
-  Webhook controller, processor, route, HMAC ordering and request-cost files
-  remain owned by the webhook stream.
+  requested-provider webhook candidates are unchanged. The later coordinated
+  lanes removed saved-secret Assisted Hooks callbacks and the public Logging
+  API, while the webhook stream retained ownership of controller, processor,
+  route, HMAC ordering and request cost.
 
 ## Evidence
 

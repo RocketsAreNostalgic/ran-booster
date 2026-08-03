@@ -73,12 +73,12 @@ do_action(
 );
 ```
 
-The first argument is respectively a
+The first three arguments are respectively a
 `\RAN\AddOn\Portability\PortabilityFacade`,
 `\RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade` or
-`\RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade`. The optional third action
-supplies a `\RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade`. The final
-action supplies only its named facade.
+`\RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade`. The optional fourth action
+supplies only its named
+`\RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade`.
 
 These actions are request-local delivery points for exact, already-public safe
 facades. They are not view hooks or service locators. An add-on must attach its

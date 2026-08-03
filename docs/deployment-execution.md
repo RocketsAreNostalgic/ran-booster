@@ -24,8 +24,8 @@ For the operator-level trigger sequence and every Booster, shared-updater, and
 WordPress handoff for both published releases and tracked branches, begin with
 the [package update orchestration guide](package-update-orchestration.md).
 Before proposing a new shared updater, installer, lock, receipt, credential
-lifecycle, or release/branch abstraction, also review the durable
-[package update orchestration decision register](package-update-orchestration-decision-register.md).
+lifecycle, or release/branch abstraction, also review the private durable
+package update decision register.
 
 ## What the runtime path does
 

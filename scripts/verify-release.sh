@@ -54,7 +54,7 @@ committed_entries=(
 	'views'
 )
 package_root='vendor/ran/wp-github-release-updater'
-updater_version='v2.0.0-beta.1'
+updater_version='v2.0.0-beta.2'
 updater_commit='b727e48660a71b2e7ae0db80c61ebbebfb1d30c9'
 package_entries=(
 	"$package_root/LICENSE"

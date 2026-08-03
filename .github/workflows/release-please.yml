@@ -49,10 +49,11 @@ jobs:
                   version="$(jq -er '."." | select(type == "string")' .release-please-manifest.json)"
                   [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
                   tag="v${version}"
-                  if git diff --quiet HEAD^ HEAD -- .release-please-manifest.json; then exit 0; fi
-                  if release_json="$(gh release view "$tag" --json isDraft,isImmutable,targetCommitish 2>&1)"; then
-                      if [[ "$(jq -er '.isDraft' <<< "$release_json")" == false ]]; then
-                          if [[ "$(jq -er '.isImmutable' <<< "$release_json")" == true ]]; then exit 0; fi
+                  manifest_changed=true
+                  git diff --quiet HEAD^ HEAD -- .release-please-manifest.json && manifest_changed=false
+                  if release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" 2>&1)"; then
+                      if [[ "$(jq -er '.draft' <<< "$release_json")" == false ]]; then
+                          if [[ "$manifest_changed" == false || "$(jq -er '.immutable' <<< "$release_json")" == true ]]; then exit 0; fi
                           echo '::error::The published release is not immutable and cannot be accepted.'
                           exit 1
                       fi
@@ -66,7 +67,7 @@ jobs:
                   release_commit="$(git log -1 --format=%H -- .release-please-manifest.json)"
                   test "$(git show "${release_commit}:.release-please-manifest.json" | jq -er '."."')" = "$version"
                   if [[ "$state" == draft ]]; then
-                      test "$(jq -er '.targetCommitish' <<< "$release_json")" = "$release_commit"
+                      test "$(jq -er '.target_commitish' <<< "$release_json")" = "$release_commit"
                   fi
                   printf 'RAN_RELEASE_VERSION=%s\nRAN_RELEASE_TAG=%s\nRAN_RELEASE_COMMIT=%s\nRAN_RELEASE_STATE=%s\nRAN_RELEASE_PENDING=true\n' "$version" "$tag" "$release_commit" "$state" >> "$GITHUB_ENV"
 

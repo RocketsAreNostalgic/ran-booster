@@ -13,6 +13,11 @@ final class ReleaseWorkflowContractTest extends TestCase {
 
 		self::assertStringContainsString( 'skip-github-release: true', $workflow );
 		self::assertStringContainsString( 'fetch-depth: 0', $workflow );
+		$unchangedExit = strpos( $workflow, 'git diff --quiet HEAD^ HEAD -- .release-please-manifest.json; then exit 0' );
+		$releaseLookup = strpos( $workflow, 'gh release view "$tag"' );
+		self::assertIsInt( $unchangedExit );
+		self::assertIsInt( $releaseLookup );
+		self::assertLessThan( $releaseLookup, $unchangedExit, 'A non-release push must exit before inspecting the previous release.' );
 		self::assertStringContainsString( 'git log -1 --format=%H -- .release-please-manifest.json', $workflow );
 		self::assertStringContainsString( 'isDraft,isImmutable,targetCommitish', $workflow );
 		self::assertStringContainsString( "*'(HTTP 404)'*", $workflow );

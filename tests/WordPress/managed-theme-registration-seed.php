@@ -3,8 +3,6 @@
  * Seed release-managed active and inactive theme rows on a disposable site.
  */
 
-declare(strict_types=1);
-
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\PackageSource;

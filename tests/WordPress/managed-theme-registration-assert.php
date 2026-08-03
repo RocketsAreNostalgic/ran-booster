@@ -3,8 +3,6 @@
  * Assert normal Booster registration for active and inactive managed themes.
  */
 
-declare(strict_types=1);
-
 if ( 'ran-booster-managed-active' !== get_stylesheet() ) {
 	throw new RuntimeException( 'The managed active fixture theme is not active.' );
 }

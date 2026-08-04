@@ -21,6 +21,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 
 		self::assertTrue( $payload['can_provision'] );
 		self::assertSame( $candidate, $payload['candidate_path'] );
+		self::assertSame( '/srv/private site/.ran-booster/0123456789abcdef', $payload['candidate_directory'] );
 		self::assertSame(
 			array(
 				"test ! -L '/srv/private site/.ran-booster' && test ! -L '/srv/private site/.ran-booster/0123456789abcdef' && install -d -m 700 -- '/srv/private site/.ran-booster' '/srv/private site/.ran-booster/0123456789abcdef'",
@@ -50,6 +51,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertFalse( $payload['can_provision'] );
 		self::assertSame( 'sodium_unavailable', $payload['reason_code'] );
 		self::assertNull( $payload['candidate_path'] );
+		self::assertNull( $payload['candidate_directory'] );
 		self::assertSame( array(), $payload['directory_commands'] );
 		self::assertNull( $payload['config_alternatives'] );
 	}
@@ -77,6 +79,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 			);
 
 			self::assertSame( '/private/canary/secrets.json', $payload['candidate_path'] );
+			self::assertSame( '/private/canary', $payload['candidate_directory'] );
 			self::assertSame( $result->pathSource(), $payload['path_source'] );
 			self::assertFalse( $payload['can_provision'] );
 			self::assertNull( $payload['manual_preflight'] );
@@ -96,6 +99,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertFalse( $payload['can_provision'] );
 		self::assertSame( 'setup_available', $payload['reason_code'] );
 		self::assertNull( $payload['candidate_path'] );
+		self::assertNull( $payload['candidate_directory'] );
 		self::assertNull( $payload['path_source'] );
 		self::assertNull( $payload['manual_preflight'] );
 		self::assertSame( array(), $payload['directory_commands'] );

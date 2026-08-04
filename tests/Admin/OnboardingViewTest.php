@@ -113,7 +113,9 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Create secure storage', $html );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details" open', $html );
 		self::assertStringContainsString( '/private/&lt;canary&gt;/secrets.json', $html );
-		self::assertStringContainsString( 'Recommended location', $html );
+		self::assertStringContainsString( 'Storage directory', $html );
+		self::assertStringContainsString( '/private/&lt;canary&gt;', $html );
+		self::assertStringContainsString( 'Storage file', $html );
 		self::assertStringContainsString( 'Booster selected this private location automatically', $html );
 		self::assertStringContainsString( 'Set up manually instead', $html );
 		self::assertStringContainsString( 'absolute private directory outside the public web root on durable local storage', $html );
@@ -213,21 +215,23 @@ final class OnboardingViewTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'data-ran-booster-storage-status="manual_required"', $html );
-		self::assertStringContainsString( 'Storage location', $html );
+		self::assertStringContainsString( 'Storage directory', $html );
+		self::assertStringContainsString( 'Storage file', $html );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details" open', $html );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-manual" open', $html );
 		self::assertStringContainsString( 'Manual setup instructions', $html );
 	}
 
-	public function testManualRequiredWithoutCandidateStillShowsOverrideInstructions(): void {
+	public function testUnsafeConfiguredPathShowsRejectedDirectoryFileAndOverrideInstructions(): void {
 		$html = $this->renderView(
 			null,
 			array(
-				'status'              => 'manual_required',
+				'status'              => 'storage_needs_attention',
 				'reason_code'         => 'configured_path_unsafe',
-				'message'             => 'The configured encrypted secrets path is not a verified private location.',
-				'candidate_path'      => null,
-				'path_source'         => null,
+				'message'             => 'Choose a private location outside the public web root.',
+				'candidate_path'      => '/var/www/site/public_html/ran-booster/secrets.json',
+				'candidate_directory' => '/var/www/site/public_html/ran-booster',
+				'path_source'         => 'manual',
 				'can_provision'       => false,
 				'action_url'          => '/admin',
 				'manual_preflight'    => null,
@@ -236,7 +240,12 @@ final class OnboardingViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'Set a storage location manually', $html );
+		self::assertStringContainsString( 'Use a different storage location', $html );
+		self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
+		self::assertStringContainsString( '/var/www/site/public_html/ran-booster</code>', $html );
+		self::assertStringContainsString( '<dt>Storage file</dt>', $html );
+		self::assertStringContainsString( '/var/www/site/public_html/ran-booster/secrets.json</code>', $html );
+		self::assertStringContainsString( 'Custom wp-config.php path', $html );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $html );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="configured_path_unsafe"', $html );
 	}

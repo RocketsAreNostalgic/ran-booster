@@ -44,9 +44,11 @@ class SecretsStorageProvisioner {
 		}
 		if ( is_string( $configured ) ) {
 			if ( ! $this->validateConfiguredCandidate( $configured ) ) {
-				return SecretsStorageProvisioningResult::manualRequired(
+				return SecretsStorageProvisioningResult::storageNeedsAttention(
+					$configured,
+					SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL,
 					'configured_path_unsafe',
-					'The configured encrypted secrets path is not a verified private location.'
+					'The resolved configured storage directory is not a verified private location. It may be inside the public web root, use a symbolic link or cross another unsafe path boundary. Choose a real local directory outside the public web root.'
 				);
 			}
 
@@ -331,8 +333,8 @@ class SecretsStorageProvisioner {
 		$directory = dirname( $candidate );
 		if ( ! file_exists( $directory ) && ! is_link( $directory ) ) {
 			return $this->pathFailure(
-				'storage_directory_missing',
-				'The configured secrets directory does not exist or is not visible to the PHP process.'
+				'storage_directory_unavailable',
+				'PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700.'
 			);
 		}
 		if ( is_link( $directory ) || ! is_dir( $directory ) || ! stream_is_local( $directory ) ) {
@@ -448,6 +450,31 @@ class SecretsStorageProvisioner {
 
 	/** @return array{code: string, message: string} */
 	private function managedStorageDiagnostic( SecretsStorageUnavailable $failure ): array {
+		if ( SecretsStorageUnavailable::REASON_GENERIC !== $failure->reason() ) {
+			return match ( $failure->reason() ) {
+				'storage_key_missing' => $this->pathFailure(
+					'storage_key_missing',
+					'secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.'
+				),
+				'storage_file_missing' => $this->pathFailure(
+					'storage_file_missing',
+					'The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.'
+				),
+				'storage_orphan_lock' => $this->pathFailure(
+					'storage_orphan_lock',
+					'Only secrets.json.lock remains; no secrets file or database encryption key was found.'
+				),
+				'storage_lock_missing' => $this->pathFailure(
+					'storage_lock_missing',
+					'Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup.'
+				),
+				default => $this->pathFailure(
+					$failure->reason(),
+					'Booster could not safely use the encrypted secrets store.'
+				),
+			};
+		}
+
 		return match ( $failure->getMessage() ) {
 			'The encrypted Booster secrets store is incomplete.',
 			'The encrypted Booster secrets store is incomplete because its lock is missing.',

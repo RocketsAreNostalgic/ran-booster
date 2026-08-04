@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Dashboard;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
+use RAN\Secrets\SecretsStorageProvisioningResult;
 use RuntimeException;
 use WP_Error;
 
@@ -105,5 +106,27 @@ final class DashboardNoticeLoggingTest extends TestCase {
 		self::assertStringContainsString( '"operation":"install-plugin"', $entries[0]['line'] );
 		self::assertStringContainsString( '"exception_class":"LogicException"', $entries[0]['line'] );
 		self::assertStringNotContainsString( 'Package operations are not configured.', $entries[0]['line'] );
+	}
+
+	public function testStorageAttentionLogsOnlyStablePathlessDiagnosticContext(): void {
+		$method = new \ReflectionMethod( Dashboard::class, 'logSecretsStorageDiagnostic' );
+		$method->invoke(
+			$this->dashboard,
+			SecretsStorageProvisioningResult::storageNeedsAttention(
+				'/private/path-canary/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL,
+				'storage_key_missing',
+				'sentinel-storage-message'
+			)
+		);
+
+		$entries = $this->capture->snapshot()['entries'];
+		self::assertCount( 1, $entries );
+		self::assertStringContainsString( 'secrets storage diagnostic reported', $entries[0]['line'] );
+		self::assertStringContainsString( '"diagnostic_id":"storage_key_missing"', $entries[0]['line'] );
+		self::assertStringContainsString( '"event":"secrets_storage_diagnostic"', $entries[0]['line'] );
+		self::assertStringContainsString( '"state":"storage_needs_attention"', $entries[0]['line'] );
+		self::assertStringNotContainsString( 'path-canary', $entries[0]['line'] );
+		self::assertStringNotContainsString( 'sentinel-storage-message', $entries[0]['line'] );
 	}
 }

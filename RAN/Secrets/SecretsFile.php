@@ -98,7 +98,8 @@ class SecretsFile {
 					return false;
 				}
 				if ( null === $key || ! $hasFile ) {
-					throw $this->unavailable( 'The encrypted Booster secrets store is incomplete.' );
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
+					throw $this->incompleteStore( $key, $hasFile );
 				}
 
 				$permissionsChanged = $this->secureExistingFile();
@@ -139,8 +140,12 @@ class SecretsFile {
 			function (): bool {
 				$key     = $this->loadKey( false );
 				$hasFile = $this->hasFile();
+				if ( null === $key && ! $hasFile ) {
+					return false;
+				}
 				if ( null === $key || ! $hasFile ) {
-					throw $this->unavailable( 'The encrypted Booster secrets store is incomplete.' );
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
+					throw $this->incompleteStore( $key, $hasFile );
 				}
 
 				$this->readEncryptedDocument( $key );
@@ -713,7 +718,10 @@ class SecretsFile {
 		$this->assertAvailable();
 		$this->assertConfiguredLocation();
 		if ( ! $hasLock ) {
-			throw $this->unavailable( 'The encrypted Booster secrets store is incomplete because its lock is missing.' );
+			throw $this->unavailable(
+				'The encrypted Booster secrets store is incomplete because its lock is missing.',
+				'storage_lock_missing'
+			);
 		}
 
 		$this->withLock(
@@ -722,11 +730,9 @@ class SecretsFile {
 			function ( mixed $lock ): void {
 				$key     = $this->loadKey( false );
 				$hasFile = $this->hasFile();
-				if ( ! $hasFile && null === $key ) {
-					throw $this->unavailable( 'The encrypted Booster secrets store is incomplete.' );
-				}
 				if ( $hasFile !== ( null !== $key ) ) {
-					throw $this->unavailable( 'The encrypted Booster secrets store is incomplete.' );
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
+					throw $this->incompleteStore( $key, $hasFile );
 				}
 				if ( $hasFile ) {
 					$this->deletableFileStat(
@@ -786,7 +792,8 @@ class SecretsFile {
 
 				if ( $hasFile ) {
 					if ( null === $key ) {
-						throw $this->unavailable( 'The encrypted Booster secrets store is incomplete.' );
+						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
+						throw $this->incompleteStore( $key, $hasFile );
 					}
 
 					$authenticated = $this->deletableFileStat(
@@ -1237,7 +1244,10 @@ class SecretsFile {
 				return true;
 			}
 
-			throw $this->unavailable( 'The encrypted Booster secrets store is missing its lock.' );
+			throw $this->unavailable(
+				'The encrypted Booster secrets store is missing its lock.',
+				'storage_lock_missing'
+			);
 		}
 
 		return false;
@@ -1251,7 +1261,8 @@ class SecretsFile {
 			return $this->emptyDocument();
 		}
 		if ( null === $key || ! $hasFile ) {
-			throw $this->unavailable( 'The encrypted Booster secrets store is incomplete.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
+			throw $this->incompleteStore( $key, $hasFile );
 		}
 
 		return $this->readEncryptedDocument( $key );
@@ -1961,8 +1972,28 @@ class SecretsFile {
 		clearstatcache( true, $path );
 	}
 
-	private function unavailable( string $message ): SecretsStorageUnavailable {
-		return new SecretsStorageUnavailable( $message );
+	private function incompleteStore( #[\SensitiveParameter] ?string $key, bool $hasFile ): SecretsStorageUnavailable {
+		if ( $hasFile && null === $key ) {
+			return $this->unavailable(
+				'The encrypted Booster secrets store is incomplete: secrets.json exists but its database key is missing.',
+				'storage_key_missing'
+			);
+		}
+		if ( ! $hasFile && null !== $key ) {
+			return $this->unavailable(
+				'The encrypted Booster secrets store is incomplete: its database key exists but secrets.json is missing.',
+				'storage_file_missing'
+			);
+		}
+
+		return $this->unavailable(
+			'The encrypted Booster secrets store is incomplete: only secrets.json.lock remains.',
+			'storage_orphan_lock'
+		);
+	}
+
+	private function unavailable( string $message, string $reason = SecretsStorageUnavailable::REASON_GENERIC ): SecretsStorageUnavailable {
+		return new SecretsStorageUnavailable( $message, $reason );
 	}
 
 	private function loadKey( bool $repairAutoload = true ): ?string {

@@ -169,12 +169,13 @@ class Dashboard {
 				$adminUrl . '?page=ran-booster-themes-create'
 			);
 			if ( null !== $this->secretsStorage ) {
-				$includeStorageDetails                 = current_user_can( 'manage_options' )
+				$includeStorageDetails = current_user_can( 'manage_options' )
 					&& current_user_can( 'activate_plugins' );
-				$wordpressRoot                         = defined( 'ABSPATH' ) && is_string( ABSPATH )
+				$wordpressRoot         = defined( 'ABSPATH' ) && is_string( ABSPATH )
 					? ABSPATH
 					: '';
-				$result                                = $this->secretsStorageResult ?? $this->secretsStorage->status();
+				$result                = $this->secretsStorageResult ?? $this->secretsStorage->status();
+				$this->logSecretsStorageDiagnostic( $result );
 				$data['onboarding']['secrets_storage'] = ( new SecretsStorageSetupPresenter() )->build(
 					$result,
 					$adminUrl . '?page=ran-booster&tab=overview',
@@ -268,6 +269,32 @@ class Dashboard {
 
 	public function setSecretsStorageProvisioningResult( SecretsStorageProvisioningResult $result ): void {
 		$this->secretsStorageResult = $result;
+	}
+
+	private function logSecretsStorageDiagnostic( SecretsStorageProvisioningResult $result ): void {
+		if ( ! in_array(
+			$result->status(),
+			array(
+				SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION,
+				SecretsStorageProvisioningResult::MANUAL_REQUIRED,
+				SecretsStorageProvisioningResult::UNSUPPORTED,
+			),
+			true
+		) ) {
+			return;
+		}
+
+		BoosterLogger::log(
+			'secrets storage diagnostic reported',
+			array(
+				'diagnostic_id' => $result->code(),
+				'event'         => 'secrets_storage_diagnostic',
+				'outcome_code'  => $result->code(),
+				'source'        => 'admin',
+				'state'         => $result->status(),
+				'step'          => 'overview_status',
+			)
+		);
 	}
 
 	/** @return list<array{name:string,identifier:string,type:string}> */

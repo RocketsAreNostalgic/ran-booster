@@ -320,6 +320,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			self::fail( 'Incomplete converted-install material must stop uninstall.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'incomplete', $failure->getMessage() );
+			self::assertSame( 'storage_key_missing', $failure->reason() );
 			self::assertStringNotContainsString( $path, $failure->getMessage() );
 		}
 
@@ -330,7 +331,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $root );
 	}
 
-	public function testDeletionPreflightRejectsKeyOnlyLockOnlyAndMissingLockStoresWithoutMutation(): void {
+	public function testDeletionPreflightRejectsRecoverablePartialStoresButDeletesSafeLockOnlyResidue(): void {
 		[$keyRoot, $keyPath] = $this->sidecarFixture();
 		$keyStore            = new InMemorySiteKeyStore( $keyPath );
 		$key                 = $keyStore->loadOrCreate()['key'];
@@ -340,7 +341,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
-		$this->assertStoragePreflightRefused( $keyOnly );
+		$this->assertStoragePreflightRefused( $keyOnly, 'storage_lock_missing' );
 		self::assertSame( $key, $keyStore->load( false ) );
 		self::assertTrue( $keyStore->deleteExact( $key ) );
 		rmdir( $keyRoot );
@@ -354,9 +355,10 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
-		$this->assertStoragePreflightRefused( $lockOnly );
-		self::assertFileExists( $lockPath . '.lock' );
-		unlink( $lockPath . '.lock' );
+		self::assertFalse( $lockOnly->hasHealthyManagedStorage() );
+		$lockOnly->assertManagedStorageDeletable();
+		$lockOnly->deleteManagedStorage();
+		self::assertFileDoesNotExist( $lockPath . '.lock' );
 		rmdir( $lockRoot );
 
 		[$missingRoot, $missingPath] = $this->sidecarFixture();
@@ -378,7 +380,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			'pre-conversion-secret-canary'
 		);
 		self::assertTrue( unlink( $missingPath . '.lock' ) );
-		$this->assertStoragePreflightRefused( $missingLock );
+		$this->assertStoragePreflightRefused( $missingLock, 'storage_lock_missing' );
 		self::assertFileExists( $missingPath );
 		self::assertNotNull( $missingKeyStore->load( false ) );
 		unlink( $missingPath );
@@ -420,12 +422,13 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 	}
 
-	private function assertStoragePreflightRefused( SecretsFile $secrets ): void {
+	private function assertStoragePreflightRefused( SecretsFile $secrets, string $expectedReason ): void {
 		try {
 			$secrets->assertManagedStorageDeletable();
 			self::fail( 'Incomplete managed storage must fail the deletion preflight.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'incomplete', $failure->getMessage() );
+			self::assertSame( $expectedReason, $failure->reason() );
 		}
 	}
 }

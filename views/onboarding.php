@@ -5,12 +5,16 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$secretsStorage       = isset( $onboarding['secrets_storage'] ) && is_array( $onboarding['secrets_storage'] )
+$secretsStorage                    = isset( $onboarding['secrets_storage'] ) && is_array( $onboarding['secrets_storage'] )
 	? $onboarding['secrets_storage']
 	: null;
-$storageStatus        = null === $secretsStorage ? '' : (string) $secretsStorage['status'];
-$storageReasonCode    = null === $secretsStorage ? '' : (string) ( $secretsStorage['reason_code'] ?? '' );
-$storageStatusLabels  = array(
+$storageStatus                     = null === $secretsStorage ? '' : (string) $secretsStorage['status'];
+$storageReasonCode                 = null === $secretsStorage ? '' : (string) ( $secretsStorage['reason_code'] ?? '' );
+$storageCandidatePath              = null === $secretsStorage ? null : ( $secretsStorage['candidate_path'] ?? null );
+$storageDirectory                  = null === $secretsStorage
+	? null
+	: ( $secretsStorage['candidate_directory'] ?? ( is_string( $storageCandidatePath ) ? dirname( $storageCandidatePath ) : null ) );
+$storageStatusLabels               = array(
 	'path_configured'         => __( 'Path configured', 'ran-booster' ),
 	'storage_healthy'         => __( 'Storage healthy', 'ran-booster' ),
 	'storage_needs_attention' => __( 'Storage needs attention', 'ran-booster' ),
@@ -19,7 +23,7 @@ $storageStatusLabels  = array(
 	'unsupported'             => __( 'Unavailable', 'ran-booster' ),
 	'pending_verification'    => __( 'Verification pending', 'ran-booster' ),
 );
-$storageStatusClasses = array(
+$storageStatusClasses              = array(
 	'path_configured'         => 'neutral',
 	'storage_healthy'         => 'ok',
 	'storage_needs_attention' => 'warning',
@@ -28,11 +32,6 @@ $storageStatusClasses = array(
 	'unsupported'             => 'error',
 	'pending_verification'    => 'pending',
 );
-$storageLocationLabel = match ( $storageStatus ) {
-	'path_configured', 'storage_healthy', 'storage_needs_attention' => __( 'Storage file', 'ran-booster' ),
-	'setup_available' => __( 'Recommended location', 'ran-booster' ),
-	default           => __( 'Storage location', 'ran-booster' ),
-};
 $storagePathSource                 = null === $secretsStorage ? null : ( $secretsStorage['path_source'] ?? null );
 $storagePathSourceLabels           = array(
 	'automatic' => __( 'Booster default', 'ran-booster' ),
@@ -129,8 +128,14 @@ $hasStorageDetails                 = null !== $secretsStorage
 					<div>
 						<?php if ( null !== $secretsStorage['candidate_path'] ) { ?>
 							<dl class="ran-booster-onboarding__storage-facts">
+								<?php if ( null !== $storageDirectory ) { ?>
+									<div>
+										<dt><?php esc_html_e( 'Storage directory', 'ran-booster' ); ?></dt>
+										<dd><code><?php echo esc_html( $storageDirectory ); ?></code></dd>
+									</div>
+								<?php } ?>
 								<div>
-									<dt><?php echo esc_html( $storageLocationLabel ); ?></dt>
+									<dt><?php esc_html_e( 'Storage file', 'ran-booster' ); ?></dt>
 									<dd><code><?php echo esc_html( $secretsStorage['candidate_path'] ); ?></code></dd>
 								</div>
 								<?php if ( isset( $storagePathSourceLabels[ $storagePathSource ] ) && in_array( $storageStatus, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>

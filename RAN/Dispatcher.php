@@ -313,7 +313,20 @@ class Dispatcher {
 					'Automatic secure storage setup is unavailable.'
 				)
 				: $this->secretsStorage->provision();
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $failure ) {
+			\RAN\Logging\BoosterLogger::logException(
+				'secrets storage setup failed',
+				$failure,
+				array(
+					'diagnostic_id' => 'provisioning_failed',
+					'event'         => 'secrets_storage_setup_failed',
+					'operation'     => 'create_secure_storage',
+					'outcome_code'  => 'provisioning_failed',
+					'source'        => 'admin',
+					'state'         => 'failed',
+					'step'          => 'provision',
+				)
+			);
 			$result = SecretsStorageProvisioningResult::manualRequired(
 				'provisioning_failed',
 				'Automatic secure storage setup could not be completed.'

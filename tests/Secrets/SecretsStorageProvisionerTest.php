@@ -204,8 +204,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->configured = $directory . '/secrets.json';
 
 		$result = $provisioner->status();
-		self::assertSame( 'storage_directory_missing', $result->code() );
-		self::assertSame( 'The configured secrets directory does not exist or is not visible to the PHP process.', $result->message() );
+		self::assertSame( 'storage_directory_unavailable', $result->code() );
+		self::assertStringContainsString( 'execute/traverse', $result->message() );
 
 		self::assertTrue( mkdir( $directory, 0755 ) );
 		$result = $provisioner->status();
@@ -267,6 +267,13 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->healthFailureMessage = 'The encrypted Booster secrets store is incomplete.';
 		self::assertSame( 'storage_incomplete', $provisioner->status()->code() );
 
+		$provisioner->healthFailureReason = 'storage_key_missing';
+		$result                           = $provisioner->status();
+		self::assertSame( 'storage_key_missing', $result->code() );
+		self::assertStringContainsString( 'database encryption key is missing', $result->message() );
+		self::assertStringContainsString( 'will not delete unauthenticated ciphertext', $result->message() );
+
+		$provisioner->healthFailureReason  = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
 		$provisioner->healthFailureMessage = 'The encrypted Booster secrets document could not be authenticated.';
 		$result                            = $provisioner->status();
 		self::assertSame( 'storage_authentication_failed', $result->code() );
@@ -287,15 +294,17 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 	}
 
-	public function testManualOverrideInsideWordPressIsRejectedWithoutExposingItsPath(): void {
+	public function testManualOverrideInsideWordPressIsRejectedWithPrivilegedCorrectionPath(): void {
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $this->wordpressRoot . '/secrets.json';
 
 		$result = $provisioner->status();
 
-		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
+		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $result->status() );
 		self::assertSame( 'configured_path_unsafe', $result->code() );
-		self::assertNull( $result->candidatePath() );
+		self::assertSame( $this->wordpressRoot . '/secrets.json', $result->candidatePath() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->pathSource() );
+		self::assertStringContainsString( 'outside the public web root', $result->message() );
 		self::assertFalse( $provisioner->resolverCalled );
 	}
 
@@ -441,6 +450,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public bool $healthy                  = false;
 	public bool $healthFailure            = false;
 	public string $healthFailureMessage   = 'Fixture storage failure.';
+	public string $healthFailureReason    = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
 	public bool $readRuntimeConfiguration = false;
 
 	public function __construct( string $temporaryBoundary ) {
@@ -515,7 +525,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	protected function managedStorageHealthy(): bool {
 		if ( $this->healthFailure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only fixed fixture message.
-			throw new \RAN\Secrets\SecretsStorageUnavailable( $this->healthFailureMessage );
+			throw new \RAN\Secrets\SecretsStorageUnavailable( $this->healthFailureMessage, $this->healthFailureReason );
 		}
 
 		return $this->healthy;

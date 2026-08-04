@@ -392,11 +392,13 @@
 .ran-booster-admin .ran-booster-package-summary {
 	position: sticky;
 	inset-block-start: 54px;
+	min-inline-size: 0;
 	border: 1px solid var(--ran-booster-border);
 	background: var(--ran-booster-surface);
 }
 
 .ran-booster-admin .ran-booster-package-summary > div {
+	min-inline-size: 0;
 	padding: var(--ran-booster-space-16);
 	border-block-end: 1px solid var(--ran-booster-border);
 }
@@ -416,6 +418,17 @@
 	margin: var(--ran-booster-space-4) 0 0;
 	color: var(--ran-booster-text-subtle);
 	font-size: var(--ran-booster-font-size-xs);
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin
+	.ran-booster-package-summary__meta
+	> .ran-booster-repository-link {
+	display: block;
+	max-inline-size: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .ran-booster-admin .ran-booster-readiness-panel {

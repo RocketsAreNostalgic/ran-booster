@@ -158,6 +158,18 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-package-summary__eyebrow {', $settings );
 	}
 
+	public function testPackageSummaryContainsLongCopyAndTruncatesOnlyTheRepositoryLink(): void {
+		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		self::assertStringContainsString( ".ran-booster-package-summary {\n\tposition: sticky;\n\tinset-block-start: 54px;\n\tmin-inline-size: 0;", $settings );
+		self::assertStringContainsString( ".ran-booster-package-summary > div {\n\tmin-inline-size: 0;", $settings );
+		self::assertStringContainsString( ".ran-booster-package-summary__meta {\n\tmargin:", $settings );
+		self::assertStringContainsString( 'overflow-wrap: anywhere;', $settings );
+		self::assertStringContainsString( '> .ran-booster-repository-link {', $settings );
+		self::assertStringContainsString( 'text-overflow: ellipsis;', $settings );
+		self::assertStringContainsString( 'white-space: nowrap;', $settings );
+	}
+
 	public function testAdminPrimitivesOwnSharedHeadingsAndCredentialDialogChrome(): void {
 		$primitives       = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$onboarding       = $this->view( 'onboarding.php' );

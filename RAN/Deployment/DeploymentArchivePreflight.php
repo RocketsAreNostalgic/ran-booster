@@ -23,7 +23,8 @@ class DeploymentArchivePreflight {
 	public const MIN_CONFIGURED_BYTES = 1048576;
 	public const MAX_CONFIGURED_BYTES = 536870912;
 
-	private const EXPANDED_RATIO = 4;
+	private const EXPANDED_RATIO    = 4;
+	private const DOWNLOAD_ATTEMPTS = 2;
 
 	public function __construct( private ?int $configuredMaxBytes = null ) {
 	}
@@ -200,6 +201,7 @@ class DeploymentArchivePreflight {
 		if ( ! wp_is_file_mod_allowed( 'ran-booster' ) ) {
 			throw new RuntimeException( 'WordPress file modifications are disabled for this site.' );
 		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
 		if ( 'direct' !== get_filesystem_method() ) {
 			throw new RuntimeException( 'RAN Booster beta requires the direct WordPress filesystem method.' );
 		}
@@ -253,31 +255,36 @@ class DeploymentArchivePreflight {
 	private function download( PreparedArchive $archive, string $path ): void {
 		$url = $archive->getUrl();
 		$this->assertSafeHttpsUrl( $url );
-		$response = wp_safe_remote_get(
-			$url,
-			array(
-				'timeout'             => self::DOWNLOAD_TIMEOUT,
-				'redirection'         => 3,
-				'reject_unsafe_urls'  => true,
-				'stream'              => true,
-				'filename'            => $path,
-				'limit_response_size' => $this->compressedLimit() + 1,
-			)
-		);
-		if ( is_wp_error( $response ) ) {
-			// WordPress reports both network failures and local streamed-file write
-			// failures as http_request_failed. Retrying that undifferentiated error
-			// could repeat a persistent local failure, so only HTTP responses below
-			// are eligible for the single bounded retry.
-			throw new RuntimeException( 'The deployment archive could not be downloaded.' );
-		}
-		$status = (int) wp_remote_retrieve_response_code( $response );
-		if ( 429 === $status || in_array( $status, array( 502, 503, 504 ), true ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The retry type stores only a normalized integer delay and fixed message.
-			throw new RuntimeException( 'The deployment archive is temporarily unavailable.' );
-		}
-		if ( $status < 200 || $status >= 300 ) {
-			throw new RuntimeException( 'The provider returned an unsuccessful archive response.' );
+		for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
+			$response = wp_safe_remote_get(
+				$url,
+				array(
+					'timeout'             => self::DOWNLOAD_TIMEOUT,
+					'redirection'         => 3,
+					'reject_unsafe_urls'  => true,
+					'stream'              => true,
+					'filename'            => $path,
+					'limit_response_size' => $this->compressedLimit() + 1,
+				)
+			);
+			if ( is_wp_error( $response ) ) {
+				// WordPress reports both network failures and local streamed-file write
+				// failures as http_request_failed. Retrying that undifferentiated error
+				// could repeat a persistent local failure.
+				throw new RuntimeException( 'The deployment archive could not be downloaded.' );
+			}
+			$status = (int) wp_remote_retrieve_response_code( $response );
+			if ( 429 === $status || in_array( $status, array( 502, 503, 504 ), true ) ) {
+				if ( $attempt < self::DOWNLOAD_ATTEMPTS ) {
+					continue;
+				}
+				throw new RuntimeException( 'The deployment archive is temporarily unavailable.' );
+			}
+			if ( $status < 200 || $status >= 300 ) {
+				throw new RuntimeException( 'The provider returned an unsuccessful archive response.' );
+			}
+
+			return;
 		}
 	}
 

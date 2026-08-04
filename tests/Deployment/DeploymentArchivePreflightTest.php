@@ -27,6 +27,9 @@ use ReflectionMethod;
 use RuntimeException;
 use ZipArchive;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
+}
 if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 	define( 'WP_PLUGIN_DIR', DeploymentArchivePreflightTestEnvironment::pluginRoot() );
 }
@@ -85,6 +88,93 @@ final class DeploymentArchivePreflightTest extends TestCase {
 		self::assertSame( $artifactSize, file_put_contents( $artifact->getPath(), str_repeat( 'x', $artifactSize ) ) );
 		$this->expectExceptionMessage( 'changed before use' );
 		$artifact->assertUnchanged();
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testPreflightLoadsTheWordPressFilesystemApiOutsideAdmin(): void {
+		$this->zip( array( 'bundle/example.php' => self::VALID_PLUGIN ) );
+		self::assertArrayNotHasKey( 'ran_booster_wordpress_file_api_loads', $GLOBALS );
+		$archive = new PreflightPreparedArchive();
+
+		$artifact = ( new DeploymentArchivePreflight() )->prepare( $this->attempt(), $archive, 'example/example.php' );
+
+		self::assertSame( 1, $GLOBALS['ran_booster_wordpress_file_api_loads'] ?? null );
+		self::assertSame( 1, DeploymentArchivePreflightWordPressState::$requests );
+		self::assertSame( 1, $archive->cleanupCalls );
+		$artifact->cleanup();
+	}
+
+	#[DataProvider( 'transientArchiveStatuses' )]
+	public function testTransientArchiveResponseReceivesOneBoundedReattempt( int $status ): void {
+		$this->zip( array( 'bundle/example.php' => self::VALID_PLUGIN ) );
+		DeploymentArchivePreflightWordPressState::$responses = array(
+			array( 'status' => $status ),
+			array( 'status' => 200 ),
+		);
+		$archive = new PreflightPreparedArchive();
+
+		$artifact = ( new DeploymentArchivePreflight() )->prepare( $this->attempt(), $archive, 'example/example.php' );
+
+		self::assertSame( 2, DeploymentArchivePreflightWordPressState::$requests );
+		self::assertSame( 1, $archive->cleanupCalls );
+		$artifact->assertUnchanged();
+		$artifact->cleanup();
+	}
+
+	public static function transientArchiveStatuses(): iterable {
+		yield 'rate limited' => array( 429 );
+		yield 'bad gateway' => array( 502 );
+		yield 'service unavailable' => array( 503 );
+		yield 'gateway timeout' => array( 504 );
+	}
+
+	public function testSecondTransientArchiveResponseFailsWithoutRequeuing(): void {
+		$this->zip( array( 'bundle/example.php' => self::VALID_PLUGIN ) );
+		DeploymentArchivePreflightWordPressState::$responses = array(
+			array( 'status' => 503 ),
+			array( 'status' => 504 ),
+		);
+		$archive = new PreflightPreparedArchive();
+
+		try {
+			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), $archive, 'example/example.php' );
+			self::fail( 'A second transient archive response must fail the attempt.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The deployment archive is temporarily unavailable.', $failure->getMessage() );
+		}
+		self::assertSame( 2, DeploymentArchivePreflightWordPressState::$requests );
+		self::assertSame( 1, $archive->cleanupCalls );
+		$this->assertNoPreparedArtifactsRemain();
+	}
+
+	#[DataProvider( 'terminalArchiveFailures' )]
+	public function testTerminalArchiveFailureIsNotRetried( bool $wpError, int $status, string $message ): void {
+		$this->zip( array( 'bundle/example.php' => self::VALID_PLUGIN ) );
+		DeploymentArchivePreflightWordPressState::$responses = array(
+			array(
+				'wp_error' => $wpError,
+				'status'   => $status,
+			),
+			array( 'status' => 200 ),
+		);
+		$archive = new PreflightPreparedArchive();
+
+		try {
+			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), $archive, 'example/example.php' );
+			self::fail( 'A terminal archive failure must fail the attempt.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( $message, $failure->getMessage() );
+		}
+		self::assertSame( 1, DeploymentArchivePreflightWordPressState::$requests );
+		self::assertSame( 1, $archive->cleanupCalls );
+		$this->assertNoPreparedArtifactsRemain();
+	}
+
+	public static function terminalArchiveFailures(): iterable {
+		yield 'stream or network failure' => array( true, 200, 'The deployment archive could not be downloaded.' );
+		yield 'not found' => array( false, 404, 'The provider returned an unsuccessful archive response.' );
+		yield 'internal server error' => array( false, 500, 'The provider returned an unsuccessful archive response.' );
 	}
 
 	public function testDefaultAndConfiguredLimitsPreserveTheExpandedSafetyRatio(): void {

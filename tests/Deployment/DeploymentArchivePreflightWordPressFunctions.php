@@ -43,9 +43,14 @@ function get_bloginfo( string $field ): string {
 
 /** @param array<string, mixed> $arguments */
 function wp_safe_remote_get( string $url, array $arguments ): array {
+	$responseIndex = DeploymentArchivePreflightWordPressState::$requests;
 	++DeploymentArchivePreflightWordPressState::$requests;
 	DeploymentArchivePreflightWordPressState::$arguments = $arguments;
-	if ( DeploymentArchivePreflightWordPressState::$wpError ) {
+	$fixture = DeploymentArchivePreflightWordPressState::$responses[ $responseIndex ] ?? array();
+	$wpError = array_key_exists( 'wp_error', $fixture )
+		? $fixture['wp_error']
+		: DeploymentArchivePreflightWordPressState::$wpError;
+	if ( $wpError ) {
 		return array( 'wp_error' => true );
 	}
 
@@ -66,8 +71,8 @@ function wp_safe_remote_get( string $url, array $arguments ): array {
 	fclose( $output );
 
 	return array(
-		'response' => array( 'code' => DeploymentArchivePreflightWordPressState::$status ),
-		'headers'  => DeploymentArchivePreflightWordPressState::$headers,
+		'response' => array( 'code' => $fixture['status'] ?? DeploymentArchivePreflightWordPressState::$status ),
+		'headers'  => $fixture['headers'] ?? DeploymentArchivePreflightWordPressState::$headers,
 	);
 }
 

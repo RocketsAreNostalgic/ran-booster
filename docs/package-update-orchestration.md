@@ -670,11 +670,12 @@ operator uses the separate protected acknowledge-reviewed action before a new
 attempt can be admitted. Re-prompting the worker only schedules already queued
 rows and never takes over WordPress's updater lock.
 
-There is no automatic retry of a failed provider download or upgrader attempt.
-The worker schedules the next queued row, not the failed row. A new
-administrator action or a new provider delivery may create a later attempt
-after a definite terminal result. An exact webhook replay never reruns its
-existing attempt.
+There is no automatic retry of a failed deployment attempt. An archive download
+may make one immediate in-attempt reattempt after an HTTP 429, 502, 503, or 504;
+it does not requeue or rerun the deployment. The worker schedules the next
+queued row, not the failed row. A new administrator action or a new provider
+delivery may create a later attempt after a definite terminal result. An exact
+webhook replay never reruns its existing attempt.
 
 Background webhook failures are reported only after the terminal attempt is
 durably written. Notification failure does not rerun deployment.

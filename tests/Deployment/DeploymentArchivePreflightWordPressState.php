@@ -10,6 +10,8 @@ final class DeploymentArchivePreflightWordPressState {
 	public static int $status    = 200;
 	public static int $requests  = 0;
 	public static bool $wpError  = false;
+	/** @var list<array{status?: int, wp_error?: bool, headers?: array<string, string>}> */
+	public static array $responses = array();
 	/** @var array<string, string> */
 	public static array $headers = array();
 	/** @var array<string, mixed> */
@@ -27,6 +29,7 @@ final class DeploymentArchivePreflightWordPressState {
 		self::$status               = 200;
 		self::$requests             = 0;
 		self::$wpError              = false;
+		self::$responses            = array();
 		self::$headers              = array();
 		self::$arguments            = array();
 		self::$multisite            = false;

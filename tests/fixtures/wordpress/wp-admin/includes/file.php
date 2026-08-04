@@ -1,3 +1,3 @@
 <?php
 
-// Intentionally empty WordPress include stub for dependency-free characterization.
+$GLOBALS['ran_booster_wordpress_file_api_loads'] = (int) ( $GLOBALS['ran_booster_wordpress_file_api_loads'] ?? 0 ) + 1;

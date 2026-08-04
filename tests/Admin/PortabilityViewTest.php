@@ -150,6 +150,11 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Cannot apply', $html );
 		self::assertStringContainsString( 'class="ran-booster-portability__reconciliation-row"', $html );
 		self::assertStringContainsString( 'data-portability-row="0" data-portability-action="install"', $html );
+		self::assertStringContainsString( 'data-portability-package-name="Install me"', $html );
+		self::assertStringContainsString( 'data-portability-package-type="Plugin"', $html );
+		self::assertStringContainsString( 'data-portability-package-identifier="plugin/install.php"', $html );
+		self::assertStringContainsString( 'data-portability-package-name="&lt;Private &amp; Forms&gt;"', $html );
+		self::assertStringContainsString( 'data-portability-package-identifier="private/&lt;forms&gt;.php"', $html );
 		self::assertStringContainsString( 'class="notice notice-warning inline"', $html );
 		self::assertStringContainsString( 'for="ran-booster-portability-target-credential-4"', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-target-credential-4"', $html );

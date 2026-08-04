@@ -200,7 +200,7 @@ final readonly class PortabilityApplicationService {
 			$this->assertDisabledResult( $result, $item->package, $credentialId, $repositoryPrivate );
 		}
 
-		return $this->deploymentResult( $result, $item->package );
+		return $this->deploymentResult( $result );
 	}
 
 	/**
@@ -286,7 +286,7 @@ final readonly class PortabilityApplicationService {
 	 * @param array<string, mixed> $result
 	 * @return array{status:string,message:string}
 	 */
-	private function deploymentResult( array $result, BlueprintPackage $package ): array {
+	private function deploymentResult( array $result ): array {
 		if ( 'succeeded' === ( $result['status'] ?? null ) ) {
 			return array(
 				'status'  => 'installed',
@@ -307,17 +307,9 @@ final readonly class PortabilityApplicationService {
 				$reference
 			);
 		}
-		$packageType = 'plugin' === $package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' );
-
 		return array(
 			'status'  => 'failed',
-			'message' => sprintf(
-				/* translators: 1: package type, 2: package display name, 3: safe deployment failure reason and optional support reference. */
-				__( '%1$s “%2$s”: %3$s', 'ran-booster' ),
-				$packageType,
-				$package->displayName,
-				$message
-			),
+			'message' => $message,
 		);
 	}
 

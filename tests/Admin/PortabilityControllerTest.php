@@ -425,8 +425,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testInstallSuccessExplainsTheDisabledDeploymentGate(): void {
 		$result = $this->deploymentResult(
-			array( 'status' => 'succeeded' ),
-			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null )
+			array( 'status' => 'succeeded' )
 		);
 
 		self::assertSame( 'installed', $result['status'] );
@@ -435,49 +434,41 @@ final class PortabilityControllerTest extends TestCase {
 	}
 
 	public function testInstallFailureUsesTheSpecificDeploymentOutcomeAndReference(): void {
-		$package = new BlueprintPackage( 'plugin', 'oversized/oversized.php', 'Oversized Example', 'gh', 'repository-id', 'owner/oversized', 'main', null );
-		$result  = $this->deploymentResult(
+		$result = $this->deploymentResult(
 			array(
 				'status'         => 'failed',
 				'outcome_code'   => DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE,
 				'correlation_id' => str_repeat( 'a', 32 ),
-			),
-			$package
+			)
 		);
 
 		self::assertSame( 'failed', $result['status'] );
-		self::assertStringStartsWith( 'Plugin “Oversized Example”:', $result['message'] );
 		self::assertStringContainsString( 'configured archive download limit', $result['message'] );
 		self::assertStringContainsString( 'Reference: ' . str_repeat( 'a', 32 ), $result['message'] );
 		self::assertStringNotContainsString( 'check repository access', $result['message'] );
 	}
 
-	public function testInstallFailureIdentifiesAnOffendingTheme(): void {
-		$package = new BlueprintPackage( 'theme', 'oversized-theme', 'Oversized Theme', 'gh', 'repository-id', 'owner/oversized-theme', 'main', null );
-		$result  = $this->deploymentResult(
+	public function testInstallFailureKeepsTheSafeOutcomeIndependentOfPackageType(): void {
+		$result = $this->deploymentResult(
 			array(
 				'status'       => 'failed',
 				'outcome_code' => DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE,
-			),
-			$package
+			)
 		);
 
-		self::assertStringStartsWith( 'Theme “Oversized Theme”:', $result['message'] );
 		self::assertStringContainsString( 'configured archive download limit', $result['message'] );
 	}
 
 	public function testInstallFailureRejectsUnsafeOutcomeEvidenceAndMalformedReferences(): void {
-		$package = new BlueprintPackage( 'plugin', 'safe/safe.php', 'Safe Package', 'gh', 'repository-id', 'owner/safe', 'main', null );
-		$result  = $this->deploymentResult(
+		$result = $this->deploymentResult(
 			array(
 				'status'         => 'failed',
 				'outcome_code'   => 'Authorization: Bearer secret-canary',
 				'correlation_id' => 'secret-canary',
-			),
-			$package
+			)
 		);
 
-		self::assertSame( 'Plugin “Safe Package”: Booster recorded an unavailable deployment outcome.', $result['message'] );
+		self::assertSame( 'Booster recorded an unavailable deployment outcome.', $result['message'] );
 		self::assertStringNotContainsString( 'secret-canary', $result['message'] );
 	}
 
@@ -643,10 +634,10 @@ final class PortabilityControllerTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $result @return array{status:string,message:string} */
-	private function deploymentResult( array $result, BlueprintPackage $package ): array {
+	private function deploymentResult( array $result ): array {
 		$method = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'deploymentResult' );
 
-		return $method->invoke( $this->application(), $result, $package );
+		return $method->invoke( $this->application(), $result );
 	}
 
 	private function application(): PortabilityApplicationService {

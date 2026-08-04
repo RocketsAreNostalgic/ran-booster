@@ -448,26 +448,46 @@
 			updateSelectionControls();
 		}
 
-		function renderResult(result) {
+		function renderResult(result, row, rendered = null) {
 			if (!results) {
-				return;
+				return null;
 			}
 			let resultType = 'success';
 			if (result.status === 'failed') {
 				resultType = 'error';
 			} else if (result.status === 'skipped') {
 				resultType = 'warning';
+			} else if (result.status === 'pending') {
+				resultType = 'info';
 			}
-			const item = document.createElement('div');
-			const text = document.createElement('p');
+			const item = rendered?.item || document.createElement('div');
+			const text = rendered?.text || document.createElement('p');
+			const type =
+				row?.getAttribute('data-portability-package-type') || 'Package';
+			const name =
+				row?.getAttribute('data-portability-package-name') ||
+				row?.getAttribute('data-portability-package-identifier') ||
+				'Unknown';
+			const identifier =
+				row?.getAttribute('data-portability-package-identifier') || '';
+			const shortLabel = type + ' “' + name + '”';
+			const label = identifier
+				? shortLabel + ' (' + identifier + ')'
+				: shortLabel;
+			const resultMessage =
+				result.message || 'Package result unavailable.';
 
 			item.className =
 				'notice inline notice-' +
 				resultType +
 				' ran-booster-portability__apply-result';
-			text.textContent = result.message || 'Package result unavailable.';
-			item.appendChild(text);
-			results.appendChild(item);
+			text.textContent = label + ' — ' + resultMessage;
+			if (!rendered) {
+				item.appendChild(text);
+				results.appendChild(item);
+			}
+
+			return { item, text };
 		}
 
 		async function preview(
@@ -578,6 +598,10 @@
 				}
 
 				for (const row of rows) {
+					const rendered = renderResult(
+						{ status: 'pending', message: 'Applying…' },
+						row
+					);
 					const data = new FormData(form);
 					data.set('action', 'ran_booster_apply_blueprint');
 					data.set('nonce', form.dataset.portabilityApplyNonce || '');
@@ -617,14 +641,18 @@
 						) {
 							appliedEverySelection = false;
 						}
-						renderResult(result);
+						renderResult(result, row, rendered);
 					} catch {
 						appliedEverySelection = false;
-						renderResult({
-							status: 'failed',
-							message:
-								'Package apply failed. Review the blueprint again.',
-						});
+						renderResult(
+							{
+								status: 'failed',
+								message:
+									'Package apply failed. Review the blueprint again.',
+							},
+							row,
+							rendered
+						);
 					}
 				}
 

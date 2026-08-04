@@ -35,10 +35,11 @@ $hasActionableRows       = array() !== array_filter(
 			<?php foreach ( $portabilityReviewRows as $rowIndex => $row ) : ?>
 				<?php
 				$reviewAction = $row['action'];
+				$packageName  = '' !== (string) ( $row['name'] ?? '' ) ? (string) $row['name'] : (string) ( $row['identifier'] ?? '' );
 				$credential   = 'blocked' === $reviewAction && is_array( $row['credential'] ?? null ) ? $row['credential'] : null;
 				$credentialId = 'ran-booster-portability-target-credential-' . $rowIndex;
 				?>
-				<tr data-portability-row="<?php echo esc_attr( (string) $rowIndex ); ?>" data-portability-action="<?php echo esc_attr( $reviewAction ); ?>">
+				<tr data-portability-row="<?php echo esc_attr( (string) $rowIndex ); ?>" data-portability-action="<?php echo esc_attr( $reviewAction ); ?>" data-portability-package-name="<?php echo esc_attr( $packageName ); ?>" data-portability-package-type="<?php echo esc_attr( (string) ( $row['type'] ?? __( 'Package', 'ran-booster' ) ) ); ?>" data-portability-package-identifier="<?php echo esc_attr( (string) ( $row['identifier'] ?? '' ) ); ?>">
 					<td><strong><?php echo esc_html( $row['name'] ?? '' ); ?></strong><code><?php echo esc_html( $row['identifier'] ?? '' ); ?></code></td>
 					<td><?php echo esc_html( $row['type'] ?? '' ); ?></td>
 					<td><span class="ran-booster-portability__status ran-booster-portability__status--<?php echo esc_attr( $reviewAction ); ?>"><?php echo esc_html( $portabilityActionLabels[ $reviewAction ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span></td>

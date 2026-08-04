@@ -52,7 +52,14 @@ function checkbox(selector, checked = true) {
 	};
 }
 
-function row(index, action, checked = true) {
+function row(
+	index,
+	action,
+	checked = true,
+	type = 'Plugin',
+	name = `Package ${index}`,
+	identifier = `package-${index}/package.php`
+) {
 	const choice =
 		action === 'install' || action === 'adopt'
 			? checkbox('[data-portability-select]', checked)
@@ -60,12 +67,21 @@ function row(index, action, checked = true) {
 
 	return {
 		choice,
-		getAttribute(name) {
-			if (name === 'data-portability-row') {
+		getAttribute(attribute) {
+			if (attribute === 'data-portability-row') {
 				return String(index);
 			}
-			if (name === 'data-portability-action') {
+			if (attribute === 'data-portability-action') {
 				return action;
+			}
+			if (attribute === 'data-portability-package-type') {
+				return type;
+			}
+			if (attribute === 'data-portability-package-name') {
+				return name;
+			}
+			if (attribute === 'data-portability-package-identifier') {
+				return identifier;
 			}
 			return null;
 		},
@@ -255,7 +271,10 @@ function importFixture(fetchResponse, rowSets = {}) {
 		},
 		createElement() {
 			return {
-				appendChild() {},
+				children: [],
+				appendChild(child) {
+					this.children.push(child);
+				},
 				className: '',
 				textContent: '',
 			};
@@ -631,6 +650,10 @@ test('apply sends only selected rows serially and preserves choices on review', 
 
 		finishApply();
 		await tick();
+		assert.equal(
+			state.results.items[0].children[0].textContent,
+			'Plugin “Package 1” (package-1/package.php) — Applied.'
+		);
 		assert.equal(state.apply.getAttribute('aria-busy'), 'true');
 		assert.equal(state.applyLabel.textContent, 'Applying…');
 		assert.equal(state.previewSubmit.getAttribute('aria-busy'), null);
@@ -653,6 +676,82 @@ test('apply sends only selected rows serially and preserves choices on review', 
 			false
 		);
 		assert.equal(state.applyLabel.textContent, 'Apply selected changes');
+	} finally {
+		cleanup();
+	}
+});
+
+test('apply identifies the exact package where a serial chain is pending', async () => {
+	let finishApply;
+	let applies = 0;
+	const state = importFixture(
+		(data) => {
+			if (data.get('action') === 'ran_booster_apply_blueprint') {
+				if (++applies === 1) {
+					return success('', {
+						message: 'Installed with deployment disabled.',
+						status: 'installed',
+					});
+				}
+				return new Promise((resolve) => {
+					finishApply = () =>
+						resolve(
+							success('', {
+								message: 'Adopted: deployment disabled',
+								status: 'adopted',
+							})
+						);
+				});
+			}
+
+			return success('<table>review</table>');
+		},
+		{
+			'<table>review</table>': [
+				[
+					'0',
+					'install',
+					true,
+					'Plugin',
+					'Forms Plugin',
+					'forms/forms.php',
+				],
+				[
+					'1',
+					'adopt',
+					true,
+					'Theme',
+					'Campaign Theme',
+					'campaign-theme',
+				],
+			],
+		}
+	);
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+
+		const applying = state.listeners.get('apply:click')();
+		await tick();
+		assert.equal(state.results.items.length, 2);
+		assert.equal(
+			state.results.items[0].children[0].textContent,
+			'Plugin “Forms Plugin” (forms/forms.php) — Installed with deployment disabled.'
+		);
+		assert.equal(
+			state.results.items[1].children[0].textContent,
+			'Theme “Campaign Theme” (campaign-theme) — Applying…'
+		);
+
+		finishApply();
+		await applying;
+		assert.equal(state.results.items.length, 2);
+		assert.equal(
+			state.results.items[1].children[0].textContent,
+			'Theme “Campaign Theme” (campaign-theme) — Adopted: deployment disabled'
+		);
 	} finally {
 		cleanup();
 	}

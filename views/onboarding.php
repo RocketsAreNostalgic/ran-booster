@@ -9,6 +9,7 @@ $secretsStorage       = isset( $onboarding['secrets_storage'] ) && is_array( $on
 	? $onboarding['secrets_storage']
 	: null;
 $storageStatus        = null === $secretsStorage ? '' : (string) $secretsStorage['status'];
+$storageReasonCode    = null === $secretsStorage ? '' : (string) ( $secretsStorage['reason_code'] ?? '' );
 $storageStatusLabels  = array(
 	'path_configured'         => __( 'Path configured', 'ran-booster' ),
 	'storage_healthy'         => __( 'Storage healthy', 'ran-booster' ),
@@ -43,11 +44,14 @@ $storageDetailsOpen                = in_array(
 	array( 'storage_needs_attention', 'setup_available', 'manual_required', 'unsupported', 'pending_verification' ),
 	true
 );
+$showsStorageOverride              = in_array( $storageStatus, array( 'storage_needs_attention', 'manual_required' ), true )
+	&& null === ( $secretsStorage['config_alternatives'] ?? null );
 $hasStorageDetails                 = null !== $secretsStorage
 	&& (
 		null !== $secretsStorage['candidate_path']
 		|| $secretsStorage['can_provision']
 		|| null !== $secretsStorage['config_alternatives']
+		|| $showsStorageOverride
 	);
 
 ?>
@@ -109,7 +113,7 @@ $hasStorageDetails                 = null !== $secretsStorage
 	?>
 
 	<?php if ( null !== $secretsStorage ) { ?>
-		<section class="ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading">
+		<section class="ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading" data-ran-booster-storage-reason="<?php echo esc_attr( $storageReasonCode ); ?>">
 			<div class="ran-booster-onboarding__storage-heading">
 				<h3 id="ran-booster-onboarding-storage-heading"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
 				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storageStatusClasses[ $storageStatus ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $storageStatus ); ?>"><?php echo esc_html( $storageStatusLabels[ $storageStatus ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
@@ -150,12 +154,33 @@ $hasStorageDetails                 = null !== $secretsStorage
 							</form>
 						<?php } ?>
 
+						<?php if ( $showsStorageOverride ) { ?>
+							<details class="ran-booster-onboarding__storage-manual" open>
+								<summary><?php echo esc_html( 'storage_needs_attention' === $storageStatus ? __( 'Use a different storage location', 'ran-booster' ) : __( 'Set a storage location manually', 'ran-booster' ) ); ?></summary>
+								<div>
+									<p><?php esc_html_e( 'Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages secrets.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600.', 'ran-booster' ); ?></p>
+									<p><?php esc_html_e( 'Replace any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition with this preferred directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:', 'ran-booster' ); ?></p>
+									<code>define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );</code>
+									<p><?php esc_html_e( 'Or update the same constant with WP-CLI:', 'ran-booster' ); ?></p>
+									<code>wp config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR '/absolute/private/path' --type=constant</code>
+									<p><?php esc_html_e( 'For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:', 'ran-booster' ); ?></p>
+									<pre><code>$ran_booster_secrets_dir = getenv( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' );
+if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_secrets_dir ) ) {
+	define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $ran_booster_secrets_dir );
+}</code></pre>
+									<p><?php esc_html_e( 'The legacy exact-file constant can use the same anchor:', 'ran-booster' ); ?></p>
+									<code>define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', dirname( __DIR__ ) . '/private/ran-booster/secrets.json' );</code>
+									<p><?php esc_html_e( 'If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half.', 'ran-booster' ); ?></p>
+								</div>
+							</details>
+						<?php } ?>
+
 						<?php if ( null !== $secretsStorage['config_alternatives'] ) { ?>
 							<details class="ran-booster-onboarding__storage-manual" <?php echo esc_attr( 'manual_required' === $storageStatus ? 'open' : '' ); ?>>
 								<summary><?php echo esc_html( $secretsStorage['can_provision'] ? __( 'Set up manually instead', 'ran-booster' ) : __( 'Manual setup instructions', 'ran-booster' ) ); ?></summary>
 								<div>
 									<p><?php echo esc_html( $secretsStorage['manual_preflight'] ); ?></p>
-									<p><?php esc_html_e( 'Use an absolute secrets.json path outside the public web root on durable local storage. Its immediate parent must be owned by PHP, readable and writable by PHP, and mode 0700.', 'ran-booster' ); ?></p>
+									<p><?php esc_html_e( 'Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json within it.', 'ran-booster' ); ?></p>
 									<p><?php esc_html_e( 'Create the owner-only private directories:', 'ran-booster' ); ?></p>
 									<ol>
 										<?php foreach ( $secretsStorage['directory_commands'] as $command ) { ?>

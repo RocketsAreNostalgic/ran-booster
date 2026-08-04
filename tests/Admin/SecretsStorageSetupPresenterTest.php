@@ -29,9 +29,9 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		);
 		self::assertSame(
 			array(
-				'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '/srv/private site/.ran-booster/0123456789abcdef/secrets\\'file.json' );",
+				'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/srv/private site/.ran-booster/0123456789abcdef' );",
 				'wp_cli' => 'wp --path=' . escapeshellarg( $root )
-					. " config set RAN_BOOSTER_ENCRYPTED_SECRETS_FILE '/srv/private site/.ran-booster/0123456789abcdef/secrets'\\''file.json' --type=constant",
+					. " config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR '/srv/private site/.ran-booster/0123456789abcdef' --type=constant",
 			),
 			$payload['config_alternatives']
 		);
@@ -48,6 +48,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		);
 
 		self::assertFalse( $payload['can_provision'] );
+		self::assertSame( 'sodium_unavailable', $payload['reason_code'] );
 		self::assertNull( $payload['candidate_path'] );
 		self::assertSame( array(), $payload['directory_commands'] );
 		self::assertNull( $payload['config_alternatives'] );
@@ -93,6 +94,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		);
 
 		self::assertFalse( $payload['can_provision'] );
+		self::assertSame( 'setup_available', $payload['reason_code'] );
 		self::assertNull( $payload['candidate_path'] );
 		self::assertNull( $payload['path_source'] );
 		self::assertNull( $payload['manual_preflight'] );

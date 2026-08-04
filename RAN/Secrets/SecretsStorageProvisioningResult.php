@@ -52,11 +52,16 @@ final readonly class SecretsStorageProvisioningResult {
 		);
 	}
 
-	public static function storageNeedsAttention( string $candidatePath, string $pathSource ): self {
+	public static function storageNeedsAttention(
+		string $candidatePath,
+		string $pathSource,
+		string $code = 'storage_needs_attention',
+		string $message = 'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.'
+	): self {
 		return new self(
 			self::STORAGE_NEEDS_ATTENTION,
-			'storage_needs_attention',
-			'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.',
+			$code,
+			$message,
 			$candidatePath,
 			$pathSource
 		);

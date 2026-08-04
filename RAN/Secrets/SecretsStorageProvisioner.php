@@ -18,7 +18,8 @@ use Throwable;
  */
 class SecretsStorageProvisioner {
 
-	private const CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
+	private const DIRECTORY_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
+	private const FILE_CONSTANT_NAME      = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
 
 	public function __construct(
 		private readonly PrivateLocationCandidateResolver $resolver = new PrivateLocationCandidateResolver(),
@@ -49,15 +50,30 @@ class SecretsStorageProvisioner {
 				);
 			}
 
-			$source = $this->configuredPathSource( $configured );
-			if ( ! $this->readyPath( $configured ) ) {
-				return SecretsStorageProvisioningResult::storageNeedsAttention( $configured, $source );
+			$source      = $this->configuredPathSource( $configured );
+			$pathFailure = $this->inspectReadyPath( $configured );
+			if ( null !== $pathFailure ) {
+				return SecretsStorageProvisioningResult::storageNeedsAttention(
+					$configured,
+					$source,
+					$pathFailure['code'],
+					$pathFailure['message']
+				);
 			}
 
 			try {
 				return $this->managedStorageHealthy()
 					? SecretsStorageProvisioningResult::storageHealthy( $configured, $source )
 					: SecretsStorageProvisioningResult::pathConfigured( $configured, $source );
+			} catch ( SecretsStorageUnavailable $failure ) {
+				$diagnostic = $this->managedStorageDiagnostic( $failure );
+
+				return SecretsStorageProvisioningResult::storageNeedsAttention(
+					$configured,
+					$source,
+					$diagnostic['code'],
+					$diagnostic['message']
+				);
 			} catch ( Throwable ) {
 				return SecretsStorageProvisioningResult::storageNeedsAttention( $configured, $source );
 			}
@@ -214,11 +230,22 @@ class SecretsStorageProvisioner {
 
 	/** @return string|false|null False means defined with an invalid value. */
 	protected function configuredPath(): string|false|null {
-		if ( ! defined( self::CONSTANT_NAME ) ) {
+		if ( defined( self::DIRECTORY_CONSTANT_NAME ) ) {
+			$value = constant( self::DIRECTORY_CONSTANT_NAME );
+			if ( ! is_string( $value ) || '' === trim( $value ) ) {
+				return false;
+			}
+
+			$directory = '/' === $value ? '/' : rtrim( $value, '/' );
+			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'secrets.json';
+
+			return $this->absoluteCanonicalPath( $path ) ? $path : false;
+		}
+		if ( ! defined( self::FILE_CONSTANT_NAME ) ) {
 			return null;
 		}
 
-		$value = constant( self::CONSTANT_NAME );
+		$value = constant( self::FILE_CONSTANT_NAME );
 
 		return is_string( $value ) && $this->absoluteCanonicalPath( $value ) ? $value : false;
 	}
@@ -299,39 +326,118 @@ class SecretsStorageProvisioner {
 		}
 	}
 
-	private function readyPath( string $candidate ): bool {
+	/** @return array{code: string, message: string}|null */
+	private function inspectReadyPath( string $candidate ): ?array {
 		$directory = dirname( $candidate );
-		if ( ! is_dir( $directory )
-			|| is_link( $directory )
-			|| ! is_writable( $directory )
-			|| ! stream_is_local( $directory )
-		) {
-			return false;
+		if ( ! file_exists( $directory ) && ! is_link( $directory ) ) {
+			return $this->pathFailure(
+				'storage_directory_missing',
+				'The configured secrets directory does not exist or is not visible to the PHP process.'
+			);
+		}
+		if ( is_link( $directory ) || ! is_dir( $directory ) || ! stream_is_local( $directory ) ) {
+			return $this->pathFailure(
+				'storage_directory_invalid',
+				'The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link.'
+			);
 		}
 
 		$stat = lstat( $directory );
-
-		if ( false === $stat
-			|| 0040000 !== ( $stat['mode'] & 0170000 )
-			|| 0700 !== ( $stat['mode'] & 0777 )
-			|| ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() !== $stat['uid'] )
-		) {
-			return false;
+		if ( false === $stat || 0040000 !== ( $stat['mode'] & 0170000 ) ) {
+			return $this->pathFailure(
+				'storage_directory_inspection_failed',
+				'Booster could not verify the configured secrets directory.'
+			);
+		}
+		$issues = $this->accessIssues( $directory, $stat, 0700, 'directory' );
+		if ( array() !== $issues ) {
+			return $this->pathFailure(
+				'storage_directory_unusable',
+				implode( ' ', $issues )
+			);
 		}
 
 		if ( ! file_exists( $candidate ) && ! is_link( $candidate ) ) {
-			return true;
+			return null;
 		}
-		if ( is_link( $candidate ) || ! is_file( $candidate ) || ! is_readable( $candidate ) || ! is_writable( $candidate ) ) {
-			return false;
+		if ( is_link( $candidate ) || ! is_file( $candidate ) ) {
+			return $this->pathFailure(
+				'storage_file_invalid',
+				'The configured secrets file must be a regular file, not a symbolic link.'
+			);
 		}
 		$file = lstat( $candidate );
+		if ( false === $file || 0100000 !== ( $file['mode'] & 0170000 ) ) {
+			return $this->pathFailure(
+				'storage_file_inspection_failed',
+				'Booster could not verify the configured secrets file.'
+			);
+		}
+		$issues = $this->accessIssues( $candidate, $file, 0600, 'file' );
+		if ( 1 !== $file['nlink'] ) {
+			$issues[] = 'The configured secrets file has additional hard links.';
+		}
+		if ( array() !== $issues ) {
+			return $this->pathFailure(
+				'storage_file_unusable',
+				implode( ' ', $issues )
+			);
+		}
 
-		return false !== $file
-			&& 0100000 === ( $file['mode'] & 0170000 )
-			&& 1 === $file['nlink']
-			&& 0600 === ( $file['mode'] & 0777 )
-			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $file['uid'] );
+		return null;
+	}
+
+	/**
+	 * @param array{mode: int, uid: int} $stat
+	 * @return list<string>
+	 */
+	private function accessIssues( string $path, array $stat, int $requiredMode, string $label ): array {
+		$issues = array();
+		$mode   = $stat['mode'] & 0777;
+		if ( $requiredMode !== $mode ) {
+			$issues[] = sprintf( 'The configured secrets %s uses mode %04o; mode %04o is required.', $label, $mode, $requiredMode );
+		}
+		if ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() !== $stat['uid'] ) {
+			$issues[] = sprintf( 'The configured secrets %s is not owned by the PHP process user.', $label );
+		}
+		if ( ! is_readable( $path ) ) {
+			$issues[] = sprintf( 'The configured secrets %s is not readable by PHP.', $label );
+		}
+		if ( ! is_writable( $path ) ) {
+			$issues[] = sprintf( 'The configured secrets %s is not writable by PHP.', $label );
+		}
+
+		return $issues;
+	}
+
+	/** @return array{code: string, message: string} */
+	private function pathFailure( string $code, string $message ): array {
+		return compact( 'code', 'message' );
+	}
+
+	/** @return array{code: string, message: string} */
+	private function managedStorageDiagnostic( SecretsStorageUnavailable $failure ): array {
+		return match ( $failure->getMessage() ) {
+			'The encrypted Booster secrets store is incomplete.',
+			'The encrypted Booster secrets store is incomplete because its lock is missing.',
+			'The encrypted Booster secrets store is missing its lock.' => $this->pathFailure(
+				'storage_incomplete',
+				'The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage.'
+			),
+			'The encrypted Booster secrets document could not be authenticated.' => $this->pathFailure(
+				'storage_authentication_failed',
+				'The secrets file could not be authenticated with this site\'s database key. Restore both from the same backup.'
+			),
+			'The encrypted Booster secrets payload is invalid.',
+			'The encrypted Booster secrets payload is not canonical.' => $this->pathFailure(
+				'storage_document_invalid',
+				'The secrets file authenticated but its encrypted document is invalid.'
+			),
+			default => $this->pathFailure(
+				'storage_unavailable',
+				'Booster could not safely read the configured secrets storage.'
+			),
+		};
 	}
 
 	private function loadedWpConfigPath(): ?string {

@@ -201,15 +201,32 @@ work is in neither record.
 - **Provider add-ons** — compatible provider add-ons appear beside GitHub and
   retain their own credential, webhook and documentation guidance.
 - Credentials come from deployment constants or the encrypted JSON file selected
-  on Booster's protected Overview. Its absolute private path is recorded with
-  `RAN_BOOSTER_ENCRYPTED_SECRETS_FILE`; no secret plaintext is stored there or
-  in the WordPress database. Conventional single-site POSIX installations can
-  use automatic setup. For containers or uncommon layouts, define an absolute
-  `secrets.json` path outside the public web root on durable local storage whose
-  immediate parent is owned by PHP, readable and writable by PHP, and mode
-  `0700`. File-backed profiles are structurally validated for display; their
+  on Booster's protected Overview. Prefer an absolute private directory through
+  `RAN_BOOSTER_ENCRYPTED_SECRETS_DIR`; the operator creates that owner-only
+  `0700` directory and Booster manages `secrets.json` and its lock within it.
+  The older `RAN_BOOSTER_ENCRYPTED_SECRETS_FILE` exact-file constant remains a
+  transitional fallback. Both constants must evaluate to absolute paths. To
+  express a location relative to `wp-config.php`, anchor it in that file with
+  PHP's `__DIR__` and normalize it without `..`, for example
+  `define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );`.
+  The legacy exact-file equivalent is
+  `define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', dirname( __DIR__ ) . '/private/ran-booster/secrets.json' );`.
+  Raw relative strings are rejected because web, cron, and CLI processes may
+  use different working directories. No secret plaintext is stored there or in the
+  WordPress database. Conventional single-site POSIX installations can use
+  automatic setup. File-backed profiles are structurally validated for display; their
   current provider validity is checked only when the selected credential or
   bounded webhook candidates are used.
+- When the protected Overview reports a storage error, it keeps the manual
+  override instructions visible. Replace an existing exact-file definition
+  with `RAN_BOOSTER_ENCRYPTED_SECRETS_DIR` in `wp-config.php`, or set the
+  directory constant from a non-empty environment variable there before
+  WordPress loads plugins. Booster does not read an environment variable by
+  itself. Automatic
+  paths are based on the private parent of the detected WordPress boundary;
+  that is usually operator-accessible on conventional
+  `/home/account/public_html` hosting, but container deployment roots such as
+  `/var/www/<deployment-id>` may require an explicit durable private path.
 - A credentials restore requires the matching encrypted sidecar and
   `ran_booster_secrets_key_v1` database option from the same backup. Neither
   half is useful alone.

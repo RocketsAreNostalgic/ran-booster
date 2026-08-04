@@ -15,6 +15,7 @@ final readonly class SecretsStorageSetupPresenter {
 	/**
 	 * @return array{
 	 *     status: string,
+	 *     reason_code: string,
 	 *     message: string,
 	 *     candidate_path: string|null,
 	 *     path_source: string|null,
@@ -41,8 +42,8 @@ final readonly class SecretsStorageSetupPresenter {
 		) {
 			$directory = dirname( $candidate );
 			$parent    = dirname( $directory );
-			$quoted    = escapeshellarg( $candidate );
-			$phpPath   = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $candidate );
+			$quoted    = escapeshellarg( $directory );
+			$phpPath   = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $directory );
 			$root      = realpath( $wordpressRoot );
 
 			$manualPreflight    = 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.';
@@ -52,16 +53,17 @@ final readonly class SecretsStorageSetupPresenter {
 					. ' && install -d -m 700 -- ' . escapeshellarg( $parent ) . ' ' . escapeshellarg( $directory ),
 			);
 			$configAlternatives = array(
-				'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '" . $phpPath . "' );",
+				'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . $phpPath . "' );",
 				'wp_cli' => false === $root
 					? ''
 					: 'wp --path=' . escapeshellarg( $root )
-						. ' config set RAN_BOOSTER_ENCRYPTED_SECRETS_FILE ' . $quoted . ' --type=constant',
+						. ' config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR ' . $quoted . ' --type=constant',
 			);
 		}
 
 		return array(
 			'status'              => $result->status(),
+			'reason_code'         => $result->code(),
 			'message'             => $result->message(),
 			'candidate_path'      => $candidate,
 			'path_source'         => $includeSensitiveDetails ? $result->pathSource() : null,

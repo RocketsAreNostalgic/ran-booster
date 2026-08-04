@@ -195,10 +195,13 @@ final class DocumentationViewTest extends TestCase {
 	public function testStatesTheCredentialFileLocationRetentionAndRemovalContractAccurately(): void {
 		$html = $this->renderView( $this->providerDocumentation() );
 
+		self::assertStringContainsString( '<code>RAN_BOOSTER_ENCRYPTED_SECRETS_DIR</code>', $html );
 		self::assertStringContainsString( '<code>RAN_BOOSTER_ENCRYPTED_SECRETS_FILE</code>', $html );
+		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster'", $html );
+		self::assertStringContainsString( 'Raw unanchored relative strings are rejected', $html );
 		self::assertStringContainsString( 'authenticated ciphertext in a private JSON file', $html );
-		self::assertStringContainsString( 'absolute secrets.json path outside the public web root on durable local storage', $html );
-		self::assertStringContainsString( 'immediate parent is owned by PHP, readable and writable by PHP, and mode 0700', $html );
+		self::assertStringContainsString( 'private directory outside the public web root on durable local storage', $html );
+		self::assertStringContainsString( 'directory must be owned by PHP, readable and writable by PHP, and mode 0700', $html );
 		self::assertStringContainsString( '<code>ran_booster_secrets_key_v1</code>', $html );
 		self::assertStringContainsString( 'neither the filesystem nor database alone contains usable credentials', $html );
 		self::assertStringContainsString( 'matching encrypted file and database key from the same backup', $html );

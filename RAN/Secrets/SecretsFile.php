@@ -1597,13 +1597,36 @@ class SecretsFile {
 	}
 
 	private function defaultPath(): ?string {
+		if ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) ) {
+			$value = constant( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' );
+			if ( ! is_string( $value ) || '' === trim( $value ) ) {
+				return null;
+			}
+
+			$directory = '/' === $value
+				? '/'
+				: rtrim( $value, '/' );
+			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'secrets.json';
+
+			return $this->absoluteCanonicalConfiguredPath( $path ) ? $path : null;
+		}
 		if ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' )
 			&& is_string( RAN_BOOSTER_ENCRYPTED_SECRETS_FILE )
-			&& '' !== trim( RAN_BOOSTER_ENCRYPTED_SECRETS_FILE ) ) {
+			&& $this->absoluteCanonicalConfiguredPath( RAN_BOOSTER_ENCRYPTED_SECRETS_FILE ) ) {
 			return RAN_BOOSTER_ENCRYPTED_SECRETS_FILE;
 		}
 
 		return null;
+	}
+
+	private function absoluteCanonicalConfiguredPath( string $path ): bool {
+		return str_starts_with( $path, '/' )
+			&& ! str_ends_with( $path, '/' )
+			&& ! str_contains( $path, "\0" )
+			&& ! str_contains( $path, "\r" )
+			&& ! str_contains( $path, "\n" )
+			&& 1 !== preg_match( '#/(?:\.{1,2})(?:/|$)#', $path )
+			&& ! str_contains( $path, '//' );
 	}
 
 	/**

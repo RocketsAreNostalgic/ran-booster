@@ -9,9 +9,12 @@ namespace Tests\Secrets;
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\PosixFilesystemProbe;
 use RAN\Secrets\PrivateLocationCandidateResolver;
+use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsStorageProvisioner;
 use RAN\Secrets\SecretsStorageProvisioningResult;
 use RAN\Secrets\WpConfigPathWriteResult;
@@ -109,6 +112,72 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertFalse( $provisioner->writerCalled );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testDirectoryConstantWinsAndAppendsTheManagedFilename(): void {
+		$wpConfigDirectory = $this->root . '/public';
+		$directory         = dirname( $wpConfigDirectory ) . '/operator-private';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $directory );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $this->root . '/legacy/secrets.json' );
+
+		$provisioner                           = $this->provisioner();
+		$provisioner->readRuntimeConfiguration = true;
+		$result                                = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
+		self::assertSame( $directory . '/secrets.json', $result->candidatePath() );
+		self::assertSame( $directory . '/secrets.json', ( new SecretsFile() )->path() );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testLegacyFileConstantAcceptsTheNormalizedWpConfigRelativeForm(): void {
+		$wpConfigDirectory = $this->root . '/public';
+		$directory         = dirname( $wpConfigDirectory ) . '/operator-file';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$file = $directory . '/secrets.json';
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $file );
+
+		$provisioner                           = $this->provisioner();
+		$provisioner->readRuntimeConfiguration = true;
+		$result                                = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
+		self::assertSame( $file, $result->candidatePath() );
+		self::assertSame( $file, ( new SecretsFile() )->path() );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testRawRelativeDirectoryConstantIsRejectedByBothConsumers(): void {
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', 'relative/private' );
+
+		$provisioner                           = $this->provisioner();
+		$provisioner->readRuntimeConfiguration = true;
+		$result                                = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
+		self::assertSame( 'configured_path_invalid', $result->code() );
+		self::assertNull( $result->candidatePath() );
+		self::assertNull( ( new SecretsFile() )->path() );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testRawRelativeFileConstantIsRejectedByBothConsumers(): void {
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'relative/private/secrets.json' );
+
+		$provisioner                           = $this->provisioner();
+		$provisioner->readRuntimeConfiguration = true;
+		$result                                = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
+		self::assertSame( 'configured_path_invalid', $result->code() );
+		self::assertNull( $result->candidatePath() );
+		self::assertNull( ( new SecretsFile() )->path() );
+	}
+
 	public function testConfiguredPathReportsAuthenticatedAndBrokenStorageTruthfully(): void {
 		$manual = $this->root . '/manual-health';
 		self::assertTrue( mkdir( $manual, 0700 ) );
@@ -125,7 +194,58 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$result                     = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $result->status() );
-		self::assertSame( 'storage_needs_attention', $result->code() );
+		self::assertSame( 'storage_unavailable', $result->code() );
+		self::assertStringNotContainsString( $this->root, $result->message() );
+	}
+
+	public function testConfiguredPathExplainsMissingAndInsecureDirectory(): void {
+		$directory               = $this->root . '/manual-attention';
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $directory . '/secrets.json';
+
+		$result = $provisioner->status();
+		self::assertSame( 'storage_directory_missing', $result->code() );
+		self::assertSame( 'The configured secrets directory does not exist or is not visible to the PHP process.', $result->message() );
+
+		self::assertTrue( mkdir( $directory, 0755 ) );
+		$result = $provisioner->status();
+		self::assertSame( 'storage_directory_unusable', $result->code() );
+		self::assertStringContainsString( '0755', $result->message() );
+		self::assertStringContainsString( '0700', $result->message() );
+		self::assertStringNotContainsString( $this->root, $result->message() );
+	}
+
+	public function testConfiguredPathExplainsUnsafeFilePermissions(): void {
+		$directory = $this->root . '/manual-file-attention';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$file = $directory . '/secrets.json';
+		self::assertNotFalse( file_put_contents( $file, '{}' ) );
+		self::assertTrue( chmod( $file, 0644 ) );
+
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $file;
+		$result                  = $provisioner->status();
+
+		self::assertSame( 'storage_file_unusable', $result->code() );
+		self::assertStringContainsString( '0644', $result->message() );
+		self::assertStringContainsString( '0600', $result->message() );
+		self::assertStringNotContainsString( $this->root, $result->message() );
+	}
+
+	public function testConfiguredPathDistinguishesIncompleteAndAuthenticationFailures(): void {
+		$directory = $this->root . '/manual-managed-attention';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$provisioner                = $this->provisioner();
+		$provisioner->configured    = $directory . '/secrets.json';
+		$provisioner->healthFailure = true;
+
+		$provisioner->healthFailureMessage = 'The encrypted Booster secrets store is incomplete.';
+		self::assertSame( 'storage_incomplete', $provisioner->status()->code() );
+
+		$provisioner->healthFailureMessage = 'The encrypted Booster secrets document could not be authenticated.';
+		$result                            = $provisioner->status();
+		self::assertSame( 'storage_authentication_failed', $result->code() );
+		self::assertStringContainsString( 'same backup', $result->message() );
 		self::assertStringNotContainsString( $this->root, $result->message() );
 	}
 
@@ -167,7 +287,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->configured = $actual . '/secrets.json';
 		self::assertNotFalse( file_put_contents( $provisioner->configured, '{}' ) );
 		self::assertTrue( chmod( $provisioner->configured, 0644 ) );
-		self::assertSame( 'storage_needs_attention', $provisioner->status()->code() );
+		self::assertSame( 'storage_file_unusable', $provisioner->status()->code() );
 
 		self::assertTrue( chmod( $provisioner->configured, 0600 ) );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $provisioner->status()->status() );
@@ -281,18 +401,20 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public string $root      = '';
 	public string $candidate = '';
 	/** @var list<string> */
-	public array $included               = array();
-	public string|false|null $configured = null;
-	public bool $sodium                  = true;
-	public bool $multisite               = false;
-	public bool $localPlatform           = true;
-	public bool $resolverCalled          = false;
-	public bool $probeCalled             = false;
-	public bool $writerCalled            = false;
-	public bool $probeFails              = false;
-	public ?string $writerFailureCode    = null;
-	public bool $healthy                 = false;
-	public bool $healthFailure           = false;
+	public array $included                = array();
+	public string|false|null $configured  = null;
+	public bool $sodium                   = true;
+	public bool $multisite                = false;
+	public bool $localPlatform            = true;
+	public bool $resolverCalled           = false;
+	public bool $probeCalled              = false;
+	public bool $writerCalled             = false;
+	public bool $probeFails               = false;
+	public ?string $writerFailureCode     = null;
+	public bool $healthy                  = false;
+	public bool $healthFailure            = false;
+	public string $healthFailureMessage   = 'Fixture storage failure.';
+	public bool $readRuntimeConfiguration = false;
 
 	public function __construct( string $temporaryBoundary ) {
 		parent::__construct(
@@ -348,7 +470,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	}
 
 	protected function configuredPath(): string|false|null {
-		return $this->configured;
+		return $this->readRuntimeConfiguration ? parent::configuredPath() : $this->configured;
 	}
 
 	protected function isMultisiteInstallation(): bool {
@@ -365,7 +487,8 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 
 	protected function managedStorageHealthy(): bool {
 		if ( $this->healthFailure ) {
-			throw new \RAN\Secrets\SecretsStorageUnavailable( 'Fixture storage failure.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only fixed fixture message.
+			throw new \RAN\Secrets\SecretsStorageUnavailable( $this->healthFailureMessage );
 		}
 
 		return $this->healthy;

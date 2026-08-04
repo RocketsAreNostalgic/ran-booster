@@ -119,6 +119,9 @@ $hasStorageDetails                 = null !== $secretsStorage
 				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storageStatusClasses[ $storageStatus ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $storageStatus ); ?>"><?php echo esc_html( $storageStatusLabels[ $storageStatus ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
 			</div>
 			<p><?php echo esc_html( $secretsStorage['message'] ); ?></p>
+			<?php if ( '' !== $storageReasonCode && in_array( $storageStatus, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true ) ) { ?>
+				<p class="description"><strong><?php esc_html_e( 'Diagnostic code:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storageReasonCode ); ?></code></p>
+			<?php } ?>
 
 			<?php if ( $hasStorageDetails ) { ?>
 				<details class="ran-booster-onboarding__storage-details"<?php echo $storageDetailsOpen ? ' open' : ''; ?>>

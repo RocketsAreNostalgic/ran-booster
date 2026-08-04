@@ -232,6 +232,31 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringNotContainsString( $this->root, $result->message() );
 	}
 
+	public function testConfiguredPathExplainsMissingAndUnsafeLockFile(): void {
+		$directory = $this->root . '/manual-lock-attention';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$file = $directory . '/secrets.json';
+		self::assertNotFalse( file_put_contents( $file, '{}' ) );
+		self::assertTrue( chmod( $file, 0600 ) );
+
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $file;
+		$result                  = $provisioner->status();
+		self::assertSame( 'storage_lock_missing', $result->code() );
+		self::assertStringContainsString( 'matching lock file is missing', $result->message() );
+
+		$lock = $file . '.lock';
+		self::assertNotFalse( file_put_contents( $lock, '' ) );
+		self::assertTrue( chmod( $lock, 0644 ) );
+		$result = $provisioner->status();
+		self::assertSame( 'storage_lock_unusable', $result->code() );
+		self::assertStringContainsString( '0644', $result->message() );
+		self::assertStringContainsString( '0600', $result->message() );
+
+		self::assertTrue( chmod( $lock, 0600 ) );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $provisioner->status()->status() );
+	}
+
 	public function testConfiguredPathDistinguishesIncompleteAndAuthenticationFailures(): void {
 		$directory = $this->root . '/manual-managed-attention';
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -290,6 +315,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( 'storage_file_unusable', $provisioner->status()->code() );
 
 		self::assertTrue( chmod( $provisioner->configured, 0600 ) );
+		self::assertNotFalse( file_put_contents( $provisioner->configured . '.lock', '' ) );
+		self::assertTrue( chmod( $provisioner->configured . '.lock', 0600 ) );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $provisioner->status()->status() );
 	}
 

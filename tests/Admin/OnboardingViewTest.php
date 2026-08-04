@@ -190,6 +190,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster/secrets.json'", $broken );
 		self::assertStringContainsString( 'getenv', $broken );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="storage_needs_attention"', $broken );
+		self::assertStringContainsString( '<strong>Diagnostic code:</strong> <code>storage_needs_attention</code>', $broken );
 	}
 
 	public function testManualRequiredStorageOpensItsInstructions(): void {

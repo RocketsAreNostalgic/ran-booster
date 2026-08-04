@@ -384,6 +384,37 @@ class SecretsStorageProvisioner {
 			);
 		}
 
+		$lock = $candidate . '.lock';
+		if ( ! file_exists( $lock ) && ! is_link( $lock ) ) {
+			return $this->pathFailure(
+				'storage_lock_missing',
+				'The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup.'
+			);
+		}
+		if ( is_link( $lock ) || ! is_file( $lock ) ) {
+			return $this->pathFailure(
+				'storage_lock_invalid',
+				'The configured secrets lock must be a regular file, not a symbolic link.'
+			);
+		}
+		$lockStat = lstat( $lock );
+		if ( false === $lockStat || 0100000 !== ( $lockStat['mode'] & 0170000 ) ) {
+			return $this->pathFailure(
+				'storage_lock_inspection_failed',
+				'Booster could not verify the configured secrets lock file.'
+			);
+		}
+		$issues = $this->accessIssues( $lock, $lockStat, 0600, 'lock file' );
+		if ( 1 !== $lockStat['nlink'] ) {
+			$issues[] = 'The configured secrets lock file has additional hard links.';
+		}
+		if ( array() !== $issues ) {
+			return $this->pathFailure(
+				'storage_lock_unusable',
+				implode( ' ', $issues )
+			);
+		}
+
 		return null;
 	}
 
@@ -433,9 +464,27 @@ class SecretsStorageProvisioner {
 				'storage_document_invalid',
 				'The secrets file authenticated but its encrypted document is invalid.'
 			),
+			'The Booster site key is unavailable.' => $this->pathFailure(
+				'storage_key_unavailable',
+				'Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup.'
+			),
+			'The encrypted Booster secrets file is not readable.',
+			'The encrypted Booster secrets file is not a secure bounded file.',
+			'The encrypted Booster secrets file could not be read safely.' => $this->pathFailure(
+				'storage_file_unusable',
+				'The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file.'
+			),
+			'Refusing to use an invalid encrypted Booster secrets lock.',
+			'Could not open the encrypted Booster secrets lock.',
+			'Could not inspect the encrypted Booster secrets lock.',
+			'Could not secure the encrypted Booster secrets lock.',
+			'Could not lock the encrypted Booster secrets store.' => $this->pathFailure(
+				'storage_lock_unusable',
+				'The secrets lock file could not be used safely. Verify its ownership and mode 0600.'
+			),
 			default => $this->pathFailure(
 				'storage_unavailable',
-				'Booster could not safely read the configured secrets storage.'
+				'Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600.'
 			),
 		};
 	}

@@ -58,6 +58,11 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Protect your files and know what actually moves</summary>', $html );
 		self::assertStringContainsString( '<summary>Credential storage, retention and removal</summary>', $html );
 		self::assertStringContainsString( 'id="ran-booster-credential-storage"', $html );
+		self::assertStringContainsString( '<h3>Use a different storage location</h3>', $html );
+		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );", $html );
+		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', dirname( __DIR__ ) . '/private/ran-booster/secrets.json' );", $html );
+		self::assertStringContainsString( 'Do not add group access as a workaround', $html );
+		self::assertStringContainsString( 'move or restore secrets.json, secrets.json.lock and the matching database key together', $html );
 		self::assertStringContainsString( '<summary>About RAN Booster</summary>', $html );
 		self::assertLessThan( strpos( $html, 'GitHub credentials and access' ), strpos( $html, 'Move packages between sites' ) );
 	}

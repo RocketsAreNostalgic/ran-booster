@@ -739,14 +739,15 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			metadataEligible: static fn (): bool => true,
 			releasePreflight: static fn (): \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight => new \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight(
 				\RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-				'example'
+				'example',
+				reasonCode: 'github_updater_ambiguous_release_asset'
 			)
 		);
 
 		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
 
 		self::assertFalse( $result->successful() );
-		self::assertSame( 'invalid_release_assets', $result->code() );
+		self::assertSame( 'github_updater_ambiguous_release_asset', $result->code() );
 		self::assertCount( 0, $store->transitions );
 		self::assertSame( PackageSource::BRANCH, $package->getSource() );
 		self::assertSame( DeploymentPolicy::AUTOMATIC, $package->getDeploymentPolicy() );

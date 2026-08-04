@@ -179,7 +179,10 @@ value object. Its stable result codes are `ready`, `release_unavailable`,
 `release_version_mismatch`, `release_header_missing`,
 `release_header_invalid` and `release_archive_unreadable`. Consumers read only
 `code()`, `ready()`, `packageRoot()`, `latestVersion()`, `releaseUrl()`,
-`releaseTag()` and `packageHeaderVersion()`. Unknown or unprovable
+`releaseTag()`, `packageHeaderVersion()` and `reasonCode()`. The stable `code()`
+remains the workflow category; `reasonCode()` is an optional, allowlisted,
+display-safe cause for actionable diagnostics and never contains provider
+response bodies, URLs, paths, tokens or exception messages. Unknown or unprovable
 authorization, package, revision, channel or result binding fails closed as
 `null`; it must not be interpreted as a new result code or as permission to
 enable release tracking.

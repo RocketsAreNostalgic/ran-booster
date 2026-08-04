@@ -27,7 +27,8 @@ final readonly class ReleaseTrackingPreflight {
 		private string $releaseUrl = '',
 		private string $releaseTag = '',
 		private string $packageHeaderVersion = '',
-		private string $versionRelationship = ''
+		private string $versionRelationship = '',
+		private string $reasonCode = ''
 	) {
 		if ( ! in_array(
 			$this->code,
@@ -48,6 +49,7 @@ final readonly class ReleaseTrackingPreflight {
 			|| strlen( $this->releaseTag ) > 128
 			|| strlen( $this->packageHeaderVersion ) > 64
 			|| ! in_array( $this->versionRelationship, array( '', 'newer', 'same', 'older', 'invalid' ), true )
+			|| ( '' !== $this->reasonCode && ! in_array( $this->reasonCode, self::reasonCodes(), true ) )
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->releaseTag . $this->packageHeaderVersion )
 			|| ( '' !== $this->releaseUrl && ! $this->validReleaseUrl( $this->releaseUrl ) ) ) {
 			throw new InvalidArgumentException( 'Release tracking preflight is invalid.' );
@@ -84,6 +86,77 @@ final readonly class ReleaseTrackingPreflight {
 
 	public function versionRelationship(): string {
 		return $this->versionRelationship;
+	}
+
+	/**
+	 * Return a bounded machine-readable cause without provider response data.
+	 */
+	public function reasonCode(): string {
+		return $this->reasonCode;
+	}
+
+	/** @return list<string> */
+	private static function reasonCodes(): array {
+		return array(
+			'release_runtime_unavailable',
+			'github_updater_invalid_preflight_target',
+			'github_updater_no_eligible_release',
+			'github_updater_release_search_budget_exhausted',
+			'github_updater_ambiguous_release_asset',
+			'github_updater_invalid_release_asset',
+			'github_updater_release_asset_too_large',
+			'github_updater_missing_asset_digest',
+			'github_updater_invalid_release',
+			'github_updater_release_is_draft',
+			'github_updater_invalid_release_tag',
+			'github_updater_prerelease_not_allowed',
+			'github_updater_invalid_release_url',
+			'github_updater_invalid_tag_commit',
+			'github_updater_artifact_continuity_failed',
+			'github_updater_repository_identity_changed',
+			'github_updater_credentials_unavailable',
+			'github_updater_invalid_access_token',
+			'github_updater_github_authentication_failed',
+			'github_updater_github_forbidden',
+			'github_updater_downloaded_artifact_invalid',
+			'github_updater_downloaded_digest_mismatch',
+			'github_updater_rate_limited',
+			'github_updater_http_transport_failed',
+			'github_updater_github_http_error',
+			'github_updater_download_failed',
+			'github_updater_expired_release_asset_url',
+			'github_updater_redirect_limit_exceeded',
+			'github_updater_response_too_large',
+			'github_updater_invalid_json',
+			'github_updater_unsafe_release_asset_redirect',
+			'github_updater_temp_file_failed',
+			'github_updater_invalid_runtime_version',
+			'github_updater_check_in_progress',
+			'github_updater_release_artifact_unavailable',
+			'github_updater_release_check_failed',
+			'github_updater_release_preflight_unavailable',
+			'github_updater_operation_failed',
+			'github_updater_release_assurance_failed',
+			'release_version_mismatch',
+			'package_header_missing',
+			'package_header_invalid',
+			'package_archive_unreadable',
+			'package_zip_extension_unavailable',
+			'package_archive_size_invalid',
+			'package_archive_too_large',
+			'package_archive_path_unsafe',
+			'package_archive_path_duplicate',
+			'package_archive_root_invalid',
+			'package_archive_entry_duplicate',
+			'package_archive_entry_limit',
+			'release_version_invalid',
+			'package_update_uri_missing',
+			'package_update_uri_invalid',
+			'package_compatibility_missing',
+			'package_compatibility_invalid',
+			'github_updater_release_incompatible',
+			'package_header_ambiguous',
+		);
 	}
 
 	private function validReleaseUrl( string $url ): bool {

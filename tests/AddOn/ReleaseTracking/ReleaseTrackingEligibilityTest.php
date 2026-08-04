@@ -60,4 +60,21 @@ final class ReleaseTrackingEligibilityTest extends TestCase {
 		self::assertSame( 'v2.1.0', $preflight->releaseTag() );
 		self::assertSame( '2.0.0', $preflight->packageHeaderVersion() );
 	}
+
+	public function testPreflightCarriesOnlyAnAllowlistedReasonCode(): void {
+		$preflight = new ReleaseTrackingPreflight(
+			ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
+			'example',
+			reasonCode: 'github_updater_ambiguous_release_asset'
+		);
+
+		self::assertSame( 'github_updater_ambiguous_release_asset', $preflight->reasonCode() );
+
+		$this->expectException( \InvalidArgumentException::class );
+		new ReleaseTrackingPreflight(
+			ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
+			'example',
+			reasonCode: 'provider_secret_detail'
+		);
+	}
 }

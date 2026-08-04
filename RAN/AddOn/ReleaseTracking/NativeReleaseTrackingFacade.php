@@ -300,7 +300,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
 			if ( ! $preflight->ready() ) {
-				return ReleaseTrackingResult::failed( $preflight->code(), 'Published release assets could not be validated.' );
+				return ReleaseTrackingResult::failed(
+					'' !== $preflight->reasonCode() ? $preflight->reasonCode() : $preflight->code(),
+					'Published release assets could not be validated.'
+				);
 			}
 			$packageRoot   = $eligibility->packageRoot();
 			$headerFile    = $this->headerFile( $type, $identifier );
@@ -712,7 +715,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$validation['package_header_version'] ?? '',
 				is_string( $diagnostics['version_relationship'] ?? null )
 					? $diagnostics['version_relationship']
-					: 'invalid'
+					: 'invalid',
+				ReleaseTrackingPreflight::READY === $code ? '' : $validation['code']
 			);
 		} catch ( InvalidArgumentException ) {
 			return null;

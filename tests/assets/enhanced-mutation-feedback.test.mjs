@@ -89,6 +89,7 @@ function fixture() {
 		{ id: 'ran-booster-advanced-source-settings', open: false },
 		{ id: 'ran-booster-package-danger-zone', open: false },
 	];
+	let renderedErrors = [];
 	const errorAttributes = new Map();
 	const formAttributes = new Map();
 	const buttonAttributes = new Map();
@@ -140,6 +141,9 @@ function fixture() {
 		elements: [button, secondary],
 		getAttribute(name) {
 			return formAttributes.get(name) ?? null;
+		},
+		hasAttribute() {
+			return false;
 		},
 		matches(selector) {
 			return selector === '[data-ran-booster-enhanced-mutation]';
@@ -267,9 +271,17 @@ function fixture() {
 			return null;
 		},
 		querySelectorAll(selector) {
-			return selector === '[data-ran-booster-package-disclosure]'
-				? packageDisclosures
-				: [];
+			if (selector === '[data-ran-booster-package-disclosure]') {
+				return packageDisclosures;
+			}
+			if (
+				selector ===
+				'#wpbody-content .notice-error, #wpbody-content .error'
+			) {
+				return [error, ...renderedErrors];
+			}
+
+			return [];
 		},
 	};
 	const window = {
@@ -323,6 +335,9 @@ function fixture() {
 		scrollCalls,
 		setPackageDisclosures(disclosures) {
 			packageDisclosures = disclosures;
+		},
+		setRenderedErrors(errors) {
+			renderedErrors = errors;
 		},
 		swapTarget,
 		sourceLink,
@@ -585,6 +600,65 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	assert.deepEqual(state.announcements, [
 		{ message: 'The setting could not be saved.', type: 'assertive' },
 	]);
+});
+
+test('a package failure copies its rendered summary into the global error banner', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	state.error.textContent = '';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-package-mutation';
+	state.setRenderedErrors([
+		{
+			hidden: false,
+			textContent:
+				'The GitHub release must contain exactly one uploaded ZIP asset. Why this happened and how to fix it.',
+			querySelector(selector) {
+				return selector === 'p'
+					? {
+							textContent:
+								'The GitHub release must contain exactly one uploaded ZIP asset.',
+						}
+					: null;
+			},
+		},
+	]);
+
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+
+	assert.equal(state.error.hidden, false);
+	assert.equal(
+		state.error.textContent,
+		'The GitHub release must contain exactly one uploaded ZIP asset.'
+	);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+});
+
+test('a package response never reveals an empty global error banner', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	state.error.textContent = '';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-package-mutation';
+
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.error.focusOptions, null);
 });
 
 test('a redirected failure retains its originating form and focuses without scrolling', () => {

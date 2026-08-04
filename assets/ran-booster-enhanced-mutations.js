@@ -211,8 +211,17 @@
 				return;
 			}
 
+			const message = (
+				fallbackMessage ||
+				region.textContent ||
+				''
+			).trim();
+			if (!message) {
+				region.hidden = true;
+				return;
+			}
 			if (fallbackMessage) {
-				region.textContent = fallbackMessage;
+				region.textContent = message;
 			}
 			region.hidden = false;
 			region.setAttribute('role', 'alert');
@@ -221,6 +230,27 @@
 			}
 			region.focus?.({ preventScroll: true });
 			announce(region.textContent.trim(), 'error');
+		}
+
+		function renderedFailureMessage(form) {
+			const region = errorRegion(form);
+			const notice = Array.from(
+				document.querySelectorAll(
+					'#wpbody-content .notice-error, #wpbody-content .error'
+				)
+			).find(function (candidate) {
+				return (
+					candidate !== region &&
+					candidate.hidden !== true &&
+					(candidate.textContent || '').trim() !== ''
+				);
+			});
+
+			return (
+				notice?.querySelector?.('p')?.textContent ||
+				notice?.textContent ||
+				''
+			).trim();
 		}
 
 		function hideToast(toast) {
@@ -456,12 +486,12 @@
 			}
 
 			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
-				focusError(form);
+				focusError(form, renderedFailureMessage(form));
 				return;
 			}
 
 			if (isPackageMutation(form) && errorRegion(form)) {
-				focusError(form);
+				focusError(form, renderedFailureMessage(form));
 			}
 		});
 

@@ -18,6 +18,7 @@ final class ReleaseCandidatePreflight {
 	public static mixed $candidates  = null;
 	public static mixed $inspection  = null;
 	public static mixed $acquired    = null;
+	public static mixed $check       = null;
 	public static int $discoverCalls = 0;
 	public static int $listCalls     = 0;
 	public static int $inspectCalls  = 0;
@@ -45,6 +46,7 @@ final class ReleaseCandidatePreflight {
 		self::$candidates    = null;
 		self::$inspection    = null;
 		self::$acquired      = null;
+		self::$check         = null;
 		self::$discoverCalls = 0;
 		self::$listCalls     = 0;
 		self::$inspectCalls  = 0;
@@ -56,6 +58,12 @@ final class ReleaseCandidatePreflight {
 		++self::$discoverCalls;
 
 		return self::$discovery;
+	}
+
+	public function check( bool $force = false ): mixed {
+		unset( $force );
+
+		return self::$check;
 	}
 
 	public function listCandidates(): mixed {
@@ -87,6 +95,34 @@ final class ReleaseCandidatePreflight {
 		}
 
 		return self::$acquired;
+	}
+}
+
+final readonly class ManagedCandidateValidationFixture {
+
+	public function __construct( private string $code ) {
+	}
+
+	public function code(): string {
+		return $this->code;
+	}
+
+	public function releaseVersion(): string {
+		return '1.2.3';
+	}
+
+	public function releaseTag(): string {
+		return 'v1.2.3';
+	}
+
+	public function packageHeaderVersion(): ?string {
+		return '1.2.3';
+	}
+
+	public function relationshipTo( string $installedVersion ): string {
+		unset( $installedVersion );
+
+		return 'same';
 	}
 }
 

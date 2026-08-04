@@ -28,7 +28,7 @@ final class ManagedReleasePreflight {
 		try {
 			$preflightClass = 'RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\ReleaseCandidatePreflight';
 			if ( ! class_exists( $preflightClass ) ) {
-				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot );
+				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'release_runtime_unavailable' );
 			}
 
 			$target    = array(
@@ -43,15 +43,15 @@ final class ManagedReleasePreflight {
 			);
 			$candidate = $preflightClass::fromTarget( $target );
 			if ( $candidate instanceof \WP_Error ) {
-				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot );
+				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'github_updater_invalid_preflight_target' );
 			}
 			$candidate = $candidate->check( $force );
 			if ( $candidate instanceof \WP_Error ) {
+				[ $code, $reasonCode ] = $this->errorOutcome( $candidate->get_error_code() );
 				return new ReleaseTrackingPreflight(
-					in_array( $candidate->get_error_code(), array( 'github_updater_no_eligible_release', 'github_updater_release_incompatible' ), true )
-						? ReleaseTrackingPreflight::RELEASE_UNAVAILABLE
-						: ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
-					$packageRoot
+					$code,
+					$packageRoot,
+					reasonCode: $reasonCode
 				);
 			}
 
@@ -60,9 +60,11 @@ final class ManagedReleasePreflight {
 				'package_header_missing' => ReleaseTrackingPreflight::RELEASE_HEADER_MISSING,
 				'package_header_invalid' => ReleaseTrackingPreflight::RELEASE_HEADER_INVALID,
 				'package_archive_unreadable' => ReleaseTrackingPreflight::RELEASE_ARCHIVE_UNREADABLE,
+				'github_updater_release_incompatible' => ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
 				'release_identity_verified' => ReleaseTrackingPreflight::READY,
 				default => ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
 			};
+			$reasonCode = ReleaseTrackingPreflight::READY === $code ? '' : $candidate->code();
 
 			return new ReleaseTrackingPreflight(
 				$code,
@@ -71,11 +73,45 @@ final class ManagedReleasePreflight {
 				$this->releaseUrl( (string) $package->getRepository(), $candidate->releaseTag() ),
 				$candidate->releaseTag(),
 				$candidate->packageHeaderVersion() ?? '',
-				$candidate->relationshipTo( $package->getVersion() )
+				$candidate->relationshipTo( $package->getVersion() ),
+				$reasonCode
 			);
 		} catch ( \Throwable ) {
 			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot );
 		}
+	}
+
+	/** @return array{string, string} */
+	private function errorOutcome( string $errorCode ): array {
+		if ( str_starts_with( $errorCode, 'github_updater_operation_' ) ) {
+			return array( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, 'github_updater_operation_failed' );
+		}
+		if ( str_starts_with( $errorCode, 'github_updater_release_assurance_' ) ) {
+			return array( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, 'github_updater_release_assurance_failed' );
+		}
+
+		$category = match ( $errorCode ) {
+			'github_updater_no_eligible_release',
+			'github_updater_release_search_budget_exhausted',
+			'github_updater_release_incompatible' => ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
+			'github_updater_ambiguous_release_asset',
+			'github_updater_invalid_release_asset',
+			'github_updater_release_asset_too_large',
+			'github_updater_missing_asset_digest',
+			'github_updater_invalid_release',
+			'github_updater_release_is_draft',
+			'github_updater_invalid_release_tag',
+			'github_updater_prerelease_not_allowed',
+			'github_updater_invalid_release_url',
+			'github_updater_invalid_tag_commit',
+			'github_updater_artifact_continuity_failed',
+			'github_updater_repository_identity_changed',
+			'github_updater_downloaded_artifact_invalid',
+			'github_updater_downloaded_digest_mismatch' => ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
+			default => ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
+		};
+
+		return array( $category, $errorCode );
 	}
 
 	/**

@@ -102,9 +102,11 @@ uses `github_updater_release_assurance_duplicate`,
 `github_updater_release_assurance_invalid_result` or
 `github_updater_release_assurance_rejected`. A checker cannot waive a built-in
 failure, receive credentials or archive paths, download or install the package,
-or mutate updater state. With no checker, the built-in checks remain mandatory
-and sufficient. `package_type` and `header_file` preserve the same seam for
-plugins and themes.
+or mutate updater state. With no checker, the built-in checks remain mandatory.
+Automatic mode additionally requires the updater-owned stable repository ID
+and immutable published-release profile at offer time and fresh pre-install;
+manual mode does not claim that stronger publication property. `package_type`
+and `header_file` preserve the same seam for plugins and themes.
 
 The `immutable` boolean is GitHub-reported release metadata, not proof that the
 release attestation or a separate Artifact Attestation was cryptographically
@@ -235,7 +237,7 @@ The candidate-validation ZIP is temporary. It proves that the release is safe
 to advertise, then its temporary file is discarded. The cached native offer is
 metadata, not an installation archive.
 
-The bundled updater at `v1.6.0-beta.1` binds managed release configuration,
+The bundled updater at `v2.0.0-beta.4` binds managed release configuration,
 cached offers and release fingerprints to the provider's stable repository ID.
 Discovery and acquisition also compare that ID with live GitHub repository
 metadata. Reusing the same `owner/repository` locator for a deleted and recreated

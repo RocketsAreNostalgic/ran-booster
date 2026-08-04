@@ -12,7 +12,7 @@ namespace RAN\WPGitHubReleaseUpdater\V1\WordPress;
  */
 final class ReleaseCandidatePreflight {
 
-	public const PROSPECTIVE_API_VERSION = 3;
+	public const PROSPECTIVE_API_VERSION = 4;
 
 	public static mixed $discovery   = null;
 	public static mixed $candidates  = null;
@@ -64,8 +64,8 @@ final class ReleaseCandidatePreflight {
 		return self::$candidates;
 	}
 
-	public function inspectExact( int $releaseId, string $tag, string $defaultBranch ): mixed {
-		unset( $releaseId, $tag, $defaultBranch );
+	public function inspectExact( int $releaseId, string $tag ): mixed {
+		unset( $releaseId, $tag );
 		++self::$inspectCalls;
 
 		return self::$inspection;
@@ -74,10 +74,9 @@ final class ReleaseCandidatePreflight {
 	public function acquireExact(
 		int $releaseId,
 		string $tag,
-		string $defaultBranch,
 		ReleaseFingerprint $fingerprint
 	): mixed {
-		unset( $releaseId, $tag, $defaultBranch );
+		unset( $releaseId, $tag );
 		++self::$acquireCalls;
 		if ( self::$inspection instanceof ProspectiveInspectionFixture
 			&& ! hash_equals( self::$inspection->fingerprint()->value(), $fingerprint->value() ) ) {

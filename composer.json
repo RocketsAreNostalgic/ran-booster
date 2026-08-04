@@ -28,7 +28,8 @@
     "require": {
         "php": "^8.2",
         "ext-sodium": "*",
-        "ran/wp-github-release-updater": "^1.6.0-beta.1"
+        "ext-zip": "*",
+        "ran/wp-github-release-updater": "2.0.0-beta.4"
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",

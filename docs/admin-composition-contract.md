@@ -66,7 +66,7 @@ do_action(
 );
 
 // Delivered only when the selected updater runtime supplies the internal
-// prospective capability required by Core's public API 4.
+// prospective capability required by Core's public API 5.
 do_action(
 	'ran_booster_prospective_release_ready',
 	$prospectiveRelease
@@ -190,8 +190,8 @@ does not install, downgrade or alter package files. `ReleaseTrackingStatus`
 exposes the canonical `stable` or `prerelease` channel.
 
 Prospective installation is a separate optional contract. Core defines
-`RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` as `4` only when its selected
-updater runtime publishes the complete internal API 2 capability required by
+`RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` as `5` only when its selected
+updater runtime publishes the complete internal API 4 capability required by
 Core, then delivers the facade through
 `ran_booster_prospective_release_ready`. The two version markers describe
 different boundaries and are deliberately independent.

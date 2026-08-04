@@ -152,7 +152,7 @@ class CorePackageExecutor {
 		add_filter( 'upgrader_pre_download', $preDownload, 10, 4 );
 		add_filter( 'upgrader_source_selection', $sourceFilter, 10, 4 );
 		add_filter( 'automatic_updates_is_vcs_checkout', $vcsFilter, 10, 2 );
-		add_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10, 7 );
+		add_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10, 6 );
 		add_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX, 1 );
 		add_action( 'upgrader_process_complete', $complete, 100, 2 );
 
@@ -267,7 +267,7 @@ class CorePackageExecutor {
 	 * Admit only this immutable branch artifact through the selected updater's
 	 * retained V1 handoff. Every other earlier download reply remains fail-closed.
 	 *
-	 * @return Closure(mixed, mixed, mixed, mixed, mixed, mixed, mixed): mixed
+	 * @return Closure(mixed, mixed, mixed, mixed, mixed, mixed): mixed
 	 */
 	private function coreReinstallHandoffFilter( string $type, string $identifier, PreparedArtifact $artifact ): Closure {
 		return static function (
@@ -282,8 +282,10 @@ class CorePackageExecutor {
 			$identifier,
 			$artifact
 		): mixed {
-			if ( true === $admitted
-				|| ! is_string( $reply )
+			if ( null !== $admitted ) {
+				return $admitted;
+			}
+			if ( ! is_string( $reply )
 				|| ! is_string( $package )
 				|| ! is_array( $extra )
 				|| $type !== $targetType
@@ -296,12 +298,12 @@ class CorePackageExecutor {
 			}
 
 			try {
-				$artifact->assertUnchanged();
+				$claim = $artifact->claimForNativeUpdate( $type, $identifier );
 			} catch ( Throwable ) {
-				return false;
+				return null;
 			}
 
-			return true;
+			return $claim;
 		};
 	}
 

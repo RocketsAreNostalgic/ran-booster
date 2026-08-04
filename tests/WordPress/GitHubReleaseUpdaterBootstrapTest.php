@@ -22,8 +22,8 @@ use TypeError;
 final class GitHubReleaseUpdaterBootstrapTest extends TestCase {
 
 	public function testCoreAndUpdaterProspectiveApiGenerationsAreIndependent(): void {
-		self::assertSame( 4, ProspectiveReleaseFacade::API_VERSION );
-		self::assertSame( 3, GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION );
+		self::assertSame( 5, ProspectiveReleaseFacade::API_VERSION );
+		self::assertSame( 4, GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION );
 	}
 
 	/** @return list<array{string, string}> */
@@ -204,7 +204,7 @@ final class GitHubReleaseUpdaterBootstrapTest extends TestCase {
 			'state'            => 'active',
 		);
 
-		self::assertSame( 3, GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $facade ) );
+		self::assertSame( 4, GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $facade ) );
 	}
 
 	public function testReportsProspectiveApiWhenTheSelectedRuntimeTargetIsTemporarilyUnavailable(): void {
@@ -216,7 +216,7 @@ final class GitHubReleaseUpdaterBootstrapTest extends TestCase {
 			'code'             => 'github_updater_github_http_error',
 		);
 
-		self::assertSame( 3, GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $facade ) );
+		self::assertSame( 4, GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $facade ) );
 	}
 
 	public function testDoesNotAdvertiseProspectiveApiBeforeSelectionIsFixed(): void {

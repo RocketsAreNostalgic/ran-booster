@@ -136,7 +136,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
 
-	public function testDiscoveryMapsTheResolvedRepositoryAndNonDefaultBranchEvidence(): void {
+	public function testDiscoveryMapsOnlyPublishedReleaseEvidence(): void {
 		ReleaseCandidatePreflight::$discovery = new ProspectiveDiscoveryFixture( 42, 'v1.2.3', '1.2.3' );
 		$plugins                              = new ProspectivePluginRepository();
 		$executor                             = new ProspectiveExecutor();
@@ -153,13 +153,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_available', $result->code() );
 		self::assertSame(
 			array(
-				'release_id'         => 42,
-				'tag'                => 'v1.2.3',
-				'version'            => '1.2.3',
-				'channel'            => 'stable',
-				'default_branch'     => 'main',
-				'selected_branch'    => 'feature/release',
-				'non_default_branch' => true,
+				'release_id' => 42,
+				'tag'        => 'v1.2.3',
+				'version'    => '1.2.3',
+				'channel'    => 'stable',
 			),
 			$result->data()
 		);
@@ -292,8 +289,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	public function testFailedExactValidationDoesNotExecuteOrPersistAnything(): void {
 		ReleaseCandidatePreflight::$acquired = new \WP_Error(
-			'github_updater_release_not_on_default_branch',
-			'The selected release is not on the default branch.'
+			'github_updater_artifact_continuity_failed',
+			'The selected published release changed.'
 		);
 		$plugins                             = new ProspectivePluginRepository();
 		$executor                            = new ProspectiveExecutor();

@@ -206,7 +206,8 @@ private, bounded operational logging, while add-on and provider contracts no
 longer receive a logger, expose `ProviderRegistry::logging()`, or publish the
 `RAN_BOOSTER_LOGGING_API_VERSION` marker. The coordinated compatibility cut is
 Add-on API 14, Provider API 8, Portability API 2, and Admin Interaction API 2;
-Prospective Release API remains 4.
+Prospective Release API is 5 after the coordinated published-release-only
+contract cut.
 
 This closes the supported free-form path. It does not claim that same-process
 PHP prevents a hostile plugin from observing or invoking unrelated callbacks.

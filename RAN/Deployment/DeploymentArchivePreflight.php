@@ -192,7 +192,7 @@ class DeploymentArchivePreflight {
 
 	private function assertLocalReadiness( DeploymentAttempt $attempt ): void {
 		if ( ! class_exists( ZipArchive::class ) ) {
-			throw new RuntimeException( 'The PHP ZipArchive extension is required for deployment archive inspection.' );
+			throw new RuntimeException( 'The PHP ext-zip platform requirement is unavailable; deployment archives cannot be inspected.' );
 		}
 		if ( is_multisite() ) {
 			throw new RuntimeException( 'Archive deployment is supported only on a single-site WordPress installation.' );

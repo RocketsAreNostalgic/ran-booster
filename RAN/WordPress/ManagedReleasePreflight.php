@@ -70,7 +70,8 @@ final class ManagedReleasePreflight {
 				$candidate->releaseVersion(),
 				$this->releaseUrl( (string) $package->getRepository(), $candidate->releaseTag() ),
 				$candidate->releaseTag(),
-				$candidate->packageHeaderVersion() ?? ''
+				$candidate->packageHeaderVersion() ?? '',
+				$candidate->relationshipTo( $package->getVersion() )
 			);
 		} catch ( \Throwable ) {
 			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot );
@@ -98,16 +99,10 @@ final class ManagedReleasePreflight {
 		}
 
 		return array(
-			'release_id'         => $discovery->releaseId(),
-			'tag'                => $discovery->tag(),
-			'version'            => $discovery->version(),
-			'channel'            => $channel,
-			'default_branch'     => (string) $repository['repository_default_branch'],
-			'selected_branch'    => (string) $repository['branch'],
-			'non_default_branch' => ! hash_equals(
-				(string) $repository['repository_default_branch'],
-				(string) $repository['branch']
-			),
+			'release_id' => $discovery->releaseId(),
+			'tag'        => $discovery->tag(),
+			'version'    => $discovery->version(),
+			'channel'    => $channel,
 		);
 	}
 
@@ -167,16 +162,12 @@ final class ManagedReleasePreflight {
 		if ( $candidate instanceof \WP_Error ) {
 			return $candidate;
 		}
-		$inspection = $candidate->inspectExact(
-			$releaseId,
-			$tag,
-			(string) $repository['repository_default_branch']
-		);
+		$inspection = $candidate->inspectExact( $releaseId, $tag );
 		if ( $inspection instanceof \WP_Error ) {
 			return $inspection;
 		}
 
-		return $this->prospectiveInspectionData( $inspection, $repository, $channel );
+		return $this->prospectiveInspectionData( $inspection, $channel );
 	}
 
 	/**
@@ -202,12 +193,7 @@ final class ManagedReleasePreflight {
 		if ( $fingerprint instanceof \WP_Error ) {
 			return $fingerprint;
 		}
-		$validated = $candidate->acquireExact(
-			$releaseId,
-			$tag,
-			(string) $repository['repository_default_branch'],
-			$fingerprint
-		);
+		$validated = $candidate->acquireExact( $releaseId, $tag, $fingerprint );
 		if ( $validated instanceof \WP_Error ) {
 			return $validated;
 		}
@@ -287,39 +273,27 @@ final class ManagedReleasePreflight {
 			&& is_string( $repository['provider_repository_id'] ?? null )
 			&& 1 === preg_match( '/\A[1-9][0-9]{0,18}\z/D', $repository['provider_repository_id'] )
 			&& is_string( $repository['credential_id'] ?? null )
-			&& is_string( $repository['private'] ?? null )
-			&& is_string( $repository['repository_default_branch'] ?? null )
-			&& '' !== $repository['repository_default_branch']
-			&& is_string( $repository['branch'] ?? null )
-			&& '' !== $repository['branch'];
+			&& is_string( $repository['private'] ?? null );
 	}
 
 	/**
-	 * @param object               $inspection
-	 * @param array<string, mixed> $repository
+	 * @param object $inspection
 	 * @return array<string, bool|int|string>
 	 */
 	private function prospectiveInspectionData(
 		object $inspection,
-		array $repository,
 		string $channel
 	): array {
 		return array(
-			'release_id'         => $inspection->releaseId(),
-			'tag'                => $inspection->tag(),
-			'version'            => $inspection->version(),
-			'commit'             => $inspection->commit(),
-			'details_url'        => $inspection->detailsUrl(),
-			'package_root'       => $inspection->packageRoot(),
-			'main_file'          => $inspection->mainFile(),
-			'fingerprint'        => $inspection->fingerprint()->value(),
-			'channel'            => $channel,
-			'default_branch'     => (string) $repository['repository_default_branch'],
-			'selected_branch'    => (string) $repository['branch'],
-			'non_default_branch' => ! hash_equals(
-				(string) $repository['repository_default_branch'],
-				(string) $repository['branch']
-			),
+			'release_id'   => $inspection->releaseId(),
+			'tag'          => $inspection->tag(),
+			'version'      => $inspection->version(),
+			'commit'       => $inspection->commit(),
+			'details_url'  => $inspection->detailsUrl(),
+			'package_root' => $inspection->packageRoot(),
+			'main_file'    => $inspection->mainFile(),
+			'fingerprint'  => $inspection->fingerprint()->value(),
+			'channel'      => $channel,
 		);
 	}
 

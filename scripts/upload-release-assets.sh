@@ -32,7 +32,8 @@ done <<< "$assets"
 if [[ $expected_count -eq 0 ]]; then
 	[[ $zip_count -eq 0 ]] || fail 'release already contains a different ZIP.'
 	gh release upload "$tag" "$archive" --repo "$repository"
-	exit
+	expected_count=1
+	zip_count=1
 fi
 [[ $expected_count -eq 1 && $zip_count -eq 1 ]] \
 	|| fail 'release contains ambiguous ZIP assets.'

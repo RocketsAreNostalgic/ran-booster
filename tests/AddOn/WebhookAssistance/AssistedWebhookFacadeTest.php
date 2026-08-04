@@ -325,6 +325,26 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 'rotated-secret', $provider->signingSecret );
 	}
 
+	public function testReconfigureExceptionAfterProviderInvocationRetainsRecoveryEvidence(): void {
+		$secrets                    = new FixedFacadeSecretsFile();
+		$provider                   = new FixedWebhookProvider();
+		$provider->throwReconfigure = true;
+		$facade                     = $this->facade( $secrets, $provider );
+		$target                     = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                        = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ]  = $secrets->profile( $profileId, 1, 'current-secret' );
+		$secrets->materials[ $profileId ] = $secrets->profiles[ $profileId ];
+
+		$result = $facade->reconfigure( $target, 'profile_1', '55', $profileId, 1, 'good' );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'reconfigure_outcome_unknown', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertSame( $profileId, $result->profile()?->id() );
+		self::assertSame( 'current-secret', $provider->signingSecret );
+	}
+
 	public function testStaleTargetNonceAndProfileFailBeforeProviderWork(): void {
 		$secrets  = new FixedFacadeSecretsFile();
 		$provider = new FixedWebhookProvider();
@@ -383,6 +403,25 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 'rotated-secret', $secrets->materials[ $profileId ]['secret'] );
 	}
 
+	public function testRemoveExceptionAfterProviderInvocationRetainsRecoveryEvidence(): void {
+		$secrets               = new FixedFacadeSecretsFile();
+		$provider              = new FixedWebhookProvider();
+		$provider->throwRemove = true;
+		$facade                = $this->facade( $secrets, $provider );
+		$target                = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$profileId                       = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profileId ] = $secrets->profile( $profileId, 1 );
+
+		$result = $facade->remove( $target, 'profile_1', '55', $profileId, 1, 'good' );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'remove_outcome_unknown', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertSame( $profileId, $result->profile()?->id() );
+		self::assertArrayHasKey( $profileId, $secrets->profiles );
+	}
+
 	public function testFitnessIsExplicitAndBoundToTheSavedProfile(): void {
 		$secrets  = new FixedFacadeSecretsFile();
 		$provider = new FixedWebhookProvider();
@@ -424,6 +463,8 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 	public string $setupState         = 'succeeded';
 	public string $fitnessSuitability = 'unknown';
 	public bool $throwSetup           = false;
+	public bool $throwReconfigure     = false;
+	public bool $throwRemove          = false;
 	/** @var callable(): void|null */
 	public $duringSetup = null;
 	/** @var callable(): void|null */
@@ -491,6 +532,9 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
 		++$this->calls;
 		$this->signingSecret = $signingSecret;
+		if ( $this->throwReconfigure ) {
+			throw new \RuntimeException( 'Provider response was lost after invocation.' );
+		}
 
 		return $this->operation( 'succeeded', 'configured_pending_delivery' );
 	}
@@ -501,6 +545,9 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 			$callback           = $this->duringRemove;
 			$this->duringRemove = null;
 			$callback();
+		}
+		if ( $this->throwRemove ) {
+			throw new \RuntimeException( 'Provider response was lost after invocation.' );
 		}
 
 		return $this->operation( $this->removeState, 'succeeded' === $this->removeState ? 'absence_confirmed' : 'remove_ambiguous', 'succeeded' === $this->removeState ? 'absent' : 'unknown' );

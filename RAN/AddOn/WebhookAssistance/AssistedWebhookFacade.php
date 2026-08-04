@@ -175,14 +175,20 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->appliesMetadata( $current, $record[0] ) || ! $this->credentialSourceAvailable( $current->providerCode(), $credentialProfileId, $requestCredential ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
+				$providerStarted = false;
 				try {
 					if ( ! $this->identityConfirmed( 'reconfigure', $current, $credentialProfileId, $requestCredential, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $record[0] );
 					}
-					$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+					$provider        = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+					$providerStarted = true;
 
 					return $provider->reconfigure( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $requestCredential, $record[1] )->withProfile( $record[0] );
 				} catch ( \Throwable ) {
+					if ( $providerStarted ) {
+						return $this->mutationOutcomeUnknown( 'reconfigure_outcome_unknown', $hookId )->withProfile( $record[0] );
+					}
+
 					return $this->failed( 'operation_failed' )->withProfile( $record[0] );
 				}
 			}
@@ -198,19 +204,25 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->appliesMetadata( $current, $record[0] ) || ! $this->credentialSourceAvailable( $current->providerCode(), $credentialProfileId, $requestCredential ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
-				$profile = $record[0];
+				$profile         = $record[0];
+				$providerStarted = false;
 				try {
 					if ( ! $this->identityConfirmed( 'remove', $current, $credentialProfileId, $requestCredential, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
 					}
-					$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
-					$result   = $provider->remove( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $requestCredential )->withProfile( $profile );
+					$provider        = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+					$providerStarted = true;
+					$result          = $provider->remove( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $requestCredential )->withProfile( $profile );
 					if ( $result->confirmsAbsence() && 'created' === $profile->disposition() && ! $this->deleteProfileIfRevision( $current->providerCode(), $profile->id(), $profile->revision() ) ) {
 						return $result->asPartial( 'local_profile_release_failed', 'The remote hook is absent; remove the retained local profile before replacing it.' );
 					}
 
 					return $result;
 				} catch ( \Throwable ) {
+					if ( $providerStarted ) {
+						return $this->mutationOutcomeUnknown( 'remove_outcome_unknown', $hookId )->withProfile( $profile );
+					}
+
 					return $this->failed( 'operation_failed' )->withProfile( $profile );
 				}
 			}
@@ -489,11 +501,19 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	private function failed( string $code ): RepositoryWebhookOperationResult {
+		return $this->unknownResult( 'failed', $code, null, 'Review the current target, profile, credential and provider capability.' );
+	}
+
+	private function mutationOutcomeUnknown( string $code, string $hookId ): RepositoryWebhookOperationResult {
+		return $this->unknownResult( 'ambiguous', $code, $hookId, 'Inspect the identified remote hook and run Check before retrying.' );
+	}
+
+	private function unknownResult( string $state, string $code, ?string $hookId, string $remediation ): RepositoryWebhookOperationResult {
 		return new RepositoryWebhookOperationResult(
-			'failed',
+			$state,
 			$code,
 			gmdate( 'Y-m-d\TH:i:s\Z' ),
-			null,
+			$hookId,
 			array(
 				'endpoint'     => 'unknown',
 				'events'       => 'unknown',
@@ -501,7 +521,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 				'active'       => 'unknown',
 			),
 			'unknown',
-			'Review the current target, profile, credential and provider capability.'
+			$remediation
 		);
 	}
 

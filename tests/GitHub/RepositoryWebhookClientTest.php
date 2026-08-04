@@ -6,8 +6,10 @@ namespace Tests\GitHub;
 
 require_once __DIR__ . '/RepositoryResolverWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\GitHub\RepositoryWebhookClient;
+use RAN\GitHub\RepositoryResolverWpError;
 
 final class RepositoryWebhookClientTest extends TestCase {
 
@@ -58,6 +60,109 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertStringNotContainsString( self::SECRET, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
 	}
 
+	/** @return iterable<string, array{int}> */
+	public static function deterministicCreateFailures(): iterable {
+		yield 'bad request' => array( 400 );
+		yield 'unauthorized' => array( 401 );
+		yield 'forbidden' => array( 403 );
+		yield 'repository absent' => array( 404 );
+		yield 'validation rejected' => array( 422 );
+	}
+
+	#[DataProvider( 'deterministicCreateFailures' )]
+	public function testDeterministicCreateFailureIsFailedWithoutAHookIdentity( int $status ): void {
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, array() ),
+				$this->response( $status, array( 'message' => 'request rejected' ) ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertSame( 'failed', $result->state() );
+		self::assertSame( 'setup_failed', $result->code() );
+		self::assertNull( $result->hookId() );
+		self::assertSame( array( 'GET', 'POST' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+	}
+
+	public function testTransientCreateFailureIsAmbiguousWithoutAHookIdentity(): void {
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, array() ),
+				$this->response( 503, array( 'message' => 'temporarily unavailable' ) ),
+			)
+		);
+
+		$result = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'setup_failed_ambiguous', $result->code() );
+		self::assertNull( $result->hookId() );
+		self::assertCount( 2, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
+	public function testLostCreateResponseIsAmbiguousWithoutAHookIdentity(): void {
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, array() ),
+				new RepositoryResolverWpError( 'http_request_failed' ),
+			)
+		);
+
+		$result = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'setup_failed_ambiguous', $result->code() );
+		self::assertNull( $result->hookId() );
+		self::assertCount( 2, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
+	public function testFailedSetupReadbackIsCompensatedOnlyAfterConfirmedAbsence(): void {
+		$created = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, array() ),
+				$this->response( 201, $created ),
+				$this->response( 503, array( 'message' => 'readback unavailable' ) ),
+				$this->response( 204, array() ),
+				$this->response( 404, array() ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertSame( 'failed', $result->state() );
+		self::assertSame( 'setup_compensated', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertSame( 'absent', $result->toArray()['delivery'] );
+		self::assertSame( array( 'GET', 'POST', 'GET', 'DELETE', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+	}
+
+	public function testFailedSetupCompensationRemainsPartialWithTheKnownHookIdentity(): void {
+		$created = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, array() ),
+				$this->response( 201, $created ),
+				$this->response( 503, array( 'message' => 'readback unavailable' ) ),
+				$this->response( 500, array( 'message' => 'delete failed' ) ),
+				$this->response( 200, $created ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertSame( 'partial', $result->state() );
+		self::assertSame( 'setup_compensation_incomplete', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertFalse( $result->confirmsAbsence() );
+		self::assertSame( array( 'GET', 'POST', 'GET', 'DELETE', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+	}
+
 	public function testThirdFullDiscoveryPageStopsBeforeMutation(): void {
 		$page = array();
 		for ( $id = 1; $id <= 100; ++$id ) {
@@ -101,6 +206,44 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertSame( 'failed', $result->state() );
 		self::assertSame( 'hook_ownership_mismatch', $result->code() );
 		self::assertCount( 1, \RAN\GitHub\repository_resolver_http_requests() );
+	}
+
+	public function testReconfigureReadbackFailureRemainsAmbiguousWithTheKnownHookIdentity(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, $hook ),
+				$this->response( 503, array( 'message' => 'readback unavailable' ) ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->reconfigure( 'owner/example', '55', 'https://site.example/hook', self::TOKEN, self::SECRET );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'reconfigure_readback_unavailable', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertSame( array( 'GET', 'PATCH', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+	}
+
+	public function testRemoveAbsenceReadbackFailureRemainsAmbiguousWithTheKnownHookIdentity(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 204, array() ),
+				$this->response( 503, array( 'message' => 'readback unavailable' ) ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->remove( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertSame( 'ambiguous', $result->state() );
+		self::assertSame( 'remove_readback_unavailable', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertSame( array( 'GET', 'DELETE', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
 	}
 
 	public function testCheckCannotConfirmAnIncompleteReadback(): void {

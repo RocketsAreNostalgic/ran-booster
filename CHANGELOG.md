@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-beta.8](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-08-04)
+
+
+### Bug Fixes
+
+* make secrets storage failures actionable ([912b85c](https://github.com/RocketsAreNostalgic/ran-booster/commit/912b85cef47099c55531d9be795160ab01c8931f))
+
 ## [1.0.0-beta.7](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-08-04)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-beta.6](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-08-04)
+
+
+### Bug Fixes
+
+* make secrets storage actionable ([c9d0f26](https://github.com/RocketsAreNostalgic/ran-booster/commit/c9d0f26991073c7750dbb942635243f7d9feb35e))
+* pass Core repository identity to updater ([a7763f4](https://github.com/RocketsAreNostalgic/ran-booster/commit/a7763f40cc03b6f97022653ec5e8ae513860c8bb))
+
 ## [1.0.0-beta.5](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-08-04)
 
 

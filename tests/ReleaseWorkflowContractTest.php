@@ -41,6 +41,9 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'Expected exactly one merged release PR for the manifest commit.', $workflow );
 		self::assertStringContainsString( 'autorelease: pending', $workflow );
 		self::assertStringContainsString( 'autorelease: tagged', $workflow );
+		self::assertStringContainsString( 'pending="$(jq -r \'any(.labels[]?; .name == "autorelease: pending")\'', $workflow );
+		self::assertStringContainsString( 'tagged="$(jq -r \'any(.labels[]?; .name == "autorelease: tagged")\'', $workflow );
+		self::assertStringNotContainsString( 'jq -er \'any(.labels[]?', $workflow );
 		self::assertStringContainsString( 'issues/${release_pr_number}/labels/autorelease%3A%20pending', $workflow );
 	}
 }

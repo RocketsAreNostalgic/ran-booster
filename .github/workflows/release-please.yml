@@ -163,8 +163,8 @@ jobs:
                           | if length == 1 then .[0] else error("Expected exactly one merged release PR for the manifest commit.") end'
                   )"
                   release_pr_number="$(jq -er '.number' <<< "$release_pr")"
-                  pending="$(jq -er 'any(.labels[]?; .name == "autorelease: pending")' <<< "$release_pr")"
-                  tagged="$(jq -er 'any(.labels[]?; .name == "autorelease: tagged")' <<< "$release_pr")"
+                  pending="$(jq -r 'any(.labels[]?; .name == "autorelease: pending")' <<< "$release_pr")"
+                  tagged="$(jq -r 'any(.labels[]?; .name == "autorelease: tagged")' <<< "$release_pr")"
                   if [[ "$pending" != true && "$tagged" != true ]]; then
                       echo '::error::The exact merged release PR has neither the pending nor tagged Release Please label.'
                       exit 1

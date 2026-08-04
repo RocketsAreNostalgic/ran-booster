@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-beta.9](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-08-04)
+
+
+### Bug Fixes
+
+* contain package source card text ([331b4ba](https://github.com/RocketsAreNostalgic/ran-booster/commit/331b4ba7bf9f215c383e66a11ef1a0667e73af0c))
+* expose release validation diagnostics ([fcd1951](https://github.com/RocketsAreNostalgic/ran-booster/commit/fcd19517cc3ad8c151c42afd80d4fef283ec0689))
+* identify Transporter package results ([4b4ea5d](https://github.com/RocketsAreNostalgic/ran-booster/commit/4b4ea5ddfc287b465a4503206088718c2dfd3135))
+
 ## [1.0.0-beta.8](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-08-04)
 
 

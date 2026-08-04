@@ -31,6 +31,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertIsString( $workflow );
 
 		self::assertStringContainsString( 'pull-requests: write', $workflow );
+		self::assertMatchesRegularExpression( '/package-release:.*?permissions:\s+contents: write\s+pull-requests: write\s+issues: write/s', $workflow );
 		self::assertStringContainsString( 'RAN_RELEASE_PR_RECONCILE=true', $workflow );
 		self::assertStringContainsString( 'releases/tags/${RAN_RELEASE_TAG}', $workflow );
 		self::assertStringContainsString( '.tag_name == $tag and .draft == false and .immutable == true and .target_commitish == $commit', $workflow );

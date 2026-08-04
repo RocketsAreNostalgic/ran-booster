@@ -237,7 +237,7 @@ The candidate-validation ZIP is temporary. It proves that the release is safe
 to advertise, then its temporary file is discarded. The cached native offer is
 metadata, not an installation archive.
 
-The bundled updater at `v2.0.0-beta.3` binds managed release configuration,
+The bundled updater at `v2.0.0-beta.4` binds managed release configuration,
 cached offers and release fingerprints to the provider's stable repository ID.
 Discovery and acquisition also compare that ID with live GitHub repository
 metadata. Reusing the same `owner/repository` locator for a deleted and recreated

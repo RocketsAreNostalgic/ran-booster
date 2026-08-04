@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.0-beta.7](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-08-04)
+
+
+### Bug Fixes
+
+* expose secrets storage failures ([e50308e](https://github.com/RocketsAreNostalgic/ran-booster/commit/e50308e46a00dcfa50880f7549e0ec92fc9decd9))
+* **release:** allow false label state ([1015315](https://github.com/RocketsAreNostalgic/ran-booster/commit/10153151b208aac2341e2a826278643bfcfd0967))
+* **release:** allow PR label mutation ([0cd2b93](https://github.com/RocketsAreNostalgic/ran-booster/commit/0cd2b937ac9ce8e337d09077deee4fe9ee89016b))
+* **release:** reconcile Release Please labels ([a6934f1](https://github.com/RocketsAreNostalgic/ran-booster/commit/a6934f16bb88c21be5d1b732df9590b7b67090c8))
+
 ## [1.0.0-beta.6](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-08-04)
 
 

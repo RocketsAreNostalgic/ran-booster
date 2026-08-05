@@ -322,6 +322,15 @@ For an enhanced validation or unexpected failure, Core keeps the current
 authoritative panel in place and replaces only the declared error region. The
 error remains visible and receives focus.
 
+Core's repository-credential and webhook-secret save modals are a narrow
+internal exception to the enhanced success presentation. Their correctable
+failures remain in the open modal, but verified save success directs the browser
+to the signed canonical result URL as a full-page navigation. The rebuilt page
+closes the modal, renders the authoritative profile list and presents the normal
+WordPress success notice. Provider-profile deletion continues to use the bounded
+authoritative-region refresh. This exception does not change the public add-on
+interaction contract or permit add-ons to select their own navigation mode.
+
 Without JavaScript or HTMX, the same form submits to the same protected
 handler. Core redirects to a signed canonical URL and renders a normal
 WordPress success, info or error notice. The interaction metadata is transport
@@ -361,6 +370,7 @@ Core contract tests must cover:
 - exact HTMX target and operation matching;
 - signed result markers and rejection of tampering;
 - authoritative success/accepted refreshes and exactly one toast event;
+- save-modal full-page success navigation with unchanged local failures;
 - scoped `422` and generic `500` persistent errors; and
 - the normal signed redirect-and-notice fallback.
 

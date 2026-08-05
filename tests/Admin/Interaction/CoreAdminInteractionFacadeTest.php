@@ -255,6 +255,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertSame( array( 200 ), $this->statuses );
 		$location = $this->header( 'HX-Location' );
 		self::assertNotNull( $location );
+		self::assertNull( $this->header( 'HX-Redirect' ) );
 		$decoded = json_decode( $location, true );
 		self::assertIsArray( $decoded );
 		self::assertSame( '#ran-booster-provider-task-panel', $decoded['target'] );
@@ -367,60 +368,128 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertCount( 1, $GLOBALS['ran_booster_interaction_test_actions']['admin_init'] );
 	}
 
-	public function testCoreProviderProfileSuccessUsesTheSharedSignedPrgFlow(): void {
-		$facade                           = $this->facade();
-		$_GET                             = array(
-			'view'     => 'credentials',
-			's'        => 'Deployment',
-			'kind'     => 'api-key',
-			'status'   => 'ready',
-			'orderby'  => 'usage',
-			'order'    => 'desc',
-			'paged'    => '2',
-			'per_page' => '50',
+	public function testCoreProviderProfileSaveSuccessUsesSignedFullPageNavigation(): void {
+		$cases = array(
+			array(
+				'action'    => 'save-access-profile',
+				'view'      => 'credentials',
+				'message'   => 'Repository access token saved.',
+				'list_args' => array(
+					's'        => 'Deployment',
+					'kind'     => 'api-key',
+					'status'   => 'ready',
+					'orderby'  => 'usage',
+					'order'    => 'desc',
+					'paged'    => '2',
+					'per_page' => '50',
+				),
+			),
+			array(
+				'action'    => 'save-webhook-profile',
+				'view'      => 'secrets',
+				'message'   => 'Push-to-Deploy secret saved.',
+				'list_args' => array(),
+			),
 		);
-		$request                          = $facade->providerProfileRequest(
-			'save-access-profile',
-			'fixture'
-		);
-		$_SERVER['HTTP_HX_REQUEST']       = 'true';
-		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
-		$_POST['ran_booster_interaction'] = array(
-			'operation' => 'core:save-access-profile',
-			'target'    => CoreProviderProfileInteraction::TARGET_KEY,
-		);
+
+		foreach ( $cases as $case ) {
+			$this->headers   = array();
+			$this->statuses  = array();
+			$this->redirects = array();
+
+			$GLOBALS['ran_booster_interaction_test_actions'] = array();
+			$_GET                             = array_merge( array( 'view' => $case['view'] ), $case['list_args'] );
+			$facade                           = $this->facade();
+			$request                          = $facade->providerProfileRequest( $case['action'], 'fixture' );
+			$_SERVER['HTTP_HX_REQUEST']       = 'true';
+			$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
+			$_POST['ran_booster_interaction'] = array(
+				'operation' => 'core:' . $case['action'],
+				'target'    => CoreProviderProfileInteraction::TARGET_KEY,
+			);
+			$_POST['ran_booster']['secret']   = 'secret-canary-provider-profile';
+
+			$this->captureTermination(
+				fn () => $facade->respondToProviderProfileSuccess( $request, $case['message'] )
+			);
+
+			self::assertSame( array( 200 ), $this->statuses );
+			$redirect = $this->header( 'HX-Redirect' );
+			self::assertNotNull( $redirect );
+			self::assertNull( $this->header( 'HX-Location' ) );
+			self::assertNull( $this->header( 'HX-Trigger-After-Swap' ) );
+			self::assertSame( array(), $this->redirects );
+			foreach ( $this->headers as $header ) {
+				self::assertStringNotContainsString( 'secret-canary', $header[1] );
+			}
+
+			$this->loadQueryFromUrl( $redirect );
+			self::assertSame( 'core:' . $case['action'], $_GET['ran_booster_interaction_operation'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The fixture loads and verifies the signed outcome query.
+			self::assertSame( $request->canonicalUrl, $_GET['ran_booster_interaction_return'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The fixture loads and verifies the signed outcome query.
+			$this->headers = array();
+			$_POST         = array();
+			unset( $_SERVER['HTTP_HX_REQUEST'], $_SERVER['HTTP_HX_TARGET'] );
+			$facade->preparePendingFeedback();
+			$notices = $GLOBALS['ran_booster_interaction_test_actions']['admin_notices'] ?? array();
+			self::assertCount( 1, $notices );
+
+			ob_start();
+			$notices[0]['callback']();
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'notice notice-success', $html );
+			self::assertStringContainsString( $case['message'], $html );
+		}
+	}
+
+	public function testCoreProviderProfileDeleteSuccessKeepsTheAuthoritativeRegionSwap(): void {
+		foreach (
+			array(
+				array( 'delete-access-profile', 'credentials', 'Repository access token removed.' ),
+				array( 'delete-webhook-profile', 'secrets', 'Push-to-Deploy secret removed.' ),
+			) as $case
+		) {
+			$this->headers                    = array();
+			$this->statuses                   = array();
+			$_GET['view']                     = $case[1];
+			$facade                           = $this->facade();
+			$request                          = $facade->providerProfileRequest( $case[0], 'fixture' );
+			$_SERVER['HTTP_HX_REQUEST']       = 'true';
+			$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
+			$_POST['ran_booster_interaction'] = array(
+				'operation' => 'core:' . $case[0],
+				'target'    => CoreProviderProfileInteraction::TARGET_KEY,
+			);
+
+			$this->captureTermination(
+				fn () => $facade->respondToProviderProfileSuccess( $request, $case[2] )
+			);
+
+			self::assertSame( array( 200 ), $this->statuses );
+			$location = json_decode( (string) $this->header( 'HX-Location' ), true );
+			self::assertIsArray( $location );
+			self::assertSame( CoreProviderProfileInteraction::TARGET_SELECTOR, $location['target'] );
+			self::assertSame( CoreProviderProfileInteraction::TARGET_SELECTOR, $location['select'] );
+			self::assertNull( $this->header( 'HX-Redirect' ) );
+		}
+	}
+
+	public function testCoreProviderProfileSaveKeepsNativeSignedPrgFallback(): void {
+		$facade       = $this->facade();
+		$_GET['view'] = 'credentials';
+		$request      = $facade->providerProfileRequest( 'save-access-profile', 'fixture' );
 
 		$this->captureTermination(
-			fn () => $facade->respondToProviderProfileSuccess(
-				$request,
-				'Repository access token saved.'
-			)
+			fn () => $facade->respondToProviderProfileSuccess( $request, 'Repository access token saved.' )
 		);
 
-		self::assertSame( array( 200 ), $this->statuses );
-		$location = json_decode( (string) $this->header( 'HX-Location' ), true );
-		self::assertIsArray( $location );
-		self::assertSame( CoreProviderProfileInteraction::TARGET_SELECTOR, $location['target'] );
-		self::assertSame( CoreProviderProfileInteraction::TARGET_SELECTOR, $location['select'] );
-		self::assertStringNotContainsString( 'secret-canary', $location['path'] );
-
-		$this->loadQueryFromUrl( $location['path'] );
-		$this->headers = array();
+		self::assertSame( array(), $this->headers );
+		self::assertSame( array(), $this->statuses );
+		self::assertCount( 1, $this->redirects );
+		$this->loadQueryFromUrl( $this->redirects[0] );
 		$facade->preparePendingFeedback();
-
-		$trigger = json_decode( (string) $this->header( 'HX-Trigger-After-Swap' ), true );
-		self::assertIsArray( $trigger );
-		self::assertSame(
-			'core:save-access-profile',
-			$trigger['ran-booster:admin-mutation-success']['operation']
-		);
-		self::assertSame(
-			'Repository access token saved.',
-			$trigger['ran-booster:admin-mutation-success']['message']
-		);
-		self::assertSame(
-			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture&view=credentials&s=Deployment&status=ready&orderby=usage&order=desc&paged=2&per_page=50&kind=api-key',
-			$this->header( 'HX-Replace-Url' )
+		self::assertCount(
+			1,
+			$GLOBALS['ran_booster_interaction_test_actions']['admin_notices'] ?? array()
 		);
 	}
 
@@ -459,6 +528,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			'operation' => 'core:save-webhook-profile',
 			'target'    => CoreProviderProfileInteraction::TARGET_KEY,
 		);
+		$_POST['ran_booster']['secret']   = 'secret-canary-provider-profile';
 
 		ob_start();
 		$this->captureTermination(
@@ -471,7 +541,13 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 		self::assertSame( array( 422 ), $this->statuses );
 		self::assertSame( '#ran-booster-webhook-profile-error', $this->header( 'HX-Retarget' ) );
+		self::assertSame( 'unset', $this->header( 'HX-Reselect' ) );
+		self::assertSame( 'outerHTML', $this->header( 'HX-Reswap' ) );
+		self::assertNull( $this->header( 'HX-Redirect' ) );
+		self::assertNull( $this->header( 'HX-Location' ) );
+		self::assertSame( array(), $this->redirects );
 		self::assertStringContainsString( 'Enter the Push-to-Deploy secret.', $html );
+		self::assertStringNotContainsString( 'secret-canary', $html );
 		self::assertNull( $this->header( 'HX-Trigger-After-Swap' ) );
 
 		$this->headers  = array();

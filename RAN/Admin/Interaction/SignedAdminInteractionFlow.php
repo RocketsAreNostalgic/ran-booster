@@ -84,13 +84,25 @@ final class SignedAdminInteractionFlow {
 			&& hash_equals( $request->targetKey, $payload['target'] );
 	}
 
-	public function respond( SignedAdminInteractionRequest $request, string $kind, string $message ): never {
+	public function respond(
+		SignedAdminInteractionRequest $request,
+		string $kind,
+		string $message,
+		bool $fullPageEnhancedSuccess = false
+	): never {
 		$this->assertOutcome( $kind, $message );
 		if ( $this->isEnhancedRequest( $request ) ) {
 			if ( $this->hasSuccessFeedback( $kind ) ) {
+				$outcomeUrl = $this->signedOutcomeUrl( $request, $kind, $message );
+				if ( $fullPageEnhancedSuccess ) {
+					( $this->emitStatus )( $this->status( $kind ) );
+					( $this->emitHeader )( 'HX-Redirect', $outcomeUrl );
+					( $this->terminate )();
+				}
+
 				$location = wp_json_encode(
 					array(
-						'path'   => $this->signedOutcomeUrl( $request, $kind, $message ),
+						'path'   => $outcomeUrl,
 						'target' => $request->targetSelector,
 						'select' => $request->targetSelector,
 						'swap'   => 'outerHTML show:none',

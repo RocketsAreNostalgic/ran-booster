@@ -171,7 +171,12 @@ final class CoreAdminInteractionFacade implements
 		$this->flow->respond(
 			$request,
 			AdminInteractionOutcome::SUCCESS,
-			$message
+			$message,
+			in_array(
+				$request->operation,
+				array( 'core:save-access-profile', 'core:save-webhook-profile' ),
+				true
+			)
 		);
 	}
 

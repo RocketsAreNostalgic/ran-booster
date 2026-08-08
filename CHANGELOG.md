@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-08-08)
+
+
+### Features
+
+* add explicit transporter credential export ([8a43d3f](https://github.com/RocketsAreNostalgic/ran-booster/commit/8a43d3f9e2f5392a620f8e475260030805ab9e47))
+* add explicit transporter credential import ([1c217e2](https://github.com/RocketsAreNostalgic/ran-booster/commit/1c217e25b066e0cc564e692a326cb643aab16650))
+* polish transporter credential review ([5bfd553](https://github.com/RocketsAreNostalgic/ran-booster/commit/5bfd5534c848e86e037d352d7f3fddff7e9b8562))
+* **portability:** close explicit credential transfer controls ([2027b7c](https://github.com/RocketsAreNostalgic/ran-booster/commit/2027b7ca35b1be67f04bf1c2b8164e5b9811bdf5))
+
+
+### Bug Fixes
+
+* **credentials:** make credential entry actionable ([f51db4a](https://github.com/RocketsAreNostalgic/ran-booster/commit/f51db4a1a9302b59c5c38cac490d5e2c950cb1c3))
+* **dependencies:** add libc support for various resolver bindings in pnpm-lock.yaml ([6ea2644](https://github.com/RocketsAreNostalgic/ran-booster/commit/6ea2644d1f458add4b49828b0e7cd629e19ea593))
+* **deployment:** harden archive preflight retries ([ea37584](https://github.com/RocketsAreNostalgic/ran-booster/commit/ea375847f44c2c677002de51898dea06a08905c4))
+* **interaction:** enhance response handling for provider profile save operations ([e657d35](https://github.com/RocketsAreNostalgic/ran-booster/commit/e657d359ab82ed43e8ebb2f8ee8b6eccbe549c05))
+* **webhooks:** preserve uncertain mutation outcomes ([239317f](https://github.com/RocketsAreNostalgic/ran-booster/commit/239317fbb1780036b600d553fc9439d79f139e38))
+
 ## [1.0.0-beta.9](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-08-04)
 
 

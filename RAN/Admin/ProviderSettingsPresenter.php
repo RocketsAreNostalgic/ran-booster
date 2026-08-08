@@ -888,6 +888,7 @@ final readonly class ProviderSettingsPresenter {
 		return array(
 			'code'               => $kind->code,
 			'label'              => $kind->label,
+			'short_label'        => $kind->shortLabel,
 			'secret_label'       => $kind->secretLabel,
 			'secret_placeholder' => $kind->secretPlaceholder,
 			'fields'             => array_map( $this->credentialField( ... ), $kind->fields ),

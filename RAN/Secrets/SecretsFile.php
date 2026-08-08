@@ -6,6 +6,7 @@ namespace RAN\Secrets;
 
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\PackageBlueprint;
+use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialPolicy;
@@ -964,6 +965,9 @@ class SecretsFile {
 			$record = null !== $policy
 				? $policy->normalizeCredential( $metadata, $secret )
 				: $metadata + array( 'secret' => $secret );
+		} catch ( InvalidCredentialInput $failure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
+			throw new InvalidCredentialInput( $failure->reason );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential material could not be validated.' );
 		}

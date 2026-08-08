@@ -175,12 +175,19 @@ function fixture({ clipboard, crypto, secretValue = '' } = {}) {
 }
 
 const generateSecureBase64Url = loadFunction('generateSecureBase64Url');
+const initSecretVisibility = loadFunction('initSecretVisibility');
 const initGeneratedSecretTools = loadFunction('initGeneratedSecretTools', {
 	generateSecureBase64Url,
+	initSecretVisibility,
 });
+const accessSecretToolResets = new WeakMap();
 const webhookSecretToolResets = new WeakMap();
 const resetWebhookSecretTools = loadFunction('resetWebhookSecretTools', {
 	webhookSecretToolResets,
+});
+const resetCredentialModal = loadFunction('resetCredentialModal', {
+	accessSecretToolResets,
+	resetWebhookSecretTools,
 });
 const initWebhookSecretTools = loadFunction('initWebhookSecretTools', {
 	initGeneratedSecretTools,
@@ -357,8 +364,9 @@ test('the ready callback initializes webhook tools without a weak fallback', () 
 	assert.match(source, /\t\tinitWebhookSecretTools\(\);/);
 	assert.match(
 		source,
-		/form\.reset\(\);[\s\S]+resetWebhookSecretTools\(webhookSecretTools\);/
+		/function resetCredentialModal\(modal\)[\s\S]+resetWebhookSecretTools\(webhookTools\);/
 	);
+	assert.match(source, /resetCredentialModal\(modal\);/);
 	assert.doesNotMatch(source, /Math\.random/);
 });
 
@@ -495,7 +503,7 @@ test('add and edit modal population clear stale generated secret state', () => {
 	};
 	let webhookFieldUpdates = 0;
 	const populateCredentialModal = loadFunction('populateCredentialModal', {
-		resetWebhookSecretTools,
+		resetCredentialModal,
 		updateWebhookFields() {
 			webhookFieldUpdates += 1;
 		},

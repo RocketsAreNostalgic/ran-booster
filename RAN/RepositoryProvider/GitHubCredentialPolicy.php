@@ -14,7 +14,7 @@ final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy 
 		return ProviderCode::parse( 'gh' );
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalizeCredential( array $metadata, #[\SensitiveParameter] mixed $secret ): array {
 		$label         = $this->requiredString( $metadata['label'] ?? null, 'Credential label' );
 		$kind          = $this->requiredString( $metadata['kind'] ?? null, 'Credential kind' );
 		$configuration = $metadata['configuration'] ?? array();
@@ -34,7 +34,12 @@ final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy 
 			: '';
 
 		if ( 'fine-grained' === $kind && ! $this->isOwner( $owner ) ) {
-			throw new RuntimeException( 'Fine-grained GitHub credentials require a valid resource owner.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidCredentialInput( InvalidCredentialInput::INVALID_RESOURCE_OWNER );
+		}
+		if ( 'fine-grained' === $kind && str_starts_with( $secret, 'ghp_' ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidCredentialInput( InvalidCredentialInput::LOOKS_CLASSIC );
 		}
 
 		return array(
@@ -55,13 +60,11 @@ final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy 
 			return null;
 		}
 
-		return $this->normalizeCredential(
-			array(
-				'label'         => 'Deployment configuration',
-				'kind'          => 'classic',
-				'configuration' => array( 'owner' => '' ),
-			),
-			$token
+		return array(
+			'label'         => 'Deployment configuration',
+			'kind'          => 'classic',
+			'configuration' => array( 'owner' => '' ),
+			'secret'        => trim( $token ),
 		);
 	}
 

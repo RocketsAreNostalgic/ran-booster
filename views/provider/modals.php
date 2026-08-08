@@ -24,18 +24,23 @@ if ( $hasCredentialSettings ) {
 				<h2 id="ran-booster-access-modal-title" class="ran-booster-dialog__title">Add repository credential</h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-access-profile-error" data-ran-booster-interaction-operation="core:save-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'save-access-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-access-profile-error" data-ran-booster-interaction-operation="core:save-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'save-access-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="save-access-profile">
 					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
 					<input type="hidden" name="ran_booster[id]" value="">
 					<p class="description"><?php echo esc_html( sprintf( /* translators: 1: provider label, 2: provider code. */ __( 'Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider['label'], $provider['code'] ) ); ?></p>
 					<p><label>Label <input type="text" name="ran_booster[label]" class="regular-text" required placeholder="e.g. Deployment access"></label></p>
-				<p><label>Credential type <select name="ran_booster[kind]" class="ran-booster-credential-kind">
-					<?php foreach ( $provider['credential_kinds'] as $kind ) { ?>
-						<option value="<?php echo esc_attr( $kind['code'] ); ?>" data-secret-label="<?php echo esc_attr( $kind['secret_label'] ); ?>" data-secret-placeholder="<?php echo esc_attr( $kind['secret_placeholder'] ); ?>"><?php echo esc_html( $kind['label'] ); ?></option>
-					<?php } ?>
-				</select></label></p>
+				<div class="ran-booster-credential-modal__field-row">
+					<p><label>Credential type <select name="ran_booster[kind]" class="ran-booster-credential-kind">
+						<?php foreach ( $provider['credential_kinds'] as $kind ) { ?>
+							<option value="<?php echo esc_attr( $kind['code'] ); ?>" data-secret-label="<?php echo esc_attr( $kind['secret_label'] ); ?>" data-secret-placeholder="<?php echo esc_attr( $kind['secret_placeholder'] ); ?>"><?php echo esc_html( $kind['short_label'] ?? $kind['label'] ); ?></option>
+						<?php } ?>
+					</select></label></p>
+					<p>
+						<label><?php esc_html_e( 'Expiry / removal date', 'ran-booster' ); ?> <input type="date" name="ran_booster[expires_on]" class="regular-text ran-booster-expiry-date" aria-describedby="ran-booster-expiry-removal-help"></label>
+					</p>
+				</div>
 				<?php
 				$fieldKinds = array();
 				$fieldData  = array();
@@ -56,18 +61,17 @@ if ( $hasCredentialSettings ) {
 					</p>
 				<?php } ?>
 				<p>
-					<label><?php esc_html_e( 'Expiry date', 'ran-booster' ); ?> <input type="date" name="ran_booster[expires_on]" class="regular-text ran-booster-expiry-date"></label>
-					<span class="description"><?php esc_html_e( 'Optional. Record the date supplied when the credential was created. Provider-reported expiry takes precedence when available.', 'ran-booster' ); ?></span>
+					<label><input type="checkbox" name="ran_booster[self_destruct]" value="1" class="ran-booster-credential-self-destruct" aria-describedby="ran-booster-expiry-removal-help"> <?php esc_html_e( 'Automatically remove this saved credential after this date', 'ran-booster' ); ?></label>
 				</p>
-				<p>
-					<label><input type="checkbox" name="ran_booster[self_destruct]" value="1" class="ran-booster-credential-self-destruct"> <?php esc_html_e( 'Automatically remove this saved credential', 'ran-booster' ); ?></label>
-					<span class="description"><?php esc_html_e( 'Use this for temporarily saved higher-capability credentials. Booster removes it after the date below; a provider-reported expiry can only make removal earlier.', 'ran-booster' ); ?></span>
+				<p id="ran-booster-expiry-removal-help" class="description"><?php esc_html_e( 'Enter the provider expiry date, or choose an earlier one. If automatic removal is enabled, Booster removes the saved credential after this date. A known provider expiry is the latest date allowed.', 'ran-booster' ); ?></p>
+				<p data-access-secret-tools>
+					<label for="ran-booster-access-secret"><span class="ran-booster-secret-label">Credential secret</span></label>
+					<span class="ran-booster-portability__password-input">
+						<input id="ran-booster-access-secret" type="password" name="ran_booster[secret]" class="regular-text ran-booster-secret-input" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="ran-booster-access-secret-help">
+						<button type="button" class="ran-booster-portability__password-visibility" data-access-secret-visibility data-show-label="<?php esc_attr_e( 'Show token', 'ran-booster' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide token', 'ran-booster' ); ?>" aria-controls="ran-booster-access-secret" aria-label="<?php esc_attr_e( 'Show token', 'ran-booster' ); ?>" aria-pressed="false" title="<?php esc_attr_e( 'Show token', 'ran-booster' ); ?>" hidden disabled><span class="dashicons dashicons-visibility" data-access-secret-visibility-icon aria-hidden="true"></span></button>
+					</span>
+					<span id="ran-booster-access-secret-help" class="screen-reader-text ran-booster-secret-help" data-access-secret-help data-add-message="<?php esc_attr_e( 'Required when adding.', 'ran-booster' ); ?>" data-edit-message="<?php esc_attr_e( 'A token is already saved. Leave this field unchanged to keep it, or enter a replacement.', 'ran-booster' ); ?>"><?php esc_html_e( 'Required when adding.', 'ran-booster' ); ?></span>
 				</p>
-				<p class="ran-booster-credential-destroy-date" hidden>
-					<label><?php esc_html_e( 'Remove after date', 'ran-booster' ); ?> <input type="date" name="ran_booster[destroy_on]" class="regular-text"></label>
-					<span class="description"><?php esc_html_e( 'The credential remains available through this UTC date and is removed on the next Booster request afterwards.', 'ran-booster' ); ?></span>
-				</p>
-				<p><label><span class="ran-booster-secret-label">Credential secret</span> <input type="password" name="ran_booster[secret]" class="regular-text ran-booster-secret-input" autocomplete="new-password"></label><span class="description ran-booster-secret-help">Required when adding. On edit, leave blank to retain the saved credential.</span></p>
 				<div id="ran-booster-access-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
 				<div class="ran-booster-credential-modal__actions"><button type="submit" class="button button-primary">Save credential</button><button type="button" class="button ran-booster-close-credential-modal">Cancel</button></div>
 			</form>

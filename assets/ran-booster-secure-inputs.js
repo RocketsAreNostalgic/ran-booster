@@ -1,6 +1,7 @@
 (function () {
 	'use strict';
 
+	const accessSecretToolResets = new WeakMap();
 	const webhookSecretToolResets = new WeakMap();
 	let activeCredentialButton = null;
 	let credentialRequestHandled = false;
@@ -19,6 +20,7 @@
 	onDomReady(function () {
 		initPortabilityPasswordTools();
 		initWebhookSecretTools();
+		initAccessSecretTools();
 		initWebhookUrlCopy();
 		initCredentialSettings();
 	});
@@ -51,6 +53,7 @@
 		document.body.classList.remove('ran-booster-repository-picker-open');
 		activeCredentialButton = null;
 		initWebhookSecretTools();
+		initAccessSecretTools(target);
 		initWebhookUrlCopy(target);
 		initCredentialSettings();
 	}
@@ -101,6 +104,38 @@
 		return generated;
 	}
 
+	function initSecretVisibility(input, visibility, icon, onShow) {
+		function reset() {
+			input.type = 'password';
+			visibility.setAttribute('aria-pressed', 'false');
+			visibility.setAttribute('aria-label', visibility.dataset.showLabel);
+			visibility.setAttribute('title', visibility.dataset.showLabel);
+			icon.classList.add('dashicons-visibility');
+			icon.classList.remove('dashicons-hidden');
+		}
+
+		visibility.addEventListener('click', function () {
+			const showing = input.type === 'password';
+			const label = showing
+				? visibility.dataset.hideLabel
+				: visibility.dataset.showLabel;
+
+			input.type = showing ? 'text' : 'password';
+			visibility.setAttribute('aria-pressed', showing ? 'true' : 'false');
+			visibility.setAttribute('aria-label', label);
+			visibility.setAttribute('title', label);
+			icon.classList.toggle('dashicons-visibility', !showing);
+			icon.classList.toggle('dashicons-hidden', showing);
+			input.focus();
+			if (showing && onShow) {
+				onShow();
+			}
+		});
+
+		reset();
+		return { reset };
+	}
+
 	function initGeneratedSecretTools(options) {
 		const {
 			input,
@@ -138,13 +173,19 @@
 			copy.disabled = value === '';
 		}
 
+		const visibilityTools = initSecretVisibility(
+			input,
+			visibility,
+			visibilityIcon,
+			function () {
+				if (status.textContent === status.dataset.copyFailedMessage) {
+					input.select();
+				}
+			}
+		);
+
 		function reset() {
-			input.type = 'password';
-			visibility.setAttribute('aria-pressed', 'false');
-			visibility.setAttribute('aria-label', visibility.dataset.showLabel);
-			visibility.setAttribute('title', visibility.dataset.showLabel);
-			visibilityIcon.classList.add('dashicons-visibility');
-			visibilityIcon.classList.remove('dashicons-hidden');
+			visibilityTools.reset();
 			updateCopyState();
 			resetCopyFeedback();
 			showStatus('');
@@ -162,25 +203,6 @@
 				showStatus(status.dataset.generatedMessage, true);
 			} catch {
 				showStatus(status.dataset.generationFailedMessage);
-			}
-		});
-
-		visibility.addEventListener('click', function () {
-			const showing = input.type === 'password';
-			const label = showing
-				? visibility.dataset.hideLabel
-				: visibility.dataset.showLabel;
-
-			input.type = showing ? 'text' : 'password';
-			visibility.setAttribute('aria-pressed', showing ? 'true' : 'false');
-			visibility.setAttribute('aria-label', label);
-			visibility.setAttribute('title', label);
-			visibilityIcon.classList.toggle('dashicons-visibility', !showing);
-			visibilityIcon.classList.toggle('dashicons-hidden', showing);
-			input.focus();
-
-			if (status.textContent === status.dataset.copyFailedMessage) {
-				input.select();
 			}
 		});
 
@@ -377,6 +399,77 @@
 		if (reset) {
 			reset();
 		}
+	}
+
+	function resetCredentialModal(modal) {
+		modal.querySelector('form')?.reset();
+		const accessTools = modal.querySelector('[data-access-secret-tools]');
+		accessSecretToolResets.get(accessTools)?.();
+		const webhookTools = modal.querySelector('[data-webhook-secret-tools]');
+		if (webhookTools) {
+			resetWebhookSecretTools(webhookTools);
+		}
+	}
+
+	function initAccessSecretTools(root = document) {
+		root.querySelectorAll('[data-access-secret-tools]').forEach(
+			function (tools) {
+				if (tools.dataset.ranBoosterAccessSecretBound === 'true') {
+					return;
+				}
+				tools.dataset.ranBoosterAccessSecretBound = 'true';
+				const input = tools.querySelector('.ran-booster-secret-input');
+				const visibility = tools.querySelector(
+					'[data-access-secret-visibility]'
+				);
+				const icon = tools.querySelector(
+					'[data-access-secret-visibility-icon]'
+				);
+				if (!input || !visibility || !icon) {
+					return;
+				}
+
+				const visibilityTools = initSecretVisibility(
+					input,
+					visibility,
+					icon
+				);
+				function reset() {
+					visibilityTools.reset();
+					visibility.disabled = input.value === '';
+					visibility.hidden = input.value === '';
+				}
+				input.addEventListener('input', function () {
+					visibility.disabled = input.value === '';
+					visibility.hidden = input.value === '';
+					const expiryInput =
+						input.form?.elements['ran_booster[expires_on]'];
+					if (expiryInput) {
+						if (
+							input.dataset.saved === 'true' &&
+							input.value !== '' &&
+							expiryInput.dataset.replacementStarted !== 'true'
+						) {
+							expiryInput.value = '';
+							expiryInput.dataset.replacementStarted = 'true';
+						} else if (
+							input.value === '' &&
+							expiryInput.dataset.replacementStarted === 'true'
+						) {
+							expiryInput.value =
+								expiryInput.dataset.originalValue || '';
+							expiryInput.dataset.replacementStarted = 'false';
+						}
+						expiryInput.max =
+							input.value === ''
+								? expiryInput.dataset.providerMax || ''
+								: '';
+					}
+				});
+				accessSecretToolResets.set(tools, reset);
+				reset();
+			}
+		);
 	}
 
 	function initWebhookSecretTools() {
@@ -662,6 +755,7 @@
 				return;
 			}
 
+			resetCredentialModal(modal);
 			modal.setAttribute('hidden', 'hidden');
 			document.body.classList.remove(
 				'ran-booster-repository-picker-open'
@@ -775,14 +869,8 @@
 		const modalKind = modal.getAttribute('data-credential-modal');
 		const providerLabel = modal.getAttribute('data-provider-label') || '';
 		const labelInput = form.elements['ran_booster[label]'];
-		const webhookSecretTools = modal.querySelector(
-			'[data-webhook-secret-tools]'
-		);
 
-		form.reset();
-		if (webhookSecretTools) {
-			resetWebhookSecretTools(webhookSecretTools);
-		}
+		resetCredentialModal(modal);
 		form.elements['ran_booster[id]'].value =
 			button.getAttribute('data-id') || '';
 		labelInput.value = button.getAttribute('data-label') || '';
@@ -794,24 +882,40 @@
 		modal.querySelector('.ran-booster-secret-input').required = !isEdit;
 
 		if (modalKind === 'access') {
+			const secretHelp = modal.querySelector('[data-access-secret-help]');
+			if (secretHelp) {
+				secretHelp.textContent = isEdit
+					? secretHelp.dataset.editMessage
+					: secretHelp.dataset.addMessage;
+			}
+			modal.querySelector('.ran-booster-secret-input').dataset.saved =
+				isEdit ? 'true' : 'false';
 			const kindSelect = form.elements['ran_booster[kind]'];
 			const expiryInput = form.elements['ran_booster[expires_on]'];
 			const selfDestructInput =
 				form.elements['ran_booster[self_destruct]'];
-			const destroyOnInput = form.elements['ran_booster[destroy_on]'];
 			kindSelect.value =
 				button.getAttribute('data-kind') || kindSelect.options[0].value;
-			if (expiryInput) {
-				expiryInput.value =
-					button.getAttribute('data-expires-on') || '';
-			}
 			if (selfDestructInput) {
 				selfDestructInput.checked =
 					button.getAttribute('data-self-destruct') === '1';
 			}
-			if (destroyOnInput) {
-				destroyOnInput.value =
-					button.getAttribute('data-destroy-on') || '';
+			if (expiryInput) {
+				const providerExpiry =
+					button.getAttribute('data-provider-expires-on') || '';
+				expiryInput.dataset.providerMax = providerExpiry;
+				expiryInput.max = providerExpiry;
+				expiryInput.value =
+					selfDestructInput && selfDestructInput.checked
+						? button.getAttribute('data-destroy-on') ||
+							button.getAttribute('data-expires-on') ||
+							providerExpiry ||
+							''
+						: button.getAttribute('data-expires-on') ||
+							providerExpiry ||
+							'';
+				expiryInput.dataset.originalValue = expiryInput.value;
+				expiryInput.dataset.replacementStarted = 'false';
 			}
 
 			let configuration = {};
@@ -849,15 +953,11 @@
 	function updateCredentialSelfDestructFields(modal) {
 		const form = modal.querySelector('form');
 		const checkbox = form.elements['ran_booster[self_destruct]'];
-		const field = modal.querySelector(
-			'.ran-booster-credential-destroy-date'
-		);
-		const input = form.elements['ran_booster[destroy_on]'];
-		if (!checkbox || !field || !input) {
+		const input = form.elements['ran_booster[expires_on]'];
+		if (!checkbox || !input) {
 			return;
 		}
 
-		field.toggleAttribute('hidden', !checkbox.checked);
 		input.required = checkbox.checked;
 	}
 
@@ -871,7 +971,9 @@
 		secretLabel.textContent =
 			option.getAttribute('data-secret-label') || 'Credential secret';
 		secretInput.placeholder =
-			option.getAttribute('data-secret-placeholder') || '';
+			secretInput.dataset.saved === 'true'
+				? '••••••••••'
+				: option.getAttribute('data-secret-placeholder') || '';
 
 		modal
 			.querySelectorAll('.ran-booster-credential-config-field')

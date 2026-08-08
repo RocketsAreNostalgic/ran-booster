@@ -283,6 +283,51 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'initCredentialSettings();', $credentialScript );
 	}
 
+	public function testAccessTokenFieldKeepsSavedStateSeparateFromTheEmptyNativeInput(): void {
+		$modals = $this->view( 'provider/modals.php' );
+		$script = $this->asset( 'ran-booster-secure-inputs.js' );
+		$styles = $this->asset( 'ran-booster-onboarding.css' );
+		$dialog = $this->asset( 'ran-booster/70-credential-dialog.css' );
+		$github = $this->source( 'RAN/RepositoryProvider/GitHubProvider.php' );
+
+		self::assertStringContainsString( 'class="ran-booster-credential-modal__form" autocomplete="off"', $modals );
+		self::assertStringContainsString( 'id="ran-booster-access-secret" type="password"', $modals );
+		self::assertStringContainsString( 'autocomplete="off" autocapitalize="none" spellcheck="false"', $modals );
+		self::assertStringContainsString( 'A token is already saved. Leave this field unchanged to keep it, or enter a replacement.', $modals );
+		self::assertStringContainsString( 'data-access-secret-visibility', $modals );
+		self::assertStringContainsString( 'aria-describedby="ran-booster-access-secret-help"', $modals );
+		self::assertStringContainsString( 'class="screen-reader-text ran-booster-secret-help"', $modals );
+		self::assertStringContainsString( 'hidden disabled><span class="dashicons dashicons-visibility" data-access-secret-visibility-icon', $modals );
+		self::assertStringNotContainsString( 'value="••••', $modals );
+		self::assertStringNotContainsString( 'autocomplete="new-password"', substr( $modals, 0, (int) strpos( $modals, 'data-credential-modal="webhook"' ) ) );
+		self::assertStringContainsString( "secretInput.dataset.saved === 'true'", $script );
+		self::assertStringContainsString( "? '••••••••••'", $script );
+		self::assertStringContainsString( "visibility.hidden = input.value === '';", $script );
+		self::assertStringContainsString( "input.type = showing ? 'text' : 'password';", $script );
+		self::assertStringNotContainsString( 'Example token format:', $script );
+		self::assertStringContainsString( '.ran-booster-portability__password-visibility[hidden]', $styles );
+		self::assertStringContainsString( 'ran-booster-credential-modal__field-row', $modals );
+		self::assertStringContainsString( 'Expiry / removal date', $modals );
+		self::assertStringContainsString( 'Enter the provider expiry date, or choose an earlier one.', $modals );
+		self::assertStringContainsString( 'A known provider expiry is the latest date allowed.', $modals );
+		self::assertStringContainsString( 'Automatically remove this saved credential after this date', $modals );
+		self::assertStringNotContainsString( 'ran_booster[destroy_on]', $modals );
+		self::assertStringNotContainsString( 'ran-booster-credential-destroy-date', $modals );
+		self::assertStringContainsString( "const input = form.elements['ran_booster[expires_on]'];", $script );
+		self::assertStringContainsString( "button.getAttribute('data-destroy-on') ||", $script );
+		self::assertStringContainsString( "button.getAttribute('data-provider-expires-on') || ''", $script );
+		self::assertStringContainsString( 'expiryInput.dataset.originalValue = expiryInput.value;', $script );
+		self::assertStringContainsString( "expiryInput.dataset.replacementStarted = 'true';", $script );
+		self::assertStringContainsString( 'data-provider-expires-on=', $this->view( 'provider.php' ) );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-credential-modal__field-row {', $dialog );
+		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);', $dialog );
+		self::assertStringContainsString( "'Classic personal access token'", $github );
+		self::assertStringContainsString( "'Fine-grained personal access token'", $github );
+		self::assertStringContainsString( "'Classic PAT'", $github );
+		self::assertStringContainsString( "'Fine-grained PAT'", $github );
+		self::assertStringContainsString( "\$kind['short_label'] ?? \$kind['label']", $modals );
+	}
+
 	public function testPortabilityApplyResultsUseWordPressNoticeStates(): void {
 		$script = $this->asset( 'ran-booster-portability.js' );
 

@@ -22,6 +22,7 @@ use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
+use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\CredentialValidator;
@@ -827,14 +828,38 @@ class Dispatcher {
 					}
 					$manualExpiry = trim( wp_unslash( $request['expires_on'] ) );
 					$manualExpiry = '' === $manualExpiry ? null : $manualExpiry;
+					if ( null !== $manualExpiry
+						&& ( 1 !== preg_match( '/\A(\d{4})-(\d{2})-(\d{2})\z/D', $manualExpiry, $expiryParts )
+							|| ! checkdate( (int) $expiryParts[2], (int) $expiryParts[3], (int) $expiryParts[1] ) )
+					) {
+						throw new CredentialRequestException( 'Enter a valid expiry / removal date.' );
+					}
+				}
+				$existingManualExpiry = null;
+				$providerExpiry       = null;
+				if ( null !== $id && '' !== $id ) {
+					try {
+						$expiryObservation    = $this->expiryObservations->get( $provider->value, $id );
+						$observedManualExpiry = $expiryObservation['manual_expires_on'] ?? null;
+						$providerExpiresAt    = $expiryObservation['provider_expires_at'] ?? null;
+						$existingManualExpiry = is_string( $observedManualExpiry ) ? $observedManualExpiry : null;
+						$providerExpiry       = is_string( $providerExpiresAt ) ? substr( $providerExpiresAt, 0, 10 ) : null;
+					} catch ( \RuntimeException ) {
+						$existingManualExpiry = null;
+						$providerExpiry       = null;
+					}
+				}
+				if ( '' === $secret && null !== $manualExpiry && null !== $providerExpiry && $manualExpiry > $providerExpiry ) {
+					throw new CredentialRequestException( 'The expiry / removal date cannot be later than the expiry reported by the provider.' );
 				}
 				$selfDestruct = isset( $request['self_destruct'] ) && '1' === $request['self_destruct'];
-				$destroyOn    = isset( $request['destroy_on'] ) && is_string( $request['destroy_on'] )
-					? trim( wp_unslash( $request['destroy_on'] ) )
-					: '';
-				if ( $selfDestruct && '' === $destroyOn ) {
-					throw new CredentialRequestException( 'Choose the date on which Booster should remove this saved credential.' );
+				if ( $selfDestruct && null === $manualExpiry ) {
+					throw new CredentialRequestException( 'Enter an expiry / removal date before enabling automatic removal.' );
 				}
+				$manualExpiryIsProviderFallback = '' === $secret
+					&& null === $existingManualExpiry
+					&& null !== $providerExpiry
+					&& $manualExpiry === $providerExpiry;
 
 				$message = $this->updaterLock->run(
 					function () use (
@@ -846,19 +871,15 @@ class Dispatcher {
 						$kind,
 						$configuration,
 						$selfDestruct,
-						$destroyOn,
 						$manualExpirySubmitted,
-						$manualExpiry
+						$manualExpiry,
+						$manualExpiryIsProviderFallback
 					): string {
 						$existingProfile = null === $id
 							? null
 							: ( $secrets->credentialProfiles( $provider )[ $id ] ?? null );
 						$isReplacement   = is_array( $existingProfile ) && '' !== $secret;
-						if ( $isReplacement ) {
-							$this->expiryObservations->clear( $provider->value, $id );
-						}
-
-						$savedId      = $secrets->saveCredential(
+						$savedId         = $secrets->saveCredential(
 							$provider,
 							$id,
 							array(
@@ -866,22 +887,25 @@ class Dispatcher {
 								'kind'          => $kind,
 								'configuration' => $configuration,
 								'self_destruct' => $selfDestruct,
-								'destroy_on'    => $selfDestruct ? $destroyOn : null,
+								'destroy_on'    => $selfDestruct ? $manualExpiry : null,
 							),
 							$secret
 						);
-						$savedProfile = $secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
+						$savedProfile    = $secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
 						if ( ! is_array( $savedProfile )
 							|| $label !== ( $savedProfile['label'] ?? null )
 							|| $kind !== ( $savedProfile['kind'] ?? null )
 							|| ! is_array( $savedProfile['configuration'] ?? null )
 							|| array() !== array_diff_assoc( $configuration, $savedProfile['configuration'] )
 							|| $selfDestruct !== ( $savedProfile['self_destruct'] ?? null )
-							|| ( $selfDestruct ? $destroyOn : null ) !== ( $savedProfile['destroy_on'] ?? null )
+							|| ( $selfDestruct ? $manualExpiry : null ) !== ( $savedProfile['destroy_on'] ?? null )
 							|| empty( $savedProfile['configured'] ) ) {
 							throw new CredentialRequestException( 'Booster could not verify that the repository credential was saved.' );
 						}
-						if ( $manualExpirySubmitted ) {
+						if ( $isReplacement ) {
+							$this->expiryObservations->clear( $provider->value, $savedId );
+						}
+						if ( $manualExpirySubmitted && ! $manualExpiryIsProviderFallback ) {
 							$this->expiryObservations->setManualExpiry( $provider->value, $savedId, $manualExpiry );
 						}
 
@@ -962,7 +986,7 @@ class Dispatcher {
 				)
 			);
 			if ( null !== $interactionRequest && null !== $this->providerProfileInteraction ) {
-				if ( $exception instanceof CredentialRequestException ) {
+				if ( $exception instanceof CredentialRequestException || $exception instanceof InvalidCredentialInput ) {
 					$this->providerProfileInteraction->respondToProviderProfileValidationFailure( $interactionRequest, $error );
 
 					return;
@@ -1239,7 +1263,7 @@ class Dispatcher {
 	}
 
 	private function safeCredentialError( \Throwable $exception ): string {
-		if ( $exception instanceof CredentialRequestException ) {
+		if ( $exception instanceof CredentialRequestException || $exception instanceof InvalidCredentialInput ) {
 			return $exception->getMessage();
 		}
 

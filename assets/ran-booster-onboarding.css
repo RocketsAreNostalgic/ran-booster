@@ -655,6 +655,10 @@
 	cursor: pointer;
 }
 
+.ran-booster-admin .ran-booster-portability__password-visibility[hidden] {
+	display: none;
+}
+
 .ran-booster-admin .ran-booster-portability__password-visibility:focus {
 	z-index: 1;
 	box-shadow: 0 0 0 1px var(--ran-booster-color-blue-300);

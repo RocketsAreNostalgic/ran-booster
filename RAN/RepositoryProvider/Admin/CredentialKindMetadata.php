@@ -12,6 +12,7 @@ final readonly class CredentialKindMetadata {
 	public string $label;
 	public string $secretLabel;
 	public string $secretPlaceholder;
+	public string $shortLabel;
 
 	/**
 	 * @var list<CredentialFieldMetadata>
@@ -26,12 +27,14 @@ final readonly class CredentialKindMetadata {
 		string $label,
 		string $secretLabel,
 		string $secretPlaceholder = '',
-		array $fields = array()
+		array $fields = array(),
+		string $shortLabel = ''
 	) {
 		$code              = MetadataRules::identifier( $code );
 		$label             = MetadataRules::requiredText( $label, MetadataRules::LABEL_LENGTH );
 		$secretLabel       = MetadataRules::requiredText( $secretLabel, MetadataRules::LABEL_LENGTH );
 		$secretPlaceholder = MetadataRules::optionalText( $secretPlaceholder, MetadataRules::DETAIL_LENGTH );
+		$shortLabel        = MetadataRules::optionalText( $shortLabel, MetadataRules::LABEL_LENGTH );
 
 		$indexedFields = array();
 
@@ -51,6 +54,7 @@ final readonly class CredentialKindMetadata {
 		$this->label             = $label;
 		$this->secretLabel       = $secretLabel;
 		$this->secretPlaceholder = $secretPlaceholder;
+		$this->shortLabel        = '' === $shortLabel ? $label : $shortLabel;
 		$this->fields            = array_values( $indexedFields );
 	}
 }

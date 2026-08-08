@@ -47,7 +47,9 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 						'classic',
 						'Classic personal access token',
 						'Personal access token',
-						'ghp_...'
+						'ghp_...',
+						array(),
+						'Classic PAT'
 					),
 					new CredentialKindMetadata(
 						'fine-grained',
@@ -61,9 +63,10 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 								'text',
 								true,
 								'organization-or-user',
-								'The GitHub organization or user selected as the token resource owner.'
+								'Enter the GitHub username or organization selected as the token resource owner, not an email address.'
 							),
-						)
+						),
+						'Fine-grained PAT'
 					),
 				),
 				array(

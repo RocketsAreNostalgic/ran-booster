@@ -22,6 +22,8 @@ use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
+use RAN\RepositoryProvider\CredentialExpiryReport;
+use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
 use RAN\RepositoryProvider\ProviderMetadata;
@@ -214,7 +216,20 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	/** @return array<string, array{array<string, mixed>, string}> */
 	public static function invalidMutations(): array {
 		return array(
-			'save access'    => array(
+			'self-destruct without date' => array(
+				array(
+					'action'        => 'save-access-profile',
+					'provider'      => 'fixture',
+					'label'         => 'Temporary access',
+					'kind'          => 'api-key',
+					'configuration' => array( 'tenant' => 'deployment' ),
+					'secret'        => 'secret-canary-access',
+					'expires_on'    => '',
+					'self_destruct' => '1',
+				),
+				'Enter an expiry / removal date before enabling automatic removal.',
+			),
+			'save access'                => array(
 				array(
 					'action'        => 'save-access-profile',
 					'provider'      => 'fixture',
@@ -225,7 +240,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				),
 				'Enter a label for this credential.',
 			),
-			'delete access'  => array(
+			'delete access'              => array(
 				array(
 					'action'   => 'delete-access-profile',
 					'provider' => 'fixture',
@@ -233,7 +248,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				),
 				'Choose a repository credential to remove.',
 			),
-			'save webhook'   => array(
+			'save webhook'               => array(
 				array(
 					'action'   => 'save-webhook-profile',
 					'provider' => 'fixture',
@@ -244,7 +259,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				),
 				'Enter a label for this credential.',
 			),
-			'delete webhook' => array(
+			'delete webhook'             => array(
 				array(
 					'action'   => 'delete-webhook-profile',
 					'provider' => 'fixture',
@@ -281,6 +296,173 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame( $expectedMessage, $response->feedbackMessage );
 		self::assertStringNotContainsString( 'secret-canary', $response->feedbackMessage );
+	}
+
+	public function testAutomaticRemovalUsesTheRecordedExpiryAsItsEncryptedDeadline(): void {
+		$interaction        = new CapturingProviderProfileInteraction();
+		$dashboard          = $this->createMock( Dashboard::class );
+		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'label'         => 'Temporary access',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'deployment' ),
+			'secret'        => 'secret-canary-access',
+			'expires_on'    => '2026-09-30',
+			'self_destruct' => '1',
+		);
+
+		$this->dispatcher(
+			$dashboard,
+			$this->secrets,
+			$interaction,
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			$expiryObservations
+		)->dispatchPostRequests();
+
+		$response = $interaction->response;
+		self::assertNotNull( $response );
+		self::assertSame( 'success', $response->kind );
+		$profiles = array_values(
+			array_filter(
+				$this->secrets->credentialProfiles( 'fixture' ),
+				static fn ( array $profile ): bool => 'Temporary access' === $profile['label']
+			)
+		);
+		self::assertCount( 1, $profiles );
+		self::assertTrue( $profiles[0]['self_destruct'] );
+		self::assertSame( '2026-09-30', $profiles[0]['destroy_on'] );
+		self::assertSame(
+			'2026-09-30',
+			$expiryObservations->get( 'fixture', $profiles[0]['id'] )['manual_expires_on']
+		);
+	}
+
+	public function testKnownProviderExpiryRejectsALaterSubmittedDateBeforeSaving(): void {
+		$interaction        = new CapturingProviderProfileInteraction();
+		$dashboard          = $this->createMock( Dashboard::class );
+		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
+		$expiryObservations->recordProviderExpiry(
+			'fixture',
+			'credential_existing',
+			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
+			'2026-08-08T12:00:00Z'
+		);
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Changed label',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'existing' ),
+			'secret'        => '',
+			'expires_on'    => '2026-09-11',
+		);
+
+		$this->dispatcher(
+			$dashboard,
+			$this->secrets,
+			$interaction,
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			$expiryObservations
+		)->dispatchPostRequests();
+
+		$response = $interaction->response;
+		self::assertNotNull( $response );
+		self::assertSame( 'validation_failure', $response->kind );
+		self::assertSame(
+			'The expiry / removal date cannot be later than the expiry reported by the provider.',
+			$response->feedbackMessage
+		);
+		self::assertSame(
+			'Existing credential',
+			$this->secrets->credentialProfiles( 'fixture' )['credential_existing']['label']
+		);
+	}
+
+	public function testUnchangedProviderFallbackDoesNotBecomeAManualExpiry(): void {
+		$interaction        = new CapturingProviderProfileInteraction();
+		$dashboard          = $this->createMock( Dashboard::class );
+		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
+		$expiryObservations->recordProviderExpiry(
+			'fixture',
+			'credential_existing',
+			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
+			'2026-08-08T12:00:00Z'
+		);
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Renamed credential',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'existing' ),
+			'secret'        => '',
+			'expires_on'    => '2026-09-10',
+		);
+
+		$this->dispatcher(
+			$dashboard,
+			$this->secrets,
+			$interaction,
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			$expiryObservations
+		)->dispatchPostRequests();
+
+		self::assertSame( 'success', $interaction->response?->kind );
+		$observation = $expiryObservations->get( 'fixture', 'credential_existing' );
+		self::assertSame( '2026-09-10T12:00:00Z', $observation['provider_expires_at'] );
+		self::assertArrayNotHasKey( 'manual_expires_on', $observation );
+	}
+
+	public function testReplacementDoesNotInheritThePreviousTokensProviderExpiry(): void {
+		$interaction        = new CapturingProviderProfileInteraction();
+		$dashboard          = $this->createMock( Dashboard::class );
+		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
+		$expiryObservations->recordProviderExpiry(
+			'fixture',
+			'credential_existing',
+			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
+			'2026-08-08T12:00:00Z'
+		);
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Replacement credential',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'existing' ),
+			'secret'        => 'replacement-secret-canary',
+			'expires_on'    => '',
+		);
+
+		$this->dispatcher(
+			$dashboard,
+			$this->secrets,
+			$interaction,
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			$expiryObservations
+		)->dispatchPostRequests();
+
+		self::assertSame( 'success', $interaction->response?->kind );
+		self::assertSame( array(), $expiryObservations->get( 'fixture', 'credential_existing' ) );
+		self::assertSame(
+			'Replacement credential',
+			$this->secrets->credentialProfiles( 'fixture' )['credential_existing']['label']
+		);
 	}
 
 	public function testAccessProfileLockContentionFailsBeforeCredentialDeletion(): void {
@@ -380,6 +562,61 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary', $response->feedbackMessage );
 	}
 
+	public function testClosedProviderInputFailureRemainsActionableAndNeverReflectsTheToken(): void {
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'credentialProfiles' )->willReturn(
+			array(
+				'credential_existing' => array(
+					'configured' => true,
+					'label'      => 'Existing credential',
+				),
+			)
+		);
+		$secrets->expects( self::once() )
+			->method( 'saveCredential' )
+			->willThrowException( new InvalidCredentialInput( InvalidCredentialInput::LOOKS_CLASSIC ) );
+		$interaction        = new CapturingProviderProfileInteraction();
+		$dashboard          = $this->createMock( Dashboard::class );
+		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
+		$expiryObservations->setManualExpiry( 'fixture', 'credential_existing', '2026-09-01' );
+		$expiryObservations->recordProviderExpiry(
+			'fixture',
+			'credential_existing',
+			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
+			'2026-08-08T12:00:00Z'
+		);
+		$observationBefore = $expiryObservations->document;
+		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Deployment access',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'deployment' ),
+			'secret'        => 'ghp_token-value-must-not-render',
+			'expires_on'    => '',
+		);
+		$_GET['view']         = 'credentials';
+
+		$this->dispatcher(
+			$dashboard,
+			$secrets,
+			$interaction,
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			$expiryObservations
+		)->dispatchPostRequests();
+		$response = $interaction->response;
+		self::assertNotNull( $response );
+		self::assertSame( 'validation_failure', $response->kind );
+		self::assertSame(
+			'This token begins with ghp_, which identifies a classic personal access token. Choose Classic personal access token or paste a fine-grained token.',
+			$response->feedbackMessage
+		);
+		self::assertStringNotContainsString( 'token-value', $response->feedbackMessage );
+		self::assertSame( $observationBefore, $expiryObservations->document );
+	}
+
 	private function seedStoredProfiles(): void {
 		$this->secrets->saveCredential(
 			'fixture',
@@ -459,7 +696,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		Dashboard $dashboard,
 		SecretsFile $secrets,
 		CapturingProviderProfileInteraction $interaction,
-		InMemoryPublicRepositoryLookupProfileStore $lookup
+		InMemoryPublicRepositoryLookupProfileStore $lookup,
+		?InMemoryCredentialExpiryObservationStore $expiryObservations = null
 	): Dispatcher {
 		$plugins = new class() extends PluginRepository { public function __construct() {} };
 		$themes  = new class() extends ThemeRepository { public function __construct() {} };
@@ -479,7 +717,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			$this->updaterLock,
 			credentialUsage: $usage,
 			publicLookupProfiles: $lookup,
-			expiryObservations: new InMemoryCredentialExpiryObservationStore(),
+			expiryObservations: $expiryObservations ?? new InMemoryCredentialExpiryObservationStore(),
 			providerProfileInteraction: $interaction
 		);
 	}

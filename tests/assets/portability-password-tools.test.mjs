@@ -41,8 +41,10 @@ function loadFunction(name, dependencies = {}) {
 }
 
 const generateSecureBase64Url = loadFunction('generateSecureBase64Url');
+const initSecretVisibility = loadFunction('initSecretVisibility');
 const initGeneratedSecretTools = loadFunction('initGeneratedSecretTools', {
 	generateSecureBase64Url,
+	initSecretVisibility,
 });
 
 function control(value = '') {

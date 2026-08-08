@@ -8,12 +8,27 @@ if ( ! is_string( $root ) || '' === $root ) {
 	throw new RuntimeException( 'The executor source root is unavailable.' );
 }
 
-require_once $root . '/RAN/PackageSubdirectory.php';
-require_once $root . '/RAN/Deployment/PreparedArtifact.php';
-require_once $root . '/RAN/Runtime/RuntimeSupport.php';
-require_once $root . '/RAN/WordPress/CorePackageExecutionFailure.php';
-require_once $root . '/RAN/WordPress/CorePackageExecutionResult.php';
-require_once $root . '/RAN/WordPress/CorePackageExecutor.php';
+$executorSource = array(
+	RAN\PackageSubdirectory::class                    => '/RAN/PackageSubdirectory.php',
+	RAN\Deployment\PreparedArtifact::class             => '/RAN/Deployment/PreparedArtifact.php',
+	RAN\Runtime\RuntimeSupport::class                   => '/RAN/Runtime/RuntimeSupport.php',
+	RAN\WordPress\CorePackageExecutionFailure::class   => '/RAN/WordPress/CorePackageExecutionFailure.php',
+	RAN\WordPress\CorePackageExecutionResult::class    => '/RAN/WordPress/CorePackageExecutionResult.php',
+	RAN\WordPress\CorePackageExecutor::class           => '/RAN/WordPress/CorePackageExecutor.php',
+);
+foreach ( $executorSource as $class => $relativePath ) {
+	$sourcePath = $root . $relativePath;
+	if ( class_exists( $class, false ) ) {
+		$loadedPath = ( new ReflectionClass( $class ) )->getFileName();
+		$sourceHash = hash_file( 'sha256', $sourcePath );
+		$loadedHash = is_string( $loadedPath ) ? hash_file( 'sha256', $loadedPath ) : false;
+		if ( ! is_string( $sourceHash ) || ! is_string( $loadedHash ) || ! hash_equals( $sourceHash, $loadedHash ) ) {
+			throw new RuntimeException( 'The loaded executor source does not match the checkout under test.' );
+		}
+		continue;
+	}
+	require_once $sourcePath;
+}
 
 require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -36,6 +51,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 	}
 
 	public function run(): void {
+		$this->assertMaintenanceAbsent();
 		$this->exercisePlugins();
 		$this->exerciseThemes();
 		$this->exerciseInstallHookIsolation();
@@ -77,7 +93,12 @@ final class RanBoosterCorePackageExecutorSmoke {
 
 		$inactive = $this->artifact( 'plugin', $slug, '2.0.0', 'plugin-inactive' );
 		$this->assertScopedUpdate(
-			static fn () => $executor->updatePlugin( $inactive, $slug, null, $identifier ),
+			fn () => $this->withMaintenanceObservation(
+				'plugin',
+				$identifier,
+				false,
+				static fn () => $executor->updatePlugin( $inactive, $slug, null, $identifier )
+			),
 			WP_PLUGIN_DIR
 		);
 		$this->assertPlugin( $identifier, '2.0.0', 'plugin-inactive', false );
@@ -87,7 +108,14 @@ final class RanBoosterCorePackageExecutorSmoke {
 			throw new RuntimeException( 'The disposable plugin could not be activated.' );
 		}
 		$sameVersion = $this->artifact( 'plugin', $slug, '2.0.0', 'plugin-same-version', null, null, true );
-		$this->assertSuccess( $this->withScrapeResponse( false, static fn () => $executor->updatePlugin( $sameVersion, $slug, null, $identifier ) ) );
+		$this->assertSuccess(
+			$this->withMaintenanceObservation(
+				'plugin',
+				$identifier,
+				true,
+				fn () => $this->withScrapeResponse( false, static fn () => $executor->updatePlugin( $sameVersion, $slug, null, $identifier ) )
+			)
+		);
 		$this->assertPlugin( $identifier, '2.0.0', 'plugin-same-version', true );
 
 		$downgrade = $this->artifact( 'plugin', $slug, '1.5.0', 'plugin-downgrade' );
@@ -178,10 +206,24 @@ final class RanBoosterCorePackageExecutorSmoke {
 		$this->themes[] = $slug;
 		$this->assertTheme( $slug, '1.0.0', 'theme-install', false );
 
-		$this->assertSuccess( $executor->updateTheme( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ), $slug, null, $slug ) );
+		$this->assertSuccess(
+			$this->withMaintenanceObservation(
+				'theme',
+				$slug,
+				false,
+				fn () => $executor->updateTheme( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ), $slug, null, $slug )
+			)
+		);
 		$this->assertTheme( $slug, '2.0.0', 'theme-inactive', false );
 		switch_theme( $slug );
-		$this->assertSuccess( $executor->updateTheme( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ), $slug, null, $slug ) );
+		$this->assertSuccess(
+			$this->withMaintenanceObservation(
+				'theme',
+				$slug,
+				true,
+				fn () => $executor->updateTheme( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ), $slug, null, $slug )
+			)
+		);
 		$this->assertTheme( $slug, '3.0.0', 'theme-active', true );
 	}
 
@@ -341,6 +383,51 @@ final class RanBoosterCorePackageExecutorSmoke {
 		return $result;
 	}
 
+	private function withMaintenanceObservation( string $type, string $identifier, bool $expectedActive, callable $operation ): mixed {
+		$active = 'plugin' === $type
+			? is_plugin_active( $identifier )
+			: get_stylesheet() === $identifier;
+		if ( $expectedActive !== $active ) {
+			throw new RuntimeException( 'The maintenance-mode proof package has an unexpected activation state.' );
+		}
+
+		$observations = array();
+		$observer = static function ( mixed $response, mixed $destination, mixed $remoteDestination, array $extra ) use ( $type, $identifier, &$observations ): mixed {
+			unset( $destination, $remoteDestination );
+			if ( 'update' !== ( $extra['action'] ?? null )
+				|| $type !== ( $extra['type'] ?? null )
+				|| $identifier !== ( $extra[ $type ] ?? null )
+			) {
+				return $response;
+			}
+
+			$path = ABSPATH . '.maintenance';
+			clearstatcache( true, $path );
+			$contents = is_file( $path ) && ! is_link( $path ) ? file_get_contents( $path ) : false;
+			$match = array();
+			$valid = is_string( $contents )
+				&& 1 === preg_match( '/\A<\?php \$upgrading = ([0-9]+); \?>\z/D', $contents, $match )
+				&& (int) $match[1] <= time()
+				&& (int) $match[1] > time() - ( 10 * MINUTE_IN_SECONDS );
+			$observations[] = $valid;
+
+			return $response;
+		};
+		add_filter( 'upgrader_clear_destination', $observer, 100, 4 );
+		try {
+			$result = $operation();
+		} finally {
+			remove_filter( 'upgrader_clear_destination', $observer, 100 );
+		}
+
+		$this->assertMaintenanceAbsent();
+		if ( array( true ) !== $observations ) {
+			throw new RuntimeException( 'WordPress maintenance mode was not active at the package mutation boundary.' );
+		}
+
+		return $result;
+	}
+
 	private function artifact(
 		string $kind,
 		string $slug,
@@ -431,7 +518,9 @@ final class RanBoosterCorePackageExecutorSmoke {
 	}
 
 	private function assertMaintenanceAbsent(): void {
-		if ( file_exists( ABSPATH . '.maintenance' ) || is_link( ABSPATH . '.maintenance' ) ) {
+		$path = ABSPATH . '.maintenance';
+		clearstatcache( true, $path );
+		if ( file_exists( $path ) || is_link( $path ) ) {
 			throw new RuntimeException( 'WordPress left maintenance mode enabled.' );
 		}
 	}
@@ -439,7 +528,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 	private function hookFingerprint(): array {
 		global $wp_filter;
 		$fingerprint = array();
-		foreach ( array( 'pre_site_transient_update_plugins', 'pre_site_transient_update_themes', 'upgrader_pre_download', 'upgrader_source_selection', 'automatic_updates_is_vcs_checkout', 'wp_doing_cron', 'upgrader_process_complete' ) as $hook ) {
+		foreach ( array( 'pre_site_transient_update_plugins', 'pre_site_transient_update_themes', 'upgrader_pre_download', 'upgrader_source_selection', 'upgrader_clear_destination', 'automatic_updates_is_vcs_checkout', 'wp_doing_cron', 'upgrader_process_complete' ) as $hook ) {
 			$fingerprint[ $hook ] = array();
 			if ( ! isset( $wp_filter[ $hook ] ) ) {
 				continue;

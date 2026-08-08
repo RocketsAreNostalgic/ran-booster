@@ -216,6 +216,7 @@ jobs:
               run: |
                   printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
                   composer test:core-updater-proof
+                  composer test:core-package-executor
 
             - name: Prove native updater-lock election
               if: ${{ matrix.suite == 'critical' }}

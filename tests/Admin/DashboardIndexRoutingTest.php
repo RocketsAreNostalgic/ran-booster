@@ -228,6 +228,51 @@ final class DashboardIndexRoutingTest extends TestCase {
 			),
 			$data['portabilityExportRows']
 		);
+		self::assertSame( array(), $data['portabilityExportCredentialGroups'] );
+		self::assertFalse( $data['portabilityExportCredentialsUnavailable'] );
+	}
+
+	public function testPortabilityGroupsOnlyDisplaySafeCredentialMetadataAndKeepsPackageOnlyFallback(): void {
+		$_GET['tab'] = 'portability';
+		$plugin      = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id', credentialId: 'shared-profile' );
+		$theme       = $this->managedPackage( 'example-theme', 'Example Theme', 'theme-repository-id', credentialId: 'shared-profile' );
+		$plugins     = $this->createStub( PluginRepository::class );
+		$themes      = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$secrets = new class() extends SecretsFile {
+			public function __construct() {
+				parent::__construct( '/unused/test-secrets.php', array() );
+			}
+			public function credentialProfiles( ProviderCode|string $provider ): array {
+				return array(
+					'shared-profile' => array(
+						'id'            => 'shared-profile',
+						'provider'      => 'gh',
+						'label'         => 'Shared credential',
+						'kind'          => 'classic',
+						'configuration' => array( 'secret_context' => 'configuration-canary' ),
+						'source'        => 'file',
+						'configured'    => true,
+						'self_destruct' => false,
+					),
+				);
+			}
+		};
+
+		$data = $this->dashboard( $secrets, null, null, null, $plugins, $themes )->getIndex()['data'];
+
+		self::assertFalse( $data['portabilityExportCredentialsUnavailable'] );
+		self::assertSame( array( 'code', 'label', 'credentials' ), array_keys( $data['portabilityExportCredentialGroups'][0] ) );
+		$credential = $data['portabilityExportCredentialGroups'][0]['credentials'][0];
+		self::assertSame( array( 'id', 'label', 'kind_label', 'available', 'reason', 'destroy_on', 'packages' ), array_keys( $credential ) );
+		self::assertSame( array( 'Example Plugin', 'Example Theme' ), array_column( $credential['packages'], 'name' ) );
+		self::assertArrayNotHasKey( 'configuration', $credential );
+
+		$unavailable = $this->dashboard( $this->throwingSecrets(), null, null, null, $plugins, $themes )->getIndex()['data'];
+		self::assertFalse( $unavailable['portabilityExportUnavailable'] );
+		self::assertCount( 2, $unavailable['portabilityExportRows'] );
+		self::assertTrue( $unavailable['portabilityExportCredentialsUnavailable'] );
 	}
 
 	/** @return list<array{string, string}> */
@@ -235,7 +280,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 		return array(
 			array( 'overview', 'onboarding.php' ),
 			array( 'documentation', 'documentation.php' ),
-			array( 'portability', 'portability.php' ),
 			array( 'troubleshooting', 'troubleshooting.php' ),
 		);
 	}
@@ -1245,7 +1289,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		string $provider = 'gh',
 		\RAN\Deployment\DeploymentPolicy $policy = \RAN\Deployment\DeploymentPolicy::MANUAL,
 		string $repository = 'owner/repository',
-		string $branch = 'main'
+		string $branch = 'main',
+		string $credentialId = ''
 	): Package {
 		$package = $this->createStub( Package::class );
 		$package->method( 'getIdentifier' )->willReturn( $identifier );
@@ -1253,12 +1298,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package->method( 'getSlug' )->willReturn( 'example' );
 		$package->method( 'getProviderCode' )->willReturn( $provider );
 		$package->method( 'getProviderRepositoryId' )->willReturn( $providerRepositoryId );
-		$package->method( 'getRepository' )->willReturn( new ManagedRepository( $provider, $repository, $providerRepositoryId, $branch, false, null ) );
+		$package->method( 'getRepository' )->willReturn( new ManagedRepository( $provider, $repository, $providerRepositoryId, $branch, false, $credentialId ) );
 		$package->method( 'getBranch' )->willReturn( $branch );
 		$package->method( 'getSubdirectory' )->willReturn( null );
 		$package->method( 'getSource' )->willReturn( $source );
 		$package->method( 'getSourceRevision' )->willReturn( 1 );
 		$package->method( 'getDeploymentPolicy' )->willReturn( $policy );
+		$package->method( 'getCredentialId' )->willReturn( $credentialId );
 
 		return $package;
 	}

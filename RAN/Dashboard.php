@@ -196,8 +196,24 @@ class Dashboard {
 			$data['providerListState'] = $this->requestedProviderListState();
 		} elseif ( null !== $selectedTab && 'portability' === $selectedTab->getKey() ) {
 			try {
-				$data['portabilityExportRows']        = $this->portabilityExportRows();
+				$export                               = $this->portabilityExportData();
+				$data['portabilityExportRows']        = $export['rows'];
 				$data['portabilityExportUnavailable'] = false;
+				try {
+					$data['portabilityExportCredentialGroups']       = $this->providerSettings->buildPortabilityCredentials( $export['credentials'] );
+					$data['portabilityExportCredentialsUnavailable'] = false;
+				} catch ( Throwable $failure ) {
+					BoosterLogger::logException(
+						'portability export credentials unavailable',
+						$failure,
+						array(
+							'source' => 'admin',
+							'step'   => 'portability_export_credentials',
+						)
+					);
+					$data['portabilityExportCredentialGroups']       = array();
+					$data['portabilityExportCredentialsUnavailable'] = true;
+				}
 			} catch ( Throwable $failure ) {
 				BoosterLogger::logException(
 					'portability export rows unavailable',
@@ -207,8 +223,10 @@ class Dashboard {
 						'step'   => 'portability_export_rows',
 					)
 				);
-				$data['portabilityExportRows']        = array();
-				$data['portabilityExportUnavailable'] = true;
+				$data['portabilityExportRows']                   = array();
+				$data['portabilityExportUnavailable']            = true;
+				$data['portabilityExportCredentialGroups']       = array();
+				$data['portabilityExportCredentialsUnavailable'] = false;
 			}
 		} elseif ( null !== $selectedTab && 'documentation' === $selectedTab->getKey() ) {
 			$data['providerDocumentation'] = null === $this->providerDocumentation
@@ -297,9 +315,10 @@ class Dashboard {
 		);
 	}
 
-	/** @return list<array{name:string,identifier:string,type:string}> */
-	private function portabilityExportRows(): array {
-		$rows = array();
+	/** @return array{rows:list<array{name:string,identifier:string,type:string}>,credentials:array<string,array<string,list<array{index:int,name:string,type:string}>>>} */
+	private function portabilityExportData(): array {
+		$rows        = array();
+		$credentials = array();
 		foreach ( array(
 			'plugin' => $this->plugins->allDeploymentPlugins(),
 			'theme'  => $this->themes->allDeploymentThemes(),
@@ -308,16 +327,25 @@ class Dashboard {
 				if ( ! $package instanceof Package ) {
 					throw new \UnexpectedValueException();
 				}
-				$blueprint = BlueprintPackage::fromManagedPackage( $type, $package );
-				$rows[]    = array(
+				$blueprint    = BlueprintPackage::fromManagedPackage( $type, $package );
+				$index        = count( $rows );
+				$rows[]       = array(
 					'name'       => $blueprint->displayName,
 					'identifier' => $blueprint->identifier,
 					'type'       => $blueprint->type,
 				);
+				$credentialId = $package->getCredentialId();
+				if ( '' !== $blueprint->provider && '' !== $credentialId ) {
+					$credentials[ $blueprint->provider ][ $credentialId ][] = array(
+						'index' => $index,
+						'name'  => $blueprint->displayName,
+						'type'  => $blueprint->type,
+					);
+				}
 			}
 		}
 
-		return $rows;
+		return compact( 'rows', 'credentials' );
 	}
 
 	/** @param array{provider: string, credential_id?: string|null, repository?: string|null} $request */

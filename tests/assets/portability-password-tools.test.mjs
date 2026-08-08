@@ -106,8 +106,8 @@ function classes(...initial) {
 
 function fixture({ clipboard, crypto, passwordValue = '' } = {}) {
 	const form = control();
-	const credentialToggle = control();
-	credentialToggle.checked = true;
+	const credentialChoice = control();
+	credentialChoice.checked = true;
 	const password = control(passwordValue);
 	password.type = 'password';
 	const confirmation = control();
@@ -144,13 +144,21 @@ function fixture({ clipboard, crypto, passwordValue = '' } = {}) {
 	};
 	validation.hidden = true;
 	const validationMessage = control();
+	const details = control();
 
 	globalThis.document = {
+		getElementById() {
+			return details;
+		},
+		querySelectorAll(selector) {
+			return selector === '[data-portability-export-credential]'
+				? [credentialChoice]
+				: [];
+		},
 		querySelector(selector) {
 			return (
 				{
 					'[data-portability-export-form]': form,
-					'[data-portability-credential-toggle]': credentialToggle,
 					'[data-portability-password]': password,
 					'[data-portability-password-confirmation]': confirmation,
 					'[data-portability-password-visibility]': visibility,
@@ -182,7 +190,7 @@ function fixture({ clipboard, crypto, passwordValue = '' } = {}) {
 		copy,
 		copyIcon,
 		copySuccessIcon,
-		credentialToggle,
+		credentialChoice,
 		form,
 		generate,
 		password,
@@ -503,10 +511,18 @@ test('unprotected export bypasses password checks and clears stale warnings', ()
 		state.form.listeners.get('submit')(protectedEvent);
 		assert.equal(protectedEvent.prevented, true);
 
-		state.credentialToggle.checked = false;
-		state.credentialToggle.listeners.get('change')();
+		state.password.value = 'discarded-password-value';
+		state.confirmation.value = 'discarded-password-value';
+		state.credentialChoice.checked = false;
+		state.credentialChoice.listeners.get('change')();
 		assert.equal(state.validation.hidden, true);
 		assert.equal(state.validationMessage.textContent, '');
+		assert.equal(state.password.value, '');
+		assert.equal(state.confirmation.value, '');
+		assert.equal(state.password.disabled, true);
+		assert.equal(state.confirmation.disabled, true);
+		assert.equal(state.visibility.disabled, true);
+		assert.equal(state.generate.disabled, true);
 
 		const unprotectedEvent = {
 			prevented: false,
@@ -516,6 +532,11 @@ test('unprotected export bypasses password checks and clears stale warnings', ()
 		};
 		state.form.listeners.get('submit')(unprotectedEvent);
 		assert.equal(unprotectedEvent.prevented, false);
+
+		state.credentialChoice.checked = true;
+		state.credentialChoice.listeners.get('change')();
+		assert.equal(state.password.disabled, false);
+		assert.equal(state.confirmation.disabled, false);
 	} finally {
 		cleanup();
 	}

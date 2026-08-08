@@ -17,6 +17,7 @@ use RAN\Portability\PortabilityApplicationService;
 use RAN\Portability\TargetPackageReason;
 use RAN\Portability\UnsupportedBlueprintPackages;
 use RAN\Runtime\RuntimeSupport;
+use RAN\Secrets\SecretsFile;
 use RAN\Storage\PackageStorageFailure;
 use Throwable;
 
@@ -45,17 +46,21 @@ final readonly class PortabilityController {
 			return $this->exportFailure( __( 'Your Transporter export session expired. Reload the page and try again.', 'ran-booster' ), 403 );
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- isAllowed validates this purpose-specific nonce before reading input.
-		$includeCredentials = isset( $_POST['include_credentials'] ) && '1' === $_POST['include_credentials'];
-		$password           = $this->passwordFromRequest( 'password' );
-		$confirmation       = $this->passwordFromRequest( 'password_confirmation' );
-		$passwordError      = $this->exportPasswordError( $includeCredentials, $password, $confirmation );
+		try {
+			$credentials = $this->selectedCredentials();
+		} catch ( InvalidArgumentException ) {
+			return $this->exportFailure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400 );
+		}
+		$password      = $this->passwordFromRequest( 'password' );
+		$confirmation  = $this->passwordFromRequest( 'password_confirmation' );
+		$passwordError = $this->exportPasswordError( array() !== $credentials, $password, $confirmation );
 
 		if ( null !== $passwordError ) {
 			return $this->exportFailure( $passwordError, 400 );
 		}
 
 		try {
-			$blueprint = $this->exporter->export( $includeCredentials, $this->selectedPackages() );
+			$blueprint = $this->exporter->export( $credentials, $this->selectedPackages() );
 		} catch ( LocalSecretStoreUnavailable ) {
 			return $this->exportFailure( __( 'Encrypted credential storage is unavailable, so Booster did not export credentials.', 'ran-booster' ), 409 );
 		} catch ( PackageStorageFailure $failure ) {
@@ -63,7 +68,7 @@ final readonly class PortabilityController {
 		} catch ( UnsupportedBlueprintPackages $failure ) {
 			return $this->exportFailure( $this->exportValidationFailureMessage( $failure ), 400 );
 		} catch ( InvalidArgumentException ) {
-			return $this->exportFailure( __( 'The selected managed packages changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400 );
+			return $this->exportFailure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400 );
 		} catch ( Throwable ) {
 			return $this->exportFailure( __( 'Booster could not read the managed package selection. Please try again.', 'ran-booster' ), 500 );
 		}
@@ -285,6 +290,34 @@ final readonly class PortabilityController {
 		}
 
 		return $selected;
+	}
+
+	/** @return array<string, list<string>> */
+	private function selectedCredentials(): array {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handleExport validates its purpose-specific nonce first.
+		$input = $_POST['credentials'] ?? array();
+		if ( ! is_array( $input ) ) {
+			throw new InvalidArgumentException();
+		}
+
+		$selected = array();
+		$count    = 0;
+		foreach ( $input as $provider => $ids ) {
+			if ( ! is_string( $provider ) || 1 !== preg_match( '/\A[a-z][a-z0-9-]{0,31}\z/', $provider )
+				|| ! is_array( $ids ) || ! array_is_list( $ids ) || array() === $ids ) {
+				throw new InvalidArgumentException();
+			}
+			foreach ( $ids as $id ) {
+				$id = is_string( $id ) ? wp_unslash( $id ) : '';
+				if ( SecretsFile::CONSTANT_PROFILE === $id || 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', $id )
+					|| isset( $selected[ $provider ][ $id ] ) || ++$count > PackageBlueprint::MAX_CREDENTIALS ) {
+					throw new InvalidArgumentException();
+				}
+				$selected[ $provider ][ $id ] = true;
+			}
+		}
+
+		return array_map( 'array_keys', $selected );
 	}
 
 	private function requestedAction(): ?string {

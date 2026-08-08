@@ -29,13 +29,15 @@ final readonly class ManagedPackageBlueprintExporter {
 	}
 
 	/**
-	 * @param list<array{type:string,identifier:string}>|null $selection
+	 * @param array<string, list<string>>                     $credentialSelection
+	 * @param list<array{type:string,identifier:string}>|null $packageSelection
 	 */
-	public function export( bool $includeCredentials = false, ?array $selection = null ): PackageBlueprint {
+	public function export( array $credentialSelection = array(), ?array $packageSelection = null ): PackageBlueprint {
 		$packages    = array();
 		$managed     = array();
 		$unsupported = array();
-		$selected    = $this->selection( $selection );
+		$selected    = $this->selection( $packageSelection );
+		$credentials = $this->credentialSelection( $credentialSelection );
 		foreach ( array(
 			'plugin' => $this->plugins->allDeploymentPlugins(),
 			'theme'  => $this->themes->allDeploymentThemes(),
@@ -73,7 +75,29 @@ final readonly class ManagedPackageBlueprintExporter {
 			throw new UnsupportedBlueprintPackages( $unsupported );
 		}
 
-		return new PackageBlueprint( $packages, $includeCredentials ? $this->credentials( $managed ) : array() );
+		return new PackageBlueprint( $packages, array() === $credentials ? array() : $this->credentials( $managed, $credentials ) );
+	}
+
+	/** @param array<string, list<string>> $selection @return array<string, true> */
+	private function credentialSelection( array $selection ): array {
+		$selected = array();
+		foreach ( $selection as $provider => $ids ) {
+			if ( ! is_string( $provider ) || 1 !== preg_match( '/\A[a-z][a-z0-9-]{0,31}\z/', $provider )
+				|| ! is_array( $ids ) || ! array_is_list( $ids ) || array() === $ids ) {
+				throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
+			}
+			foreach ( $ids as $id ) {
+				$key = is_string( $id ) ? $provider . "\0" . $id : '';
+				if ( ! is_string( $id ) || SecretsFile::CONSTANT_PROFILE === $id
+					|| 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', $id ) || isset( $selected[ $key ] )
+					|| count( $selected ) >= PackageBlueprint::MAX_CREDENTIALS ) {
+					throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
+				}
+				$selected[ $key ] = true;
+			}
+		}
+
+		return $selected;
 	}
 
 	/**
@@ -110,34 +134,35 @@ final readonly class ManagedPackageBlueprintExporter {
 	 * @param list<array{package: Package, blueprint: BlueprintPackage}> $managed
 	 * @return list<BlueprintCredential>
 	 */
-	private function credentials( array $managed ): array {
+	private function credentials( array $managed, array $selected ): array {
 		$grouped        = array();
+		$matched        = array();
+		$materials      = array();
 		$storageChecked = false;
 
 		foreach ( $managed as $entry ) {
 			$package      = $entry['package'];
 			$blueprint    = $entry['blueprint'];
 			$credentialId = $package->getCredentialId();
-			if ( '' === $credentialId || SecretsFile::CONSTANT_PROFILE === $credentialId ) {
+			$key          = $blueprint->provider . "\0" . $credentialId;
+			if ( ! isset( $selected[ $key ] ) ) {
 				continue;
 			}
-			if ( '' === $blueprint->provider ) {
-				throw LocalSecretStoreUnavailable::forPortability();
-			}
+			$matched[ $key ] = true;
 
 			try {
 				if ( ! $storageChecked ) {
 					$this->secrets->assertManagedStorageReady();
 					$storageChecked = true;
 				}
-				$material = $this->secrets->credentialMaterial( $blueprint->provider, $credentialId );
+				$material = $materials[ $key ] ??= $this->secrets->credentialMaterial( $blueprint->provider, $credentialId );
 			} catch ( \Throwable $failure ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception is caught at the admin boundary.
 				throw LocalSecretStoreUnavailable::forPortability( $failure );
 			}
 			if ( ! is_array( $material ) || 'file' !== ( $material['source'] ?? null )
-				|| $blueprint->provider !== ( $material['provider'] ?? null ) ) {
-				throw LocalSecretStoreUnavailable::forPortability();
+				|| $blueprint->provider !== ( $material['provider'] ?? null ) || true === ( $material['self_destruct'] ?? false ) ) {
+				throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
 			}
 
 			$record = array(
@@ -158,6 +183,9 @@ final readonly class ManagedPackageBlueprintExporter {
 				'type'       => $blueprint->type,
 				'identifier' => $blueprint->identifier,
 			);
+		}
+		if ( array_diff_key( $selected, $matched ) ) {
+			throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
 		}
 
 		return array_values(

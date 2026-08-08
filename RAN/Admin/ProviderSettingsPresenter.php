@@ -354,6 +354,48 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
+	 * Build the display-only credential candidates for Transporter export.
+	 *
+	 * @param array<string, array<string, list<array{index:int,name:string,type:string}>>> $associations
+	 * @return list<array{code:string,label:string,credentials:list<array<string,mixed>>}>
+	 */
+	public function buildPortabilityCredentials( array $associations ): array {
+		$groups = array();
+		foreach ( $this->providers->administrationMetadata() as $metadata ) {
+			$code       = $metadata->code->value;
+			$candidates = $associations[ $code ] ?? array();
+			$admin      = $metadata->admin;
+			if ( array() === $candidates || null === $admin ) {
+				continue;
+			}
+
+			$profiles    = $this->secrets->credentialProfiles( $code );
+			$credentials = array();
+			foreach ( $candidates as $id => $packages ) {
+				$profile       = $profiles[ $id ] ?? null;
+				$kind          = is_array( $profile ) ? $admin->getCredentialKind( (string) ( $profile['kind'] ?? '' ) ) : null;
+				$source        = is_array( $profile ) && is_string( $profile['source'] ?? null ) ? $profile['source'] : '';
+				$credentials[] = array(
+					'id'         => is_array( $profile ) ? $id : '',
+					'label'      => is_array( $profile ) && is_string( $profile['label'] ?? null ) ? $profile['label'] : '',
+					'kind_label' => null !== $kind ? $kind->label : ( is_array( $profile ) ? (string) ( $profile['kind'] ?? '' ) : '' ),
+					'available'  => is_array( $profile ) && 'file' === $source && ! empty( $profile['configured'] ) && empty( $profile['self_destruct'] ),
+					'reason'     => ! is_array( $profile ) ? 'missing' : ( 'file' !== $source ? 'configuration' : ( ! empty( $profile['self_destruct'] ) ? 'self_destruct' : '' ) ),
+					'destroy_on' => is_array( $profile ) && is_string( $profile['destroy_on'] ?? null ) ? $profile['destroy_on'] : null,
+					'packages'   => $packages,
+				);
+			}
+			$groups[] = array(
+				'code'        => $code,
+				'label'       => $metadata->label,
+				'credentials' => $credentials,
+			);
+		}
+
+		return $groups;
+	}
+
+	/**
 	 * Registered providers remain available even when they omit an optional
 	 * package capability or package-admin metadata.
 	 *

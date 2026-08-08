@@ -36,7 +36,7 @@ function loadFunction(name) {
 	return Function(`"use strict"; return (${source.slice(start, end)});`)();
 }
 
-function checkbox(selector, checked = true) {
+function checkbox(selector, checked = true, exportIndex = null) {
 	const listeners = new Map();
 
 	return {
@@ -45,6 +45,11 @@ function checkbox(selector, checked = true) {
 		listeners,
 		addEventListener(type, listener) {
 			listeners.set(type, listener);
+		},
+		getAttribute(attribute) {
+			return attribute === 'data-portability-export-package-index'
+				? exportIndex
+				: null;
 		},
 		matches(candidate) {
 			return candidate === selector;
@@ -94,8 +99,8 @@ function row(
 function exportFixture(states) {
 	const master = checkbox('[data-portability-export-select-all]');
 	const submit = { disabled: false };
-	const choices = states.map((checked) =>
-		checkbox('[data-portability-export-select]', checked)
+	const choices = states.map((checked, index) =>
+		checkbox('[data-portability-export-select]', checked, String(index))
 	);
 
 	globalThis.document = {
@@ -115,6 +120,88 @@ function exportFixture(states) {
 	};
 
 	return { choices, master, submit };
+}
+
+function credentialExportFixture() {
+	const packageMaster = checkbox('[data-portability-export-select-all]');
+	const packages = [
+		checkbox('[data-portability-export-select]', true, '0'),
+		checkbox('[data-portability-export-select]', true, '1'),
+	];
+	const credentials = [
+		checkbox('[data-portability-export-credential]', false),
+		checkbox('[data-portability-export-credential]', false),
+	];
+	credentials.forEach((choice) => {
+		choice.disabled = false;
+	});
+	const rows = ['0', '1'].map((packageIndex, index) => ({
+		dataset: { portabilityCredentialPackages: packageIndex },
+		hidden: false,
+		querySelector(selector) {
+			return selector === '[data-portability-export-credential]'
+				? credentials[index]
+				: null;
+		},
+	}));
+	const submit = { disabled: false };
+	const events = [];
+	const form = {
+		dispatchEvent(event) {
+			events.push(event.type);
+		},
+	};
+	const summary = {
+		dataset: {
+			credentialPlural: '%d selected repository credential profiles',
+			credentialSingular: '1 selected repository credential profile',
+			packageOnlyTemplate:
+				'Create a Transporter Blueprint for %s without repository credentials.',
+			packagePlural: '%d packages',
+			packageSingular: '1 package',
+			protectedTemplate:
+				'Create a Transporter Blueprint for %1$s using %2$s. Credential permissions have not been assessed.',
+		},
+		textContent: '',
+	};
+
+	globalThis.document = {
+		querySelector(selector) {
+			return (
+				{
+					'[data-portability-export-select-all]': packageMaster,
+					'[data-portability-export-submit]': submit,
+					'[data-portability-export-form]': form,
+					'[data-portability-export-summary]': summary,
+				}[selector] || null
+			);
+		},
+		querySelectorAll(selector) {
+			return (
+				{
+					'[data-portability-export-select]': packages,
+					'[data-portability-export-credential-row]': rows,
+					'[data-portability-export-credential]': credentials,
+				}[selector] || []
+			);
+		},
+	};
+	globalThis.window = {
+		CustomEvent: class {
+			constructor(type) {
+				this.type = type;
+			}
+		},
+	};
+
+	return {
+		credentials,
+		events,
+		packageMaster,
+		packages,
+		rows,
+		summary,
+	};
 }
 
 function progressButton(idleLabel, busyLabel, labelSelector) {
@@ -375,6 +462,44 @@ test('export master selection reflects checked, unchecked and mixed rows', () =>
 		);
 		assert.equal(state.master.indeterminate, false);
 		assert.equal(state.submit.disabled, true);
+	} finally {
+		cleanup();
+	}
+});
+
+test('credential export selection follows package relevance and reports selected profiles', () => {
+	const state = credentialExportFixture();
+
+	try {
+		loadFunction('initPortabilityExportSelection')();
+		assert.equal(
+			state.summary.textContent,
+			'Create a Transporter Blueprint for 2 packages without repository credentials.'
+		);
+
+		state.credentials[0].checked = true;
+		state.credentials[0].listeners.get('change')();
+		assert.equal(
+			state.summary.textContent,
+			'Create a Transporter Blueprint for 2 packages using 1 selected repository credential profile. Credential permissions have not been assessed.'
+		);
+
+		state.packages[0].checked = false;
+		state.packages[0].listeners.get('change')();
+		assert.equal(state.rows[0].hidden, true);
+		assert.equal(state.credentials[0].checked, false);
+		assert.equal(state.credentials[0].disabled, true);
+		assert.deepEqual(state.events, [
+			'ran-booster:portability-credentials-changed',
+		]);
+
+		state.credentials[1].checked = true;
+		state.credentials[1].listeners.get('change')();
+		assert.equal(state.credentials[1].checked, true);
+		assert.equal(
+			state.summary.textContent,
+			'Create a Transporter Blueprint for 1 package using 1 selected repository credential profile. Credential permissions have not been assessed.'
+		);
 	} finally {
 		cleanup();
 	}

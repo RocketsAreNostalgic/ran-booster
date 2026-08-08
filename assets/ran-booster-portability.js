@@ -14,40 +14,10 @@
 
 	onDomReady(function () {
 		initPortabilityModeChooser();
-		initPortabilityCredentialOption();
 		initPortabilityExportDownload();
 		initPortabilityExportSelection();
 		initPortabilityPreview();
 	});
-
-	function initPortabilityCredentialOption() {
-		const toggle = document.querySelector(
-			'[data-portability-credential-toggle]'
-		);
-
-		if (!toggle) {
-			return;
-		}
-
-		const details = document.getElementById(
-			toggle.getAttribute('aria-controls')
-		);
-
-		if (!details) {
-			return;
-		}
-
-		function updateDetails() {
-			details.hidden = !toggle.checked;
-			toggle.setAttribute(
-				'aria-expanded',
-				toggle.checked ? 'true' : 'false'
-			);
-		}
-
-		toggle.addEventListener('change', updateDetails);
-		updateDetails();
-	}
 
 	function initPortabilityExportSelection() {
 		const master = document.querySelector(
@@ -56,24 +26,89 @@
 		const choices = Array.from(
 			document.querySelectorAll('[data-portability-export-select]')
 		);
-
 		if (!master || !choices.length) {
 			return;
 		}
 
+		const credentialRows = Array.from(
+			document.querySelectorAll(
+				'[data-portability-export-credential-row]'
+			)
+		);
+		const credentialChoices = Array.from(
+			document.querySelectorAll('[data-portability-export-credential]')
+		);
+		const form = document.querySelector('[data-portability-export-form]');
+		const summary = document.querySelector(
+			'[data-portability-export-summary]'
+		);
 		const submit = document.querySelector(
 			'[data-portability-export-submit]'
 		);
 
 		function updateMaster() {
-			const selected = choices.filter(function (choice) {
-				return choice.checked;
-			}).length;
-
-			master.checked = selected === choices.length;
-			master.indeterminate = selected > 0 && selected < choices.length;
+			const selected = choices.filter((choice) => choice.checked);
+			const indexes = new Set(
+				selected.map((choice) =>
+					choice.getAttribute('data-portability-export-package-index')
+				)
+			);
+			let credentialsChanged = false;
+			credentialRows.forEach(function (row) {
+				const relevant = (
+					row.dataset.portabilityCredentialPackages || ''
+				)
+					.split(' ')
+					.some((index) => indexes.has(index));
+				const choice = row.querySelector(
+					'[data-portability-export-credential]'
+				);
+				row.hidden = !relevant;
+				if (choice) {
+					choice.disabled = !relevant;
+					credentialsChanged =
+						(!relevant && choice.checked) || credentialsChanged;
+					choice.checked = relevant && choice.checked;
+				}
+			});
+			master.checked = selected.length === choices.length;
+			master.indeterminate = selected.length > 0 && !master.checked;
 			if (submit) {
-				submit.disabled = selected === 0;
+				submit.disabled = selected.length === 0;
+			}
+			const credentialCount = credentialChoices.filter(
+				(choice) => choice.checked && !choice.disabled
+			).length;
+			if (summary) {
+				const packages = (
+					selected.length === 1
+						? summary.dataset.packageSingular
+						: summary.dataset.packagePlural
+				).replace('%d', selected.length);
+				const credentials = (
+					credentialCount === 1
+						? summary.dataset.credentialSingular
+						: summary.dataset.credentialPlural
+				).replace('%d', credentialCount);
+				summary.textContent = credentialCount
+					? summary.dataset.protectedTemplate
+							.replace('%1$s', packages)
+							.replace('%2$s', credentials)
+					: summary.dataset.packageOnlyTemplate.replace(
+							'%s',
+							packages
+						);
+			}
+			if (
+				credentialsChanged &&
+				form &&
+				typeof window.CustomEvent === 'function'
+			) {
+				form.dispatchEvent(
+					new window.CustomEvent(
+						'ran-booster:portability-credentials-changed'
+					)
+				);
 			}
 		}
 
@@ -84,6 +119,9 @@
 			updateMaster();
 		});
 		choices.forEach(function (choice) {
+			choice.addEventListener('change', updateMaster);
+		});
+		credentialChoices.forEach(function (choice) {
 			choice.addEventListener('change', updateMaster);
 		});
 		updateMaster();

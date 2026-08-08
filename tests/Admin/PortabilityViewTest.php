@@ -23,14 +23,14 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-portability-import"', $html );
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-export"[^>]+hidden>/', $html );
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-import"[^>]+hidden>/', $html );
-		self::assertStringContainsString( 'data-portability-credential-toggle', $html );
+		self::assertStringContainsString( '>Repository credentials<', $html );
 		self::assertStringContainsString( 'Packages to include', $html );
 		self::assertStringContainsString( 'data-portability-export-select-all', $html );
 		self::assertStringContainsString( 'name="packages[plugin][]" value="example/example.php" type="checkbox" checked', $html );
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
 		self::assertStringContainsString( 'example/example.php', $html );
-		self::assertStringContainsString( 'aria-controls="ran-booster-portability-export-credential-details"', $html );
-		self::assertStringContainsString( 'id="ran-booster-portability-export-credential-details" class="ran-booster-portability__credential-details" hidden', $html );
+		self::assertStringNotContainsString( 'name="include_credentials"', $html );
+		self::assertStringContainsString( 'id="ran-booster-portability-export-credential-details" class="ran-booster-portability__credential-details"', $html );
 		self::assertStringContainsString( 'name="password" type="password" minlength="20" maxlength="256"', $html );
 		self::assertStringContainsString( 'name="password_confirmation" type="password" minlength="20" maxlength="256"', $html );
 		self::assertStringContainsString( 'data-portability-export-form', $html );
@@ -101,6 +101,82 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'campaign-2026', $html );
 		self::assertStringNotContainsString( 'application/json', $html );
 		self::assertStringNotContainsString( 'credential_id', $html );
+	}
+
+	public function testExportRendersExplicitEligibleAndUnavailableCredentialChoicesWithoutSensitiveMetadata(): void {
+		$html = $this->renderView(
+			exportCredentialGroups: array(
+				array(
+					'code'        => 'gh',
+					'label'       => 'GitHub',
+					'credentials' => array(
+						array(
+							'id'            => 'eligible-profile',
+							'label'         => 'Deployment <PAT>',
+							'kind_label'    => 'Personal access token (classic)',
+							'available'     => true,
+							'reason'        => '',
+							'destroy_on'    => null,
+							'configuration' => 'configuration-canary',
+							'secret'        => 'secret-canary',
+							'expiry'        => 'expiry-canary',
+							'packages'      => array(
+								array(
+									'index' => 0,
+									'name'  => 'Example <Plugin>',
+									'type'  => 'plugin',
+								),
+							),
+						),
+						array(
+							'id'         => 'temporary-profile',
+							'label'      => 'Temporary administrator token',
+							'kind_label' => 'Fine-grained token',
+							'available'  => false,
+							'reason'     => 'self_destruct',
+							'destroy_on' => '2026-08-31',
+							'packages'   => array(
+								array(
+									'index' => 0,
+									'name'  => 'Example <Plugin>',
+									'type'  => 'plugin',
+								),
+							),
+						),
+						array(
+							'id'         => 'constant',
+							'label'      => 'Configuration credential',
+							'kind_label' => 'Classic token',
+							'available'  => false,
+							'reason'     => 'configuration',
+							'destroy_on' => null,
+							'packages'   => array(
+								array(
+									'index' => 0,
+									'name'  => 'Example <Plugin>',
+									'type'  => 'plugin',
+								),
+							),
+						),
+					),
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'name="credentials[gh][]" value="eligible-profile" data-portability-export-credential', $html );
+		self::assertSame( 1, substr_count( $html, 'eligible-profile' ) );
+		self::assertStringContainsString( 'GitHub', $html );
+		self::assertStringContainsString( 'Deployment &lt;PAT&gt;', $html );
+		self::assertStringContainsString( 'Personal access token (classic)', $html );
+		self::assertStringContainsString( 'Used by: Example &lt;Plugin&gt;. The provider permissions for this credential have not been assessed.', $html );
+		self::assertStringContainsString( 'automatically remove this saved credential on 2026-08-31', $html );
+		self::assertStringContainsString( 'credential is supplied by site configuration', $html );
+		self::assertStringContainsString( 'data-portability-export-summary', $html );
+		self::assertStringNotContainsString( 'value="temporary-profile"', $html );
+		self::assertStringNotContainsString( 'value="constant"', $html );
+		self::assertStringNotContainsString( 'configuration-canary', $html );
+		self::assertStringNotContainsString( 'secret-canary', $html );
+		self::assertStringNotContainsString( 'expiry-canary', $html );
 	}
 
 	public function testRendersAllActionsAndCredentialReconciliationFromSafeRows(): void {
@@ -182,6 +258,10 @@ final class PortabilityViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Booster could not load the managed package list.', $unavailable );
 		self::assertStringContainsString( 'data-portability-export-submit disabled="disabled"', $unavailable );
+
+		$credentialUnavailable = $this->renderView( exportCredentialsUnavailable: true );
+		self::assertStringContainsString( 'You can still create a package-only Blueprint.', $credentialUnavailable );
+		self::assertStringNotContainsString( 'data-portability-export-submit disabled="disabled"', $credentialUnavailable );
 	}
 
 	public function testBlockedRowWithoutChoicesDirectsTheUserToCredentialSettings(): void {
@@ -276,16 +356,24 @@ final class PortabilityViewTest extends TestCase {
 	/**
 	 * @param array<int, array<string, mixed>> $rows Review rows.
 	 */
-	private function renderView( array $rows = array(), ?array $exportRows = null, bool $exportUnavailable = false ): string {
-		$portabilityReviewRows        = $rows;
-		$portabilityExportRows        = $exportRows ?? array(
+	private function renderView(
+		array $rows = array(),
+		?array $exportRows = null,
+		bool $exportUnavailable = false,
+		array $exportCredentialGroups = array(),
+		bool $exportCredentialsUnavailable = false
+	): string {
+		$portabilityReviewRows                   = $rows;
+		$portabilityExportRows                   = $exportRows ?? array(
 			array(
 				'name'       => 'Example <Plugin>',
 				'identifier' => 'example/example.php',
 				'type'       => 'plugin',
 			),
 		);
-		$portabilityExportUnavailable = $exportUnavailable;
+		$portabilityExportUnavailable            = $exportUnavailable;
+		$portabilityExportCredentialGroups       = $exportCredentialGroups;
+		$portabilityExportCredentialsUnavailable = $exportCredentialsUnavailable;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/portability.php';

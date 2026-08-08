@@ -26,12 +26,26 @@ The runtime flow is:
 1. Execute the resulting actions through the normal deployment or management
    path.
 
-Export submits package type and identifier only. The exporter rebuilds each
-selected package from Booster's current non-cleaning managed-package readers and
-rejects empty, malformed, duplicate, unknown, wrong-type, or stale selections.
-It filters the package set before collecting credentials, so an excluded package
-and its credential association cannot enter the archive. The archive format does
-not change; a subset is already a valid version 1 blueprint.
+Export submits selected package identities and, when requested, selected saved
+repository credential profile identities. The exporter rebuilds each selected
+package from Booster's current non-cleaning managed-package readers and rejects
+empty, malformed, duplicate, unknown, wrong-type, or stale selections.
+
+Credential choices are grouped by provider and derived only from the selected
+packages. They begin unchecked. Shared profiles appear once; unassigned
+profiles do not appear. File-backed profiles are eligible unless Booster is
+scheduled to remove them automatically. Constant-backed and self-destructing
+profiles remain visible with an unavailable reason. Provider-native or manually
+recorded expiry does not block transfer, and Transporter does not inspect or
+certify provider permissions or prefer one declared credential kind.
+
+The server treats the browser selection only as a request. It fresh-checks the
+package association, file-backed source, provider identity, current material,
+and local self-destruct state before building the archive. A stale, forged, or
+newly ineligible credential selection rejects the export rather than silently
+falling back to package-only. Zero accepted credentials produces the ordinary
+package-only Blueprint and ignores any password. The archive format does not
+change; a subset is already a valid version 1 blueprint.
 
 The codebase currently treats Transporter as a strict single-site feature. The
 mutation guard rejects multisite before deployment work proceeds.
@@ -64,7 +78,8 @@ layer, and the subdirectory must already be normalized.
 `BlueprintCredential` is the optional encrypted credential record. It keeps the
 credential provider, label, kind, configuration, secret, and the package list
 that it belongs to. The record is normalized and bounded before it is written
-into a blueprint.
+into a blueprint. Source profile IDs and local self-destruct dates are never
+serialized.
 
 `BlueprintArchive` writes and reads the briefcase ZIP. It supports a canonical
 JSON-only archive and an encrypted AES-256 variant when the runtime can prove

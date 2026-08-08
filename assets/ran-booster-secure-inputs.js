@@ -233,12 +233,12 @@
 
 	function initPortabilityPasswordTools() {
 		const form = document.querySelector('[data-portability-export-form]');
-		const credentialToggle = document.querySelector(
-			'[data-portability-credential-toggle]'
-		);
 		const password = document.querySelector('[data-portability-password]');
 		const confirmation = document.querySelector(
 			'[data-portability-password-confirmation]'
+		);
+		const details = document.getElementById(
+			'ran-booster-portability-export-credential-details'
 		);
 		const visibility = document.querySelector(
 			'[data-portability-password-visibility]'
@@ -268,7 +268,7 @@
 
 		if (
 			!form ||
-			!credentialToggle ||
+			!details ||
 			!password ||
 			!confirmation ||
 			!visibility ||
@@ -283,6 +283,9 @@
 		) {
 			return;
 		}
+		const credentialChoices = Array.from(
+			document.querySelectorAll('[data-portability-export-credential]')
+		);
 
 		function clearValidation() {
 			validation.hidden = true;
@@ -299,7 +302,7 @@
 			field.focus();
 		}
 
-		initGeneratedSecretTools({
+		const tools = initGeneratedSecretTools({
 			input: password,
 			visibility,
 			visibilityIcon,
@@ -316,14 +319,37 @@
 			onInput: clearValidation,
 		});
 
-		confirmation.addEventListener('input', clearValidation);
-		credentialToggle.addEventListener('change', function () {
-			if (!credentialToggle.checked) {
+		function hasSelectedCredential() {
+			return credentialChoices.some(function (choice) {
+				return choice.checked && !choice.disabled;
+			});
+		}
+
+		function syncCredentialSelection() {
+			const selected = hasSelectedCredential();
+			details.hidden = !selected;
+			password.disabled = !selected;
+			confirmation.disabled = !selected;
+			visibility.disabled = !selected;
+			generate.disabled = !selected;
+			if (!selected) {
+				password.value = '';
+				tools.reset();
+				confirmation.value = '';
 				clearValidation();
 			}
+		}
+
+		confirmation.addEventListener('input', clearValidation);
+		credentialChoices.forEach(function (choice) {
+			choice.addEventListener('change', syncCredentialSelection);
 		});
+		form.addEventListener(
+			'ran-booster:portability-credentials-changed',
+			syncCredentialSelection
+		);
 		form.addEventListener('submit', function (event) {
-			if (!credentialToggle.checked) {
+			if (!hasSelectedCredential()) {
 				return;
 			}
 
@@ -343,6 +369,7 @@
 		});
 
 		clearValidation();
+		syncCredentialSelection();
 	}
 
 	function resetWebhookSecretTools(root) {

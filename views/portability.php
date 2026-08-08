@@ -5,10 +5,23 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$portabilityReviewRows        = is_array( $portabilityReviewRows ?? null ) ? $portabilityReviewRows : array();
-$portabilityExportRows        = is_array( $portabilityExportRows ?? null ) ? $portabilityExportRows : array();
-$portabilityExportUnavailable = true === ( $portabilityExportUnavailable ?? false );
-$renderPortabilityExtension   = static function ( string $hook, string $step ): void {
+$portabilityReviewRows                   = is_array( $portabilityReviewRows ?? null ) ? $portabilityReviewRows : array();
+$portabilityExportRows                   = is_array( $portabilityExportRows ?? null ) ? $portabilityExportRows : array();
+$portabilityExportUnavailable            = true === ( $portabilityExportUnavailable ?? false );
+$portabilityExportCredentialGroups       = is_array( $portabilityExportCredentialGroups ?? null ) ? $portabilityExportCredentialGroups : array();
+$portabilityExportCredentialsUnavailable = true === ( $portabilityExportCredentialsUnavailable ?? false );
+$portabilityExportPackageCount           = count( $portabilityExportRows );
+/* translators: %d: number of selected managed packages. */
+$portabilityPackagePlural = __( '%d packages', 'ran-booster' );
+/* translators: %d: number of selected repository credential profiles. */
+$portabilityCredentialPlural = __( '%d selected repository credential profiles', 'ran-booster' );
+/* translators: 1: selected package count and noun. 2: selected credential-profile count and noun. */
+$portabilityProtectedSummary = __( 'Create a Transporter Blueprint for %1$s using %2$s. Credential permissions have not been assessed.', 'ran-booster' );
+/* translators: %s: selected package count and noun. */
+$portabilityPackageOnlySummary = __( 'Create a Transporter Blueprint for %s without repository credentials.', 'ran-booster' );
+/* translators: %d: number of selected managed packages. */
+$portabilityInitialPackageCount = sprintf( _n( '%d package', '%d packages', $portabilityExportPackageCount, 'ran-booster' ), $portabilityExportPackageCount );
+$renderPortabilityExtension     = static function ( string $hook, string $step ): void {
 	$bufferLevel = ob_get_level();
 	ob_start();
 	try {
@@ -57,7 +70,7 @@ $renderPortabilityExtension   = static function ( string $hook, string $step ): 
 		<header class="ran-booster-portability__flow-header">
 			<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
-			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Repository credentials are included only when you choose the protected option below.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
 		</header>
 		<form class="ran-booster-portability__export-form" method="post" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-portability-export-form>
 			<input type="hidden" name="action" value="ran_booster_export_blueprint">
@@ -87,7 +100,7 @@ $renderPortabilityExtension   = static function ( string $hook, string $step ): 
 							?>
 							<tr>
 								<?php /* translators: %s: managed plugin or theme name. */ ?>
-								<th scope="row" class="check-column"><input id="ran-booster-portability-export-package-<?php echo esc_attr( (string) $rowIndex ); ?>" name="packages[<?php echo esc_attr( $packageType ); ?>][]" value="<?php echo esc_attr( $identifier ); ?>" type="checkbox" checked data-portability-export-select aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'ran-booster' ), $name ) ); ?>"></th>
+				<th scope="row" class="check-column"><input id="ran-booster-portability-export-package-<?php echo esc_attr( (string) $rowIndex ); ?>" name="packages[<?php echo esc_attr( $packageType ); ?>][]" value="<?php echo esc_attr( $identifier ); ?>" type="checkbox" checked data-portability-export-select data-portability-export-package-index="<?php echo esc_attr( (string) $rowIndex ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'ran-booster' ), $name ) ); ?>"></th>
 								<td><label for="ran-booster-portability-export-package-<?php echo esc_attr( (string) $rowIndex ); ?>"><strong><?php echo esc_html( $name ); ?></strong></label><code><?php echo esc_html( $identifier ); ?></code></td>
 								<td><?php echo esc_html( 'plugin' === $packageType ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ) ); ?></td>
 							</tr>
@@ -97,11 +110,66 @@ $renderPortabilityExtension   = static function ( string $hook, string $step ): 
 				</table>
 			</div>
 		</section>
-		<fieldset class="ran-booster-portability__credential-option">
-			<legend><?php esc_html_e( 'Credential transfer', 'ran-booster' ); ?></legend>
-			<label for="ran-booster-portability-include-credentials"><input id="ran-booster-portability-include-credentials" name="include_credentials" value="1" type="checkbox" data-portability-credential-toggle aria-controls="ran-booster-portability-export-credential-details" aria-expanded="false"> <?php esc_html_e( 'Include stored repository credentials', 'ran-booster' ); ?></label>
-			<p class="description"><?php esc_html_e( 'Encrypts the Transporter Blueprint ZIP with a password.', 'ran-booster' ); ?></p>
-			<div id="ran-booster-portability-export-credential-details" class="ran-booster-portability__credential-details" hidden>
+		<section class="ran-booster-portability__credential-option" aria-labelledby="ran-booster-portability-export-credentials-heading">
+			<h4 id="ran-booster-portability-export-credentials-heading"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h4>
+			<p><?php esc_html_e( 'Select only the saved credentials that should be copied. Credential permissions have not been assessed.', 'ran-booster' ); ?></p>
+			<?php if ( $portabilityExportCredentialsUnavailable ) : ?>
+				<div class="notice notice-warning inline"><p><?php esc_html_e( 'Booster could not load repository credential choices. You can still create a package-only Blueprint.', 'ran-booster' ); ?></p></div>
+			<?php elseif ( array() === $portabilityExportCredentialGroups ) : ?>
+				<p class="description"><?php esc_html_e( 'None of the selected managed packages uses a saved repository credential.', 'ran-booster' ); ?></p>
+			<?php else : ?>
+				<div class="ran-booster-portability__credential-groups">
+				<?php foreach ( $portabilityExportCredentialGroups as $groupIndex => $group ) : ?>
+					<?php
+					$providerCode  = is_string( $group['code'] ?? null ) ? $group['code'] : '';
+					$providerLabel = is_string( $group['label'] ?? null ) ? $group['label'] : $providerCode;
+					$credentials   = is_array( $group['credentials'] ?? null ) ? $group['credentials'] : array();
+					?>
+					<fieldset class="ran-booster-portability__credential-group">
+						<legend><?php echo esc_html( $providerLabel ); ?></legend>
+						<ul class="ran-booster-portability__credential-list">
+						<?php foreach ( $credentials as $credentialIndex => $credential ) : ?>
+							<?php
+							$controlId      = 'ran-booster-portability-export-credential-' . $groupIndex . '-' . $credentialIndex;
+							$reasonId       = $controlId . '-reason';
+							$available      = ! empty( $credential['available'] );
+							$label          = is_string( $credential['label'] ?? null ) && '' !== $credential['label'] ? $credential['label'] : __( 'Unavailable saved credential', 'ran-booster' );
+							$kindLabel      = is_string( $credential['kind_label'] ?? null ) ? $credential['kind_label'] : '';
+							$packages       = is_array( $credential['packages'] ?? null ) ? $credential['packages'] : array();
+							$packageIndexes = implode( ' ', array_map( static fn ( array $package ): string => (string) ( $package['index'] ?? '' ), $packages ) );
+							if ( $available ) {
+								/* translators: %s: comma-separated managed package names. */
+								$description = sprintf( __( 'Used by: %s. The provider permissions for this credential have not been assessed.', 'ran-booster' ), implode( ', ', array_column( $packages, 'name' ) ) );
+							} elseif ( 'self_destruct' === ( $credential['reason'] ?? null ) ) {
+								$destroyOn = is_string( $credential['destroy_on'] ?? null ) ? $credential['destroy_on'] : '';
+								/* translators: %s: local automatic-removal date. */
+								$description = '' === $destroyOn ? __( 'Unavailable for transfer — Booster will automatically remove this saved credential.', 'ran-booster' ) : sprintf( __( 'Unavailable for transfer — Booster will automatically remove this saved credential on %s.', 'ran-booster' ), $destroyOn );
+							} else {
+								$description = 'configuration' === ( $credential['reason'] ?? null ) ? __( 'Unavailable for transfer — this credential is supplied by site configuration.', 'ran-booster' ) : __( 'Unavailable for transfer — this saved credential no longer exists.', 'ran-booster' );
+							}
+							?>
+							<li class="ran-booster-portability__credential-row" data-portability-export-credential-row data-portability-credential-packages="<?php echo esc_attr( $packageIndexes ); ?>">
+								<label for="<?php echo esc_attr( $controlId ); ?>">
+									<?php if ( $available ) : ?>
+										<input id="<?php echo esc_attr( $controlId ); ?>" type="checkbox" name="credentials[<?php echo esc_attr( $providerCode ); ?>][]" value="<?php echo esc_attr( (string) $credential['id'] ); ?>" data-portability-export-credential aria-describedby="<?php echo esc_attr( $reasonId ); ?>">
+									<?php else : ?>
+										<input id="<?php echo esc_attr( $controlId ); ?>" type="checkbox" disabled aria-describedby="<?php echo esc_attr( $reasonId ); ?>">
+									<?php endif; ?>
+									<strong><?php echo esc_html( $label ); ?></strong>
+									<?php
+									if ( '' !== $kindLabel ) :
+										?>
+										· <?php echo esc_html( $kindLabel ); ?><?php endif; ?>
+								</label>
+								<span class="description" id="<?php echo esc_attr( $reasonId ); ?>"><?php echo esc_html( $description ); ?></span>
+							</li>
+						<?php endforeach; ?>
+						</ul>
+					</fieldset>
+				<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+			<div id="ran-booster-portability-export-credential-details" class="ran-booster-portability__credential-details">
 				<div class="ran-booster-portability__password-fields">
 					<p class="ran-booster-portability__password-primary">
 						<label for="ran-booster-portability-export-password"><?php esc_html_e( 'Transporter Blueprint password', 'ran-booster' ); ?></label>
@@ -135,7 +203,8 @@ $renderPortabilityExtension   = static function ( string $hook, string $step ): 
 					<p class="description"><?php esc_html_e( 'Passwords are never stored by Booster. Keep yours safe; it is required to open this Transporter Blueprint.', 'ran-booster' ); ?></p>
 				</div>
 			</div>
-		</fieldset>
+		</section>
+		<p class="ran-booster-portability__export-summary" data-portability-export-summary data-package-singular="<?php esc_attr_e( '1 package', 'ran-booster' ); ?>" data-package-plural="<?php echo esc_attr( $portabilityPackagePlural ); ?>" data-credential-singular="<?php esc_attr_e( '1 selected repository credential profile', 'ran-booster' ); ?>" data-credential-plural="<?php echo esc_attr( $portabilityCredentialPlural ); ?>" data-protected-template="<?php echo esc_attr( $portabilityProtectedSummary ); ?>" data-package-only-template="<?php echo esc_attr( $portabilityPackageOnlySummary ); ?>" aria-live="polite"><?php echo esc_html( sprintf( $portabilityPackageOnlySummary, $portabilityInitialPackageCount ) ); ?></p>
 		<p><button type="submit" class="button button-primary" data-portability-export-submit<?php disabled( $portabilityExportUnavailable || array() === $portabilityExportRows ); ?>><?php esc_html_e( 'Download Transporter Blueprint', 'ran-booster' ); ?></button></p>
 		<div class="notice notice-error inline" data-portability-export-message role="alert" hidden><p data-portability-export-message-text></p></div>
 		</form>

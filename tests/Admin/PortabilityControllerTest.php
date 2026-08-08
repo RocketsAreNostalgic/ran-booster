@@ -145,6 +145,38 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertNull( $method->invoke( $this->controller() ) );
 	}
 
+	public function testExportParsesTheExactBoundedCredentialSelection(): void {
+		$expected             = array(
+			'gh' => array( 'classic-profile', 'fine_grained-profile' ),
+			'bb' => array( 'bitbucket-profile' ),
+		);
+		$_POST['credentials'] = $expected;
+
+		self::assertSame( $expected, $this->selectedCredentials() );
+		unset( $_POST['credentials'] );
+		self::assertSame( array(), $this->selectedCredentials() );
+	}
+
+	#[DataProvider( 'invalidCredentialSelections' )]
+	public function testExportRejectsMalformedCredentialSelections( mixed $selection ): void {
+		$_POST['credentials'] = $selection;
+		$this->expectException( InvalidArgumentException::class );
+		$this->selectedCredentials();
+	}
+
+	/** @return iterable<string, array{mixed}> */
+	public static function invalidCredentialSelections(): iterable {
+		yield 'scalar root' => array( 'gh' );
+		yield 'invalid provider' => array( array( 'GitHub' => array( 'valid-profile' ) ) );
+		yield 'scalar provider selection' => array( array( 'gh' => 'valid-profile' ) );
+		yield 'empty provider selection' => array( array( 'gh' => array() ) );
+		yield 'associative provider selection' => array( array( 'gh' => array( 'profile' => 'valid-profile' ) ) );
+		yield 'constant profile' => array( array( 'gh' => array( SecretsFile::CONSTANT_PROFILE ) ) );
+		yield 'malformed profile' => array( array( 'gh' => array( 'invalid profile' ) ) );
+		yield 'duplicate profile' => array( array( 'gh' => array( 'valid-profile', 'valid-profile' ) ) );
+		yield 'over bound' => array( array( 'gh' => array_map( static fn ( int $index ): string => 'profile_' . $index, range( 0, PackageBlueprint::MAX_CREDENTIALS ) ) ) );
+	}
+
 	public function testApplyFailureKeepsTheSafeStorageFailureMessage(): void {
 		try {
 			PackageMutationResult::conflict(
@@ -622,6 +654,13 @@ final class PortabilityControllerTest extends TestCase {
 	/** @return list<array{type:string,identifier:string}> */
 	private function selectedPackages(): array {
 		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selectedPackages' );
+
+		return $method->invoke( $this->controller() );
+	}
+
+	/** @return array<string, list<string>> */
+	private function selectedCredentials(): array {
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selectedCredentials' );
 
 		return $method->invoke( $this->controller() );
 	}

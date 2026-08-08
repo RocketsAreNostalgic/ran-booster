@@ -87,7 +87,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			'sentinel-portability-token'
 		);
 
-		$blueprint = $this->exporter( $sourceSecrets )->export( true );
+		$blueprint = $this->exporter( $sourceSecrets )->export( array( 'gh' => array( 'source-credential' ) ) );
 		$password  = 'correct-horse-battery-staple';
 		( new BlueprintArchive() )->writeTo( $this->archivePath, $blueprint, $password );
 		$imported = ( new BlueprintArchive() )->readFrom( $this->archivePath, $password );

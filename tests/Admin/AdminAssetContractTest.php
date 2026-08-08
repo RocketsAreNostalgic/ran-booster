@@ -293,7 +293,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'initPortabilityPreview();', $script );
 		self::assertStringContainsString( 'initPortabilityExportSelection();', $script );
 		self::assertStringContainsString( 'initPortabilityModeChooser();', $script );
-		self::assertStringContainsString( 'initPortabilityCredentialOption();', $script );
+		self::assertStringContainsString( 'initPortabilityExportSelection();', $script );
 		self::assertStringContainsString( '^#ran-booster-portability-([a-z0-9-]+)$', $script );
 		self::assertStringContainsString( 'selectMode(requestedMode);', $script );
 	}

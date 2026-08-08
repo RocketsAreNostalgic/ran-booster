@@ -54,7 +54,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		InMemorySiteKeyStore::reset( $this->targetPath );
 	}
 
-	public function testBlueprintV1ReencryptsImportedCredentialWithIndependentTargetKey(): void {
+	public function testBlueprintV1ReencryptsImportedCredentialAndRetainsItAfterALaterPackageFailure(): void {
 		$codec          = new EncryptedSecretsEnvelopeCodec();
 		$sourceKeyStore = new InMemorySiteKeyStore( $this->sourcePath );
 		$targetKeyStore = new InMemorySiteKeyStore( $this->targetPath );
@@ -130,6 +130,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			'sentinel-portability-token',
 			$targetSecrets->credentialMaterial( 'gh', $targetId )['secret']
 		);
+		self::assertSame( $targetId, $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0] );
 
 		$sourceKey = $sourceKeyStore->load();
 		$targetKey = $targetKeyStore->load();

@@ -202,6 +202,151 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
+	public function testItCurrentlyStripsSelfDestructLifecycleMetadataWhileExportingTheSecret(): void {
+		$plugin  = $this->package( 'plugin/lifecycle.php', 'lifecycle', 'lifecycle-repository-id', credentialId: 'lifecycle-profile-canary' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
+		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
+		try {
+			$secrets->saveCredential(
+				'gh',
+				'lifecycle-profile-canary',
+				array(
+					'label'         => 'Lifecycle characterization credential',
+					'kind'          => 'classic',
+					'configuration' => array(),
+					'self_destruct' => true,
+					'destroy_on'    => '2099-12-31',
+				),
+				'lifecycle-secret-canary'
+			);
+			$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/lifecycle.php' => $plugin ) );
+			$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+
+			$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export( true );
+
+			self::assertCount( 1, $blueprint->credentials );
+			self::assertSame( 'lifecycle-secret-canary', $blueprint->credentials[0]->secret );
+			self::assertSame(
+				array( 'provider', 'label', 'kind', 'configuration', 'secret', 'packages' ),
+				array_keys( $blueprint->credentials[0]->toArray() )
+			);
+			self::assertStringContainsString( 'lifecycle-secret-canary', $blueprint->canonicalJson() );
+			self::assertStringNotContainsString( 'lifecycle-profile-canary', $blueprint->canonicalJson() );
+			self::assertStringNotContainsString( 'self_destruct', $blueprint->canonicalJson() );
+			self::assertStringNotContainsString( 'destroy_on', $blueprint->canonicalJson() );
+			self::assertStringNotContainsString( '2099-12-31', $blueprint->canonicalJson() );
+		} finally {
+			foreach ( array( $path, $path . '.lock' ) as $file ) {
+				if ( is_file( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test cleanup removes only its unique temporary sidecar.
+					unlink( $file );
+				}
+			}
+		}
+	}
+
+	public function testIdenticalMaterialAcrossTwoSourceProfilesDeduplicatesBySelectedPackageAssociations(): void {
+		$plugin  = $this->package( 'plugin/profile-a.php', 'profile-a', 'profile-a-repository-id', credentialId: 'profile-a-canary' );
+		$theme   = $this->package( 'profile-b-theme', 'profile-b-theme', 'profile-b-repository-id', credentialId: 'profile-b-canary' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
+		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
+		try {
+			foreach ( array( 'profile-a-canary', 'profile-b-canary' ) as $profileId ) {
+				$secrets->saveCredential(
+					'gh',
+					$profileId,
+					array(
+						'label'         => 'Identical material characterization credential',
+						'kind'          => 'classic',
+						'configuration' => array(),
+					),
+					'identical-material-secret-canary'
+				);
+			}
+			$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/profile-a.php' => $plugin ) );
+			$themes->method( 'allDeploymentThemes' )->willReturn( array( 'profile-b-theme' => $theme ) );
+			$exporter = new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets );
+
+			$profileA = $exporter->export(
+				true,
+				array(
+					array(
+						'type'       => 'plugin',
+						'identifier' => 'plugin/profile-a.php',
+					),
+				)
+			);
+			$profileB = $exporter->export(
+				true,
+				array(
+					array(
+						'type'       => 'theme',
+						'identifier' => 'profile-b-theme',
+					),
+				)
+			);
+			$both     = $exporter->export( true );
+
+			self::assertCount( 1, $profileA->credentials );
+			self::assertCount( 1, $profileB->credentials );
+			self::assertCount( 1, $both->credentials );
+
+			$profileARecord = $profileA->credentials[0]->toArray();
+			$profileBRecord = $profileB->credentials[0]->toArray();
+			$bothRecord     = $both->credentials[0]->toArray();
+			self::assertSame(
+				array(
+					array(
+						'type'       => 'plugin',
+						'identifier' => 'plugin/profile-a.php',
+					),
+				),
+				$profileARecord['packages']
+			);
+			self::assertSame(
+				array(
+					array(
+						'type'       => 'theme',
+						'identifier' => 'profile-b-theme',
+					),
+				),
+				$profileBRecord['packages']
+			);
+			self::assertSame(
+				array(
+					array(
+						'type'       => 'plugin',
+						'identifier' => 'plugin/profile-a.php',
+					),
+					array(
+						'type'       => 'theme',
+						'identifier' => 'profile-b-theme',
+					),
+				),
+				$bothRecord['packages']
+			);
+
+			unset( $profileARecord['packages'], $profileBRecord['packages'], $bothRecord['packages'] );
+			self::assertSame( $profileARecord, $profileBRecord );
+			self::assertSame( $profileARecord, $bothRecord );
+			foreach ( array( $profileA, $profileB, $both ) as $blueprint ) {
+				self::assertStringNotContainsString( 'profile-a-canary', $blueprint->canonicalJson() );
+				self::assertStringNotContainsString( 'profile-b-canary', $blueprint->canonicalJson() );
+			}
+		} finally {
+			foreach ( array( $path, $path . '.lock' ) as $file ) {
+				if ( is_file( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test cleanup removes only its unique temporary sidecar.
+					unlink( $file );
+				}
+			}
+		}
+	}
+
 	public function testItExportsOnlyTheExactSelectedPackages(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id' );

@@ -58,6 +58,34 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( 'transferred', $source );
 	}
 
+	public function testTransferredMaterialIsAttemptedBeforeAnExplicitTargetCredentialWithoutPreviewPersistence(): void {
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
+		$secrets->saveCredential(
+			'gh',
+			'target-pat',
+			array(
+				'label'         => 'Target PAT',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			'sentinel-portability-token'
+		);
+		$before = (string) file_get_contents( $this->path );
+
+		$source = null;
+		$result = $verifier->verify( $this->installItem(), $this->credential(), 'target-pat', $source );
+
+		self::assertSame( TargetPackageAction::INSTALL, $result->action );
+		self::assertSame( TargetPackageReason::NONE, $result->reason );
+		self::assertSame( 'transferred', $source );
+		self::assertNotNull( $provider->temporaryCredentialId );
+		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
+		self::assertNotSame( 'target-pat', $provider->temporaryCredentialId );
+		self::assertNull( $secrets->credentialMaterial( 'gh', $provider->temporaryCredentialId ) );
+		self::assertSame( array( 'target-pat' ), array_keys( $secrets->credentialProfiles( 'gh' ) ) );
+		self::assertSame( $before, (string) file_get_contents( $this->path ) );
+	}
+
 	public function testItPreservesAnAssociatedCredentialForAPublicRepository(): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
 

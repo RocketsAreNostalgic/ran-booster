@@ -116,7 +116,7 @@ if ( $hasWebhookSettings ) {
 				<h2 id="ran-booster-webhook-modal-title" class="ran-booster-dialog__title">Add Push-to-Deploy secret</h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-webhook-profile-error" data-ran-booster-interaction-operation="core:save-webhook-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'save-webhook-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-webhook-profile-error" data-ran-booster-interaction-operation="core:save-webhook-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'save-webhook-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="save-webhook-profile">
 				<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
@@ -127,27 +127,31 @@ if ( $hasWebhookSettings ) {
 						<option value="<?php echo esc_attr( $scope['code'] ); ?>" data-requires-target="<?php echo $scope['requires_target'] ? '1' : '0'; ?>" data-target-label="<?php echo esc_attr( $scope['target_label'] ); ?>" data-target-placeholder="<?php echo esc_attr( $scope['target_placeholder'] ); ?>" data-description="<?php echo esc_attr( $scope['description'] ); ?>"><?php echo esc_html( $scope['label'] ); ?></option>
 					<?php } ?>
 				</select></label></p>
-				<p class="ran-booster-webhook-target-field" hidden><label><span class="ran-booster-webhook-target-label">Target</span> <input type="text" name="ran_booster[target]" class="regular-text" autocapitalize="none" spellcheck="false" data-owner-list="ran-booster-managed-webhook-owners" data-repository-list="ran-booster-managed-webhook-repositories"></label><span class="description ran-booster-webhook-target-help"></span></p>
-				<?php if ( ! empty( $managedRepositories['owners'] ) ) { ?>
-					<datalist id="ran-booster-managed-webhook-owners">
-						<?php foreach ( $managedRepositories['owners'] as $owner ) { ?>
-							<option value="<?php echo esc_attr( $owner ); ?>"><?php echo esc_html( $owner ); ?></option>
-						<?php } ?>
-					</datalist>
-				<?php } ?>
-				<?php if ( ! empty( $managedRepositories['repositories'] ) ) { ?>
-					<datalist id="ran-booster-managed-webhook-repositories">
-						<?php foreach ( $managedRepositories['repositories'] as $repository ) { ?>
-							<option value="<?php echo esc_attr( $repository['target'] ); ?>"><?php echo esc_html( $repository['target'] ); ?></option>
-						<?php } ?>
-					</datalist>
-				<?php } ?>
+				<p class="ran-booster-webhook-target-field" hidden>
+					<label><span class="ran-booster-webhook-target-label">Target</span>
+						<select name="ran_booster[target]" class="regular-text" data-webhook-target>
+							<optgroup label="<?php esc_attr_e( 'Managed owners', 'ran-booster' ); ?>" data-webhook-target-options="owner">
+								<option value="" disabled><?php echo esc_html( empty( $managedRepositories['owners'] ) ? __( 'No managed owners available', 'ran-booster' ) : __( 'Choose a managed owner', 'ran-booster' ) ); ?></option>
+								<?php foreach ( $managedRepositories['owners'] ?? array() as $owner ) { ?>
+									<option value="<?php echo esc_attr( $owner ); ?>"><?php echo esc_html( $owner ); ?></option>
+								<?php } ?>
+							</optgroup>
+							<optgroup label="<?php esc_attr_e( 'Managed repositories', 'ran-booster' ); ?>" data-webhook-target-options="repository">
+								<option value="" disabled><?php echo esc_html( empty( $managedRepositories['repositories'] ) ? __( 'No managed repositories available', 'ran-booster' ) : __( 'Choose a managed repository', 'ran-booster' ) ); ?></option>
+								<?php foreach ( $managedRepositories['repositories'] ?? array() as $repository ) { ?>
+									<option value="<?php echo esc_attr( $repository['target'] ); ?>"><?php echo esc_html( $repository['target'] ); ?></option>
+								<?php } ?>
+							</optgroup>
+						</select>
+					</label>
+					<span class="description ran-booster-webhook-target-help"></span>
+				</p>
 				<p class="ran-booster-portability__password-primary" data-webhook-secret-tools>
 					<label for="ran-booster-webhook-secret"><?php esc_html_e( 'Webhook secret', 'ran-booster' ); ?></label>
 					<span class="ran-booster-portability__password-control">
 						<span class="ran-booster-portability__password-input">
-							<input id="ran-booster-webhook-secret" type="password" name="ran_booster[secret]" class="ran-booster-secret-input" minlength="32" maxlength="512" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="<?php esc_attr_e( 'Long random secret', 'ran-booster' ); ?>" aria-describedby="ran-booster-webhook-secret-guidance" data-webhook-secret-input>
-							<button type="button" class="ran-booster-portability__password-visibility" data-webhook-secret-visibility data-show-label="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide secret', 'ran-booster' ); ?>" aria-controls="ran-booster-webhook-secret" aria-label="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" aria-pressed="false" title="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>"><span class="dashicons dashicons-visibility" data-webhook-secret-visibility-icon aria-hidden="true"></span></button>
+							<input id="ran-booster-webhook-secret" type="password" name="ran_booster[secret]" class="ran-booster-secret-input" minlength="32" maxlength="512" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" placeholder="<?php esc_attr_e( 'Long random secret', 'ran-booster' ); ?>" data-add-placeholder="<?php esc_attr_e( 'Long random secret', 'ran-booster' ); ?>" aria-describedby="ran-booster-webhook-secret-guidance" data-webhook-secret-input>
+							<button type="button" class="ran-booster-portability__password-visibility" data-webhook-secret-visibility data-show-label="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide secret', 'ran-booster' ); ?>" aria-controls="ran-booster-webhook-secret" aria-label="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" aria-pressed="false" title="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" hidden disabled><span class="dashicons dashicons-visibility" data-webhook-secret-visibility-icon aria-hidden="true"></span></button>
 						</span>
 						<span class="ran-booster-portability__password-actions">
 							<button type="button" class="button" data-webhook-secret-generate><?php esc_html_e( 'Generate secret', 'ran-booster' ); ?></button>
@@ -163,7 +167,7 @@ if ( $hasWebhookSettings ) {
 							</button>
 						</span>
 					</span>
-					<span id="ran-booster-webhook-secret-guidance" class="description ran-booster-secret-help ran-booster-portability__password-guidance"><strong><?php esc_html_e( 'Copy the secret before saving.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Paste the same value into the provider webhook. Booster will not show a saved secret again, and saving it here does not create or verify the remote webhook. On edit, leave blank to retain the saved secret.', 'ran-booster' ); ?></span>
+					<span id="ran-booster-webhook-secret-guidance" class="description ran-booster-secret-help ran-booster-portability__password-guidance"><strong><?php esc_html_e( 'Copy the secret before saving.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Paste the same value into the provider webhook. Booster will not reveal a saved secret again, and saving it here does not create or verify the remote webhook. On edit, leave the field unchanged to retain the saved secret.', 'ran-booster' ); ?></span>
 					<span class="ran-booster-portability__password-status" data-webhook-secret-status data-generated-message="<?php esc_attr_e( 'A secure 64-character webhook secret was generated.', 'ran-booster' ); ?>" data-copied-message="<?php esc_attr_e( 'Webhook secret copied to the clipboard.', 'ran-booster' ); ?>" data-generation-failed-message="<?php esc_attr_e( 'Booster could not generate a webhook secret securely in this browser. Enter one manually.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The webhook secret is selected; use your browser’s copy command.', 'ran-booster' ); ?>" role="status" aria-live="polite" aria-atomic="true"></span>
 				</p>
 				<div id="ran-booster-webhook-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>

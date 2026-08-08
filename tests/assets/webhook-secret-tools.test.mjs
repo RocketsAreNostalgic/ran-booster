@@ -102,6 +102,7 @@ function control(value = '') {
 function fixture({ clipboard, crypto, secretValue = '' } = {}) {
 	const secret = control(secretValue);
 	secret.type = 'password';
+	secret.dataset.addPlaceholder = 'Long random secret';
 	const visibility = control();
 	visibility.dataset = {
 		hideLabel: 'Hide secret',
@@ -193,6 +194,7 @@ const initWebhookSecretTools = loadFunction('initWebhookSecretTools', {
 	initGeneratedSecretTools,
 	webhookSecretToolResets,
 });
+const updateWebhookFields = loadFunction('updateWebhookFields');
 const initWebhookUrlCopy = loadFunction('initWebhookUrlCopy');
 
 function initialize(options) {
@@ -221,10 +223,14 @@ test('secure generation fills a 64-character webhook secret', () => {
 
 	try {
 		assert.equal(state.copy.disabled, true);
+		assert.equal(state.visibility.disabled, true);
+		assert.equal(state.visibility.hidden, true);
 
 		state.generate.listeners.get('click')();
 		assert.match(state.secret.value, /^[A-Za-z0-9_-]{64}$/);
 		assert.equal(state.copy.disabled, false);
+		assert.equal(state.visibility.disabled, false);
+		assert.equal(state.visibility.hidden, false);
 		assert.equal(state.status.textContent, 'Secret generated.');
 		assert.equal(
 			state.status.classList.contains('screen-reader-text'),
@@ -267,6 +273,8 @@ test('copy and submission match the server-normalized secret', async () => {
 		state.secret.value = '';
 		state.secret.listeners.get('input')();
 		assert.equal(state.copy.disabled, true);
+		assert.equal(state.visibility.disabled, true);
+		assert.equal(state.visibility.hidden, true);
 		assert.equal(state.status.textContent, '');
 		assert.equal(state.copy.getAttribute('aria-label'), 'Copy secret');
 		assert.equal(state.copyIcon.getAttribute('hidden'), null);
@@ -314,6 +322,8 @@ test('visibility and modal reset restore the masked empty state', () => {
 			true
 		);
 		assert.equal(state.copy.disabled, true);
+		assert.equal(state.visibility.disabled, true);
+		assert.equal(state.visibility.hidden, true);
 		assert.equal(state.copy.getAttribute('aria-label'), 'Copy secret');
 		assert.equal(state.copyIcon.getAttribute('hidden'), null);
 		assert.equal(state.copySuccessIcon.getAttribute('hidden'), '');
@@ -461,6 +471,105 @@ test('invalid or absent webhook-secret deep links do nothing', () => {
 	assert.equal(clicks, 0);
 });
 
+test('scope switches between the closed managed owner and repository choices', () => {
+	function option(value) {
+		return { parentElement: null, value };
+	}
+
+	function group(scope, options) {
+		const attributes = new Map();
+		const targetGroup = {
+			dataset: { webhookTargetOptions: scope },
+			disabled: false,
+			options,
+			querySelector(selector) {
+				return selector === 'option[value=""]' ? options[0] : null;
+			},
+			toggleAttribute(name, force) {
+				if (force) {
+					attributes.set(name, '');
+				} else {
+					attributes.delete(name);
+				}
+			},
+		};
+		options.forEach((choice) => {
+			choice.parentElement = targetGroup;
+		});
+
+		return targetGroup;
+	}
+
+	const ownerOptions = [option(''), option('managed-owner')];
+	const repositoryOptions = [option(''), option('managed-owner/repository')];
+	const ownerGroup = group('owner', ownerOptions);
+	const repositoryGroup = group('repository', repositoryOptions);
+	const target = control();
+	target.options = [...ownerOptions, ...repositoryOptions];
+	target.selectedIndex = 1;
+	target.querySelectorAll = function (selector) {
+		return selector === '[data-webhook-target-options]'
+			? [ownerGroup, repositoryGroup]
+			: [];
+	};
+	const label = control();
+	const help = control();
+	const field = control();
+	field.toggleAttribute = function (name, force) {
+		if (force) {
+			this.setAttribute(name, '');
+		} else {
+			this.removeAttribute(name);
+		}
+	};
+	field.querySelector = function (selector) {
+		return (
+			{
+				'[data-webhook-target]': target,
+				'.ran-booster-webhook-target-label': label,
+				'.ran-booster-webhook-target-help': help,
+			}[selector] || null
+		);
+	};
+	const ownerScope = control('owner');
+	ownerScope.setAttribute('data-requires-target', '1');
+	ownerScope.setAttribute('data-target-label', 'Owner');
+	ownerScope.setAttribute('data-description', 'Choose a managed owner.');
+	const repositoryScope = control('repository');
+	repositoryScope.setAttribute('data-requires-target', '1');
+	repositoryScope.setAttribute('data-target-label', 'Repository');
+	repositoryScope.setAttribute(
+		'data-description',
+		'Choose a managed repository.'
+	);
+	const scope = control();
+	scope.options = [ownerScope, repositoryScope];
+	scope.selectedIndex = 0;
+	const modal = {
+		querySelector(selector) {
+			return selector === '.ran-booster-webhook-scope' ? scope : field;
+		},
+	};
+
+	updateWebhookFields(modal);
+	assert.equal(target.selectedIndex, 1);
+	assert.equal(ownerGroup.disabled, false);
+	assert.equal(repositoryGroup.disabled, true);
+	assert.equal(label.textContent, 'Owner');
+
+	scope.selectedIndex = 1;
+	updateWebhookFields(modal);
+	assert.equal(target.selectedIndex, 2);
+	assert.equal(ownerGroup.disabled, true);
+	assert.equal(repositoryGroup.disabled, false);
+	assert.equal(label.textContent, 'Repository');
+	assert.equal(help.textContent, 'Choose a managed repository.');
+
+	target.selectedIndex = 3;
+	updateWebhookFields(modal);
+	assert.equal(target.selectedIndex, 3);
+});
+
 test('add and edit modal population clear stale generated secret state', () => {
 	const state = initialize({
 		crypto: {
@@ -496,6 +605,7 @@ test('add and edit modal population clear stale generated secret state', () => {
 					form: state.form,
 					'.ran-booster-dialog__title': title,
 					'.ran-booster-secret-input': state.secret,
+					'[data-webhook-secret-input]': state.secret,
 					'[data-webhook-secret-tools]': state.root,
 				}[selector] || null
 			);
@@ -520,7 +630,10 @@ test('add and edit modal population clear stale generated secret state', () => {
 		assert.equal(state.secret.value, '');
 		assert.equal(state.secret.type, 'password');
 		assert.equal(state.secret.required, true);
+		assert.equal(state.secret.dataset.saved, 'false');
+		assert.equal(state.secret.placeholder, 'Long random secret');
 		assert.equal(state.copy.disabled, true);
+		assert.equal(state.visibility.hidden, true);
 		assert.equal(title.textContent, 'Add Push-to-Deploy secret');
 
 		state.secret.value = 'stale-secret-value';
@@ -538,7 +651,10 @@ test('add and edit modal population clear stale generated secret state', () => {
 		assert.equal(state.secret.value, '');
 		assert.equal(state.secret.type, 'password');
 		assert.equal(state.secret.required, false);
+		assert.equal(state.secret.dataset.saved, 'true');
+		assert.equal(state.secret.placeholder, '••••••••••');
 		assert.equal(state.copy.disabled, true);
+		assert.equal(state.visibility.hidden, true);
 		assert.equal(title.textContent, 'Edit Push-to-Deploy secret');
 		assert.equal(webhookFieldUpdates, 2);
 	} finally {

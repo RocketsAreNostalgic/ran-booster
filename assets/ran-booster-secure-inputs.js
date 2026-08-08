@@ -511,6 +511,10 @@
 				) {
 					return;
 				}
+				function updateVisibilityState() {
+					visibility.disabled = secret.value === '';
+					visibility.hidden = secret.value === '';
+				}
 				const tools = initGeneratedSecretTools({
 					input: secret,
 					visibility,
@@ -521,11 +525,18 @@
 					copySuccessIcon,
 					status,
 					byteLength: 48,
+					onGenerate: updateVisibilityState,
+					onInput: updateVisibilityState,
 					normalizeValue(value) {
 						return value.trim();
 					},
 				});
-				webhookSecretToolResets.set(root, tools.reset);
+				function reset() {
+					tools.reset();
+					updateVisibilityState();
+				}
+				webhookSecretToolResets.set(root, reset);
+				reset();
 
 				const form = root.closest('form');
 				if (form) {
@@ -942,6 +953,13 @@
 			updateCredentialFields(modal);
 			updateCredentialSelfDestructFields(modal);
 		} else {
+			const secretInput = modal.querySelector(
+				'[data-webhook-secret-input]'
+			);
+			secretInput.dataset.saved = isEdit ? 'true' : 'false';
+			secretInput.placeholder = isEdit
+				? '••••••••••'
+				: secretInput.dataset.addPlaceholder || '';
 			form.elements['ran_booster[scope]'].value =
 				button.getAttribute('data-scope') || 'owner';
 			form.elements['ran_booster[target]'].value =
@@ -995,26 +1013,31 @@
 		const select = modal.querySelector('.ran-booster-webhook-scope');
 		const option = select.options[select.selectedIndex];
 		const field = modal.querySelector('.ran-booster-webhook-target-field');
-		const input = field.querySelector('input');
+		const target = field.querySelector('[data-webhook-target]');
 		const required = option.getAttribute('data-requires-target') === '1';
+		let activeOptions = null;
 
 		field.toggleAttribute('hidden', !required);
-		input.required = required;
-		input.disabled = !required;
-		input.placeholder =
-			option.getAttribute('data-target-placeholder') || '';
-		const repositoryList = input.getAttribute('data-repository-list') || '';
-		const ownerList = input.getAttribute('data-owner-list') || '';
-		if (required && option.value === 'owner' && ownerList) {
-			input.setAttribute('list', ownerList);
-		} else if (
-			required &&
-			option.value === 'repository' &&
-			repositoryList
-		) {
-			input.setAttribute('list', repositoryList);
-		} else {
-			input.removeAttribute('list');
+		target.required = required;
+		target.disabled = !required;
+		target
+			.querySelectorAll('[data-webhook-target-options]')
+			.forEach(function (group) {
+				const active =
+					group.dataset.webhookTargetOptions === option.value;
+				group.disabled = !active;
+				group.toggleAttribute('hidden', !active);
+				if (active) {
+					activeOptions = group;
+				}
+			});
+		const selected = target.options[target.selectedIndex];
+		if (required && selected?.parentElement !== activeOptions) {
+			const placeholder =
+				activeOptions?.querySelector('option[value=""]');
+			target.selectedIndex = placeholder
+				? Array.from(target.options).indexOf(placeholder)
+				: -1;
 		}
 		field.querySelector('.ran-booster-webhook-target-label').textContent =
 			option.getAttribute('data-target-label') || 'Target';

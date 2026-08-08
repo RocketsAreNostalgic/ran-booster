@@ -681,6 +681,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$webhook_profiles                     = array();
 		$managed_webhook_repositories         = array(
 			'available'    => true,
+			'owners'       => array( 'owner' ),
 			'repositories' => array(
 				array(
 					'target'               => 'owner/example',
@@ -793,8 +794,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Push-to-Deploy disabled; pushes are ignored.', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--warning">No secret</span>', $html );
 		self::assertStringNotContainsString( '>1 managed package</span>', $html );
-		self::assertStringContainsString( 'data-repository-list="ran-booster-managed-webhook-repositories"', $html );
-		self::assertStringContainsString( '<datalist id="ran-booster-managed-webhook-repositories">', $html );
+		self::assertStringContainsString( 'data-webhook-target-options="owner"', $html );
+		self::assertStringContainsString( 'data-webhook-target-options="repository"', $html );
+		self::assertStringContainsString( '<option value="owner">owner</option>', $html );
+		self::assertStringContainsString( '<option value="owner/example">owner/example</option>', $html );
 		self::assertStringContainsString( 'tab=gh&amp;assisted_repository=repo-42', $html );
 		self::assertStringContainsString( 'class="button" href=', $html );
 		self::assertStringContainsString( 'Assisted Hooks', $html );

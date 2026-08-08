@@ -292,7 +292,7 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertStringContainsString( 'class="ran-booster-credential-modal__form" autocomplete="off"', $modals );
 		self::assertStringContainsString( 'id="ran-booster-access-secret" type="password"', $modals );
-		self::assertStringContainsString( 'autocomplete="off" autocapitalize="none" spellcheck="false"', $modals );
+		self::assertStringContainsString( 'autocomplete="one-time-code" autocapitalize="none" spellcheck="false"', $modals );
 		self::assertStringContainsString( 'A token is already saved. Leave this field unchanged to keep it, or enter a replacement.', $modals );
 		self::assertStringContainsString( 'data-access-secret-visibility', $modals );
 		self::assertStringContainsString( 'aria-describedby="ran-booster-access-secret-help"', $modals );
@@ -326,6 +326,30 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "'Classic PAT'", $github );
 		self::assertStringContainsString( "'Fine-grained PAT'", $github );
 		self::assertStringContainsString( "\$kind['short_label'] ?? \$kind['label']", $modals );
+	}
+
+	public function testWebhookSecretFieldKeepsManagedSuggestionsAndSavedStateSeparateFromBrowserAutofill(): void {
+		$modals = $this->view( 'provider/modals.php' );
+		$script = $this->asset( 'ran-booster-secure-inputs.js' );
+
+		self::assertStringContainsString( 'data-credential-modal="webhook"', $modals );
+		self::assertStringContainsString( 'class="ran-booster-credential-modal__form" autocomplete="off"', substr( $modals, (int) strpos( $modals, 'data-credential-modal="webhook"' ) ) );
+		self::assertStringContainsString( 'name="ran_booster[target]" class="regular-text" data-webhook-target', $modals );
+		self::assertStringContainsString( 'data-webhook-target-options="owner"', $modals );
+		self::assertStringContainsString( 'data-webhook-target-options="repository"', $modals );
+		self::assertStringContainsString( 'No managed owners available', $modals );
+		self::assertStringContainsString( 'No managed repositories available', $modals );
+		self::assertStringNotContainsString( '<datalist', $modals );
+		self::assertStringContainsString( 'id="ran-booster-webhook-secret" type="password"', $modals );
+		self::assertStringContainsString( 'autocomplete="off" autocapitalize="none" spellcheck="false"', $modals );
+		self::assertStringContainsString( "data-add-placeholder=\"<?php esc_attr_e( 'Long random secret'", $modals );
+		self::assertStringContainsString( 'data-webhook-secret-visibility', $modals );
+		self::assertStringContainsString( 'hidden disabled><span class="dashicons dashicons-visibility" data-webhook-secret-visibility-icon', $modals );
+		self::assertStringNotContainsString( 'value="••••', $modals );
+		self::assertStringContainsString( 'Booster will not reveal a saved secret again', $modals );
+		self::assertStringContainsString( "secretInput.dataset.saved = isEdit ? 'true' : 'false';", $script );
+		self::assertStringContainsString( "? '••••••••••'", $script );
+		self::assertStringContainsString( "visibility.hidden = secret.value === '';", $script );
 	}
 
 	public function testPortabilityApplyResultsUseWordPressNoticeStates(): void {

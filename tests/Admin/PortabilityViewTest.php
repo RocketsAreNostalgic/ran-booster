@@ -224,24 +224,16 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'No change', $html );
 		self::assertStringContainsString( 'Leave unchanged', $html );
 		self::assertStringContainsString( 'Cannot apply', $html );
-		self::assertStringContainsString( 'class="ran-booster-portability__reconciliation-row"', $html );
+		self::assertStringNotContainsString( 'class="ran-booster-portability__reconciliation-row"', $html );
 		self::assertStringContainsString( 'data-portability-row="0" data-portability-action="install"', $html );
 		self::assertStringContainsString( 'data-portability-package-name="Install me"', $html );
 		self::assertStringContainsString( 'data-portability-package-type="Plugin"', $html );
 		self::assertStringContainsString( 'data-portability-package-identifier="plugin/install.php"', $html );
 		self::assertStringContainsString( 'data-portability-package-name="&lt;Private &amp; Forms&gt;"', $html );
 		self::assertStringContainsString( 'data-portability-package-identifier="private/&lt;forms&gt;.php"', $html );
-		self::assertStringContainsString( 'class="notice notice-warning inline"', $html );
-		self::assertStringContainsString( 'for="ran-booster-portability-target-credential-4"', $html );
-		self::assertStringContainsString( 'id="ran-booster-portability-target-credential-4"', $html );
-		self::assertStringContainsString( 'reviews the Transporter Blueprint again automatically', $html );
-		self::assertStringNotContainsString( 'Review Transporter Blueprint again', $html );
-		self::assertStringContainsString( 'value="classic-pat"', $html );
-		self::assertStringContainsString( 'GitHub &lt;Classic PAT&gt;', $html );
 		self::assertStringContainsString( '&lt;Private &amp; Forms&gt;', $html );
 		self::assertStringContainsString( 'private/&lt;forms&gt;.php', $html );
 		self::assertStringContainsString( 'Repository &lt;access&gt; required', $html );
-		self::assertStringContainsString( 'page=ran-booster&amp;tab=gh', $html );
 		self::assertStringNotContainsString( 'view-secret-canary', $html );
 		self::assertStringNotContainsString( 'choice-secret-canary', $html );
 		self::assertStringNotContainsString( 'credential-secret-canary', $html );
@@ -264,18 +256,44 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-portability-export-submit disabled="disabled"', $credentialUnavailable );
 	}
 
-	public function testBlockedRowWithoutChoicesDirectsTheUserToCredentialSettings(): void {
-		$row               = $this->row( 'Private package', 'private/package.php', 'blocked', 'Credential required' );
-		$row['credential'] = array(
-			'choices'      => array(),
-			'settings_url' => 'https://example.test/settings',
+	public function testCredentialReviewRequiresOneExplicitSafeDecision(): void {
+		$row                       = $this->row( 'Private package', 'private/package.php', 'blocked', 'Credential required' );
+		$row['credential_ordinal'] = 0;
+		$html                      = $this->renderView(
+			array( $row ),
+			credentialRows: array(
+				array(
+					'ordinal'        => 0,
+					'provider_label' => 'GitHub <Cloud>',
+					'label'          => 'Imported <PAT>',
+					'kind'           => 'classic',
+					'packages'       => array(
+						array(
+							'name' => 'Private package',
+							'type' => 'Plugin',
+						),
+					),
+					'action'         => null,
+					'target_id'      => null,
+					'target_choices' => array(),
+					'settings_url'   => 'https://example.test/settings',
+					'secret'         => 'view-secret-canary',
+					'configuration'  => 'configuration-canary',
+				),
+			)
 		);
 
-		$html = $this->renderView( array( $row ) );
-
-		self::assertStringContainsString( 'No saved target credentials are available for this provider.', $html );
+		self::assertStringContainsString( 'No saved credentials are available for this provider.', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
-		self::assertStringNotContainsString( '<select', $html );
+		self::assertSame( 3, substr_count( $html, 'name="credential_decisions[0][action]"' ) );
+		self::assertStringContainsString( 'value="import"', $html );
+		self::assertStringContainsString( 'value="target"', $html );
+		self::assertStringContainsString( 'value="leave"', $html );
+		self::assertStringNotContainsString( 'value="import" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
+		self::assertStringNotContainsString( 'value="target" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
+		self::assertStringNotContainsString( 'value="leave" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
+		self::assertStringNotContainsString( 'view-secret-canary', $html );
+		self::assertStringNotContainsString( 'configuration-canary', $html );
 	}
 
 	public function testReviewRendersTheCompleteBoundedBlueprint(): void {
@@ -361,9 +379,11 @@ final class PortabilityViewTest extends TestCase {
 		?array $exportRows = null,
 		bool $exportUnavailable = false,
 		array $exportCredentialGroups = array(),
-		bool $exportCredentialsUnavailable = false
+		bool $exportCredentialsUnavailable = false,
+		array $credentialRows = array()
 	): string {
 		$portabilityReviewRows                   = $rows;
+		$portabilityCredentialRows               = $credentialRows;
 		$portabilityExportRows                   = $exportRows ?? array(
 			array(
 				'name'       => 'Example <Plugin>',

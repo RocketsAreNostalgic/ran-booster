@@ -9,6 +9,7 @@ namespace Tests\Portability;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use RAN\Portability\BlueprintCredential;
+use RAN\Portability\BlueprintCredentialAction;
 use RAN\Portability\BlueprintPackage;
 use RAN\Portability\BlueprintPlanItem;
 use RAN\Portability\BlueprintRepositoryVerifier;
@@ -45,8 +46,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	public function testItRetriesOnlyAnAccessFailureWithATemporaryCredential(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
 
-		$source = null;
-		$result = $verifier->verify( $this->installItem(), $this->credential(), null, $source );
+		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( TargetPackageReason::NONE, $result->reason );
@@ -55,7 +55,6 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertNull( $secrets->credentialMaterial( 'gh', $provider->temporaryCredentialId ) );
 		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
 		self::assertFileDoesNotExist( $this->path );
-		self::assertSame( 'transferred', $source );
 	}
 
 	public function testTransferredMaterialIsAttemptedBeforeAnExplicitTargetCredentialWithoutPreviewPersistence(): void {
@@ -72,12 +71,10 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		);
 		$before = (string) file_get_contents( $this->path );
 
-		$source = null;
-		$result = $verifier->verify( $this->installItem(), $this->credential(), 'target-pat', $source );
+		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT, 'target-pat' );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( TargetPackageReason::NONE, $result->reason );
-		self::assertSame( 'transferred', $source );
 		self::assertNotNull( $provider->temporaryCredentialId );
 		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
 		self::assertNotSame( 'target-pat', $provider->temporaryCredentialId );
@@ -89,41 +86,35 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	public function testItPreservesAnAssociatedCredentialForAPublicRepository(): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
 
-		$source            = null;
 		$repositoryPrivate = null;
-		$result            = $verifier->verify( $this->installItem(), $this->credential(), null, $source, $repositoryPrivate );
+		$result            = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT, null, $repositoryPrivate );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
 		self::assertNotNull( $provider->temporaryCredentialId );
-		self::assertSame( 'transferred', $source );
 		self::assertFalse( $repositoryPrivate );
 	}
 
 	public function testItLeavesAPackageOnlyPublicRepositoryAnonymous(): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
 
-		$source            = null;
 		$repositoryPrivate = null;
-		$result            = $verifier->verify( $this->installItem(), null, null, $source, $repositoryPrivate );
+		$result            = $verifier->verify( $this->installItem(), null, null, null, $repositoryPrivate );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( null ), $provider->credentialIds );
-		self::assertNull( $source );
 		self::assertFalse( $repositoryPrivate );
 	}
 
 	public function testItDoesNotSilentlyDropAnInvalidTransferredCredential(): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
 
-		$source = null;
-		$result = $verifier->verify( $this->installItem(), $this->credential( 'example/example.php', 'expired-token' ), null, $source );
+		$result = $verifier->verify( $this->installItem(), $this->credential( 'example/example.php', 'expired-token' ), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
 		self::assertCount( 1, $provider->credentialIds );
 		self::assertNotNull( $provider->credentialIds[0] );
-		self::assertNull( $source );
 	}
 
 	public function testItDoesNotResolveManagedOrProtectedRows(): void {
@@ -146,11 +137,11 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	public function testItDoesNotUseACredentialBoundToAnotherPackage(): void {
 		[$verifier, $provider] = $this->verifier( 404, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential( 'other/other.php' ) );
+		$result = $verifier->verify( $this->installItem(), $this->credential( 'other/other.php' ), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
-		self::assertSame( array( null ), $provider->credentialIds );
+		self::assertSame( array(), $provider->credentialIds );
 	}
 
 	public function testItUsesAnExplicitExistingTargetCredentialAfterAnonymousAccessFails(): void {
@@ -166,23 +157,19 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			'sentinel-portability-token'
 		);
 
-		$source = null;
-		$result = $verifier->verify( $this->installItem(), null, 'target-pat', $source );
+		$result = $verifier->verify( $this->installItem(), null, null, 'target-pat' );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( 'target-pat' ), $provider->credentialIds );
-		self::assertSame( 'target', $source );
 	}
 
 	public function testItRetriesAnAnonymousRateLimitWithATransferredCredential(): void {
 		[$verifier, $provider] = $this->verifier( 429, 'repository-id' );
 
-		$source = null;
-		$result = $verifier->verify( $this->installItem(), $this->credential(), null, $source );
+		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
-		self::assertSame( 'transferred', $source );
 	}
 
 	public function testItOffersSavedTargetCredentialsWhenAnonymousQuotaIsExhausted(): void {
@@ -228,10 +215,21 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	public function testItBlocksAStableRepositoryIdentityMismatch(): void {
 		[$verifier] = $this->verifier( 0, 'different-repository-id' );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential() );
+		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH, $result->reason );
+	}
+
+	public function testCredentialBearingRowsRequireAnExplicitDecisionWithoutAnyProviderAttempt(): void {
+		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
+
+		$unresolved = $verifier->verify( $this->installItem(), $this->credential() );
+		$leave      = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::LEAVE );
+
+		self::assertSame( TargetPackageAction::BLOCKED, $unresolved->action );
+		self::assertSame( TargetPackageAction::BLOCKED, $leave->action );
+		self::assertSame( array(), $provider->credentialIds );
 	}
 
 	/** @return array{BlueprintRepositoryVerifier, TemporaryCredentialProvider, SecretsFile} */

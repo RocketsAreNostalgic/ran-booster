@@ -57,6 +57,7 @@ The main runtime types are:
 - `RAN\Portability\PackageBlueprint`
 - `RAN\Portability\BlueprintPackage`
 - `RAN\Portability\BlueprintCredential`
+- `RAN\Portability\BlueprintCredentialAction`
 - `RAN\Portability\BlueprintArchive`
 - `RAN\Portability\BlueprintReviewer`
 - `RAN\Portability\BlueprintRepositoryVerifier`
@@ -127,13 +128,22 @@ state something inconsistent, such as `install` with a conflict reason.
 provider using `ProviderRegistry` and the provider's `resolveRepository()`
 method.
 
-For install and adopt rows, an explicitly associated credential carried by the
-encrypted blueprint, or a target credential selected by the operator, is
-verified against the exact repository first. This preserves intentional
-authenticated access for public repositories as well as private access. A
-package with no credential intent is resolved anonymously. Preview never writes
-a temporary transferred credential to the sidecar; it is persisted only when
-its package is applied.
+Every credential carried by an encrypted Blueprint requires one request-local
+choice: import the transferred credential, use one current file-backed target
+credential for the same provider, or leave every affected package unchanged.
+There is no default and no fallback between transferred, target, and anonymous
+access. The selected source is verified against the exact repository, including
+for a public repository. A package with no carried credential retains the
+package-only target or anonymous verification path.
+
+Preview never writes transferred material to the sidecar. Apply reparses the
+Blueprint and decision, checks package capability and adoption consent, repeats
+the exact selected verification, and persists transferred material only for a
+selected actionable package. The imported profile uses a deterministic identity,
+so retries make the transferred credential available without overwriting or
+claiming whether it was newly created. Credential availability and the later
+package operation are reported as separate outcomes; a package failure does not
+imply that already-persisted transferred material was removed.
 
 The verifier returns the same plan item when the provider repository identity
 matches the blueprint and carries forward the provider-reported public/private

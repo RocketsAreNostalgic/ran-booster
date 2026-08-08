@@ -236,6 +236,7 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 		<section class="ran-booster-portability__apply" aria-labelledby="ran-booster-portability-apply-heading">
 			<h4 id="ran-booster-portability-apply-heading"><?php esc_html_e( 'Apply selected package changes', 'ran-booster' ); ?></h4>
 			<p><?php esc_html_e( 'Managed, blocked, protected and unchecked rows remain unchanged. Eligible selected packages are applied independently.', 'ran-booster' ); ?></p>
+			<p data-portability-apply-summary aria-live="polite"><?php esc_html_e( 'No package changes selected.', 'ran-booster' ); ?></p>
 			<p><button type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply data-idle-label="<?php esc_attr_e( 'Apply selected changes', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Applying…', 'ran-booster' ); ?>" disabled><span data-portability-apply-label><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></span></button></p>
 			<div data-portability-apply-results aria-live="polite"></div>
 		</section>

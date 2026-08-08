@@ -80,21 +80,31 @@ final readonly class BlueprintRepositoryVerifier {
 	public function verify(
 		BlueprintPlanItem $item,
 		?BlueprintCredential $credential = null,
+		?BlueprintCredentialAction $credentialAction = null,
 		?string $targetCredentialId = null,
-		?string &$credentialSource = null,
 		?bool &$repositoryPrivate = null
 	): BlueprintPlanItem {
-		$credentialSource    = null;
-		$repositoryPrivate   = null;
-		$credentialAttempted = false;
+		$repositoryPrivate = null;
 		if ( ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) {
 			return $item;
 		}
 
-		if ( $this->canTransfer( $item, $credential ) ) {
-			$credentialAttempted = true;
+		if ( null !== $credential ) {
+			if ( BlueprintCredentialAction::IMPORT !== $credentialAction || ! $this->canTransfer( $item, $credential ) ) {
+				if ( BlueprintCredentialAction::TARGET !== $credentialAction
+					|| ! $this->hasTargetCredential( $item->package->provider, $targetCredentialId ) ) {
+					return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
+				}
+
+				try {
+					return $this->verifiedItem( $item, $targetCredentialId, $repositoryPrivate );
+				} catch ( Throwable $failure ) {
+					return $this->blockedItem( $item, $failure );
+				}
+			}
+
 			try {
-				$verified = $this->secrets->withTemporaryCredential(
+				return $this->secrets->withTemporaryCredential(
 					$credential->provider,
 					array(
 						'label'         => $credential->label,
@@ -106,34 +116,19 @@ final readonly class BlueprintRepositoryVerifier {
 						return $this->verifiedItem( $item, $credentialId, $repositoryPrivate );
 					}
 				);
-				if ( $verified === $item ) {
-					$credentialSource = 'transferred';
-				}
-
-				return $verified;
 			} catch ( Throwable $failure ) {
-				if ( ! $this->requiresCredential( $failure ) ) {
-					return $this->blockedItem( $item, $failure );
-				}
+				return $this->requiresCredential( $failure )
+					? new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED )
+					: $this->blockedItem( $item, $failure );
 			}
 		}
 
 		if ( $this->hasTargetCredential( $item->package->provider, $targetCredentialId ) ) {
-			$credentialAttempted = true;
 			try {
-				$verified = $this->verifiedItem( $item, $targetCredentialId, $repositoryPrivate );
-				if ( $verified === $item ) {
-					$credentialSource = 'target';
-				}
-
-				return $verified;
+				return $this->verifiedItem( $item, $targetCredentialId, $repositoryPrivate );
 			} catch ( Throwable $failure ) {
 				return $this->blockedItem( $item, $failure );
 			}
-		}
-
-		if ( $credentialAttempted ) {
-			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
 		}
 
 		try {

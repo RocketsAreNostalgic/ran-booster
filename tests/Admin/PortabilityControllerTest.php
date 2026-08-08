@@ -17,6 +17,7 @@ use RAN\PackageSource;
 use RAN\Plugin;
 use RAN\Portability\BlueprintArchive;
 use RAN\Portability\BlueprintCredential;
+use RAN\Portability\BlueprintCredentialAction;
 use RAN\Portability\BlueprintExportPackageFailure;
 use RAN\Portability\BlueprintPackage;
 use RAN\Portability\BlueprintPlanItem;
@@ -145,6 +146,90 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertNull( $method->invoke( $this->controller() ) );
 	}
 
+	public function testCredentialDecisionParserAcceptsOnlyTheClosedOrdinalShape(): void {
+		$blueprint                     = $this->credentialBlueprint();
+		$_POST['credential_decisions'] = array(
+			'0' => array(
+				'action'    => 'target',
+				'target_id' => 'saved-profile',
+			),
+		);
+		$method                        = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credentialDecisions' );
+
+		self::assertSame(
+			array(
+				0 => array(
+					'action'    => BlueprintCredentialAction::TARGET,
+					'target_id' => 'saved-profile',
+				),
+			),
+			$method->invoke( $this->controller(), $blueprint )
+		);
+	}
+
+	#[DataProvider( 'invalidCredentialDecisions' )]
+	public function testCredentialDecisionParserRejectsAmbiguousOrMalformedInput( mixed $input ): void {
+		$_POST['credential_decisions'] = $input;
+		$method                        = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credentialDecisions' );
+
+		$this->expectException( InvalidArgumentException::class );
+		$method->invoke( $this->controller(), $this->credentialBlueprint() );
+	}
+
+	/** @return iterable<string, array{mixed}> */
+	public static function invalidCredentialDecisions(): iterable {
+		yield 'scalar root' => array( 'import' );
+		yield 'unknown ordinal' => array( array( 1 => array( 'action' => 'import' ) ) );
+		yield 'non-canonical ordinal' => array( array( '00' => array( 'action' => 'import' ) ) );
+		yield 'unknown action' => array( array( 0 => array( 'action' => 'automatic' ) ) );
+		yield 'extra key' => array(
+			array(
+				0 => array(
+					'action'   => 'import',
+					'fallback' => 'target',
+				),
+			),
+		);
+		yield 'target missing id' => array( array( 0 => array( 'action' => 'target' ) ) );
+		yield 'import with target id' => array(
+			array(
+				0 => array(
+					'action'    => 'import',
+					'target_id' => 'saved-profile',
+				),
+			),
+		);
+		yield 'constant target' => array(
+			array(
+				0 => array(
+					'action'    => 'target',
+					'target_id' => SecretsFile::CONSTANT_PROFILE,
+				),
+			),
+		);
+	}
+
+	public function testMissingCredentialDecisionLeavesApplyUnchangedWithoutStorageOrProviderWork(): void {
+		$secrets                = new PortabilityReadinessSpySecretsFile( false );
+		$file                   = $this->blueprintArchive( $this->credentialBlueprint(), 'correct-horse-battery-staple' );
+		$_POST['row']           = '0';
+		$_POST['review_action'] = 'install';
+		$_POST['password']      = 'correct-horse-battery-staple';
+		$this->setUploadedBlueprint( $file );
+
+		try {
+			$result = $this->previewController( $secrets )->handleApply();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
+			unlink( $file );
+		}
+
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'skipped', $result['data']['status'] );
+		self::assertSame( 'none', $result['data']['credential_state'] );
+		self::assertSame( 0, $secrets->readinessChecks );
+	}
+
 	public function testExportParsesTheExactBoundedCredentialSelection(): void {
 		$expected             = array(
 			'gh' => array( 'classic-profile', 'fine_grained-profile' ),
@@ -262,8 +347,10 @@ final class PortabilityControllerTest extends TestCase {
 			unlink( $file );
 		}
 
-		self::assertSame( 1, $secrets->readinessChecks );
-		self::assertStringContainsString( 'Target encrypted credential storage is unavailable.', $html );
+		self::assertSame( 0, $secrets->readinessChecks );
+		self::assertStringContainsString( 'Repository credentials', $html );
+		self::assertStringContainsString( 'name="credential_decisions[0][action]" value="import"', $html );
+		self::assertStringNotContainsString( 'value="import" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
 		self::assertStringNotContainsString( 'sentinel-portability-token', $html );
 	}
 
@@ -277,8 +364,9 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'status'  => 'unchanged',
-				'message' => 'This package is already managed.',
+				'status'           => 'unchanged',
+				'message'          => 'This package is already managed.',
+				'credential_state' => 'none',
 			),
 			$result
 		);
@@ -600,6 +688,29 @@ final class PortabilityControllerTest extends TestCase {
 			'owner/repository',
 			'main',
 			null
+		);
+	}
+
+	private function credentialBlueprint(): PackageBlueprint {
+		$package = $this->blueprintPackage();
+
+		return new PackageBlueprint(
+			array( $package ),
+			array(
+				new BlueprintCredential(
+					'gh',
+					'Imported credential',
+					'classic',
+					array(),
+					'sentinel-portability-token',
+					array(
+						array(
+							'type'       => $package->type,
+							'identifier' => $package->identifier,
+						),
+					)
+				),
+			)
 		);
 	}
 

@@ -340,6 +340,9 @@
 		const results = root
 			? root.querySelector('[data-portability-apply-results]')
 			: null;
+		const applySummary = root
+			? root.querySelector('[data-portability-apply-summary]')
+			: null;
 
 		if (!root || !form || !review || !message || !settings?.ajaxUrl) {
 			return;
@@ -348,6 +351,8 @@
 		const file = form.querySelector('input[type="file"]');
 		const emptyReview = review.innerHTML;
 		const selections = new Map();
+		const decisions = new Map();
+		let previewGeneration = 0;
 		const previewIdleLabel = previewLabel?.textContent || '';
 		const applyIdleLabel = applyLabel?.textContent || '';
 
@@ -404,7 +409,20 @@
 			}
 		}
 
-		function appendTargetCredentials(data) {
+		function appendCredentialDecisions(data) {
+			decisions.forEach(function (decision, ordinal) {
+				data.append(
+					'credential_decisions[' + ordinal + '][action]',
+					decision.action
+				);
+				if (decision.action === 'target' && decision.targetId) {
+					data.append(
+						'credential_decisions[' + ordinal + '][target_id]',
+						decision.targetId
+					);
+				}
+			});
+
 			root.querySelectorAll(
 				'[data-portability-target-credential]'
 			).forEach(function (select) {
@@ -462,6 +480,46 @@
 			if (apply) {
 				apply.disabled = selected === 0;
 			}
+			if (applySummary) {
+				const selectedRowElements = choices
+					.filter(function (choice) {
+						return choice.checked;
+					})
+					.map(function (choice) {
+						return choice.closest('[data-portability-row]');
+					});
+				const imports = new Set();
+				const targets = new Set();
+				selectedRowElements.forEach(function (row) {
+					const ordinal = row?.getAttribute(
+						'data-portability-credential-ordinal'
+					);
+					const action =
+						ordinal === null
+							? null
+							: decisions.get(ordinal)?.action;
+					if (action === 'import') {
+						imports.add(ordinal);
+					} else if (action === 'target') {
+						targets.add(ordinal);
+					}
+				});
+				applySummary.textContent = selected
+					? 'Apply ' +
+						selected +
+						' package change' +
+						(selected === 1 ? '' : 's') +
+						', import ' +
+						imports.size +
+						' repository credential' +
+						(imports.size === 1 ? '' : 's') +
+						' and use ' +
+						targets.size +
+						' saved credential' +
+						(targets.size === 1 ? '' : 's') +
+						'. Deployment will remain Disabled. Credential permissions have not been assessed.'
+					: 'No package changes selected.';
+			}
 		}
 
 		function restoreSelections() {
@@ -500,6 +558,8 @@
 			}
 			const item = rendered?.item || document.createElement('div');
 			const text = rendered?.text || document.createElement('p');
+			const credentialText =
+				rendered?.credentialText || document.createElement('p');
 			const type =
 				row?.getAttribute('data-portability-package-type') || 'Package';
 			const name =
@@ -519,19 +579,39 @@
 				'notice inline notice-' +
 				resultType +
 				' ran-booster-portability__apply-result';
+			const credentialMessages = {
+				transferred_available:
+					'Transferred credential is available on this site.',
+				target_selected:
+					'Selected saved credential was verified for this repository.',
+				unavailable:
+					'Repository credential was not made available on this site.',
+			};
+			credentialText.textContent =
+				credentialMessages[result.credential_state] || '';
+			credentialText.hidden = !credentialText.textContent;
 			text.textContent = label + ' — ' + resultMessage;
 			if (!rendered) {
 				item.appendChild(text);
+				if (credentialText.textContent) {
+					item.appendChild(credentialText);
+				}
 				results.appendChild(item);
+			} else if (
+				credentialText.textContent &&
+				!credentialText.parentNode
+			) {
+				item.appendChild(credentialText);
 			}
 
-			return { item, text };
+			return { item, text, credentialText };
 		}
 
 		async function preview(
 			clearResults = true,
 			showButtonBusy = true,
-			announceCompletion = false
+			announceCompletion = false,
+			focus = null
 		) {
 			if (!file?.files?.length) {
 				return;
@@ -539,7 +619,8 @@
 
 			rememberSelections();
 			const data = new FormData(form);
-			appendTargetCredentials(data);
+			appendCredentialDecisions(data);
+			const generation = ++previewGeneration;
 			if (showButtonBusy) {
 				setPreviewBusy(true);
 			}
@@ -553,6 +634,9 @@
 					credentials: 'same-origin',
 				});
 				const payload = await response.json();
+				if (generation !== previewGeneration) {
+					return;
+				}
 				if (
 					!payload?.success ||
 					typeof payload.data?.html !== 'string'
@@ -564,6 +648,23 @@
 				}
 				review.innerHTML = payload.data.html;
 				restoreSelections();
+				if (focus) {
+					const group = review.querySelector(
+						'[data-portability-credential-ordinal="' +
+							focus.ordinal +
+							'"]'
+					);
+					const control = focus.target
+						? group?.querySelector(
+								'[data-portability-credential-target]'
+							)
+						: group?.querySelector(
+								'[data-portability-credential-action][value="' +
+									focus.action +
+									'"]'
+							);
+					control?.focus();
+				}
 				showMessage('', 'info');
 				if (announceCompletion) {
 					announceSuccess('Transporter Blueprint reviewed.');
@@ -576,7 +677,7 @@
 					'error'
 				);
 			} finally {
-				if (showButtonBusy) {
+				if (showButtonBusy && generation === previewGeneration) {
 					setPreviewBusy(false);
 				}
 			}
@@ -589,6 +690,7 @@
 		form.addEventListener('change', function (event) {
 			if (event.target === file) {
 				selections.clear();
+				decisions.clear();
 				resetReview();
 				showMessage('', 'info');
 			}
@@ -596,11 +698,60 @@
 		form.addEventListener('input', function (event) {
 			if (event.target.matches('input[name="password"]')) {
 				selections.clear();
+				decisions.clear();
 				resetReview();
 				showMessage('', 'info');
 			}
 		});
 		root.addEventListener('change', function (event) {
+			if (event.target.matches('[data-portability-credential-action]')) {
+				const group = event.target.closest(
+					'[data-portability-credential-group]'
+				);
+				const ordinal = group?.getAttribute(
+					'data-portability-credential-ordinal'
+				);
+				const target = group?.querySelector(
+					'[data-portability-credential-target]'
+				);
+				if (ordinal === null || !group) {
+					return;
+				}
+				if (target) {
+					target.disabled = event.target.value !== 'target';
+				}
+				if (event.target.value === 'target' && !target?.value) {
+					decisions.delete(ordinal);
+					updateSelectionControls();
+					return;
+				}
+				decisions.set(ordinal, {
+					action: event.target.value,
+					targetId:
+						event.target.value === 'target' ? target.value : '',
+				});
+				preview(true, true, false, {
+					ordinal,
+					action: event.target.value,
+				});
+				return;
+			}
+			if (event.target.matches('[data-portability-credential-target]')) {
+				const group = event.target.closest(
+					'[data-portability-credential-group]'
+				);
+				const ordinal = group?.getAttribute(
+					'data-portability-credential-ordinal'
+				);
+				if (ordinal !== null && event.target.value) {
+					decisions.set(ordinal, {
+						action: 'target',
+						targetId: event.target.value,
+					});
+					preview(true, true, false, { ordinal, target: true });
+				}
+				return;
+			}
 			if (event.target.matches('[data-portability-target-credential]')) {
 				preview();
 			}
@@ -657,7 +808,7 @@
 							? '1'
 							: '0'
 					);
-					appendTargetCredentials(data);
+					appendCredentialDecisions(data);
 					try {
 						const response = await window.fetch(settings.ajaxUrl, {
 							method: 'POST',

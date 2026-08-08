@@ -63,14 +63,15 @@ function row(
 	checked = true,
 	type = 'Plugin',
 	name = `Package ${index}`,
-	identifier = `package-${index}/package.php`
+	identifier = `package-${index}/package.php`,
+	credentialOrdinal = null
 ) {
 	const choice =
 		action === 'install' || action === 'adopt'
 			? checkbox('[data-portability-select]', checked)
 			: null;
 
-	return {
+	const item = {
 		choice,
 		getAttribute(attribute) {
 			if (attribute === 'data-portability-row') {
@@ -88,12 +89,20 @@ function row(
 			if (attribute === 'data-portability-package-identifier') {
 				return identifier;
 			}
+			if (attribute === 'data-portability-credential-ordinal') {
+				return credentialOrdinal;
+			}
 			return null;
 		},
 		querySelector(selector) {
 			return selector === '[data-portability-select]' ? choice : null;
 		},
 	};
+	if (choice) {
+		choice.closest = () => item;
+	}
+
+	return item;
 }
 
 function exportFixture(states) {
@@ -290,6 +299,7 @@ function importFixture(fetchResponse, rowSets = {}) {
 			this.items = [];
 		},
 	};
+	const applySummary = { textContent: '' };
 	let html = '<table>empty</table>';
 	let currentRows = [];
 	let master = null;
@@ -344,6 +354,7 @@ function importFixture(fetchResponse, rowSets = {}) {
 					'[data-portability-preview-message]': message,
 					'[data-portability-apply]': apply,
 					'[data-portability-apply-results]': results,
+					'[data-portability-apply-summary]': applySummary,
 				}[selector] || null
 			);
 		},
@@ -361,6 +372,7 @@ function importFixture(fetchResponse, rowSets = {}) {
 				children: [],
 				appendChild(child) {
 					this.children.push(child);
+					child.parentNode = this;
 				},
 				className: '',
 				textContent: '',
@@ -404,6 +416,7 @@ function importFixture(fetchResponse, rowSets = {}) {
 
 	return {
 		apply,
+		applySummary,
 		events,
 		file,
 		forms,
@@ -710,6 +723,89 @@ test('target credential previews preserve known choices and keep new defaults', 
 			[false, true, true]
 		);
 		assert.equal(state.master().indeterminate, true);
+	} finally {
+		cleanup();
+	}
+});
+
+test('credential decisions have no default and the same exact choice reaches Preview and Apply', async () => {
+	const submitted = [];
+	const state = importFixture(
+		async (data) => {
+			submitted.push(data);
+			return data.get('action') === 'ran_booster_apply_blueprint'
+				? success('', {
+						credential_state: 'transferred_available',
+						message: 'Applied.',
+						status: 'installed',
+					})
+				: success();
+		},
+		{
+			'<table>review</table>': [
+				[
+					'0',
+					'install',
+					true,
+					'Plugin',
+					'Package 0',
+					'package-0/package.php',
+					'0',
+				],
+			],
+		}
+	);
+	const target = { disabled: true, value: '' };
+	const group = {
+		getAttribute(name) {
+			return name === 'data-portability-credential-ordinal' ? '0' : null;
+		},
+		querySelector(selector) {
+			return selector === '[data-portability-credential-target]'
+				? target
+				: null;
+		},
+	};
+	const importChoice = {
+		value: 'import',
+		closest() {
+			return group;
+		},
+		matches(selector) {
+			return selector === '[data-portability-credential-action]';
+		},
+	};
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.equal(
+			submitted[0].get('credential_decisions[0][action]'),
+			undefined
+		);
+
+		state.listeners.get('root:change')({ target: importChoice });
+		await tick();
+		assert.equal(
+			submitted[1].get('credential_decisions[0][action]'),
+			'import'
+		);
+		assert.equal(
+			submitted[1].get('credential_decisions[0][target_id]'),
+			undefined
+		);
+
+		state.listeners.get('apply:click')();
+		await tick();
+		assert.equal(
+			submitted[2].get('credential_decisions[0][action]'),
+			'import'
+		);
+		assert.equal(
+			state.results.items[0].children[1].textContent,
+			'Transferred credential is available on this site.'
+		);
 	} finally {
 		cleanup();
 	}

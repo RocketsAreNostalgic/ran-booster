@@ -30,23 +30,31 @@ final readonly class PortabilityApplicationService {
 	}
 
 	/**
+	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credentialDecisions
 	 * @param array<int, string> $targetCredentialIds
 	 * @return list<BlueprintPlanItem>
 	 */
-	public function review( PackageBlueprint $blueprint, array $targetCredentialIds = array() ): array {
-		$items        = $this->reviewer->review( $blueprint );
-		$verified     = array();
-		$storageReady = $this->credentialStorageReady( $blueprint );
+	public function review( PackageBlueprint $blueprint, array $credentialDecisions = array(), array $targetCredentialIds = array() ): array {
+		$items    = $this->reviewer->review( $blueprint );
+		$verified = array();
 
 		foreach ( $items as $index => $item ) {
-			$credential = $this->credentialFor( $blueprint, $item );
-			$verified[] = null !== $credential && $this->isActionable( $item ) && ! $storageReady
+			$ordinal    = null;
+			$credential = $this->credentialFor( $blueprint, $item, $ordinal );
+			$decision   = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
+			$action     = $decision['action'] ?? null;
+			$verified[] = BlueprintCredentialAction::IMPORT === $action && $this->isActionable( $item ) && ! $this->credentialStorageReady()
 				? new BlueprintPlanItem(
 					$item->package,
 					TargetPackageAction::BLOCKED,
 					TargetPackageReason::LOCAL_SECRET_STORE_UNAVAILABLE
 				)
-				: $this->verifier->verify( $item, $credential, $targetCredentialIds[ $index ] ?? null );
+				: $this->verifier->verify(
+					$item,
+					$credential,
+					$action,
+					$decision['target_id'] ?? ( null === $credential ? ( $targetCredentialIds[ $index ] ?? null ) : null )
+				);
 		}
 
 		return $verified;
@@ -112,12 +120,14 @@ final readonly class PortabilityApplicationService {
 	}
 
 	/**
-	 * @return array{status:string,message:string}
+	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credentialDecisions
+	 * @return array{status:string,message:string,credential_state:string}
 	 */
 	public function apply(
 		PackageBlueprint $blueprint,
 		int $row,
 		?string $expectedAction,
+		array $credentialDecisions,
 		?string $targetCredentialId,
 		bool $adopt,
 		bool $canInstall
@@ -126,24 +136,40 @@ final readonly class PortabilityApplicationService {
 		if ( ! $item instanceof BlueprintPlanItem ) {
 			throw new InvalidArgumentException();
 		}
-		$credential = $this->credentialFor( $blueprint, $item );
-		if ( null !== $credential && $this->isActionable( $item ) ) {
+		$ordinal            = null;
+		$credential         = $this->credentialFor( $blueprint, $item, $ordinal );
+		$decision           = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
+		$credentialAction   = $decision['action'] ?? null;
+		$targetCredentialId = $decision['target_id'] ?? ( null === $credential ? $targetCredentialId : null );
+		if ( $expectedAction !== $item->action->value ) {
+			return $this->result( 'skipped', __( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ) );
+		}
+		if ( null !== $credential && ( null === $credentialAction || BlueprintCredentialAction::LEAVE === $credentialAction ) ) {
+			return $this->result( 'skipped', __( 'This package was left unchanged by the repository credential decision.', 'ran-booster' ) );
+		}
+		if ( ! $canInstall ) {
+			return $this->result( 'failed', __( 'You do not have permission to apply this package type.', 'ran-booster' ) );
+		}
+		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
+			return $this->result( 'skipped', __( 'This installed package was not selected for adoption.', 'ran-booster' ) );
+		}
+		if ( BlueprintCredentialAction::IMPORT === $credentialAction ) {
 			$this->assertLocalSecretStoreReady();
 		}
-		$source            = null;
 		$repositoryPrivate = null;
-		$item              = $this->verifier->verify( $item, $credential, $targetCredentialId, $source, $repositoryPrivate );
+		$item              = $this->verifier->verify( $item, $credential, $credentialAction, $targetCredentialId, $repositoryPrivate );
 		if ( $expectedAction !== $item->action->value ) {
-			return array(
-				'status'  => 'skipped',
-				'message' => __( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ),
+			return $this->result(
+				'skipped',
+				__( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ),
+				null !== $credential && in_array( $credentialAction, array( BlueprintCredentialAction::IMPORT, BlueprintCredentialAction::TARGET ), true ) ? 'unavailable' : 'none'
 			);
 		}
 
-		return $this->applyItem( $blueprint, $item, $credential, $source, $targetCredentialId, $repositoryPrivate, $adopt, $canInstall );
+		return $this->applyItem( $blueprint, $item, $credential, $credentialAction?->value, $targetCredentialId, $repositoryPrivate, $adopt, $canInstall );
 	}
 
-	/** @return array{status:string,message:string} */
+	/** @return array{status:string,message:string,credential_state:string} */
 	private function applyItem(
 		PackageBlueprint $blueprint,
 		BlueprintPlanItem $item,
@@ -155,52 +181,50 @@ final readonly class PortabilityApplicationService {
 		bool $canInstall
 	): array {
 		if ( TargetPackageAction::MANAGED === $item->action ) {
-			return array(
-				'status'  => 'unchanged',
-				'message' => __( 'This package is already managed.', 'ran-booster' ),
-			);
+			return $this->result( 'unchanged', __( 'This package is already managed.', 'ran-booster' ) );
 		}
 		if ( ! $this->isActionable( $item ) ) {
-			return array(
-				'status'  => 'skipped',
-				'message' => __( 'This package changed or cannot be applied. Review the Transporter Blueprint again.', 'ran-booster' ),
-			);
+			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Transporter Blueprint again.', 'ran-booster' ) );
 		}
 		if ( ! $canInstall ) {
-			return array(
-				'status'  => 'failed',
-				'message' => __( 'You do not have permission to apply this package type.', 'ran-booster' ),
-			);
+			return $this->result( 'failed', __( 'You do not have permission to apply this package type.', 'ran-booster' ) );
 		}
 		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
-			return array(
-				'status'  => 'skipped',
-				'message' => __( 'This installed package was not selected for adoption.', 'ran-booster' ),
+			return $this->result( 'skipped', __( 'This installed package was not selected for adoption.', 'ran-booster' ) );
+		}
+
+		$credentialState = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
+		try {
+			$credentialId    = $this->credentialId( $blueprint, $credential, $source, $targetCredentialId );
+			$credentialState = 'import' === $source ? 'transferred_available' : ( 'target' === $source ? 'target_selected' : 'none' );
+			if ( null === $repositoryPrivate ) {
+				throw new InvalidArgumentException();
+			}
+			$operation = PackageOperation::fromInput(
+				'install-' . $item->package->type,
+				$this->operationInput( $item, $credentialId, $repositoryPrivate )
+			);
+			$result    = $this->operations->execute( $operation );
+			if ( TargetPackageAction::ADOPT === $item->action ) {
+				$this->assertDisabledResult( $result, $item->package, $credentialId, $repositoryPrivate );
+
+				return $this->result( 'adopted', __( 'Adopted: deployment disabled', 'ran-booster' ), $credentialState );
+			}
+			if ( 'succeeded' === ( $result['status'] ?? null ) ) {
+				$this->assertDisabledResult( $result, $item->package, $credentialId, $repositoryPrivate );
+			}
+
+			return $this->deploymentResult( $result ) + array( 'credential_state' => $credentialState );
+		} catch ( Throwable $failure ) {
+			if ( null === $credential ) {
+				throw $failure;
+			}
+			return $this->result(
+				'failed',
+				__( 'Booster could not apply this package. Review the Transporter Blueprint again and check repository access.', 'ran-booster' ),
+				$credentialState
 			);
 		}
-
-		$credentialId = $this->credentialId( $blueprint, $credential, $source, $targetCredentialId );
-		if ( null === $repositoryPrivate ) {
-			throw new InvalidArgumentException();
-		}
-		$operation = PackageOperation::fromInput(
-			'install-' . $item->package->type,
-			$this->operationInput( $item, $credentialId, $repositoryPrivate )
-		);
-		$result    = $this->operations->execute( $operation );
-		if ( TargetPackageAction::ADOPT === $item->action ) {
-			$this->assertDisabledResult( $result, $item->package, $credentialId, $repositoryPrivate );
-
-			return array(
-				'status'  => 'adopted',
-				'message' => __( 'Adopted: deployment disabled', 'ran-booster' ),
-			);
-		}
-		if ( 'succeeded' === ( $result['status'] ?? null ) ) {
-			$this->assertDisabledResult( $result, $item->package, $credentialId, $repositoryPrivate );
-		}
-
-		return $this->deploymentResult( $result );
 	}
 
 	/**
@@ -322,7 +346,7 @@ final readonly class PortabilityApplicationService {
 		if ( 'target' === $source ) {
 			return $targetCredentialId;
 		}
-		if ( 'transferred' !== $source || null === $credential ) {
+		if ( 'import' !== $source || null === $credential ) {
 			return null;
 		}
 
@@ -355,8 +379,9 @@ final readonly class PortabilityApplicationService {
 		return $input;
 	}
 
-	private function credentialFor( PackageBlueprint $blueprint, BlueprintPlanItem $item ): ?BlueprintCredential {
-		foreach ( $blueprint->credentials as $credential ) {
+	private function credentialFor( PackageBlueprint $blueprint, BlueprintPlanItem $item, ?int &$ordinal = null ): ?BlueprintCredential {
+		$ordinal = null;
+		foreach ( $blueprint->credentials as $index => $credential ) {
 			if ( $credential->provider === $item->package->provider
 				&& in_array(
 					array(
@@ -366,6 +391,8 @@ final readonly class PortabilityApplicationService {
 					$credential->packages,
 					true
 				) ) {
+				$ordinal = $index;
+
 				return $credential;
 			}
 		}
@@ -373,10 +400,7 @@ final readonly class PortabilityApplicationService {
 		return null;
 	}
 
-	private function credentialStorageReady( PackageBlueprint $blueprint ): bool {
-		if ( array() === $blueprint->credentials ) {
-			return true;
-		}
+	private function credentialStorageReady(): bool {
 		try {
 			$this->secrets->assertManagedStorageReady();
 
@@ -397,5 +421,14 @@ final readonly class PortabilityApplicationService {
 
 	private function isActionable( BlueprintPlanItem $item ): bool {
 		return in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true );
+	}
+
+	/** @return array{status:string,message:string,credential_state:string} */
+	private function result( string $status, string $message, string $credentialState = 'none' ): array {
+		return array(
+			'status'           => $status,
+			'message'          => $message,
+			'credential_state' => $credentialState,
+		);
 	}
 }

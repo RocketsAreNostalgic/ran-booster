@@ -12,11 +12,15 @@ namespace Tests\Portability;
 use PHPUnit\Framework\TestCase;
 use RAN\ManagedRepository;
 use RAN\Package;
+use RAN\PackageOperationService;
 use RAN\PackageSource;
 use RAN\Portability\BlueprintArchive;
+use RAN\Portability\BlueprintCredentialAction;
 use RAN\Portability\BlueprintPlanItem;
 use RAN\Portability\BlueprintRepositoryVerifier;
+use RAN\Portability\BlueprintReviewer;
 use RAN\Portability\ManagedPackageBlueprintExporter;
+use RAN\Portability\PortabilityApplicationService;
 use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
 use RAN\RepositoryProvider\GitHubCredentialPolicy;
@@ -28,6 +32,7 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RuntimeException;
+use ReflectionClass;
 use Tests\Secrets\InMemorySiteKeyStore;
 
 final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
@@ -104,28 +109,29 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			new ProviderRegistry( array( $provider ), $catalog ),
 			$targetSecrets
 		);
-		$source     = null;
 		$preview    = $verifier->verify(
 			new BlueprintPlanItem( $imported->packages[0], TargetPackageAction::INSTALL, TargetPackageReason::NONE ),
 			$credential,
-			null,
-			$source
+			BlueprintCredentialAction::IMPORT
 		);
 
 		self::assertSame( TargetPackageAction::INSTALL, $preview->action );
-		self::assertSame( 'transferred', $source );
 		self::assertFileDoesNotExist( $this->targetPath );
 		self::assertNull( $targetKeyStore->load() );
 
+		$application = new PortabilityApplicationService(
+			( new ReflectionClass( BlueprintReviewer::class ) )->newInstanceWithoutConstructor(),
+			$verifier,
+			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
+			$targetSecrets
+		);
+		$applyItem   = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
+		$result      = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( 'transferred_available', $result['credential_state'] );
+		self::assertStringContainsString( 'could not apply this package', $result['message'] );
 		$targetId = $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0];
-		try {
-			throw new RuntimeException( 'Simulated package mutation failure after credential persistence.' );
-		} catch ( RuntimeException $failure ) {
-			self::assertSame(
-				'Simulated package mutation failure after credential persistence.',
-				$failure->getMessage()
-			);
-		}
 		self::assertSame(
 			'sentinel-portability-token',
 			$targetSecrets->credentialMaterial( 'gh', $targetId )['secret']

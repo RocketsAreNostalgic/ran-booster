@@ -749,19 +749,21 @@
 	background: var(--ran-booster-danger-strong);
 }
 
-.ran-booster-admin .ran-booster-portability__reconciliation-row > td {
-	padding-block: 0 var(--ran-booster-space-12);
-	padding-inline: var(--ran-booster-space-12);
-	background: var(--ran-booster-surface-info);
+.ran-booster-admin .ran-booster-portability__credential-review {
+	margin-block-end: var(--ran-booster-space-18);
 }
 
-.ran-booster-admin .ran-booster-portability__reconciliation-row .notice {
-	margin: 0;
+.ran-booster-admin .ran-booster-portability__credential-review fieldset {
+	display: grid;
+	gap: var(--ran-booster-space-8);
 }
 
-.ran-booster-admin .ran-booster-portability__reconciliation-row select {
-	min-inline-size: 240px;
-	margin-inline-start: var(--ran-booster-space-8);
+.ran-booster-admin .ran-booster-portability__credential-review label {
+	display: block;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-review select {
+	inline-size: min(100%, 360px);
 }
 
 @media screen and (max-width: 782px) {

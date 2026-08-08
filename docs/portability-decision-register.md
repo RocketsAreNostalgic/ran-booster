@@ -75,14 +75,17 @@ schema contains provider, label, declared kind, configuration, secret, and
 package associations. It does not contain a Core profile ID, import UI choice,
 `self_destruct`, or `destroy_on`.
 
-Landing A now implements the export side of PT-016 through PT-018: explicit
-eligible profile selection, fresh self-destruct rejection, equal declared-kind
-eligibility, and no permission or expiry assurance. PT-019, PT-020, and the
-target-side import-choice work remain future controls. Source profile IDs and
-export choices are request-only authority selectors and are not added to
-`blueprint.json`; target profile IDs and import choices remain future
-request-only selectors. Blueprint V1, Portability API 2, Provider API 8, and
-Add-on API 14 are unchanged.
+Landings A and B implement PT-016 through PT-020: explicit eligible profile
+selection, fresh self-destruct rejection, equal declared-kind eligibility, no
+permission or expiry assurance, and an explicit request-local import, saved
+target, or leave decision for every carried credential. Preview does not
+persist transferred material. Apply verifies only the selected source and
+reports credential availability separately from the package outcome, without
+claiming whether a deterministic imported profile was newly created. Source
+profile IDs, target profile IDs, and both export and import choices remain
+request-only authority selectors and are not added to `blueprint.json`.
+Blueprint V1, Portability API 2, Provider API 8, and Add-on API 14 are
+unchanged.
 
 ## Implemented corrections
 

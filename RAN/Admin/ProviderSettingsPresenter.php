@@ -330,17 +330,18 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * Build the provider capability summary used by managed-package lists.
 	 *
-	 * @return list<array{code: string, label: string, available: bool, deploy: bool, default_credential_id: string, credentials: list<array{id: string, label: string, source: string}>}>
+	 * @return list<array{code: string, label: string, available: bool, deploy: bool, default_credential_id: string, credential_kind_labels: array<string,string>, credentials: list<array{id: string, label: string, source: string}>}>
 	 */
 	public function buildPackageList(): array {
 		return array_map(
 			static fn ( array $provider ): array => array(
-				'code'                  => $provider['code'],
-				'label'                 => $provider['label'],
-				'available'             => $provider['available'],
-				'deploy'                => $provider['deploy'],
-				'default_credential_id' => $provider['default_credential_id'],
-				'credentials'           => array_map(
+				'code'                   => $provider['code'],
+				'label'                  => $provider['label'],
+				'available'              => $provider['available'],
+				'deploy'                 => $provider['deploy'],
+				'default_credential_id'  => $provider['default_credential_id'],
+				'credential_kind_labels' => $provider['credential_kind_labels'],
+				'credentials'            => array_map(
 					static fn ( array $credential ): array => array(
 						'id'     => $credential['id'],
 						'label'  => $credential['label'],
@@ -365,22 +366,29 @@ final readonly class ProviderSettingsPresenter {
 			$code       = $metadata->code->value;
 			$candidates = $associations[ $code ] ?? array();
 			$admin      = $metadata->admin;
-			if ( array() === $candidates || null === $admin ) {
+			if ( null === $admin ) {
 				continue;
 			}
 
-			$profiles    = $this->secrets->credentialProfiles( $code );
+			$profiles   = $this->secrets->credentialProfiles( $code );
+			$profileIds = array_values( array_unique( array_merge( array_keys( $candidates ), array_keys( $profiles ) ) ) );
+			if ( array() === $profileIds ) {
+				continue;
+			}
 			$credentials = array();
-			foreach ( $candidates as $id => $packages ) {
+			foreach ( $profileIds as $id ) {
 				$profile       = $profiles[ $id ] ?? null;
+				$packages      = $candidates[ $id ] ?? array();
 				$kind          = is_array( $profile ) ? $admin->getCredentialKind( (string) ( $profile['kind'] ?? '' ) ) : null;
 				$source        = is_array( $profile ) && is_string( $profile['source'] ?? null ) ? $profile['source'] : '';
+				$selfDestruct  = is_array( $profile ) && ! empty( $profile['self_destruct'] );
+				$reason        = ! is_array( $profile ) ? 'missing' : ( 'file' !== $source ? 'configuration' : ( $selfDestruct ? 'self_destruct' : ( array() === $packages ? 'unassociated' : '' ) ) );
 				$credentials[] = array(
 					'id'         => is_array( $profile ) ? $id : '',
 					'label'      => is_array( $profile ) && is_string( $profile['label'] ?? null ) ? $profile['label'] : '',
 					'kind_label' => null !== $kind ? $kind->label : ( is_array( $profile ) ? (string) ( $profile['kind'] ?? '' ) : '' ),
-					'available'  => is_array( $profile ) && 'file' === $source && ! empty( $profile['configured'] ) && empty( $profile['self_destruct'] ),
-					'reason'     => ! is_array( $profile ) ? 'missing' : ( 'file' !== $source ? 'configuration' : ( ! empty( $profile['self_destruct'] ) ? 'self_destruct' : '' ) ),
+					'available'  => '' === $reason && ! empty( $profile['configured'] ),
+					'reason'     => $reason,
 					'destroy_on' => is_array( $profile ) && is_string( $profile['destroy_on'] ?? null ) ? $profile['destroy_on'] : null,
 					'packages'   => $packages,
 				);
@@ -457,6 +465,7 @@ final readonly class ProviderSettingsPresenter {
 				'deploy'                                 => true,
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
 				'default_credential_id'                  => $this->defaultCredentialId( $credentials ),
+				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credentialKind( ... ), $admin->credentialKinds ), 'label', 'code' ),
 				'credential_profiles'                    => $credentials,
 				'public_lookup'                          => $this->packagePublicLookup( $provider, $code, $credentials ),
 			);

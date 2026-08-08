@@ -210,7 +210,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
 
-		$data = $this->dashboard( $this->throwingSecrets(), null, null, null, $plugins, $themes )->getIndex()['data'];
+		$secrets = new class() extends SecretsFile {
+			public function __construct() {
+				parent::__construct( '/unused/test-secrets.php', array() );
+			}
+			public function credentialProfiles( ProviderCode|string $provider ): array {
+				return array();
+			}
+		};
+		$data    = $this->dashboard( $secrets, null, null, null, $plugins, $themes )->getIndex()['data'];
 
 		self::assertFalse( $data['portabilityExportUnavailable'] );
 		self::assertSame(
@@ -246,12 +254,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 			public function credentialProfiles( ProviderCode|string $provider ): array {
 				return array(
-					'shared-profile' => array(
+					'shared-profile'       => array(
 						'id'            => 'shared-profile',
 						'provider'      => 'gh',
 						'label'         => 'Shared credential',
 						'kind'          => 'classic',
 						'configuration' => array( 'secret_context' => 'configuration-canary' ),
+						'source'        => 'file',
+						'configured'    => true,
+						'self_destruct' => false,
+					),
+					'unassociated-profile' => array(
+						'id'            => 'unassociated-profile',
+						'provider'      => 'gh',
+						'label'         => 'Unused credential',
+						'kind'          => 'classic',
+						'configuration' => array( 'secret_context' => 'unused-configuration-canary' ),
 						'source'        => 'file',
 						'configured'    => true,
 						'self_destruct' => false,
@@ -264,10 +282,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertFalse( $data['portabilityExportCredentialsUnavailable'] );
 		self::assertSame( array( 'code', 'label', 'credentials' ), array_keys( $data['portabilityExportCredentialGroups'][0] ) );
+		self::assertCount( 2, $data['portabilityExportCredentialGroups'][0]['credentials'] );
 		$credential = $data['portabilityExportCredentialGroups'][0]['credentials'][0];
 		self::assertSame( array( 'id', 'label', 'kind_label', 'available', 'reason', 'destroy_on', 'packages' ), array_keys( $credential ) );
 		self::assertSame( array( 'Example Plugin', 'Example Theme' ), array_column( $credential['packages'], 'name' ) );
 		self::assertArrayNotHasKey( 'configuration', $credential );
+		$unassociated = $data['portabilityExportCredentialGroups'][0]['credentials'][1];
+		self::assertFalse( $unassociated['available'] );
+		self::assertSame( 'unassociated', $unassociated['reason'] );
+		self::assertSame( array(), $unassociated['packages'] );
+		self::assertArrayNotHasKey( 'configuration', $unassociated );
+		self::assertStringNotContainsString( 'unused-configuration-canary', (string) wp_json_encode( $data['portabilityExportCredentialGroups'] ) );
 
 		$unavailable = $this->dashboard( $this->throwingSecrets(), null, null, null, $plugins, $themes )->getIndex()['data'];
 		self::assertFalse( $unavailable['portabilityExportUnavailable'] );

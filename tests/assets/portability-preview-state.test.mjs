@@ -153,6 +153,13 @@ function credentialExportFixture() {
 				: null;
 		},
 	}));
+	rows.push({
+		dataset: { portabilityCredentialPackages: '' },
+		hidden: false,
+		querySelector() {
+			return null;
+		},
+	});
 	const submit = { disabled: false };
 	const events = [];
 	const form = {
@@ -253,10 +260,11 @@ function progressButton(idleLabel, busyLabel, labelSelector) {
 	return { button, label };
 }
 
-function importFixture(fetchResponse, rowSets = {}) {
+function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	const listeners = new Map();
 	const events = [];
 	const forms = [];
+	const htmxProcesses = [];
 	const file = { files: [{ name: 'blueprint.zip' }] };
 	const password = {
 		matches(selector) {
@@ -283,7 +291,7 @@ function importFixture(fetchResponse, rowSets = {}) {
 	);
 	const apply = {
 		...applyProgress.button,
-		disabled: false,
+		disabled: true,
 		addEventListener(type, listener) {
 			listeners.set(`apply:${type}`, listener);
 		},
@@ -300,18 +308,150 @@ function importFixture(fetchResponse, rowSets = {}) {
 		},
 	};
 	const applySummary = { textContent: '' };
+	const reviewError = { hidden: true };
 	let html = '<table>empty</table>';
 	let currentRows = [];
 	let master = null;
-	const review = {
+	const reviewAttributes = new Map();
+	const reviewClasses = new Set();
+	const control = (selectors, value = '') => {
+		const attributes = new Map();
+		return {
+			attributes,
+			disabled: false,
+			focusCalls: 0,
+			value,
+			closest(selector) {
+				return selector === '[data-portability-credential-group]'
+					? group
+					: null;
+			},
+			dispatchEvent() {},
+			focus() {
+				this.focusCalls += 1;
+			},
+			getAttribute(name) {
+				return attributes.get(name) ?? null;
+			},
+			matches(selector) {
+				return selectors.includes(selector);
+			},
+			setAttribute(name, attributeValue) {
+				attributes.set(name, attributeValue);
+			},
+		};
+	};
+	const credentialActions = {
+		import: control(
+			[
+				'[data-portability-credential-action]',
+				'[data-portability-credential-refresh]',
+			],
+			'import'
+		),
+		target: control(['[data-portability-credential-action]'], 'target'),
+		leave: control(
+			[
+				'[data-portability-credential-action]',
+				'[data-portability-credential-refresh]',
+			],
+			'leave'
+		),
+	};
+	const credentialTarget = control(
+		[
+			'[data-portability-credential-target]',
+			'[data-portability-credential-refresh]',
+		],
+		options.targetValue || ''
+	);
+	credentialTarget.disabled = true;
+	credentialTarget.dispatchedChanges = 0;
+	credentialTarget.dispatchEvent = function () {
+		this.dispatchedChanges += 1;
+		listeners.get('root:change')?.({ target: this });
+	};
+	const group = {
+		getAttribute(name) {
+			return name === 'data-portability-credential-ordinal' ? '0' : null;
+		},
 		querySelector(selector) {
-			return selector === '[data-portability-select-all]' ? master : null;
+			if (selector === '[data-portability-credential-target]') {
+				return credentialTarget;
+			}
+			const match = selector.match(
+				/^\[data-portability-credential-action\]\[value="(import|target|leave)"\]$/
+			);
+			return match ? credentialActions[match[1]] : null;
+		},
+	};
+	const credentialRefreshControls = [
+		credentialActions.import,
+		credentialActions.leave,
+		credentialTarget,
+	];
+	function setRows(rows) {
+		currentRows = rows.map((item) => row(...item));
+		master = currentRows.some((item) => item.choice)
+			? checkbox('[data-portability-select-all]')
+			: null;
+	}
+	const review = {
+		classList: {
+			contains(name) {
+				return reviewClasses.has(name);
+			},
+			remove(name) {
+				reviewClasses.delete(name);
+			},
+			toggle(name, force) {
+				if (force) {
+					reviewClasses.add(name);
+				} else {
+					reviewClasses.delete(name);
+				}
+			},
+		},
+		getAttribute(name) {
+			return reviewAttributes.get(name) ?? null;
+		},
+		querySelector(selector) {
+			if (selector === '[data-portability-select-all]') {
+				return master;
+			}
+			return selector === '[data-portability-credential-ordinal="0"]'
+				? group
+				: null;
 		},
 		querySelectorAll(selector) {
-			return selector ===
-				'[data-portability-row][data-portability-action]'
-				? currentRows
-				: [];
+			if (
+				selector === '[data-portability-row][data-portability-action]'
+			) {
+				return currentRows;
+			}
+			if (selector === '[data-portability-credential-refresh]') {
+				return credentialRefreshControls;
+			}
+			if (
+				selector ===
+				'[data-portability-select], [data-portability-select-all]'
+			) {
+				return [
+					...currentRows.map((item) => item.choice).filter(Boolean),
+					...(master ? [master] : []),
+				];
+			}
+			return [];
+		},
+		removeAttribute(name) {
+			reviewAttributes.delete(name);
+		},
+		toggleAttribute(name, force) {
+			if (force) {
+				reviewAttributes.set(name, '');
+			} else {
+				reviewAttributes.delete(name);
+			}
 		},
 	};
 
@@ -321,10 +461,7 @@ function importFixture(fetchResponse, rowSets = {}) {
 		},
 		set(value) {
 			html = value;
-			currentRows = (rowSets[value] || []).map((item) => row(...item));
-			master = currentRows.some((item) => item.choice)
-				? checkbox('[data-portability-select-all]')
-				: null;
+			setRows(rowSets[value] || []);
 		},
 	});
 
@@ -355,6 +492,7 @@ function importFixture(fetchResponse, rowSets = {}) {
 					'[data-portability-apply]': apply,
 					'[data-portability-apply-results]': results,
 					'[data-portability-apply-summary]': applySummary,
+					'[data-portability-review-error]': reviewError,
 				}[selector] || null
 			);
 		},
@@ -405,14 +543,21 @@ function importFixture(fetchResponse, rowSets = {}) {
 	};
 	globalThis.window = {
 		CustomEvent: class {
-			constructor(type, options) {
-				this.detail = options.detail;
+			constructor(type, eventOptions) {
+				this.detail = eventOptions.detail;
 				this.type = type;
 			}
 		},
-		fetch: (url, options) => fetchResponse(options.body),
+		fetch: (url, requestOptions) => fetchResponse(requestOptions.body),
 		ranBoosterPortability: { ajaxUrl: '/admin-ajax.php' },
 	};
+	if (options.htmx) {
+		globalThis.window.htmx = {
+			process(scope) {
+				htmxProcesses.push(scope);
+			},
+		};
+	}
 
 	return {
 		apply,
@@ -420,6 +565,11 @@ function importFixture(fetchResponse, rowSets = {}) {
 		events,
 		file,
 		forms,
+		credentialActions,
+		credentialRefreshControls,
+		credentialTarget,
+		group,
+		htmxProcesses,
 		listeners,
 		master: () => master,
 		message,
@@ -429,7 +579,11 @@ function importFixture(fetchResponse, rowSets = {}) {
 		previewSubmit,
 		results,
 		review,
+		reviewError,
 		rows: () => currentRows,
+		swapRows(rows) {
+			setRows(rows);
+		},
 		targetCredential,
 	};
 }
@@ -489,6 +643,7 @@ test('credential export selection follows package relevance and reports selected
 			state.summary.textContent,
 			'Create a Transporter Blueprint for 2 packages without repository credentials.'
 		);
+		assert.equal(state.rows[2].hidden, false);
 
 		state.credentials[0].checked = true;
 		state.credentials[0].listeners.get('change')();
@@ -502,6 +657,7 @@ test('credential export selection follows package relevance and reports selected
 		assert.equal(state.rows[0].hidden, true);
 		assert.equal(state.credentials[0].checked, false);
 		assert.equal(state.credentials[0].disabled, true);
+		assert.equal(state.rows[2].hidden, false);
 		assert.deepEqual(state.events, [
 			'ran-booster:portability-credentials-changed',
 		]);
@@ -527,6 +683,14 @@ test('changing the artifact or password resets saved import choices', async () =
 		loadFunction('initPortabilityPreview')();
 		state.listeners.get('form:submit')({ preventDefault() {} });
 		await tick();
+		state.listeners.get('root:change')({
+			target: state.credentialActions.import,
+		});
+		await tick();
+		assert.equal(
+			state.forms.at(-1).get('credential_decisions[0][action]'),
+			'import'
+		);
 
 		state.rows()[0].choice.checked = false;
 		state.listeners.get('root:change')({ target: state.rows()[0].choice });
@@ -537,13 +701,25 @@ test('changing the artifact or password resets saved import choices', async () =
 		state.listeners.get('form:submit')({ preventDefault() {} });
 		await tick();
 		assert.equal(state.rows()[0].choice.checked, true);
+		assert.equal(
+			state.forms.at(-1).get('credential_decisions[0][action]'),
+			undefined
+		);
 
+		state.listeners.get('root:change')({
+			target: state.credentialActions.import,
+		});
+		await tick();
 		state.rows()[0].choice.checked = false;
 		state.listeners.get('root:change')({ target: state.rows()[0].choice });
 		state.listeners.get('form:input')({ target: state.password });
 		state.listeners.get('form:submit')({ preventDefault() {} });
 		await tick();
 		assert.equal(state.rows()[0].choice.checked, true);
+		assert.equal(
+			state.forms.at(-1).get('credential_decisions[0][action]'),
+			undefined
+		);
 	} finally {
 		cleanup();
 	}
@@ -723,6 +899,197 @@ test('target credential previews preserve known choices and keep new defaults', 
 			[false, true, true]
 		);
 		assert.equal(state.master().indeterminate, true);
+	} finally {
+		cleanup();
+	}
+});
+
+test('HTMX credential refresh keeps the full review and restores selections after a narrow swap', async () => {
+	const state = importFixture(
+		async () => success('<table>review</table>'),
+		{
+			'<table>review</table>': [
+				[
+					'0',
+					'install',
+					true,
+					'Plugin',
+					'Package 0',
+					'package-0/package.php',
+					'0',
+				],
+				['1', 'adopt', true],
+			],
+		},
+		{ htmx: true }
+	);
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		assert.deepEqual(
+			state.credentialRefreshControls.map((control) =>
+				control.getAttribute('hx-post')
+			),
+			['/admin-ajax.php', '/admin-ajax.php', '/admin-ajax.php']
+		);
+		assert.deepEqual(state.htmxProcesses, [state.review]);
+
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.deepEqual(state.htmxProcesses, [state.review, state.review]);
+		assert.equal(state.apply.disabled, false);
+
+		state.rows()[0].choice.checked = false;
+		state.listeners.get('root:change')({ target: state.rows()[0].choice });
+		const fullReview = state.review.innerHTML;
+		state.listeners.get('root:change')({
+			target: state.credentialActions.import,
+		});
+		assert.equal(state.apply.disabled, true);
+		assert.equal(state.review.innerHTML, fullReview);
+
+		const xhr = {};
+		const refreshDetail = {
+			requestConfig: { elt: state.credentialActions.import },
+			xhr,
+		};
+		state.listeners.get('root:htmx:beforeRequest')({
+			detail: refreshDetail,
+		});
+		assert.equal(state.review.innerHTML, fullReview);
+		assert.equal(state.review.getAttribute('aria-busy'), '');
+		assert.equal(state.review.classList.contains('is-updating'), true);
+		assert.equal(state.apply.disabled, true);
+		assert.equal(state.rows()[0].choice.disabled, true);
+
+		const resultClears = state.results.clears;
+		state.swapRows([
+			[
+				'0',
+				'install',
+				true,
+				'Plugin',
+				'Package 0',
+				'package-0/package.php',
+				'0',
+			],
+			['1', 'adopt', true],
+			['2', 'install', true],
+		]);
+		state.listeners.get('root:htmx:afterSwap')({ detail: refreshDetail });
+
+		assert.equal(state.review.innerHTML, fullReview);
+		assert.deepEqual(
+			state.rows().map((item) => item.choice.checked),
+			[false, true, true]
+		);
+		assert.equal(state.master().indeterminate, true);
+		assert.equal(state.apply.disabled, false);
+		assert.equal(state.review.getAttribute('aria-busy'), null);
+		assert.equal(state.review.classList.contains('is-updating'), false);
+		assert.equal(state.reviewError.hidden, true);
+		assert.equal(state.results.clears, resultClears + 1);
+	} finally {
+		cleanup();
+	}
+});
+
+test('failed HTMX credential refresh retains the review and keeps Apply disabled', async () => {
+	const state = importFixture(
+		async () => success('<table>review</table>'),
+		{
+			'<table>review</table>': [['0', 'install', true]],
+		},
+		{ htmx: true }
+	);
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const fullReview = state.review.innerHTML;
+		state.results.items.push({ retained: true });
+
+		state.listeners.get('root:change')({
+			target: state.credentialActions.leave,
+		});
+		const xhr = {};
+		const refreshDetail = {
+			requestConfig: { elt: state.credentialActions.leave },
+			xhr,
+		};
+		state.listeners.get('root:htmx:beforeRequest')({
+			detail: refreshDetail,
+		});
+		state.listeners.get('root:htmx:afterRequest')({
+			detail: { ...refreshDetail, successful: false },
+		});
+
+		assert.equal(state.review.innerHTML, fullReview);
+		assert.equal(state.rows().length, 1);
+		assert.equal(state.rows()[0].choice.disabled, true);
+		assert.equal(state.apply.disabled, true);
+		assert.equal(state.reviewError.hidden, false);
+		assert.equal(state.review.getAttribute('aria-busy'), null);
+		assert.equal(state.review.classList.contains('is-updating'), false);
+		assert.deepEqual(state.results.items, [{ retained: true }]);
+	} finally {
+		cleanup();
+	}
+});
+
+test('target action without an ID only reveals and focuses its select', async () => {
+	const state = importFixture(
+		async () => success('<table>review</table>'),
+		{
+			'<table>review</table>': [
+				[
+					'0',
+					'install',
+					true,
+					'Plugin',
+					'Package 0',
+					'package-0/package.php',
+					'0',
+				],
+			],
+		},
+		{ htmx: true }
+	);
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const formCount = state.forms.length;
+		const fullReview = state.review.innerHTML;
+
+		state.listeners.get('root:change')({
+			target: state.credentialActions.target,
+		});
+		assert.equal(state.credentialTarget.disabled, false);
+		assert.equal(state.credentialTarget.focusCalls, 1);
+		assert.equal(state.credentialTarget.dispatchedChanges, 0);
+		assert.equal(state.forms.length, formCount);
+		assert.equal(state.review.innerHTML, fullReview);
+		assert.equal(state.apply.disabled, true);
+		assert.equal(
+			state.applySummary.textContent,
+			'Apply 1 package change, import 0 repository credentials and use 0 saved credentials. Deployment will remain Disabled. Credential permissions have not been assessed.'
+		);
+
+		state.credentialTarget.value = 'target-profile';
+		state.listeners.get('root:change')({
+			target: state.credentialActions.target,
+		});
+		assert.equal(state.credentialTarget.dispatchedChanges, 1);
+		assert.equal(state.credentialTarget.focusCalls, 1);
+		assert.equal(state.forms.length, formCount);
+		assert.equal(state.apply.disabled, true);
+		assert.equal(
+			state.applySummary.textContent,
+			'Apply 1 package change, import 0 repository credentials and use 1 saved credential. Deployment will remain Disabled. Credential permissions have not been assessed.'
+		);
 	} finally {
 		cleanup();
 	}

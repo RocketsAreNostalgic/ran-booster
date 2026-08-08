@@ -52,6 +52,10 @@ function wp_send_json_success( array $data ): array {
 	);
 }
 
+function wp_die(): never {
+	throw new \RuntimeException( 'ran_booster_test_wp_die' );
+}
+
 function get_current_user_id(): int {
 	return (int) ( $GLOBALS['ran_booster_repository_admin_user_id'] ?? 1 );
 }

@@ -55,21 +55,23 @@
 			);
 			let credentialsChanged = false;
 			credentialRows.forEach(function (row) {
+				const choice = row.querySelector(
+					'[data-portability-export-credential]'
+				);
+				if (!choice) {
+					row.hidden = false;
+					return;
+				}
 				const relevant = (
 					row.dataset.portabilityCredentialPackages || ''
 				)
 					.split(' ')
 					.some((index) => indexes.has(index));
-				const choice = row.querySelector(
-					'[data-portability-export-credential]'
-				);
 				row.hidden = !relevant;
-				if (choice) {
-					choice.disabled = !relevant;
-					credentialsChanged =
-						(!relevant && choice.checked) || credentialsChanged;
-					choice.checked = relevant && choice.checked;
-				}
+				choice.disabled = !relevant;
+				credentialsChanged =
+					(!relevant && choice.checked) || credentialsChanged;
+				choice.checked = relevant && choice.checked;
 			});
 			master.checked = selected.length === choices.length;
 			master.indeterminate = selected.length > 0 && !master.checked;
@@ -343,6 +345,9 @@
 		const applySummary = root
 			? root.querySelector('[data-portability-apply-summary]')
 			: null;
+		const reviewError = root
+			? root.querySelector('[data-portability-review-error]')
+			: null;
 
 		if (!root || !form || !review || !message || !settings?.ajaxUrl) {
 			return;
@@ -353,8 +358,59 @@
 		const selections = new Map();
 		const decisions = new Map();
 		let previewGeneration = 0;
+		let credentialRefreshXhr = null;
+		let reviewConfirmed = false;
 		const previewIdleLabel = previewLabel?.textContent || '';
 		const applyIdleLabel = applyLabel?.textContent || '';
+
+		function prepareCredentialRefresh(scope = review) {
+			if (!window.htmx?.process) {
+				return;
+			}
+
+			scope
+				.querySelectorAll('[data-portability-credential-refresh]')
+				.forEach(function (control) {
+					control.setAttribute('hx-post', settings.ajaxUrl);
+				});
+			window.htmx.process(scope);
+		}
+
+		function showReviewError(visible) {
+			if (reviewError) {
+				reviewError.hidden = !visible;
+			}
+		}
+
+		function setReviewBusy(busy) {
+			review.toggleAttribute('aria-busy', busy);
+			review.classList.toggle('is-updating', busy);
+			if (busy) {
+				reviewConfirmed = false;
+				review
+					.querySelectorAll(
+						'[data-portability-select], [data-portability-select-all]'
+					)
+					.forEach(function (control) {
+						control.disabled = true;
+					});
+			}
+			updateSelectionControls();
+		}
+
+		function handlesCredentialRefresh(event) {
+			const requestElement =
+				event.detail?.requestConfig?.elt || event.detail?.elt;
+			return Boolean(
+				requestElement?.matches?.(
+					'[data-portability-credential-refresh]'
+				)
+			);
+		}
+
+		function isLatestCredentialRefresh(event) {
+			return event.detail?.xhr === credentialRefreshXhr;
+		}
 
 		function setProgressButtonBusy(button, label, idleLabel, busy) {
 			if (!button) {
@@ -400,10 +456,14 @@
 		}
 
 		function resetReview(clearResults = true) {
+			reviewConfirmed = false;
 			review.innerHTML = emptyReview;
+			review.removeAttribute('aria-busy');
+			review.classList.remove('is-updating');
 			if (apply) {
 				apply.disabled = true;
 			}
+			showReviewError(false);
 			if (clearResults && results) {
 				results.replaceChildren();
 			}
@@ -478,7 +538,7 @@
 					selected > 0 && selected < choices.length;
 			}
 			if (apply) {
-				apply.disabled = selected === 0;
+				apply.disabled = selected === 0 || !reviewConfirmed;
 			}
 			if (applySummary) {
 				const selectedRowElements = choices
@@ -647,6 +707,8 @@
 					);
 				}
 				review.innerHTML = payload.data.html;
+				prepareCredentialRefresh();
+				reviewConfirmed = true;
 				restoreSelections();
 				if (focus) {
 					const group = review.querySelector(
@@ -663,13 +725,19 @@
 									focus.action +
 									'"]'
 							);
-					control?.focus();
+					try {
+						control?.focus({ preventScroll: true });
+					} catch {
+						control?.focus();
+					}
 				}
+				showReviewError(false);
 				showMessage('', 'info');
 				if (announceCompletion) {
 					announceSuccess('Transporter Blueprint reviewed.');
 				}
 			} catch (error) {
+				reviewConfirmed = false;
 				showMessage(
 					error instanceof Error
 						? error.message
@@ -682,6 +750,45 @@
 				}
 			}
 		}
+
+		prepareCredentialRefresh();
+		root.addEventListener('htmx:beforeRequest', function (event) {
+			if (!handlesCredentialRefresh(event) || !event.detail?.xhr) {
+				return;
+			}
+			credentialRefreshXhr = event.detail.xhr;
+			rememberSelections();
+			showReviewError(false);
+			setReviewBusy(true);
+		});
+		root.addEventListener('htmx:afterSwap', function (event) {
+			if (
+				!handlesCredentialRefresh(event) ||
+				!isLatestCredentialRefresh(event)
+			) {
+				return;
+			}
+			reviewConfirmed = true;
+			if (results) {
+				results.replaceChildren();
+			}
+			showReviewError(false);
+			showMessage('', 'info');
+			restoreSelections();
+			setReviewBusy(false);
+		});
+		root.addEventListener('htmx:afterRequest', function (event) {
+			if (
+				!handlesCredentialRefresh(event) ||
+				!isLatestCredentialRefresh(event) ||
+				event.detail?.successful
+			) {
+				return;
+			}
+			reviewConfirmed = false;
+			showReviewError(true);
+			setReviewBusy(false);
+		});
 
 		form.addEventListener('submit', function (event) {
 			event.preventDefault();
@@ -705,6 +812,7 @@
 		});
 		root.addEventListener('change', function (event) {
 			if (event.target.matches('[data-portability-credential-action]')) {
+				reviewConfirmed = false;
 				const group = event.target.closest(
 					'[data-portability-credential-group]'
 				);
@@ -723,6 +831,21 @@
 				if (event.target.value === 'target' && !target?.value) {
 					decisions.delete(ordinal);
 					updateSelectionControls();
+					try {
+						target?.focus({ preventScroll: true });
+					} catch {
+						target?.focus();
+					}
+					return;
+				}
+				if (
+					event.target.value === 'target' &&
+					window.htmx &&
+					target?.matches('[data-portability-credential-refresh]')
+				) {
+					target.dispatchEvent(
+						new Event('change', { bubbles: true })
+					);
 					return;
 				}
 				decisions.set(ordinal, {
@@ -730,6 +853,15 @@
 					targetId:
 						event.target.value === 'target' ? target.value : '',
 				});
+				updateSelectionControls();
+				if (
+					window.htmx &&
+					event.target.matches(
+						'[data-portability-credential-refresh]'
+					)
+				) {
+					return;
+				}
 				preview(true, true, false, {
 					ordinal,
 					action: event.target.value,
@@ -737,6 +869,7 @@
 				return;
 			}
 			if (event.target.matches('[data-portability-credential-target]')) {
+				reviewConfirmed = false;
 				const group = event.target.closest(
 					'[data-portability-credential-group]'
 				);
@@ -748,7 +881,18 @@
 						action: 'target',
 						targetId: event.target.value,
 					});
-					preview(true, true, false, { ordinal, target: true });
+					updateSelectionControls();
+					if (
+						!window.htmx ||
+						!event.target.matches(
+							'[data-portability-credential-refresh]'
+						)
+					) {
+						preview(true, true, false, {
+							ordinal,
+							target: true,
+						});
+					}
 				}
 				return;
 			}

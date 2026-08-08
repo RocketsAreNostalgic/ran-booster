@@ -31,13 +31,15 @@ repository credential profile identities. The exporter rebuilds each selected
 package from Booster's current non-cleaning managed-package readers and rejects
 empty, malformed, duplicate, unknown, wrong-type, or stale selections.
 
-Credential choices are grouped by provider and derived only from the selected
-packages. They begin unchecked. Shared profiles appear once; unassigned
-profiles do not appear. File-backed profiles are eligible unless Booster is
-scheduled to remove them automatically. Constant-backed and self-destructing
-profiles remain visible with an unavailable reason. Provider-native or manually
-recorded expiry does not block transfer, and Transporter does not inspect or
-certify provider permissions or prefer one declared credential kind.
+Credential choices are grouped by provider. Profiles associated with the
+selected packages appear first and begin unchecked; shared profiles appear
+once. Saved profiles that are not associated with a Booster-managed plugin or
+theme remain visible but disabled. File-backed associated profiles are eligible
+unless Booster is scheduled to remove them automatically. Constant-backed and
+self-destructing profiles also remain visible with an unavailable reason.
+Provider-native or manually recorded expiry does not block transfer, and
+Transporter does not inspect or certify provider permissions or prefer one
+declared credential kind.
 
 The server treats the browser selection only as a request. It fresh-checks the
 package association, file-backed source, provider identity, current material,

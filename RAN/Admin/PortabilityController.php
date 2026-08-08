@@ -124,7 +124,7 @@ final readonly class PortabilityController {
 			} catch ( InvalidArgumentException ) {
 				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Transporter Blueprint again.', 'ran-booster' ) ), 400 );
 			}
-			return wp_send_json_success( array( 'html' => $this->reviewBlueprint( $blueprint, $decisions, $this->targetCredentialIds() ) ) );
+			return $this->previewSuccess( $this->reviewBlueprint( $blueprint, $decisions, $this->targetCredentialIds() ) );
 		} catch ( PackageStorageFailure $failure ) {
 			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->isDatabaseUnsupported() ? 503 : 500 );
 		} catch ( Throwable ) {
@@ -193,7 +193,23 @@ final readonly class PortabilityController {
 			$rows[] = $this->row( $item, $this->credentialOrdinalForPackage( $blueprint, $item->package ), $targetCredentialIds[ $index ] ?? null );
 		}
 
-		return $this->renderReview( $rows, array() === $blueprint->credentials ? array() : $this->credentialRows( $blueprint, $credentialDecisions ) );
+		return $this->renderReview( $rows, array() === $blueprint->credentials ? array() : $this->credentialRows( $blueprint, $credentialDecisions, $items ) );
+	}
+
+	private function previewSuccess( string $html ): mixed {
+		if ( ! $this->isHtmxRequest() ) {
+			return wp_send_json_success( array( 'html' => $html ) );
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The existing review partial escapes its display-safe controller projection.
+		echo $html;
+		wp_die();
+	}
+
+	private function isHtmxRequest(): bool {
+		$value = $_SERVER['HTTP_HX_REQUEST'] ?? null;
+
+		return is_string( $value ) && 'true' === strtolower( trim( $value ) );
 	}
 
 	private function isAllowed( string $nonceAction ): bool {
@@ -487,9 +503,10 @@ final readonly class PortabilityController {
 
 	/**
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $decisions
+	 * @param list<BlueprintPlanItem> $items
 	 * @return list<array<string, mixed>>
 	 */
-	private function credentialRows( PackageBlueprint $blueprint, array $decisions ): array {
+	private function credentialRows( PackageBlueprint $blueprint, array $decisions, array $items ): array {
 		$providers = array();
 		try {
 			$providerList = $this->providerSettings->buildPackageList();
@@ -503,8 +520,11 @@ final readonly class PortabilityController {
 		}
 		$rows = array();
 		foreach ( $blueprint->credentials as $ordinal => $credential ) {
-			$provider = $providers[ $credential->provider ] ?? array();
-			$packages = array();
+			$provider       = $providers[ $credential->provider ] ?? array();
+			$kindLabels     = is_array( $provider['credential_kind_labels'] ?? null ) ? $provider['credential_kind_labels'] : array();
+			$packages       = array();
+			$proposedCount  = 0;
+			$unchangedCount = 0;
 			foreach ( $blueprint->packages as $packageRow => $package ) {
 				if ( in_array(
 					array(
@@ -514,24 +534,35 @@ final readonly class PortabilityController {
 					$credential->packages,
 					true
 				) ) {
-					$packages[] = array(
+					$projected  = array(
 						'row'  => $packageRow,
 						'name' => $package->displayName,
 						'type' => 'plugin' === $package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 					);
+					$packages[] = $projected;
+					$action     = $items[ $packageRow ]->action->value ?? null;
+					if ( in_array( $action, array( 'managed', 'protected' ), true ) ) {
+						++$unchangedCount;
+					} else {
+						++$proposedCount;
+					}
 				}
 			}
 			$decision = $decisions[ $ordinal ] ?? null;
 			$rows[]   = array(
-				'ordinal'        => $ordinal,
-				'provider_label' => is_string( $provider['label'] ?? null ) ? $provider['label'] : $credential->provider,
-				'label'          => $credential->label,
-				'kind'           => $credential->kind,
-				'packages'       => $packages,
-				'action'         => $decision['action']->value ?? null,
-				'target_id'      => $decision['target_id'] ?? null,
-				'target_choices' => array_values( array_filter( $provider['credentials'] ?? array(), static fn ( array $candidate ): bool => 'file' === ( $candidate['source'] ?? null ) ) ),
-				'settings_url'   => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $credential->provider ) . '&view=credentials' ),
+				'ordinal'           => $ordinal,
+				'provider_label'    => is_string( $provider['label'] ?? null ) ? $provider['label'] : $credential->provider,
+				'label'             => $credential->label,
+				'kind'              => $credential->kind,
+				'kind_label'        => is_string( $kindLabels[ $credential->kind ] ?? null ) ? $kindLabels[ $credential->kind ] : $credential->kind,
+				'packages'          => $packages,
+				'decision_required' => 0 < $proposedCount,
+				'proposed_count'    => $proposedCount,
+				'unchanged_count'   => $unchangedCount,
+				'action'            => $decision['action']->value ?? null,
+				'target_id'         => $decision['target_id'] ?? null,
+				'target_choices'    => array_values( array_filter( $provider['credentials'] ?? array(), static fn ( array $candidate ): bool => 'file' === ( $candidate['source'] ?? null ) ) ),
+				'settings_url'      => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $credential->provider ) . '&view=credentials' ),
 			);
 		}
 

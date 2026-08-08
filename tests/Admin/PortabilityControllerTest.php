@@ -56,6 +56,7 @@ final class PortabilityControllerTest extends TestCase {
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
 		unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
 		unset( $GLOBALS['ran_booster_repository_admin_uploaded_files'] );
+		unset( $_SERVER['HTTP_HX_REQUEST'] );
 	}
 
 	protected function tearDown(): void {
@@ -64,6 +65,7 @@ final class PortabilityControllerTest extends TestCase {
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
 		unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
 		unset( $GLOBALS['ran_booster_repository_admin_uploaded_files'] );
+		unset( $_SERVER['HTTP_HX_REQUEST'] );
 
 		parent::tearDown();
 	}
@@ -116,6 +118,36 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertTrue( $result['success'] );
 		self::assertStringContainsString( 'data-portability-row="0"', $result['data']['html'] );
 		self::assertStringContainsString( 'data-portability-action="install"', $result['data']['html'] );
+	}
+
+	public function testPreviewSuccessPreservesJsonForNonHtmxRequests(): void {
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'previewSuccess' );
+
+		self::assertSame(
+			array(
+				'success' => true,
+				'data'    => array( 'html' => '<div id="review">Safe review</div>' ),
+			),
+			$method->invoke( $this->controller(), '<div id="review">Safe review</div>' )
+		);
+	}
+
+	public function testPreviewSuccessWritesHtmlForHtmxRequests(): void {
+		$_SERVER['HTTP_HX_REQUEST'] = ' TRUE ';
+		$method                     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'previewSuccess' );
+
+		ob_start();
+		try {
+			$method->invoke( $this->controller(), '<div id="review">Safe review</div>' );
+			self::fail( 'The HTMX response must terminate through wp_die after writing the review HTML.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'ran_booster_test_wp_die', $failure->getMessage() );
+		} finally {
+			$output = (string) ob_get_clean();
+		}
+
+		self::assertSame( '<div id="review">Safe review</div>', $output );
+		self::assertStringNotContainsString( '"success"', $output );
 	}
 
 	public function testApplyRecomputesAndSkipsAStaleSubmittedAction(): void {
@@ -352,6 +384,67 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringContainsString( 'name="credential_decisions[0][action]" value="import"', $html );
 		self::assertStringNotContainsString( 'value="import" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
 		self::assertStringNotContainsString( 'sentinel-portability-token', $html );
+	}
+
+	public function testCredentialProjectionNeedsNoDecisionWhenEveryAssociatedPackageIsUnchanged(): void {
+		$managed   = new BlueprintPackage( 'plugin', 'managed/managed.php', 'Managed <Plugin>', 'gh', 'managed-source-id-canary', 'owner/managed', 'main', null );
+		$protected = new BlueprintPackage( 'theme', 'protected-theme', 'Protected Theme', 'gh', 'protected-source-id-canary', 'owner/protected', 'main', null );
+		$blueprint = new PackageBlueprint(
+			array( $managed, $protected ),
+			array(
+				new BlueprintCredential(
+					'gh',
+					'Imported credential',
+					'classic',
+					array( 'configuration' => 'configuration-canary' ),
+					'secret-canary',
+					array(
+						array(
+							'type'       => $managed->type,
+							'identifier' => $managed->identifier,
+						),
+						array(
+							'type'       => $protected->type,
+							'identifier' => $protected->identifier,
+						),
+					)
+				),
+			)
+		);
+		$items     = array(
+			new BlueprintPlanItem( $managed, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED ),
+			new BlueprintPlanItem( $protected, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT ),
+		);
+		$method    = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credentialRows' );
+
+		$rows = $method->invoke( $this->previewController( new PortabilityReadinessSpySecretsFile( true ) ), $blueprint, array(), $items );
+
+		self::assertCount( 1, $rows );
+		self::assertFalse( $rows[0]['decision_required'] );
+		self::assertSame( 0, $rows[0]['proposed_count'] );
+		self::assertSame( 2, $rows[0]['unchanged_count'] );
+		self::assertSame(
+			array(
+				array(
+					'row'  => 0,
+					'name' => 'Managed <Plugin>',
+					'type' => 'Plugin',
+				),
+				array(
+					'row'  => 1,
+					'name' => 'Protected Theme',
+					'type' => 'Theme',
+				),
+			),
+			$rows[0]['packages']
+		);
+		self::assertArrayNotHasKey( 'secret', $rows[0] );
+		self::assertArrayNotHasKey( 'configuration', $rows[0] );
+		$projection = (string) wp_json_encode( $rows );
+		self::assertStringNotContainsString( 'secret-canary', $projection );
+		self::assertStringNotContainsString( 'configuration-canary', $projection );
+		self::assertStringNotContainsString( 'managed-source-id-canary', $projection );
+		self::assertStringNotContainsString( 'protected-source-id-canary', $projection );
 	}
 
 	public function testApplyRecognisesAManagedPackageWithoutMutation(): void {

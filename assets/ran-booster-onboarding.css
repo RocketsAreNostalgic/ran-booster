@@ -386,9 +386,11 @@
 	display: grid;
 	gap: var(--ran-booster-space-12);
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	margin-block-start: var(--ran-booster-space-18);
-	padding-block-start: var(--ran-booster-space-18);
-	border-block-start: 1px solid var(--ran-booster-divider);
+	margin-block-start: var(--ran-booster-space-12);
+	padding: var(--ran-booster-space-16);
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-surface);
 }
 
 .ran-booster-admin .ran-booster-portability__import-fields {
@@ -493,6 +495,23 @@
 	min-inline-size: 0;
 }
 
+.ran-booster-admin
+	.ran-booster-portability__export-review
+	> :is(
+		.ran-booster-portability__credential-option,
+		.ran-booster-portability__export-packages
+	) {
+	margin-block-start: var(--ran-booster-space-20);
+	padding: 0;
+	background: transparent;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__export-review
+	.ran-booster-portability__packages-title {
+	margin-block-start: 0;
+}
+
 .ran-booster-admin .ran-booster-portability__credential-option > .description {
 	margin-block-end: 0;
 }
@@ -503,6 +522,76 @@
 	margin: 0;
 	padding: 0;
 	list-style: none;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-group {
+	min-inline-size: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-availability-group {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-availability-group
+	+ .ran-booster-portability__credential-availability-group {
+	margin-block-start: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-group
+	+ .ran-booster-portability__credential-group {
+	margin-block-start: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-card {
+	min-inline-size: 0;
+	margin: 0;
+	padding: var(--ran-booster-space-16);
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-card--unavailable {
+	color: var(--ran-booster-text-muted);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-card--unavailable
+	.ran-booster-portability__credential-selection {
+	cursor: not-allowed;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-option
+	.ran-booster-portability__credential-card:has(
+		> .ran-booster-portability__credential-selection > input:checked
+	) {
+	border-color: var(--ran-booster-color-blue-300);
+	background: var(--ran-booster-surface-info);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-selection {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: var(--ran-booster-space-10);
+	align-items: start;
+	cursor: pointer;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-selection > input {
+	margin-block-start: var(--ran-booster-space-3);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-selection
+	.ran-booster-portability__credential-heading {
+	justify-content: flex-start;
 }
 
 .ran-booster-admin .ran-booster-portability__credential-row .description {
@@ -750,20 +839,267 @@
 }
 
 .ran-booster-admin .ran-booster-portability__credential-review {
-	margin-block-end: var(--ran-booster-space-18);
+	margin-block: var(--ran-booster-space-20) 0;
 }
 
-.ran-booster-admin .ran-booster-portability__credential-review fieldset {
-	display: grid;
+.ran-booster-admin .ran-booster-portability__review-heading {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review
+	.ran-booster-portability__review-title {
+	margin-block-end: 0;
+	font-size: 18px;
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: var(--ran-booster-line-height-tight);
+}
+
+.ran-booster-admin .ran-booster-portability__review > p {
+	max-inline-size: 760px;
+	margin-block: var(--ran-booster-space-8) 0;
+	margin-inline: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review
+	.ran-booster-portability__subsection-title {
+	margin-block: 0 var(--ran-booster-space-6);
+	margin-inline: 0;
+	font-size: 15px;
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review
+	.ran-booster-portability__packages-title {
+	margin-block-start: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-portability__packages-description {
+	max-inline-size: 850px;
+	margin-block: 0 var(--ran-booster-space-12);
+	margin-inline: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-review > p {
+	max-inline-size: 850px;
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-review > p + p {
+	margin-block-start: var(--ran-booster-space-6);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-review > p.description {
+	font-size: var(--ran-booster-font-size-sm);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-review > p strong {
+	color: var(--ran-booster-text);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-review
+	.ran-booster-portability__credential-list {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-heading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
 	gap: var(--ran-booster-space-8);
+	inline-size: 100%;
 }
 
-.ran-booster-admin .ran-booster-portability__credential-review label {
+.ran-booster-admin
+	.ran-booster-portability__credential-heading
+	.ran-booster-portability__credential-name {
+	margin: 0;
+	margin-inline-end: var(--ran-booster-space-4);
+	font-size: var(--ran-booster-font-size-base);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-heading
+	.ran-booster-tile {
+	flex: 0 0 auto;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-packages {
+	margin-block-start: var(--ran-booster-space-14);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-packages > summary {
+	inline-size: fit-content;
+	color: var(--ran-booster-text-muted);
+	cursor: pointer;
+	font-size: var(--ran-booster-font-size-sm);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-packages
+	> summary:focus-visible {
+	outline: 2px solid var(--ran-booster-color-blue-300);
+	outline-offset: 2px;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-packages ul {
+	display: grid;
+	gap: var(--ran-booster-space-6);
+	margin-block: var(--ran-booster-space-10) 0;
+	margin-inline: var(--ran-booster-space-20) 0;
+	padding: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-packages
+	li
+	.description {
+	display: inline;
+	margin-inline-start: var(--ran-booster-space-4);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-actions {
+	display: grid;
+	gap: var(--ran-booster-space-10);
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-action {
+	padding-block: var(--ran-booster-space-12);
+	padding-inline: var(--ran-booster-space-14);
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-action:focus-within {
+	border-color: var(--ran-booster-color-blue-300);
+	box-shadow: 0 0 0 1px var(--ran-booster-color-blue-300);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-action:has(input:checked) {
+	border-color: var(--ran-booster-color-blue-300);
+	background: var(--ran-booster-surface-info);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-action:has(> label > input:disabled) {
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-action > label {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: var(--ran-booster-space-10);
+	align-items: start;
+	cursor: pointer;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-action > label > input {
+	margin-block-start: 2px;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-action
+	> label
+	.description {
 	display: block;
+	margin-block-start: var(--ran-booster-space-4);
 }
 
-.ran-booster-admin .ran-booster-portability__credential-review select {
-	inline-size: min(100%, 360px);
+.ran-booster-admin .ran-booster-portability__credential-target {
+	display: grid;
+	gap: var(--ran-booster-space-6);
+	margin-block-start: var(--ran-booster-space-10);
+	padding-inline-start: calc(16px + var(--ran-booster-space-10));
+}
+
+.ran-booster-admin .ran-booster-portability__credential-target label {
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-target select {
+	inline-size: min(100%, 420px);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-unavailable {
+	margin-block: var(--ran-booster-space-8) 0;
+	margin-inline: calc(16px + var(--ran-booster-space-10)) 0;
+}
+
+.ran-booster-admin .ran-booster-portability__credential-decision-state {
+	display: flex;
+	align-items: baseline;
+	gap: var(--ran-booster-space-8);
+	margin-block-start: var(--ran-booster-space-16);
+	padding-block: var(--ran-booster-space-10);
+	padding-inline: var(--ran-booster-space-12);
+	border: 0;
+	border-inline-start: 3px solid var(--ran-booster-status-ok);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__credential-decision-state--unavailable {
+	border-inline-start-color: var(--ran-booster-status-warning-border);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-footer {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-12);
+	margin-block-start: var(--ran-booster-space-12);
+	padding-block-start: var(--ran-booster-space-10);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-footer a {
+	flex: 0 0 auto;
+}
+
+.ran-booster-admin #ran-booster-portability-review-progress.htmx-indicator {
+	flex: 0 0 auto;
+	margin: 0;
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-sm);
+	opacity: 0;
+	visibility: hidden;
+	transition: none;
+}
+
+.ran-booster-admin
+	#ran-booster-portability-review-progress.htmx-indicator.htmx-request,
+.ran-booster-admin
+	.htmx-request
+	#ran-booster-portability-review-progress.htmx-indicator {
+	opacity: 1;
+	visibility: visible;
+}
+
+.ran-booster-admin .ran-booster-portability__review-error {
+	margin-block: var(--ran-booster-space-8) var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-portability__review-error[hidden] {
+	display: none;
+}
+
+.ran-booster-admin
+	[data-portability-review][aria-busy="true"]
+	:is([data-portability-select-all], [data-portability-select]) {
+	cursor: progress;
 }
 
 @media screen and (max-width: 782px) {
@@ -783,5 +1119,20 @@
 	.ran-booster-admin .ran-booster-portability__apply,
 	.ran-booster-admin .ran-booster-portability__credential-option {
 		padding-block-start: var(--ran-booster-space-18);
+	}
+
+	.ran-booster-admin .ran-booster-portability__credential-footer {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.ran-booster-admin .ran-booster-portability__review-heading {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.ran-booster-admin .ran-booster-portability__credential-decision-state {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 }

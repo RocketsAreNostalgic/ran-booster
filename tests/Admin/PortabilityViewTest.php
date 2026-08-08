@@ -24,7 +24,8 @@ final class PortabilityViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-export"[^>]+hidden>/', $html );
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-import"[^>]+hidden>/', $html );
 		self::assertStringContainsString( '>Repository credentials<', $html );
-		self::assertStringContainsString( 'Packages to include', $html );
+		self::assertStringContainsString( 'id="ran-booster-portability-export-review-heading" class="ran-booster-portability__review-title">Blueprint contents</h4>', $html );
+		self::assertStringContainsString( 'id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
 		self::assertStringContainsString( 'data-portability-export-select-all', $html );
 		self::assertStringContainsString( 'name="packages[plugin][]" value="example/example.php" type="checkbox" checked', $html );
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
@@ -89,6 +90,14 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'type="file" accept="application/zip,application/x-zip-compressed,.zip" disabled', $html );
 		self::assertStringContainsString( 'Choose a Transporter Blueprint to review its packages.', $html );
 		self::assertStringContainsString( 'Packages in this import review', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-portability-review-heading" class="ran-booster-portability__review-title">Blueprint review</h4>', $html );
+		self::assertStringContainsString( 'Review repository access decisions and the package changes proposed for this site.', $html );
+		self::assertStringContainsString( '<h5 id="ran-booster-portability-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
+		self::assertStringContainsString( 'Review the target state of each package and select the eligible changes you want to apply.', $html );
+		self::assertStringContainsString( 'aria-labelledby="ran-booster-portability-packages-heading"', $html );
+		self::assertStringContainsString( 'id="ran-booster-portability-review-progress" class="ran-booster-portability__review-progress htmx-indicator" role="status" aria-live="polite"', $html );
+		self::assertStringContainsString( 'data-portability-review-error role="alert" hidden', $html );
+		self::assertStringContainsString( 'id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll"', $html );
 		self::assertStringContainsString( 'role="region"', $html );
 		self::assertStringContainsString( 'tabindex="0"', $html );
 		self::assertStringNotContainsString( 'Switch mode', $html );
@@ -158,6 +167,15 @@ final class PortabilityViewTest extends TestCase {
 								),
 							),
 						),
+						array(
+							'id'         => 'unassociated-profile',
+							'label'      => 'Unused repository token',
+							'kind_label' => 'Fine-grained token',
+							'available'  => false,
+							'reason'     => 'unassociated',
+							'destroy_on' => null,
+							'packages'   => array(),
+						),
 					),
 				),
 			)
@@ -165,15 +183,29 @@ final class PortabilityViewTest extends TestCase {
 
 		self::assertStringContainsString( 'name="credentials[gh][]" value="eligible-profile" data-portability-export-credential', $html );
 		self::assertSame( 1, substr_count( $html, 'eligible-profile' ) );
-		self::assertStringContainsString( 'GitHub', $html );
-		self::assertStringContainsString( 'Deployment &lt;PAT&gt;', $html );
-		self::assertStringContainsString( 'Personal access token (classic)', $html );
-		self::assertStringContainsString( 'Used by: Example &lt;Plugin&gt;. The provider permissions for this credential have not been assessed.', $html );
-		self::assertStringContainsString( 'automatically remove this saved credential on 2026-08-31', $html );
-		self::assertStringContainsString( 'credential is supplied by site configuration', $html );
+		self::assertLessThan( strpos( $html, 'id="ran-booster-portability-export-packages-heading"' ), strpos( $html, 'id="ran-booster-portability-export-credentials-heading"' ) );
+		self::assertStringContainsString( '<legend class="screen-reader-text">GitHub credential choices</legend>', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-row ran-booster-portability__credential-card', $html );
+		self::assertStringNotContainsString( '>Available for transfer</h6>', $html );
+		self::assertStringNotContainsString( '>Unavailable for transfer</h6>', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-card--unavailable', $html );
+		self::assertLessThan( strpos( $html, 'Unused repository token' ), strpos( $html, 'Deployment &lt;PAT&gt;' ) );
+		self::assertLessThan( strpos( $html, 'id="ran-booster-portability-export-credential-details"' ), strpos( $html, 'Unused repository token' ) );
+		self::assertStringContainsString( 'ran-booster-portability__credential-name">Deployment &lt;PAT&gt;</strong>', $html );
+		self::assertStringContainsString( 'ran-booster-tile__value">GitHub</span>', $html );
+		self::assertStringContainsString( 'ran-booster-tile__value">Personal access token (classic)</span>', $html );
+		self::assertStringContainsString( '<summary>Used by 1 package</summary>', $html );
+		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
+		self::assertStringContainsString( 'The provider permissions for this credential have not been assessed.', $html );
+		self::assertStringContainsString( '<strong>Unavailable for transfer</strong>', $html );
+		self::assertStringContainsString( 'Booster will automatically remove this saved credential on 2026-08-31', $html );
+		self::assertStringContainsString( 'This credential is supplied by site configuration', $html );
+		self::assertStringContainsString( 'Unused repository token', $html );
+		self::assertStringContainsString( 'No Booster-managed plugin or theme uses this credential.', $html );
 		self::assertStringContainsString( 'data-portability-export-summary', $html );
 		self::assertStringNotContainsString( 'value="temporary-profile"', $html );
 		self::assertStringNotContainsString( 'value="constant"', $html );
+		self::assertStringNotContainsString( 'value="unassociated-profile"', $html );
 		self::assertStringNotContainsString( 'configuration-canary', $html );
 		self::assertStringNotContainsString( 'secret-canary', $html );
 		self::assertStringNotContainsString( 'expiry-canary', $html );
@@ -263,37 +295,124 @@ final class PortabilityViewTest extends TestCase {
 			array( $row ),
 			credentialRows: array(
 				array(
-					'ordinal'        => 0,
-					'provider_label' => 'GitHub <Cloud>',
-					'label'          => 'Imported <PAT>',
-					'kind'           => 'classic',
-					'packages'       => array(
+					'ordinal'           => 0,
+					'provider_label'    => 'GitHub <Cloud>',
+					'label'             => 'Imported <PAT>',
+					'kind'              => 'classic',
+					'kind_label'        => 'Classic personal access token',
+					'decision_required' => true,
+					'proposed_count'    => 1,
+					'unchanged_count'   => 1,
+					'packages'          => array(
 						array(
 							'name' => 'Private package',
 							'type' => 'Plugin',
 						),
+						array(
+							'name' => 'Protected <Theme>',
+							'type' => 'Theme',
+						),
 					),
-					'action'         => null,
-					'target_id'      => null,
-					'target_choices' => array(),
-					'settings_url'   => 'https://example.test/settings',
-					'secret'         => 'view-secret-canary',
-					'configuration'  => 'configuration-canary',
+					'action'            => null,
+					'target_id'         => null,
+					'target_choices'    => array(
+						array(
+							'id'     => 'saved-profile',
+							'label'  => 'Saved <Profile>',
+							'source' => 'file',
+						),
+					),
+					'settings_url'      => 'https://example.test/settings',
+					'secret'            => 'view-secret-canary',
+					'configuration'     => 'configuration-canary',
+					'source_id'         => 'source-id-canary',
 				),
 			)
 		);
 
-		self::assertStringContainsString( 'No saved credentials are available for this provider.', $html );
+		self::assertStringContainsString( '<h5 id="ran-booster-portability-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title">Repository credentials</h5>', $html );
+		self::assertStringContainsString( '<strong>Before you continue:</strong>', $html );
+		self::assertStringContainsString( 'Booster checks whether the credential can access each required repository, not what other permissions it has.', $html );
+		self::assertStringContainsString( 'Booster will not update packages added or adopted from this Blueprint until you deliberately change their deployment setting.', $html );
+		self::assertStringContainsString( '<legend class="screen-reader-text">GitHub &lt;Cloud&gt; — Imported &lt;PAT&gt;</legend>', $html );
+		self::assertStringContainsString( '<h6 class="ran-booster-portability__credential-name">Imported &lt;PAT&gt;</h6>', $html );
+		self::assertStringContainsString( 'ran-booster-tile ran-booster-portability__credential-provider', $html );
+		self::assertStringContainsString( 'ran-booster-tile__value">GitHub &lt;Cloud&gt;</span>', $html );
+		self::assertStringContainsString( 'ran-booster-tile ran-booster-portability__credential-kind', $html );
+		self::assertStringContainsString( 'ran-booster-tile__value">Classic personal access token</span>', $html );
+		self::assertStringContainsString( '<summary>Used by 2 packages; 1 package may change</summary>', $html );
+		self::assertStringContainsString( 'Protected &lt;Theme&gt;', $html );
+		self::assertStringContainsString( 'Saved &lt;Profile&gt;', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 		self::assertSame( 3, substr_count( $html, 'name="credential_decisions[0][action]"' ) );
-		self::assertStringContainsString( 'value="import"', $html );
-		self::assertStringContainsString( 'value="target"', $html );
-		self::assertStringContainsString( 'value="leave"', $html );
-		self::assertStringNotContainsString( 'value="import" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
-		self::assertStringNotContainsString( 'value="target" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
-		self::assertStringNotContainsString( 'value="leave" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
+		self::assertSame( 1, preg_match( '/<fieldset class="ran-booster-portability__credential-row ran-booster-portability__credential-card"[\s\S]+?<\/fieldset>/', $html, $card ) );
+		self::assertSame( 1, substr_count( $card[0], 'value="import"' ) );
+		self::assertSame( 1, substr_count( $card[0], 'value="target"' ) );
+		self::assertSame( 1, substr_count( $card[0], 'value="leave"' ) );
+		self::assertStringNotContainsString( ' checked=', $card[0] );
+		self::assertSame( 3, substr_count( $card[0], 'data-portability-credential-refresh' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-trigger="change delay:150ms"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled)"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-encoding="multipart/form-data"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-target="#ran-booster-portability-package-review"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-select="#ran-booster-portability-package-review"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-swap="outerHTML show:none"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-sync="[data-portability-preview]:replace"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-indicator="#ran-booster-portability-review-progress"' ) );
+		self::assertStringContainsString( 'value="target" data-portability-credential-action aria-describedby=', $card[0] );
+		self::assertStringNotContainsString( 'value="target" data-portability-credential-action data-portability-credential-refresh', $card[0] );
 		self::assertStringNotContainsString( 'view-secret-canary', $html );
 		self::assertStringNotContainsString( 'configuration-canary', $html );
+		self::assertStringNotContainsString( 'source-id-canary', $html );
+	}
+
+	public function testCredentialReviewExplainsWhenAllAssociatedPackagesRemainUnchanged(): void {
+		$managed                         = $this->row( 'Managed <Plugin>', 'managed/plugin.php', 'managed', 'Configuration matches' );
+		$managed['credential_ordinal']   = 0;
+		$protected                       = $this->row( 'Protected Theme', 'protected-theme', 'protected', 'Managed differently' );
+		$protected['credential_ordinal'] = 0;
+		$html                            = $this->renderView(
+			array( $managed, $protected ),
+			credentialRows: array(
+				array(
+					'ordinal'           => 0,
+					'provider_label'    => 'Provider <Cloud>',
+					'label'             => 'Imported <Credential>',
+					'kind'              => 'token',
+					'decision_required' => false,
+					'proposed_count'    => 0,
+					'unchanged_count'   => 2,
+					'packages'          => array(
+						array(
+							'name' => 'Managed <Plugin>',
+							'type' => 'Plugin',
+						),
+						array(
+							'name' => 'Protected Theme',
+							'type' => 'Theme',
+						),
+					),
+					'settings_url'      => 'https://example.test/settings',
+					'secret'            => 'unchanged-secret-canary',
+					'configuration'     => 'unchanged-configuration-canary',
+					'source_id'         => 'unchanged-source-id-canary',
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'This Blueprint includes repository credentials, but none are needed for package changes on this site.', $html );
+		self::assertStringNotContainsString( 'Choose how this site should access repositories needed by the proposed package changes.', $html );
+		self::assertStringNotContainsString( '<strong>Before you continue:</strong>', $html );
+		self::assertStringContainsString( '<summary>Used by 2 packages; all unchanged</summary>', $html );
+		self::assertStringContainsString( '<strong>No action needed</strong>', $html );
+		self::assertStringContainsString( 'No credential choice is needed because every affected package will remain unchanged.', $html );
+		self::assertStringContainsString( 'Managed &lt;Plugin&gt;', $html );
+		self::assertStringContainsString( 'Manage repository credentials', $html );
+		self::assertStringNotContainsString( 'name="credential_decisions[0][action]"', $html );
+		self::assertStringNotContainsString( 'data-portability-credential-refresh', $html );
+		self::assertStringNotContainsString( 'unchanged-secret-canary', $html );
+		self::assertStringNotContainsString( 'unchanged-configuration-canary', $html );
+		self::assertStringNotContainsString( 'unchanged-source-id-canary', $html );
 	}
 
 	public function testReviewRendersTheCompleteBoundedBlueprint(): void {

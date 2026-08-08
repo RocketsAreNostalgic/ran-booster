@@ -29,16 +29,21 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 		private ProviderCredentialStore $credentials,
 		private int $anonymousFailure,
 		private string $providerRepositoryId,
-		private bool $private = false
+		private bool $private = false,
+		private string $providerCode = 'gh',
+		private string $providerLabel = 'GitHub',
+		private string $acceptedSecret = 'sentinel-portability-token'
 	) {
 	}
 
 	public function getMetadata(): ProviderMetadata {
-		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+		return new ProviderMetadata( ProviderCode::parse( $this->providerCode ), $this->providerLabel, 'https://provider.example.test/', 'Owner' );
 	}
 
 	public function getCredentialPolicy(): ProviderCredentialPolicy {
-		return new GitHubCredentialPolicy();
+		return 'gh' === $this->providerCode
+			? new GitHubCredentialPolicy()
+			: new TemporaryProviderCredentialPolicy( ProviderCode::parse( $this->providerCode ) );
 	}
 
 	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
@@ -49,14 +54,14 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 		}
 		if ( null !== $request->credentialId ) {
 			$material = $this->credentials->credentialMaterial( $request->credentialId );
-			if ( ! is_array( $material ) || 'sentinel-portability-token' !== ( $material['secret'] ?? null ) ) {
+			if ( ! is_array( $material ) || $this->acceptedSecret !== ( $material['secret'] ?? null ) ) {
 				throw new RuntimeException( 'Repository access failed.', 401 );
 			}
 			$this->temporaryCredentialId = $request->credentialId;
 		}
 
 		return new RepositoryDescriptor(
-			ProviderCode::parse( 'gh' ),
+			ProviderCode::parse( $this->providerCode ),
 			'owner/repository',
 			'example',
 			$this->providerRepositoryId,
@@ -68,5 +73,41 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 
 	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
 		throw new RuntimeException( 'Archive preparation is not used by this test.' );
+	}
+}
+
+// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused test provider policy belongs with the provider double.
+final readonly class TemporaryProviderCredentialPolicy implements ProviderCredentialPolicy {
+
+	public function __construct( private ProviderCode $provider ) {
+	}
+
+	public function getProvider(): ProviderCode {
+		return $this->provider;
+	}
+
+	public function normalizeCredential( array $metadata, mixed $secret ): array {
+		$label         = $metadata['label'] ?? null;
+		$kind          = $metadata['kind'] ?? null;
+		$configuration = $metadata['configuration'] ?? null;
+		if ( ! is_string( $label ) || '' === trim( $label ) || ! is_string( $kind ) || '' === trim( $kind )
+			|| ! is_array( $configuration ) || ! is_string( $secret ) || '' === trim( $secret ) ) {
+			throw new RuntimeException( 'The temporary provider credential is invalid.' );
+		}
+
+		return array(
+			'label'         => trim( $label ),
+			'kind'          => trim( $kind ),
+			'configuration' => $configuration,
+			'secret'        => trim( $secret ),
+		);
+	}
+
+	public function getConstantNames(): array {
+		return array();
+	}
+
+	public function credentialFromConstants( array $constants ): ?array {
+		return null;
 	}
 }

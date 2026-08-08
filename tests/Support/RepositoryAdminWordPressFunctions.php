@@ -29,6 +29,24 @@ function is_uploaded_file( string $filename ): bool {
 	return in_array( $filename, $GLOBALS['ran_booster_repository_admin_uploaded_files'] ?? array(), true );
 }
 
+function tempnam( string $directory, string $prefix ): string|false {
+	$path = \tempnam( $directory, $prefix );
+	$GLOBALS['ran_booster_repository_admin_temporary_files'][] = $path;
+
+	return $path;
+}
+
+function file_get_contents( string $filename ): string|false {
+	if ( array_key_exists( 'ran_booster_repository_admin_file_read', $GLOBALS ) ) {
+		$read = $GLOBALS['ran_booster_repository_admin_file_read'];
+
+		return is_callable( $read ) ? $read( $filename ) : false;
+	}
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test shim delegates to the native read used by the production boundary.
+	return \file_get_contents( $filename );
+}
+
 /**
  * @param array<string, mixed> $data
  * @return array{success: false, data: array<string, mixed>, status: int|null}

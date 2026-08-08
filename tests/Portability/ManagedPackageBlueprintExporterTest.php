@@ -253,6 +253,54 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
+	public function testProviderAndManualExpiryObservationsDoNotBlockOrEnterTheBlueprint(): void {
+		$plugin  = $this->package( 'plugin/expiring.php', 'expiring', 'expiring-repository-id', credentialId: 'expiring-profile' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/expiring.php' => $plugin ) );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$secrets = new class() extends SecretsFile {
+			public function __construct() {
+				parent::__construct( null, array() );
+			}
+			public function assertManagedStorageReady(): void {
+			}
+			public function credentialMaterial( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id = null ): ?array {
+				$providerCode = $provider instanceof \RAN\RepositoryProvider\ProviderCode ? $provider->value : $provider;
+
+				return array(
+					'id'                  => $id,
+					'provider'            => $providerCode,
+					'label'               => 'Normally expiring token',
+					'kind'                => 'fine-grained',
+					'configuration'       => array( 'owner' => 'RocketsAreNostalgic' ),
+					'source'              => 'file',
+					'immutable'           => false,
+					'configured'          => true,
+					'self_destruct'       => false,
+					'destroy_on'          => null,
+					'manual_expires_on'   => '2099-01-01',
+					'provider_expires_at' => '2099-01-02T03:04:05Z',
+					'provider_checked_at' => '2026-08-08T12:00:00Z',
+					'secret'              => 'expiry-observation-secret-canary',
+				);
+			}
+		};
+
+		$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export(
+			array( 'gh' => array( 'expiring-profile' ) )
+		);
+		$json      = $blueprint->canonicalJson();
+
+		self::assertCount( 1, $blueprint->credentials );
+		self::assertSame( 'fine-grained', $blueprint->credentials[0]->kind );
+		self::assertStringNotContainsString( 'manual_expires_on', $json );
+		self::assertStringNotContainsString( 'provider_expires_at', $json );
+		self::assertStringNotContainsString( 'provider_checked_at', $json );
+		self::assertStringNotContainsString( '2099-01', $json );
+		self::assertStringNotContainsString( '2026-08-08', $json );
+	}
+
 	public function testItRejectsASelectedSelfDestructCredential(): void {
 		$plugin  = $this->package( 'plugin/lifecycle.php', 'lifecycle', 'lifecycle-repository-id', credentialId: 'lifecycle-profile-canary' );
 		$plugins = $this->createStub( PluginRepository::class );

@@ -138,13 +138,17 @@ unchanged, pauses package storage, Transporter and all deployment paths, and
 keeps read-only compatibility Troubleshooting available. Restore a supported
 database to resume. Raw moves within the supported MySQL/MariaDB envelope are
 best effort. Before a move, export every managed package in a current
-Blueprint, optionally include eligible file-stored credentials in its
-password-protected archive, preview the ZIP, retain it off-site, and keep the
+Blueprint, explicitly select any eligible file-stored credentials the target
+needs, preview the password-protected ZIP, retain it off-site, and keep the
 normal database and filesystem backup. The target must still satisfy Booster's
 database requirements. Blueprints omit deployment-attempt and delivery-replay
 history, webhook secrets and provider-side hooks, constants, locks and worker
 state, and source deployment policy. Installed and adopted packages start
-Disabled. Booster does not perform cross-engine table migration.
+Disabled. Every carried credential requires an explicit import, saved-target
+or leave choice on a target with the matching provider active. Transfer copies
+the credential; it does not remove, revoke or rotate the source. Blueprint V1
+cannot reconstruct a source-local automatic-removal date from legacy archives.
+Booster does not perform cross-engine table migration.
 
 Booster runs one sequential package mutation at a time and records one of five
 states: queued, running, succeeded, failed or needs attention. It uses
@@ -205,8 +209,9 @@ access and package-only Transporter Blueprints remain available.
 Deleting Booster through WordPress permanently removes all verified
 Booster-owned local data, including both custom tables, the encrypted
 credentials file and its separate database key. Before deletion, export a
-password-protected Blueprint with the selected packages and any file-stored
-repository credentials they use that you may need. Blueprints omit webhook
+password-protected Blueprint with the selected packages and any explicitly
+selected eligible file-stored repository credentials the target may need.
+Blueprints omit webhook
 secrets, provider-side hooks, constants and deployment history, and restored
 packages start Disabled. Revoke provider credentials and remove remote webhooks
 separately first. Booster removes only the exact `wp-config.php` definition it

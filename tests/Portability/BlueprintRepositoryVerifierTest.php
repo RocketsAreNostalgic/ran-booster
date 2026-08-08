@@ -7,6 +7,7 @@ namespace Tests\Portability;
 // phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DevelopmentFunctions.error_log_var_export
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\BlueprintCredentialAction;
@@ -15,6 +16,8 @@ use RAN\Portability\BlueprintPlanItem;
 use RAN\Portability\BlueprintRepositoryVerifier;
 use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
+use RAN\RepositoryProvider\GitHubCredentialPolicy;
+use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
@@ -57,6 +60,35 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertFileDoesNotExist( $this->path );
 	}
 
+	#[DataProvider( 'transferredProviderCredentialProvider' )]
+	public function testTransferredCredentialVerificationIsProviderNeutral(
+		string $providerCode,
+		string $kind,
+		array $configuration,
+		string $secret
+	): void {
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id', false, $providerCode, $secret );
+
+		$result = $verifier->verify(
+			$this->installItem( $providerCode ),
+			$this->credential( provider: $providerCode, kind: $kind, configuration: $configuration, secret: $secret ),
+			BlueprintCredentialAction::IMPORT
+		);
+
+		self::assertSame( TargetPackageAction::INSTALL, $result->action );
+		self::assertCount( 1, $provider->credentialIds );
+		self::assertNotNull( $provider->temporaryCredentialId );
+		self::assertNull( $secrets->credentialMaterial( $providerCode, $provider->temporaryCredentialId ) );
+		self::assertSame( array(), $secrets->credentialProfiles( $providerCode ) );
+	}
+
+	/** @return iterable<string, array{string,string,array<string,string>,string}> */
+	public static function transferredProviderCredentialProvider(): iterable {
+		yield 'GitHub classic' => array( 'gh', 'classic', array( 'owner' => '' ), 'sentinel-portability-token' );
+		yield 'GitHub fine-grained' => array( 'gh', 'fine-grained', array( 'owner' => 'RocketsAreNostalgic' ), 'sentinel-portability-token' );
+		yield 'Bitbucket API token' => array( 'bb', 'api-token', array( 'account_email' => 'canary@example.test' ), 'sentinel-bitbucket-portability-token' );
+	}
+
 	public function testTransferredMaterialIsAttemptedBeforeAnExplicitTargetCredentialWithoutPreviewPersistence(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
 		$secrets->saveCredential(
@@ -83,8 +115,9 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( $before, (string) file_get_contents( $this->path ) );
 	}
 
-	public function testItPreservesAnAssociatedCredentialForAPublicRepository(): void {
-		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
+	#[DataProvider( 'repositoryPrivacyProvider' )]
+	public function testItPreservesAnAssociatedCredentialForPublicAndPrivateRepositories( bool $private ): void {
+		[$verifier, $provider] = $this->verifier( 0, 'repository-id', $private );
 
 		$repositoryPrivate = null;
 		$result            = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT, null, $repositoryPrivate );
@@ -92,7 +125,13 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
 		self::assertNotNull( $provider->temporaryCredentialId );
-		self::assertFalse( $repositoryPrivate );
+		self::assertSame( $private, $repositoryPrivate );
+	}
+
+	/** @return iterable<string, array{bool}> */
+	public static function repositoryPrivacyProvider(): iterable {
+		yield 'public' => array( false );
+		yield 'private' => array( true );
 	}
 
 	public function testItLeavesAPackageOnlyPublicRepositoryAnonymous(): void {
@@ -161,6 +200,69 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( 'target-pat' ), $provider->credentialIds );
+	}
+
+	public function testCarriedCredentialTargetChoiceUsesOnlyTheSubmittedTargetProfile(): void {
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
+		$secrets->saveCredential(
+			'gh',
+			'target-pat',
+			array(
+				'label'         => 'Target PAT',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			'sentinel-portability-token'
+		);
+
+		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' );
+
+		self::assertSame( TargetPackageAction::INSTALL, $result->action );
+		self::assertSame( array( 'target-pat' ), $provider->credentialIds );
+		self::assertSame( 'target-pat', $provider->temporaryCredentialId );
+	}
+
+	public function testWrongProviderTargetChoiceBlocksWithoutAnyFallback(): void {
+		$catalog  = new ProviderSecretPolicyCatalog();
+		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
+		$provider = new TemporaryCredentialProvider( $secrets->credentialsFor( 'gh' ), 404, 'repository-id' );
+		$registry = new ProviderRegistry( array( $provider ), $catalog );
+		$catalog->register( ProviderCode::parse( 'bb' ), new TemporaryProviderCredentialPolicy( ProviderCode::parse( 'bb' ) ), null );
+		$secrets->saveCredential(
+			'bb',
+			'wrong-provider-profile',
+			array(
+				'label'         => 'Wrong provider token',
+				'kind'          => 'api-token',
+				'configuration' => array( 'account_email' => 'canary@example.test' ),
+			),
+			'sentinel-bitbucket-portability-token'
+		);
+
+		$result = ( new BlueprintRepositoryVerifier( $registry, $secrets ) )->verify(
+			$this->installItem(),
+			$this->credential(),
+			BlueprintCredentialAction::TARGET,
+			'wrong-provider-profile'
+		);
+
+		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
+		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
+		self::assertSame( array(), $provider->credentialIds );
+	}
+
+	public function testInactiveProviderBlocksTransferredMaterialAndCleansTheTemporaryProfile(): void {
+		$catalog = new ProviderSecretPolicyCatalog();
+		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
+		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
+		$verifier = new BlueprintRepositoryVerifier( new ProviderRegistry(), $secrets );
+
+		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
+
+		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
+		self::assertSame( TargetPackageReason::PROVIDER_UNAVAILABLE, $result->reason );
+		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
+		self::assertFileDoesNotExist( $this->path );
 	}
 
 	public function testItRetriesAnAnonymousRateLimitWithATransferredCredential(): void {
@@ -233,29 +335,49 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	}
 
 	/** @return array{BlueprintRepositoryVerifier, TemporaryCredentialProvider, SecretsFile} */
-	private function verifier( int $anonymousFailure, string $providerRepositoryId ): array {
+	private function verifier(
+		int $anonymousFailure,
+		string $providerRepositoryId,
+		bool $private = false,
+		string $providerCode = 'gh',
+		string $acceptedSecret = 'sentinel-portability-token'
+	): array {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
-		$provider = new TemporaryCredentialProvider( $secrets->credentialsFor( 'gh' ), $anonymousFailure, $providerRepositoryId );
+		$provider = new TemporaryCredentialProvider(
+			$secrets->credentialsFor( $providerCode ),
+			$anonymousFailure,
+			$providerRepositoryId,
+			$private,
+			$providerCode,
+			'gh' === $providerCode ? 'GitHub' : 'Bitbucket',
+			$acceptedSecret
+		);
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
 		return array( new BlueprintRepositoryVerifier( $registry, $secrets ), $provider, $secrets );
 	}
 
-	private function package(): BlueprintPackage {
-		return new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null );
+	private function package( string $provider = 'gh' ): BlueprintPackage {
+		return new BlueprintPackage( 'plugin', 'example/example.php', 'Example', $provider, 'repository-id', 'owner/repository', 'main', null );
 	}
 
-	private function installItem(): BlueprintPlanItem {
-		return new BlueprintPlanItem( $this->package(), TargetPackageAction::INSTALL, TargetPackageReason::NONE );
+	private function installItem( string $provider = 'gh' ): BlueprintPlanItem {
+		return new BlueprintPlanItem( $this->package( $provider ), TargetPackageAction::INSTALL, TargetPackageReason::NONE );
 	}
 
-	private function credential( string $identifier = 'example/example.php', string $secret = 'sentinel-portability-token' ): BlueprintCredential {
+	private function credential(
+		string $identifier = 'example/example.php',
+		string $secret = 'sentinel-portability-token',
+		string $provider = 'gh',
+		string $kind = 'classic',
+		array $configuration = array( 'owner' => '' )
+	): BlueprintCredential {
 		return new BlueprintCredential(
-			'gh',
+			$provider,
 			'Imported credential',
-			'classic',
-			array( 'owner' => '' ),
+			$kind,
+			$configuration,
 			$secret,
 			array(
 				array(

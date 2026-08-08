@@ -295,6 +295,18 @@ credential under its current provider policy immediately before delivery, and
 provider callbacks never run while Core holds the sidecar lock. A displayed
 file-backed profile is stored; its provider validity is checked on use.
 
+### Transporter credential boundary
+
+Core owns Transporter package and credential selection, password-protected
+Blueprint custody, request-local decision parsing, temporary Preview material
+and target-side persistence. A matching active provider receives only its
+provider-bound selected material for the existing exact-repository verification
+request. It receives no archive password, Blueprint parser, source profile ID,
+cross-provider credential access, persistence authority or fallback choice.
+Provider-native expiry may inform ordinary provider validation, but it is not a
+Transporter transfer gate or permission-fitness claim. Local self-destruct
+eligibility remains a Core custody decision made before export.
+
 Webhook support remains optional. A webhook-capable provider implements
 `WebhookNormalizer`, whose `getWebhookPolicy()` returns its
 `ProviderWebhookPolicy`. That policy declares the small allowlist of request

@@ -127,16 +127,24 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		);
 		$applyItem   = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
 		$result      = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+		$secondItem  = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
+		$second      = $applyItem->invoke( $application, $imported, $secondItem, $credential, 'import', null, false, true, true );
+		$retry       = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertSame( 'transferred_available', $result['credential_state'] );
 		self::assertStringContainsString( 'could not apply this package', $result['message'] );
+		self::assertSame( 'failed', $second['status'] );
+		self::assertSame( 'transferred_available', $second['credential_state'] );
+		self::assertSame( 'failed', $retry['status'] );
+		self::assertSame( 'transferred_available', $retry['credential_state'] );
 		$targetId = $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0];
 		self::assertSame(
 			'sentinel-portability-token',
 			$targetSecrets->credentialMaterial( 'gh', $targetId )['secret']
 		);
 		self::assertSame( $targetId, $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0] );
+		self::assertSame( array( $targetId ), array_keys( $targetSecrets->credentialProfiles( 'gh' ) ) );
 
 		$sourceKey = $sourceKeyStore->load();
 		$targetKey = $targetKeyStore->load();
@@ -153,24 +161,31 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 	}
 
 	private function exporter( SecretsFile $secrets ): ManagedPackageBlueprintExporter {
-		$package = $this->createStub( Package::class );
-		$package->method( 'getIdentifier' )->willReturn( 'example/example.php' );
-		$package->method( 'getDisplayName' )->willReturn( 'Example' );
-		$package->method( 'getSlug' )->willReturn( 'example' );
-		$package->method( 'getProviderCode' )->willReturn( 'gh' );
-		$package->method( 'getProviderRepositoryId' )->willReturn( 'repository-id' );
-		$package->method( 'getRepository' )->willReturn(
-			new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', true, 'source-credential' )
-		);
-		$package->method( 'getBranch' )->willReturn( 'main' );
-		$package->method( 'isPrivate' )->willReturn( true );
-		$package->method( 'getSubdirectory' )->willReturn( null );
-		$package->method( 'getCredentialId' )->willReturn( 'source-credential' );
-		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
-		$package->method( 'getSourceRevision' )->willReturn( 1 );
+		$packages = array();
+		foreach ( array(
+			'example/example.php' => 'Example',
+			'second/second.php'   => 'Second',
+		) as $identifier => $displayName ) {
+			$package = $this->createStub( Package::class );
+			$package->method( 'getIdentifier' )->willReturn( $identifier );
+			$package->method( 'getDisplayName' )->willReturn( $displayName );
+			$package->method( 'getSlug' )->willReturn( explode( '/', $identifier, 2 )[0] );
+			$package->method( 'getProviderCode' )->willReturn( 'gh' );
+			$package->method( 'getProviderRepositoryId' )->willReturn( 'repository-id' );
+			$package->method( 'getRepository' )->willReturn(
+				new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', true, 'source-credential' )
+			);
+			$package->method( 'getBranch' )->willReturn( 'main' );
+			$package->method( 'isPrivate' )->willReturn( true );
+			$package->method( 'getSubdirectory' )->willReturn( null );
+			$package->method( 'getCredentialId' )->willReturn( 'source-credential' );
+			$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
+			$package->method( 'getSourceRevision' )->willReturn( 1 );
+			$packages[ $identifier ] = $package;
+		}
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $package ) );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( $packages );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
 
 		return new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets );

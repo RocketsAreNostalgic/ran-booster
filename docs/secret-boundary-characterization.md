@@ -258,6 +258,17 @@ credential reader. Receipt of plaintext means Core cannot constrain what that
 provider does in its private code or logger. Conformance proves the supported
 Core boundary and cross-provider scoping, not provider honesty.
 
+Transporter is the one encrypted-archive path that deliberately carries an
+explicitly selected repository credential. Core reads that one source profile,
+writes its canonical provider-owned material only inside the password-protected
+Blueprint, exposes it to the matching provider as request-local Preview
+material, and persists it under the target site's independent encryption only
+during an authorised Apply. Portability API 2, ordinary add-ons, webhook-secret
+workflows and unrelated add-on secrets receive no archive or persistence
+authority. The archive is a copy, not a move, revocation or rotation
+instruction, and Preview must not write the target key, sidecar or package
+state.
+
 ## Negative-conformance surface matrix
 
 Use synthetic values assembled in test code. Never use realistic provider

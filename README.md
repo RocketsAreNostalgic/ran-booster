@@ -98,8 +98,8 @@ Complete database copies within the supported MySQL/MariaDB and InnoDB envelope
 are best effort. Before a database move:
 
 1. Export a current Blueprint containing every managed package.
-2. Optionally include eligible file-stored credentials in the
-   password-protected archive.
+2. Explicitly select any eligible file-stored credentials that the target
+   needs; they are copied only inside the password-protected archive.
 3. Preview the ZIP successfully and retain it off-site.
 4. Keep the normal database and filesystem backup.
 
@@ -109,6 +109,13 @@ It does not carry deployment-attempt or delivery-replay history, webhook
 secrets or provider-side hooks, constants, locks or worker state, or the source
 deployment policy. Every installed or adopted package starts with deployment
 **Disabled**. Cross-engine table migration is not a Booster feature.
+
+Every carried credential requires an explicit target choice: import the copied
+material, use a current saved credential for the same active provider, or leave
+its packages unchanged. There is no credential or anonymous fallback. Import
+does not remove, revoke or rotate the source credential, and Blueprint V1
+cannot reconstruct a source-local automatic-removal date from either current or
+legacy archives.
 
 Database schemas 8 and 9 existed only in untagged development checkouts and
 will not be migrated by the next release. Before updating such a checkout, keep
@@ -397,8 +404,9 @@ including both custom tables, the encrypted credentials file and key, scheduled
 work, notices and temporary capture files.
 
 Before deleting Booster, export a password-protected Blueprint with the
-selected packages and any file-stored repository credentials they use that you
-may need. Blueprints do not contain webhook secrets, provider-side hooks,
+selected packages and explicitly selected eligible file-stored repository
+credentials that the target may need. Blueprints do not contain webhook
+secrets, provider-side hooks,
 constants or deployment history, and restored packages start with deployment
 **Disabled**. Revoke provider credentials and remove remote webhooks separately
 before uninstalling; Assisted Hooks can remove an identified GitHub hook when

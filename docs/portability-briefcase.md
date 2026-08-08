@@ -41,6 +41,11 @@ Provider-native or manually recorded expiry does not block transfer, and
 Transporter does not inspect or certify provider permissions or prefer one
 declared credential kind.
 
+Credential transfer is a copy operation. It does not remove, revoke or rotate
+the source credential, and it does not move provider-side access or webhooks.
+Treat the source and target copies as independently held credentials after a
+successful import.
+
 The server treats the browser selection only as a request. It fresh-checks the
 package association, file-backed source, provider identity, current material,
 and local self-destruct state before building the archive. A stale, forged, or
@@ -83,6 +88,11 @@ credential provider, label, kind, configuration, secret, and the package list
 that it belongs to. The record is normalized and bounded before it is written
 into a blueprint. Source profile IDs and local self-destruct dates are never
 serialized.
+
+That omission also applies to older Blueprint V1 archives. A target cannot
+reconstruct whether Booster once had a source-local automatic-removal date, so
+legacy archives receive the same explicit import, saved-target or leave choice
+without any lifecycle assurance.
 
 `BlueprintArchive` writes and reads the briefcase ZIP. It supports a canonical
 JSON-only archive and an encrypted AES-256 variant when the runtime can prove
@@ -134,9 +144,11 @@ Every credential carried by an encrypted Blueprint requires one request-local
 choice: import the transferred credential, use one current file-backed target
 credential for the same provider, or leave every affected package unchanged.
 There is no default and no fallback between transferred, target, and anonymous
-access. The selected source is verified against the exact repository, including
-for a public repository. A package with no carried credential retains the
-package-only target or anonymous verification path.
+access. The matching provider must be active and compatible on the target before
+Transporter can verify or import its credential. The selected source is verified
+against the exact repository, including for a public repository. A package with
+no carried credential retains the package-only target or anonymous verification
+path.
 
 Preview never writes transferred material to the sidecar. Apply reparses the
 Blueprint and decision, checks package capability and adoption consent, repeats

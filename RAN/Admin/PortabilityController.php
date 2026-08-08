@@ -88,12 +88,14 @@ final readonly class PortabilityController {
 		}
 
 		try {
+			$bytes = $this->archiveBytes( $path );
 			nocache_headers();
 			header( 'Content-Type: application/zip' );
 			header( 'Content-Disposition: attachment; filename="' . BlueprintArchive::FILENAME . '"' );
-			header( 'Content-Length: ' . (string) filesize( $path ) );
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- Streams only this just-created, administrator-requested ZIP.
-			readfile( $path );
+			header( 'Content-Length: ' . (string) strlen( $bytes ) );
+			echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Emits only the fully read, bounded ZIP after validation.
+		} catch ( Throwable ) {
+			return $this->exportFailure( __( 'Booster could not read the Transporter Blueprint ZIP. Please try again.', 'ran-booster' ), 500 );
 		} finally {
 			if ( is_file( $path ) ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's generated ZIP.
@@ -102,6 +104,27 @@ final readonly class PortabilityController {
 		}
 
 		exit;
+	}
+
+	private function archiveBytes( string $path ): string {
+		$size = is_file( $path ) ? filesize( $path ) : false;
+		if ( ! is_int( $size ) || $size < 1 || $size > BlueprintArchive::MAX_BYTES ) {
+			throw new InvalidArgumentException();
+		}
+
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Contains private temporary-file warnings inside the fixed administrator error boundary.
+		set_error_handler( static fn(): bool => true );
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads only this request's bounded private temporary ZIP before headers are sent.
+			$bytes = file_get_contents( $path );
+		} finally {
+			restore_error_handler();
+		}
+		if ( ! is_string( $bytes ) || strlen( $bytes ) !== $size ) {
+			throw new InvalidArgumentException();
+		}
+
+		return $bytes;
 	}
 
 	public function handlePreview(): mixed {

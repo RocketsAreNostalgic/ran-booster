@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-beta.13](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-08-09)
+
+
+### Bug Fixes
+
+* recover orphaned credential storage safely ([02ab40b](https://github.com/RocketsAreNostalgic/ran-booster/commit/02ab40b4f240372b48ee4535b644e808e09f9940))
+
 ## [1.0.0-beta.12](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-08-09)
 
 

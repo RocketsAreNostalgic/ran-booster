@@ -37,7 +37,7 @@ fi
 
 version="$($php_bin "$wp_cli" core version --path="$wordpress")"
 case "$version" in
-	7.0.*) ;;
+	7.0|7.0.*) ;;
 	*)
 		echo 'The managed-theme registration proof requires a supported WordPress 7.0.x fixture.' >&2
 		exit 2

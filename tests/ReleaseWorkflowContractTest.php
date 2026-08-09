@@ -109,6 +109,14 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		}
 	}
 
+	public function testWordPressSmokeGatesAcceptTheExactDeclaredFloor(): void {
+		foreach ( array( 'core-updater-proof.sh', 'managed-theme-registration-smoke.sh' ) as $scriptName ) {
+			$script = file_get_contents( __DIR__ . '/WordPress/' . $scriptName ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local CI contract.
+			self::assertIsString( $script );
+			self::assertStringContainsString( '7.0|7.0.*) ;;', $script );
+		}
+	}
+
 	private function workflow( string $name ): string {
 		$workflow = file_get_contents( dirname( __DIR__ ) . '/.github/workflows/' . $name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local workflow contract.
 		self::assertIsString( $workflow );

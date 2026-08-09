@@ -23,7 +23,7 @@ $portabilityCredentialRows = is_array( $portabilityCredentialRows ?? null )
 	: array();
 $hasActionableRows         = array() !== array_filter(
 	$portabilityReviewRows,
-	static fn( array $row ): bool => in_array( $row['action'], array( 'install', 'adopt' ), true )
+	static fn( array $row ): bool => in_array( $row['action'], array( 'install', 'adopt' ), true ) || true === ( $row['credential_recovery'] ?? false )
 );
 $hasCredentialDecisions    = array() !== array_filter(
 	$portabilityCredentialRows,
@@ -35,8 +35,8 @@ $hasCredentialDecisions    = array() !== array_filter(
 	<section class="ran-booster-portability__credential-review" aria-labelledby="ran-booster-portability-credentials-heading">
 		<h5 id="ran-booster-portability-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h5>
 		<?php if ( $hasCredentialDecisions ) : ?>
-			<p><?php esc_html_e( 'Choose how this site should access repositories needed by the proposed package changes. Booster verifies each exact repository using only your choice.', 'ran-booster' ); ?></p>
-			<p class="description"><strong><?php esc_html_e( 'Before you continue:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Booster checks whether the credential can access each required repository, not what other permissions it has. Booster will not update packages added or adopted from this Blueprint until you deliberately change their deployment setting.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Choose how this site should access repositories needed by the proposed package changes or credential recovery. Booster verifies each exact repository using only your choice.', 'ran-booster' ); ?></p>
+			<p class="description"><strong><?php esc_html_e( 'Before you continue:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Booster checks whether the credential can access each required repository, not what other permissions it has. Importing a credential for an already-managed package does not change that package’s saved credential selection.', 'ran-booster' ); ?></p>
 		<?php else : ?>
 			<p><?php esc_html_e( 'This Blueprint includes repository credentials, but none are needed for package changes on this site.', 'ran-booster' ); ?></p>
 		<?php endif; ?>
@@ -50,12 +50,25 @@ $hasCredentialDecisions    = array() !== array_filter(
 		$packages         = array_values( array_filter( (array) ( $credential['packages'] ?? array() ), 'is_array' ) );
 		$packageCount     = count( $packages );
 		$proposedCount    = max( 0, (int) ( $credential['proposed_count'] ?? 0 ) );
+		$recoveryCount    = max( 0, (int) ( $credential['recovery_count'] ?? 0 ) );
 		$packageLabel     = sprintf(
 			/* translators: %d: number of packages using the credential. */
 			_n( '%d package', '%d packages', $packageCount, 'ran-booster' ),
 			$packageCount
 		);
-		$packageSummary = $decisionRequired
+		$recoveryLabel = sprintf(
+			/* translators: %d: number of already-managed packages eligible for credential-only recovery. */
+			_n( '%d managed package', '%d managed packages', $recoveryCount, 'ran-booster' ),
+			$recoveryCount
+		);
+		$packageSummary = 0 < $recoveryCount && 0 === $proposedCount
+			? sprintf(
+				/* translators: 1: total package count label, 2: managed package count label. */
+				__( 'Used by %1$s; credential recovery is available for %2$s', 'ran-booster' ),
+				$packageLabel,
+				$recoveryLabel
+			)
+			: ( $decisionRequired
 			? sprintf(
 				/* translators: 1: total package count label, 2: proposed package change count label. */
 				__( 'Used by %1$s; %2$s', 'ran-booster' ),
@@ -70,7 +83,7 @@ $hasCredentialDecisions    = array() !== array_filter(
 				/* translators: %s: unchanged package count label. */
 				__( 'Used by %s; all unchanged', 'ran-booster' ),
 				$packageLabel
-			);
+			) );
 		$targetChoices = is_array( $credential['target_choices'] ?? null ) ? array_slice( $credential['target_choices'], 0, 50 ) : array();
 		$descriptionId = 'ran-booster-portability-credential-description-' . $ordinal;
 		$targetId      = 'ran-booster-portability-credential-target-' . $ordinal;
@@ -102,6 +115,7 @@ $hasCredentialDecisions    = array() !== array_filter(
 							<span><strong><?php esc_html_e( 'Import this credential', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Add the protected credential from this Blueprint to this site.', 'ran-booster' ); ?></span></span>
 						</label>
 					</div>
+					<?php if ( 0 < $proposedCount ) : ?>
 					<div class="ran-booster-portability__credential-action ran-booster-portability__credential-action--target">
 						<label>
 							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="target" data-portability-credential-action aria-describedby="<?php echo esc_attr( $descriptionId ); ?>"<?php checked( 'target', $credentialAction ); ?><?php disabled( array() === $targetChoices ); ?>>
@@ -123,10 +137,11 @@ $hasCredentialDecisions    = array() !== array_filter(
 							<p class="description ran-booster-portability__credential-unavailable"><?php esc_html_e( 'No saved credentials are available for this provider.', 'ran-booster' ); ?></p>
 						<?php endif; ?>
 					</div>
+					<?php endif; ?>
 					<div class="ran-booster-portability__credential-action">
 						<label>
 							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="leave" data-portability-credential-action data-portability-credential-refresh aria-describedby="<?php echo esc_attr( $descriptionId ); ?>" hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled)" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php checked( 'leave', $credentialAction ); ?>>
-							<span><strong><?php esc_html_e( 'Leave packages unchanged', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Do not install or adopt packages that need this credential.', 'ran-booster' ); ?></span></span>
+							<span><strong><?php esc_html_e( 'Leave unchanged', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Do not install, adopt or import this repository credential.', 'ran-booster' ); ?></span></span>
 						</label>
 					</div>
 				</div>
@@ -152,7 +167,7 @@ $hasCredentialDecisions    = array() !== array_filter(
 <div id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll" role="region" aria-labelledby="ran-booster-portability-packages-heading" tabindex="0">
 	<table class="widefat striped ran-booster-portability__review-table">
 		<caption class="screen-reader-text"><?php esc_html_e( 'Packages in this import review', 'ran-booster' ); ?></caption>
-		<thead><tr><th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Type', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Target state', 'ran-booster' ); ?></th><th scope="col"><label><input type="checkbox" data-portability-select-all aria-label="<?php esc_attr_e( 'Select all actionable packages', 'ran-booster' ); ?>"<?php checked( $hasActionableRows ); ?><?php disabled( ! $hasActionableRows ); ?>> <?php esc_html_e( 'Apply plan', 'ran-booster' ); ?></label></th></tr></thead>
+		<thead><tr><th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Type', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Target state', 'ran-booster' ); ?></th><th scope="col"><label><input type="checkbox" data-portability-select-all aria-label="<?php esc_attr_e( 'Select all actionable changes', 'ran-booster' ); ?>"<?php checked( $hasActionableRows ); ?><?php disabled( ! $hasActionableRows ); ?>> <?php esc_html_e( 'Apply plan', 'ran-booster' ); ?></label></th></tr></thead>
 		<tbody>
 		<?php if ( array() === $portabilityReviewRows ) : ?>
 			<tr><td colspan="4"><?php esc_html_e( 'Choose a Transporter Blueprint to review its packages.', 'ran-booster' ); ?></td></tr>
@@ -165,6 +180,10 @@ $hasCredentialDecisions    = array() !== array_filter(
 				?>
 				<tr data-portability-row="<?php echo esc_attr( (string) $rowIndex ); ?>" data-portability-action="<?php echo esc_attr( $reviewAction ); ?>"
 				<?php
+				if ( true === ( $row['credential_recovery'] ?? false ) ) :
+					?>
+					data-portability-credential-recovery="true"<?php endif; ?>
+				<?php
 				if ( null !== $credentialOrdinal ) :
 					?>
 					data-portability-credential-ordinal="<?php echo esc_attr( (string) $credentialOrdinal ); ?>"<?php endif; ?> data-portability-package-name="<?php echo esc_attr( $packageName ); ?>" data-portability-package-type="<?php echo esc_attr( (string) ( $row['type'] ?? __( 'Package', 'ran-booster' ) ) ); ?>" data-portability-package-identifier="<?php echo esc_attr( (string) ( $row['identifier'] ?? '' ) ); ?>">
@@ -172,7 +191,9 @@ $hasCredentialDecisions    = array() !== array_filter(
 					<td><?php echo esc_html( $row['type'] ?? '' ); ?></td>
 					<td><span class="ran-booster-portability__status ran-booster-portability__status--<?php echo esc_attr( $reviewAction ); ?>"><?php echo esc_html( $portabilityActionLabels[ $reviewAction ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span></td>
 					<td>
-					<?php if ( in_array( $reviewAction, array( 'install', 'adopt' ), true ) ) : ?>
+					<?php if ( true === ( $row['credential_recovery'] ?? false ) ) : ?>
+						<label class="ran-booster-portability__apply-choice"><input type="checkbox" data-portability-select value="<?php echo esc_attr( (string) $rowIndex ); ?>" checked> <?php esc_html_e( 'Import credential only', 'ran-booster' ); ?></label>
+					<?php elseif ( in_array( $reviewAction, array( 'install', 'adopt' ), true ) ) : ?>
 						<label class="ran-booster-portability__apply-choice"><input type="checkbox" data-portability-select value="<?php echo esc_attr( (string) $rowIndex ); ?>" checked> <?php echo esc_html( $portabilityActionLabels[ $reviewAction ][1] ); ?></label>
 					<?php else : ?>
 						<?php echo esc_html( $portabilityActionLabels[ $reviewAction ][1] ); ?>

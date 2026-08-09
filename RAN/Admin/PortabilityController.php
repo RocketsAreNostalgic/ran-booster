@@ -15,6 +15,7 @@ use RAN\Portability\LocalSecretStoreUnavailable;
 use RAN\Portability\ManagedPackageBlueprintExporter;
 use RAN\Portability\PackageBlueprint;
 use RAN\Portability\PortabilityApplicationService;
+use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
 use RAN\Portability\UnsupportedBlueprintPackages;
 use RAN\Runtime\RuntimeSupport;
@@ -213,7 +214,15 @@ final readonly class PortabilityController {
 		$rows  = array();
 
 		foreach ( $items as $index => $item ) {
-			$rows[] = $this->row( $item, $this->credentialOrdinalForPackage( $blueprint, $item->package ), $targetCredentialIds[ $index ] ?? null );
+			$credentialOrdinal = $this->credentialOrdinalForPackage( $blueprint, $item->package );
+			$rows[]            = $this->row(
+				$item,
+				$credentialOrdinal,
+				$targetCredentialIds[ $index ] ?? null,
+				null !== $credentialOrdinal
+					&& BlueprintCredentialAction::IMPORT === ( $credentialDecisions[ $credentialOrdinal ]['action'] ?? null )
+					&& TargetPackageAction::MANAGED === $item->action
+			);
 		}
 
 		return $this->renderReview( $rows, array() === $blueprint->credentials ? array() : $this->credentialRows( $blueprint, $credentialDecisions, $items ) );
@@ -448,7 +457,7 @@ final readonly class PortabilityController {
 	}
 
 	/** @return array<string, mixed> */
-	private function row( BlueprintPlanItem $item, ?int $credentialOrdinal = null, ?string $selectedCredentialId = null ): array {
+	private function row( BlueprintPlanItem $item, ?int $credentialOrdinal = null, ?string $selectedCredentialId = null, bool $credentialRecovery = false ): array {
 		$row = array(
 			'name'       => $item->package->displayName,
 			'identifier' => $item->package->identifier,
@@ -459,6 +468,9 @@ final readonly class PortabilityController {
 		);
 		if ( null !== $credentialOrdinal ) {
 			$row['credential_ordinal'] = $credentialOrdinal;
+		}
+		if ( $credentialRecovery ) {
+			$row['credential_recovery'] = true;
 		}
 
 		if ( null === $credentialOrdinal && TargetPackageReason::CREDENTIAL_REQUIRED === $item->reason ) {
@@ -547,6 +559,7 @@ final readonly class PortabilityController {
 			$kindLabels     = is_array( $provider['credential_kind_labels'] ?? null ) ? $provider['credential_kind_labels'] : array();
 			$packages       = array();
 			$proposedCount  = 0;
+			$recoveryCount  = 0;
 			$unchangedCount = 0;
 			foreach ( $blueprint->packages as $packageRow => $package ) {
 				if ( in_array(
@@ -564,7 +577,10 @@ final readonly class PortabilityController {
 					);
 					$packages[] = $projected;
 					$action     = $items[ $packageRow ]->action->value ?? null;
-					if ( in_array( $action, array( 'managed', 'protected' ), true ) ) {
+					if ( 'managed' === $action ) {
+						++$recoveryCount;
+						++$unchangedCount;
+					} elseif ( 'protected' === $action ) {
 						++$unchangedCount;
 					} else {
 						++$proposedCount;
@@ -579,8 +595,9 @@ final readonly class PortabilityController {
 				'kind'              => $credential->kind,
 				'kind_label'        => is_string( $kindLabels[ $credential->kind ] ?? null ) ? $kindLabels[ $credential->kind ] : $credential->kind,
 				'packages'          => $packages,
-				'decision_required' => 0 < $proposedCount,
+				'decision_required' => 0 < $proposedCount || 0 < $recoveryCount,
 				'proposed_count'    => $proposedCount,
+				'recovery_count'    => $recoveryCount,
 				'unchanged_count'   => $unchangedCount,
 				'action'            => $decision['action']->value ?? null,
 				'target_id'         => $decision['target_id'] ?? null,

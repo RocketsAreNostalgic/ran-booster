@@ -404,7 +404,7 @@ class SecretsFile {
 		$this->assertAvailable();
 		$providerCode = $this->providerValue( $provider );
 		$id           = 'tmp_' . bin2hex( random_bytes( 16 ) );
-		$record       = $this->validateCredential( $providerCode, $id, $metadata, $secret );
+		$record       = $this->validateCredential( $providerCode, $id, $metadata, $secret, true );
 
 		$this->temporaryCredentials[ $providerCode ][ $id ] = array(
 			'id'            => $id,
@@ -1138,7 +1138,8 @@ class SecretsFile {
 					'kind'          => $credential->kind,
 					'configuration' => $credential->configuration,
 				),
-				$credential->secret
+				$credential->secret,
+				true
 			);
 			$records[] = array(
 				'provider' => $provider,

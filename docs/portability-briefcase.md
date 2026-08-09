@@ -150,10 +150,20 @@ against the exact repository, including for a public repository. A package with
 no carried credential retains the package-only target or anonymous verification
 path.
 
+An explicit import choice also makes a matching `managed` row eligible for
+credential-only recovery. Transporter validates the decoded credential with the
+provider's submitted-secret policy, verifies access to that row's exact stable
+repository identity, and persists only the deterministic target-local profile.
+It does not run a package operation or change the managed row's saved credential
+ID. Blueprint credentials intentionally contain no source credential ID, so an
+administrator must assign the recovered target profile separately when the
+existing managed row still refers to a missing profile.
+
 Preview never writes transferred material to the sidecar. Apply reparses the
-Blueprint and decision, checks package capability and adoption consent, repeats
-the exact selected verification, and persists transferred material only for a
-selected actionable package. The imported profile uses a deterministic identity,
+Blueprint and decision, checks package capability and adoption consent where a
+package operation is requested, repeats the exact selected verification, and
+persists transferred material only for a selected package or credential-only
+recovery row. The imported profile uses a deterministic identity,
 so retries make the transferred credential available without overwriting or
 claiming whether it was newly created. Credential availability and the later
 package operation are reported as separate outcomes; a package failure does not

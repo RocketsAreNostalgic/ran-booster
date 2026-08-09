@@ -290,14 +290,14 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<code>vendor</code>', $html );
 		self::assertStringContainsString( 'Step-by-step: moving a package to another site', $html );
 		self::assertStringContainsString( 'Choose which managed plugins and themes to include', $html );
-		self::assertStringContainsString( 'Select only the actionable rows you want Booster to apply', $html );
+		self::assertStringContainsString( 'select only the actions you want Booster to apply', $html );
 		self::assertStringContainsString( 'Excluded and unchecked packages remain untouched', $html );
 		self::assertStringContainsString( 'select Review Transporter Blueprint', $html );
 		self::assertStringContainsString( 're-reads the ZIP and re-checks each package and repository', $html );
-		self::assertStringContainsString( 'associates each validated credential with the same packages when you apply it', $html );
-		self::assertStringContainsString( 'including public repositories that deliberately use authenticated access', $html );
+		self::assertStringContainsString( 'Installing or adopting a package associates the imported credential with that package', $html );
+		self::assertStringContainsString( 'Credential-only recovery for an already-managed package imports the credential under a new target-local ID', $html );
+		self::assertStringContainsString( 'assign the recovered credential through the package settings if needed', $html );
 		self::assertStringContainsString( 'Do not overwrite an existing target site', $html );
-		self::assertStringContainsString( 'add credentials directly through the provider settings screens on the target site', $html );
 		self::assertStringNotContainsString( 'transfer only the intended records', $html );
 		self::assertStringNotContainsString( 'V1', $html );
 		self::assertStringNotContainsString( 'file-backed', $html );

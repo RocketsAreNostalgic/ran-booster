@@ -284,14 +284,14 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 				<h4 id="ran-booster-portability-review-heading" class="ran-booster-portability__review-title"><?php esc_html_e( 'Blueprint review', 'ran-booster' ); ?></h4>
 				<span id="ran-booster-portability-review-progress" class="ran-booster-portability__review-progress htmx-indicator" role="status" aria-live="polite"><?php esc_html_e( 'Rechecking repository access…', 'ran-booster' ); ?></span>
 			</div>
-			<p><?php esc_html_e( 'Review repository access decisions and the package changes proposed for this site.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Review repository access decisions, package changes and any credential-only recovery proposed for this site.', 'ran-booster' ); ?></p>
 			<div class="notice notice-error inline ran-booster-portability__review-error" data-portability-review-error role="alert" hidden><p><?php esc_html_e( 'The review could not be updated. Choose again or review the Transporter Blueprint before applying changes.', 'ran-booster' ); ?></p></div>
 			<div data-portability-review><?php require __DIR__ . '/portability-review.php'; ?></div>
 		</section>
 		<section class="ran-booster-portability__apply" aria-labelledby="ran-booster-portability-apply-heading">
-			<h4 id="ran-booster-portability-apply-heading"><?php esc_html_e( 'Apply selected package changes', 'ran-booster' ); ?></h4>
-			<p><?php esc_html_e( 'Managed, blocked, protected and unchecked rows remain unchanged. Eligible selected packages are applied independently.', 'ran-booster' ); ?></p>
-			<p data-portability-apply-summary aria-live="polite"><?php esc_html_e( 'No package changes selected.', 'ran-booster' ); ?></p>
+			<h4 id="ran-booster-portability-apply-heading"><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></h4>
+			<p><?php esc_html_e( 'Eligible package changes and credential-only recovery rows are applied independently. Credential-only recovery does not change an already-managed package’s settings.', 'ran-booster' ); ?></p>
+			<p data-portability-apply-summary aria-live="polite"><?php esc_html_e( 'No changes selected.', 'ran-booster' ); ?></p>
 			<p><button type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply data-idle-label="<?php esc_attr_e( 'Apply selected changes', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Applying…', 'ran-booster' ); ?>" disabled><span data-portability-apply-label><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></span></button></p>
 			<div data-portability-apply-results aria-live="polite"></div>
 		</section>

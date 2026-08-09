@@ -9,6 +9,9 @@ namespace Tests\RepositoryProvider;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Portability\BlueprintCredential;
+use RAN\Portability\BlueprintPackage;
+use RAN\Portability\PackageBlueprint;
 use RAN\RepositoryProvider\GitHubCredentialPolicy;
 use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderCode;
@@ -304,6 +307,49 @@ final class GitHubCredentialPolicyTest extends TestCase {
 				str_contains( (string) json_encode( $failure->getTrace() ), $token ),
 				'The submitted token must not survive in the boundary exception trace.'
 			);
+		} finally {
+			InMemorySiteKeyStore::reset( $path );
+			foreach ( array( $path, $path . '.lock' ) as $file ) {
+				if ( is_file( $file ) || is_link( $file ) ) {
+					unlink( $file );
+				}
+			}
+			if ( is_dir( $directory ) ) {
+				rmdir( $directory );
+			}
+		}
+	}
+
+	public function testBlueprintImportRejectsAMismatchedDecodedTokenBeforePersistence(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-github-blueprint-' . bin2hex( random_bytes( 8 ) );
+		$path      = $directory . '/secrets.json';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$catalog = new ProviderSecretPolicyCatalog();
+		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
+		$secrets    = SecretsFileTestFactory::create( $path, array(), $catalog );
+		$package    = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
+		$credential = new BlueprintCredential(
+			'gh',
+			'Repository access',
+			'classic',
+			array( 'owner' => '' ),
+			'github_pat_' . str_repeat( 'a', 40 ),
+			array(
+				array(
+					'type'       => 'plugin',
+					'identifier' => 'example/example.php',
+				),
+			)
+		);
+		$blueprint  = new PackageBlueprint( array( $package ), array( $credential ) );
+
+		try {
+			$secrets->importCredentialsIfAbsent( $blueprint, $credential );
+			self::fail( 'Blueprint material with a mismatched token prefix must be rejected.' );
+		} catch ( InvalidCredentialInput $failure ) {
+			self::assertSame( InvalidCredentialInput::REQUIRES_CLASSIC, $failure->reason );
+			self::assertFileDoesNotExist( $path );
+			self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
 		} finally {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {

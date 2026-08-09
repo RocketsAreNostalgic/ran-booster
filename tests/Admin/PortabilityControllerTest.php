@@ -472,7 +472,7 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'sentinel-portability-token', $html );
 	}
 
-	public function testCredentialProjectionNeedsNoDecisionWhenEveryAssociatedPackageIsUnchanged(): void {
+	public function testCredentialProjectionOffersRecoveryForAssociatedManagedPackages(): void {
 		$managed   = new BlueprintPackage( 'plugin', 'managed/managed.php', 'Managed <Plugin>', 'gh', 'managed-source-id-canary', 'owner/managed', 'main', null );
 		$protected = new BlueprintPackage( 'theme', 'protected-theme', 'Protected Theme', 'gh', 'protected-source-id-canary', 'owner/protected', 'main', null );
 		$blueprint = new PackageBlueprint(
@@ -506,8 +506,9 @@ final class PortabilityControllerTest extends TestCase {
 		$rows = $method->invoke( $this->previewController( new PortabilityReadinessSpySecretsFile( true ) ), $blueprint, array(), $items );
 
 		self::assertCount( 1, $rows );
-		self::assertFalse( $rows[0]['decision_required'] );
+		self::assertTrue( $rows[0]['decision_required'] );
 		self::assertSame( 0, $rows[0]['proposed_count'] );
+		self::assertSame( 1, $rows[0]['recovery_count'] );
 		self::assertSame( 2, $rows[0]['unchanged_count'] );
 		self::assertSame(
 			array(

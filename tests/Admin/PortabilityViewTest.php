@@ -91,7 +91,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Choose a Transporter Blueprint to review its packages.', $html );
 		self::assertStringContainsString( 'Packages in this import review', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-portability-review-heading" class="ran-booster-portability__review-title">Blueprint review</h4>', $html );
-		self::assertStringContainsString( 'Review repository access decisions and the package changes proposed for this site.', $html );
+		self::assertStringContainsString( 'Review repository access decisions, package changes and any credential-only recovery proposed for this site.', $html );
 		self::assertStringContainsString( '<h5 id="ran-booster-portability-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
 		self::assertStringContainsString( 'Review the target state of each package and select the eligible changes you want to apply.', $html );
 		self::assertStringContainsString( 'aria-labelledby="ran-booster-portability-packages-heading"', $html );
@@ -333,7 +333,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<h5 id="ran-booster-portability-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title">Repository credentials</h5>', $html );
 		self::assertStringContainsString( '<strong>Before you continue:</strong>', $html );
 		self::assertStringContainsString( 'Booster checks whether the credential can access each required repository, not what other permissions it has.', $html );
-		self::assertStringContainsString( 'Booster will not update packages added or adopted from this Blueprint until you deliberately change their deployment setting.', $html );
+		self::assertStringContainsString( 'Importing a credential for an already-managed package does not change that package’s saved credential selection.', $html );
 		self::assertStringContainsString( '<legend class="screen-reader-text">GitHub &lt;Cloud&gt; — Imported &lt;PAT&gt;</legend>', $html );
 		self::assertStringContainsString( '<h6 class="ran-booster-portability__credential-name">Imported &lt;PAT&gt;</h6>', $html );
 		self::assertStringContainsString( 'ran-booster-tile ran-booster-portability__credential-provider', $html );
@@ -366,13 +366,11 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'source-id-canary', $html );
 	}
 
-	public function testCredentialReviewExplainsWhenAllAssociatedPackagesRemainUnchanged(): void {
-		$managed                         = $this->row( 'Managed <Plugin>', 'managed/plugin.php', 'managed', 'Configuration matches' );
-		$managed['credential_ordinal']   = 0;
+	public function testCredentialReviewExplainsWhenOnlyProtectedPackagesRemainUnchanged(): void {
 		$protected                       = $this->row( 'Protected Theme', 'protected-theme', 'protected', 'Managed differently' );
 		$protected['credential_ordinal'] = 0;
 		$html                            = $this->renderView(
-			array( $managed, $protected ),
+			array( $protected ),
 			credentialRows: array(
 				array(
 					'ordinal'           => 0,
@@ -381,12 +379,9 @@ final class PortabilityViewTest extends TestCase {
 					'kind'              => 'token',
 					'decision_required' => false,
 					'proposed_count'    => 0,
-					'unchanged_count'   => 2,
+					'recovery_count'    => 0,
+					'unchanged_count'   => 1,
 					'packages'          => array(
-						array(
-							'name' => 'Managed <Plugin>',
-							'type' => 'Plugin',
-						),
 						array(
 							'name' => 'Protected Theme',
 							'type' => 'Theme',
@@ -403,16 +398,58 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'This Blueprint includes repository credentials, but none are needed for package changes on this site.', $html );
 		self::assertStringNotContainsString( 'Choose how this site should access repositories needed by the proposed package changes.', $html );
 		self::assertStringNotContainsString( '<strong>Before you continue:</strong>', $html );
-		self::assertStringContainsString( '<summary>Used by 2 packages; all unchanged</summary>', $html );
+		self::assertStringContainsString( '<summary>Used by 1 package; all unchanged</summary>', $html );
 		self::assertStringContainsString( '<strong>No action needed</strong>', $html );
 		self::assertStringContainsString( 'No credential choice is needed because every affected package will remain unchanged.', $html );
-		self::assertStringContainsString( 'Managed &lt;Plugin&gt;', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 		self::assertStringNotContainsString( 'name="credential_decisions[0][action]"', $html );
 		self::assertStringNotContainsString( 'data-portability-credential-refresh', $html );
 		self::assertStringNotContainsString( 'unchanged-secret-canary', $html );
 		self::assertStringNotContainsString( 'unchanged-configuration-canary', $html );
 		self::assertStringNotContainsString( 'unchanged-source-id-canary', $html );
+	}
+
+	public function testManagedCredentialRecoveryIsSelectableWithoutAPackageChange(): void {
+		$managed                        = $this->row( 'Managed <Plugin>', 'managed/plugin.php', 'managed', 'Configuration matches' );
+		$managed['credential_ordinal']  = 0;
+		$managed['credential_recovery'] = true;
+		$html                           = $this->renderView(
+			array( $managed ),
+			credentialRows: array(
+				array(
+					'ordinal'           => 0,
+					'provider_label'    => 'GitHub',
+					'label'             => 'Recovered PAT',
+					'kind'              => 'classic',
+					'decision_required' => true,
+					'proposed_count'    => 0,
+					'recovery_count'    => 1,
+					'unchanged_count'   => 1,
+					'packages'          => array(
+						array(
+							'name' => 'Managed <Plugin>',
+							'type' => 'Plugin',
+						),
+					),
+					'action'            => 'import',
+					'target_choices'    => array(
+						array(
+							'id'     => 'saved-profile',
+							'label'  => 'Saved profile',
+							'source' => 'file',
+						),
+					),
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'credential recovery is available for 1 managed package', $html );
+		self::assertStringContainsString( 'data-portability-action="managed"', $html );
+		self::assertStringContainsString( 'data-portability-credential-recovery="true"', $html );
+		self::assertStringContainsString( 'data-portability-select value="0" checked', $html );
+		self::assertStringContainsString( 'Import credential only', $html );
+		self::assertStringNotContainsString( 'value="target" data-portability-credential-action', $html );
+		self::assertStringContainsString( 'data-portability-select-all aria-label="Select all actionable changes" checked="checked"', $html );
 	}
 
 	public function testReviewRendersTheCompleteBoundedBlueprint(): void {

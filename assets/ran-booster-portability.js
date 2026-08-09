@@ -502,8 +502,12 @@
 					'[data-portability-row][data-portability-action]'
 				)
 			).filter(function (row) {
-				return ['install', 'adopt'].includes(
-					row.getAttribute('data-portability-action')
+				return (
+					['install', 'adopt'].includes(
+						row.getAttribute('data-portability-action')
+					) ||
+					row.getAttribute('data-portability-credential-recovery') ===
+						'true'
 				);
 			});
 		}
@@ -564,11 +568,17 @@
 						targets.add(ordinal);
 					}
 				});
+				const packageChanges = selectedRowElements.filter(
+					(row) =>
+						row?.getAttribute(
+							'data-portability-credential-recovery'
+						) !== 'true'
+				).length;
 				applySummary.textContent = selected
 					? 'Apply ' +
-						selected +
+						packageChanges +
 						' package change' +
-						(selected === 1 ? '' : 's') +
+						(packageChanges === 1 ? '' : 's') +
 						', import ' +
 						imports.size +
 						' repository credential' +
@@ -577,8 +587,12 @@
 						targets.size +
 						' saved credential' +
 						(targets.size === 1 ? '' : 's') +
-						'. Deployment will remain Disabled. Credential permissions have not been assessed.'
-					: 'No package changes selected.';
+						'. ' +
+						(packageChanges
+							? 'Deployment will remain Disabled. '
+							: 'Managed package settings will remain unchanged. ') +
+						'Credential permissions have not been assessed.'
+					: 'No changes selected.';
 			}
 		}
 
@@ -970,7 +984,11 @@
 								};
 						if (
 							!result ||
-							!['installed', 'adopted'].includes(result.status)
+							![
+								'installed',
+								'adopted',
+								'credential_available',
+							].includes(result.status)
 						) {
 							appliedEverySelection = false;
 						}

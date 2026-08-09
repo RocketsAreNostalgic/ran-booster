@@ -25,6 +25,8 @@ use Tests\Secrets\SecretsFileTestFactory;
 
 #[CoversClass( BlueprintRepositoryVerifier::class )]
 final class BlueprintRepositoryVerifierTest extends TestCase {
+	private const CLASSIC_TOKEN      = 'ghp_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
+	private const FINE_GRAINED_TOKEN = 'github_pat_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
 
 	private string $directory;
 	private string $path;
@@ -84,8 +86,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 
 	/** @return iterable<string, array{string,string,array<string,string>,string}> */
 	public static function transferredProviderCredentialProvider(): iterable {
-		yield 'GitHub classic' => array( 'gh', 'classic', array( 'owner' => '' ), 'sentinel-portability-token' );
-		yield 'GitHub fine-grained' => array( 'gh', 'fine-grained', array( 'owner' => 'RocketsAreNostalgic' ), 'sentinel-portability-token' );
+		yield 'GitHub classic' => array( 'gh', 'classic', array( 'owner' => '' ), self::CLASSIC_TOKEN );
+		yield 'GitHub fine-grained' => array( 'gh', 'fine-grained', array( 'owner' => 'RocketsAreNostalgic' ), self::FINE_GRAINED_TOKEN );
 		yield 'Bitbucket API token' => array( 'bb', 'api-token', array( 'account_email' => 'canary@example.test' ), 'sentinel-bitbucket-portability-token' );
 	}
 
@@ -99,7 +101,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 				'kind'          => 'classic',
 				'configuration' => array(),
 			),
-			'sentinel-portability-token'
+			self::CLASSIC_TOKEN
 		);
 		$before = (string) file_get_contents( $this->path );
 
@@ -152,8 +154,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
-		self::assertCount( 1, $provider->credentialIds );
-		self::assertNotNull( $provider->credentialIds[0] );
+		self::assertSame( array(), $provider->credentialIds );
 	}
 
 	public function testItDoesNotResolveManagedOrProtectedRows(): void {
@@ -161,6 +162,33 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		$managed               = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
 
 		self::assertSame( $managed, $verifier->verify( $managed, $this->credential() ) );
+		self::assertSame( $managed, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::LEAVE ) );
+		self::assertSame( $managed, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' ) );
+		self::assertSame( array(), $provider->credentialIds );
+	}
+
+	public function testItVerifiesOnlyAnExplicitManagedRowImport(): void {
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
+		$managed                         = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
+
+		$repositoryPrivate = null;
+		$result            = $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::IMPORT, null, $repositoryPrivate );
+
+		self::assertSame( $managed, $result );
+		self::assertFalse( $repositoryPrivate );
+		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
+		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
+		self::assertFileDoesNotExist( $this->path );
+	}
+
+	public function testItBlocksManagedRowImportBoundToAnotherPackage(): void {
+		[$verifier, $provider] = $this->verifier( 404, 'repository-id' );
+		$managed               = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
+
+		$result = $verifier->verify( $managed, $this->credential( 'other/other.php' ), BlueprintCredentialAction::IMPORT );
+
+		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
+		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
 		self::assertSame( array(), $provider->credentialIds );
 	}
 
@@ -193,7 +221,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 				'kind'          => 'classic',
 				'configuration' => array(),
 			),
-			'sentinel-portability-token'
+			self::CLASSIC_TOKEN
 		);
 
 		$result = $verifier->verify( $this->installItem(), null, null, 'target-pat' );
@@ -212,7 +240,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 				'kind'          => 'classic',
 				'configuration' => array(),
 			),
-			'sentinel-portability-token'
+			self::CLASSIC_TOKEN
 		);
 
 		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' );
@@ -284,7 +312,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 				'kind'          => 'classic',
 				'configuration' => array(),
 			),
-			'sentinel-portability-token'
+			self::CLASSIC_TOKEN
 		);
 
 		$result = $verifier->verify( $this->installItem() );
@@ -340,7 +368,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		string $providerRepositoryId,
 		bool $private = false,
 		string $providerCode = 'gh',
-		string $acceptedSecret = 'sentinel-portability-token'
+		string $acceptedSecret = self::CLASSIC_TOKEN
 	): array {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
@@ -368,7 +396,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 
 	private function credential(
 		string $identifier = 'example/example.php',
-		string $secret = 'sentinel-portability-token',
+		string $secret = self::CLASSIC_TOKEN,
 		string $provider = 'gh',
 		string $kind = 'classic',
 		array $configuration = array( 'owner' => '' )

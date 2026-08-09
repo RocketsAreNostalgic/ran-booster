@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Portability;
 
 use RAN\AddOn\Portability\PortabilityCandidate;
+use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
@@ -12,7 +13,7 @@ use RAN\RepositoryProvider\UnknownProvider;
 use RAN\Secrets\SecretsFile;
 use Throwable;
 
-/** Verifies only install/adopt rows against their declared provider repository. */
+/** Verifies package changes and explicit managed-row credential recovery. */
 final readonly class BlueprintRepositoryVerifier {
 
 	public function __construct(
@@ -85,7 +86,10 @@ final readonly class BlueprintRepositoryVerifier {
 		?bool &$repositoryPrivate = null
 	): BlueprintPlanItem {
 		$repositoryPrivate = null;
-		if ( ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) {
+		$managedImport     = TargetPackageAction::MANAGED === $item->action
+			&& null !== $credential
+			&& BlueprintCredentialAction::IMPORT === $credentialAction;
+		if ( ! $managedImport && ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) {
 			return $item;
 		}
 
@@ -181,7 +185,8 @@ final readonly class BlueprintRepositoryVerifier {
 	}
 
 	private function requiresCredential( Throwable $failure ): bool {
-		return in_array( $failure->getCode(), array( 401, 403, 404 ), true );
+		return $failure instanceof InvalidCredentialInput
+			|| in_array( $failure->getCode(), array( 401, 403, 404 ), true );
 	}
 
 	private function blockedItem( BlueprintPlanItem $item, Throwable $failure ): BlueprintPlanItem {

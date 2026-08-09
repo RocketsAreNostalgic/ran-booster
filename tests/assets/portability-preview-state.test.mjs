@@ -64,10 +64,11 @@ function row(
 	type = 'Plugin',
 	name = `Package ${index}`,
 	identifier = `package-${index}/package.php`,
-	credentialOrdinal = null
+	credentialOrdinal = null,
+	credentialRecovery = false
 ) {
 	const choice =
-		action === 'install' || action === 'adopt'
+		action === 'install' || action === 'adopt' || credentialRecovery
 			? checkbox('[data-portability-select]', checked)
 			: null;
 
@@ -91,6 +92,9 @@ function row(
 			}
 			if (attribute === 'data-portability-credential-ordinal') {
 				return credentialOrdinal;
+			}
+			if (attribute === 'data-portability-credential-recovery') {
+				return credentialRecovery ? 'true' : null;
 			}
 			return null;
 		},
@@ -1168,6 +1172,92 @@ test('credential decisions have no default and the same exact choice reaches Pre
 		assert.equal(
 			submitted[2].get('credential_decisions[0][action]'),
 			'import'
+		);
+		assert.equal(
+			state.results.items[0].children[1].textContent,
+			'Transferred credential is available on this site.'
+		);
+	} finally {
+		cleanup();
+	}
+});
+
+test('managed credential recovery enables Apply without claiming a package change', async () => {
+	const submitted = [];
+	const state = importFixture(
+		async (data) => {
+			submitted.push(data);
+			return data.get('action') === 'ran_booster_apply_blueprint'
+				? success('', {
+						credential_state: 'transferred_available',
+						message:
+							'The repository credential is available on this site. The managed package settings were not changed.',
+						status: 'credential_available',
+					})
+				: success(
+						data.get('credential_decisions[0][action]') === 'import'
+							? '<table>managed recovery</table>'
+							: '<table>managed</table>'
+					);
+		},
+		{
+			'<table>managed</table>': [
+				[
+					'0',
+					'managed',
+					true,
+					'Plugin',
+					'Package 0',
+					'package-0/package.php',
+					'0',
+					false,
+				],
+			],
+			'<table>managed recovery</table>': [
+				[
+					'0',
+					'managed',
+					true,
+					'Plugin',
+					'Package 0',
+					'package-0/package.php',
+					'0',
+					true,
+				],
+			],
+		}
+	);
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.equal(state.apply.disabled, true);
+
+		state.listeners.get('root:change')({
+			target: state.credentialActions.import,
+		});
+		await tick();
+		assert.equal(state.apply.disabled, false);
+		assert.equal(
+			state.applySummary.textContent,
+			'Apply 0 package changes, import 1 repository credential and use 0 saved credentials. Managed package settings will remain unchanged. Credential permissions have not been assessed.'
+		);
+
+		await state.listeners.get('apply:click')();
+		const applyData = submitted.find(
+			(data) => data.get('action') === 'ran_booster_apply_blueprint'
+		);
+		assert.ok(applyData);
+		assert.equal(applyData.get('row'), '0');
+		assert.equal(applyData.get('review_action'), 'managed');
+		assert.equal(
+			applyData.get('credential_decisions[0][action]'),
+			'import'
+		);
+		assert.equal(
+			state.results.items[0].className.includes('notice-success'),
+			true
 		);
 		assert.equal(
 			state.results.items[0].children[1].textContent,

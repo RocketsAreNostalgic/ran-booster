@@ -35,7 +35,10 @@ use RuntimeException;
 use ReflectionClass;
 use Tests\Secrets\InMemorySiteKeyStore;
 
+require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
+
 final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
+	private const CLASSIC_TOKEN = 'ghp_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
 
 	private string $root;
 	private string $sourcePath;
@@ -89,7 +92,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 				'kind'          => 'classic',
 				'configuration' => array(),
 			),
-			'sentinel-portability-token'
+			self::CLASSIC_TOKEN
 		);
 
 		$blueprint = $this->exporter( $sourceSecrets )->export( array( 'gh' => array( 'source-credential' ) ) );
@@ -114,7 +117,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertFileExists( $this->targetPath . '.lock' );
 
 		$targetSecrets->assertManagedStorageReady();
-		$provider = new TemporaryCredentialProvider( $targetSecrets->credentialsFor( 'gh' ), 0, 'repository-id' );
+		$provider = new TemporaryCredentialProvider( $targetSecrets->credentialsFor( 'gh' ), 0, 'repository-id', false, 'gh', 'GitHub', self::CLASSIC_TOKEN );
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$verifier = new BlueprintRepositoryVerifier(
 			new ProviderRegistry( array( $provider ), $catalog ),
@@ -130,28 +133,59 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertFileDoesNotExist( $this->targetPath );
 		self::assertNull( $targetKeyStore->load() );
 
+		$managedPackage = $this->createStub( Package::class );
+		$managedPackage->method( 'getIdentifier' )->willReturn( $imported->packages[0]->identifier );
+		$managedPackage->method( 'getDisplayName' )->willReturn( $imported->packages[0]->displayName );
+		$managedPackage->method( 'getProviderCode' )->willReturn( $imported->packages[0]->provider );
+		$managedPackage->method( 'getProviderRepositoryId' )->willReturn( $imported->packages[0]->providerRepositoryId );
+		$managedPackage->method( 'getRepository' )->willReturn(
+			new ManagedRepository(
+				$imported->packages[0]->provider,
+				$imported->packages[0]->repository,
+				$imported->packages[0]->providerRepositoryId,
+				$imported->packages[0]->branch,
+				true,
+				'missing-source-profile'
+			)
+		);
+		$managedPackage->method( 'getBranch' )->willReturn( $imported->packages[0]->branch );
+		$managedPackage->method( 'getSubdirectory' )->willReturn( $imported->packages[0]->subdirectory );
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'isInstalled' )->willReturn( true );
+		$plugins->method( 'hasManagementRecord' )->willReturn( true );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $managedPackage );
+
 		$application = new PortabilityApplicationService(
-			( new ReflectionClass( BlueprintReviewer::class ) )->newInstanceWithoutConstructor(),
+			new BlueprintReviewer( $plugins, $themes ),
 			$verifier,
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$targetSecrets
 		);
-		$applyItem   = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
-		$managed     = $applyItem->invoke(
-			$application,
+		$decisions   = array(
+			0 => array(
+				'action'    => BlueprintCredentialAction::IMPORT,
+				'target_id' => null,
+			),
+		);
+		$review      = $application->review( $imported, $decisions );
+		self::assertSame( TargetPackageAction::MANAGED, $review[0]->action );
+		self::assertFileDoesNotExist( $this->targetPath );
+		$applyItem = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
+		$managed   = $application->apply(
 			$imported,
-			new BlueprintPlanItem( $imported->packages[0], TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED ),
-			$credential,
-			'import',
+			0,
+			'managed',
+			$decisions,
 			null,
 			false,
-			true,
-			true
+			false
 		);
-		self::assertSame( 'unchanged', $managed['status'] );
-		self::assertSame( 'none', $managed['credential_state'] );
-		self::assertFileDoesNotExist( $this->targetPath );
-		self::assertNull( $targetKeyStore->load( false ) );
+		self::assertSame( 'credential_available', $managed['status'] );
+		self::assertSame( 'transferred_available', $managed['credential_state'] );
+		self::assertStringContainsString( 'managed package settings were not changed', $managed['message'] );
+		self::assertFileExists( $this->targetPath );
+		self::assertIsString( $targetKeyStore->load( false ) );
 
 		$result     = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
 		$secondItem = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
@@ -167,7 +201,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertSame( 'transferred_available', $retry['credential_state'] );
 		$targetId = $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0];
 		self::assertSame(
-			'sentinel-portability-token',
+			self::CLASSIC_TOKEN,
 			$targetSecrets->credentialMaterial( 'gh', $targetId )['secret']
 		);
 		self::assertSame( $targetId, $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0] );
@@ -179,7 +213,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertIsString( $targetKey );
 		self::assertNotSame( $sourceKey, $targetKey );
 		$envelope = (string) file_get_contents( $this->targetPath );
-		self::assertStringNotContainsString( 'sentinel-portability-token', $envelope );
+		self::assertStringNotContainsString( self::CLASSIC_TOKEN, $envelope );
 		self::assertStringNotContainsString( base64_encode( $sourceKey ), $envelope );
 		self::assertStringNotContainsString( base64_encode( $targetKey ), $envelope );
 

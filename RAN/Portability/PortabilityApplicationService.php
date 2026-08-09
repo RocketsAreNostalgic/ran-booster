@@ -43,7 +43,7 @@ final readonly class PortabilityApplicationService {
 			$credential = $this->credentialFor( $blueprint, $item, $ordinal );
 			$decision   = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
 			$action     = $decision['action'] ?? null;
-			$verified[] = BlueprintCredentialAction::IMPORT === $action && $this->isActionable( $item ) && ! $this->credentialStorageReady()
+			$verified[] = BlueprintCredentialAction::IMPORT === $action && $this->canImportCredential( $item ) && ! $this->credentialStorageReady()
 				? new BlueprintPlanItem(
 					$item->package,
 					TargetPackageAction::BLOCKED,
@@ -147,7 +147,10 @@ final readonly class PortabilityApplicationService {
 		if ( null !== $credential && ( null === $credentialAction || BlueprintCredentialAction::LEAVE === $credentialAction ) ) {
 			return $this->result( 'skipped', __( 'This package was left unchanged by the repository credential decision.', 'ran-booster' ) );
 		}
-		if ( ! $canInstall ) {
+		$credentialOnly = TargetPackageAction::MANAGED === $item->action
+			&& null !== $credential
+			&& BlueprintCredentialAction::IMPORT === $credentialAction;
+		if ( ! $credentialOnly && ! $canInstall ) {
 			return $this->result( 'failed', __( 'You do not have permission to apply this package type.', 'ran-booster' ) );
 		}
 		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
@@ -181,7 +184,25 @@ final readonly class PortabilityApplicationService {
 		bool $canInstall
 	): array {
 		if ( TargetPackageAction::MANAGED === $item->action ) {
-			return $this->result( 'unchanged', __( 'This package is already managed.', 'ran-booster' ) );
+			if ( 'import' !== $source || null === $credential || ! is_bool( $repositoryPrivate ) ) {
+				return $this->result( 'unchanged', __( 'This package is already managed.', 'ran-booster' ) );
+			}
+
+			try {
+				$this->credentialId( $blueprint, $credential, $source, $targetCredentialId );
+
+				return $this->result(
+					'credential_available',
+					__( 'The repository credential is available on this site. The managed package settings were not changed.', 'ran-booster' ),
+					'transferred_available'
+				);
+			} catch ( Throwable ) {
+				return $this->result(
+					'failed',
+					__( 'Booster could not import this repository credential. Review the Transporter Blueprint again and check repository access.', 'ran-booster' ),
+					'unavailable'
+				);
+			}
 		}
 		if ( ! $this->isActionable( $item ) ) {
 			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Transporter Blueprint again.', 'ran-booster' ) );
@@ -421,6 +442,10 @@ final readonly class PortabilityApplicationService {
 
 	private function isActionable( BlueprintPlanItem $item ): bool {
 		return in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true );
+	}
+
+	private function canImportCredential( BlueprintPlanItem $item ): bool {
+		return TargetPackageAction::MANAGED === $item->action || $this->isActionable( $item );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */

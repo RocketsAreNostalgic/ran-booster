@@ -53,6 +53,16 @@ final readonly class SecretsStorageProvisioningResult {
 		);
 	}
 
+	public static function storageReset( string $candidatePath, string $pathSource ): self {
+		return new self(
+			self::PATH_CONFIGURED,
+			'storage_reset',
+			'The orphaned database key was removed. Booster will initialize fresh encrypted storage when you next save or import a credential.',
+			$candidatePath,
+			$pathSource
+		);
+	}
+
 	public static function storageNeedsAttention(
 		string $candidatePath,
 		string $pathSource,

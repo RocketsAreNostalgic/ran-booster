@@ -210,6 +210,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringContainsString( 'Credential-backed operations remain paused', $html );
 		self::assertStringContainsString( 'Restore the matching sidecar and site key from the same backup', $html );
 		self::assertStringContainsString( 'Review encrypted storage', $html );
+		self::assertStringNotContainsString( 'button button-primary', $html );
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 		self::assertStringNotContainsString( $this->directory, $html );
 		self::assertStringNotContainsString( 'could not be authenticated', $html );

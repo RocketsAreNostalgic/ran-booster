@@ -189,6 +189,135 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
+	public function testProtectedPostResetsOnlyThroughTheTypedGuardAndRedirectsPathlessly(): void {
+		$_POST       = array(
+			'ran_booster' => array(
+				'action'             => 'reset-empty-storage',
+				'reset_confirmation' => SecretsStorageProvisioner::RESET_CONFIRMATION,
+			),
+		);
+		$provisioner = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::storageReset(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			)
+		);
+
+		try {
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			self::fail( 'Successful reset must redirect to a fresh protected Overview response.' );
+		} catch ( SetupActionRedirect $redirect ) {
+			self::assertSame(
+				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
+				$redirect->url
+			);
+			self::assertStringNotContainsString( 'private', $redirect->url );
+		}
+
+		self::assertSame( array( SecretsStorageProvisioner::RESET_CONFIRMATION ), $provisioner->resetConfirmations );
+		self::assertSame(
+			array( 'ran-booster-reset-empty-storage' ),
+			$GLOBALS['ran_booster_test_nonce_checks']
+		);
+	}
+
+	public function testGetCannotResetStorage(): void {
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_POST                     = array(
+			'ran_booster' => array(
+				'action'             => 'reset-empty-storage',
+				'reset_confirmation' => SecretsStorageProvisioner::RESET_CONFIRMATION,
+			),
+		);
+		$provisioner               = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::storageReset(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			)
+		);
+
+		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+
+		self::assertSame( array(), $provisioner->resetConfirmations );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	public function testResetRequiresBothCapabilitiesBeforeNonceOrMutation(): void {
+		$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = false;
+		$_POST       = array(
+			'ran_booster' => array(
+				'action'             => 'reset-empty-storage',
+				'reset_confirmation' => SecretsStorageProvisioner::RESET_CONFIRMATION,
+			),
+		);
+		$provisioner = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::storageReset(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			)
+		);
+
+		$this->expectException( \RuntimeException::class );
+		try {
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+		} finally {
+			self::assertSame( array(), $provisioner->resetConfirmations );
+			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+		}
+	}
+
+	public function testResetRequiresItsDedicatedValidNonce(): void {
+		$GLOBALS['ran_booster_test_nonce_valid'] = false;
+		$_POST                                   = array(
+			'ran_booster' => array(
+				'action'             => 'reset-empty-storage',
+				'reset_confirmation' => SecretsStorageProvisioner::RESET_CONFIRMATION,
+			),
+		);
+		$provisioner                             = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::storageReset(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			)
+		);
+
+		$this->expectException( \RuntimeException::class );
+		try {
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+		} finally {
+			self::assertSame( array(), $provisioner->resetConfirmations );
+			self::assertSame( array( 'ran-booster-reset-empty-storage' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+		}
+	}
+
+	public function testUnexpectedResetFailureIsReducedToAPathlessProtectedResult(): void {
+		$_POST       = array(
+			'ran_booster' => array(
+				'action'             => 'reset-empty-storage',
+				'reset_confirmation' => SecretsStorageProvisioner::RESET_CONFIRMATION,
+			),
+		);
+		$provisioner = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::storageNeedsAttention(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			),
+			true
+		);
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'setSecretsStorageProvisioningResult' )
+			->with(
+				self::callback(
+					static fn ( SecretsStorageProvisioningResult $result ): bool => 'storage_reset_failed' === $result->code()
+						&& null === $result->candidatePath()
+						&& ! str_contains( $result->message(), 'canary' )
+				)
+			);
+
+		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
+	}
+
 	private function dispatcher( Dashboard $dashboard, SecretsStorageProvisioner $provisioner ): Dispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
@@ -217,6 +346,8 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 	public int $provisionCalls = 0;
 	/** @var list<string> */
 	public array $adoptTokens = array();
+	/** @var list<string> */
+	public array $resetConfirmations = array();
 
 	public function __construct(
 		private readonly SecretsStorageProvisioningResult $result,
@@ -235,6 +366,15 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 
 	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
 		$this->adoptTokens[] = $token;
+
+		return $this->result;
+	}
+
+	public function resetOrphanedStorage( string $confirmation ): SecretsStorageProvisioningResult {
+		$this->resetConfirmations[] = $confirmation;
+		if ( $this->throw ) {
+			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );
+		}
 
 		return $this->result;
 	}

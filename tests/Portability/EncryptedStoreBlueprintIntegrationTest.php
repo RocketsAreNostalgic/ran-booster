@@ -98,18 +98,29 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		$imported = ( new BlueprintArchive() )->readFrom( $this->archivePath, $password );
 		self::assertSame( $blueprint->canonicalJson(), $imported->canonicalJson() );
 
-		$targetSecrets->assertManagedStorageReady();
+		$credential  = $imported->credentials[0];
+		$orphanedKey = $targetKeyStore->loadOrCreate()['key'];
+		try {
+			$targetSecrets->importCredentialsIfAbsent( $imported, $credential );
+			self::fail( 'Blueprint import must not overwrite a key whose encrypted sidecar is missing.' );
+		} catch ( \RAN\Secrets\SecretsStorageUnavailable $failure ) {
+			self::assertSame( 'storage_file_missing', $failure->reason() );
+		}
+		self::assertSame( $orphanedKey, $targetKeyStore->load( false ) );
+		self::assertTrue( $targetSecrets->canResetOrphanedKeyAt( $this->targetPath ) );
+		$targetSecrets->resetOrphanedKeyAt( $this->targetPath );
+		self::assertNull( $targetKeyStore->load( false ) );
 		self::assertFileDoesNotExist( $this->targetPath );
-		self::assertNull( $targetKeyStore->load() );
+		self::assertFileExists( $this->targetPath . '.lock' );
 
-		$credential = $imported->credentials[0];
-		$provider   = new TemporaryCredentialProvider( $targetSecrets->credentialsFor( 'gh' ), 0, 'repository-id' );
-		$catalog    = new ProviderSecretPolicyCatalog();
-		$verifier   = new BlueprintRepositoryVerifier(
+		$targetSecrets->assertManagedStorageReady();
+		$provider = new TemporaryCredentialProvider( $targetSecrets->credentialsFor( 'gh' ), 0, 'repository-id' );
+		$catalog  = new ProviderSecretPolicyCatalog();
+		$verifier = new BlueprintRepositoryVerifier(
 			new ProviderRegistry( array( $provider ), $catalog ),
 			$targetSecrets
 		);
-		$preview    = $verifier->verify(
+		$preview  = $verifier->verify(
 			new BlueprintPlanItem( $imported->packages[0], TargetPackageAction::INSTALL, TargetPackageReason::NONE ),
 			$credential,
 			BlueprintCredentialAction::IMPORT
@@ -126,10 +137,26 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			$targetSecrets
 		);
 		$applyItem   = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
-		$result      = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
-		$secondItem  = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
-		$second      = $applyItem->invoke( $application, $imported, $secondItem, $credential, 'import', null, false, true, true );
-		$retry       = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+		$managed     = $applyItem->invoke(
+			$application,
+			$imported,
+			new BlueprintPlanItem( $imported->packages[0], TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED ),
+			$credential,
+			'import',
+			null,
+			false,
+			true,
+			true
+		);
+		self::assertSame( 'unchanged', $managed['status'] );
+		self::assertSame( 'none', $managed['credential_state'] );
+		self::assertFileDoesNotExist( $this->targetPath );
+		self::assertNull( $targetKeyStore->load( false ) );
+
+		$result     = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+		$secondItem = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
+		$second     = $applyItem->invoke( $application, $imported, $secondItem, $credential, 'import', null, false, true, true );
+		$retry      = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertSame( 'transferred_available', $result['credential_state'] );

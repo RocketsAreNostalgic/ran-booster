@@ -54,6 +54,7 @@ use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsRuntimeAvailability;
 use RAN\Secrets\SecretsStorageProvisioner;
+use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Portability\BlueprintArchive;
 use RAN\Portability\BlueprintRepositoryVerifier;
 use RAN\Portability\BlueprintReviewer;
@@ -133,6 +134,9 @@ final class BoosterServiceProvider {
 
 				try {
 					$secrets->verifyAndSecure();
+				} catch ( SecretsStorageUnavailable ) {
+					// The typed, pathless storage notice and Overview status own this state.
+					return;
 				} catch ( \Throwable $exception ) {
 					$runtimeDashboard = $container->make( Dashboard::class );
 					$runtimeDashboard->addFailureMessage(

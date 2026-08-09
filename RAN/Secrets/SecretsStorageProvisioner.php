@@ -21,6 +21,7 @@ class SecretsStorageProvisioner {
 	private const DIRECTORY_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
 	private const FILE_CONSTANT_NAME      = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
 	private const RECOVERY_MAX_ENTRIES    = 64;
+	public const RESET_CONFIRMATION       = 'RESET STORAGE';
 
 	public function __construct(
 		private readonly PrivateLocationCandidateResolver $resolver = new PrivateLocationCandidateResolver(),
@@ -196,23 +197,48 @@ class SecretsStorageProvisioner {
 	 * Find authenticated sibling storage without mutating or weakening policy.
 	 *
 	 * @return array{
-	 *     state: 'available'|'blocked'|'ambiguous',
+	 *     state: 'available'|'blocked'|'ambiguous'|'reset_available',
 	 *     message: string,
 	 *     candidate_path: string|null,
-	 *     token: string|null
+	 *     token: string|null,
+	 *     confirmation: string|null
 	 * }|null
 	 */
 	public function recoveryState( SecretsStorageProvisioningResult $status ): ?array {
 		$current = $status->candidatePath();
 		if ( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION !== $status->status()
 			|| null === $current
-			|| ! $this->currentStoreIsEmpty( $current )
+			|| ! $this->currentCiphertextIsAbsent( $current )
 		) {
 			return null;
 		}
 
-		$candidates = $this->recoveryCandidates( $current );
+		$scanComplete = true;
+		$candidates   = $this->recoveryCandidates( $current, $scanComplete );
+		if ( ! $scanComplete ) {
+			return array(
+				'state'          => 'blocked',
+				'message'        => 'Booster found plausible prior storage material that it could not inspect completely. Restore or review that material manually before resetting the database key.',
+				'candidate_path' => null,
+				'token'          => null,
+				'confirmation'   => null,
+			);
+		}
 		if ( array() === $candidates ) {
+			try {
+				if ( $this->orphanedKeyResetAvailable( $current ) ) {
+					return array(
+						'state'          => 'reset_available',
+						'message'        => 'Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store.',
+						'candidate_path' => null,
+						'token'          => null,
+						'confirmation'   => self::RESET_CONFIRMATION,
+					);
+				}
+			} catch ( Throwable ) {
+				return null;
+			}
+
 			return null;
 		}
 		if ( 1 !== count( $candidates ) ) {
@@ -221,6 +247,7 @@ class SecretsStorageProvisioner {
 				'message'        => 'Booster found more than one authenticated prior storage set. Choose and configure the correct private location manually.',
 				'candidate_path' => null,
 				'token'          => null,
+				'confirmation'   => null,
 			);
 		}
 
@@ -248,6 +275,7 @@ class SecretsStorageProvisioner {
 				'message'        => $message,
 				'candidate_path' => null,
 				'token'          => null,
+				'confirmation'   => null,
 			);
 		}
 
@@ -256,7 +284,33 @@ class SecretsStorageProvisioner {
 			'message'        => 'Booster found one prior storage set that authenticates with this site\'s database key and whose credentials pass their current provider policies.',
 			'candidate_path' => $candidate['candidate_path'],
 			'token'          => $candidate['token'],
+			'confirmation'   => null,
 		);
+	}
+
+	public function resetOrphanedStorage( string $confirmation ): SecretsStorageProvisioningResult {
+		$status  = $this->status();
+		$current = $status->candidatePath();
+		$source  = $status->pathSource();
+		if ( null === $current
+			|| null === $source
+			|| ! hash_equals( self::RESET_CONFIRMATION, $confirmation )
+		) {
+			return $this->resetFailure( $status, 'storage_reset_request_invalid', 'The empty-storage reset request is invalid. Review the current storage state and try again.' );
+		}
+
+		$offer = $this->recoveryState( $status );
+		if ( null === $offer || 'reset_available' !== $offer['state'] ) {
+			return $this->resetFailure( $status, 'storage_reset_state_changed', 'The credential storage state changed and was not reset. Review it again before continuing.' );
+		}
+
+		try {
+			$this->resetOrphanedKey( $current );
+		} catch ( Throwable ) {
+			return $this->resetFailure( $status, 'storage_reset_failed', 'The orphaned credential key could not be removed safely. No storage reset was confirmed.' );
+		}
+
+		return SecretsStorageProvisioningResult::storageReset( $current, $source );
 	}
 
 	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
@@ -341,6 +395,18 @@ class SecretsStorageProvisioner {
 		}
 
 		return $this->secrets->recoveryCredentialsFitAt( $candidate );
+	}
+
+	protected function orphanedKeyResetAvailable( string $current ): bool {
+		return null !== $this->secrets && $this->secrets->canResetOrphanedKeyAt( $current );
+	}
+
+	protected function resetOrphanedKey( string $current ): void {
+		if ( null === $this->secrets ) {
+			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
+		}
+
+		$this->secrets->resetOrphanedKeyAt( $current );
 	}
 
 	protected function wordpressRoot(): string {
@@ -473,14 +539,22 @@ class SecretsStorageProvisioner {
 	}
 
 	/** @return list<array{candidate_path:string,token:string,safe:bool,fit:bool}> */
-	private function recoveryCandidates( string $current ): array {
-		$base = $this->automaticStorageBase( $current );
-		if ( null === $base || ! is_dir( $base ) || is_link( $base ) || ! stream_is_local( $base ) ) {
+	private function recoveryCandidates( string $current, ?bool &$complete = null ): array {
+		$complete = true;
+		$base     = $this->automaticStorageBase( $current );
+		if ( null === $base ) {
+			return array();
+		}
+		if ( ! is_dir( $base ) || is_link( $base ) || ! stream_is_local( $base ) ) {
+			$complete = false;
+
 			return array();
 		}
 
 		$entries = scandir( $base );
 		if ( false === $entries || count( $entries ) > self::RECOVERY_MAX_ENTRIES + 2 ) {
+			$complete = false;
+
 			return array();
 		}
 
@@ -493,14 +567,32 @@ class SecretsStorageProvisioner {
 				continue;
 			}
 
-			$candidate = $base . '/' . $entry . '/secrets.json';
+			$directory = $base . '/' . $entry;
+			if ( is_link( $directory ) || ! is_dir( $directory ) ) {
+				$complete = false;
+
+				continue;
+			}
+			$candidate = $directory . '/secrets.json';
+			$lock      = $candidate . '.lock';
+			if ( ! file_exists( $candidate )
+				&& ! is_link( $candidate )
+				&& ! file_exists( $lock )
+				&& ! is_link( $lock )
+			) {
+				continue;
+			}
 			try {
 				if ( null !== $this->inspectReadyPath( $candidate ) ) {
+					$complete = false;
+
 					continue;
 				}
 				$fit      = $this->recoveryCredentialsFit( $candidate );
 				$revision = $this->recoveryRevision( $candidate );
 				if ( null === $revision ) {
+					$complete = false;
+
 					continue;
 				}
 				$candidates[] = array(
@@ -510,6 +602,8 @@ class SecretsStorageProvisioner {
 					'fit'            => $fit,
 				);
 			} catch ( Throwable ) {
+				$complete = false;
+
 				continue;
 			}
 		}
@@ -528,11 +622,19 @@ class SecretsStorageProvisioner {
 			: null;
 	}
 
-	private function currentStoreIsEmpty( string $current ): bool {
-		return ! file_exists( $current )
-			&& ! is_link( $current )
-			&& ! file_exists( $current . '.lock' )
-			&& ! is_link( $current . '.lock' );
+	protected function currentCiphertextIsAbsent( string $current ): bool {
+		if ( file_exists( $current ) || is_link( $current ) ) {
+			return false;
+		}
+		if ( null === $this->secrets ) {
+			return ! file_exists( $current . '.lock' ) && ! is_link( $current . '.lock' );
+		}
+
+		try {
+			return $this->secrets->canRecoverFromMissingCiphertextAt( $current );
+		} catch ( Throwable ) {
+			return false;
+		}
 	}
 
 	private function recoveryRevision( string $candidate ): ?string {
@@ -559,6 +661,15 @@ class SecretsStorageProvisioner {
 				$code,
 				$message
 			);
+	}
+
+	private function resetFailure( SecretsStorageProvisioningResult $status, string $code, string $message ): SecretsStorageProvisioningResult {
+		$current = $status->candidatePath();
+		$source  = $status->pathSource();
+
+		return null === $current || null === $source
+			? SecretsStorageProvisioningResult::manualRequired( $code, $message )
+			: SecretsStorageProvisioningResult::storageNeedsAttention( $current, $source, $code, $message );
 	}
 
 	/** @return array{code: string, message: string}|null */

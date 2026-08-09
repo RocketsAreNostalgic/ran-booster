@@ -129,7 +129,7 @@ final class CredentialExpiryNotice {
 			</p>
 			<p>
 				<?php esc_html_e( 'Restore the matching sidecar and site key from the same backup before changing credentials.', 'ran-booster' ); ?>
-				<a class="button button-primary" href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=overview' ); ?>"><?php esc_html_e( 'Review encrypted storage', 'ran-booster' ); ?></a>
+				<a href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=overview' ); ?>"><?php esc_html_e( 'Review encrypted storage', 'ran-booster' ); ?></a>
 			</p>
 		</div>
 		<?php

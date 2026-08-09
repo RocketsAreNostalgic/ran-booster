@@ -14,6 +14,7 @@ use RAN\Admin\CredentialSelfDestructPurger;
 use RAN\Internal\CoreContainer;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\SecretsFile;
+use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Storage\Database;
 use RAN\Storage\CredentialUsageReader;
@@ -216,13 +217,29 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		self::assertSame( 1, $fixture['secrets']->purges );
 	}
 
-	/** @return array{secrets: TrackingSecretsFile, database: TrackingDatabase, plugins: TrackingPluginRepository} */
+	public function testTypedStorageFailureUsesTheDedicatedNoticeWithoutAGenericDuplicate(): void {
+		$fixture = $this->registeredFixture();
+		$fixture['dashboard']->expects( self::never() )->method( 'addFailureMessage' );
+		$fixture['secrets']->validationFailure = new SecretsStorageUnavailable(
+			'The encrypted Booster secrets store is incomplete.',
+			'storage_file_missing'
+		);
+		$this->request( 'GET', 'overview' );
+
+		$this->runAdminInit();
+
+		self::assertSame( 1, $fixture['secrets']->validations );
+	}
+
+	/** @return array{secrets: TrackingSecretsFile, database: TrackingDatabase, plugins: TrackingPluginRepository, dashboard: \RAN\Dashboard} */
 	private function registeredFixture(): array {
 		$secrets   = null;
 		$database  = new TrackingDatabase();
 		$plugins   = new TrackingPluginRepository();
 		$container = new CoreContainer();
 		$booster   = new Booster( $container );
+		$dashboard = $this->createMock( \RAN\Dashboard::class );
+		$container->bind( \RAN\Dashboard::class, $dashboard );
 		$container->bind( 'RAN\\Storage\\Database', $database );
 		$container->bind( 'RAN\\Storage\\PluginRepository', $plugins );
 		$container->bind(
@@ -262,9 +279,10 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		self::assertInstanceOf( TrackingSecretsFile::class, $secrets );
 
 		return array(
-			'secrets'  => $secrets,
-			'database' => $database,
-			'plugins'  => $plugins,
+			'secrets'   => $secrets,
+			'database'  => $database,
+			'plugins'   => $plugins,
+			'dashboard' => $dashboard,
 		);
 	}
 
@@ -285,8 +303,9 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 }
 
 final class TrackingSecretsFile extends SecretsFile {
-	public int $validations = 0;
-	public int $purges      = 0;
+	public int $validations               = 0;
+	public int $purges                    = 0;
+	public ?\Throwable $validationFailure = null;
 
 	public function __construct( ProviderSecretPolicyCatalog $policies ) {
 		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies );
@@ -294,6 +313,9 @@ final class TrackingSecretsFile extends SecretsFile {
 
 	public function verifyAndSecure(): bool {
 		++$this->validations;
+		if ( null !== $this->validationFailure ) {
+			throw $this->validationFailure;
+		}
 
 		return false;
 	}

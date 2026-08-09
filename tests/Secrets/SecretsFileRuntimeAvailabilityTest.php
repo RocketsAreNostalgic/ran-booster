@@ -20,6 +20,7 @@ use RAN\Secrets\SecretsFile;
 use RAN\Secrets\EncryptedSecretsEnvelopeCodec;
 use RAN\Secrets\SecretsRuntimeAvailability;
 use RAN\Secrets\SecretsStorageUnavailable;
+use RAN\Secrets\SiteKeyStore;
 use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 
 final class SecretsFileRuntimeAvailabilityTest extends TestCase {
@@ -390,6 +391,157 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $missingRoot );
 	}
 
+	public function testExplicitOrphanedKeyResetRechecksStateAndLeavesTheManagedLockForFreshInitialization(): void {
+		foreach ( array( false, true ) as $existingLock ) {
+			[$root, $path] = $this->sidecarFixture();
+			$keyStore      = new InMemorySiteKeyStore( $path );
+			$oldKey        = $keyStore->loadOrCreate()['key'];
+			$secrets       = $this->realSecrets(
+				$path,
+				$keyStore,
+				new EncryptedSecretsEnvelopeCodec(),
+				new SecretsRuntimeAvailability( true, false )
+			);
+			if ( $existingLock ) {
+				self::assertNotFalse( file_put_contents( $path . '.lock', '' ) );
+				self::assertTrue( chmod( $path . '.lock', 0600 ) );
+			}
+
+			self::assertTrue( $secrets->canResetOrphanedKeyAt( $path ) );
+			$secrets->resetOrphanedKeyAt( $path );
+
+			self::assertNull( $keyStore->load( false ) );
+			self::assertFileDoesNotExist( $path );
+			self::assertFileExists( $path . '.lock' );
+			self::assertSame( 0600, fileperms( $path . '.lock' ) & 0777 );
+			self::assertFalse( $secrets->canResetOrphanedKeyAt( $path ) );
+
+			$secrets->saveCredential(
+				'gh',
+				'fresh-profile',
+				array(
+					'label'         => 'Fresh credential',
+					'kind'          => 'classic',
+					'configuration' => array(),
+				),
+				'fresh-secret-canary'
+			);
+			self::assertFileExists( $path );
+			self::assertNotNull( $keyStore->load( false ) );
+			self::assertNotSame( $oldKey, $keyStore->load( false ) );
+			self::assertTrue( $secrets->hasHealthyManagedStorage() );
+
+			InMemorySiteKeyStore::reset( $path );
+			unlink( $path );
+			unlink( $path . '.lock' );
+			rmdir( $root );
+		}
+	}
+
+	public function testOrphanedKeyResetRefusesAChangedPathOrRestoredCiphertext(): void {
+		[$root, $path] = $this->sidecarFixture();
+		$keyStore      = new InMemorySiteKeyStore( $path );
+		$key           = $keyStore->loadOrCreate()['key'];
+		$secrets       = $this->realSecrets(
+			$path,
+			$keyStore,
+			new EncryptedSecretsEnvelopeCodec(),
+			new SecretsRuntimeAvailability( true, false )
+		);
+
+		self::assertFalse( $secrets->canResetOrphanedKeyAt( $path . '.changed' ) );
+		self::assertNotFalse( file_put_contents( $path, '{}' ) );
+		self::assertTrue( chmod( $path, 0600 ) );
+		self::assertFalse( $secrets->canResetOrphanedKeyAt( $path ) );
+		try {
+			$secrets->resetOrphanedKeyAt( $path );
+			self::fail( 'Restored ciphertext must stop the orphaned-key reset.' );
+		} catch ( SecretsStorageUnavailable $failure ) {
+			self::assertStringContainsString( 'changed', $failure->getMessage() );
+		}
+		self::assertSame( $key, $keyStore->load( false ) );
+
+		InMemorySiteKeyStore::reset( $path );
+		unlink( $path );
+		unlink( $path . '.lock' );
+		rmdir( $root );
+	}
+
+	public function testOrphanedKeyResetDoesNotRepairAnUntrustedExistingLock(): void {
+		[$root, $path] = $this->sidecarFixture();
+		$keyStore      = new InMemorySiteKeyStore( $path );
+		$key           = $keyStore->loadOrCreate()['key'];
+		$secrets       = $this->realSecrets(
+			$path,
+			$keyStore,
+			new EncryptedSecretsEnvelopeCodec(),
+			new SecretsRuntimeAvailability( true, false )
+		);
+		self::assertNotFalse( file_put_contents( $path . '.lock', '' ) );
+		self::assertTrue( chmod( $path . '.lock', 0660 ) );
+
+		try {
+			$secrets->resetOrphanedKeyAt( $path );
+			self::fail( 'An insecure existing lock must block reset.' );
+		} catch ( SecretsStorageUnavailable $failure ) {
+			self::assertStringContainsString( 'secure', $failure->getMessage() );
+		}
+		self::assertSame( 0660, fileperms( $path . '.lock' ) & 0777 );
+		self::assertSame( $key, $keyStore->load( false ) );
+
+		InMemorySiteKeyStore::reset( $path );
+		unlink( $path . '.lock' );
+		rmdir( $root );
+	}
+
+	public function testOrphanedKeyResetPreservesAKeyThatChangesBeforeExactDeletion(): void {
+		[$root, $path] = $this->sidecarFixture();
+		$keyStore      = new class() extends SiteKeyStore {
+			public string $key;
+
+			public function __construct() {
+				$this->key = random_bytes( 32 );
+			}
+
+			public function load( bool $repairAutoload = true ): ?string {
+				return $this->key;
+			}
+
+			public function loadOrCreate(): array {
+				return array(
+					'key'     => $this->key,
+					'created' => false,
+				);
+			}
+
+			public function deleteExact( #[\SensitiveParameter] string $key ): bool {
+				$this->key = random_bytes( 32 );
+
+				return false;
+			}
+		};
+		$oldKey        = $keyStore->key;
+		$secrets       = $this->realSecrets(
+			$path,
+			$keyStore,
+			new EncryptedSecretsEnvelopeCodec(),
+			new SecretsRuntimeAvailability( true, false )
+		);
+
+		try {
+			$secrets->resetOrphanedKeyAt( $path );
+			self::fail( 'A replaced database key must not be treated as the exact orphaned key.' );
+		} catch ( SecretsStorageUnavailable $failure ) {
+			self::assertStringContainsString( 'could not be removed safely', $failure->getMessage() );
+		}
+		self::assertNotSame( $oldKey, $keyStore->key );
+		self::assertFileDoesNotExist( $path );
+		self::assertFileExists( $path . '.lock' );
+
+		unlink( $path . '.lock' );
+		rmdir( $root );
+	}
+
 	private function secrets( bool $sodium, bool $multisite ): SecretsFile {
 		return new SecretsFile(
 			constants: array(),
@@ -408,7 +560,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 	private function realSecrets(
 		string $path,
-		InMemorySiteKeyStore $keyStore,
+		SiteKeyStore $keyStore,
 		EncryptedSecretsEnvelopeCodec $codec,
 		SecretsRuntimeAvailability $availability
 	): SecretsFile {

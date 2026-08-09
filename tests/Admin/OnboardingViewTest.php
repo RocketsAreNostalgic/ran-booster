@@ -186,6 +186,46 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'including GitHub token prefixes', $html );
 	}
 
+	public function testRendersAnExplicitTypedOrphanedKeyResetWithPermanentLossWarning(): void {
+		$html = $this->renderView(
+			null,
+			array(
+				'status'              => 'storage_needs_attention',
+				'reason_code'         => 'storage_file_missing',
+				'message'             => 'The database key exists but the file is missing.',
+				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/secrets.json',
+				'path_source'         => 'automatic',
+				'can_provision'       => false,
+				'action_url'          => '/admin',
+				'manual_preflight'    => null,
+				'directory_commands'  => array(),
+				'config_alternatives' => null,
+				'recovery'            => array(
+					'state'               => 'reset_available',
+					'message'             => 'An orphaned database key was found.',
+					'candidate_path'      => null,
+					'candidate_directory' => null,
+					'token'               => null,
+					'can_adopt'           => false,
+					'can_reset'           => true,
+					'reset_confirmation'  => 'RESET STORAGE',
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'Start over with empty credential storage', $html );
+		self::assertStringContainsString( 'Permanent reset:', $html );
+		self::assertStringContainsString( 'webhook secret', $html );
+		self::assertStringContainsString( 'not a complete credential backup', $html );
+		self::assertStringContainsString( 'installing or adopting applicable package rows', $html );
+		self::assertStringContainsString( 'never contains webhook secrets', $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="reset-empty-storage"', $html );
+		self::assertStringContainsString( 'value="ran-booster-reset-empty-storage"', $html );
+		self::assertStringContainsString( 'name="ran_booster[reset_confirmation]"', $html );
+		self::assertStringContainsString( 'pattern="RESET STORAGE"', $html );
+		self::assertStringNotContainsString( 'adopt-secure-storage', $html );
+	}
+
 	public function testHealthyAndBrokenStorageUseTruthfulStatuses(): void {
 		$healthy = $this->renderStorageStatus(
 			'storage_healthy',

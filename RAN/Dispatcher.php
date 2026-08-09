@@ -148,6 +148,12 @@ class Dispatcher {
 				return;
 			}
 
+			if ( 'reset-empty-storage' === $action ) {
+				$this->resetEmptyStorage( $request );
+
+				return;
+			}
+
 			if ( 'save-public-lookup-profile' === $action ) {
 				$this->managePublicLookupProfile( $request );
 
@@ -400,6 +406,62 @@ class Dispatcher {
 		}
 
 		if ( $result->requiresNextRequestVerification() ) {
+			$adminUrl = is_multisite()
+				? network_admin_url( 'admin.php' )
+				: admin_url( 'admin.php' );
+			$this->redirectTo( $adminUrl . '?page=ran-booster&tab=overview' );
+		}
+
+		$this->dashboard->setSecretsStorageProvisioningResult( $result );
+	}
+
+	/** @param array<string, mixed> $request */
+	private function resetEmptyStorage( array $request ): void {
+		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
+			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
+			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
+			return;
+		}
+		foreach ( array( 'manage_options', 'activate_plugins' ) as $capability ) {
+			if ( ! current_user_can( $capability ) ) {
+				wp_die( esc_html__( 'You do not have sufficient permissions to reset Booster storage.', 'ran-booster' ) );
+			}
+		}
+
+		check_admin_referer( 'ran-booster-reset-empty-storage' );
+		$request      = wp_unslash( $request );
+		$confirmation = is_string( $request['reset_confirmation'] ?? null )
+			? sanitize_text_field( $request['reset_confirmation'] )
+			: '';
+
+		try {
+			$result = null === $this->secretsStorage
+				? SecretsStorageProvisioningResult::manualRequired(
+					'provisioner_unavailable',
+					'Empty credential storage reset is unavailable.'
+				)
+				: $this->secretsStorage->resetOrphanedStorage( $confirmation );
+		} catch ( \Throwable $failure ) {
+			\RAN\Logging\BoosterLogger::logException(
+				'secrets storage reset failed',
+				$failure,
+				array(
+					'diagnostic_id' => 'storage_reset_failed',
+					'event'         => 'secrets_storage_reset_failed',
+					'operation'     => 'reset_empty_storage',
+					'outcome_code'  => 'storage_reset_failed',
+					'source'        => 'admin',
+					'state'         => 'failed',
+					'step'          => 'reset',
+				)
+			);
+			$result = SecretsStorageProvisioningResult::manualRequired(
+				'storage_reset_failed',
+				'Empty credential storage could not be reset safely.'
+			);
+		}
+
+		if ( 'storage_reset' === $result->code() ) {
 			$adminUrl = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );

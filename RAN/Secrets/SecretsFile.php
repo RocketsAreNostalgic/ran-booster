@@ -151,6 +151,74 @@ class SecretsFile {
 	}
 
 	/**
+	 * Report whether the configured store is the narrow key-only recovery case.
+	 *
+	 * The check is read-only. A later reset must repeat it while holding the
+	 * managed exclusive lock.
+	 */
+	public function canResetOrphanedKeyAt( string $expectedPath ): bool {
+		if ( ! $this->canRecoverFromMissingCiphertextAt( $expectedPath ) ) {
+			return false;
+		}
+
+		return null !== $this->loadKey( false );
+	}
+
+	/**
+	 * Verify that missing ciphertext is paired with no lock or a secure managed lock.
+	 */
+	public function canRecoverFromMissingCiphertextAt( string $expectedPath ): bool {
+		$this->assertAvailable();
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+			return false;
+		}
+
+		$this->assertConfiguredLocation();
+		if ( $this->hasFile() ) {
+			return false;
+		}
+
+		$lock = $this->lockPath();
+		if ( ! file_exists( $lock ) && ! is_link( $lock ) ) {
+			return true;
+		}
+
+		return $this->withLock(
+			LOCK_SH,
+			false,
+			fn (): bool => ! $this->hasFile()
+		);
+	}
+
+	/**
+	 * Remove only the exact orphaned database key after a locked state recheck.
+	 *
+	 * The secure lock remains so the next normal credential write can initialize
+	 * a fresh key and authenticated sidecar through the existing first-write path.
+	 */
+	public function resetOrphanedKeyAt( string $expectedPath ): void {
+		$this->assertAvailable();
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+			throw $this->unavailable( 'The encrypted Booster secrets path changed before reset.' );
+		}
+
+		$lock       = $this->lockPath();
+		$createLock = ! file_exists( $lock ) && ! is_link( $lock );
+		$this->withLock(
+			LOCK_EX,
+			$createLock,
+			function (): void {
+				$key = $this->loadKey( false );
+				if ( null === $key || $this->hasFile() ) {
+					throw $this->unavailable( 'The encrypted Booster secrets state changed before reset.' );
+				}
+
+				$this->deleteExactKey( $key );
+			}
+		);
+	}
+
+	/**
 	 * Report whether managed storage contains an authenticated document.
 	 *
 	 * A configured but pristine location returns false. Incomplete, unsafe or

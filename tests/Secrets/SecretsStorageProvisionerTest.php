@@ -459,9 +459,11 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	public function testUniqueAuthenticatedProviderFitSiblingCanBeAdoptedByOpaqueRevision(): void {
 		$old = $this->recoveryStore( 'abcdef0123456789' );
 		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
-		$provisioner             = $this->provisioner();
-		$provisioner->configured = $this->candidate;
-		$status                  = $provisioner->status();
+		$provisioner                      = $this->provisioner();
+		$provisioner->configured          = $this->candidate;
+		$provisioner->healthFailure       = true;
+		$provisioner->healthFailureReason = 'storage_file_missing';
+		$status                           = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $status->status() );
 		$recovery = $provisioner->recoveryState( $status );
@@ -476,6 +478,71 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringContainsString( dirname( $old ), $config );
 		self::assertStringNotContainsString( dirname( $this->candidate ), $config );
 		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
+	}
+
+	public function testExistingManagedLockDoesNotHideAnAuthenticatedSibling(): void {
+		$old = $this->recoveryStore( 'abcdef0123456789' );
+		self::assertTrue( mkdir( dirname( $this->candidate ), 0700 ) );
+		self::assertNotFalse( file_put_contents( $this->candidate . '.lock', '' ) );
+		self::assertTrue( chmod( $this->candidate . '.lock', 0600 ) );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner                      = $this->provisioner();
+		$provisioner->configured          = $this->candidate;
+		$provisioner->healthFailure       = true;
+		$provisioner->healthFailureReason = 'storage_file_missing';
+
+		$recovery = $provisioner->recoveryState( $provisioner->status() );
+
+		self::assertIsArray( $recovery );
+		self::assertSame( 'available', $recovery['state'] );
+		self::assertSame( $old, $recovery['candidate_path'] );
+	}
+
+	public function testExplicitResetIsOfferedOnlyForTheOrphanedKeyStateAndRequiresTypedConfirmation(): void {
+		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner                         = $this->provisioner();
+		$provisioner->configured             = $this->candidate;
+		$provisioner->healthFailure          = true;
+		$provisioner->healthFailureReason    = 'storage_file_missing';
+		$provisioner->orphanedResetAvailable = true;
+		$status                              = $provisioner->status();
+
+		$offer = $provisioner->recoveryState( $status );
+		self::assertIsArray( $offer );
+		self::assertSame( 'reset_available', $offer['state'] );
+		self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $offer['confirmation'] );
+
+		$invalid = $provisioner->resetOrphanedStorage( 'reset storage' );
+		self::assertSame( 'storage_reset_request_invalid', $invalid->code() );
+		self::assertSame( array(), $provisioner->resetCandidates );
+
+		$reset = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $reset->status() );
+		self::assertSame( 'storage_reset', $reset->code() );
+		self::assertSame( array( $this->candidate ), $provisioner->resetCandidates );
+
+		$replay = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		self::assertSame( 'storage_reset_state_changed', $replay->code() );
+		self::assertSame( array( $this->candidate ), $provisioner->resetCandidates );
+	}
+
+	public function testAuthenticatedSiblingRecoveryTakesPriorityOverReset(): void {
+		$this->recoveryStore( 'abcdef0123456789' );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner                         = $this->provisioner();
+		$provisioner->configured             = $this->candidate;
+		$provisioner->healthFailure          = true;
+		$provisioner->healthFailureReason    = 'storage_file_missing';
+		$provisioner->orphanedResetAvailable = true;
+
+		$offer = $provisioner->recoveryState( $provisioner->status() );
+
+		self::assertIsArray( $offer );
+		self::assertSame( 'available', $offer['state'] );
+		$result = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		self::assertSame( 'storage_reset_state_changed', $result->code() );
+		self::assertSame( array(), $provisioner->resetCandidates );
 	}
 
 	public function testAuthenticatedUnsafeSiblingIsReportedButCannotBeAdopted(): void {
@@ -507,7 +574,40 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertNull( $ambiguous['token'] );
 
 		$provisioner->recoveryAuthenticationFails = true;
-		self::assertNull( $provisioner->recoveryState( $provisioner->status() ) );
+		$blocked                                  = $provisioner->recoveryState( $provisioner->status() );
+		self::assertIsArray( $blocked );
+		self::assertSame( 'blocked', $blocked['state'] );
+		self::assertStringContainsString( 'could not inspect completely', $blocked['message'] );
+	}
+
+	public function testMalformedOrOverLimitSiblingScanBlocksReset(): void {
+		$malformed = $this->recoveryStore( 'abcdef0123456789' );
+		self::assertTrue( unlink( $malformed . '.lock' ) );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner                         = $this->provisioner();
+		$provisioner->configured             = $this->candidate;
+		$provisioner->healthFailure          = true;
+		$provisioner->healthFailureReason    = 'storage_file_missing';
+		$provisioner->orphanedResetAvailable = true;
+
+		$blocked = $provisioner->recoveryState( $provisioner->status() );
+		self::assertIsArray( $blocked );
+		self::assertSame( 'blocked', $blocked['state'] );
+		self::assertNull( $blocked['confirmation'] );
+		self::assertSame(
+			'storage_reset_state_changed',
+			$provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
+		);
+		self::assertSame( array(), $provisioner->resetCandidates );
+
+		self::assertTrue( unlink( $malformed ) );
+		for ( $index = 0; $index <= 64; ++$index ) {
+			self::assertTrue( mkdir( dirname( dirname( $this->candidate ) ) . '/' . sprintf( '%016x', $index ), 0700 ) );
+		}
+		$overflow = $provisioner->recoveryState( $provisioner->status() );
+		self::assertIsArray( $overflow );
+		self::assertSame( 'blocked', $overflow['state'] );
+		self::assertNull( $overflow['confirmation'] );
 	}
 
 	public function testAuthenticatedProviderUnfitSiblingIsVisibleButNotAdoptable(): void {
@@ -592,8 +692,11 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public bool $unsafeAfterProbe            = false;
 	public bool $recoveryAuthenticationFails = false;
 	public bool $recoveryCredentialsFit      = true;
+	public bool $orphanedResetAvailable      = false;
 	/** @var list<string> */
 	public array $authenticatedCandidates = array();
+	/** @var list<string> */
+	public array $resetCandidates = array();
 	/** @var list<array{directory:string,code:string,reason:string,component:string|null}> */
 	public array $discardedCandidates = array();
 
@@ -631,6 +734,19 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		}
 
 		return $this->recoveryCredentialsFit;
+	}
+
+	protected function currentCiphertextIsAbsent( string $current ): bool {
+		return ! file_exists( $current ) && ! is_link( $current );
+	}
+
+	protected function orphanedKeyResetAvailable( string $current ): bool {
+		return $this->orphanedResetAvailable;
+	}
+
+	protected function resetOrphanedKey( string $current ): void {
+		$this->resetCandidates[]      = $current;
+		$this->orphanedResetAvailable = false;
 	}
 
 	protected function writeConfiguration( string $config, string $candidate ): WpConfigPathWriteResult {

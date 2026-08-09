@@ -7,6 +7,7 @@ namespace Tests\Admin;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Secrets\SecretsStorageProvisioningResult;
+use RAN\Secrets\SecretsStorageProvisioner;
 
 final class SecretsStorageSetupPresenterTest extends TestCase {
 
@@ -162,6 +163,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		);
 
 		self::assertTrue( $payload['recovery']['can_adopt'] );
+		self::assertFalse( $payload['recovery']['can_reset'] );
 		self::assertSame( $recoveryPath, $payload['recovery']['candidate_path'] );
 		self::assertSame( dirname( $recoveryPath ), $payload['recovery']['candidate_directory'] );
 
@@ -181,6 +183,47 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 			)
 		);
 		self::assertFalse( $blocked['recovery']['can_adopt'] );
+		self::assertFalse( $blocked['recovery']['can_reset'] );
 		self::assertNull( $blocked['recovery']['candidate_path'] );
+	}
+
+	public function testBuildsAResetOfferOnlyForTheExplicitOrphanedKeyState(): void {
+		$payload = ( new SecretsStorageSetupPresenter() )->build(
+			SecretsStorageProvisioningResult::storageNeedsAttention(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC,
+				'storage_file_missing'
+			),
+			'/admin',
+			'',
+			true,
+			array(
+				'state'          => 'reset_available',
+				'message'        => 'An orphaned key was found.',
+				'candidate_path' => null,
+				'token'          => null,
+				'confirmation'   => SecretsStorageProvisioner::RESET_CONFIRMATION,
+			)
+		);
+
+		self::assertTrue( $payload['recovery']['can_reset'] );
+		self::assertFalse( $payload['recovery']['can_adopt'] );
+		self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $payload['recovery']['reset_confirmation'] );
+
+		$redacted = ( new SecretsStorageSetupPresenter() )->build(
+			SecretsStorageProvisioningResult::storageNeedsAttention(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			),
+			'/admin',
+			'',
+			false,
+			array(
+				'state'        => 'reset_available',
+				'message'      => 'An orphaned key was found.',
+				'confirmation' => SecretsStorageProvisioner::RESET_CONFIRMATION,
+			)
+		);
+		self::assertNull( $redacted['recovery'] );
 	}
 }

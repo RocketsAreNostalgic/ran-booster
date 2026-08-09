@@ -29,7 +29,9 @@ final readonly class SecretsStorageSetupPresenter {
 	 *         candidate_path: string|null,
 	 *         candidate_directory: string|null,
 	 *         token: string|null,
-	 *         can_adopt: bool
+	 *         can_adopt: bool,
+	 *         can_reset: bool,
+	 *         reset_confirmation: string|null
 	 *     }|null,
 	 *     manual_preflight: string|null,
 	 *     directory_commands: list<string>,
@@ -83,6 +85,9 @@ final readonly class SecretsStorageSetupPresenter {
 			$recoveryState     = is_string( $recovery['state'] ?? null )
 				? $recovery['state']
 				: 'blocked';
+			$resetConfirmation = is_string( $recovery['confirmation'] ?? null )
+				? $recovery['confirmation']
+				: null;
 			$recoveryPayload   = array(
 				'state'               => $recoveryState,
 				'message'             => is_string( $recovery['message'] ?? null ) ? $recovery['message'] : '',
@@ -92,6 +97,9 @@ final readonly class SecretsStorageSetupPresenter {
 				'can_adopt'           => 'available' === $recoveryState
 					&& null !== $recoveryCandidate
 					&& null !== $recoveryToken,
+				'can_reset'           => 'reset_available' === $recoveryState
+					&& null !== $resetConfirmation,
+				'reset_confirmation'  => $resetConfirmation,
 			);
 		}
 

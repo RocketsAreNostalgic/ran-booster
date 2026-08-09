@@ -11,12 +11,120 @@ permissions:
     contents: read
 
 concurrency:
-    group: quality-${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+    group: quality-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+    runtime-archive:
+        name: Runtime archive
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 10
+        outputs:
+            artifact-name: ${{ steps.archive.outputs.artifact-name }}
+            archive-sha256: ${{ steps.archive.outputs.archive-sha256 }}
+            release-candidate: ${{ steps.archive.outputs.release-candidate }}
+            source-commit: ${{ steps.archive.outputs.source-commit }}
+            version: ${{ steps.archive.outputs.version }}
+            wordpress-matrix: ${{ steps.archive.outputs.wordpress-matrix }}
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # 2.36.0
+              with:
+                  php-version: '8.2'
+                  coverage: none
+                  extensions: zip
+                  tools: composer:v2
+
+            - name: Build and verify the runtime archive once
+              id: archive
+              shell: bash
+              env:
+                  RAN_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+                  RAN_PR_BASE: ${{ github.event.pull_request.base.ref }}
+                  RAN_PR_HEAD: ${{ github.event.pull_request.head.ref }}
+                  RAN_PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+              run: |
+                  set -euo pipefail
+
+                  release_candidate=false
+                  if [[ "$GITHUB_EVENT_NAME" == pull_request \
+                      && "$RAN_PR_AUTHOR" == 'github-actions[bot]' \
+                      && "$RAN_PR_BASE" == main \
+                      && "$RAN_PR_HEAD" == 'release-please--branches--main--components--ran-booster' \
+                      && "$RAN_PR_HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]; then
+                      release_candidate=true
+                  fi
+
+                  source_commit="$GITHUB_SHA"
+                  if [[ "$GITHUB_EVENT_NAME" == push ]] \
+                      && ! git diff --quiet "${GITHUB_SHA}^1" "$GITHUB_SHA" -- .release-please-manifest.json; then
+                      source_commit="$(git rev-parse "${GITHUB_SHA}^2")"
+                      test "$(git log -1 --format=%H "$GITHUB_SHA" -- .release-please-manifest.json)" = "$source_commit"
+                      test "$(git rev-parse "${GITHUB_SHA}^{tree}")" = "$(git rev-parse "${source_commit}^{tree}")"
+                  fi
+
+                  version="$(git show "${source_commit}:ran-booster.php" \
+                      | sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p')"
+                  test -n "$version"
+                  bash scripts/build-release.sh "$source_commit" "$version"
+
+                  archive="build/ran-booster-${version}.zip"
+                  if unzip -Z1 "$archive" | grep -Fq 'ran-booster-fixture-provider'; then
+                      echo 'The runtime archive contains the test-only fixture provider.' >&2
+                      exit 1
+                  fi
+                  archive_sha256="$(sha256sum "$archive" | awk '{ print $1 }')"
+                  artifact_name="ran-booster-runtime-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+                  jq -n \
+                      --arg quality_commit "$GITHUB_SHA" \
+                      --arg source_commit "$source_commit" \
+                      --arg version "$version" \
+                      --arg sha256 "$archive_sha256" \
+                      '{
+                        schema: "ran-booster-ci-runtime",
+                        schema_version: 1,
+                        quality_commit: $quality_commit,
+                        source_commit: $source_commit,
+                        version: $version,
+                        sha256: $sha256
+                      }' > build/ran-booster-ci-runtime.json
+
+                  if [[ "$release_candidate" == true ]]; then
+                      wordpress_matrix='{"include":[{"wordpress":"7.0.2","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":true}]}'
+                  else
+                      wordpress_matrix='{"include":[{"wordpress":"7.0.1","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"compatibility","plugin_check":false},{"wordpress":"7.0.2","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":true},{"wordpress":"7.0.2","database":"MariaDB 10.11","database_image":"mariadb:10.11","suite":"critical","plugin_check":false},{"wordpress":"7.0.2","database":"MySQL 8.0 floor","database_image":"mysql:8.0","suite":"floor","plugin_check":false}]}'
+                  fi
+
+                  {
+                      printf 'artifact-name=%s\n' "$artifact_name"
+                      printf 'archive-sha256=%s\n' "$archive_sha256"
+                      printf 'release-candidate=%s\n' "$release_candidate"
+                      printf 'source-commit=%s\n' "$source_commit"
+                      printf 'version=%s\n' "$version"
+                      printf 'wordpress-matrix=%s\n' "$wordpress_matrix"
+                  } >> "$GITHUB_OUTPUT"
+
+            - name: Upload the verified runtime archive
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: ${{ steps.archive.outputs.artifact-name }}
+                  path: |
+                      build/ran-booster-${{ steps.archive.outputs.version }}.zip
+                      build/ran-booster-ci-runtime.json
+                  if-no-files-found: error
+                  retention-days: 7
+
     quality:
         name: Quality
+        needs: runtime-archive
+        if: ${{ needs.runtime-archive.outputs.release-candidate != 'true' }}
         runs-on: blacksmith-2vcpu-ubuntu-2404
         timeout-minutes: 10
         steps:
@@ -74,29 +182,12 @@ jobs:
 
     wordpress:
         name: WordPress ${{ matrix.wordpress }} / ${{ matrix.database }} / PHP 8.2
+        needs: runtime-archive
         runs-on: blacksmith-2vcpu-ubuntu-2404
         timeout-minutes: 10
         strategy:
             fail-fast: false
-            matrix:
-                include:
-                    - wordpress: 7.0.1
-                      database: MySQL 8.4
-                      database_image: mysql:8.4
-                      suite: compatibility
-                    - wordpress: 7.0.2
-                      database: MySQL 8.4
-                      database_image: mysql:8.4
-                      suite: critical
-                      plugin_check: true
-                    - wordpress: 7.0.2
-                      database: MariaDB 10.11
-                      database_image: mariadb:10.11
-                      suite: critical
-                    - wordpress: 7.0.2
-                      database: MySQL 8.0 floor
-                      database_image: mysql:8.0
-                      suite: floor
+            matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}
         services:
             mysql:
                 image: ${{ matrix.database_image }}
@@ -124,19 +215,35 @@ jobs:
                   extensions: mysqli, zip
                   tools: composer:v2, wp-cli
 
-            - name: Build runtime archive
-              id: archive
+            - name: Download the verified runtime archive
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  name: ${{ needs.runtime-archive.outputs.artifact-name }}
+                  path: build
+
+            - name: Verify the shared runtime archive identity
               shell: bash
               run: |
                   set -euo pipefail
-                  version="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' ran-booster.php)"
-                  bash scripts/build-release.sh HEAD "${version}"
-                  bash scripts/verify-release.sh "build/ran-booster-${version}.zip" "${version}"
-                  if unzip -Z1 "build/ran-booster-${version}.zip" | grep -Fq 'ran-booster-fixture-provider'; then
-                      echo 'The runtime archive contains the test-only fixture provider.' >&2
-                      exit 1
-                  fi
-                  echo "path=build/ran-booster-${version}.zip" >> "${GITHUB_OUTPUT}"
+                  metadata='build/ran-booster-ci-runtime.json'
+                  archive='build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip'
+                  test -f "$metadata"
+                  test -f "$archive"
+                  jq -e \
+                      --arg quality_commit "$GITHUB_SHA" \
+                      --arg source_commit '${{ needs.runtime-archive.outputs.source-commit }}' \
+                      --arg version '${{ needs.runtime-archive.outputs.version }}' \
+                      --arg sha256 '${{ needs.runtime-archive.outputs.archive-sha256 }}' \
+                      '.schema == "ran-booster-ci-runtime"
+                        and .schema_version == 1
+                        and .quality_commit == $quality_commit
+                        and .source_commit == $source_commit
+                        and .version == $version
+                        and .sha256 == $sha256' \
+                      "$metadata" >/dev/null
+                  printf '%s  %s\n' '${{ needs.runtime-archive.outputs.archive-sha256 }}' "$archive" \
+                      | sha256sum --check --strict
+                  unzip -tqq "$archive"
 
             - name: Install WordPress ${{ matrix.wordpress }}
               run: |
@@ -148,7 +255,7 @@ jobs:
 
             - name: Install and activate runtime archive
               run: |
-                  wp plugin install "$GITHUB_WORKSPACE/${{ steps.archive.outputs.path }}" --path=build/wordpress --activate
+                  wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip" --path=build/wordpress --activate
                   wp plugin is-active ran-booster --path=build/wordpress
 
             - name: Prove global Core container isolation

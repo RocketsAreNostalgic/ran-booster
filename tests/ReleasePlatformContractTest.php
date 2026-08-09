@@ -29,6 +29,17 @@ final class ReleasePlatformContractTest extends TestCase {
 		}
 	}
 
+	public function testBuilderVerifiesTheArchiveBeforePublishingItToTheBuildDirectory(): void {
+		$script = file_get_contents( dirname( __DIR__ ) . '/scripts/build-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		self::assertIsString( $script );
+
+		$verify = strpos( $script, 'bash "$script_dir/verify-release.sh" "$tmp_archive" "$expected_version" "$commit"' );
+		$move   = strpos( $script, 'mv -f "$tmp_archive" "$build_dir/$archive_name"' );
+		self::assertIsInt( $verify );
+		self::assertIsInt( $move );
+		self::assertTrue( $verify < $move );
+	}
+
 	public function testDeploymentPreflightNamesTheMissingPlatformRequirement(): void {
 		$source = file_get_contents( dirname( __DIR__ ) . '/RAN/Deployment/DeploymentArchivePreflight.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
 		self::assertIsString( $source );

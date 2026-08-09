@@ -52,6 +52,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertSame( 'sodium_unavailable', $payload['reason_code'] );
 		self::assertNull( $payload['candidate_path'] );
 		self::assertNull( $payload['candidate_directory'] );
+		self::assertSame( array(), $payload['discarded_candidates'] );
 		self::assertSame( array(), $payload['directory_commands'] );
 		self::assertNull( $payload['config_alternatives'] );
 	}
@@ -90,21 +91,56 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 
 	public function testSensitiveSetupDetailsAreRedactedForAUserWithoutBothCapabilities(): void {
 		$payload = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::setupAvailable( '/private/canary/secrets.json' ),
+			SecretsStorageProvisioningResult::manualRequired(
+				'location_unavailable',
+				'No safe location.',
+				null,
+				array(
+					array(
+						'directory' => '/private/canary',
+						'code'      => 'fixture_rejection',
+						'reason'    => 'Fixture path rejected.',
+						'component' => '/private',
+					),
+				)
+			),
 			'/admin',
 			(string) realpath( dirname( __DIR__, 2 ) ),
 			false
 		);
 
 		self::assertFalse( $payload['can_provision'] );
-		self::assertSame( 'setup_available', $payload['reason_code'] );
+		self::assertSame( 'location_unavailable', $payload['reason_code'] );
 		self::assertNull( $payload['candidate_path'] );
 		self::assertNull( $payload['candidate_directory'] );
 		self::assertNull( $payload['path_source'] );
+		self::assertSame( array(), $payload['discarded_candidates'] );
 		self::assertNull( $payload['manual_preflight'] );
 		self::assertSame( array(), $payload['directory_commands'] );
 		self::assertNull( $payload['config_alternatives'] );
 		self::assertNull( $payload['recovery'] );
+	}
+
+	public function testPrivilegedOverviewReceivesDiscardedCandidateReasons(): void {
+		$discarded = array(
+			array(
+				'directory' => '/var/www/account/.ran-booster/0123456789abcdef',
+				'code'      => 'php_accessible_group_writable_ancestor',
+				'reason'    => 'A PHP-accessible group-writable ancestor can replace the account path.',
+				'component' => '/var/www',
+			),
+		);
+		$payload   = ( new SecretsStorageSetupPresenter() )->build(
+			SecretsStorageProvisioningResult::manualRequired(
+				'location_unavailable',
+				'No safe location.',
+				null,
+				$discarded
+			),
+			'/admin'
+		);
+
+		self::assertSame( $discarded, $payload['discarded_candidates'] );
 	}
 
 	public function testBuildsAnAdoptionOfferOnlyForAnAvailableRecoveryState(): void {

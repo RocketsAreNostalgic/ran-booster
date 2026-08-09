@@ -90,18 +90,23 @@ class SecretsStorageProvisioner {
 			);
 		}
 
+		$discarded = array();
 		try {
-			$candidate = $this->resolveCandidate();
+			$candidate = $this->resolveCandidate( $discarded );
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'location_unavailable',
-				'Booster could not determine a safe private storage location.'
+				'Booster could not determine a safe private storage location.',
+				null,
+				$discarded
 			);
 		}
 		if ( null === $candidate ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'location_unavailable',
-				'Booster could not determine a safe private storage location.'
+				'Booster could not determine a safe private storage location.',
+				null,
+				$discarded
 			);
 		}
 
@@ -293,12 +298,14 @@ class SecretsStorageProvisioner {
 			: $this->recoveryFailure( $current, 'wp_config_verification_unavailable', 'Booster could not require a fresh WordPress configuration check.' );
 	}
 
-	protected function resolveCandidate(): ?string {
+	/** @param list<array{directory:string,code:string,reason:string,component:string|null}>|null $discarded */
+	protected function resolveCandidate( ?array &$discarded = null ): ?string {
 		return $this->resolver->resolve(
 			$this->wordpressRoot(),
 			$this->contentDirectory(),
 			$this->pluginDirectory(),
-			$this->documentRoot()
+			$this->documentRoot(),
+			$discarded
 		);
 	}
 

@@ -28,7 +28,8 @@ final readonly class SecretsStorageProvisioningResult {
 		private string $code,
 		private string $message,
 		private ?string $candidatePath,
-		private ?string $pathSource = null
+		private ?string $pathSource = null,
+		private array $discardedCandidates = array()
 	) {
 	}
 
@@ -77,8 +78,14 @@ final readonly class SecretsStorageProvisioningResult {
 		);
 	}
 
-	public static function manualRequired( string $code, string $message, ?string $candidatePath = null ): self {
-		return new self( self::MANUAL_REQUIRED, $code, $message, $candidatePath );
+	/** @param list<array{directory:string,code:string,reason:string,component:string|null}> $discardedCandidates */
+	public static function manualRequired(
+		string $code,
+		string $message,
+		?string $candidatePath = null,
+		array $discardedCandidates = array()
+	): self {
+		return new self( self::MANUAL_REQUIRED, $code, $message, $candidatePath, null, $discardedCandidates );
 	}
 
 	public static function unsupported( string $code, string $message ): self {
@@ -113,6 +120,11 @@ final readonly class SecretsStorageProvisioningResult {
 
 	public function pathSource(): ?string {
 		return $this->pathSource;
+	}
+
+	/** @return list<array{directory:string,code:string,reason:string,component:string|null}> */
+	public function discardedCandidates(): array {
+		return $this->discardedCandidates;
 	}
 
 	public function hasConfiguredPath(): bool {

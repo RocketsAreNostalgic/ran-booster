@@ -20,6 +20,7 @@ final readonly class SecretsStorageSetupPresenter {
 	 *     candidate_path: string|null,
 	 *     candidate_directory: string|null,
 	 *     path_source: string|null,
+	 *     discarded_candidates: list<array{directory:string,code:string,reason:string,component:string|null}>,
 	 *     can_provision: bool,
 	 *     action_url: string,
 	 *     recovery: array{
@@ -95,18 +96,19 @@ final readonly class SecretsStorageSetupPresenter {
 		}
 
 		return array(
-			'status'              => $result->status(),
-			'reason_code'         => $result->code(),
-			'message'             => $result->message(),
-			'candidate_path'      => $candidate,
-			'candidate_directory' => null === $candidate ? null : dirname( $candidate ),
-			'path_source'         => $includeSensitiveDetails ? $result->pathSource() : null,
-			'can_provision'       => $includeSensitiveDetails && $result->canProvisionAutomatically(),
-			'action_url'          => $actionUrl,
-			'recovery'            => $recoveryPayload,
-			'manual_preflight'    => $manualPreflight,
-			'directory_commands'  => $directoryCommands,
-			'config_alternatives' => $configAlternatives,
+			'status'               => $result->status(),
+			'reason_code'          => $result->code(),
+			'message'              => $result->message(),
+			'candidate_path'       => $candidate,
+			'candidate_directory'  => null === $candidate ? null : dirname( $candidate ),
+			'path_source'          => $includeSensitiveDetails ? $result->pathSource() : null,
+			'discarded_candidates' => $includeSensitiveDetails ? $result->discardedCandidates() : array(),
+			'can_provision'        => $includeSensitiveDetails && $result->canProvisionAutomatically(),
+			'action_url'           => $actionUrl,
+			'recovery'             => $recoveryPayload,
+			'manual_preflight'     => $manualPreflight,
+			'directory_commands'   => $directoryCommands,
+			'config_alternatives'  => $configAlternatives,
 		);
 	}
 }

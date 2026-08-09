@@ -65,18 +65,74 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 	}
 
 	public function testNeverSuggestsAPathThatFailsTheConfiguredAncestorPolicy(): void {
-		$this->remove( $this->root . '/account/site/.git' );
 		self::assertTrue( chmod( $this->root . '/account', 0770 ) );
-		$resolver = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$discarded = array();
 
 		self::assertNull(
 			$resolver->resolve(
 				$this->root . '/account/site/public',
 				$this->root . '/account/site/public/wp-content',
 				$this->root . '/account/site/public/wp-content/plugins/ran-booster',
-				$this->root . '/account/site/public'
+				$this->root . '/account/site/public',
+				$discarded
 			)
 		);
+		self::assertSame(
+			array(
+				array(
+					'directory' => $this->root . '/account/.ran-booster/' . $this->fingerprint(),
+					'code'      => 'broad_private_path_permissions',
+					'reason'    => 'A private path component is writable by its group or by other users.',
+					'component' => $this->root . '/account',
+				),
+			),
+			$discarded
+		);
+	}
+
+	public function testRejectsAGroupWritableAncestorOwnedByPhpEvenWhenOwnerWriteIsDisabled(): void {
+		self::assertTrue( chmod( $this->root, 0570 ) );
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$discarded = array();
+
+		try {
+			self::assertNull(
+				$resolver->resolve(
+					$this->root . '/account/site/public',
+					$this->root . '/account/site/public/wp-content',
+					$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+					$this->root . '/account/site/public',
+					$discarded
+				)
+			);
+			self::assertSame( 'php_accessible_group_writable_ancestor', $discarded[0]['code'] ?? null );
+			self::assertSame( $this->root, $discarded[0]['component'] ?? null );
+		} finally {
+			chmod( $this->root, 0700 );
+		}
+	}
+
+	public function testRejectsAWorldWritableHostAncestor(): void {
+		self::assertTrue( chmod( $this->root, 0777 ) );
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$discarded = array();
+
+		try {
+			self::assertNull(
+				$resolver->resolve(
+					$this->root . '/account/site/public',
+					$this->root . '/account/site/public/wp-content',
+					$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+					$this->root . '/account/site/public',
+					$discarded
+				)
+			);
+			self::assertSame( 'world_writable_host_ancestor', $discarded[0]['code'] ?? null );
+			self::assertSame( $this->root, $discarded[0]['component'] ?? null );
+		} finally {
+			chmod( $this->root, 0700 );
+		}
 	}
 
 	public function testRejectsUnrelatedOrSymlinkedBoundaries(): void {
@@ -165,5 +221,23 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 			}
 		}
 		rmdir( $path );
+	}
+
+	private function fingerprint(): string {
+		return substr(
+			hash(
+				'sha256',
+				implode(
+					"\0",
+					array(
+						$this->root . '/account/site/public',
+						$this->root . '/account/site/public/wp-content',
+						$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+					)
+				)
+			),
+			0,
+			16
+		);
 	}
 }

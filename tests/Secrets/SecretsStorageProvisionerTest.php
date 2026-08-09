@@ -72,6 +72,27 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertDirectoryDoesNotExist( dirname( $this->candidate ) );
 	}
 
+	public function testUnavailableLocationRetainsBoundedDiscardedCandidateDiagnostics(): void {
+		$provisioner                      = $this->provisioner();
+		$provisioner->resolverFails       = true;
+		$provisioner->discardedCandidates = array(
+			array(
+				'directory' => $this->root . '/account/.ran-booster/0123456789abcdef',
+				'code'      => 'php_accessible_group_writable_ancestor',
+				'reason'    => 'The host ancestor is writable by the PHP group.',
+				'component' => $this->root,
+			),
+		);
+
+		$result = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
+		self::assertSame( 'location_unavailable', $result->code() );
+		self::assertSame( $provisioner->discardedCandidates, $result->discardedCandidates() );
+		self::assertFalse( $provisioner->probeCalled );
+		self::assertFalse( $provisioner->writerCalled );
+	}
+
 	public function testProvisionProbesThenWritesAndRemainsPendingUntilAFreshConfigurationCheck(): void {
 		$provisioner = $this->provisioner();
 
@@ -557,6 +578,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public bool $multisite                   = false;
 	public bool $localPlatform               = true;
 	public bool $resolverCalled              = false;
+	public bool $resolverFails               = false;
 	public bool $probeCalled                 = false;
 	public bool $writerCalled                = false;
 	public bool $probeFails                  = false;
@@ -572,6 +594,8 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public bool $recoveryCredentialsFit      = true;
 	/** @var list<string> */
 	public array $authenticatedCandidates = array();
+	/** @var list<array{directory:string,code:string,reason:string,component:string|null}> */
+	public array $discardedCandidates = array();
 
 	public function __construct( string $temporaryBoundary ) {
 		parent::__construct(
@@ -581,10 +605,11 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		);
 	}
 
-	protected function resolveCandidate(): ?string {
+	protected function resolveCandidate( ?array &$discarded = null ): ?string {
 		$this->resolverCalled = true;
+		$discarded            = $this->discardedCandidates;
 
-		return $this->candidate;
+		return $this->resolverFails ? null : $this->candidate;
 	}
 
 	protected function probeCandidate( string $candidate ): bool {

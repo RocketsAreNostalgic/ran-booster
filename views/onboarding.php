@@ -40,6 +40,9 @@ $storagePathSourceLabels           = array(
 $storageRecovery                   = null === $secretsStorage || ! is_array( $secretsStorage['recovery'] ?? null )
 	? null
 	: $secretsStorage['recovery'];
+$storageDiscardedCandidates        = null === $secretsStorage || ! is_array( $secretsStorage['discarded_candidates'] ?? null )
+	? array()
+	: $secretsStorage['discarded_candidates'];
 $credentialStorageDocumentationUrl = $onboarding['documentation_url'] . '#ran-booster-credential-storage';
 $storageDetailsOpen                = in_array(
 	$storageStatus,
@@ -53,6 +56,7 @@ $hasStorageDetails                 = null !== $secretsStorage
 		null !== $secretsStorage['candidate_path']
 		|| $secretsStorage['can_provision']
 		|| null !== $storageRecovery
+		|| array() !== $storageDiscardedCandidates
 		|| null !== $secretsStorage['config_alternatives']
 		|| $showsStorageOverride
 	);
@@ -142,7 +146,7 @@ $hasStorageDetails                 = null !== $secretsStorage
 									<dt><?php esc_html_e( 'Storage file', 'ran-booster' ); ?></dt>
 									<dd><code><?php echo esc_html( $secretsStorage['candidate_path'] ); ?></code></dd>
 								</div>
-								<?php if ( isset( $storagePathSourceLabels[ $storagePathSource ] ) && in_array( $storageStatus, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>
+								<?php if ( is_string( $storagePathSource ) && isset( $storagePathSourceLabels[ $storagePathSource ] ) && in_array( $storageStatus, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>
 									<div>
 										<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
 										<dd><?php echo esc_html( $storagePathSourceLabels[ $storagePathSource ] ); ?></dd>
@@ -164,6 +168,26 @@ $hasStorageDetails                 = null !== $secretsStorage
 								<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
 								<button type="submit" class="button button-primary"><?php esc_html_e( 'Create secure storage', 'ran-booster' ); ?></button>
 							</form>
+						<?php } ?>
+
+						<?php if ( array() !== $storageDiscardedCandidates ) { ?>
+							<div class="ran-booster-onboarding__storage-discarded">
+								<h4><?php esc_html_e( 'Automatic locations considered and discarded', 'ran-booster' ); ?></h4>
+								<p class="description"><?php esc_html_e( 'This check is read-only; Booster did not create files in these locations.', 'ran-booster' ); ?></p>
+								<ul>
+									<?php foreach ( $storageDiscardedCandidates as $discardedCandidate ) { ?>
+										<?php if ( is_array( $discardedCandidate ) && is_string( $discardedCandidate['directory'] ?? null ) && is_string( $discardedCandidate['code'] ?? null ) && is_string( $discardedCandidate['reason'] ?? null ) ) { ?>
+											<li>
+												<code><?php echo esc_html( $discardedCandidate['directory'] ); ?></code>
+												<p class="description"><strong><?php esc_html_e( 'Reason:', 'ran-booster' ); ?></strong> <?php echo esc_html( $discardedCandidate['reason'] ); ?> <code><?php echo esc_html( $discardedCandidate['code'] ); ?></code></p>
+												<?php if ( is_string( $discardedCandidate['component'] ?? null ) ) { ?>
+													<p class="description"><strong><?php esc_html_e( 'Blocking component:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $discardedCandidate['component'] ); ?></code></p>
+												<?php } ?>
+											</li>
+										<?php } ?>
+									<?php } ?>
+								</ul>
+							</div>
 						<?php } ?>
 
 						<?php if ( null !== $storageRecovery ) { ?>

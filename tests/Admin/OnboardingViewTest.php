@@ -256,6 +256,40 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Manual setup instructions', $html );
 	}
 
+	public function testLocationUnavailableListsEscapedDiscardedCandidatesAndReasons(): void {
+		$html = $this->renderView(
+			null,
+			array(
+				'status'               => 'manual_required',
+				'reason_code'          => 'location_unavailable',
+				'message'              => 'Booster could not determine a safe private storage location.',
+				'candidate_path'       => null,
+				'path_source'          => null,
+				'discarded_candidates' => array(
+					array(
+						'directory' => '/var/www/<account>/.ran-booster/0123456789abcdef',
+						'code'      => 'php_accessible_group_writable_ancestor',
+						'reason'    => 'PHP can modify the blocking component.',
+						'component' => '/var/www/<shared>',
+					),
+				),
+				'can_provision'        => false,
+				'action_url'           => '/admin',
+				'manual_preflight'     => null,
+				'directory_commands'   => array(),
+				'config_alternatives'  => null,
+			)
+		);
+
+		self::assertStringContainsString( 'Automatic locations considered and discarded', $html );
+		self::assertStringContainsString( 'This check is read-only', $html );
+		self::assertStringContainsString( '/var/www/&lt;account&gt;/.ran-booster/0123456789abcdef', $html );
+		self::assertStringContainsString( 'php_accessible_group_writable_ancestor', $html );
+		self::assertStringContainsString( 'PHP can modify the blocking component.', $html );
+		self::assertStringContainsString( '/var/www/&lt;shared&gt;', $html );
+		self::assertStringNotContainsString( '/var/www/<account>', $html );
+	}
+
 	public function testUnsafeConfiguredPathShowsRejectedDirectoryFileAndOverrideInstructions(): void {
 		$html = $this->renderView(
 			null,

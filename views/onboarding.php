@@ -207,8 +207,8 @@ $hasStorageDetails                 = null !== $secretsStorage
 										<button type="submit" class="button button-primary"><?php esc_html_e( 'Adopt existing storage', 'ran-booster' ); ?></button>
 									</form>
 								<?php } elseif ( $storageCanReset ) { ?>
-									<p><strong><?php esc_html_e( 'Permanent reset:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Restore the matching secrets.json first if it is available. Resetting abandons every missing repository credential and webhook secret that used this key.', 'ran-booster' ); ?></p>
-									<p class="description"><?php esc_html_e( 'A Transporter Blueprint is not a complete credential backup. It may transfer selected repository credentials only while installing or adopting applicable package rows, and it never contains webhook secrets.', 'ran-booster' ); ?></p>
+									<p><strong><?php esc_html_e( 'Permanent reset:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Restore the matching secrets.json and database key from the same backup first if they are available. Resetting abandons every repository credential and webhook secret that cannot be recovered from that matching pair.', 'ran-booster' ); ?></p>
+									<p class="description"><?php esc_html_e( 'A Transporter Blueprint is not a complete credential backup. It may transfer selected repository credentials for applicable package rows, including explicit credential-only recovery for an already-managed package, but it never contains webhook secrets.', 'ran-booster' ); ?></p>
 									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secretsStorage['action_url'] ); ?>">
 										<?php wp_nonce_field( 'ran-booster-reset-empty-storage' ); ?>
 										<input type="hidden" name="ran_booster[action]" value="reset-empty-storage">
@@ -219,7 +219,7 @@ $hasStorageDetails                 = null !== $secretsStorage
 											?>
 										</label>
 										<input id="ran-booster-reset-confirmation" type="text" name="ran_booster[reset_confirmation]" required autocomplete="off" pattern="<?php echo esc_attr( $storageRecovery['reset_confirmation'] ); ?>">
-										<button type="submit" class="button"><?php esc_html_e( 'Reset empty storage', 'ran-booster' ); ?></button>
+										<button type="submit" class="button"><?php esc_html_e( 'Reset credential storage', 'ran-booster' ); ?></button>
 									</form>
 								<?php } else { ?>
 									<p class="description"><?php esc_html_e( 'Automatic adoption remains disabled. Booster will not bypass private-path checks or rewrite an operator-managed storage definition.', 'ran-booster' ); ?></p>

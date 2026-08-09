@@ -205,10 +205,12 @@ class SecretsStorageProvisioner {
 	 * }|null
 	 */
 	public function recoveryState( SecretsStorageProvisioningResult $status ): ?array {
-		$current = $status->candidatePath();
+		$current           = $status->candidatePath();
+		$missingCiphertext = null !== $current && $this->currentCiphertextIsAbsent( $current );
+		$missingKey        = 'storage_key_missing' === $status->code();
 		if ( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION !== $status->status()
 			|| null === $current
-			|| ! $this->currentCiphertextIsAbsent( $current )
+			|| ( ! $missingCiphertext && ! $missingKey )
 		) {
 			return null;
 		}
@@ -218,7 +220,7 @@ class SecretsStorageProvisioner {
 		if ( ! $scanComplete ) {
 			return array(
 				'state'          => 'blocked',
-				'message'        => 'Booster found plausible prior storage material that it could not inspect completely. Restore or review that material manually before resetting the database key.',
+				'message'        => 'Booster found plausible prior storage material that it could not inspect completely. Restore or review that material manually before resetting credential storage.',
 				'candidate_path' => null,
 				'token'          => null,
 				'confirmation'   => null,
@@ -226,7 +228,16 @@ class SecretsStorageProvisioner {
 		}
 		if ( array() === $candidates ) {
 			try {
-				if ( $this->orphanedKeyResetAvailable( $current ) ) {
+				if ( $missingKey && $this->orphanedCiphertextResetAvailable( $current ) ) {
+					return array(
+						'state'          => 'reset_available',
+						'message'        => 'Booster found encrypted credential storage without its matching database key. Restore the matching database key if possible, or explicitly discard the unauthenticated ciphertext and start with empty credential storage.',
+						'candidate_path' => null,
+						'token'          => null,
+						'confirmation'   => self::RESET_CONFIRMATION,
+					);
+				}
+				if ( $missingCiphertext && $this->orphanedKeyResetAvailable( $current ) ) {
 					return array(
 						'state'          => 'reset_available',
 						'message'        => 'Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store.',
@@ -240,6 +251,15 @@ class SecretsStorageProvisioner {
 			}
 
 			return null;
+		}
+		if ( $missingKey ) {
+			return array(
+				'state'          => 'blocked',
+				'message'        => 'Booster found prior storage material, but no database key is available to authenticate it. Restore the matching database key before adopting or resetting storage.',
+				'candidate_path' => null,
+				'token'          => null,
+				'confirmation'   => null,
+			);
 		}
 		if ( 1 !== count( $candidates ) ) {
 			return array(
@@ -305,9 +325,13 @@ class SecretsStorageProvisioner {
 		}
 
 		try {
-			$this->resetOrphanedKey( $current );
+			if ( 'storage_key_missing' === $status->code() ) {
+				$this->resetOrphanedCiphertext( $current );
+			} else {
+				$this->resetOrphanedKey( $current );
+			}
 		} catch ( Throwable ) {
-			return $this->resetFailure( $status, 'storage_reset_failed', 'The orphaned credential key could not be removed safely. No storage reset was confirmed.' );
+			return $this->resetFailure( $status, 'storage_reset_failed', 'The incomplete credential storage could not be reset safely. No storage reset was confirmed.' );
 		}
 
 		return SecretsStorageProvisioningResult::storageReset( $current, $source );
@@ -407,6 +431,18 @@ class SecretsStorageProvisioner {
 		}
 
 		$this->secrets->resetOrphanedKeyAt( $current );
+	}
+
+	protected function orphanedCiphertextResetAvailable( string $current ): bool {
+		return null !== $this->secrets && $this->secrets->canResetOrphanedCiphertextAt( $current );
+	}
+
+	protected function resetOrphanedCiphertext( string $current ): void {
+		if ( null === $this->secrets ) {
+			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
+		}
+
+		$this->secrets->resetOrphanedCiphertextAt( $current );
 	}
 
 	protected function wordpressRoot(): string {

@@ -217,13 +217,47 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Permanent reset:', $html );
 		self::assertStringContainsString( 'webhook secret', $html );
 		self::assertStringContainsString( 'not a complete credential backup', $html );
-		self::assertStringContainsString( 'installing or adopting applicable package rows', $html );
+		self::assertStringContainsString( 'credential-only recovery for an already-managed package', $html );
 		self::assertStringContainsString( 'never contains webhook secrets', $html );
+		self::assertStringContainsString( 'Reset credential storage', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="reset-empty-storage"', $html );
 		self::assertStringContainsString( 'value="ran-booster-reset-empty-storage"', $html );
 		self::assertStringContainsString( 'name="ran_booster[reset_confirmation]"', $html );
 		self::assertStringContainsString( 'pattern="RESET STORAGE"', $html );
 		self::assertStringNotContainsString( 'adopt-secure-storage', $html );
+	}
+
+	public function testRendersTheSameRestoreFirstEscapeHatchWhenTheDatabaseKeyIsMissing(): void {
+		$html = $this->renderView(
+			null,
+			array(
+				'status'              => 'storage_needs_attention',
+				'reason_code'         => 'storage_key_missing',
+				'message'             => 'The encrypted file exists but its database key is missing.',
+				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/secrets.json',
+				'path_source'         => 'automatic',
+				'can_provision'       => false,
+				'action_url'          => '/admin',
+				'manual_preflight'    => null,
+				'directory_commands'  => array(),
+				'config_alternatives' => null,
+				'recovery'            => array(
+					'state'               => 'reset_available',
+					'message'             => 'Orphaned encrypted storage was found.',
+					'candidate_path'      => null,
+					'candidate_directory' => null,
+					'token'               => null,
+					'can_adopt'           => false,
+					'can_reset'           => true,
+					'reset_confirmation'  => 'RESET STORAGE',
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'data-ran-booster-storage-reason="storage_key_missing"', $html );
+		self::assertStringContainsString( 'Restore the matching secrets.json and database key from the same backup', $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="reset-empty-storage"', $html );
+		self::assertStringContainsString( 'Reset credential storage', $html );
 	}
 
 	public function testHealthyAndBrokenStorageUseTruthfulStatuses(): void {

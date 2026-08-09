@@ -219,6 +219,72 @@ class SecretsFile {
 	}
 
 	/**
+	 * Report whether the configured store is the narrow ciphertext-only recovery case.
+	 *
+	 * The ciphertext cannot be authenticated without its database key, so this
+	 * verifies only the exact managed path, ownership, inode and permission
+	 * boundaries. A later reset repeats every check under the exclusive lock.
+	 */
+	public function canResetOrphanedCiphertextAt( string $expectedPath ): bool {
+		$this->assertAvailable();
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+			return false;
+		}
+
+		$this->assertConfiguredLocation();
+		if ( null !== $this->loadKey( false ) || ! $this->hasFile() ) {
+			return false;
+		}
+
+		return $this->withLock(
+			LOCK_SH,
+			false,
+			function (): bool {
+				if ( null !== $this->loadKey( false ) || ! $this->hasFile() ) {
+					return false;
+				}
+
+				$this->deletableFileStat( (string) $this->path, 'encrypted Booster secrets file' );
+
+				return true;
+			}
+		);
+	}
+
+	/**
+	 * Remove only secure orphaned ciphertext after a locked state recheck.
+	 *
+	 * The secure lock remains so the next normal credential write can create a
+	 * fresh database key and authenticated sidecar through the first-write path.
+	 */
+	public function resetOrphanedCiphertextAt( string $expectedPath ): void {
+		$this->assertAvailable();
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+			throw $this->unavailable( 'The encrypted Booster secrets path changed before reset.' );
+		}
+
+		$this->withLock(
+			LOCK_EX,
+			false,
+			function (): void {
+				if ( null !== $this->loadKey( false ) || ! $this->hasFile() ) {
+					throw $this->unavailable( 'The encrypted Booster secrets state changed before reset.' );
+				}
+
+				$ciphertext = $this->deletableFileStat(
+					(string) $this->path,
+					'encrypted Booster secrets file'
+				);
+				$this->deleteExactFile(
+					(string) $this->path,
+					$ciphertext,
+					'Could not remove the orphaned encrypted Booster secrets file safely.'
+				);
+			}
+		);
+	}
+
+	/**
 	 * Report whether managed storage contains an authenticated document.
 	 *
 	 * A configured but pristine location returns false. Incomplete, unsafe or

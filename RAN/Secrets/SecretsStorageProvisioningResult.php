@@ -57,7 +57,7 @@ final readonly class SecretsStorageProvisioningResult {
 		return new self(
 			self::PATH_CONFIGURED,
 			'storage_reset',
-			'The orphaned database key was removed. Booster will initialize fresh encrypted storage when you next save or import a credential.',
+			'Incomplete credential storage was reset. Booster will initialize fresh encrypted storage when you next save or import a credential.',
 			$candidatePath,
 			$pathSource
 		);

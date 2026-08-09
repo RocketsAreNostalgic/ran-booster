@@ -187,28 +187,30 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertNull( $blocked['recovery']['candidate_path'] );
 	}
 
-	public function testBuildsAResetOfferOnlyForTheExplicitOrphanedKeyState(): void {
-		$payload = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::storageNeedsAttention(
-				'/private/current/secrets.json',
-				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC,
-				'storage_file_missing'
-			),
-			'/admin',
-			'',
-			true,
-			array(
-				'state'          => 'reset_available',
-				'message'        => 'An orphaned key was found.',
-				'candidate_path' => null,
-				'token'          => null,
-				'confirmation'   => SecretsStorageProvisioner::RESET_CONFIRMATION,
-			)
-		);
+	public function testBuildsTheSameExplicitResetOfferForEitherIncompleteStorageHalf(): void {
+		foreach ( array( 'storage_file_missing', 'storage_key_missing' ) as $reason ) {
+			$payload = ( new SecretsStorageSetupPresenter() )->build(
+				SecretsStorageProvisioningResult::storageNeedsAttention(
+					'/private/current/secrets.json',
+					SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC,
+					$reason
+				),
+				'/admin',
+				'',
+				true,
+				array(
+					'state'          => 'reset_available',
+					'message'        => 'One storage half is missing.',
+					'candidate_path' => null,
+					'token'          => null,
+					'confirmation'   => SecretsStorageProvisioner::RESET_CONFIRMATION,
+				)
+			);
 
-		self::assertTrue( $payload['recovery']['can_reset'] );
-		self::assertFalse( $payload['recovery']['can_adopt'] );
-		self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $payload['recovery']['reset_confirmation'] );
+			self::assertTrue( $payload['recovery']['can_reset'] );
+			self::assertFalse( $payload['recovery']['can_adopt'] );
+			self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $payload['recovery']['reset_confirmation'] );
+		}
 
 		$redacted = ( new SecretsStorageSetupPresenter() )->build(
 			SecretsStorageProvisioningResult::storageNeedsAttention(

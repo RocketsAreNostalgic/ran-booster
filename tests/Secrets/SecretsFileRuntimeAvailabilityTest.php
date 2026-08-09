@@ -439,6 +439,109 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		}
 	}
 
+	public function testExplicitOrphanedCiphertextResetRechecksStateAndLeavesTheManagedLockForFreshInitialization(): void {
+		[$root, $path] = $this->sidecarFixture();
+		$keyStore      = new InMemorySiteKeyStore( $path );
+		$secrets       = $this->realSecrets(
+			$path,
+			$keyStore,
+			new EncryptedSecretsEnvelopeCodec(),
+			new SecretsRuntimeAvailability( true, false )
+		);
+		$secrets->saveCredential(
+			'gh',
+			'orphaned-ciphertext',
+			array(
+				'label'         => 'Orphaned ciphertext credential',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			'orphaned-ciphertext-secret-canary'
+		);
+		$oldKey = $keyStore->load( false );
+		self::assertNotNull( $oldKey );
+		self::assertTrue( $keyStore->deleteExact( $oldKey ) );
+
+		self::assertTrue( $secrets->canResetOrphanedCiphertextAt( $path ) );
+		$secrets->resetOrphanedCiphertextAt( $path );
+
+		self::assertFileDoesNotExist( $path );
+		self::assertFileExists( $path . '.lock' );
+		self::assertNull( $keyStore->load( false ) );
+		self::assertFalse( $secrets->canResetOrphanedCiphertextAt( $path ) );
+
+		$secrets->saveCredential(
+			'gh',
+			'fresh-after-ciphertext-reset',
+			array(
+				'label'         => 'Fresh credential',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			'fresh-after-ciphertext-reset-secret-canary'
+		);
+		self::assertFileExists( $path );
+		self::assertNotNull( $keyStore->load( false ) );
+		self::assertTrue( $secrets->hasHealthyManagedStorage() );
+
+		InMemorySiteKeyStore::reset( $path );
+		unlink( $path );
+		unlink( $path . '.lock' );
+		rmdir( $root );
+	}
+
+	public function testOrphanedCiphertextResetRefusesAReappearedDatabaseKeyOrUntrustedFile(): void {
+		[$root, $path] = $this->sidecarFixture();
+		$keyStore      = new InMemorySiteKeyStore( $path );
+		$secrets       = $this->realSecrets(
+			$path,
+			$keyStore,
+			new EncryptedSecretsEnvelopeCodec(),
+			new SecretsRuntimeAvailability( true, false )
+		);
+		$secrets->saveCredential(
+			'gh',
+			'restored-key',
+			array(
+				'label'         => 'Restored key credential',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			'restored-key-secret-canary'
+		);
+		$key = $keyStore->load( false );
+		self::assertNotNull( $key );
+		self::assertTrue( $keyStore->deleteExact( $key ) );
+		self::assertTrue( $secrets->canResetOrphanedCiphertextAt( $path ) );
+
+		$keyStore->loadOrCreate();
+		self::assertFalse( $secrets->canResetOrphanedCiphertextAt( $path ) );
+		try {
+			$secrets->resetOrphanedCiphertextAt( $path );
+			self::fail( 'A restored database key must stop ciphertext reset.' );
+		} catch ( SecretsStorageUnavailable $failure ) {
+			self::assertStringContainsString( 'changed', $failure->getMessage() );
+		}
+		self::assertFileExists( $path );
+
+		$restored = $keyStore->load( false );
+		self::assertNotNull( $restored );
+		self::assertTrue( $keyStore->deleteExact( $restored ) );
+		self::assertTrue( chmod( $path, 0660 ) );
+		try {
+			$secrets->resetOrphanedCiphertextAt( $path );
+			self::fail( 'An insecure ciphertext file must stop reset.' );
+		} catch ( SecretsStorageUnavailable $failure ) {
+			self::assertStringContainsString( 'invalid encrypted Booster secrets file', $failure->getMessage() );
+		}
+		self::assertFileExists( $path );
+
+		InMemorySiteKeyStore::reset( $path );
+		unlink( $path );
+		unlink( $path . '.lock' );
+		rmdir( $root );
+	}
+
 	public function testOrphanedKeyResetRefusesAChangedPathOrRestoredCiphertext(): void {
 		[$root, $path] = $this->sidecarFixture();
 		$keyStore      = new InMemorySiteKeyStore( $path );

@@ -25,7 +25,9 @@ use Tests\Secrets\SecretsFileTestFactory;
 
 #[CoversClass( BlueprintRepositoryVerifier::class )]
 final class BlueprintRepositoryVerifierTest extends TestCase {
-	private const CLASSIC_TOKEN      = 'ghp_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
+	// phpcs:ignore Generic.Strings.UnnecessaryStringConcat.Found -- Keep fixture tokens split so credential scanners do not treat them as live PATs.
+	private const CLASSIC_TOKEN = 'ghp_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
+	// phpcs:ignore Generic.Strings.UnnecessaryStringConcat.Found -- Keep fixture tokens split so credential scanners do not treat them as live PATs.
 	private const FINE_GRAINED_TOKEN = 'github_pat_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
 
 	private string $directory;

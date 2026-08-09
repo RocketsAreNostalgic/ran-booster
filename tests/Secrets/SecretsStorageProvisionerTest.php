@@ -527,6 +527,60 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( array( $this->candidate ), $provisioner->resetCandidates );
 	}
 
+	public function testExplicitResetAlsoHandlesSecureOrphanedCiphertextWithoutItsDatabaseKey(): void {
+		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
+		self::assertNotFalse( file_put_contents( $this->candidate, 'encrypted-canary' ) );
+		self::assertTrue( chmod( $this->candidate, 0600 ) );
+		self::assertNotFalse( file_put_contents( $this->candidate . '.lock', '' ) );
+		self::assertTrue( chmod( $this->candidate . '.lock', 0600 ) );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner                                   = $this->provisioner();
+		$provisioner->configured                       = $this->candidate;
+		$provisioner->healthFailure                    = true;
+		$provisioner->healthFailureReason              = 'storage_key_missing';
+		$provisioner->orphanedCiphertextResetAvailable = true;
+
+		$offer = $provisioner->recoveryState( $provisioner->status() );
+		self::assertIsArray( $offer );
+		self::assertSame( 'reset_available', $offer['state'] );
+		self::assertStringContainsString( 'without its matching database key', $offer['message'] );
+
+		$reset = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		self::assertSame( 'storage_reset', $reset->code() );
+		self::assertSame( array( $this->candidate ), $provisioner->resetCiphertextCandidates );
+		self::assertSame( array(), $provisioner->resetCandidates );
+
+		$replay = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		self::assertSame( 'storage_reset_state_changed', $replay->code() );
+	}
+
+	public function testMissingDatabaseKeyCannotResetWhilePriorStorageMaterialNeedsReview(): void {
+		$this->recoveryStore( 'abcdef0123456789' );
+		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
+		self::assertNotFalse( file_put_contents( $this->candidate, 'encrypted-canary' ) );
+		self::assertTrue( chmod( $this->candidate, 0600 ) );
+		self::assertNotFalse( file_put_contents( $this->candidate . '.lock', '' ) );
+		self::assertTrue( chmod( $this->candidate . '.lock', 0600 ) );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner                                   = $this->provisioner();
+		$provisioner->configured                       = $this->candidate;
+		$provisioner->healthFailure                    = true;
+		$provisioner->healthFailureReason              = 'storage_key_missing';
+		$provisioner->orphanedCiphertextResetAvailable = true;
+
+		$offer = $provisioner->recoveryState( $provisioner->status() );
+
+		self::assertIsArray( $offer );
+		self::assertSame( 'blocked', $offer['state'] );
+		self::assertNull( $offer['confirmation'] );
+		self::assertStringContainsString( 'no database key is available to authenticate it', $offer['message'] );
+		self::assertSame(
+			'storage_reset_state_changed',
+			$provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
+		);
+		self::assertSame( array(), $provisioner->resetCiphertextCandidates );
+	}
+
 	public function testAuthenticatedSiblingRecoveryTakesPriorityOverReset(): void {
 		$this->recoveryStore( 'abcdef0123456789' );
 		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
@@ -672,31 +726,34 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public string $root      = '';
 	public string $candidate = '';
 	/** @var list<string> */
-	public array $included                   = array();
-	public string|false|null $configured     = null;
-	public bool $sodium                      = true;
-	public bool $multisite                   = false;
-	public bool $localPlatform               = true;
-	public bool $resolverCalled              = false;
-	public bool $resolverFails               = false;
-	public bool $probeCalled                 = false;
-	public bool $writerCalled                = false;
-	public bool $probeFails                  = false;
-	public ?string $writerFailureCode        = null;
-	public bool $healthy                     = false;
-	public bool $healthFailure               = false;
-	public string $healthFailureMessage      = 'Fixture storage failure.';
-	public string $healthFailureReason       = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
-	public bool $readRuntimeConfiguration    = false;
-	public bool $forceUnsafe                 = false;
-	public bool $unsafeAfterProbe            = false;
-	public bool $recoveryAuthenticationFails = false;
-	public bool $recoveryCredentialsFit      = true;
-	public bool $orphanedResetAvailable      = false;
+	public array $included                        = array();
+	public string|false|null $configured          = null;
+	public bool $sodium                           = true;
+	public bool $multisite                        = false;
+	public bool $localPlatform                    = true;
+	public bool $resolverCalled                   = false;
+	public bool $resolverFails                    = false;
+	public bool $probeCalled                      = false;
+	public bool $writerCalled                     = false;
+	public bool $probeFails                       = false;
+	public ?string $writerFailureCode             = null;
+	public bool $healthy                          = false;
+	public bool $healthFailure                    = false;
+	public string $healthFailureMessage           = 'Fixture storage failure.';
+	public string $healthFailureReason            = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
+	public bool $readRuntimeConfiguration         = false;
+	public bool $forceUnsafe                      = false;
+	public bool $unsafeAfterProbe                 = false;
+	public bool $recoveryAuthenticationFails      = false;
+	public bool $recoveryCredentialsFit           = true;
+	public bool $orphanedResetAvailable           = false;
+	public bool $orphanedCiphertextResetAvailable = false;
 	/** @var list<string> */
 	public array $authenticatedCandidates = array();
 	/** @var list<string> */
 	public array $resetCandidates = array();
+	/** @var list<string> */
+	public array $resetCiphertextCandidates = array();
 	/** @var list<array{directory:string,code:string,reason:string,component:string|null}> */
 	public array $discardedCandidates = array();
 
@@ -747,6 +804,15 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	protected function resetOrphanedKey( string $current ): void {
 		$this->resetCandidates[]      = $current;
 		$this->orphanedResetAvailable = false;
+	}
+
+	protected function orphanedCiphertextResetAvailable( string $current ): bool {
+		return $this->orphanedCiphertextResetAvailable;
+	}
+
+	protected function resetOrphanedCiphertext( string $current ): void {
+		$this->resetCiphertextCandidates[]      = $current;
+		$this->orphanedCiphertextResetAvailable = false;
 	}
 
 	protected function writeConfiguration( string $config, string $candidate ): WpConfigPathWriteResult {

@@ -38,6 +38,7 @@ use Tests\Secrets\InMemorySiteKeyStore;
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 
 final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
+	// phpcs:ignore Generic.Strings.UnnecessaryStringConcat.Found -- Keep the fixture token split so credential scanners do not treat it as a live PAT.
 	private const CLASSIC_TOKEN = 'ghp_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
 
 	private string $root;
@@ -186,6 +187,34 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertStringContainsString( 'managed package settings were not changed', $managed['message'] );
 		self::assertFileExists( $this->targetPath );
 		self::assertIsString( $targetKeyStore->load( false ) );
+
+		$lostTargetKey = $targetKeyStore->load( false );
+		self::assertNotNull( $lostTargetKey );
+		self::assertTrue( $targetKeyStore->deleteExact( $lostTargetKey ) );
+		try {
+			$targetSecrets->importCredentialsIfAbsent( $imported, $credential );
+			self::fail( 'Blueprint import must not overwrite ciphertext whose database key is missing.' );
+		} catch ( \RAN\Secrets\SecretsStorageUnavailable $failure ) {
+			self::assertSame( 'storage_key_missing', $failure->reason() );
+		}
+		self::assertTrue( $targetSecrets->canResetOrphanedCiphertextAt( $this->targetPath ) );
+		$targetSecrets->resetOrphanedCiphertextAt( $this->targetPath );
+		self::assertFileDoesNotExist( $this->targetPath );
+		self::assertFileExists( $this->targetPath . '.lock' );
+		self::assertNull( $targetKeyStore->load( false ) );
+
+		$recovered = $application->apply(
+			$imported,
+			0,
+			'managed',
+			$decisions,
+			null,
+			false,
+			false
+		);
+		self::assertSame( 'credential_available', $recovered['status'] );
+		self::assertFileExists( $this->targetPath );
+		self::assertNotNull( $targetKeyStore->load( false ) );
 
 		$result     = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
 		$secondItem = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );

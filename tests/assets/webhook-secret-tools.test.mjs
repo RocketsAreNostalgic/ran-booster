@@ -96,6 +96,13 @@ function control(value = '') {
 		setAttribute(name, attributeValue) {
 			attributes.set(name, String(attributeValue));
 		},
+		toggleAttribute(name, force) {
+			if (force) {
+				attributes.set(name, '');
+			} else {
+				attributes.delete(name);
+			}
+		},
 	};
 }
 
@@ -194,6 +201,7 @@ const initWebhookSecretTools = loadFunction('initWebhookSecretTools', {
 	initGeneratedSecretTools,
 	webhookSecretToolResets,
 });
+const ensureWebhookTargetOption = loadFunction('ensureWebhookTargetOption');
 const updateWebhookFields = loadFunction('updateWebhookFields');
 const initWebhookUrlCopy = loadFunction('initWebhookUrlCopy');
 
@@ -473,7 +481,7 @@ test('invalid or absent webhook-secret deep links do nothing', () => {
 
 test('scope switches between the closed managed owner and repository choices', () => {
 	function option(value) {
-		return { parentElement: null, value };
+		return { dataset: {}, disabled: false, parentElement: null, value };
 	}
 
 	function group(scope, options) {
@@ -546,6 +554,7 @@ test('scope switches between the closed managed owner and repository choices', (
 	scope.options = [ownerScope, repositoryScope];
 	scope.selectedIndex = 0;
 	const modal = {
+		dataset: {},
 		querySelector(selector) {
 			return selector === '.ran-booster-webhook-scope' ? scope : field;
 		},
@@ -570,6 +579,157 @@ test('scope switches between the closed managed owner and repository choices', (
 	assert.equal(target.selectedIndex, 3);
 });
 
+test('add mode disables configured webhook targets and rejects occupied deep links', () => {
+	function option(value, profileId = '') {
+		return {
+			dataset: profileId ? { webhookProfileId: profileId } : {},
+			disabled: false,
+			parentElement: null,
+			value,
+		};
+	}
+
+	const placeholder = option('');
+	const occupied = option('managed-owner', 'wh_existing');
+	const available = option('other-owner');
+	const group = {
+		dataset: { webhookTargetOptions: 'owner' },
+		disabled: false,
+		querySelector() {
+			return placeholder;
+		},
+		toggleAttribute() {},
+	};
+	[placeholder, occupied, available].forEach((choice) => {
+		choice.parentElement = group;
+	});
+	const target = control();
+	target.options = [placeholder, occupied, available];
+	target.selectedIndex = 1;
+	target.querySelectorAll = () => [group];
+	const field = control();
+	field.querySelector = (selector) =>
+		({
+			'[data-webhook-target]': target,
+			'.ran-booster-webhook-target-label': control(),
+			'.ran-booster-webhook-target-help': control(),
+		})[selector];
+	const scopeOption = control('owner');
+	scopeOption.setAttribute('data-requires-target', '1');
+	const scope = control();
+	scope.options = [scopeOption];
+	scope.selectedIndex = 0;
+	const modal = {
+		dataset: { webhookProfileId: '' },
+		querySelector(selector) {
+			return selector === '.ran-booster-webhook-scope' ? scope : field;
+		},
+	};
+
+	updateWebhookFields(modal);
+
+	assert.equal(occupied.disabled, true);
+	assert.equal(available.disabled, false);
+	assert.equal(target.selectedIndex, 0);
+});
+
+test('edit mode enables only its immutable webhook target', () => {
+	function option(value, profileId = '') {
+		return {
+			dataset: profileId ? { webhookProfileId: profileId } : {},
+			disabled: false,
+			parentElement: null,
+			value,
+		};
+	}
+
+	const placeholder = option('');
+	const current = option('managed-owner', 'wh_current');
+	const occupied = option('other-owner', 'wh_other');
+	const unused = option('unused-owner');
+	const group = {
+		dataset: { webhookTargetOptions: 'owner' },
+		disabled: false,
+		querySelector() {
+			return placeholder;
+		},
+		toggleAttribute() {},
+	};
+	[placeholder, current, occupied, unused].forEach((choice) => {
+		choice.parentElement = group;
+	});
+	const target = control();
+	target.options = [placeholder, current, occupied, unused];
+	target.selectedIndex = 1;
+	target.querySelectorAll = () => [group];
+	const label = control();
+	const help = control();
+	const field = control();
+	field.querySelector = (selector) =>
+		({
+			'[data-webhook-target]': target,
+			'.ran-booster-webhook-target-label': label,
+			'.ran-booster-webhook-target-help': help,
+		})[selector];
+	const ownerScope = control('owner');
+	ownerScope.setAttribute('data-requires-target', '1');
+	const repositoryScope = control('repository');
+	repositoryScope.setAttribute('data-requires-target', '1');
+	const scope = control();
+	scope.options = [ownerScope, repositoryScope];
+	scope.selectedIndex = 0;
+	const modal = {
+		dataset: { webhookProfileId: 'wh_current' },
+		querySelector(selector) {
+			return selector === '.ran-booster-webhook-scope' ? scope : field;
+		},
+	};
+
+	updateWebhookFields(modal);
+
+	assert.equal(ownerScope.disabled, false);
+	assert.equal(repositoryScope.disabled, true);
+	assert.equal(current.disabled, false);
+	assert.equal(occupied.disabled, true);
+	assert.equal(unused.disabled, true);
+	assert.equal(target.selectedIndex, 1);
+});
+
+test('editing a saved target outside managed inventory synthesizes a retained choice', () => {
+	const options = [];
+	const group = {
+		dataset: { webhookTargetOptions: 'owner' },
+		appendChild(option) {
+			options.push(option);
+		},
+		querySelectorAll() {
+			return options;
+		},
+	};
+	const modal = {
+		ownerDocument: {
+			createElement() {
+				return {
+					dataset: {},
+					disabled: false,
+					textContent: '',
+					value: '',
+				};
+			},
+		},
+		querySelectorAll() {
+			return [group];
+		},
+	};
+
+	ensureWebhookTargetOption(modal, 'owner', 'retired-owner', 'wh_retired');
+
+	assert.equal(options.length, 1);
+	assert.equal(options[0].value, 'retired-owner');
+	assert.equal(options[0].dataset.webhookProfileId, 'wh_retired');
+	assert.match(options[0].textContent, /already configured/);
+});
+
 test('add and edit modal population clear stale generated secret state', () => {
 	const state = initialize({
 		crypto: {
@@ -591,6 +751,7 @@ test('add and edit modal population clear stale generated secret state', () => {
 	};
 	const title = control();
 	const modal = {
+		dataset: {},
 		getAttribute(name) {
 			return (
 				{
@@ -613,6 +774,7 @@ test('add and edit modal population clear stale generated secret state', () => {
 	};
 	let webhookFieldUpdates = 0;
 	const populateCredentialModal = loadFunction('populateCredentialModal', {
+		ensureWebhookTargetOption() {},
 		resetCredentialModal,
 		updateWebhookFields() {
 			webhookFieldUpdates += 1;

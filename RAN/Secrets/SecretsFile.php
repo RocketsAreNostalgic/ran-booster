@@ -8,11 +8,13 @@ use RAN\Portability\BlueprintCredential;
 use RAN\Portability\PackageBlueprint;
 use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\InvalidProviderCode;
+use RAN\RepositoryProvider\InvalidWebhookInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialPolicy;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\RepositoryProvider\ProviderWebhookPolicy;
+use RAN\RepositoryProvider\SubmittedCredentialValidator;
 use JsonException;
 use RuntimeException;
 
@@ -377,12 +379,14 @@ class SecretsFile {
 	 * Create or update a provider credential and return its stable ID.
 	 *
 	 * @param array<string, mixed> $metadata Non-secret label, kind and configuration.
+	 * @param bool                 $submitted Apply provider checks for a newly submitted admin secret.
 	 */
 	public function saveCredential(
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,
-		#[\SensitiveParameter] ?string $secret
+		#[\SensitiveParameter] ?string $secret,
+		bool $submitted = false
 	): string {
 		$this->assertAvailable();
 		$providerCode = $this->providerValue( $provider );
@@ -398,7 +402,7 @@ class SecretsFile {
 				}
 			}
 		}
-		$record = $this->validateCredential( $providerCode, $id, $metadata, $secret );
+		$record = $this->validateCredential( $providerCode, $id, $metadata, $secret, $submitted && ! $retainSecret );
 
 		return $this->mutate(
 			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $record, $existing ): array {
@@ -611,7 +615,7 @@ class SecretsFile {
 		if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
 			$secret = $existing['secret'];
 		}
-		$record = $this->validateWebhook( $providerCode, $id, $metadata, $secret );
+		$record = $this->validateWebhook( $providerCode, $id, $metadata, $secret, true );
 		if ( is_array( $existing ) ) {
 			foreach ( array( 'scope', 'target', 'authority_id', 'origin' ) as $immutable ) {
 				if ( ! hash_equals( (string) $existing[ $immutable ], (string) $record[ $immutable ] ) ) {
@@ -631,7 +635,7 @@ class SecretsFile {
 
 				$records        = $document[ self::WEBHOOKS ][ $providerCode ] ?? array();
 				$records[ $id ] = $record;
-				$this->assertWebhookCollection( $records );
+				$this->assertWebhookCollection( $records, true );
 				$document[ self::WEBHOOKS ][ $providerCode ] = $records;
 
 				return array( $document, $id );
@@ -936,7 +940,8 @@ class SecretsFile {
 		string $provider,
 		string $id,
 		array $metadata,
-		#[\SensitiveParameter] mixed $secret
+		#[\SensitiveParameter] mixed $secret,
+		bool $submitted = false
 	): array {
 		$selfDestruct      = $metadata['self_destruct'] ?? false;
 		$manualDestroyOn   = $metadata['destroy_on'] ?? null;
@@ -983,6 +988,23 @@ class SecretsFile {
 			'configuration' => $record['configuration'],
 			'secret'        => $this->requiredString( $record['secret'] ?? null, 'Credential secret' ),
 		);
+		if ( $submitted && $policy instanceof SubmittedCredentialValidator ) {
+			try {
+				$policy->validateSubmittedCredential(
+					array(
+						'label'         => $validated['label'],
+						'kind'          => $validated['kind'],
+						'configuration' => $validated['configuration'],
+					),
+					$validated['secret']
+				);
+			} catch ( InvalidCredentialInput $failure ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
+				throw new InvalidCredentialInput( $failure->reason );
+			} catch ( \Throwable ) {
+				throw new RuntimeException( 'Provider credential material could not be validated.' );
+			}
+		}
 		if ( $selfDestruct ) {
 			$validated['self_destruct'] = true;
 			if ( is_string( $manualDestroyOn ) ) {
@@ -1070,7 +1092,8 @@ class SecretsFile {
 		string $provider,
 		string $id,
 		array $metadata,
-		#[\SensitiveParameter] mixed $secret
+		#[\SensitiveParameter] mixed $secret,
+		bool $submitted = false
 	): array {
 		$policy     = $this->providerPolicies->findWebhookPolicy( $provider );
 		$policyData = array_intersect_key(
@@ -1081,6 +1104,12 @@ class SecretsFile {
 			$record = null !== $policy
 				? $policy->normalizeWebhook( $policyData, $secret )
 				: $policyData + array( 'secret' => $secret );
+		} catch ( InvalidWebhookInput $failure ) {
+			if ( $submitted ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
+				throw new InvalidWebhookInput( $failure->reason );
+			}
+			throw new RuntimeException( 'Provider webhook material could not be validated.' );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook material could not be validated.' );
 		}
@@ -1103,8 +1132,12 @@ class SecretsFile {
 	}
 
 	/** @param array<string, array<string, mixed>> $records */
-	private function assertWebhookCollection( array $records ): void {
+	private function assertWebhookCollection( array $records, bool $submitted = false ): void {
 		if ( count( $records ) > self::MAX_WEBHOOK_PROFILES ) {
+			if ( $submitted ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+				throw new InvalidWebhookInput( InvalidWebhookInput::CAPACITY );
+			}
 			throw new RuntimeException( 'A provider cannot store more than 16 webhook secrets.' );
 		}
 
@@ -1116,6 +1149,10 @@ class SecretsFile {
 				'repository' => 'repository:' . (string) ( $record['authority_id'] ?? '' ),
 			};
 			if ( isset( $targets[ $key ] ) ) {
+				if ( $submitted ) {
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+					throw new InvalidWebhookInput( InvalidWebhookInput::DUPLICATE_TARGET );
+				}
 				throw new RuntimeException( 'Only one webhook secret may be stored for each owner or repository.' );
 			}
 			$targets[ $key ] = true;

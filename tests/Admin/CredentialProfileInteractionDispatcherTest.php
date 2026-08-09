@@ -617,6 +617,72 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertSame( $observationBefore, $expiryObservations->document );
 	}
 
+	public function testClosedWebhookInputFailureRemainsActionableAndNeverReflectsTheSecret(): void {
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$before = $this->secrets->webhookProfiles( 'fixture' );
+
+		$_POST['ran_booster'] = array(
+			'action'   => 'save-webhook-profile',
+			'provider' => 'fixture',
+			'label'    => 'Duplicate hook',
+			'scope'    => 'owner',
+			'target'   => 'existing-workspace',
+			'secret'   => 'secret-canary-webhook-value-that-must-not-render',
+		);
+		$_GET['view']         = 'secrets';
+
+		$this->dispatcher(
+			$dashboard,
+			$this->secrets,
+			$interaction,
+			new InMemoryPublicRepositoryLookupProfileStore()
+		)->dispatchPostRequests();
+
+		$response = $interaction->response;
+		self::assertNotNull( $response );
+		self::assertSame( 'validation_failure', $response->kind );
+		self::assertSame(
+			'A Push-to-Deploy secret already exists for this owner or repository. Edit the existing secret instead.',
+			$response->feedbackMessage
+		);
+		self::assertStringNotContainsString( 'secret-canary', $response->feedbackMessage );
+		self::assertSame( $before, $this->secrets->webhookProfiles( 'fixture' ) );
+	}
+
+	public function testUnexpectedWebhookStorageFailureKeepsOnlyGenericResponseCopy(): void {
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )
+			->method( 'saveWebhook' )
+			->willThrowException( new \RuntimeException( 'secret-canary-webhook-storage-fault' ) );
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$_POST['ran_booster'] = array(
+			'action'   => 'save-webhook-profile',
+			'provider' => 'fixture',
+			'label'    => 'Storage failure',
+			'scope'    => 'owner',
+			'target'   => 'new-workspace',
+			'secret'   => 'secret-canary-webhook-value-that-must-not-render',
+		);
+		$_GET['view']         = 'secrets';
+
+		$this->dispatcher(
+			$dashboard,
+			$secrets,
+			$interaction,
+			new InMemoryPublicRepositoryLookupProfileStore()
+		)->dispatchPostRequests();
+
+		$response = $interaction->response;
+		self::assertNotNull( $response );
+		self::assertSame( 'unexpected_failure', $response->kind );
+		self::assertSame( 'We could not complete that request. Please try again.', $response->feedbackMessage );
+		self::assertStringNotContainsString( 'secret-canary', $response->feedbackMessage );
+	}
+
 	private function seedStoredProfiles(): void {
 		$this->secrets->saveCredential(
 			'fixture',

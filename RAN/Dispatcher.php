@@ -24,6 +24,7 @@ use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\InvalidProviderCode;
+use RAN\RepositoryProvider\InvalidWebhookInput;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\CredentialValidator;
 use RAN\RepositoryProvider\ProviderCode;
@@ -889,7 +890,8 @@ class Dispatcher {
 								'self_destruct' => $selfDestruct,
 								'destroy_on'    => $selfDestruct ? $manualExpiry : null,
 							),
-							$secret
+							$secret,
+							true
 						);
 						$savedProfile    = $secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
 						if ( ! is_array( $savedProfile )
@@ -986,7 +988,7 @@ class Dispatcher {
 				)
 			);
 			if ( null !== $interactionRequest && null !== $this->providerProfileInteraction ) {
-				if ( $exception instanceof CredentialRequestException || $exception instanceof InvalidCredentialInput ) {
+				if ( $exception instanceof CredentialRequestException || $exception instanceof InvalidCredentialInput || $exception instanceof InvalidWebhookInput ) {
 					$this->providerProfileInteraction->respondToProviderProfileValidationFailure( $interactionRequest, $error );
 
 					return;
@@ -1263,7 +1265,7 @@ class Dispatcher {
 	}
 
 	private function safeCredentialError( \Throwable $exception ): string {
-		if ( $exception instanceof CredentialRequestException || $exception instanceof InvalidCredentialInput ) {
+		if ( $exception instanceof CredentialRequestException || $exception instanceof InvalidCredentialInput || $exception instanceof InvalidWebhookInput ) {
 			return $exception->getMessage();
 		}
 

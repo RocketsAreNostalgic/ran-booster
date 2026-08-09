@@ -403,6 +403,21 @@
 
 	function resetCredentialModal(modal) {
 		modal.querySelector('form')?.reset();
+		if (modal.dataset) {
+			delete modal.dataset.webhookProfileId;
+		}
+		modal
+			.querySelectorAll?.('.ran-booster-webhook-scope option')
+			.forEach(function (option) {
+				option.disabled = false;
+			});
+		modal
+			.querySelectorAll?.('[data-webhook-target] option')
+			.forEach(function (option) {
+				option.disabled =
+					option.value === '' ||
+					Boolean(option.dataset.webhookProfileId);
+			});
 		const accessTools = modal.querySelector('[data-access-secret-tools]');
 		accessSecretToolResets.get(accessTools)?.();
 		const webhookTools = modal.querySelector('[data-webhook-secret-tools]');
@@ -960,12 +975,54 @@
 			secretInput.placeholder = isEdit
 				? '••••••••••'
 				: secretInput.dataset.addPlaceholder || '';
-			form.elements['ran_booster[scope]'].value =
-				button.getAttribute('data-scope') || 'owner';
-			form.elements['ran_booster[target]'].value =
-				button.getAttribute('data-target') || '';
+			const profileId = button.getAttribute('data-id') || '';
+			const scope = button.getAttribute('data-scope') || 'owner';
+			const target = button.getAttribute('data-target') || '';
+			modal.dataset.webhookProfileId = profileId;
+			form.elements['ran_booster[scope]'].value = scope;
+			ensureWebhookTargetOption(modal, scope, target, profileId);
+			form.elements['ran_booster[target]'].value = target;
 			updateWebhookFields(modal);
 		}
+	}
+
+	function ensureWebhookTargetOption(modal, scope, target, profileId) {
+		if (!profileId || !target) {
+			return;
+		}
+
+		const group = Array.from(
+			modal.querySelectorAll('[data-webhook-target-options]')
+		).find(function (candidate) {
+			return candidate.dataset.webhookTargetOptions === scope;
+		});
+		if (!group) {
+			return;
+		}
+
+		const normalize = function (value) {
+			return value
+				.trim()
+				.replace(/^\/+|\/+$/g, '')
+				.toLowerCase();
+		};
+		const existing = Array.from(group.querySelectorAll('option')).find(
+			function (option) {
+				return (
+					option.value &&
+					normalize(option.value) === normalize(target)
+				);
+			}
+		);
+		if (existing) {
+			return;
+		}
+
+		const option = modal.ownerDocument.createElement('option');
+		option.value = target;
+		option.textContent = target + ' — already configured';
+		option.dataset.webhookProfileId = profileId;
+		group.appendChild(option);
 	}
 
 	function updateCredentialSelfDestructFields(modal) {
@@ -1015,8 +1072,21 @@
 		const field = modal.querySelector('.ran-booster-webhook-target-field');
 		const target = field.querySelector('[data-webhook-target]');
 		const required = option.getAttribute('data-requires-target') === '1';
+		const profileId = modal.dataset.webhookProfileId || '';
 		let activeOptions = null;
 
+		Array.from(select.options).forEach(function (scopeOption) {
+			scopeOption.disabled =
+				profileId !== '' && scopeOption.value !== option.value;
+		});
+		Array.from(target.options).forEach(function (targetOption) {
+			const configuredFor = targetOption.dataset.webhookProfileId || '';
+			targetOption.disabled =
+				targetOption.value === '' ||
+				(profileId !== ''
+					? configuredFor !== profileId
+					: configuredFor !== '');
+		});
 		field.toggleAttribute('hidden', !required);
 		target.required = required;
 		target.disabled = !required;
@@ -1032,7 +1102,10 @@
 				}
 			});
 		const selected = target.options[target.selectedIndex];
-		if (required && selected?.parentElement !== activeOptions) {
+		if (
+			required &&
+			(selected?.parentElement !== activeOptions || selected.disabled)
+		) {
 			const placeholder =
 				activeOptions?.querySelector('option[value=""]');
 			target.selectedIndex = placeholder

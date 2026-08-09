@@ -109,6 +109,17 @@ if ( $hasCredentialSettings ) {
 }
 
 if ( $hasWebhookSettings ) {
+	$configuredWebhookTargets = array();
+	foreach ( $webhook_profiles as $webhookProfile ) {
+		$scope     = is_string( $webhookProfile['scope'] ?? null ) ? $webhookProfile['scope'] : '';
+		$target    = is_string( $webhookProfile['target'] ?? null )
+			? strtolower( trim( $webhookProfile['target'], " \t\n\r\0\x0B/" ) )
+			: '';
+		$profileId = is_string( $webhookProfile['id'] ?? null ) ? $webhookProfile['id'] : '';
+		if ( in_array( $scope, array( 'owner', 'repository' ), true ) && '' !== $target && '' !== $profileId ) {
+			$configuredWebhookTargets[ $scope . ':' . $target ] = $profileId;
+		}
+	}
 	?>
 	<div class="ran-booster-credential-modal ran-booster-dialog" data-credential-modal="webhook" data-provider-label="<?php echo esc_attr( $provider['label'] ); ?>" hidden>
 		<div class="ran-booster-credential-modal__dialog ran-booster-dialog__surface" role="dialog" aria-modal="true" aria-labelledby="ran-booster-webhook-modal-title">
@@ -132,14 +143,21 @@ if ( $hasWebhookSettings ) {
 						<select name="ran_booster[target]" class="regular-text" data-webhook-target>
 							<optgroup label="<?php esc_attr_e( 'Managed owners', 'ran-booster' ); ?>" data-webhook-target-options="owner">
 								<option value="" disabled><?php echo esc_html( empty( $managedRepositories['owners'] ) ? __( 'No managed owners available', 'ran-booster' ) : __( 'Choose a managed owner', 'ran-booster' ) ); ?></option>
-								<?php foreach ( $managedRepositories['owners'] ?? array() as $owner ) { ?>
-									<option value="<?php echo esc_attr( $owner ); ?>"><?php echo esc_html( $owner ); ?></option>
+								<?php
+								foreach ( $managedRepositories['owners'] ?? array() as $owner ) {
+									$configuredId = $configuredWebhookTargets[ 'owner:' . strtolower( trim( $owner, " \t\n\r\0\x0B/" ) ) ] ?? '';
+									?>
+									<option value="<?php echo esc_attr( $owner ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( $owner . ( '' !== $configuredId ? ' — already configured' : '' ) ); ?></option>
 								<?php } ?>
 							</optgroup>
 							<optgroup label="<?php esc_attr_e( 'Managed repositories', 'ran-booster' ); ?>" data-webhook-target-options="repository">
 								<option value="" disabled><?php echo esc_html( empty( $managedRepositories['repositories'] ) ? __( 'No managed repositories available', 'ran-booster' ) : __( 'Choose a managed repository', 'ran-booster' ) ); ?></option>
-								<?php foreach ( $managedRepositories['repositories'] ?? array() as $repository ) { ?>
-									<option value="<?php echo esc_attr( $repository['target'] ); ?>"><?php echo esc_html( $repository['target'] ); ?></option>
+								<?php
+								foreach ( $managedRepositories['repositories'] ?? array() as $repository ) {
+									$repositoryTarget = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
+									$configuredId     = $configuredWebhookTargets[ 'repository:' . strtolower( trim( $repositoryTarget, " \t\n\r\0\x0B/" ) ) ] ?? '';
+									?>
+									<option value="<?php echo esc_attr( $repositoryTarget ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( $repositoryTarget . ( '' !== $configuredId ? ' — already configured' : '' ) ); ?></option>
 								<?php } ?>
 							</optgroup>
 						</select>

@@ -6,9 +6,11 @@ namespace RAN\RepositoryProvider;
 
 use RuntimeException;
 
-final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy {
+final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy, SubmittedCredentialValidator {
 
-	private const TOKEN_CONSTANT = 'RAN_BOOSTER_GITHUB_TOKEN';
+	private const TOKEN_CONSTANT  = 'RAN_BOOSTER_GITHUB_TOKEN';
+	private const MIN_TOKEN_BYTES = 40;
+	private const MAX_TOKEN_BYTES = 255;
 
 	public function getProvider(): ProviderCode {
 		return ProviderCode::parse( 'gh' );
@@ -37,17 +39,39 @@ final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy 
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
 			throw new InvalidCredentialInput( InvalidCredentialInput::INVALID_RESOURCE_OWNER );
 		}
-		if ( 'fine-grained' === $kind && str_starts_with( $secret, 'ghp_' ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
-			throw new InvalidCredentialInput( InvalidCredentialInput::LOOKS_CLASSIC );
-		}
-
 		return array(
 			'label'         => $label,
 			'kind'          => $kind,
 			'configuration' => array( 'owner' => 'classic' === $kind ? '' : $owner ),
 			'secret'        => $secret,
 		);
+	}
+
+	public function validateSubmittedCredential(
+		array $metadata,
+		#[\SensitiveParameter] string $secret
+	): void {
+		$kind = $metadata['kind'] ?? '';
+		if ( 'classic' === $kind && ! str_starts_with( $secret, 'ghp_' ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidCredentialInput( InvalidCredentialInput::REQUIRES_CLASSIC );
+		}
+		if ( 'fine-grained' === $kind && ! str_starts_with( $secret, 'github_pat_' ) ) {
+			$reason = str_starts_with( $secret, 'ghp_' )
+				? InvalidCredentialInput::LOOKS_CLASSIC
+				: InvalidCredentialInput::REQUIRES_FINE_GRAINED;
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidCredentialInput( $reason );
+		}
+
+		$length = strlen( $secret );
+		if ( $length < self::MIN_TOKEN_BYTES
+			|| $length > self::MAX_TOKEN_BYTES
+			|| 1 !== preg_match( '/\A[A-Za-z0-9_]+\z/D', $secret )
+		) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidCredentialInput( InvalidCredentialInput::INVALID_TOKEN_SHAPE );
+		}
 	}
 
 	public function getConstantNames(): array {

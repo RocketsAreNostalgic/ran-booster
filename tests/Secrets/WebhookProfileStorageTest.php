@@ -8,6 +8,7 @@ namespace Tests\Secrets;
 // phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\TestCase;
+use RAN\RepositoryProvider\InvalidWebhookInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\RepositoryProvider\ProviderWebhookPolicy;
@@ -114,8 +115,9 @@ final class WebhookProfileStorageTest extends TestCase {
 			try {
 				$this->secrets->saveWebhook( 'gh', null, $metadata, str_repeat( 'c', 32 ) );
 				self::fail( 'Duplicate webhook authority must be rejected.' );
-			} catch ( RuntimeException $exception ) {
-				self::assertStringContainsString( 'Only one webhook secret', $exception->getMessage() );
+			} catch ( InvalidWebhookInput $exception ) {
+				self::assertSame( InvalidWebhookInput::DUPLICATE_TARGET, $exception->reason );
+				self::assertStringContainsString( 'already exists', $exception->getMessage() );
 			}
 		}
 	}
@@ -131,9 +133,30 @@ final class WebhookProfileStorageTest extends TestCase {
 		}
 		self::assertCount( SecretsFile::MAX_WEBHOOK_PROFILES, $this->secrets->webhookProfiles( 'gh' ) );
 
-		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'cannot store more than 16' );
+		$this->expectException( InvalidWebhookInput::class );
+		$this->expectExceptionMessage( 'maximum of 16' );
 		$this->secrets->saveWebhook( 'gh', null, $this->owner( 'Overflow', 'owner17' ), str_repeat( 'z', 32 ) );
+	}
+
+	public function testSubmittedSecretAndTargetFailuresAreClosedAndDoNotExposeTheSecret(): void {
+		$secret = "short-secret\ncanary";
+		try {
+			$this->secrets->saveWebhook( 'gh', null, $this->owner( 'Invalid', 'not an owner!' ), str_repeat( 'v', 32 ) );
+			self::fail( 'Malformed submitted webhook material must be rejected.' );
+		} catch ( InvalidWebhookInput $failure ) {
+			self::assertSame( InvalidWebhookInput::INVALID_TARGET, $failure->reason );
+			self::assertStringNotContainsString( 'not an owner', $failure->getMessage() );
+		}
+
+		try {
+			$this->secrets->saveWebhook( 'gh', null, $this->owner( 'Invalid secret', 'valid-owner' ), $secret );
+			self::fail( 'Malformed submitted webhook secret must be rejected.' );
+		} catch ( InvalidWebhookInput $failure ) {
+			self::assertSame( InvalidWebhookInput::INVALID_SECRET, $failure->reason );
+			self::assertStringContainsString( '32 to 512 bytes', $failure->getMessage() );
+			self::assertStringNotContainsString( $secret, $failure->getMessage() );
+			self::assertFalse( str_contains( (string) json_encode( $failure->getTrace() ), $secret ) );
+		}
 	}
 
 	public function testRemovedGlobalScopeAndConstantAreUnavailable(): void {

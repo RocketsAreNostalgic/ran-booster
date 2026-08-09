@@ -36,9 +36,11 @@ final readonly class GitHubWebhookPolicy implements ProviderWebhookPolicy {
 		}
 
 		if ( 'owner' === $scope && ! $this->isOwner( $target ) ) {
-			throw new RuntimeException( 'Owner-scoped webhook secrets require a valid provider owner.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidWebhookInput( InvalidWebhookInput::INVALID_TARGET );
 		} elseif ( 'repository' === $scope && ! $this->isRepository( $target ) ) {
-			throw new RuntimeException( 'Repository-scoped webhook secrets require an owner/repository target.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidWebhookInput( InvalidWebhookInput::INVALID_TARGET );
 		}
 		if ( 'owner' === $scope ) {
 			$authorityId = '';
@@ -95,13 +97,15 @@ final readonly class GitHubWebhookPolicy implements ProviderWebhookPolicy {
 
 	private function assertSecret( string $secret ): void {
 		if ( strlen( $secret ) < 32 || strlen( $secret ) > 512 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $secret ) ) {
-			throw new RuntimeException( 'Webhook secrets must contain 32 to 512 bytes without control characters.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidWebhookInput( InvalidWebhookInput::INVALID_SECRET );
 		}
 	}
 
 	private function requiredSecret( mixed $secret ): string {
 		if ( ! is_string( $secret ) ) {
-			throw new RuntimeException( 'Webhook secret must be a string.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
+			throw new InvalidWebhookInput( InvalidWebhookInput::INVALID_SECRET );
 		}
 
 		$this->assertSecret( $secret );

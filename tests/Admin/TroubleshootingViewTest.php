@@ -1444,6 +1444,27 @@ final class TroubleshootingViewTest extends TestCase {
 					'repositories' => array( 'workspace/one', 'workspace/two' ),
 				),
 			),
+			array(
+				'id'         => 'repository-hook',
+				'label'      => 'Repository hook',
+				'scope'      => 'repository',
+				'target'     => 'workspace/one',
+				'configured' => true,
+				'editable'   => true,
+				'usage'      => array(
+					'available'    => true,
+					'total'        => 1,
+					'repositories' => array( 'workspace/one' ),
+				),
+			),
+		);
+		$managed_webhook_repositories         = array(
+			'available'    => true,
+			'owners'       => array( 'workspace', 'other-workspace' ),
+			'repositories' => array(
+				array( 'target' => 'workspace/one' ),
+				array( 'target' => 'workspace/two' ),
+			),
 		);
 		$providerView                         = 'secrets';
 
@@ -1463,11 +1484,15 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[action]" value="delete-webhook-profile"', $html );
 		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:save-webhook-profile"', $html );
 		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:delete-webhook-profile"', $html );
-		self::assertSame( 2, substr_count( $html, 'hx-target="#ran-booster-provider-profile-region"' ) );
-		self::assertSame( 2, substr_count( $html, 'hx-select="#ran-booster-provider-profile-region"' ) );
+		self::assertSame( 3, substr_count( $html, 'hx-target="#ran-booster-provider-profile-region"' ) );
+		self::assertSame( 3, substr_count( $html, 'hx-select="#ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-webhook-profile-error"', $html );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-delete-webhook-profile-error"', $html );
 		self::assertStringContainsString( 'id="ran-booster-delete-webhook-profile-error"', $html );
+		self::assertStringContainsString( 'value="workspace" data-webhook-profile-id="workspace-hook" disabled>workspace — already configured</option>', $html );
+		self::assertStringContainsString( 'value="workspace/one" data-webhook-profile-id="repository-hook" disabled>workspace/one — already configured</option>', $html );
+		self::assertStringContainsString( '<option value="other-workspace">other-workspace</option>', $html );
+		self::assertStringContainsString( '<option value="workspace/two">workspace/two</option>', $html );
 		self::assertStringContainsString( 'Remote provider webhooks will not be removed.', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}

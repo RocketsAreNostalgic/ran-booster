@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
+use RAN\Booster;
 
 final class AdminAssetContractTest extends TestCase {
 
@@ -90,9 +91,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'overflow: hidden;', $css );
 	}
 
-	public function testAdminStylesheetManifestKeepsComponentOrderAndNativeButtonScope(): void {
-		$manifest = $this->rawAsset( 'ran-booster.css' );
-
+	public function testAdminStylesheetComponentsKeepCascadeOrderAndNativeButtonScope(): void {
 		self::assertSame(
 			array(
 				'00-foundations.css',
@@ -109,7 +108,7 @@ final class AdminAssetContractTest extends TestCase {
 				'70-credential-dialog.css',
 				'80-responsive.css',
 			),
-			$this->manifestImports( $manifest )
+			$this->styleComponents()
 		);
 
 		$buttons = $this->asset( 'ran-booster/10-buttons.css' );
@@ -759,6 +758,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "\$packageView->getAction( 'unlink-delete' )", $dangerZone );
 		self::assertStringContainsString( 'disabled data-ran-booster-package-removal-submit', $dangerZone );
 
+		self::assertStringContainsString( '.ran-booster-package-danger-zone > summary {', $css );
+		self::assertStringContainsString( 'grid-template-columns: 10px auto minmax(0, 1fr);', $css );
+		self::assertStringContainsString( 'grid-column: 2;', $css );
 		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions {', $css );
 		self::assertStringContainsString( 'grid-template-columns: repeat(2, minmax(0, 1fr));', $css );
 		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions .button {', $css );
@@ -833,18 +835,17 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	private function asset( string $file ): string {
-		$contents = $this->rawAsset( $file );
-		$resolved = preg_replace_callback(
-			'/@import url\\(ran-booster\\/([^\\)]+)\\);/',
-			function ( array $matches ): string {
-				return $this->asset( 'ran-booster/' . $matches[1] );
-			},
-			$contents
+		if ( 'ran-booster.css' !== $file ) {
+			return $this->rawAsset( $file );
+		}
+
+		return implode(
+			"\n",
+			array_map(
+				fn ( string $component ): string => $this->rawAsset( 'ran-booster/' . $component ),
+				$this->styleComponents()
+			)
 		);
-
-		self::assertIsString( $resolved );
-
-		return $resolved;
 	}
 
 	private function rawAsset( string $file ): string {
@@ -856,13 +857,13 @@ final class AdminAssetContractTest extends TestCase {
 		return $contents;
 	}
 
-	/**
-	 * @return list<string>
-	 */
-	private function manifestImports( string $manifest ): array {
-		preg_match_all( '/@import url\\(ran-booster\\/([^\\)]+)\\);/', $manifest, $matches );
+	/** @return list<string> */
+	private function styleComponents(): array {
+		$componentList = ( new \ReflectionClass( Booster::class ) )->getReflectionConstant( 'ADMIN_STYLE_COMPONENTS' )?->getValue();
 
-		return $matches[1];
+		self::assertIsArray( $componentList );
+
+		return $componentList;
 	}
 
 	private function view( string $file ): string {

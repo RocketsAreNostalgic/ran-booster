@@ -230,6 +230,37 @@ final class BoosterAssetsTest extends TestCase {
 		}
 	}
 
+	public function testCommonStylesheetsPreserveCascadeWithPerComponentVersions(): void {
+		$this->booster()->loadScripts( 'ran-booster_page_ran-booster-themes' );
+
+		$expectedStyles = array(
+			'ran-booster-00-foundations'                  => '00-foundations.css',
+			'ran-booster-10-buttons'                      => '10-buttons.css',
+			'ran-booster-15-enhanced-mutations'           => '15-enhanced-mutations.css',
+			'ran-booster-20-repository-picker'            => '20-repository-picker.css',
+			'ran-booster-25-admin-primitives'             => '25-admin-primitives.css',
+			'ran-booster-30-provider-cards'               => '30-provider-cards.css',
+			'ran-booster-35-status-utilities'             => '35-status-utilities.css',
+			'ran-booster-40-tables-and-pills'             => '40-tables-and-pills.css',
+			'ran-booster-50-troubleshooting-and-activity' => '50-troubleshooting-and-activity.css',
+			'ran-booster-60-packages'                     => '60-packages.css',
+			'ran-booster-65-package-settings'             => '65-package-settings.css',
+			'ran-booster-70-credential-dialog'            => '70-credential-dialog.css',
+			'ran-booster-styles'                          => '80-responsive.css',
+		);
+		$previousHandle = null;
+
+		self::assertSame( array_keys( $expectedStyles ), array_keys( $GLOBALS['ran_booster_asset_test_registered_styles'] ) );
+		foreach ( $expectedStyles as $handle => $file ) {
+			$registeredStyle = $GLOBALS['ran_booster_asset_test_registered_styles'][ $handle ];
+
+			self::assertStringEndsWith( '/assets/ran-booster/' . $file, $registeredStyle['source'] );
+			self::assertIsInt( $registeredStyle['version'] );
+			self::assertSame( null === $previousHandle ? array() : array( $previousHandle ), $registeredStyle['dependencies'] );
+			$previousHandle = $handle;
+		}
+	}
+
 	public function testDocumentationTabReceivesTopLevelAndPageSpecificStyles(): void {
 		$_GET['tab'] = 'documentation';
 

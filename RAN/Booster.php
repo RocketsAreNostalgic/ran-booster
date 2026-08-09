@@ -36,6 +36,22 @@ class Booster {
 		'ran-booster_page_ran-booster-themes',
 	);
 
+	private const ADMIN_STYLE_COMPONENTS = array(
+		'00-foundations.css',
+		'10-buttons.css',
+		'15-enhanced-mutations.css',
+		'20-repository-picker.css',
+		'25-admin-primitives.css',
+		'30-provider-cards.css',
+		'35-status-utilities.css',
+		'40-tables-and-pills.css',
+		'50-troubleshooting-and-activity.css',
+		'60-packages.css',
+		'65-package-settings.css',
+		'70-credential-dialog.css',
+		'80-responsive.css',
+	);
+
 	public $boosterPath;
 
 	public $boosterUrl;
@@ -386,14 +402,12 @@ class Booster {
 			return;
 		}
 
-		$stylePath                     = trailingslashit( $this->boosterPath ) . 'assets/ran-booster.css';
 		$scriptPath                    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster.js';
 		$secureInputsScriptPath        = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-secure-inputs.js';
 		$portabilityScriptPath         = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-portability.js';
 		$enhancedMutationScriptPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-enhanced-mutations.js';
 		$packageScriptPath             = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-packages.js';
 		$repositoryPickerScriptPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-repository-picker.js';
-		$styleVersion                  = file_exists( $stylePath ) ? filemtime( $stylePath ) : null;
 		$scriptVersion                 = file_exists( $scriptPath ) ? filemtime( $scriptPath ) : null;
 		$secureInputsScriptVersion     = file_exists( $secureInputsScriptPath ) ? filemtime( $secureInputsScriptPath ) : null;
 		$portabilityScriptVersion      = file_exists( $portabilityScriptPath ) ? filemtime( $portabilityScriptPath ) : null;
@@ -433,7 +447,21 @@ class Booster {
 			$scriptDependencies[] = 'ran-booster-htmx';
 		}
 
-		wp_register_style( 'ran-booster-styles', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.css', array(), $styleVersion );
+		$styleDependencies = array();
+		foreach ( self::ADMIN_STYLE_COMPONENTS as $styleComponent ) {
+			$styleComponentPath = trailingslashit( $this->boosterPath ) . 'assets/ran-booster/' . $styleComponent;
+			$styleHandle        = '80-responsive.css' === $styleComponent
+				? 'ran-booster-styles'
+				: 'ran-booster-' . basename( $styleComponent, '.css' );
+
+			wp_register_style(
+				$styleHandle,
+				trailingslashit( $this->boosterUrl ) . 'assets/ran-booster/' . $styleComponent,
+				$styleDependencies,
+				file_exists( $styleComponentPath ) ? filemtime( $styleComponentPath ) : null
+			);
+			$styleDependencies = array( $styleHandle );
+		}
 		wp_enqueue_style( 'ran-booster-styles' );
 		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', $scriptDependencies, $scriptVersion, true );
 		wp_register_script(

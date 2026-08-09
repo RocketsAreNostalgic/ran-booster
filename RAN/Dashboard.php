@@ -176,11 +176,15 @@ class Dashboard {
 					: '';
 				$result                = $this->secretsStorageResult ?? $this->secretsStorage->status();
 				$this->logSecretsStorageDiagnostic( $result );
+				$recovery                              = $includeStorageDetails
+					? $this->secretsStorage->recoveryState( $result )
+					: null;
 				$data['onboarding']['secrets_storage'] = ( new SecretsStorageSetupPresenter() )->build(
 					$result,
 					$adminUrl . '?page=ran-booster&tab=overview',
 					$wordpressRoot,
-					$includeStorageDetails
+					$includeStorageDetails,
+					$recovery
 				);
 			}
 		}

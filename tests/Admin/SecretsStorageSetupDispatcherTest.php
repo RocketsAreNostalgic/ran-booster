@@ -142,6 +142,53 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
 	}
 
+	public function testProtectedPostAdoptsATokenBoundCandidateAndRedirects(): void {
+		$token       = str_repeat( 'a', 64 );
+		$_POST       = array(
+			'ran_booster' => array(
+				'action'         => 'adopt-secure-storage',
+				'recovery_token' => $token,
+			),
+		);
+		$provisioner = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::pendingVerification( '/private/previous/secrets.json' )
+		);
+
+		try {
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			self::fail( 'Successful recovery must redirect for fresh configuration verification.' );
+		} catch ( SetupActionRedirect $redirect ) {
+			self::assertSame(
+				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
+				$redirect->url
+			);
+		}
+
+		self::assertSame( array( $token ), $provisioner->adoptTokens );
+		self::assertSame(
+			array( 'ran-booster-adopt-secure-storage' ),
+			$GLOBALS['ran_booster_test_nonce_checks']
+		);
+	}
+
+	public function testGetCannotAdoptStorage(): void {
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_POST                     = array(
+			'ran_booster' => array(
+				'action'         => 'adopt-secure-storage',
+				'recovery_token' => str_repeat( 'a', 64 ),
+			),
+		);
+		$provisioner               = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::pendingVerification( '/private/previous/secrets.json' )
+		);
+
+		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+
+		self::assertSame( array(), $provisioner->adoptTokens );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
 	private function dispatcher( Dashboard $dashboard, SecretsStorageProvisioner $provisioner ): Dispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
@@ -168,6 +215,8 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 final class SetupActionProvisioner extends SecretsStorageProvisioner {
 	public int $provisionCalls = 0;
+	/** @var list<string> */
+	public array $adoptTokens = array();
 
 	public function __construct(
 		private readonly SecretsStorageProvisioningResult $result,
@@ -180,6 +229,12 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 		if ( $this->throw ) {
 			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );
 		}
+
+		return $this->result;
+	}
+
+	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
+		$this->adoptTokens[] = $token;
 
 		return $this->result;
 	}

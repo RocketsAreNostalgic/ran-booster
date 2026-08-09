@@ -228,6 +228,53 @@ final class GitHubCredentialPolicyTest extends TestCase {
 		}
 	}
 
+	public function testRecoveryFitnessRejectsADecryptableStoredGitHubPrefixMismatch(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-github-recovery-' . bin2hex( random_bytes( 8 ) );
+		$path      = $directory . '/secrets.json';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$catalog = new ProviderSecretPolicyCatalog();
+		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
+		$secrets = SecretsFileTestFactory::create( $path, array(), $catalog );
+
+		try {
+			$id = $secrets->saveCredential(
+				'gh',
+				null,
+				array(
+					'label'         => 'Legacy mismatched access',
+					'kind'          => 'classic',
+					'configuration' => array( 'owner' => '' ),
+				),
+				'github_pat_' . str_repeat( 'a', 40 ),
+				false
+			);
+
+			self::assertFalse( $secrets->recoveryCredentialsFitAt( $path ) );
+			$secrets->saveCredential(
+				'gh',
+				$id,
+				array(
+					'label'         => 'Restored classic access',
+					'kind'          => 'classic',
+					'configuration' => array( 'owner' => '' ),
+				),
+				'ghp_' . str_repeat( 'b', 36 ),
+				true
+			);
+			self::assertTrue( $secrets->recoveryCredentialsFitAt( $path ) );
+		} finally {
+			InMemorySiteKeyStore::reset( $path );
+			foreach ( array( $path, $path . '.lock' ) as $file ) {
+				if ( is_file( $file ) || is_link( $file ) ) {
+					unlink( $file );
+				}
+			}
+			if ( is_dir( $directory ) ) {
+				rmdir( $directory );
+			}
+		}
+	}
+
 	public function testEncryptedStorePreservesOnlyTheClosedSubmittedTokenFailure(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-input-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';

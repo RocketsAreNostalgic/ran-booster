@@ -22,6 +22,14 @@ final readonly class SecretsStorageSetupPresenter {
 	 *     path_source: string|null,
 	 *     can_provision: bool,
 	 *     action_url: string,
+	 *     recovery: array{
+	 *         state: string,
+	 *         message: string,
+	 *         candidate_path: string|null,
+	 *         candidate_directory: string|null,
+	 *         token: string|null,
+	 *         can_adopt: bool
+	 *     }|null,
 	 *     manual_preflight: string|null,
 	 *     directory_commands: list<string>,
 	 *     config_alternatives: array{define: string, wp_cli: string}|null
@@ -31,7 +39,8 @@ final readonly class SecretsStorageSetupPresenter {
 		SecretsStorageProvisioningResult $result,
 		string $actionUrl,
 		string $wordpressRoot = '',
-		bool $includeSensitiveDetails = true
+		bool $includeSensitiveDetails = true,
+		?array $recovery = null
 	): array {
 		$candidate          = $includeSensitiveDetails ? $result->candidatePath() : null;
 		$directoryCommands  = array();
@@ -62,6 +71,29 @@ final readonly class SecretsStorageSetupPresenter {
 			);
 		}
 
+		$recoveryPayload = null;
+		if ( $includeSensitiveDetails && null !== $recovery ) {
+			$recoveryCandidate = is_string( $recovery['candidate_path'] ?? null )
+				? $recovery['candidate_path']
+				: null;
+			$recoveryToken     = is_string( $recovery['token'] ?? null )
+				? $recovery['token']
+				: null;
+			$recoveryState     = is_string( $recovery['state'] ?? null )
+				? $recovery['state']
+				: 'blocked';
+			$recoveryPayload   = array(
+				'state'               => $recoveryState,
+				'message'             => is_string( $recovery['message'] ?? null ) ? $recovery['message'] : '',
+				'candidate_path'      => $recoveryCandidate,
+				'candidate_directory' => null === $recoveryCandidate ? null : dirname( $recoveryCandidate ),
+				'token'               => $recoveryToken,
+				'can_adopt'           => 'available' === $recoveryState
+					&& null !== $recoveryCandidate
+					&& null !== $recoveryToken,
+			);
+		}
+
 		return array(
 			'status'              => $result->status(),
 			'reason_code'         => $result->code(),
@@ -71,6 +103,7 @@ final readonly class SecretsStorageSetupPresenter {
 			'path_source'         => $includeSensitiveDetails ? $result->pathSource() : null,
 			'can_provision'       => $includeSensitiveDetails && $result->canProvisionAutomatically(),
 			'action_url'          => $actionUrl,
+			'recovery'            => $recoveryPayload,
 			'manual_preflight'    => $manualPreflight,
 			'directory_commands'  => $directoryCommands,
 			'config_alternatives' => $configAlternatives,

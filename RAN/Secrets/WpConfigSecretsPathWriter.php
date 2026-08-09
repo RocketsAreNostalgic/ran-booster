@@ -27,7 +27,26 @@ class WpConfigSecretsPathWriter {
 	private const TEMP_PREFIX   = '.ran-booster-wp-config-';
 
 	public function write( string $configPath, string $sidecarPath ): WpConfigPathWriteResult {
-		$this->edit( $configPath, $sidecarPath, false );
+		$this->edit( $configPath, $sidecarPath, false, null );
+
+		return new WpConfigPathWriteResult();
+	}
+
+	/**
+	 * Atomically retarget the exact definition previously inserted by this writer.
+	 */
+	public function retargetOwnedDefinition(
+		string $configPath,
+		string $currentSidecarPath,
+		string $replacementSidecarPath
+	): WpConfigPathWriteResult|false {
+		if ( $currentSidecarPath === $replacementSidecarPath ) {
+			$this->fail( 'sidecar_path_unchanged', 'The encrypted secrets path is already configured.' );
+		}
+
+		if ( ! $this->edit( $configPath, $currentSidecarPath, false, $replacementSidecarPath ) ) {
+			return false;
+		}
 
 		return new WpConfigPathWriteResult();
 	}
@@ -38,7 +57,7 @@ class WpConfigSecretsPathWriter {
 	 * @return bool Whether the owned definition block was removed.
 	 */
 	public function removeOwnedDefinition( string $configPath, string $sidecarPath ): bool {
-		return $this->edit( $configPath, $sidecarPath, true );
+		return $this->edit( $configPath, $sidecarPath, true, null );
 	}
 
 	/**
@@ -69,17 +88,33 @@ class WpConfigSecretsPathWriter {
 		return true;
 	}
 
-	private function edit( string $configPath, string $sidecarPath, bool $remove ): bool {
+	private function edit(
+		string $configPath,
+		string $sidecarPath,
+		bool $remove,
+		?string $replacementSidecarPath
+	): bool {
 		$this->assertAbsoluteSafePath( $configPath, 'config_path_invalid' );
 		$this->assertAbsoluteSafePath( $sidecarPath, 'sidecar_path_invalid' );
+		if ( null !== $replacementSidecarPath ) {
+			$this->assertAbsoluteSafePath( $replacementSidecarPath, 'sidecar_path_invalid' );
+		}
 		if ( $configPath === $sidecarPath ) {
 			$this->fail( 'sidecar_path_invalid', 'The encrypted secrets path is not safe for automatic configuration.' );
 		}
+		if ( null !== $replacementSidecarPath
+			&& ( $configPath === $replacementSidecarPath || $sidecarPath === $replacementSidecarPath )
+		) {
+			$this->fail( 'sidecar_path_invalid', 'The replacement encrypted secrets path is not safe for automatic configuration.' );
+		}
 
 		$preflight = null;
-		if ( $remove ) {
+		if ( $remove || null !== $replacementSidecarPath ) {
 			$preflight = $this->inspectConfigPath( $configPath, false );
-			if ( null === $this->buildRemovalCandidate( $preflight['contents'], $sidecarPath ) ) {
+			$candidate = $remove
+				? $this->buildRemovalCandidate( $preflight['contents'], $sidecarPath )
+				: $this->buildRetargetCandidate( $preflight['contents'], $sidecarPath, (string) $replacementSidecarPath );
+			if ( null === $candidate ) {
 				return false;
 			}
 		}
@@ -116,15 +151,19 @@ class WpConfigSecretsPathWriter {
 				$this->fail( 'config_changed', 'The WordPress configuration changed before it could be edited.' );
 			}
 
-			$original  = $locked['contents'];
-			$candidate = $remove
-				? $this->buildRemovalCandidate( $original, $sidecarPath )
-				: $this->buildCandidate( $original, $sidecarPath );
+			$original      = $locked['contents'];
+				$candidate = $remove
+					? $this->buildRemovalCandidate( $original, $sidecarPath )
+					: ( null === $replacementSidecarPath
+						? $this->buildCandidate( $original, $sidecarPath )
+						: $this->buildRetargetCandidate( $original, $sidecarPath, $replacementSidecarPath ) );
 			if ( null === $candidate ) {
 				return false;
 			}
 			if ( $remove ) {
 				$this->validateRemovalCandidate( $candidate, $sidecarPath );
+			} elseif ( null !== $replacementSidecarPath ) {
+				$this->validateRetargetCandidate( $candidate, $sidecarPath, $replacementSidecarPath );
 			} else {
 				$this->validateCandidate( $candidate );
 			}
@@ -274,12 +313,43 @@ class WpConfigSecretsPathWriter {
 			. $lineEnding;
 	}
 
+	private function buildRetargetCandidate(
+		string $original,
+		string $currentSidecarPath,
+		string $replacementSidecarPath
+	): ?string {
+		if ( null === $this->buildRemovalCandidate( $original, $currentSidecarPath ) ) {
+			return null;
+		}
+
+		$lineEnding  = $this->lineEnding( $original );
+		$current     = $this->ownedDefinitionBlock( $currentSidecarPath, $lineEnding );
+		$replacement = $this->ownedDefinitionBlock( $replacementSidecarPath, $lineEnding );
+		$count       = 0;
+		$candidate   = str_replace( $current, $replacement, $original, $count );
+
+		return 1 === $count ? $candidate : null;
+	}
+
 	private function validateRemovalCandidate( string $candidate, string $sidecarPath ): void {
 		if ( strlen( $candidate ) > self::MAX_BYTES ) {
 			$this->fail( 'config_size_unsupported', 'The edited WordPress configuration would exceed the size limit.' );
 		}
 		if ( null !== $this->buildRemovalCandidate( $candidate, $sidecarPath ) ) {
 			$this->fail( 'candidate_parse_failed', 'The edited WordPress configuration retained the automatic definition.' );
+		}
+	}
+
+	private function validateRetargetCandidate(
+		string $candidate,
+		string $currentSidecarPath,
+		string $replacementSidecarPath
+	): void {
+		$this->validateCandidate( $candidate );
+		if ( null !== $this->buildRemovalCandidate( $candidate, $currentSidecarPath )
+			|| null === $this->buildRemovalCandidate( $candidate, $replacementSidecarPath )
+		) {
+			$this->fail( 'candidate_parse_failed', 'The edited WordPress configuration did not contain the expected replacement definition.' );
 		}
 	}
 

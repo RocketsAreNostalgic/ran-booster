@@ -20,6 +20,7 @@ class SecretsStorageProvisioner {
 
 	private const DIRECTORY_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
 	private const FILE_CONSTANT_NAME      = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
+	private const RECOVERY_MAX_ENTRIES    = 64;
 
 	public function __construct(
 		private readonly PrivateLocationCandidateResolver $resolver = new PrivateLocationCandidateResolver(),
@@ -178,6 +179,112 @@ class SecretsStorageProvisioner {
 		return SecretsStorageProvisioningResult::pendingVerification( $candidate );
 	}
 
+	/**
+	 * Find authenticated sibling storage without mutating or weakening policy.
+	 *
+	 * @return array{
+	 *     state: 'available'|'blocked'|'ambiguous',
+	 *     message: string,
+	 *     candidate_path: string|null,
+	 *     token: string|null
+	 * }|null
+	 */
+	public function recoveryState( SecretsStorageProvisioningResult $status ): ?array {
+		$current = $status->candidatePath();
+		if ( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION !== $status->status()
+			|| null === $current
+			|| ! $this->currentStoreIsEmpty( $current )
+		) {
+			return null;
+		}
+
+		$candidates = $this->recoveryCandidates( $current );
+		if ( array() === $candidates ) {
+			return null;
+		}
+		if ( 1 !== count( $candidates ) ) {
+			return array(
+				'state'          => 'ambiguous',
+				'message'        => 'Booster found more than one authenticated prior storage set. Choose and configure the correct private location manually.',
+				'candidate_path' => null,
+				'token'          => null,
+			);
+		}
+
+		$candidate  = $candidates[0];
+		$config     = $this->loadedWpConfigPath();
+		$owned      = false;
+		$sameDevice = false;
+		try {
+			$owned      = null !== $config && $this->writer->assertOwnedDefinitionRemovable( $config, $current );
+			$sameDevice = null !== $config && $this->sameFilesystemDevice( dirname( $candidate['candidate_path'] ), $config );
+		} catch ( Throwable ) {
+			$owned = false;
+		}
+
+		if ( ! $candidate['safe'] || ! $candidate['fit'] || ! $owned || ! $sameDevice ) {
+			$message = match ( true ) {
+				! $candidate['safe'] => 'Booster authenticated prior credential storage, but its location does not pass the current private-path policy. Move the matching storage set to a verified private location before using it.',
+				! $candidate['fit'] => 'Booster authenticated prior credential storage, but one or more credentials do not pass their current provider policy. Review or restore the matching storage set before using it.',
+				! $owned => 'Booster authenticated prior credential storage, but the active wp-config.php definition is operator-managed. Configure the verified private path manually.',
+				default => 'Booster authenticated prior credential storage, but it crosses an unsupported filesystem boundary. Configure the verified private path manually.',
+			};
+
+			return array(
+				'state'          => 'blocked',
+				'message'        => $message,
+				'candidate_path' => null,
+				'token'          => null,
+			);
+		}
+
+		return array(
+			'state'          => 'available',
+			'message'        => 'Booster found one prior storage set that authenticates with this site\'s database key and whose credentials pass their current provider policies.',
+			'candidate_path' => $candidate['candidate_path'],
+			'token'          => $candidate['token'],
+		);
+	}
+
+	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
+		$status  = $this->status();
+		$current = $status->candidatePath();
+		if ( 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $token ) || null === $current ) {
+			return $this->recoveryFailure( $current, 'recovery_request_invalid', 'The storage recovery request is invalid. Review the current storage state and try again.' );
+		}
+
+		$offer = $this->recoveryState( $status );
+		if ( null === $offer
+			|| 'available' !== $offer['state']
+			|| ! is_string( $offer['candidate_path'] )
+			|| ! is_string( $offer['token'] )
+			|| ! hash_equals( $offer['token'], $token )
+		) {
+			return $this->recoveryFailure( $current, 'recovery_candidate_changed', 'The recoverable storage candidate is no longer uniquely safe and authenticated. Review the current storage state again.' );
+		}
+
+		$config = $this->loadedWpConfigPath();
+		if ( null === $config ) {
+			return $this->recoveryFailure( $current, 'wp_config_unavailable', 'Booster could not safely identify the wp-config.php loaded by WordPress.' );
+		}
+
+		try {
+			$result = $this->retargetConfiguration( $config, $current, $offer['candidate_path'] );
+		} catch ( WpConfigPathWriteException $exception ) {
+			return $this->recoveryFailure(
+				$current,
+				$this->stableCode( $exception->reason(), 'recovery_write_failed' ),
+				$exception->getMessage()
+			);
+		} catch ( Throwable ) {
+			return $this->recoveryFailure( $current, 'recovery_write_failed', 'The recoverable storage path could not be adopted safely.' );
+		}
+
+		return false !== $result && $result->requiresNextRequestVerification()
+			? SecretsStorageProvisioningResult::pendingVerification( $offer['candidate_path'] )
+			: $this->recoveryFailure( $current, 'wp_config_verification_unavailable', 'Booster could not require a fresh WordPress configuration check.' );
+	}
+
 	protected function resolveCandidate(): ?string {
 		return $this->resolver->resolve(
 			$this->wordpressRoot(),
@@ -203,6 +310,22 @@ class SecretsStorageProvisioner {
 
 	protected function writeConfiguration( string $config, string $candidate ): WpConfigPathWriteResult {
 		return $this->writer->write( $config, $candidate );
+	}
+
+	protected function retargetConfiguration(
+		string $config,
+		string $current,
+		string $replacement
+	): WpConfigPathWriteResult|false {
+		return $this->writer->retargetOwnedDefinition( $config, $current, $replacement );
+	}
+
+	protected function recoveryCredentialsFit( string $candidate ): bool {
+		if ( null === $this->secrets ) {
+			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
+		}
+
+		return $this->secrets->recoveryCredentialsFitAt( $candidate );
 	}
 
 	protected function wordpressRoot(): string {
@@ -326,6 +449,95 @@ class SecretsStorageProvisioner {
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
 		}
+	}
+
+	/** @return list<array{candidate_path:string,token:string,safe:bool,fit:bool}> */
+	private function recoveryCandidates( string $current ): array {
+		$base = $this->automaticStorageBase( $current );
+		if ( null === $base || ! is_dir( $base ) || is_link( $base ) || ! stream_is_local( $base ) ) {
+			return array();
+		}
+
+		$entries = scandir( $base );
+		if ( false === $entries || count( $entries ) > self::RECOVERY_MAX_ENTRIES + 2 ) {
+			return array();
+		}
+
+		$candidates = array();
+		foreach ( $entries as $entry ) {
+			if ( ! is_string( $entry )
+				|| 1 !== preg_match( '/\A[a-f0-9]{16}\z/D', $entry )
+				|| dirname( $current ) === $base . '/' . $entry
+			) {
+				continue;
+			}
+
+			$candidate = $base . '/' . $entry . '/secrets.json';
+			try {
+				if ( null !== $this->inspectReadyPath( $candidate ) ) {
+					continue;
+				}
+				$fit      = $this->recoveryCredentialsFit( $candidate );
+				$revision = $this->recoveryRevision( $candidate );
+				if ( null === $revision ) {
+					continue;
+				}
+				$candidates[] = array(
+					'candidate_path' => $candidate,
+					'token'          => $revision,
+					'safe'           => $this->validateConfiguredCandidate( $candidate ),
+					'fit'            => $fit,
+				);
+			} catch ( Throwable ) {
+				continue;
+			}
+		}
+
+		return $candidates;
+	}
+
+	private function automaticStorageBase( string $current ): ?string {
+		$directory = dirname( $current );
+		$base      = dirname( $directory );
+
+		return 'secrets.json' === basename( $current )
+			&& 1 === preg_match( '/\A[a-f0-9]{16}\z/D', basename( $directory ) )
+			&& '.ran-booster' === basename( $base )
+			? $base
+			: null;
+	}
+
+	private function currentStoreIsEmpty( string $current ): bool {
+		return ! file_exists( $current )
+			&& ! is_link( $current )
+			&& ! file_exists( $current . '.lock' )
+			&& ! is_link( $current . '.lock' );
+	}
+
+	private function recoveryRevision( string $candidate ): ?string {
+		$parts = array( $candidate );
+		foreach ( array( dirname( $candidate ), $candidate, $candidate . '.lock' ) as $path ) {
+			$stat = lstat( $path );
+			if ( false === $stat ) {
+				return null;
+			}
+			foreach ( array( 'dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtime', 'ctime' ) as $key ) {
+				$parts[] = (string) $stat[ $key ];
+			}
+		}
+
+		return hash( 'sha256', implode( "\0", $parts ) );
+	}
+
+	private function recoveryFailure( ?string $current, string $code, string $message ): SecretsStorageProvisioningResult {
+		return null === $current
+			? SecretsStorageProvisioningResult::manualRequired( $code, $message )
+			: SecretsStorageProvisioningResult::storageNeedsAttention(
+				$current,
+				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL,
+				$code,
+				$message
+			);
 	}
 
 	/** @return array{code: string, message: string}|null */

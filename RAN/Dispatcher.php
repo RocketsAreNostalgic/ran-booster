@@ -142,6 +142,12 @@ class Dispatcher {
 				return;
 			}
 
+			if ( 'adopt-secure-storage' === $action ) {
+				$this->adoptSecureStorage( $request );
+
+				return;
+			}
+
 			if ( 'save-public-lookup-profile' === $action ) {
 				$this->managePublicLookupProfile( $request );
 
@@ -344,6 +350,62 @@ class Dispatcher {
 
 		// Keep a failed attempt local to this protected POST response. Paths and
 		// failure details never enter redirects, logs, transients or global notices.
+		$this->dashboard->setSecretsStorageProvisioningResult( $result );
+	}
+
+	/** @param array<string, mixed> $request */
+	private function adoptSecureStorage( array $request ): void {
+		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
+			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
+			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
+			return;
+		}
+		foreach ( array( 'manage_options', 'activate_plugins' ) as $capability ) {
+			if ( ! current_user_can( $capability ) ) {
+				wp_die( esc_html__( 'You do not have sufficient permissions to recover Booster storage.', 'ran-booster' ) );
+			}
+		}
+
+		check_admin_referer( 'ran-booster-adopt-secure-storage' );
+		$request = wp_unslash( $request );
+		$token   = is_string( $request['recovery_token'] ?? null )
+			? sanitize_text_field( $request['recovery_token'] )
+			: '';
+
+		try {
+			$result = null === $this->secretsStorage
+				? SecretsStorageProvisioningResult::manualRequired(
+					'provisioner_unavailable',
+					'Automatic storage recovery is unavailable.'
+				)
+				: $this->secretsStorage->adoptRecovery( $token );
+		} catch ( \Throwable $failure ) {
+			\RAN\Logging\BoosterLogger::logException(
+				'secrets storage recovery failed',
+				$failure,
+				array(
+					'diagnostic_id' => 'recovery_failed',
+					'event'         => 'secrets_storage_recovery_failed',
+					'operation'     => 'adopt_secure_storage',
+					'outcome_code'  => 'recovery_failed',
+					'source'        => 'admin',
+					'state'         => 'failed',
+					'step'          => 'adopt',
+				)
+			);
+			$result = SecretsStorageProvisioningResult::manualRequired(
+				'recovery_failed',
+				'Automatic storage recovery could not be completed.'
+			);
+		}
+
+		if ( $result->requiresNextRequestVerification() ) {
+			$adminUrl = is_multisite()
+				? network_admin_url( 'admin.php' )
+				: admin_url( 'admin.php' );
+			$this->redirectTo( $adminUrl . '?page=ran-booster&tab=overview' );
+		}
+
 		$this->dashboard->setSecretsStorageProvisioningResult( $result );
 	}
 

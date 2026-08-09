@@ -37,6 +37,9 @@ $storagePathSourceLabels           = array(
 	'automatic' => __( 'Booster default', 'ran-booster' ),
 	'manual'    => __( 'Custom wp-config.php path', 'ran-booster' ),
 );
+$storageRecovery                   = null === $secretsStorage || ! is_array( $secretsStorage['recovery'] ?? null )
+	? null
+	: $secretsStorage['recovery'];
 $credentialStorageDocumentationUrl = $onboarding['documentation_url'] . '#ran-booster-credential-storage';
 $storageDetailsOpen                = in_array(
 	$storageStatus,
@@ -49,6 +52,7 @@ $hasStorageDetails                 = null !== $secretsStorage
 	&& (
 		null !== $secretsStorage['candidate_path']
 		|| $secretsStorage['can_provision']
+		|| null !== $storageRecovery
 		|| null !== $secretsStorage['config_alternatives']
 		|| $showsStorageOverride
 	);
@@ -160,6 +164,27 @@ $hasStorageDetails                 = null !== $secretsStorage
 								<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
 								<button type="submit" class="button button-primary"><?php esc_html_e( 'Create secure storage', 'ran-booster' ); ?></button>
 							</form>
+						<?php } ?>
+
+						<?php if ( null !== $storageRecovery ) { ?>
+							<div class="ran-booster-onboarding__storage-recovery">
+								<h4><?php esc_html_e( 'Existing Booster storage found', 'ran-booster' ); ?></h4>
+								<p><?php echo esc_html( $storageRecovery['message'] ); ?></p>
+								<?php if ( $storageRecovery['can_adopt'] ) { ?>
+									<?php if ( null !== $storageRecovery['candidate_directory'] ) { ?>
+										<p class="description"><strong><?php esc_html_e( 'Verified storage directory:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storageRecovery['candidate_directory'] ); ?></code></p>
+									<?php } ?>
+									<p class="description"><?php esc_html_e( 'This proves decryption, canonical storage and current provider credential shape, including GitHub token prefixes. It does not contact the provider or prove that a token is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files.', 'ran-booster' ); ?></p>
+									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secretsStorage['action_url'] ); ?>">
+										<?php wp_nonce_field( 'ran-booster-adopt-secure-storage' ); ?>
+										<input type="hidden" name="ran_booster[action]" value="adopt-secure-storage">
+										<input type="hidden" name="ran_booster[recovery_token]" value="<?php echo esc_attr( $storageRecovery['token'] ); ?>">
+										<button type="submit" class="button button-primary"><?php esc_html_e( 'Adopt existing storage', 'ran-booster' ); ?></button>
+									</form>
+								<?php } else { ?>
+									<p class="description"><?php esc_html_e( 'Automatic adoption remains disabled. Booster will not bypass private-path checks or rewrite an operator-managed storage definition.', 'ran-booster' ); ?></p>
+								<?php } ?>
+							</div>
 						<?php } ?>
 
 						<?php if ( $showsStorageOverride ) { ?>

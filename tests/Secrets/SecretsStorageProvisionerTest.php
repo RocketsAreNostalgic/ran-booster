@@ -401,6 +401,75 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringNotContainsString( $this->root, $result->message() );
 	}
 
+	public function testUniqueAuthenticatedProviderFitSiblingCanBeAdoptedByOpaqueRevision(): void {
+		$old = $this->recoveryStore( 'abcdef0123456789' );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $this->candidate;
+		$status                  = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $status->status() );
+		$recovery = $provisioner->recoveryState( $status );
+		self::assertIsArray( $recovery );
+		self::assertSame( 'available', $recovery['state'] );
+		self::assertSame( $old, $recovery['candidate_path'] );
+		self::assertMatchesRegularExpression( '/\A[a-f0-9]{64}\z/D', (string) $recovery['token'] );
+
+		$result = $provisioner->adoptRecovery( (string) $recovery['token'] );
+		self::assertTrue( $result->requiresNextRequestVerification() );
+		$config = (string) file_get_contents( $this->configPath );
+		self::assertStringContainsString( $old, $config );
+		self::assertStringNotContainsString( $this->candidate, $config );
+		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
+	}
+
+	public function testAuthenticatedUnsafeSiblingIsReportedButCannotBeAdopted(): void {
+		$this->recoveryStore( 'abcdef0123456789' );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner              = $this->provisioner();
+		$provisioner->configured  = $this->candidate;
+		$provisioner->forceUnsafe = true;
+
+		$recovery = $provisioner->recoveryState( $provisioner->status() );
+
+		self::assertIsArray( $recovery );
+		self::assertSame( 'blocked', $recovery['state'] );
+		self::assertNull( $recovery['candidate_path'] );
+		self::assertNull( $recovery['token'] );
+		self::assertStringContainsString( 'does not pass', $recovery['message'] );
+	}
+
+	public function testAmbiguousOrUnauthenticatedSiblingDoesNotProduceAnAdoptionToken(): void {
+		$this->recoveryStore( 'abcdef0123456789' );
+		$this->recoveryStore( 'fedcba9876543210' );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $this->candidate;
+
+		$ambiguous = $provisioner->recoveryState( $provisioner->status() );
+		self::assertIsArray( $ambiguous );
+		self::assertSame( 'ambiguous', $ambiguous['state'] );
+		self::assertNull( $ambiguous['token'] );
+
+		$provisioner->recoveryAuthenticationFails = true;
+		self::assertNull( $provisioner->recoveryState( $provisioner->status() ) );
+	}
+
+	public function testAuthenticatedProviderUnfitSiblingIsVisibleButNotAdoptable(): void {
+		$this->recoveryStore( 'abcdef0123456789' );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$provisioner                         = $this->provisioner();
+		$provisioner->configured             = $this->candidate;
+		$provisioner->recoveryCredentialsFit = false;
+
+		$recovery = $provisioner->recoveryState( $provisioner->status() );
+
+		self::assertIsArray( $recovery );
+		self::assertSame( 'blocked', $recovery['state'] );
+		self::assertNull( $recovery['token'] );
+		self::assertStringContainsString( 'do not pass their current provider policy', $recovery['message'] );
+	}
+
 	private function provisioner(): TestSecretsStorageProvisioner {
 		$provisioner                = new TestSecretsStorageProvisioner( $this->temporaryBoundary );
 		$provisioner->root          = $this->wordpressRoot;
@@ -412,6 +481,17 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->localPlatform = true;
 
 		return $provisioner;
+	}
+
+	private function recoveryStore( string $fingerprint ): string {
+		$path = dirname( dirname( $this->candidate ) ) . '/' . $fingerprint . '/secrets.json';
+		self::assertTrue( mkdir( dirname( $path ), 0700, true ) );
+		self::assertNotFalse( file_put_contents( $path, '{}' ) );
+		self::assertTrue( chmod( $path, 0600 ) );
+		self::assertNotFalse( file_put_contents( $path . '.lock', '' ) );
+		self::assertTrue( chmod( $path . '.lock', 0600 ) );
+
+		return $path;
 	}
 
 	private function removeTree( string $path ): void {
@@ -437,21 +517,26 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public string $root      = '';
 	public string $candidate = '';
 	/** @var list<string> */
-	public array $included                = array();
-	public string|false|null $configured  = null;
-	public bool $sodium                   = true;
-	public bool $multisite                = false;
-	public bool $localPlatform            = true;
-	public bool $resolverCalled           = false;
-	public bool $probeCalled              = false;
-	public bool $writerCalled             = false;
-	public bool $probeFails               = false;
-	public ?string $writerFailureCode     = null;
-	public bool $healthy                  = false;
-	public bool $healthFailure            = false;
-	public string $healthFailureMessage   = 'Fixture storage failure.';
-	public string $healthFailureReason    = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
-	public bool $readRuntimeConfiguration = false;
+	public array $included                   = array();
+	public string|false|null $configured     = null;
+	public bool $sodium                      = true;
+	public bool $multisite                   = false;
+	public bool $localPlatform               = true;
+	public bool $resolverCalled              = false;
+	public bool $probeCalled                 = false;
+	public bool $writerCalled                = false;
+	public bool $probeFails                  = false;
+	public ?string $writerFailureCode        = null;
+	public bool $healthy                     = false;
+	public bool $healthFailure               = false;
+	public string $healthFailureMessage      = 'Fixture storage failure.';
+	public string $healthFailureReason       = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
+	public bool $readRuntimeConfiguration    = false;
+	public bool $forceUnsafe                 = false;
+	public bool $recoveryAuthenticationFails = false;
+	public bool $recoveryCredentialsFit      = true;
+	/** @var list<string> */
+	public array $authenticatedCandidates = array();
 
 	public function __construct( string $temporaryBoundary ) {
 		parent::__construct(
@@ -471,6 +556,19 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		$this->probeCalled = true;
 
 		return ! $this->probeFails && parent::probeCandidate( $candidate );
+	}
+
+	protected function validateConfiguredCandidate( string $candidate ): bool {
+		return ! $this->forceUnsafe && parent::validateConfiguredCandidate( $candidate );
+	}
+
+	protected function recoveryCredentialsFit( string $candidate ): bool {
+		$this->authenticatedCandidates[] = $candidate;
+		if ( $this->recoveryAuthenticationFails ) {
+			throw new \RuntimeException( 'Provider credential fitness failed.' );
+		}
+
+		return $this->recoveryCredentialsFit;
 	}
 
 	protected function writeConfiguration( string $config, string $candidate ): WpConfigPathWriteResult {

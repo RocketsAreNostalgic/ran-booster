@@ -104,5 +104,47 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertNull( $payload['manual_preflight'] );
 		self::assertSame( array(), $payload['directory_commands'] );
 		self::assertNull( $payload['config_alternatives'] );
+		self::assertNull( $payload['recovery'] );
+	}
+
+	public function testBuildsAnAdoptionOfferOnlyForAnAvailableRecoveryState(): void {
+		$recoveryPath = '/private/.ran-booster/abcdef0123456789/secrets.json';
+		$payload      = ( new SecretsStorageSetupPresenter() )->build(
+			SecretsStorageProvisioningResult::storageNeedsAttention(
+				'/private/.ran-booster/0123456789abcdef/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			),
+			'/admin',
+			'',
+			true,
+			array(
+				'state'          => 'available',
+				'message'        => 'Authenticated prior storage found.',
+				'candidate_path' => $recoveryPath,
+				'token'          => str_repeat( 'a', 64 ),
+			)
+		);
+
+		self::assertTrue( $payload['recovery']['can_adopt'] );
+		self::assertSame( $recoveryPath, $payload['recovery']['candidate_path'] );
+		self::assertSame( dirname( $recoveryPath ), $payload['recovery']['candidate_directory'] );
+
+		$blocked = ( new SecretsStorageSetupPresenter() )->build(
+			SecretsStorageProvisioningResult::storageNeedsAttention(
+				'/private/current/secrets.json',
+				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL
+			),
+			'/admin',
+			'',
+			true,
+			array(
+				'state'          => 'blocked',
+				'message'        => 'Unsafe prior storage found.',
+				'candidate_path' => null,
+				'token'          => null,
+			)
+		);
+		self::assertFalse( $blocked['recovery']['can_adopt'] );
+		self::assertNull( $blocked['recovery']['candidate_path'] );
 	}
 }

@@ -124,6 +124,33 @@ class SecretsFile {
 	}
 
 	/**
+	 * Authenticate and validate provider credential fitness at a discovered path.
+	 *
+	 * This does not authorize the filesystem location. Recovery callers must
+	 * independently verify the candidate path and its metadata first.
+	 * Authentication failures throw; provider-fitness failures return false.
+	 */
+	public function recoveryCredentialsFitAt( string $path ): bool {
+		$candidate = new self(
+			$path,
+			$this->constants,
+			$this->providerPolicies,
+			$this->keyStore,
+			$this->codec,
+			$this->locationResolver,
+			$this->availability
+		);
+		$document  = $candidate->fileDocument();
+		try {
+			$candidate->assertRecoveryCredentialFitness( $document );
+
+			return true;
+		} catch ( \Throwable ) {
+			return false;
+		}
+	}
+
+	/**
 	 * Report whether managed storage contains an authenticated document.
 	 *
 	 * A configured but pristine location returns false. Incomplete, unsafe or
@@ -1525,6 +1552,30 @@ class SecretsFile {
 		}
 
 		return $validated;
+	}
+
+	/** @param array<string, mixed> $document */
+	private function assertRecoveryCredentialFitness( #[\SensitiveParameter] array $document ): void {
+		foreach ( $document[ self::CREDENTIALS ] as $provider => $records ) {
+			$policy = $this->providerPolicies->findCredentialPolicy( $provider );
+			if ( null === $policy ) {
+				throw new RuntimeException( 'Stored credential fitness could not be verified for an unavailable provider.' );
+			}
+
+			foreach ( $records as $id => $record ) {
+				$validated = $this->revalidateStoredCredential( $provider, $id, $record );
+				if ( $policy instanceof SubmittedCredentialValidator ) {
+					$policy->validateSubmittedCredential(
+						array(
+							'label'         => $validated['label'],
+							'kind'          => $validated['kind'],
+							'configuration' => $validated['configuration'],
+						),
+						$validated['secret']
+					);
+				}
+			}
+		}
 	}
 
 	/** @param array<string, mixed> $record */

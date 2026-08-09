@@ -152,6 +152,40 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Manual setup instructions', $html );
 	}
 
+	public function testRendersAPathlessTokenBoundStorageAdoptionForm(): void {
+		$token = str_repeat( 'b', 64 );
+		$html  = $this->renderView(
+			null,
+			array(
+				'status'              => 'storage_needs_attention',
+				'reason_code'         => 'storage_directory_unavailable',
+				'message'             => 'Current storage is missing.',
+				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/secrets.json',
+				'path_source'         => 'automatic',
+				'can_provision'       => false,
+				'action_url'          => '/admin',
+				'manual_preflight'    => null,
+				'directory_commands'  => array(),
+				'config_alternatives' => null,
+				'recovery'            => array(
+					'state'               => 'available',
+					'message'             => 'Authenticated prior storage found.',
+					'candidate_path'      => '/private/.ran-booster/abcdef0123456789/secrets.json',
+					'candidate_directory' => '/private/.ran-booster/abcdef0123456789',
+					'token'               => $token,
+					'can_adopt'           => true,
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'Existing Booster storage found', $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="adopt-secure-storage"', $html );
+		self::assertStringContainsString( 'value="ran-booster-adopt-secure-storage"', $html );
+		self::assertStringContainsString( 'name="ran_booster[recovery_token]" value="' . $token . '"', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[candidate_path]"', $html );
+		self::assertStringContainsString( 'including GitHub token prefixes', $html );
+	}
+
 	public function testHealthyAndBrokenStorageUseTruthfulStatuses(): void {
 		$healthy = $this->renderStorageStatus(
 			'storage_healthy',

@@ -98,6 +98,43 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertSame( array(), $this->temporaryFiles() );
 	}
 
+	public function testItAtomicallyRetargetsOnlyTheOwnedDefinitionAndPreservesMetadata(): void {
+		$replacement = $this->directory . '/private/previous/secrets.json';
+		self::assertTrue( chmod( $this->configPath, 0640 ) );
+		$writer = new WpConfigSecretsPathWriter();
+		$writer->write( $this->configPath, $this->sidecarPath );
+		$owner = fileowner( $this->configPath );
+		$group = filegroup( $this->configPath );
+
+		$result  = $writer->retargetOwnedDefinition( $this->configPath, $this->sidecarPath, $replacement );
+		$written = (string) file_get_contents( $this->configPath );
+
+		self::assertTrue( $result->requiresNextRequestVerification() );
+		self::assertStringNotContainsString( $this->sidecarPath, $written );
+		self::assertStringContainsString( $replacement, $written );
+		self::assertSame( 0640, fileperms( $this->configPath ) & 0777 );
+		self::assertSame( $owner, fileowner( $this->configPath ) );
+		self::assertSame( $group, filegroup( $this->configPath ) );
+		self::assertSame( array(), $this->temporaryFiles() );
+	}
+
+	public function testRetargetLeavesManualDefinitionUntouched(): void {
+		$config = "<?php\n"
+			. "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '" . $this->sidecarPath . "' );\n"
+			. "/* That's all, stop editing! Happy publishing. */\n";
+		$this->writeConfig( $config );
+
+		self::assertFalse(
+			( new WpConfigSecretsPathWriter() )->retargetOwnedDefinition(
+				$this->configPath,
+				$this->sidecarPath,
+				$this->directory . '/private/previous/secrets.json'
+			)
+		);
+		self::assertSame( $config, file_get_contents( $this->configPath ) );
+		self::assertFileDoesNotExist( $this->configPath . '.ran-booster.lock' );
+	}
+
 	public function testRemovalPreservesCrLfLineEndingsAndMatchesTheDecodedActivePath(): void {
 		$config  = str_replace( "\n", "\r\n", $this->validConfig() );
 		$sidecar = $this->directory . "/private/agency's\\secrets.json";

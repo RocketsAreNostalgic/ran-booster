@@ -61,7 +61,9 @@ final class PrivateLocationCandidateResolver {
 			}
 		}
 
-		return $candidate;
+		return $this->validateConfigured( $candidate, $wordpressRoot, $contentDir, $pluginDir, $documentRoot )
+			? $candidate
+			: null;
 	}
 
 	/**

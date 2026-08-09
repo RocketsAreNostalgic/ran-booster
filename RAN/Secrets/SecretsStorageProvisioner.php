@@ -44,16 +44,17 @@ class SecretsStorageProvisioner {
 			);
 		}
 		if ( is_string( $configured ) ) {
-			if ( ! $this->validateConfiguredCandidate( $configured ) ) {
+			$pathIsSafe = $this->validateConfiguredCandidate( $configured );
+			$source     = $this->configuredPathSource( $configured, $pathIsSafe );
+			if ( ! $pathIsSafe ) {
 				return SecretsStorageProvisioningResult::storageNeedsAttention(
 					$configured,
-					SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL,
+					$source,
 					'configured_path_unsafe',
 					'The resolved configured storage directory is not a verified private location. It may be inside the public web root, use a symbolic link or cross another unsafe path boundary. Choose a real local directory outside the public web root.'
 				);
 			}
 
-			$source      = $this->configuredPathSource( $configured );
 			$pathFailure = $this->inspectReadyPath( $configured );
 			if ( null !== $pathFailure ) {
 				return SecretsStorageProvisioningResult::storageNeedsAttention(
@@ -140,6 +141,13 @@ class SecretsStorageProvisioner {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'filesystem_probe_failed',
 				'The private storage filesystem did not pass Booster\'s safety checks.',
+				$candidate
+			);
+		}
+		if ( ! $this->validateConfiguredCandidate( $candidate ) ) {
+			return SecretsStorageProvisioningResult::manualRequired(
+				'candidate_path_unsafe',
+				'The private storage location changed or did not pass Booster\'s final path-safety check.',
 				$candidate
 			);
 		}
@@ -441,14 +449,20 @@ class SecretsStorageProvisioner {
 		return null;
 	}
 
-	private function configuredPathSource( string $configured ): string {
+	private function configuredPathSource( string $configured, bool $pathIsSafe ): string {
 		try {
-			return $configured === $this->resolveCandidate()
-				? SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
-				: SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
+			$config = $this->loadedWpConfigPath();
+			if ( null !== $config && $this->writer->hasOwnedDefinition( $config, $configured ) ) {
+				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
+			}
+			if ( $pathIsSafe && $configured === $this->resolveCandidate() ) {
+				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
+			}
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
 		}
+
+		return SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
 	}
 
 	/** @return list<array{candidate_path:string,token:string,safe:bool,fit:bool}> */

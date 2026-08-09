@@ -49,7 +49,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertSame(
 			"<?php\n\ndefine( 'DB_NAME', 'example' );\n\n"
 			. "/* RAN Booster encrypted secrets storage. */\n"
-			. "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '" . $this->sidecarPath . "' );\n\n"
+			. "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->sidecarPath ) . "' );\n\n"
 			. "/* That's all, stop editing! Happy publishing. */\n",
 			file_get_contents( $this->configPath )
 		);
@@ -58,7 +58,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 	public function testItPreservesCrLfLineEndingsAndSafelyEncodesThePath(): void {
 		$config  = str_replace( "\n", "\r\n", $this->validConfig() );
-		$sidecar = $this->directory . "/private/agency's\\secrets.json";
+		$sidecar = $this->directory . "/private/agency's\\directory/secrets.json";
 		$this->writeConfig( $config );
 
 		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $sidecar );
@@ -66,7 +66,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$written = file_get_contents( $this->configPath );
 		self::assertIsString( $written );
 		self::assertStringNotContainsString( "\n", str_replace( "\r\n", '', $written ) );
-		self::assertStringContainsString( "agency\\'s\\\\secrets.json' );\r\n", $written );
+		self::assertStringContainsString( "agency\\'s\\\\directory' );\r\n", $written );
 		token_get_all( $written, TOKEN_PARSE );
 	}
 
@@ -80,6 +80,21 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			fn() => $writer->write( $this->configPath, $this->sidecarPath )
 		);
 		self::assertSame( $written, file_get_contents( $this->configPath ) );
+	}
+
+	public function testSuccessfulWriteInvalidatesTheWpConfigOpcodeCache(): void {
+		$writer = new class() extends WpConfigSecretsPathWriter {
+			/** @var list<string> */
+			public array $invalidated = array();
+
+			protected function invalidateOpcodeCache( string $configPath ): void {
+				$this->invalidated[] = $configPath;
+			}
+		};
+
+		$writer->write( $this->configPath, $this->sidecarPath );
+
+		self::assertSame( array( $this->configPath ), $writer->invalidated );
 	}
 
 	public function testItRemovesOnlyTheOwnedDefinitionAndPreservesSurroundingBytesAndMetadata(): void {
@@ -110,8 +125,11 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$written = (string) file_get_contents( $this->configPath );
 
 		self::assertTrue( $result->requiresNextRequestVerification() );
-		self::assertStringNotContainsString( $this->sidecarPath, $written );
-		self::assertStringContainsString( $replacement, $written );
+		self::assertStringNotContainsString(
+			"define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->sidecarPath ) . "' );",
+			$written
+		);
+		self::assertStringContainsString( dirname( $replacement ), $written );
 		self::assertSame( 0640, fileperms( $this->configPath ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->configPath ) );
 		self::assertSame( $group, filegroup( $this->configPath ) );
@@ -165,6 +183,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertTrue(
 			$writer->assertOwnedDefinitionRemovable( $this->configPath, $this->sidecarPath )
 		);
+		self::assertTrue( $writer->hasOwnedDefinition( $this->configPath, $this->sidecarPath ) );
 		self::assertSame( $written, file_get_contents( $this->configPath ) );
 	}
 
@@ -198,7 +217,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 	public function testRemovalRefusesDuplicateMatchingOwnedDefinitions(): void {
 		$block  = "/* RAN Booster encrypted secrets storage. */\n"
-			. "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '" . $this->sidecarPath . "' );\n\n";
+			. "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->sidecarPath ) . "' );\n\n";
 		$config = "<?php\n" . $block . $block . "/* That's all, stop editing! Happy publishing. */\n";
 		$this->writeConfig( $config );
 
@@ -322,7 +341,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			fn() => $writer->write( $this->configPath, $this->sidecarPath )
 		);
 		self::assertNotSame( $original, file_get_contents( $this->configPath ) );
-		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', file_get_contents( $this->configPath ) );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', file_get_contents( $this->configPath ) );
 	}
 
 	public function testRemovalDetectsAConcurrentConfigChangeBeforeReplacement(): void {
@@ -337,7 +356,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			fn() => $writer->removeOwnedDefinition( $this->configPath, $this->sidecarPath )
 		);
 		self::assertStringContainsString(
-			'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE',
+			'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR',
 			(string) file_get_contents( $this->configPath )
 		);
 		self::assertStringContainsString( '// concurrent edit', (string) file_get_contents( $this->configPath ) );
@@ -498,7 +517,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertSame( 0640, fileperms( $this->configPath ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->configPath ) );
 		self::assertSame( $group, filegroup( $this->configPath ) );
-		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', (string) file_get_contents( $this->configPath ) );
+		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', (string) file_get_contents( $this->configPath ) );
 		self::assertSame( array(), $this->temporaryFiles() );
 	}
 

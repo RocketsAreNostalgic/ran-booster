@@ -11,7 +11,7 @@ use ParseError;
 use Throwable;
 
 /**
- * Adds Booster's fixed encrypted-sidecar definition to a known wp-config.php.
+ * Adds Booster's fixed encrypted-sidecar directory to a known wp-config.php.
  *
  * This class deliberately does not discover the config path or the sidecar
  * location. Callers must supply both after completing the separate location
@@ -19,12 +19,13 @@ use Throwable;
  */
 class WpConfigSecretsPathWriter {
 
-	private const CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
-	private const OWNED_MARKER  = '/* RAN Booster encrypted secrets storage. */';
-	private const MARKER        = "/* That's all, stop editing! Happy publishing. */";
-	private const MAX_BYTES     = 1048576;
-	private const LOCK_SUFFIX   = '.ran-booster.lock';
-	private const TEMP_PREFIX   = '.ran-booster-wp-config-';
+	private const DIRECTORY_CONSTANT_NAME   = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
+	private const LEGACY_FILE_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
+	private const OWNED_MARKER              = '/* RAN Booster encrypted secrets storage. */';
+	private const MARKER                    = "/* That's all, stop editing! Happy publishing. */";
+	private const MAX_BYTES                 = 1048576;
+	private const LOCK_SUFFIX               = '.ran-booster.lock';
+	private const TEMP_PREFIX               = '.ran-booster-wp-config-';
 
 	public function write( string $configPath, string $sidecarPath ): WpConfigPathWriteResult {
 		$this->edit( $configPath, $sidecarPath, false, null );
@@ -66,18 +67,30 @@ class WpConfigSecretsPathWriter {
 	 * @return bool Whether the exact owned definition is present.
 	 */
 	public function assertOwnedDefinitionRemovable( string $configPath, string $sidecarPath ): bool {
-		$this->assertAbsoluteSafePath( $configPath, 'config_path_invalid' );
-		$this->assertAbsoluteSafePath( $sidecarPath, 'sidecar_path_invalid' );
-		if ( $configPath === $sidecarPath ) {
-			$this->fail( 'sidecar_path_invalid', 'The encrypted secrets path is not safe for automatic configuration.' );
+		if ( ! $this->hasOwnedDefinition( $configPath, $sidecarPath ) ) {
+			return false;
 		}
 
 		$directory = dirname( $configPath );
 		if ( ! is_dir( $directory ) || is_link( $directory ) || ! is_writable( $directory ) ) {
 			$this->fail( 'config_directory_invalid', 'The WordPress configuration directory is not safe and writable.' );
 		}
+		$this->inspectConfigPath( $configPath );
 
-		$preflight = $this->inspectConfigPath( $configPath );
+		return true;
+	}
+
+	/**
+	 * Report whether the exact directory definition was inserted by this writer.
+	 */
+	public function hasOwnedDefinition( string $configPath, string $sidecarPath ): bool {
+		$this->assertAbsoluteSafePath( $configPath, 'config_path_invalid' );
+		$this->assertAbsoluteSafePath( $sidecarPath, 'sidecar_path_invalid' );
+		if ( $configPath === $sidecarPath ) {
+			$this->fail( 'sidecar_path_invalid', 'The encrypted secrets path is not safe for automatic configuration.' );
+		}
+
+		$preflight = $this->inspectConfigPath( $configPath, false );
 		$candidate = $this->buildRemovalCandidate( $preflight['contents'], $sidecarPath );
 		if ( null === $candidate ) {
 			return false;
@@ -269,7 +282,7 @@ class WpConfigSecretsPathWriter {
 		}
 
 		$definition  = self::OWNED_MARKER . $lineEnding;
-		$definition .= "define( '" . self::CONSTANT_NAME . "', " . $this->exportPhpString( $sidecarPath ) . ' );' . $lineEnding;
+		$definition .= "define( '" . self::DIRECTORY_CONSTANT_NAME . "', " . $this->exportPhpString( dirname( $sidecarPath ) ) . ' );' . $lineEnding;
 		$definition .= $lineEnding;
 
 		return substr( $original, 0, $markerAt[0] ) . $definition . substr( $original, $markerAt[0] );
@@ -309,7 +322,7 @@ class WpConfigSecretsPathWriter {
 
 	private function ownedDefinitionBlock( string $sidecarPath, string $lineEnding ): string {
 		return self::OWNED_MARKER . $lineEnding
-			. "define( '" . self::CONSTANT_NAME . "', " . $this->exportPhpString( $sidecarPath ) . ' );' . $lineEnding
+			. "define( '" . self::DIRECTORY_CONSTANT_NAME . "', " . $this->exportPhpString( dirname( $sidecarPath ) ) . ' );' . $lineEnding
 			. $lineEnding;
 	}
 
@@ -369,8 +382,11 @@ class WpConfigSecretsPathWriter {
 				continue;
 			}
 			$name = $this->literalDefineName( $tokens, $index );
-			if ( self::CONSTANT_NAME === $name ) {
+			if ( self::DIRECTORY_CONSTANT_NAME === $name ) {
 				++$definitions;
+			}
+			if ( self::LEGACY_FILE_CONSTANT_NAME === $name ) {
+				$this->fail( 'candidate_parse_failed', 'The edited WordPress configuration retained a legacy encrypted secrets definition.' );
 			}
 		}
 		if ( 1 !== $definitions ) {
@@ -447,6 +463,7 @@ class WpConfigSecretsPathWriter {
 				$this->attemptRollback( $path, $original, $replaced );
 				$this->fail( 'replacement_readback_failed', 'The installed WordPress configuration failed verification.' );
 			}
+			$this->invalidateOpcodeCache( $path );
 		} catch ( WpConfigPathWriteException $exception ) {
 			if ( null !== $replaced ) {
 				$this->attemptRollback( $path, $original, $replaced );
@@ -549,14 +566,21 @@ class WpConfigSecretsPathWriter {
 				$constantAt = $index + 1;
 				$this->skipWhitespace( $tokens, $constantAt );
 				$name = $tokens[ $constantAt ] ?? null;
-				if ( is_array( $name ) && T_STRING === $name[0] && self::CONSTANT_NAME === $name[1] ) {
+				if ( is_array( $name )
+					&& T_STRING === $name[0]
+					&& in_array( $name[1], array( self::DIRECTORY_CONSTANT_NAME, self::LEGACY_FILE_CONSTANT_NAME ), true )
+				) {
 					return true;
 				}
 			}
 			if ( ! is_array( $token ) || T_STRING !== $token[0] || 0 !== strcasecmp( $token[1], 'define' ) ) {
 				continue;
 			}
-			if ( self::CONSTANT_NAME === $this->literalDefineName( $tokens, $index ) ) {
+			if ( in_array(
+				$this->literalDefineName( $tokens, $index ),
+				array( self::DIRECTORY_CONSTANT_NAME, self::LEGACY_FILE_CONSTANT_NAME ),
+				true
+			) ) {
 				return true;
 			}
 		}
@@ -738,6 +762,12 @@ class WpConfigSecretsPathWriter {
 	}
 
 	protected function beforeFinalConfigCheck( string $configPath ): void {
+	}
+
+	protected function invalidateOpcodeCache( string $configPath ): void {
+		if ( function_exists( 'opcache_invalidate' ) ) {
+			opcache_invalidate( $configPath, true );
+		}
 	}
 
 	/**

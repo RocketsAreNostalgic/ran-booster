@@ -52,7 +52,31 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 				$this->root . '/account/site/public'
 			)
 		);
+		self::assertTrue(
+			$resolver->validateConfigured(
+				(string) $candidate,
+				$this->root . '/account/site/public',
+				$this->root . '/account/site/public/wp-content',
+				$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+				$this->root . '/account/site/public'
+			)
+		);
 		self::assertDirectoryDoesNotExist( $this->root . '/account/.ran-booster' );
+	}
+
+	public function testNeverSuggestsAPathThatFailsTheConfiguredAncestorPolicy(): void {
+		$this->remove( $this->root . '/account/site/.git' );
+		self::assertTrue( chmod( $this->root . '/account', 0770 ) );
+		$resolver = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+
+		self::assertNull(
+			$resolver->resolve(
+				$this->root . '/account/site/public',
+				$this->root . '/account/site/public/wp-content',
+				$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+				$this->root . '/account/site/public'
+			)
+		);
 	}
 
 	public function testRejectsUnrelatedOrSymlinkedBoundaries(): void {

@@ -84,7 +84,11 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertDirectoryExists( dirname( $this->candidate ) );
 		self::assertFileDoesNotExist( $this->candidate );
 		self::assertStringContainsString(
-			"define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '" . $this->candidate . "' );",
+			"define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->candidate ) . "' );",
+			(string) file_get_contents( $this->configPath )
+		);
+		self::assertStringNotContainsString(
+			'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE',
 			(string) file_get_contents( $this->configPath )
 		);
 
@@ -308,6 +312,19 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertFalse( $provisioner->resolverCalled );
 	}
 
+	public function testUnsafeBoosterOwnedDirectoryDefinitionIsAttributedToAutomaticSetup(): void {
+		$configured = $this->wordpressRoot . '/private/secrets.json';
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $configured );
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $configured;
+
+		$result = $provisioner->status();
+
+		self::assertSame( 'configured_path_unsafe', $result->code() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $result->pathSource() );
+		self::assertFalse( $provisioner->resolverCalled );
+	}
+
 	public function testManualOverrideRejectsSymlinkedComponentsAndUnsafeExistingTarget(): void {
 		$actual = $this->root . '/manual-actual';
 		$link   = $this->root . '/manual-link';
@@ -390,6 +407,23 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringNotContainsString( $this->root, $result->message() );
 	}
 
+	public function testCandidateIsRevalidatedAfterProbeBeforeWpConfigMutation(): void {
+		$provisioner                   = $this->provisioner();
+		$provisioner->unsafeAfterProbe = true;
+
+		$result = $provisioner->provision();
+
+		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
+		self::assertSame( 'candidate_path_unsafe', $result->code() );
+		self::assertTrue( $provisioner->probeCalled );
+		self::assertFalse( $provisioner->writerCalled );
+		self::assertStringNotContainsString( $this->root, $result->message() );
+		self::assertStringNotContainsString(
+			'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR',
+			(string) file_get_contents( $this->configPath )
+		);
+	}
+
 	public function testWriterFailureIsReducedToItsStableNonPathBearingReason(): void {
 		$provisioner                    = $this->provisioner();
 		$provisioner->writerFailureCode = 'config_changed';
@@ -418,8 +452,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$result = $provisioner->adoptRecovery( (string) $recovery['token'] );
 		self::assertTrue( $result->requiresNextRequestVerification() );
 		$config = (string) file_get_contents( $this->configPath );
-		self::assertStringContainsString( $old, $config );
-		self::assertStringNotContainsString( $this->candidate, $config );
+		self::assertStringContainsString( dirname( $old ), $config );
+		self::assertStringNotContainsString( dirname( $this->candidate ), $config );
 		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
 	}
 
@@ -533,6 +567,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public string $healthFailureReason       = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
 	public bool $readRuntimeConfiguration    = false;
 	public bool $forceUnsafe                 = false;
+	public bool $unsafeAfterProbe            = false;
 	public bool $recoveryAuthenticationFails = false;
 	public bool $recoveryCredentialsFit      = true;
 	/** @var list<string> */
@@ -559,7 +594,9 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	}
 
 	protected function validateConfiguredCandidate( string $candidate ): bool {
-		return ! $this->forceUnsafe && parent::validateConfiguredCandidate( $candidate );
+		return ! $this->forceUnsafe
+			&& ! ( $this->unsafeAfterProbe && $this->probeCalled )
+			&& parent::validateConfiguredCandidate( $candidate );
 	}
 
 	protected function recoveryCredentialsFit( string $candidate ): bool {

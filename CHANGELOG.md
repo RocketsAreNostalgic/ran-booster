@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-beta.11](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-08-09)
+
+
+### Features
+
+* recover migrated credential storage ([e19ea80](https://github.com/RocketsAreNostalgic/ran-booster/commit/e19ea80affd3a18095ade0ff799e76134076026e))
+
+
+### Bug Fixes
+
+* align automatic secrets directory setup ([4e55bf9](https://github.com/RocketsAreNostalgic/ran-booster/commit/4e55bf9fdd964861def033bbb549a517f6295c38))
+* **credentials:** make secret validation actionable ([cc21753](https://github.com/RocketsAreNostalgic/ran-booster/commit/cc21753e3cdabfc0bd29253f657e1a945b8bb315))
+* **webhooks:** clarify secret target entry ([7530c8b](https://github.com/RocketsAreNostalgic/ran-booster/commit/7530c8b1c0a0610db406eb798b880e9910ca9aeb))
+
 ## [1.0.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-08-08)
 
 

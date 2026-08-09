@@ -122,6 +122,22 @@ final class RanBoosterCorePackageExecutorSmoke {
 		$this->assertSuccess( $this->withScrapeResponse( false, static fn () => $executor->updatePlugin( $downgrade, $slug, null, $identifier ) ) );
 		$this->assertPlugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
+		// Production processes one deployment per request, while this smoke performs
+		// several. Complete WordPress's deferred request-shutdown backup cleanup so
+		// a later failure cannot restore a stale package from an earlier operation.
+		$backupDeleted = ( new Plugin_Upgrader( new Automatic_Upgrader_Skin() ) )->delete_temp_backup(
+			array(
+				array(
+					'dir'  => 'plugins',
+					'slug' => $slug,
+					'src'  => WP_PLUGIN_DIR,
+				),
+			)
+		);
+		if ( false === $backupDeleted || is_wp_error( $backupDeleted ) ) {
+			throw new RuntimeException( 'WordPress could not clean the request-scoped temporary backup.' );
+		}
+
 		$sourceVeto = static function ( mixed $source, mixed $remote, mixed $upgrader, array $extra ) use ( $identifier ): mixed {
 			unset( $remote, $upgrader );
 			return $identifier === ( $extra['plugin'] ?? null )

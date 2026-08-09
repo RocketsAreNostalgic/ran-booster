@@ -16,8 +16,10 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'github-actions[bot]', $workflow );
 		self::assertStringContainsString( 'RAN_PR_HEAD_REPOSITORY', $workflow );
 		self::assertStringContainsString( 'wordpress_matrix=', $workflow );
-		self::assertStringContainsString( '"7.0.2","database":"MySQL 8.4"', $workflow );
-		self::assertStringContainsString( '"7.0.1","database":"MySQL 8.4"', $workflow );
+		self::assertStringContainsString( '"7.0.3","database":"MySQL 8.4"', $workflow );
+		self::assertStringContainsString( '"7.0","database":"MySQL 8.4"', $workflow );
+		self::assertStringNotContainsString( sprintf( '"%s":"7.0.1"', strtolower( 'WordPress' ) ), $workflow );
+		self::assertStringNotContainsString( sprintf( '"%s":"7.0.2"', strtolower( 'WordPress' ) ), $workflow );
 		self::assertStringContainsString( '"database":"MariaDB 10.11"', $workflow );
 		self::assertStringContainsString( '"database":"MySQL 8.0 floor"', $workflow );
 		self::assertStringContainsString( 'matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}', $workflow );

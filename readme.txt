@@ -120,9 +120,10 @@ WordPress, theme, and other-plugin messages.
 
 == Supported beta operations ==
 
-WordPress 7.0 is the declared beta minimum; CI exercises the 7.0.1 and 7.0.2
-patch releases on PHP 8.2. The supported envelope is a single-site installation
-using MySQL 8.0 or newer or MariaDB 10.11 or newer, where Booster's
+WordPress 7.0 is the declared beta minimum; CI exercises that exact floor and
+the current 7.0.3 patch release on PHP 8.2. The supported envelope is a
+single-site installation using MySQL 8.0 or newer or MariaDB 10.11 or newer,
+where Booster's
 managed-package and deployment-attempt tables use InnoDB,
 WordPress's direct filesystem method is available and WP-Cron works. Booster
 does not restrict the WordPress options-table engine. File modifications,

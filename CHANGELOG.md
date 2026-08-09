@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.0-beta.14](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-08-09)
+
+
+### Bug Fixes
+
+* accept exact WordPress 7.0 floor ([9b3bd48](https://github.com/RocketsAreNostalgic/ran-booster/commit/9b3bd4866ca85eb00fb750db7a4fef929a81b28c))
+* import Blueprint credentials for managed packages ([62fb097](https://github.com/RocketsAreNostalgic/ran-booster/commit/62fb097f62e44e92033594b10cb0a046eeafcf5a))
+* reset credential storage without database key ([22abf81](https://github.com/RocketsAreNostalgic/ran-booster/commit/22abf816ee719d847db1e4b9e0a0b499e861df6a))
+* stabilize package settings styles ([8eec053](https://github.com/RocketsAreNostalgic/ran-booster/commit/8eec053c25175945384699bf6c26b5dbd5e5b7f0))
+
 ## [1.0.0-beta.13](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-08-09)
 
 

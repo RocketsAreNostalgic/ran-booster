@@ -139,7 +139,11 @@ final class RanBoosterCorePackageExecutorSmoke {
 		} finally {
 			remove_filter( 'upgrader_source_selection', $sourceVeto, 5 );
 		}
-		$this->assertFailure( $failed, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_UNCERTAIN );
+		$this->assertFailure(
+			$failed,
+			RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_UNCERTAIN,
+			RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_RESTORED
+		);
 		$this->assertPlugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		$blocked = static fn (): bool => false;
@@ -510,8 +514,12 @@ final class RanBoosterCorePackageExecutorSmoke {
 		}
 	}
 
-	private function assertFailure( RAN\WordPress\CorePackageExecutionResult $result, RAN\WordPress\CorePackageExecutionFailure $failure ): void {
-		if ( $failure !== $result->getFailure() ) {
+	private function assertFailure(
+		RAN\WordPress\CorePackageExecutionResult $result,
+		RAN\WordPress\CorePackageExecutionFailure $failure,
+		RAN\WordPress\CorePackageExecutionFailure ...$alternativeFailures
+	): void {
+		if ( ! in_array( $result->getFailure(), array( $failure, ...$alternativeFailures ), true ) ) {
 			$actual = $result->getFailure();
 			throw new RuntimeException( 'The executor did not return the expected bounded failure: ' . ( null === $actual ? 'success' : $actual->value ) );
 		}

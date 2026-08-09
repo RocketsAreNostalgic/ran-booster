@@ -413,6 +413,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			self::assertNull( $keyStore->load( false ) );
 			self::assertFileDoesNotExist( $path );
 			self::assertFileExists( $path . '.lock' );
+			clearstatcache( true, $path . '.lock' );
 			self::assertSame( 0600, fileperms( $path . '.lock' ) & 0777 );
 			self::assertFalse( $secrets->canResetOrphanedKeyAt( $path ) );
 

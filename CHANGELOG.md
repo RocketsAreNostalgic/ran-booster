@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-beta.12](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-08-09)
+
+
+### Bug Fixes
+
+* support isolated shared-host secret storage ([5ecf435](https://github.com/RocketsAreNostalgic/ran-booster/commit/5ecf435879fd53d7ca809449ded5ba0502e82ca1))
+
 ## [1.0.0-beta.11](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-08-09)
 
 

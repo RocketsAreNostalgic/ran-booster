@@ -182,7 +182,21 @@ jobs:
 
     wordpress:
         name: WordPress ${{ matrix.wordpress }} / ${{ matrix.database }} / PHP 8.2
-        needs: runtime-archive
+        needs:
+            - runtime-archive
+            - quality
+        if: >-
+            ${{
+                always()
+                && needs.runtime-archive.result == 'success'
+                && (
+                    needs.quality.result == 'success'
+                    || (
+                        needs.runtime-archive.outputs.release-candidate == 'true'
+                        && needs.quality.result == 'skipped'
+                    )
+                )
+            }}
         runs-on: blacksmith-2vcpu-ubuntu-2404
         timeout-minutes: 10
         strategy:

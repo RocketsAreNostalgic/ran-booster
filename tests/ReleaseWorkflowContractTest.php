@@ -21,6 +21,9 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( '"database":"MariaDB 10.11"', $workflow );
 		self::assertStringContainsString( '"database":"MySQL 8.0 floor"', $workflow );
 		self::assertStringContainsString( 'matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}', $workflow );
+		self::assertStringContainsString( "needs:\n            - runtime-archive\n            - quality", $workflow );
+		self::assertStringContainsString( "needs.quality.result == 'success'", $workflow );
+		self::assertStringContainsString( "needs.quality.result == 'skipped'", $workflow );
 		self::assertSame( 1, substr_count( $workflow, 'bash scripts/build-release.sh' ) );
 		self::assertStringNotContainsString( 'bash scripts/verify-release.sh', $workflow );
 	}

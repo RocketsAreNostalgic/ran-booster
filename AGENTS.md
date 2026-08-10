@@ -29,10 +29,10 @@ directory and preserve unrelated work.
   surface. Do not turn either mechanism into a generic slot or whole-view
   replacement system. Core owns routes, base rows, normalization and rendering;
   add-ons own their capability- and nonce-checked `admin_post_*` mutations.
-- During development-tooling and release work, audit the current local sibling
-  `../ran-starter-plugin` as the RAN standards baseline. Adapt only conventions
-  compatible with Booster's approved contracts; do not copy its feature
-  scaffold or dependencies wholesale.
+- Do not treat the unavailable local `../ran-starter-plugin` sibling as a
+  standards authority. Use Booster's reviewed contracts, component guidance and
+  live repository evidence. Restoring a versioned, testable starter baseline
+  requires a separate compatibility and ownership decision.
 - Treat production lines of code and concept count as an intense reviewed
   restriction, not a delivery target or an unbounded ceiling. Record
   production, test, documentation and Dex deltas separately for non-trivial

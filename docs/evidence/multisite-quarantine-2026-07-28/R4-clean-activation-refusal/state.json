@@ -1,0 +1,97 @@
+{
+    "wordpress": {
+        "version": "7.0.2",
+        "php": "8.3.23",
+        "is_multisite": true,
+        "runtime_mode": null,
+        "blog_id": 1,
+        "main_site_id": 1,
+        "prefix": "wp_",
+        "base_prefix": "wp_",
+        "options_table": "wp_options",
+        "automatic_cron_disabled": true,
+        "active_plugins": [
+            "ran-booster-assisted-hooks/ran-booster-assisted-hooks.php",
+            "ran-booster-bitbucket/ran-booster-bitbucket.php",
+            "ran-booster-release-deployments/ran-booster-release-deployments.php"
+        ],
+        "network_plugins": [],
+        "sites": [
+            {
+                "blog_id": 1,
+                "url_sha256": "e50ada01df17bc32b45c51c4a17298ede9ae4033d4d964847eacc2d468ad3cc9",
+                "active_plugins": [
+                    "ran-booster-assisted-hooks/ran-booster-assisted-hooks.php",
+                    "ran-booster-bitbucket/ran-booster-bitbucket.php",
+                    "ran-booster-release-deployments/ran-booster-release-deployments.php"
+                ]
+            },
+            {
+                "blog_id": 2,
+                "url_sha256": "cda1b2c6267f497cc0c9a2401b587df884eccf6fcab5b52bfb7cfd5d4a902585",
+                "active_plugins": []
+            }
+        ]
+    },
+    "runtime_contract": {
+        "ran_booster_function_exists": false,
+        "provider_api": null,
+        "add_on_api": null,
+        "callback_count": 6,
+        "callbacks_sha256": "825969c8b377520f9eba0f913214c8bf9a52528a5c9b94b01c838f0bf7abb4ee",
+        "callbacks": [
+            "admin_notices|10|RAN\\AssistedHooks\\Plugin::renderCompatibilityNotice",
+            "admin_notices|10|RAN\\ReleaseDeployments\\Plugin::renderCompatibilityNotice",
+            "plugins_loaded|5|RAN\\AssistedHooks\\Plugin::register",
+            "plugins_loaded|5|RAN\\ReleaseDeployments\\Plugin::register",
+            "ran_booster_documentation_sections_after_provider_bb|10|Closure",
+            "ran_booster_register_providers|10|Closure"
+        ]
+    },
+    "worker_cron": {
+        "count": 0,
+        "entries": []
+    },
+    "tables": {
+        "wp_ran_booster_packages": {
+            "exists": false,
+            "read_ok": true,
+            "rows": 0
+        },
+        "wp_ran_booster_deployment_attempts": {
+            "exists": false,
+            "read_ok": true,
+            "rows": 0
+        },
+        "wp_ran_booster_rejected_admission_audit": {
+            "exists": false,
+            "read_ok": true,
+            "rows": 0
+        }
+    },
+    "options": [],
+    "user_meta": [],
+    "packages": [],
+    "attempts": [],
+    "secure_storage": {
+        "sidecar": {
+            "exists": false
+        },
+        "key_option": {
+            "exists": false,
+            "autoload": null,
+            "bytes": null
+        },
+        "wp_config": {
+            "sha256": "b21159f6afdaa6cc458ff740ebc4e1724ed2b39d935aecc65ee9e5f2fb99e06d",
+            "without_owned_block_sha256": "b21159f6afdaa6cc458ff740ebc4e1724ed2b39d935aecc65ee9e5f2fb99e06d",
+            "owned_marker_count": 0
+        },
+        "lock": {
+            "exists": false
+        }
+    },
+    "add_on_owned": {
+        "assisted_hooks_installations": null
+    }
+}

@@ -1,0 +1,170 @@
+{
+    "wordpress": {
+        "version": "7.0.2",
+        "php": "8.3.23",
+        "is_multisite": true,
+        "runtime_mode": null,
+        "blog_id": 1,
+        "main_site_id": 1,
+        "prefix": "wp_",
+        "base_prefix": "wp_",
+        "options_table": "wp_options",
+        "automatic_cron_disabled": true,
+        "active_plugins": [
+            "ran-booster-assisted-hooks/ran-booster-assisted-hooks.php",
+            "ran-booster-bitbucket/ran-booster-bitbucket.php",
+            "ran-booster-release-deployments/ran-booster-release-deployments.php"
+        ],
+        "network_plugins": [],
+        "sites": [
+            {
+                "blog_id": 1,
+                "url_sha256": "e50ada01df17bc32b45c51c4a17298ede9ae4033d4d964847eacc2d468ad3cc9",
+                "active_plugins": [
+                    "ran-booster-assisted-hooks/ran-booster-assisted-hooks.php",
+                    "ran-booster-bitbucket/ran-booster-bitbucket.php",
+                    "ran-booster-release-deployments/ran-booster-release-deployments.php"
+                ]
+            },
+            {
+                "blog_id": 2,
+                "url_sha256": "cda1b2c6267f497cc0c9a2401b587df884eccf6fcab5b52bfb7cfd5d4a902585",
+                "active_plugins": []
+            }
+        ]
+    },
+    "runtime_contract": {
+        "ran_booster_function_exists": false,
+        "provider_api": null,
+        "add_on_api": null,
+        "callback_count": 6,
+        "callbacks_sha256": "825969c8b377520f9eba0f913214c8bf9a52528a5c9b94b01c838f0bf7abb4ee",
+        "callbacks": [
+            "admin_notices|10|RAN\\AssistedHooks\\Plugin::renderCompatibilityNotice",
+            "admin_notices|10|RAN\\ReleaseDeployments\\Plugin::renderCompatibilityNotice",
+            "plugins_loaded|5|RAN\\AssistedHooks\\Plugin::register",
+            "plugins_loaded|5|RAN\\ReleaseDeployments\\Plugin::register",
+            "ran_booster_documentation_sections_after_provider_bb|10|Closure",
+            "ran_booster_register_providers|10|Closure"
+        ]
+    },
+    "worker_cron": {
+        "count": 0,
+        "entries": []
+    },
+    "tables": {
+        "wp_ran_booster_packages": {
+            "exists": true,
+            "read_ok": true,
+            "rows": 2,
+            "schema_sha256": "5b6de65cf5ae8963fd6fcb51c41bbb54aaf6f62f1eca890337f5b16d0a7996ab",
+            "content_sha256": "b4ac353f31acd07a5044d986f9df95c75a292fc8bd55aae2e506f7424a393868"
+        },
+        "wp_ran_booster_deployment_attempts": {
+            "exists": true,
+            "read_ok": true,
+            "rows": 1,
+            "schema_sha256": "f125e0248cb4532b2391f2f9e0700483ee43758524ed27e26b34e4ffc8cbccc5",
+            "content_sha256": "bb141f90981c0d5d39bb7e12177c0a6882f1868a5e17e568427bc711e78f8251"
+        },
+        "wp_ran_booster_rejected_admission_audit": {
+            "exists": true,
+            "read_ok": true,
+            "rows": 0,
+            "schema_sha256": "a922ba332e01e3274f19cf88420b6db2c1a2dd6883752895e6a448d412bee2c7",
+            "content_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+    },
+    "options": {
+        "_site_transient_ran_wp_gh_updater_v1_97fb9326b7e04c2c284b22be82fed64c": {
+            "bytes": 303,
+            "autoload": "off",
+            "sha256": "c8863089bb354824c1a98a7f5284ff2a3b72c6a78da23542b91d522e3bcad3c1"
+        },
+        "_site_transient_timeout_ran_wp_gh_updater_v1_97fb9326b7e04c2c284b22be82fed64c": {
+            "bytes": 10,
+            "autoload": "off",
+            "sha256": "dbc5dccd5233ef0fe24e08323ac8f059b62a156f6cf51f4ef48e7c24900f0c6d"
+        },
+        "ran_booster_db_version": {
+            "bytes": 4,
+            "autoload": "off",
+            "sha256": "77c52f3feed5acdd119b1f8449d5ccc2d39be94bd0314d5b7302f36e20b6cea9"
+        },
+        "ran_booster_secrets_key_v1": {
+            "bytes": 44,
+            "autoload": "off",
+            "sha256": "050d4e0c45212203b73297c119763b1aab58644b4ff4ae1495d693eea5d16cfe"
+        }
+    },
+    "user_meta": [],
+    "packages": [
+        {
+            "id": "1",
+            "package": "quarantine-proof/quarantine-proof.php",
+            "type": "1",
+            "provider": "gh",
+            "provider_repository_id": "R_QUARANTINE_PROOF",
+            "deployment_policy": "disabled",
+            "source": "branch",
+            "source_revision": "1"
+        },
+        {
+            "id": "2",
+            "package": "quarantine-proof-theme",
+            "type": "2",
+            "provider": "gh",
+            "provider_repository_id": "R_QUARANTINE_THEME_PROOF",
+            "deployment_policy": "disabled",
+            "source": "branch",
+            "source_revision": "1"
+        }
+    ],
+    "attempts": [
+        {
+            "id": "1",
+            "correlation_id": "0123456789abcdef0123456789abcdef",
+            "state": "queued",
+            "mutation_started_at": null,
+            "outcome_code": null,
+            "finished_at": null,
+            "resolved_at": null,
+            "resolved_by": null
+        }
+    ],
+    "secure_storage": {
+        "sidecar": {
+            "exists": true,
+            "is_symlink": false,
+            "link_count": 1,
+            "bytes": 452,
+            "mode": "0600",
+            "owner": 118012854,
+            "inode": 207957655,
+            "sha256": "4266de414903ff9f18ff5f4f9122c4821bc727bac70c3421cad75478c7da3fd6"
+        },
+        "key_option": {
+            "exists": true,
+            "autoload": "off",
+            "bytes": 44
+        },
+        "wp_config": {
+            "sha256": "0b7259fe9cb86e96b2870544c1a269f83090c4f956dac670ae7bb877525db547",
+            "without_owned_block_sha256": "b21159f6afdaa6cc458ff740ebc4e1724ed2b39d935aecc65ee9e5f2fb99e06d",
+            "owned_marker_count": 1
+        },
+        "lock": {
+            "exists": true,
+            "is_symlink": false,
+            "link_count": 1,
+            "bytes": 0,
+            "mode": "0600",
+            "owner": 118012854,
+            "inode": 207959492,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+    },
+    "add_on_owned": {
+        "assisted_hooks_installations": null
+    }
+}

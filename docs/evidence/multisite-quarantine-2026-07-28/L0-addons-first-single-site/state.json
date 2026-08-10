@@ -1,0 +1,230 @@
+{
+    "wordpress": {
+        "version": "7.0.2",
+        "php": "8.3.23",
+        "is_multisite": false,
+        "runtime_mode": "single_site_supported",
+        "blog_id": 1,
+        "main_site_id": 1,
+        "prefix": "wp_",
+        "base_prefix": "wp_",
+        "options_table": "wp_options",
+        "automatic_cron_disabled": true,
+        "active_plugins": [
+            "ran-booster-assisted-hooks/ran-booster-assisted-hooks.php",
+            "ran-booster-bitbucket/ran-booster-bitbucket.php",
+            "ran-booster-release-deployments/ran-booster-release-deployments.php",
+            "ran-booster/ran-booster.php"
+        ],
+        "network_plugins": [],
+        "sites": []
+    },
+    "runtime_contract": {
+        "ran_booster_function_exists": true,
+        "provider_api": 6,
+        "add_on_api": 9,
+        "callback_count": 75,
+        "callbacks_sha256": "bfeeeafb1a5697871e61b6ddc680eb7f71eb8d99da483fb569fef21d30f7df61",
+        "callbacks": [
+            "activate_ran-booster/ran-booster.php|10|RAN\\Booster::activate",
+            "admin_enqueue_scripts|10|RAN\\AssistedHooks\\Plugin::enqueueAdminAssets",
+            "admin_enqueue_scripts|10|RAN\\Booster::loadBackgroundDeploymentFailureNoticeScript",
+            "admin_enqueue_scripts|10|RAN\\Booster::loadCredentialExpiryNoticeScript",
+            "admin_enqueue_scripts|10|RAN\\Booster::loadScripts",
+            "admin_enqueue_scripts|10|RAN\\ReleaseDeployments\\Plugin::enqueueProspectiveAssets",
+            "admin_init|10|RAN\\Admin\\Interaction\\CoreAdminInteractionFacade::preparePendingFeedback",
+            "admin_init|10|RAN\\Booster::maybeUpgradeDatabase",
+            "admin_init|10|RAN\\Booster::registerPluginActionLinks",
+            "admin_init|10|RAN\\Dispatcher::dispatchPostRequests",
+            "admin_menu|10|RAN\\Booster::adminMenu",
+            "admin_notices|10|RAN\\Admin\\BackgroundDeploymentFailureNotice::render",
+            "admin_notices|10|RAN\\Admin\\CredentialExpiryNotice::render",
+            "admin_notices|10|RAN\\Admin\\DatabaseCompatibilityNotice::render",
+            "admin_notices|10|RAN\\Admin\\SecretsRuntimeAvailabilityNotice::render",
+            "admin_notices|10|RAN\\AssistedHooks\\Plugin::renderCompatibilityNotice",
+            "admin_notices|10|RAN\\ReleaseDeployments\\Plugin::renderCompatibilityNotice",
+            "admin_notices|10|RAN\\ReleaseDeployments\\Plugin::renderOperationNotice",
+            "admin_notices|10|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::renderAdminNotice",
+            "admin_post_ran_booster_assisted_hooks_operation|10|RAN\\AssistedHooks\\Plugin::handleAdminPost",
+            "admin_post_ran_booster_release_deployments_change_channel|10|RAN\\ReleaseDeployments\\Plugin::handleChangeChannel",
+            "admin_post_ran_booster_release_deployments_enable|10|RAN\\ReleaseDeployments\\Plugin::handleEnable",
+            "admin_post_ran_booster_release_deployments_install|10|RAN\\ReleaseDeployments\\Plugin::handleProspectiveInstall",
+            "admin_post_ran_booster_release_deployments_refresh|10|RAN\\ReleaseDeployments\\Plugin::handleRefresh",
+            "admin_post_ran_booster_release_deployments_reinstall|10|RAN\\ReleaseDeployments\\Plugin::handleReinstall",
+            "admin_post_ran_booster_release_deployments_return_to_branch|10|RAN\\ReleaseDeployments\\Plugin::handleReturnToBranch",
+            "auto_update_plugin|10|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::filterAutoUpdate",
+            "deactivate_ran-booster/ran-booster.php|10|RAN\\Booster::deactivate",
+            "http_request_args|5|RAN\\WordPress\\WordPressOrgUpdateRequestFilter::plugins",
+            "http_request_args|5|RAN\\WordPress\\WordPressOrgUpdateRequestFilter::themes",
+            "init|1|RAN\\Admin\\CredentialSelfDestructPurger::purge",
+            "load-plugins.php|10|RAN\\Admin\\ManagedPluginFailureRows::register",
+            "network_admin_notices|10|RAN\\Admin\\BackgroundDeploymentFailureNotice::render",
+            "network_admin_notices|10|RAN\\Admin\\CredentialExpiryNotice::render",
+            "network_admin_notices|10|RAN\\Admin\\DatabaseCompatibilityNotice::render",
+            "network_admin_notices|10|RAN\\Admin\\SecretsRuntimeAvailabilityNotice::render",
+            "network_admin_notices|10|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::renderAdminNotice",
+            "plugins_api|10|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::filterPluginInformation",
+            "plugins_loaded|5|RAN\\AssistedHooks\\Plugin::register",
+            "plugins_loaded|5|RAN\\ReleaseDeployments\\Plugin::register",
+            "ran_booster_admin_interaction_ready|10|RAN\\AssistedHooks\\Plugin::captureAdminInteraction",
+            "ran_booster_admin_package_advanced_source_sections|10|RAN\\ReleaseDeployments\\Plugin::renderAdvancedSourceSection",
+            "ran_booster_admin_package_advanced_source_summary|10|RAN\\ReleaseDeployments\\Plugin::filterAdvancedSourceSummary",
+            "ran_booster_admin_package_management_actions|10|RAN\\ReleaseDeployments\\Plugin::filterManagementActions",
+            "ran_booster_admin_package_management_rows|10|RAN\\ReleaseDeployments\\Plugin::filterManagementRows",
+            "ran_booster_admin_package_source_choices|10|RAN\\ReleaseDeployments\\Plugin::filterSourceChoices",
+            "ran_booster_admin_package_source_sections|10|RAN\\ReleaseDeployments\\Plugin::renderSourceSection",
+            "ran_booster_admin_package_webhook_cleanup_actions|10|RAN\\AssistedHooks\\Plugin::renderPackageCleanupAction",
+            "ran_booster_admin_provider_repository_assistance_active|10|RAN\\AssistedHooks\\Plugin::repositoryAssistanceActive",
+            "ran_booster_admin_provider_repository_panel|10|RAN\\AssistedHooks\\Plugin::renderRepositoryPanel",
+            "ran_booster_admin_provider_repository_rows|10|RAN\\AssistedHooks\\Plugin::enrichRepositoryRows",
+            "ran_booster_documentation_sections_after_provider_bb|10|Closure",
+            "ran_booster_documentation_sections_after_provider_gh|10|RAN\\AssistedHooks\\Plugin::filterDocumentationSections",
+            "ran_booster_documentation_sections_before_about|10|RAN\\ReleaseDeployments\\Plugin::filterDocumentationSections",
+            "ran_booster_register_providers|10|Closure",
+            "ran_booster_release_reinstall_ready|10|RAN\\ReleaseDeployments\\Plugin::receiveReleaseReinstall",
+            "ran_booster_release_tracking_ready|10|RAN\\ReleaseDeployments\\Plugin::receiveReleaseTracking",
+            "ran_booster_run_deployment|10|RAN\\Booster::runDeploymentWorker",
+            "ran_booster_webhook_assistance_ready|10|RAN\\AssistedHooks\\Plugin::captureServices",
+            "ran_booster_webhook_cleanup_ready|10|RAN\\AssistedHooks\\Plugin::captureCleanupService",
+            "rest_api_init|10|RAN\\Booster::registerWebhookRoutes",
+            "update_plugins_github.com|10|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::filterUpdate",
+            "upgrader_pre_download|9223372036854775807|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::filterPreDownload",
+            "upgrader_process_complete|10|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::observeCompletion",
+            "upgrader_source_selection|9223372036854775807|RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\NativePluginUpdater::filterSourceSelection",
+            "wp_ajax_ran_booster_apply_blueprint|10|RAN\\Admin\\PortabilityController::handleApply",
+            "wp_ajax_ran_booster_dismiss_background_failure_notice|10|RAN\\Admin\\BackgroundDeploymentFailureNoticeController::handle",
+            "wp_ajax_ran_booster_dismiss_credential_expiry_notice|10|RAN\\Admin\\CredentialExpiryNoticeController::handle",
+            "wp_ajax_ran_booster_dismiss_development_safety_notice|10|RAN\\Admin\\DevelopmentSafetyNoticeController::handle",
+            "wp_ajax_ran_booster_export_blueprint|10|RAN\\Admin\\PortabilityController::handleExport",
+            "wp_ajax_ran_booster_list_repositories|10|RAN\\Admin\\RepositoryPickerController::handle",
+            "wp_ajax_ran_booster_package_update_progress|10|RAN\\Admin\\PackageUpdateProgressController::handle",
+            "wp_ajax_ran_booster_preview_blueprint|10|RAN\\Admin\\PortabilityController::handlePreview",
+            "wp_ajax_ran_booster_release_deployments_inspect|10|RAN\\ReleaseDeployments\\Plugin::handleProspectiveInspect",
+            "wp_ajax_ran_booster_release_deployments_list_candidates|10|RAN\\ReleaseDeployments\\Plugin::handleProspectiveListCandidates"
+        ]
+    },
+    "worker_cron": {
+        "count": 1,
+        "entries": [
+            {
+                "schedule": false,
+                "args_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            }
+        ]
+    },
+    "tables": {
+        "wp_ran_booster_packages": {
+            "exists": true,
+            "read_ok": true,
+            "rows": 2,
+            "schema_sha256": "5b6de65cf5ae8963fd6fcb51c41bbb54aaf6f62f1eca890337f5b16d0a7996ab",
+            "content_sha256": "b4ac353f31acd07a5044d986f9df95c75a292fc8bd55aae2e506f7424a393868"
+        },
+        "wp_ran_booster_deployment_attempts": {
+            "exists": true,
+            "read_ok": true,
+            "rows": 1,
+            "schema_sha256": "f125e0248cb4532b2391f2f9e0700483ee43758524ed27e26b34e4ffc8cbccc5",
+            "content_sha256": "bb141f90981c0d5d39bb7e12177c0a6882f1868a5e17e568427bc711e78f8251"
+        },
+        "wp_ran_booster_rejected_admission_audit": {
+            "exists": true,
+            "read_ok": true,
+            "rows": 0,
+            "schema_sha256": "a922ba332e01e3274f19cf88420b6db2c1a2dd6883752895e6a448d412bee2c7",
+            "content_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+    },
+    "options": {
+        "_site_transient_ran_wp_gh_updater_v1_97fb9326b7e04c2c284b22be82fed64c": {
+            "bytes": 303,
+            "autoload": "off",
+            "sha256": "d5ee66d166972aeb500dc7f49511ae51f24f87bd1bbc62529c1d18b24076e629"
+        },
+        "_site_transient_timeout_ran_wp_gh_updater_v1_97fb9326b7e04c2c284b22be82fed64c": {
+            "bytes": 10,
+            "autoload": "off",
+            "sha256": "a72d9ed096207e3fe0239d31b39f30ba38fff8d8215ecf9fc36e053a96ecf2e6"
+        },
+        "ran_booster_db_version": {
+            "bytes": 4,
+            "autoload": "off",
+            "sha256": "77c52f3feed5acdd119b1f8449d5ccc2d39be94bd0314d5b7302f36e20b6cea9"
+        },
+        "ran_booster_secrets_key_v1": {
+            "bytes": 44,
+            "autoload": "off",
+            "sha256": "050d4e0c45212203b73297c119763b1aab58644b4ff4ae1495d693eea5d16cfe"
+        }
+    },
+    "user_meta": [],
+    "packages": [
+        {
+            "id": "1",
+            "package": "quarantine-proof/quarantine-proof.php",
+            "type": "1",
+            "provider": "gh",
+            "provider_repository_id": "R_QUARANTINE_PROOF",
+            "deployment_policy": "disabled",
+            "source": "branch",
+            "source_revision": "1"
+        },
+        {
+            "id": "2",
+            "package": "quarantine-proof-theme",
+            "type": "2",
+            "provider": "gh",
+            "provider_repository_id": "R_QUARANTINE_THEME_PROOF",
+            "deployment_policy": "disabled",
+            "source": "branch",
+            "source_revision": "1"
+        }
+    ],
+    "attempts": [
+        {
+            "id": "1",
+            "correlation_id": "0123456789abcdef0123456789abcdef",
+            "state": "queued",
+            "mutation_started_at": null,
+            "outcome_code": null,
+            "finished_at": null,
+            "resolved_at": null,
+            "resolved_by": null
+        }
+    ],
+    "secure_storage": {
+        "sidecar": {
+            "exists": true,
+            "is_symlink": false,
+            "link_count": 1,
+            "bytes": 452,
+            "mode": "0600",
+            "owner": 118012854,
+            "inode": 207963069,
+            "sha256": "4266de414903ff9f18ff5f4f9122c4821bc727bac70c3421cad75478c7da3fd6"
+        },
+        "key_option": {
+            "exists": true,
+            "autoload": "off",
+            "bytes": 44
+        },
+        "wp_config": {
+            "sha256": "8935de80988945ace3d6a1c6049dc20afdb97e9151a9585efb47c6c3ab921b1c",
+            "without_owned_block_sha256": "06f3aad8f514acdb064cf022be3e200b0a4ea934035bd8882dccbfe16b783cc3",
+            "owned_marker_count": 1
+        },
+        "lock": {
+            "exists": true,
+            "is_symlink": false,
+            "link_count": 1,
+            "bytes": 0,
+            "mode": "0600",
+            "owner": 118012854,
+            "inode": 207963419,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+    },
+    "add_on_owned": {
+        "assisted_hooks_installations": null
+    }
+}

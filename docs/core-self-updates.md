@@ -263,11 +263,15 @@ The dependency order is:
 8. prove both source/runtime-only and official/manual-only behavior in
    disposable WordPress installations.
 
-Release Please owns version proposals, version sources and changelogs. It does
-not create the WordPress ZIP or publish the GitHub release directly. After the
-proposal merges, the release workflow builds and verifies the exact commit,
-creates or resumes a draft, attaches and byte-verifies the ZIP, and publishes
-only under the explicitly enabled immutable-release contract.
+Release Please owns version proposals, version sources and changelogs. Its
+action does not create the WordPress ZIP or publish the GitHub release directly.
+Quality builds, verifies and uploads the runtime archive once; the WordPress
+matrix installs and exercises that same artifact. After the proposal merges,
+the Release Please workflow runs only after Quality succeeds for the exact
+merge SHA, proves the merged proposal and source identities, downloads and
+re-verifies that exact Quality artifact, then creates or resumes a draft,
+attaches and byte-verifies the ZIP, and publishes only under the explicitly
+enabled immutable-release contract.
 
 The completed native-ZIP set is updater `v1.6.0-beta.1`, Core
 `v0.1.0-alpha.29` and Release Deployments `v0.1.0-alpha.4`. Exact commits,

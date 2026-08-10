@@ -31,6 +31,10 @@ function add_query_arg( array|string $arguments, string $valueOrUrl, ?string $ur
 	return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . http_build_query( $arguments );
 }
 
+function absint( mixed $value ): int {
+	return abs( (int) $value );
+}
+
 function do_action( string $hook, mixed ...$arguments ): void {
 	foreach ( $GLOBALS['ran_booster_dashboard_test_actions'][ $hook ] ?? array() as $callback ) {
 		$callback( ...$arguments );

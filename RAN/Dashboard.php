@@ -16,7 +16,12 @@ use RAN\Admin\DeploymentOutcomeMessage;
 use RAN\Admin\OnboardingPresenter;
 use RAN\Admin\PackageViewConfig;
 use RAN\Admin\ProviderDocumentationPresenter;
+use RAN\Admin\ProviderRepositoryCompositionRenderer;
+use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ProviderSettingsPresenter;
+use RAN\Admin\Component\AdminStatusSummaryRenderer;
+use RAN\Admin\Component\ProviderManagementTableRenderer;
+use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentAttemptRepository;
@@ -198,6 +203,15 @@ class Dashboard {
 			$data['providerView']      = $this->requestedProviderView();
 			$data['providerTask']      = $this->requestedProviderTask();
 			$data['providerListState'] = $this->requestedProviderListState();
+
+			$repositoryComposition                   = new ProviderRepositoryCompositionRenderer();
+			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $repositoryComposition ) );
+			$data                                    = array_merge( $data, $this->providerSettings->buildProfileListProjection( $data ) );
+			$data['repositoryComposition']           = $repositoryComposition;
+			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
+			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
+			$data['repositoryTableRenderer']         = new RepositoryTableRenderer();
 		} elseif ( null !== $selectedTab && 'portability' === $selectedTab->getKey() ) {
 			try {
 				$export                               = $this->portabilityExportData();
@@ -1826,6 +1840,23 @@ class Dashboard {
 			: '';
 
 		return in_array( $task, array( 'repositories', 'setup' ), true ) ? $task : 'status';
+	}
+
+	private function requestedProviderRepositoryId(): string {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository selection.
+		$value = $_GET['repository'] ?? $_GET['assisted_repository'] ?? null;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+
+		$candidate = trim( wp_unslash( $value ) );
+
+		return '' !== $candidate
+			&& strlen( $candidate ) <= 191
+			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $candidate )
+			? $candidate
+			: '';
 	}
 
 	/**

@@ -22,7 +22,7 @@ final class ProviderManagementTableRenderer {
 	/**
 	 * @param list<array<string, mixed>> $rows
 	 * @param Closure(array<string, mixed>, string): void $renderCell
-	 * @param Closure(string): string $sortUrl
+	 * @param array<string,string> $sortUrls
 	 * @param array{
 	 *     item_count_label: string,
 	 *     page_label: string,
@@ -31,7 +31,8 @@ final class ProviderManagementTableRenderer {
 	 *     per_page: int,
 	 *     action_url: string,
 	 *     hidden_fields: array<string, scalar>,
-	 *     page_url: Closure(int): string
+	 *     previous_url: string,
+	 *     next_url: string
 	 * } $pagination
 	 */
 	public function render(
@@ -39,7 +40,7 @@ final class ProviderManagementTableRenderer {
 		array $rows,
 		string $emptyMessage,
 		Closure $renderCell,
-		Closure $sortUrl,
+		array $sortUrls,
 		array $pagination
 	): void {
 		$columns = $this->columns( $type );
@@ -52,7 +53,7 @@ final class ProviderManagementTableRenderer {
 							<?php if ( null === $column['sort'] ) { ?>
 								<span class="screen-reader-text"><?php echo esc_html( $column['label'] ); ?></span>
 							<?php } else { ?>
-								<a href="<?php echo esc_url( $sortUrl( $column['sort'] ) ); ?>"><?php echo esc_html( $column['label'] ); ?></a>
+								<a href="<?php echo esc_url( $sortUrls[ $column['sort'] ] ?? '' ); ?>"><?php echo esc_html( $column['label'] ); ?></a>
 							<?php } ?>
 						</th>
 					<?php } ?>
@@ -167,7 +168,8 @@ final class ProviderManagementTableRenderer {
 	 *     per_page: int,
 	 *     action_url: string,
 	 *     hidden_fields: array<string, scalar>,
-	 *     page_url: Closure(int): string
+	 *     previous_url: string,
+	 *     next_url: string
 	 * } $pagination
 	 */
 	private function renderPagination( string $type, array $pagination ): void {
@@ -190,9 +192,9 @@ final class ProviderManagementTableRenderer {
 						<option value="50" <?php selected( 50, $pagination['per_page'] ); ?>>50</option>
 					</select>
 				</form>
-				<a class="button <?php echo 1 >= $current ? 'disabled' : ''; ?>" href="<?php echo esc_url( $pagination['page_url']( $current - 1 ) ); ?>" aria-disabled="<?php echo 1 >= $current ? 'true' : 'false'; ?>" <?php echo 1 >= $current ? 'tabindex="-1"' : ''; ?>>&lsaquo;</a>
+				<a class="button <?php echo 1 >= $current ? 'disabled' : ''; ?>" href="<?php echo esc_url( $pagination['previous_url'] ); ?>" aria-disabled="<?php echo 1 >= $current ? 'true' : 'false'; ?>" <?php echo 1 >= $current ? 'tabindex="-1"' : ''; ?>>&lsaquo;</a>
 				<span><?php echo esc_html( $pagination['page_label'] ); ?></span>
-				<a class="button <?php echo $current >= $pages ? 'disabled' : ''; ?>" href="<?php echo esc_url( $pagination['page_url']( $current + 1 ) ); ?>" aria-disabled="<?php echo $current >= $pages ? 'true' : 'false'; ?>" <?php echo $current >= $pages ? 'tabindex="-1"' : ''; ?>>&rsaquo;</a>
+				<a class="button <?php echo $current >= $pages ? 'disabled' : ''; ?>" href="<?php echo esc_url( $pagination['next_url'] ); ?>" aria-disabled="<?php echo $current >= $pages ? 'true' : 'false'; ?>" <?php echo $current >= $pages ? 'tabindex="-1"' : ''; ?>>&rsaquo;</a>
 			</div>
 		</div>
 		<?php

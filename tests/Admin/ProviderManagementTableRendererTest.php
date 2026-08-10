@@ -86,7 +86,8 @@ final class ProviderManagementTableRendererTest extends TestCase {
 					'page' => 'ran-booster',
 					'tab'  => 'gh"><unsafe',
 				),
-				'page_url'         => static fn ( int $page ): string => 'https://example.test/list?paged=' . $page . '&mode=<unsafe>',
+				'previous_url'     => 'https://example.test/list?paged=1&mode=<unsafe>',
+				'next_url'         => 'https://example.test/list?paged=3&mode=<unsafe>',
 			)
 		);
 
@@ -109,7 +110,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 			array(),
 			'Nothing found.',
 			static function (): void {},
-			static fn ( string $column ): string => 'https://example.test/list?orderby=' . $column,
+			array(),
 			array(
 				'item_count_label' => '0 items',
 				'page_label'       => 'Page 1 of 1',
@@ -118,7 +119,8 @@ final class ProviderManagementTableRendererTest extends TestCase {
 				'per_page'         => 20,
 				'action_url'       => 'https://example.test/wp-admin/admin.php',
 				'hidden_fields'    => array(),
-				'page_url'         => static fn ( int $page ): string => 'https://example.test/list?paged=' . $page,
+				'previous_url'     => 'https://example.test/list?paged=1',
+				'next_url'         => 'https://example.test/list?paged=1',
 			)
 		);
 	}
@@ -148,7 +150,8 @@ final class ProviderManagementTableRendererTest extends TestCase {
 					'tab'  => 'gh',
 					'view' => 'credentials',
 				),
-				'page_url'         => static fn ( int $page ): string => 'https://example.test/list?paged=' . $page,
+				'previous_url'     => 'https://example.test/list?paged=1',
+				'next_url'         => 'https://example.test/list?paged=1',
 			),
 			$paginationOverrides
 		);
@@ -159,7 +162,10 @@ final class ProviderManagementTableRendererTest extends TestCase {
 			$rows,
 			$emptyMessage,
 			$renderCell,
-			static fn ( string $column ): string => 'https://example.test/list?orderby=' . $column . '&next=<unsafe>',
+			array_fill_keys(
+				array( 'name', 'kind', 'scope', 'usage', 'health' ),
+				'https://example.test/list?orderby=name&next=<unsafe>'
+			),
 			$pagination
 		);
 

@@ -24,7 +24,11 @@ use RAN\Logging\TemporaryDebugCapture;
 use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
+use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
+use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
 use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderCredentialPolicy;
+use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -44,6 +48,7 @@ use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 use Tests\Support\CredentialUsageDatabase;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
+require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
@@ -169,6 +174,120 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'overview', $fallback['providerView'] );
 		self::assertSame( 'status', $fallback['providerTask'] );
 		self::assertSame( 'name', $fallback['providerListState']['orderby'] );
+	}
+
+	public function testProviderRouteRendersThePreparedAccessibleFilteredAndPaginatedOutcome(): void {
+		$_GET     = array(
+			'tab'      => 'bb',
+			'view'     => 'credentials',
+			's'        => 'Credential',
+			'kind'     => 'api-key',
+			'orderby'  => 'name',
+			'order'    => 'asc',
+			'per_page' => '20',
+		);
+		$profiles = array();
+		for ( $index = 1; $index <= 21; ++$index ) {
+			$profiles[] = array(
+				'id'            => 'profile-' . $index,
+				'label'         => sprintf( 'Credential %02d', $index ),
+				'kind'          => 'api-key',
+				'configuration' => array(),
+				'source'        => 'file',
+				'configured'    => true,
+			);
+		}
+		$profiles[] = array(
+			'id'            => 'filtered-canary',
+			'label'         => 'Filtered canary',
+			'kind'          => 'other',
+			'configuration' => array(),
+			'source'        => 'file',
+			'configured'    => true,
+		);
+		$secrets    = new class( $profiles ) extends SecretsFile {
+			/** @param list<array<string,mixed>> $profiles */
+			public function __construct( private array $profiles ) {
+				parent::__construct( '/unused/test-secrets.php', array(), ShippedSecretPolicyCatalog::create() );
+			}
+			public function credentialProfiles( ProviderCode|string $provider ): array {
+				return 'bb' === (string) $provider ? $this->profiles : array();
+			}
+			public function webhookProfiles( ProviderCode|string $provider ): array {
+				unset( $provider );
+				return array();
+			}
+		};
+		$data       = $this->dashboard( $secrets, providerCredentials: true )->getIndex()['data'];
+
+		// Dashboard supplies a fixed provider-route model; the passive view only renders and escapes it.
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading"', $html );
+		self::assertStringContainsString( '>Credentials</h2>', $html );
+		self::assertStringContainsString( 'aria-labelledby="ran-booster-provider-heading"', $html );
+		self::assertStringContainsString( '<th scope="col">', $html );
+		self::assertStringContainsString( 'Page 1 of 2', $html );
+		self::assertStringContainsString( '>Credential 01</strong>', $html );
+		self::assertStringContainsString( '>Credential 20</strong>', $html );
+		self::assertStringNotContainsString( '>Credential 21</strong>', $html );
+		self::assertStringNotContainsString( 'Filtered canary', $html );
+		self::assertStringContainsString( 'paged=2', $html );
+		self::assertStringNotContainsString( 'profile-21', $html );
+	}
+
+	public function testProviderRouteRendersANormalizedRepositorySelection(): void {
+		$_GET    = array(
+			'tab'        => 'bb',
+			'panel'      => 'repositories',
+			'repository' => 'repo-route',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				'plugin/route.php'     => $this->managedPackage(
+					'plugin/route.php',
+					'Route Plugin',
+					'repo-route',
+					\RAN\PackageSource::RELEASE_ASSET,
+					'bb',
+					repository: 'workspace/route'
+				),
+				'plugin/automatic.php' => $this->managedPackage(
+					'plugin/automatic.php',
+					'Automatic Plugin',
+					'repo-automatic',
+					provider: 'bb',
+					policy: \RAN\Deployment\DeploymentPolicy::AUTOMATIC,
+					repository: 'workspace/automatic'
+				),
+			)
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertSame( 'repo-route', $data['requestedRepositoryId'] );
+		self::assertSame( 'repo-route', $data['selectedRepositoryRow']['repository_id'] );
+		self::assertSame( 'attention', $data['webhookSummary']['tone'] );
+		self::assertStringContainsString( 'Automatic branch deployments require local signing material', $data['webhookSummary']['description'] );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed route model is rendered through the production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Repository webhook</h4>', $html );
+		self::assertStringContainsString( 'Back to managed repositories', $html );
+		self::assertStringContainsString( 'workspace/route', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $html );
 	}
 
 	public function testSelectedAddOnUsesTheRegisteredTabAndSafeContext(): void {
@@ -1244,40 +1363,43 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?ThemeRepository $themes = null,
 		?TemporaryDebugCapture $debugCapture = null,
 		?Database $database = null,
-		?AdminAddOnRegistry $adminAddOns = null
+		?AdminAddOnRegistry $adminAddOns = null,
+		bool $providerCredentials = false
 	): RoutingDashboard {
-		$providers = $this->providers();
+		$providers        = $this->providers( $providerCredentials );
+		$pluginRepository = $plugins ?? new class() extends PluginRepository {
+
+			public function __construct() {
+			}
+
+			public function allBoosterPlugins(): array {
+				return array();
+			}
+
+			public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+				return array();
+			}
+		};
+		$themeRepository  = $themes ?? new class() extends ThemeRepository {
+
+			public function __construct() {
+			}
+
+			public function allBoosterThemes(): array {
+				return array();
+			}
+
+			public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+				return array();
+			}
+		};
 
 		return new RoutingDashboard(
 			$database ?? new Database(),
-			$plugins ?? new class() extends PluginRepository {
-
-				public function __construct() {
-				}
-
-				public function allBoosterPlugins(): array {
-					return array();
-				}
-
-				public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
-					return array();
-				}
-			},
+			$pluginRepository,
 			new Booster(),
-			$themes ?? new class() extends ThemeRepository {
-
-				public function __construct() {
-				}
-
-				public function allBoosterThemes(): array {
-					return array();
-				}
-
-				public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
-					return array();
-				}
-			},
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ),
+			$themeRepository,
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), null, null, null, $pluginRepository, $themeRepository ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),
@@ -1334,23 +1456,24 @@ final class DashboardIndexRoutingTest extends TestCase {
 		return $package;
 	}
 
-	private function providers(): ProviderRegistry {
+	private function providers( bool $withCredentials = false ): ProviderRegistry {
 		return new ProviderRegistry(
 			array(
-				$this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ),
-				$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ),
+				$this->provider( ProviderCode::parse( 'gh' ), 'GitHub', $withCredentials ),
+				$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket', $withCredentials ),
 			)
 		);
 	}
 
-	private function provider( ProviderCode $code, string $label ): RepositoryProvider {
-		return new class( $code, $label ) implements RepositoryProvider {
+	private function provider( ProviderCode $code, string $label, bool $withCredentials = false ): RepositoryProvider {
+		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, \RAN\RepositoryProvider\WebhookNormalizer {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function __construct(
 				private ProviderCode $code,
-				private string $label
+				private string $label,
+				private bool $withCredentials
 			) {
 			}
 
@@ -1360,8 +1483,28 @@ final class DashboardIndexRoutingTest extends TestCase {
 					$this->label,
 					'https://example.test/',
 					'Owner',
-					new ProviderAdminMetadata( array(), array() )
+					new ProviderAdminMetadata(
+						$this->withCredentials ? array( new CredentialKindMetadata( 'api-key', 'API key', 'API key' ) ) : array(),
+						$this->withCredentials ? array( new WebhookScopeMetadata( 'repository', 'Repository', true, 'Repository' ) ) : array()
+					)
 				);
+			}
+
+			public function getCredentialPolicy(): ProviderCredentialPolicy {
+				return ShippedSecretPolicyCatalog::create()->credentialPolicy( $this->code );
+			}
+
+			public function getWebhookPolicy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {
+				return ShippedSecretPolicyCatalog::create()->webhookPolicy( $this->code );
+			}
+
+			public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+				throw new RuntimeException( 'Unused provider-route fixture method.' );
+			}
+
+			public function normalizeWebhook( \RAN\RepositoryProvider\WebhookRequest $request ): \RAN\RepositoryProvider\WebhookEnvelope {
+				unset( $request );
+				return \RAN\RepositoryProvider\WebhookEnvelope::ignored();
 			}
 		};
 	}

@@ -7,6 +7,9 @@ sanitized Booster-specific evidence.
   deliberate Local test-site roles and safety boundaries.
 - [Multisite quarantine evidence](evidence/multisite-quarantine-2026-07-28/README.md)
   is retained proof output, not a restore fixture.
+- [Core V3 C2-C3 operator-journey map](characterization/core-v3-c2-c3-operator-journey-map.md)
+  freezes the post-C1 request, operation, readback and page boundaries and the
+  only bounded follow-up packets currently proposed for the two admin hotspots.
 
 Core architecture, release, portability, and security contracts remain in the
 named documents beside this index. Private planning state belongs in the

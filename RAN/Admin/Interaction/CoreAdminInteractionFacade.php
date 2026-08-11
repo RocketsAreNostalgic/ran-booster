@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace RAN\Admin\Interaction;
 
 use InvalidArgumentException;
+use RAN\Admin\ProviderProfileAdminController;
 
 /**
  * Core implementation of the bounded add-on interaction contract.
  */
 final class CoreAdminInteractionFacade implements
 	AdminInteractionFacade,
-	CoreProviderProfileInteraction,
 	TransporterRowAdminInteractionFacade {
 
 	private const PROVIDER_PROFILE_ACTIONS = array(
@@ -160,8 +160,8 @@ final class CoreAdminInteractionFacade implements
 
 		return new SignedAdminInteractionRequest(
 			'core:' . $action,
-			CoreProviderProfileInteraction::TARGET_KEY,
-			CoreProviderProfileInteraction::TARGET_SELECTOR,
+			ProviderProfileAdminController::TARGET_KEY,
+			ProviderProfileAdminController::TARGET_SELECTOR,
 			add_query_arg( $args, admin_url( 'admin.php' ) ),
 			$contract['error']
 		);
@@ -237,7 +237,7 @@ final class CoreAdminInteractionFacade implements
 			);
 		}
 
-		if ( CoreProviderProfileInteraction::TARGET_KEY === $target ) {
+		if ( ProviderProfileAdminController::TARGET_KEY === $target ) {
 			if ( ! str_starts_with( $operation, 'core:' ) ) {
 				return null;
 			}

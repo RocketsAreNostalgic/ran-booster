@@ -9,7 +9,7 @@ $providerProfileInteractionValues = static function ( string $action ): string {
 	$values = wp_json_encode(
 		array(
 			'ran_booster_interaction[operation]' => 'core:' . $action,
-			'ran_booster_interaction[target]'    => \RAN\Admin\Interaction\CoreProviderProfileInteraction::TARGET_KEY,
+			'ran_booster_interaction[target]'    => \RAN\Admin\ProviderProfileAdminController::TARGET_KEY,
 		)
 	);
 

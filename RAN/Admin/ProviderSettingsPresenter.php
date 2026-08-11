@@ -1173,7 +1173,7 @@ final readonly class ProviderSettingsPresenter {
 		$interactionValues = wp_json_encode(
 			array(
 				'ran_booster_interaction[operation]' => 'core:delete-webhook-profile',
-				'ran_booster_interaction[target]'    => Interaction\CoreProviderProfileInteraction::TARGET_KEY,
+				'ran_booster_interaction[target]'    => ProviderProfileAdminController::TARGET_KEY,
 			)
 		);
 

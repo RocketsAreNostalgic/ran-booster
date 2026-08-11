@@ -5,6 +5,9 @@ Date: 2026-08-11
 **Characterized source object:**
 `edbff7e2712edde80165e32f02e58a3c370ddfec`
 
+The completed provider-profile source result is recorded in
+`core-v3-provider-profile-c2-1-evidence.md`.
+
 **Decision:** C2 and C3 may proceed only as the vertical packets below. This
 inventory changes no production PHP, public API, hook, action name, capability,
 nonce, persistent state, dependency, runtime type, release or installed

@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 function current_user_can( string $capability ): bool {
+	if ( array_key_exists( 'ran_booster_test_capabilities', $GLOBALS ) ) {
+		$GLOBALS['ran_booster_test_capability_checks'][] = $capability;
+
+		return $GLOBALS['ran_booster_test_capabilities'][ $capability ] ?? true;
+	}
 	$capabilities = $GLOBALS['ran_booster_repository_admin_capabilities'] ?? null;
 	if ( is_array( $capabilities ) && array_key_exists( $capability, $capabilities ) ) {
 		return (bool) $capabilities[ $capability ];
@@ -70,8 +75,9 @@ function wp_send_json_success( array $data ): array {
 	);
 }
 
-function wp_die(): never {
-	throw new \RuntimeException( 'ran_booster_test_wp_die' );
+function wp_die( string $message = '' ): never {
+	// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The focused shim preserves already escaped controller denial copy.
+	throw new \RuntimeException( '' !== $message ? $message : 'ran_booster_test_wp_die' );
 }
 
 function get_current_user_id(): int {

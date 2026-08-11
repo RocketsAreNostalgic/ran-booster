@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once __DIR__ . '/Interaction/AdminInteractionWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\Admin\Interaction\CoreProviderProfileInteraction;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\Admin\Interaction\SignedAdminInteractionRequest;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageEditProviderGuard;
 use RAN\Admin\PackageRepositoryRequestResolver;
+use RAN\Admin\ProviderProfileAdminController;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
@@ -150,6 +151,93 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 	}
 
+	/** @return array<string, array{string, string}> */
+	public static function unauthorizedActions(): array {
+		return array(
+			'save access'        => array( 'save-access-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
+			'delete access'      => array( 'delete-access-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
+			'save webhook'       => array( 'save-webhook-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
+			'delete webhook'     => array( 'delete-webhook-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
+			'validate access'    => array( 'validate-access-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
+			'save public lookup' => array( 'save-public-lookup-profile', 'You do not have sufficient permissions to manage Booster provider settings.' ),
+		);
+	}
+
+	#[DataProvider( 'unauthorizedActions' )]
+	public function testEveryProfileActionStopsBeforeSensitiveStateIsRead( string $action, string $denial ): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'credentialProfiles' );
+		$secrets->expects( self::never() )->method( 'webhookProfiles' );
+		$secrets->expects( self::never() )->method( 'saveCredential' );
+		$secrets->expects( self::never() )->method( 'deleteCredential' );
+		$secrets->expects( self::never() )->method( 'saveWebhook' );
+		$secrets->expects( self::never() )->method( 'deleteWebhook' );
+		$dashboard            = $this->createMock( Dashboard::class );
+		$interaction          = new CapturingProviderProfileInteraction();
+		$_POST['ran_booster'] = array(
+			'action'     => $action,
+			'provider'   => 'fixture',
+			'id'         => 'credential_existing',
+			'secret'     => 'secret-canary-must-not-be-read',
+			'profile_id' => 'credential_existing',
+		);
+
+		try {
+			$this->dispatcher(
+				$dashboard,
+				$secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore()
+			)->dispatchPostRequests();
+			self::fail( 'An unauthorized provider-profile action must terminate before parsing state.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( $denial, $failure->getMessage() );
+		}
+
+		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	#[DataProvider( 'unauthorizedActions' )]
+	public function testEveryProfileActionStopsAtItsExactInvalidNonceBeforeSensitiveStateIsRead( string $action ): void {
+		$GLOBALS['ran_booster_test_nonce_valid'] = false;
+		$secrets                                 = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'credentialProfiles' );
+		$secrets->expects( self::never() )->method( 'webhookProfiles' );
+		$secrets->expects( self::never() )->method( 'saveCredential' );
+		$secrets->expects( self::never() )->method( 'deleteCredential' );
+		$secrets->expects( self::never() )->method( 'saveWebhook' );
+		$secrets->expects( self::never() )->method( 'deleteWebhook' );
+		$dashboard            = $this->createMock( Dashboard::class );
+		$interaction          = new CapturingProviderProfileInteraction();
+		$_POST['ran_booster'] = array(
+			'action'     => $action,
+			'provider'   => 'fixture',
+			'id'         => 'credential_existing',
+			'secret'     => 'secret-canary-must-not-be-read',
+			'profile_id' => 'credential_existing',
+		);
+
+		try {
+			$this->dispatcher(
+				$dashboard,
+				$secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore()
+			)->dispatchPostRequests();
+			self::fail( 'An invalid provider-profile nonce must terminate before parsing state.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Invalid nonce.', $failure->getMessage() );
+		}
+
+		$expectedNonce = 'save-public-lookup-profile' === $action
+			? 'ran-booster-save-public-lookup-profile'
+			: 'ran-booster-save-secrets';
+		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( $expectedNonce ), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
 	/**
 	 * @param array<string, mixed> $request
 	 */
@@ -183,8 +271,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$this->updaterLock = $lock;
 		$dispatcher        = $this->dispatcher( $dashboard, $this->secrets, $interaction, $lookup );
 
-		$dispatcher->dispatchPostRequests();
-		$response = $interaction->response;
+		$response = $interaction->dispatch( $dispatcher );
 		self::assertNotNull( $response );
 		self::assertSame( 'success', $response->kind );
 		self::assertSame( $expectedMessage, $response->feedbackMessage );
@@ -285,13 +372,14 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$_GET['view']         = str_contains( $request['action'], 'access' ) ? 'credentials' : 'secrets';
 		$_POST['ran_booster'] = $request;
 
-		$this->dispatcher(
-			$dashboard,
-			$this->secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore()
-		)->dispatchPostRequests();
-		$response = $interaction->response;
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore()
+			)
+		);
 		self::assertNotNull( $response );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame( $expectedMessage, $response->feedbackMessage );
@@ -316,15 +404,16 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'self_destruct' => '1',
 		);
 
-		$this->dispatcher(
-			$dashboard,
-			$this->secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore(),
-			$expiryObservations
-		)->dispatchPostRequests();
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				$expiryObservations
+			)
+		);
 
-		$response = $interaction->response;
 		self::assertNotNull( $response );
 		self::assertSame( 'success', $response->kind );
 		$profiles = array_values(
@@ -366,15 +455,16 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'expires_on'    => '2026-09-11',
 		);
 
-		$this->dispatcher(
-			$dashboard,
-			$this->secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore(),
-			$expiryObservations
-		)->dispatchPostRequests();
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				$expiryObservations
+			)
+		);
 
-		$response = $interaction->response;
 		self::assertNotNull( $response );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
@@ -411,15 +501,17 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'expires_on'    => '2026-09-10',
 		);
 
-		$this->dispatcher(
-			$dashboard,
-			$this->secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore(),
-			$expiryObservations
-		)->dispatchPostRequests();
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				$expiryObservations
+			)
+		);
 
-		self::assertSame( 'success', $interaction->response?->kind );
+		self::assertSame( 'success', $response->kind );
 		$observation = $expiryObservations->get( 'fixture', 'credential_existing' );
 		self::assertSame( '2026-09-10T12:00:00Z', $observation['provider_expires_at'] );
 		self::assertArrayNotHasKey( 'manual_expires_on', $observation );
@@ -449,15 +541,17 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'expires_on'    => '',
 		);
 
-		$this->dispatcher(
-			$dashboard,
-			$this->secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore(),
-			$expiryObservations
-		)->dispatchPostRequests();
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				$expiryObservations
+			)
+		);
 
-		self::assertSame( 'success', $interaction->response?->kind );
+		self::assertSame( 'success', $response->kind );
 		self::assertSame( array(), $expiryObservations->get( 'fixture', 'credential_existing' ) );
 		self::assertSame(
 			'Replacement credential',
@@ -485,9 +579,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'id'       => 'credential_existing',
 		);
 
-		$this->dispatcher( $dashboard, $this->secrets, $interaction, $lookup )->dispatchPostRequests();
+		$response = $interaction->dispatch( $this->dispatcher( $dashboard, $this->secrets, $interaction, $lookup ) );
 
-		$response = $interaction->response;
 		self::assertNotNull( $response );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedbackMessage );
@@ -514,14 +607,15 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'secret'        => 'secret-canary-release-failure',
 		);
 
-		$this->dispatcher(
-			$dashboard,
-			$this->secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore()
-		)->dispatchPostRequests();
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore()
+			)
+		);
 
-		$response = $interaction->response;
 		self::assertNotNull( $response );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedbackMessage );
@@ -549,13 +643,14 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 		$_GET['view']         = 'credentials';
 
-		$this->dispatcher(
-			$dashboard,
-			$secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore()
-		)->dispatchPostRequests();
-		$response = $interaction->response;
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore()
+			)
+		);
 		self::assertNotNull( $response );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedbackMessage );
@@ -599,14 +694,15 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 		$_GET['view']         = 'credentials';
 
-		$this->dispatcher(
-			$dashboard,
-			$secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore(),
-			$expiryObservations
-		)->dispatchPostRequests();
-		$response = $interaction->response;
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				$expiryObservations
+			)
+		);
 		self::assertNotNull( $response );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
@@ -633,14 +729,15 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 		$_GET['view']         = 'secrets';
 
-		$this->dispatcher(
-			$dashboard,
-			$this->secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore()
-		)->dispatchPostRequests();
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore()
+			)
+		);
 
-		$response = $interaction->response;
 		self::assertNotNull( $response );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
@@ -669,14 +766,15 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 		$_GET['view']         = 'secrets';
 
-		$this->dispatcher(
-			$dashboard,
-			$secrets,
-			$interaction,
-			new InMemoryPublicRepositoryLookupProfileStore()
-		)->dispatchPostRequests();
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore()
+			)
+		);
 
-		$response = $interaction->response;
 		self::assertNotNull( $response );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedbackMessage );
@@ -784,7 +882,17 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			credentialUsage: $usage,
 			publicLookupProfiles: $lookup,
 			expiryObservations: $expiryObservations ?? new InMemoryCredentialExpiryObservationStore(),
-			providerProfileInteraction: $interaction
+			providerProfileInteraction: new ProviderProfileAdminController(
+				$dashboard,
+				$this->providers,
+				$secrets,
+				new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
+				$this->updaterLock,
+				$usage,
+				$lookup,
+				$expiryObservations ?? new InMemoryCredentialExpiryObservationStore(),
+				$interaction->facade()
+			)
 		);
 	}
 }
@@ -799,33 +907,53 @@ final readonly class CapturedProviderProfileResponse {
 	) {}
 }
 
-final class CapturingProviderProfileInteraction implements CoreProviderProfileInteraction {
+final class CapturingProviderProfileInteraction {
 
 	public ?CapturedProviderProfileResponse $response = null;
+	private CoreAdminInteractionFacade $facade;
 
-	public function providerProfileRequest(
-		string $action,
-		string $provider
-	): SignedAdminInteractionRequest {
-		return ( new CoreAdminInteractionFacade() )->providerProfileRequest(
-			$action,
-			$provider
+	public function __construct() {
+		$this->facade = new CoreAdminInteractionFacade(
+			redirect: $this->captureRedirect( ... ),
+			terminate: static function (): never {
+				\Fiber::suspend();
+				throw new \RuntimeException( 'A completed provider-profile response cannot resume.' );
+			}
 		);
 	}
 
-	public function respondToProviderProfileSuccess( SignedAdminInteractionRequest $request, string $message ): void {
-		$this->response = new CapturedProviderProfileResponse( 'success', $request, $message );
+	public function facade(): CoreAdminInteractionFacade {
+		return $this->facade;
 	}
 
-	public function respondToProviderProfileValidationFailure( SignedAdminInteractionRequest $request, string $message ): void {
-		$this->response = new CapturedProviderProfileResponse( 'validation_failure', $request, $message );
+	public function dispatch( Dispatcher $dispatcher ): CapturedProviderProfileResponse {
+		$fiber = new \Fiber( static fn () => $dispatcher->dispatchPostRequests() );
+		$fiber->start();
+		if ( ! $fiber->isSuspended() || null === $this->response ) {
+			throw new \RuntimeException( 'Provider profile response was not captured.' );
+		}
+
+		return $this->response;
 	}
 
-	public function respondToProviderProfileUnexpectedFailure( SignedAdminInteractionRequest $request ): void {
+	private function captureRedirect( string $url ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Focused signed redirect fixture.
+		$query = parse_url( $url, PHP_URL_QUERY );
+		parse_str( is_string( $query ) ? $query : '', $args );
+		$returnUrl      = is_string( $args['ran_booster_interaction_return'] ?? null )
+			? $args['ran_booster_interaction_return']
+			: '';
+		$request        = new SignedAdminInteractionRequest(
+			(string) ( $args['ran_booster_interaction_operation'] ?? '' ),
+			(string) ( $args['ran_booster_interaction_target'] ?? '' ),
+			ProviderProfileAdminController::TARGET_SELECTOR,
+			$returnUrl,
+			(string) ( $args['ran_booster_interaction_error_region'] ?? '' )
+		);
 		$this->response = new CapturedProviderProfileResponse(
-			'unexpected_failure',
+			(string) ( $args['ran_booster_interaction_outcome'] ?? '' ),
 			$request,
-			'We could not complete that request. Please try again.'
+			(string) ( $args['ran_booster_interaction_message'] ?? '' )
 		);
 	}
 }

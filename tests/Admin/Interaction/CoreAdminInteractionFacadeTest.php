@@ -14,7 +14,7 @@ use RAN\Admin\Interaction\AdminInteractionOutcome;
 use RAN\Admin\Interaction\AdminInteractionRequest;
 use RAN\Admin\Interaction\AdminInteractionTarget;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
-use RAN\Admin\Interaction\CoreProviderProfileInteraction;
+use RAN\Admin\ProviderProfileAdminController;
 use RAN\Admin\Interaction\SignedAdminInteractionFlow;
 use RAN\Admin\Interaction\SignedAdminInteractionRequest;
 use RAN\Admin\Interaction\TransporterRowAdminInteractionFacade;
@@ -405,7 +405,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
 			$_POST['ran_booster_interaction'] = array(
 				'operation' => 'core:' . $case['action'],
-				'target'    => CoreProviderProfileInteraction::TARGET_KEY,
+				'target'    => ProviderProfileAdminController::TARGET_KEY,
 			);
 			$_POST['ran_booster']['secret']   = 'secret-canary-provider-profile';
 
@@ -457,7 +457,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
 			$_POST['ran_booster_interaction'] = array(
 				'operation' => 'core:' . $case[0],
-				'target'    => CoreProviderProfileInteraction::TARGET_KEY,
+				'target'    => ProviderProfileAdminController::TARGET_KEY,
 			);
 
 			$this->captureTermination(
@@ -467,8 +467,8 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			self::assertSame( array( 200 ), $this->statuses );
 			$location = json_decode( (string) $this->header( 'HX-Location' ), true );
 			self::assertIsArray( $location );
-			self::assertSame( CoreProviderProfileInteraction::TARGET_SELECTOR, $location['target'] );
-			self::assertSame( CoreProviderProfileInteraction::TARGET_SELECTOR, $location['select'] );
+			self::assertSame( ProviderProfileAdminController::TARGET_SELECTOR, $location['target'] );
+			self::assertSame( ProviderProfileAdminController::TARGET_SELECTOR, $location['select'] );
 			self::assertNull( $this->header( 'HX-Redirect' ) );
 		}
 	}
@@ -526,7 +526,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
 		$_POST['ran_booster_interaction'] = array(
 			'operation' => 'core:save-webhook-profile',
-			'target'    => CoreProviderProfileInteraction::TARGET_KEY,
+			'target'    => ProviderProfileAdminController::TARGET_KEY,
 		);
 		$_POST['ran_booster']['secret']   = 'secret-canary-provider-profile';
 

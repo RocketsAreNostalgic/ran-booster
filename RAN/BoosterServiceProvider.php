@@ -13,7 +13,6 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
-use RAN\Admin\Interaction\CoreProviderProfileInteraction;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Deployment\DeploymentAttemptRepository;
@@ -153,7 +152,7 @@ final class BoosterServiceProvider {
 
 		$container->bind( Database::class, $database );
 		$container->bind( AdminInteractionFacade::class, $adminInteraction );
-		$container->bind( CoreProviderProfileInteraction::class, $adminInteraction );
+		$container->bind( CoreAdminInteractionFacade::class, $adminInteraction );
 		$container->bind(
 			WebhookAssistanceReadinessEvaluator::class,
 			static fn ( CoreContainer $container ): WebhookAssistanceReadinessEvaluator => new WebhookAssistanceReadinessEvaluator(

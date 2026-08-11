@@ -5,7 +5,6 @@
 
 ### Features
 
-* complete V3 Core and adopt updater beta.5 ([e52e42b](https://github.com/RocketsAreNostalgic/ran-booster/commit/e52e42b02ae48b868766d717ac343f10cb951700))
 * complete V3 Core and adopt updater beta.5 ([#25](https://github.com/RocketsAreNostalgic/ran-booster/issues/25)) ([e52e42b](https://github.com/RocketsAreNostalgic/ran-booster/commit/e52e42b02ae48b868766d717ac343f10cb951700))
 
 

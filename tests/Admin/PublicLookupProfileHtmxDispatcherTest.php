@@ -10,7 +10,7 @@ require_once dirname( __DIR__ ) . '/Support/WPError.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderProfileAdminController;
 use RAN\Admin\CredentialExpiryObservationStore;
@@ -160,7 +160,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 			new SecretsFile( null, array() ),
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $providers ),
+			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$lock,
 			publicLookupProfiles: $store,
 			providerProfileInteraction: $this->controller

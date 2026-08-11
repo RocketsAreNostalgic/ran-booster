@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentAttempt;
@@ -458,7 +458,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			new SecretsFile( null, array() ),
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $providers ),
+			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$this->createStub( WordPressUpdaterLock::class ),
 			$coordinator,
 			null,
@@ -508,7 +508,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			new SecretsFile( null, array() ),
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $providers ),
+			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$this->createStub( WordPressUpdaterLock::class ),
 			$this->coordinator,
 			null,

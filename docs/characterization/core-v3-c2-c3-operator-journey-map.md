@@ -9,6 +9,29 @@ The completed provider-profile source result is recorded in
 `core-v3-provider-profile-c2-1-evidence.md`.
 The completed deployment-admin source result is recorded in
 `core-v3-deployment-admin-c2-2-evidence.md`.
+The completed single-package mutation source result is recorded in
+`core-v3-package-admin-c2-3-evidence.md`.
+
+## Landed programme arithmetic after C2-3
+
+The source results now remove 366 physical production PHP lines from the Phase
+0 programme: C1 removes 20, C2-1 removes 136, C2-2 removes 145, and C2-3
+removes 65. C2-4 plus C3-1 must therefore remove at least 434 further lines to
+reach the 800-line physical-deletion floor. They must remove 474 further lines
+to retain the original final target of 46,254 shipped PHP and 45,602 backend
+PHP.
+
+The original remaining packet allocations total only 380 lines (80 plus 300),
+so they are no longer sufficient: they are 54 lines short of the programme
+floor and 94 lines short of the original final target. Scoped growth required
+for correctness remains permitted, but it does not relax the programme exit.
+The 434-line remainder is a visible programme target, not an automatic packet
+stop or NO-GO. Correctness and cohesive ownership remain primary; a sound
+approach must not be abandoned or distorted to manufacture LOC. If later
+packets cannot reclaim the remainder cleanly, the coordinator presents the
+measured tradeoff to the owner before any abandonment, scope, or programme-exit
+decision. The programme must not be reported complete by borrowing
+presentation credit or silently lowering its exit target.
 
 **Decision:** C2 and C3 may proceed only as the vertical packets below. This
 inventory changes no production PHP, public API, hook, action name, capability,

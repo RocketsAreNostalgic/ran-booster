@@ -12,20 +12,16 @@ use RAN\Admin\BulkPackageResult;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DeploymentAdminController;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderProfileAdminController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
-use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Logging\TemporaryDebugCapture;
-use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryLocator;
-use RAN\RepositoryProvider\UnknownProvider;
-use RAN\RepositoryProvider\UnsupportedProviderCapability;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsStorageProvisioner;
 use RAN\Secrets\SecretsStorageProvisioningResult;
@@ -39,8 +35,7 @@ class Dispatcher {
 	 */
 
 	private $dashboard;
-	private PackageRepositoryRequestResolver $packageRepositories;
-	private PackageEditProviderGuard $packageEdits;
+	private PackageAdminController $packageAdmin;
 	private ?BulkPackageActionService $bulkPackageActions;
 	private ?TemporaryDebugCapture $debugCapture;
 	private ?SecretsStorageProvisioner $secretsStorage;
@@ -53,7 +48,7 @@ class Dispatcher {
 	 * @param SecretsFile      $secrets   Provider credential store.
 	 * @param PackageRepositoryRequestResolver       $packageRepositories Package request resolver.
 	 * @param ManagedPackageWebhookAuthorityResolver $webhookAuthorities  Stable webhook authority resolver.
-	 * @param PackageEditProviderGuard                $packageEdits        Stored package provider guard.
+	 * @param PackageAdminController                  $packageAdmin        Single-package browser owner.
 	 * @param WordPressUpdaterLock                    $updaterLock         Shared package-authority mutation lock.
 	 * @param DeploymentCoordinator|null              $deploymentCoordinator Protected operator boundary.
 	 * @param CredentialUsageReader|null              $credentialUsage     Fail-closed managed-package usage reader.
@@ -65,7 +60,7 @@ class Dispatcher {
 		SecretsFile $secrets,
 		PackageRepositoryRequestResolver $packageRepositories,
 		ManagedPackageWebhookAuthorityResolver $webhookAuthorities,
-		PackageEditProviderGuard $packageEdits,
+		PackageAdminController $packageAdmin,
 		WordPressUpdaterLock $updaterLock,
 		?DeploymentCoordinator $deploymentCoordinator = null,
 		?CredentialUsageReader $credentialUsage = null,
@@ -77,13 +72,12 @@ class Dispatcher {
 		?DeploymentAttemptRepository $deploymentAttempts = null,
 		?ProviderProfileAdminController $providerProfileInteraction = null
 	) {
-		$this->dashboard           = $dashboard;
-		$this->packageRepositories = $packageRepositories;
-		$this->packageEdits        = $packageEdits;
-		$this->bulkPackageActions  = $bulkPackageActions;
-		$this->debugCapture        = $debugCapture;
-		$this->secretsStorage      = $secretsStorage;
-		$this->providerProfiles    = $providerProfileInteraction ?? new ProviderProfileAdminController(
+		$this->dashboard          = $dashboard;
+		$this->packageAdmin       = $packageAdmin;
+		$this->bulkPackageActions = $bulkPackageActions;
+		$this->debugCapture       = $debugCapture;
+		$this->secretsStorage     = $secretsStorage;
+		$this->providerProfiles   = $providerProfileInteraction ?? new ProviderProfileAdminController(
 			$dashboard,
 			$providers,
 			$secrets,
@@ -93,7 +87,7 @@ class Dispatcher {
 			$publicLookupProfiles ?? new PublicRepositoryLookupProfileStore(),
 			$expiryObservations ?? new CredentialExpiryObservationStore()
 		);
-		$this->deploymentAdmin     = new DeploymentAdminController(
+		$this->deploymentAdmin    = new DeploymentAdminController(
 			$dashboard,
 			$deploymentCoordinator,
 			$deploymentAttempts
@@ -188,90 +182,27 @@ class Dispatcher {
 			}
 
 			$packageActions = array(
-				'install-plugin'       => array(
-					'capability' => 'install_plugins',
-					'resolve'    => true,
-					'edit'       => false,
-				),
-				'install-theme'        => array(
-					'capability' => 'install_themes',
-					'resolve'    => true,
-					'edit'       => false,
-				),
-				'edit-plugin'          => array(
-					'capability' => 'update_plugins',
-					'resolve'    => true,
-					'edit'       => true,
-				),
-				'edit-theme'           => array(
-					'capability' => 'update_themes',
-					'resolve'    => true,
-					'edit'       => true,
-				),
-				'update-plugin'        => array(
-					'capability' => 'update_plugins',
-					'resolve'    => false,
-					'edit'       => false,
-				),
-				'update-theme'         => array(
-					'capability' => 'update_themes',
-					'resolve'    => false,
-					'edit'       => false,
-				),
-				'unlink-plugin'        => array(
-					'capability' => 'update_plugins',
-					'resolve'    => false,
-					'edit'       => false,
-				),
-				'unlink-theme'         => array(
-					'capability' => 'update_themes',
-					'resolve'    => false,
-					'edit'       => false,
-				),
-				'unlink-delete-plugin' => array(
-					'capability' => array( 'update_plugins', 'delete_plugins', 'activate_plugins' ),
-					'resolve'    => false,
-					'edit'       => false,
-				),
-				'unlink-delete-theme'  => array(
-					'capability' => array( 'update_themes', 'delete_themes' ),
-					'resolve'    => false,
-					'edit'       => false,
-				),
+				'install-plugin',
+				'install-theme',
+				'edit-plugin',
+				'edit-theme',
+				'update-plugin',
+				'update-theme',
+				'unlink-plugin',
+				'unlink-theme',
+				'unlink-delete-plugin',
+				'unlink-delete-theme',
 			);
-			if ( ! isset( $packageActions[ $action ] ) ) {
+			if ( ! in_array( $action, $packageActions, true ) ) {
 				return;
 			}
-			$capabilities = is_array( $packageActions[ $action ]['capability'] )
-				? $packageActions[ $action ]['capability']
-				: array( $packageActions[ $action ]['capability'] );
-			foreach ( $capabilities as $capability ) {
-				if ( ! current_user_can( $capability ) ) {
-					wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'ran-booster' ) );
-				}
-			}
-
-			check_admin_referer( $action );
-			$reinstallAfterSave = in_array( $action, array( 'edit-plugin', 'edit-theme' ), true )
-				&& isset( $request['reinstall_after_save'] )
-				&& is_scalar( $request['reinstall_after_save'] )
-				&& '1' === (string) $request['reinstall_after_save'];
-			if ( $reinstallAfterSave ) {
-				check_admin_referer( str_replace( 'edit-', 'update-', $action ), '_ran_booster_reinstall_nonce' );
-			}
-			if ( ! $this->guardPackageAction( $action, $request ) ) {
-				return;
-			}
-			if ( $packageActions[ $action ]['edit'] && ! $this->guardPackageEdit( $action, $request ) ) {
-				return;
-			}
-			if ( $packageActions[ $action ]['resolve'] ) {
-				$request = $this->resolvePackageRequest( $request );
-				if ( null === $request ) {
-					return;
-				}
-			}
-			$redirect = $this->dashboard->postPackageOperation( $action, $request );
+			$requestMethod = $_SERVER['REQUEST_METHOD'] ?? null;
+			$redirect      = $this->packageAdmin->manage(
+				$this->dashboard,
+				$action,
+				$request,
+				is_string( $requestMethod ) && 'POST' === strtoupper( $requestMethod )
+			);
 			if ( is_string( $redirect ) ) {
 				$this->redirectTo( $redirect );
 			}
@@ -598,52 +529,6 @@ class Dispatcher {
 		$this->redirectTo( $this->dashboard->bulkPackageRedirect( $packageType, $result ) );
 	}
 
-	/**
-	 * @param array<string, mixed> $request
-	 */
-	private function guardPackageAction( string $action, array $request ): bool {
-		try {
-			PackageMutationGuard::assertAdminActionAllowed( $action, $request );
-
-			return true;
-		} catch ( \RuntimeException $exception ) {
-			$this->dashboard->addFailureMessage(
-				new \WP_Error( 'ran_booster_unsupported_package_operation', $exception->getMessage() ),
-				$exception,
-				array(
-					'operation' => $action,
-					'step'      => 'package_mutation_guard',
-				)
-			);
-
-			return false;
-		}
-	}
-
-	/** @param array<string, mixed> $request */
-	private function guardPackageEdit( string $action, array $request ): bool {
-		try {
-			$this->packageEdits->assertStoredProviderAvailable( $action, $request );
-
-			return true;
-		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
-			$message = 'This package cannot be edited until its stored repository provider is registered again.';
-		} catch ( \Throwable $exception ) {
-			$failure = $exception;
-			$message = 'Booster could not verify the managed package provider. No changes were made.';
-		}
-
-		$this->dashboard->addFailureMessage(
-			new \WP_Error( 'ran_booster_unavailable_package_provider', $message ),
-			$failure,
-			array(
-				'operation' => $action,
-				'step'      => 'package_edit_guard',
-			)
-		);
-
-		return false;
-	}
 
 	/** @param array<string, mixed> $request */
 	private function runTroubleshooting( array $request ): void {
@@ -746,50 +631,5 @@ class Dispatcher {
 
 		echo $this->dashboard->renderTroubleshootingDiagnosticsRegion(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
 		exit;
-	}
-
-	/**
-	 * @param array<string, mixed> $request Package form request.
-	 * @return array<string, mixed>|null
-	 */
-	private function resolvePackageRequest( array $request ): ?array {
-		try {
-			return $this->packageRepositories->resolve( $request );
-		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
-			$message = 'The selected repository provider is not available.';
-		} catch ( UnsupportedProviderCapability $failure ) {
-			$message = 'The selected repository provider does not yet support this package operation.';
-		} catch ( \InvalidArgumentException $failure ) {
-			$message = 'Check the repository provider, account, repository, and credential fields.';
-		} catch ( \RuntimeException $failure ) {
-			$message = match ( (int) $failure->getCode() ) {
-				401 => 'The repository provider rejected the selected credential.',
-				403 => 'The repository provider denied access. Check credential permissions or rate limits.',
-				404 => 'The repository could not be found, or the selected credential cannot access it.',
-				429 => 'The repository provider rate limit has been reached. Try again later.',
-				default => 'Booster could not verify the repository. Please try again.',
-			};
-		} catch ( \Throwable $failure ) {
-			$message = 'Booster could not verify the repository. Please try again.';
-		}
-
-		$context = array(
-			'operation' => isset( $request['action'] ) && is_string( $request['action'] )
-				? sanitize_key( wp_unslash( $request['action'] ) )
-				: '',
-			'step'      => 'package_repository_resolve',
-		);
-		if ( isset( $request['provider'] )
-			&& is_string( $request['provider'] )
-			&& preg_match( '/^[a-z0-9][a-z0-9_-]{0,31}$/D', $request['provider'] ) === 1 ) {
-			$context['provider'] = $request['provider'];
-		}
-		$this->dashboard->addFailureMessage(
-			new \WP_Error( 'ran_booster_repository_error', $message ),
-			$failure,
-			$context
-		);
-
-		return null;
 	}
 }

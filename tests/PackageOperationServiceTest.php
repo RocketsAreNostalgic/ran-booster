@@ -9,6 +9,7 @@ namespace Tests;
 require_once __DIR__ . '/Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/Support/WPError.php';
+require_once __DIR__ . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -544,6 +545,52 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( array(), $dashboard->messages );
 	}
 
+	public function testSignedSuccessNoticeCannotBeCrossBoundAcrossTypeOperationOrPackage(): void {
+		$nonce = \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|install|example/example.php' );
+		$cases = array(
+			'type'      => array( 'theme', 'install', 'example/example.php' ),
+			'operation' => array( 'plugin', 'update', 'example/example.php' ),
+			'package'   => array( 'plugin', 'install', 'other/other.php' ),
+		);
+
+		foreach ( $cases as $case => $values ) {
+			[ $type, $operation, $identifier ] = $values;
+			$dashboard                         = $this->dashboard( new OperationCoordinator() );
+			$_GET                              = array(
+				'ran_booster_result'        => $operation,
+				'ran_booster_package'       => $identifier,
+				'_ran_booster_notice_nonce' => $nonce,
+			);
+
+			$this->invokePackageSuccessNotice( $dashboard, $type );
+
+			self::assertSame( array(), $dashboard->messages, $case );
+		}
+	}
+
+	#[DataProvider( 'editActions' )]
+	public function testEditReturnsADistinctAuthoritativeRepositoryReread( string $action ): void {
+		$pluginOriginal = $this->plugin();
+		$pluginFresh    = $this->plugin();
+		$themeOriginal  = new OperationTheme( 'example' );
+		$themeOriginal->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$themeFresh = new OperationTheme( 'example' );
+		$themeFresh->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$plugins                     = new OperationPluginRepository( $pluginOriginal );
+		$themes                      = new OperationThemeRepository( $themeOriginal );
+		$plugins->freshAfterMutation = $pluginFresh;
+		$themes->freshAfterMutation  = $themeFresh;
+
+		$result = $this->service( $plugins, $themes, new OperationCoordinator() )
+			->execute( PackageOperation::fromInput( $action, $this->input( $action ) ) );
+
+		$original = 'edit-plugin' === $action ? $pluginOriginal : $themeOriginal;
+		$fresh    = 'edit-plugin' === $action ? $pluginFresh : $themeFresh;
+		self::assertSame( 'edited', $result['status'] );
+		self::assertSame( $fresh, $result['package'] );
+		self::assertNotSame( $original, $result['package'] );
+	}
+
 	public function testFailedPostDoesNotReusePickerAutoOpenMarker(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$_GET      = array( 'open_picker' => '1' );
@@ -668,6 +715,23 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertStringContainsString( str_repeat( 'c', 32 ), $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'View deployment activity', $dashboard->messages[0]['message'] );
 		self::assertStringNotContainsString( 'secret-canary-token', $dashboard->messages[0]['message'] );
+	}
+
+	public function testMalformedDeploymentCorrelationCannotFallThroughToRemovalCopy(): void {
+		$coordinator         = new OperationCoordinator();
+		$coordinator->result = array(
+			'status'         => 'failed',
+			'correlation_id' => 'invalid-correlation',
+			'outcome_code'   => 'deletion_failed',
+		);
+		$dashboard           = $this->dashboard( $coordinator );
+
+		self::assertFalse( $dashboard->postPackageOperation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[0]['code'] );
+		self::assertStringNotContainsString( 'disabled in Booster', $dashboard->messages[0]['message'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
 	public function testDashboardExplainsAnAlreadyActiveDeployment(): void {
@@ -1038,12 +1102,15 @@ final class OperationPluginRepository extends PluginRepository {
 	public ?string $unlinked                              = null;
 	public ?string $requestedSlug                         = null;
 	public ?\Throwable $unlinkFailure                     = null;
+	public ?Plugin $freshAfterMutation                    = null;
 	public function __construct( private Plugin $package ) {}
 	public function fromSlug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }
 	public function boosterPluginFromFile( $file ) {
-		return $this->package; }
+		return null !== $this->freshAfterMutation && ( null !== $this->stored || array() !== $this->edited )
+			? $this->freshAfterMutation
+			: $this->package; }
 	public function store( Plugin $plugin ): PackageMutationResult {
 		$this->stored = $plugin;
 		return PackageMutationResult::changed( PackageStorageOperation::INSERT );
@@ -1073,12 +1140,15 @@ final class OperationThemeRepository extends ThemeRepository {
 	/** @var array<string, mixed> */ public array $edited = array();
 	public ?string $unlinked                              = null;
 	public ?string $requestedSlug                         = null;
+	public ?Theme $freshAfterMutation                     = null;
 	public function __construct( private Theme $package ) {}
 	public function fromSlug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }
 	public function boosterThemeFromStylesheet( $stylesheet ) {
-		return $this->package; }
+		return null !== $this->freshAfterMutation && ( null !== $this->stored || array() !== $this->edited )
+			? $this->freshAfterMutation
+			: $this->package; }
 	public function store( Theme $theme ): PackageMutationResult {
 		$this->stored = $theme;
 		return PackageMutationResult::changed( PackageStorageOperation::INSERT );

@@ -15,6 +15,7 @@ use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\OnboardingPresenter;
 use RAN\Admin\PackageViewConfig;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\ProviderDocumentationPresenter;
 use RAN\Admin\ProviderRepositoryCompositionRenderer;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
@@ -27,7 +28,6 @@ use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\RejectedAdmissionAuditRepository;
-use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Portability\BlueprintPackage;
@@ -73,7 +73,7 @@ class Dashboard {
 	private ?AdminAddOnRegistry $adminAddOns;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
-	private ?PackageOperationService $packageOperations = null;
+	private PackageAdminController $packageAdmin;
 	private DeploymentAdminPresenter $deploymentAdmin;
 	private ?TemporaryDebugCapture $debugCapture                    = null;
 	private ?SecretsStorageProvisioner $secretsStorage              = null;
@@ -118,13 +118,13 @@ class Dashboard {
 		$this->troubleshooting       = $troubleshooting;
 		$this->adminTabs             = $adminTabs;
 		$this->providerDocumentation = $providerDocumentation;
-		$this->packageOperations     = $packageOperations;
 		$this->deploymentAdmin       = new DeploymentAdminPresenter(
 			attempts: $deploymentAttempts,
 			rejectedAdmissions: $rejectedAdmissionAudit,
 			plugins: $plugins,
 			themes: $themes
 		);
+		$this->packageAdmin          = new PackageAdminController( $packageOperations, deployments: $this->deploymentAdmin );
 		$this->debugCapture          = $debugCapture;
 		$this->secretsStorage        = $secretsStorage;
 		$this->adminAddOns           = $adminAddOns;
@@ -421,7 +421,7 @@ class Dashboard {
 
 	private function renderPackagePage( PackageViewConfig $packageView ) {
 		$type = $packageView->getType();
-		$this->addPackageSuccessNotice( $type );
+		$this->packageAdmin->addSuccessNotice( $this, $type );
 		$this->addBulkPackageNotice( $type );
 
 		// Read-only package selection; mutations use separately nonce-protected forms.
@@ -1047,7 +1047,7 @@ class Dashboard {
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			return $this->databaseUnavailableCreate( $packageView, $packageView->getType() );
 		}
-		$this->addPackageSuccessNotice( $packageView->getType() );
+		$this->packageAdmin->addSuccessNotice( $this, $packageView->getType() );
 
 		return $this->render(
 			'packages/create',
@@ -1109,129 +1109,21 @@ class Dashboard {
 
 	/** @param array<string, mixed> $request */
 	public function postPackageOperation( string $action, array $request ): bool|string {
-		try {
-			if ( null === $this->packageOperations ) {
-				throw new LogicException( 'Package operations are not configured.' );
+		$packageAdmin = isset( $this->packageAdmin ) ? $this->packageAdmin : new PackageAdminController();
+
+		return $packageAdmin->perform(
+			$this,
+			$action,
+			$request,
+			$this->packageListQueryArguments(),
+			function ( WP_Error|array $message, array $context ): void {
+				$this->addMessageWithContext( $message, $context );
 			}
-			$operation          = PackageOperation::fromInput( $action, $request );
-			$reinstallAfterSave = 'edit' === $operation->operation
-				&& isset( $request['reinstall_after_save'] )
-				&& is_scalar( $request['reinstall_after_save'] )
-				&& '1' === (string) $request['reinstall_after_save'];
-			$result             = $this->packageOperations->execute( $operation );
-			if ( $reinstallAfterSave
-				&& 'edited' === $result['status']
-				&& isset( $result['package'] )
-				&& $result['package'] instanceof Package
-			) {
-				$this->addMessage(
-					array(
-						'type'    => 'info',
-						'message' => __( 'Package settings were saved before the reinstall.', 'ran-booster' ),
-					)
-				);
-				$operation = PackageOperation::updateFromSavedPackage( $operation, $result['package'] );
-				$action    = 'update-' . $operation->packageType;
-				$result    = $this->packageOperations->execute( $operation );
-			}
-		} catch ( PackageStorageFailure $failure ) {
-			status_header( 400 );
-			$this->addFailureMessage(
-				$this->packageStorageError( $failure ),
-				$failure,
-				array(
-					'operation' => $action,
-					'step'      => 'package_storage',
-				)
-			);
-			return false;
-		} catch ( DeploymentStorageFailure $failure ) {
-			if ( null !== $failure->getActiveCorrelationId() ) {
-				return $this->reportActiveDeployment( $failure, $action );
-			}
-
-			return $this->reportManualFailure( $failure, $action );
-		} catch ( Throwable $failure ) {
-			return $this->reportManualFailure( $failure, $action );
-		}
-
-		$installAnother   = 'install' === $operation->operation
-			&& isset( $request['install_another'] )
-			&& is_scalar( $request['install_another'] )
-			&& '1' === (string) $request['install_another'];
-		$returnToSettings = $reinstallAfterSave || ( 'update' === $operation->operation
-			&& isset( $request['return_to_settings'] )
-			&& is_scalar( $request['return_to_settings'] )
-			&& '1' === (string) $request['return_to_settings'] );
-
-		if ( 'succeeded' === $result['status'] && isset( $result['package'] ) && $result['package'] instanceof Package ) {
-			return $this->packageSuccessRedirect( $operation, $result['package'], $installAnother, $returnToSettings );
-		} elseif ( 'conflict' === $result['status'] ) {
-			status_header( 409 );
-			$this->addMessageWithContext(
-				new \WP_Error(
-					'ran_booster_package_edit_conflict',
-					'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.'
-				),
-				array(
-					'operation'    => $operation->operation,
-					'package_type' => $operation->packageType,
-					'step'         => 'package_edit_conflict',
-				)
-			);
-
-			return false;
-		} elseif ( 'failed' === $result['status'] && isset( $result['correlation_id'] ) ) {
-			$this->reportDeploymentFailure( $result['outcome_code'], $result['correlation_id'], $action );
-
-			return false;
-		} elseif ( 'failed' === $result['status'] && isset( $result['outcome_code'] ) ) {
-			$this->reportPackageRemovalFailure( $operation, $result['outcome_code'] );
-
-			return false;
-		} elseif ( 'edited' === $result['status'] && isset( $result['package'] ) && $result['package'] instanceof Package ) {
-			return $this->packageSuccessRedirect( $operation, $result['package'], false, true );
-		} elseif ( 'unlinked' === $result['status'] ) {
-			return $this->packageSuccessRedirect( $operation, (string) $operation->identifier );
-		} elseif ( 'deleted' === $result['status'] ) {
-			return $this->packageSuccessRedirect( $operation, (string) $operation->identifier );
-		} elseif ( 'linked' === $result['status'] && isset( $result['package'] ) && $result['package'] instanceof Package ) {
-			return $this->packageSuccessRedirect( $operation, $result['package'], $installAnother );
-		} else {
-			return $this->reportManualFailure( null, $action );
-		}
-
-		return true;
+		);
 	}
 
-	private function reportPackageRemovalFailure( PackageOperation $operation, string $outcomeCode ): void {
-		$type    = 'plugin' === $operation->packageType ? 'Plugin' : 'Theme';
-		$message = match ( $outcomeCode ) {
-			'active_dependents'          => 'Plugin was not removed because an active plugin depends on it.',
-			'deactivation_failed'        => 'Plugin was disabled in Booster, but WordPress could not deactivate it. No files were deleted.',
-			'deletion_failed'            => sprintf( '%s was disabled in Booster, but WordPress could not delete it.', $type ),
-			'files_still_present'        => sprintf( '%s was disabled in Booster, but its files are still present.', $type ),
-			'management_state_uncertain' => sprintf( '%s files were deleted, but Booster could not verify removal of its management record.', $type ),
-			'operation_in_progress'      => sprintf( '%s was not removed because another Booster operation still owns it.', $type ),
-			'operation_lock_failed'      => sprintf( '%s removal could not safely acquire or release the WordPress updater lock.', $type ),
-			'shared_plugin_directory'    => 'Plugin was not removed because its directory contains another registered plugin.',
-			'stale'                      => sprintf( '%s settings changed before this request. Refresh the package settings and try again.', $type ),
-			'theme_active'               => 'Theme was not removed because it is the active theme.',
-			'theme_has_children'         => 'Theme was not removed because an installed child theme depends on it.',
-			'theme_parent_in_use'        => 'Theme was not removed because the active theme depends on it.',
-			'unsafe_path'                => sprintf( '%s was not removed because WordPress could not verify a safe installed path.', $type ),
-			default                      => sprintf( '%s removal could not be completed safely.', $type ),
-		};
-
-		status_header( 400 );
-		$this->addMessageWithContext(
-			new \WP_Error( 'ran_booster_package_removal_' . $outcomeCode, $message ),
-			array(
-				'operation'    => $operation->operation,
-				'package_type' => $operation->packageType,
-				'step'         => 'package_removal',
-			)
-		);
+	private function addPackageSuccessNotice( string $type ): void {
+		$this->packageAdmin->addSuccessNotice( $this, $type );
 	}
 
 	private function packageStorageFailureIndex( PackageViewConfig $packageView, string $type, PackageStorageFailure $failure ): mixed {
@@ -1279,73 +1171,6 @@ class Dashboard {
 			$failure->getMessage(),
 			array( 'recovery_required' => $failure->isRecoveryRequired() )
 		);
-	}
-
-	private function packageSuccessRedirect( PackageOperation $operation, Package|string $package, bool $installAnother = false, bool $returnToSettings = false ): string {
-		$identifier = $package instanceof Package ? $package->getIdentifier() : $package;
-		if ( ! is_string( $identifier ) || '' === $identifier ) {
-			throw new LogicException( 'The deployed package identity is unavailable.' );
-		}
-		$noticeAction = $this->packageSuccessNonceAction( $operation->packageType, $operation->operation, $identifier );
-		$adminUrl     = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
-		$packageView  = 'plugin' === $operation->packageType ? PackageViewConfig::plugin() : PackageViewConfig::theme();
-		$args         = array(
-			'page'                      => $installAnother ? $packageView->getCreatePageSlug() : $packageView->getPageSlug(),
-			'ran_booster_result'        => $operation->operation,
-			'ran_booster_package'       => $identifier,
-			'_ran_booster_notice_nonce' => wp_create_nonce( $noticeAction ),
-		);
-
-		if ( $installAnother ) {
-			$args['provider']    = (string) $operation->providerCode;
-			$args['open_picker'] = '1';
-		} elseif ( in_array( $operation->operation, array( 'install', 'edit' ), true ) || $returnToSettings ) {
-			$args['package'] = $identifier;
-		} elseif ( 'update' === $operation->operation ) {
-			$args = array_merge( $this->packageListQueryArguments(), $args );
-		}
-
-		return $adminUrl . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
-	}
-
-	private function addPackageSuccessNotice( string $type ): void {
-		foreach ( array( 'ran_booster_result', 'ran_booster_package', '_ran_booster_notice_nonce' ) as $key ) {
-			if ( ! isset( $_GET[ $key ] ) || ! is_scalar( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
-				return;
-			}
-		}
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This read-only success marker is verified before use.
-		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
-		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
-		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'unlink', 'unlink-and-delete' ), true )
-			|| false === wp_verify_nonce( $nonce, $this->packageSuccessNonceAction( $type, $operation, $identifier ) )
-		) {
-			return;
-		}
-
-		$label     = 'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' );
-		$completed = match ( $operation ) {
-			'install' => __( 'installed', 'ran-booster' ),
-			'update' => __( 'updated', 'ran-booster' ),
-			'edit' => __( 'saved', 'ran-booster' ),
-			'unlink' => __( 'unlinked', 'ran-booster' ),
-			default => __( 'unlinked and deleted', 'ran-booster' ),
-		};
-		$this->messages[] = array(
-			'type'    => 'success',
-			'message' => sprintf(
-				/* translators: 1: package type, 2: completed operation. */
-				__( '%1$s was successfully %2$s.', 'ran-booster' ),
-				$label,
-				$completed
-			),
-		);
-	}
-
-	private function packageSuccessNonceAction( string $type, string $operation, string $identifier ): string {
-		return 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier;
 	}
 
 	public function bulkPackageRedirect( string $type, BulkPackageResult $result ): string {
@@ -1531,43 +1356,6 @@ class Dashboard {
 			'sha256',
 			http_build_query( $data, '', '&', PHP_QUERY_RFC3986 )
 		);
-	}
-
-	private function reportDeploymentFailure( mixed $outcomeCode, mixed $reference, string $operation ): void {
-		$notice = $this->deploymentAdmin->deploymentFailure( $outcomeCode, $reference, $operation );
-		if ( null === $notice ) {
-			$this->reportManualFailure( null, $operation );
-			return;
-		}
-		$this->addMessageWithContext( $notice['message'], $notice['context'] );
-	}
-
-	private function reportManualFailure( ?Throwable $failure = null, string $operation = '' ): bool {
-		$diagnosticId = 'ran_booster_manual_action_failed';
-		status_header( 400 );
-		$message = new WP_Error(
-			$diagnosticId,
-			__( 'RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed.', 'ran-booster' )
-		);
-		$context = array(
-			'operation' => $operation,
-			'step'      => 'manual_package_operation',
-		);
-		if ( null === $failure ) {
-			$this->addMessageWithContext( $message, $context );
-		} else {
-			$this->addFailureMessage( $message, $failure, $context );
-		}
-		return false;
-	}
-
-	private function reportActiveDeployment( DeploymentStorageFailure $failure, string $operation ): bool {
-		$notice = $this->deploymentAdmin->activeDeployment( $failure, $operation );
-		if ( null === $notice ) {
-			return $this->reportManualFailure( $failure, $operation );
-		}
-		$this->addFailureMessage( $notice['message'], $failure, $notice['context'] );
-		return false;
 	}
 
 	private function messageSeverity( mixed $message ): ?string {

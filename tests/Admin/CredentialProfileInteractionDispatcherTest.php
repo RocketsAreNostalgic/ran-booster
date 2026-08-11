@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\Admin\Interaction\SignedAdminInteractionRequest;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderProfileAdminController;
 use RAN\Dashboard;
@@ -877,7 +877,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			$secrets,
 			new PackageRepositoryRequestResolver( $this->providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $this->providers ),
+			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $this->providers ), plugins: $plugins, themes: $themes, providers: $this->providers ),
 			$this->updaterLock,
 			credentialUsage: $usage,
 			publicLookupProfiles: $lookup,

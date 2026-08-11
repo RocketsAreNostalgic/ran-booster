@@ -46,6 +46,42 @@ if ( ! function_exists( __NAMESPACE__ . '\\esc_html' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\esc_url' ) ) {
+	function esc_url( string $url ): string {
+		return \RAN\esc_url( $url );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_create_nonce' ) ) {
+	function wp_create_nonce( string $action ): string {
+		return \RAN\wp_create_nonce( $action );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_verify_nonce' ) ) {
+	function wp_verify_nonce( string $nonce, string $action ): int|false {
+		return \RAN\wp_verify_nonce( $nonce, $action );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\is_multisite' ) ) {
+	function is_multisite(): bool {
+		return \RAN\is_multisite();
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\admin_url' ) ) {
+	function admin_url( string $path = '' ): string {
+		return \RAN\admin_url( $path );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\network_admin_url' ) ) {
+	function network_admin_url( string $path = '' ): string {
+		return \RAN\network_admin_url( $path );
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\esc_html__' ) ) {
 	function esc_html__( string $text, string $domain = 'default' ): string {
 		return \RAN\esc_html__( $text, $domain );

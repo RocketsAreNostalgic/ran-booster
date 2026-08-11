@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace RAN;
 
 use InvalidArgumentException;
-use RAN\Admin\BulkPackageAction;
-use RAN\Admin\BulkPackageActionFailure;
 use RAN\Admin\BulkPackageActionService;
-use RAN\Admin\BulkPackageResult;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DeploymentAdminController;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
@@ -36,7 +33,6 @@ class Dispatcher {
 
 	private $dashboard;
 	private PackageAdminController $packageAdmin;
-	private ?BulkPackageActionService $bulkPackageActions;
 	private ?TemporaryDebugCapture $debugCapture;
 	private ?SecretsStorageProvisioner $secretsStorage;
 	private ProviderProfileAdminController $providerProfiles;
@@ -72,12 +68,11 @@ class Dispatcher {
 		?DeploymentAttemptRepository $deploymentAttempts = null,
 		?ProviderProfileAdminController $providerProfileInteraction = null
 	) {
-		$this->dashboard          = $dashboard;
-		$this->packageAdmin       = $packageAdmin;
-		$this->bulkPackageActions = $bulkPackageActions;
-		$this->debugCapture       = $debugCapture;
-		$this->secretsStorage     = $secretsStorage;
-		$this->providerProfiles   = $providerProfileInteraction ?? new ProviderProfileAdminController(
+		$this->dashboard        = $dashboard;
+		$this->packageAdmin     = $packageAdmin;
+		$this->debugCapture     = $debugCapture;
+		$this->secretsStorage   = $secretsStorage;
+		$this->providerProfiles = $providerProfileInteraction ?? new ProviderProfileAdminController(
 			$dashboard,
 			$providers,
 			$secrets,
@@ -87,7 +82,7 @@ class Dispatcher {
 			$publicLookupProfiles ?? new PublicRepositoryLookupProfileStore(),
 			$expiryObservations ?? new CredentialExpiryObservationStore()
 		);
-		$this->deploymentAdmin    = new DeploymentAdminController(
+		$this->deploymentAdmin  = new DeploymentAdminController(
 			$dashboard,
 			$deploymentCoordinator,
 			$deploymentAttempts
@@ -176,7 +171,16 @@ class Dispatcher {
 			}
 
 			if ( in_array( $action, array( 'bulk-plugin', 'bulk-theme' ), true ) ) {
-				$this->manageBulkPackageAction( $action, $request );
+				$requestMethod = $_SERVER['REQUEST_METHOD'] ?? null;
+				$redirect      = $this->packageAdmin->manageBulk(
+					$this->dashboard,
+					$action,
+					$request,
+					is_string( $requestMethod ) && 'POST' === strtoupper( $requestMethod )
+				);
+				if ( is_string( $redirect ) ) {
+					$this->redirectTo( $redirect );
+				}
 
 				return;
 			}
@@ -460,75 +464,6 @@ class Dispatcher {
 			: admin_url( 'admin.php' );
 		$this->redirectTo( $adminUrl . '?page=ran-booster&tab=troubleshooting&panel=debug-capture' );
 	}
-
-	/** @param array<string, mixed> $request */
-	private function manageBulkPackageAction( string $action, array $request ): void {
-		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
-			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
-			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
-			return;
-		}
-
-		$packageType = 'bulk-plugin' === $action ? 'plugin' : 'theme';
-		$request     = wp_unslash( $request );
-		$operation   = is_string( $request['bulk_action'] ?? null )
-			? sanitize_key( $request['bulk_action'] )
-			: BulkPackageAction::QUEUE_UPDATE;
-		$capability  = 'plugin' === $packageType
-			? match ( $operation ) {
-				BulkPackageAction::ACTIVATE_PLUGINS => 'activate_plugins',
-				BulkPackageAction::DEACTIVATE_PLUGINS => 'deactivate_plugins',
-				default => 'update_plugins',
-			}
-			: 'update_themes';
-		if ( ! current_user_can( $capability ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to manage these packages.', 'ran-booster' ) );
-		}
-
-		check_admin_referer( $action );
-		$selected = is_array( $request['identifiers'] ?? null )
-			? min( count( $request['identifiers'] ), BulkPackageAction::MAX_IDENTIFIERS )
-			: 0;
-
-		try {
-			if ( null === $this->bulkPackageActions ) {
-				throw new \RuntimeException( 'Bulk package actions are unavailable.' );
-			}
-			$command = BulkPackageAction::fromInput( $packageType, $request );
-			$result  = $this->bulkPackageActions->execute( $command );
-		} catch ( InvalidArgumentException $failure ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'bulk package action rejected',
-				$failure,
-				array(
-					'operation' => $operation,
-					'step'      => 'bulk_package_action',
-				)
-			);
-			$result = BulkPackageResult::error( $operation, $selected, 'invalid_request' );
-		} catch ( BulkPackageActionFailure $failure ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'bulk package action failed',
-				$failure,
-				array(
-					'operation'    => $operation,
-					'outcome_code' => $failure->reason,
-					'step'         => 'bulk_package_action',
-				)
-			);
-			$result = BulkPackageResult::error( $operation, $selected, $failure->reason );
-		} catch ( \Throwable $exception ) {
-			\RAN\Logging\BoosterLogger::logException(
-				'bulk package action failed',
-				$exception,
-				array( 'step' => 'bulk_package_action' )
-			);
-			$result = BulkPackageResult::error( $operation, $selected, 'unavailable' );
-		}
-
-		$this->redirectTo( $this->dashboard->bulkPackageRedirect( $packageType, $result ) );
-	}
-
 
 	/** @param array<string, mixed> $request */
 	private function runTroubleshooting( array $request ): void {

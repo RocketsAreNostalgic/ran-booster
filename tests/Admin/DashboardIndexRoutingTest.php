@@ -998,6 +998,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayHasKey( '_ran_booster_bulk_notice_nonce', $query );
 	}
 
+	public function testBulkPackageRedirectRejectsAPluginActivationResultForTheThemeList(): void {
+		$this->expectException( \LogicException::class );
+
+		$this->dashboard( $this->throwingSecrets() )->bulkPackageRedirect(
+			'theme',
+			BulkPackageResult::pluginActivation(
+				BulkPackageAction::ACTIVATE_PLUGINS,
+				1,
+				1,
+				0,
+				array()
+			)
+		);
+	}
+
 	public function testSignedBulkQueueNoticeReportsPartialSuccessAndUnavailableRunner(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
 		$url       = $dashboard->bulkPackageRedirect(
@@ -1116,6 +1131,35 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
 		$_GET['ran_booster_bulk_queued'] = '20';
+
+		$dashboard->getPlugins();
+
+		self::assertSame( array(), $dashboard->messages );
+	}
+
+	public function testBulkNoticeSignatureCannotBeReplayedAcrossPackageTypes(): void {
+		$dashboard = $this->dashboard( $this->throwingSecrets() );
+		$url       = $dashboard->bulkPackageRedirect(
+			'plugin',
+			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
+		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query and deliberately presents it to the other package type.
+		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+
+		$dashboard->getThemes();
+
+		self::assertSame( array(), $dashboard->messages );
+	}
+
+	public function testForgedBulkNoticeMarkerIsIgnored(): void {
+		$dashboard = $this->dashboard( $this->throwingSecrets() );
+		$url       = $dashboard->bulkPackageRedirect(
+			'plugin',
+			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
+		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test deliberately replaces the signed redirect marker.
+		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		$_GET['_ran_booster_bulk_notice_nonce'] = 'forged';
 
 		$dashboard->getPlugins();
 

@@ -18,7 +18,7 @@ use RuntimeException;
 use Throwable;
 use WP_Error;
 
-/** @internal Core single-package browser request and response owner. */
+/** @internal Core package-mutation request and signed-feedback owner. */
 final class PackageAdminController {
 
 	public function __construct(
@@ -27,7 +27,8 @@ final class PackageAdminController {
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null,
 		private ?ProviderRegistry $providers = null,
-		private ?DeploymentAdminPresenter $deployments = null
+		private ?DeploymentAdminPresenter $deployments = null,
+		private ?BulkPackageActionService $bulkActions = null
 	) {
 	}
 
@@ -84,6 +85,67 @@ final class PackageAdminController {
 		}
 
 		return $dashboard->postPackageOperation( $action, $request );
+	}
+
+	/** @param array<string, mixed> $request */
+	public function manageBulk(
+		Dashboard $dashboard,
+		string $action,
+		array $request,
+		bool $postRequest
+	): ?string {
+		if ( ! $postRequest || ! in_array( $action, array( 'bulk-plugin', 'bulk-theme' ), true ) ) {
+			return null;
+		}
+		$type       = 'bulk-plugin' === $action ? 'plugin' : 'theme';
+		$request    = wp_unslash( $request );
+		$operation  = is_string( $request['bulk_action'] ?? null ) ? sanitize_key( $request['bulk_action'] ) : BulkPackageAction::QUEUE_UPDATE;
+		$capability = 'plugin' === $type
+			? match ( $operation ) {
+				BulkPackageAction::ACTIVATE_PLUGINS => 'activate_plugins',
+				BulkPackageAction::DEACTIVATE_PLUGINS => 'deactivate_plugins',
+				default => 'update_plugins',
+			}
+			: 'update_themes';
+		if ( ! current_user_can( $capability ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to manage these packages.', 'ran-booster' ) );
+		}
+		check_admin_referer( $action );
+		$selected = is_array( $request['identifiers'] ?? null )
+			? min( count( $request['identifiers'] ), BulkPackageAction::MAX_IDENTIFIERS )
+			: 0;
+		try {
+			if ( null === $this->bulkActions ) {
+				throw new RuntimeException( 'Bulk package actions are unavailable.' );
+			}
+			$result = $this->bulkActions->execute( BulkPackageAction::fromInput( $type, $request ) );
+		} catch ( InvalidArgumentException $failure ) {
+			\RAN\Logging\BoosterLogger::logException(
+				'bulk package action rejected',
+				$failure,
+				array(
+					'operation' => $operation,
+					'step'      => 'bulk_package_action',
+				)
+			);
+			$result = BulkPackageResult::error( $operation, $selected, 'invalid_request' );
+		} catch ( BulkPackageActionFailure $failure ) {
+			\RAN\Logging\BoosterLogger::logException(
+				'bulk package action failed',
+				$failure,
+				array(
+					'operation'    => $operation,
+					'outcome_code' => $failure->reason,
+					'step'         => 'bulk_package_action',
+				)
+			);
+			$result = BulkPackageResult::error( $operation, $selected, $failure->reason );
+		} catch ( Throwable $failure ) {
+			\RAN\Logging\BoosterLogger::logException( 'bulk package action failed', $failure, array( 'step' => 'bulk_package_action' ) );
+			$result = BulkPackageResult::error( $operation, $selected, 'unavailable' );
+		}
+
+		return $dashboard->bulkPackageRedirect( $type, $result );
 	}
 
 	/**
@@ -203,6 +265,172 @@ final class PackageAdminController {
 		);
 	}
 
+	/** @param array<string, string> $listArguments */
+	public function bulkRedirect( string $type, BulkPackageResult $result, array $listArguments ): string {
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
+			|| ( 'theme' === $type && in_array( $result->operation, BulkPackageAction::pluginActivationOperations(), true ) ) ) {
+			throw new LogicException( 'The bulk package redirect type is invalid.' );
+		}
+		$data = $result->noticeData();
+		$args = array();
+		foreach ( $data as $key => $value ) {
+			$args[ 'ran_booster_bulk_' . $key ] = $value;
+		}
+		$args['_ran_booster_bulk_notice_nonce'] = wp_create_nonce( $this->bulkNoticeAction( $type, $data ) );
+		$adminUrl                               = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+
+		return $adminUrl . '?' . http_build_query(
+			array( 'page' => 'ran-booster-' . $type . 's' ) + $listArguments + $args,
+			'',
+			'&',
+			PHP_QUERY_RFC3986
+		);
+	}
+
+	/** @param \Closure(array<string, mixed>, array<string, string>): void $addContextMessage */
+	public function addBulkNotice( Dashboard $dashboard, string $type, \Closure $addContextMessage ): void {
+		$data = array();
+		foreach ( array( 'operation', 'selected', 'changed', 'unchanged', 'queued', 'skips', 'runner', 'error' ) as $key ) {
+			$queryKey = 'ran_booster_bulk_' . $key;
+			if ( ! isset( $_GET[ $queryKey ] ) || ! is_scalar( $_GET[ $queryKey ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
+				return;
+			}
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
+			$data[ $key ] = wp_unslash( (string) $_GET[ $queryKey ] );
+		}
+		if ( ! isset( $_GET['_ran_booster_bulk_notice_nonce'] ) || ! is_scalar( $_GET['_ran_booster_bulk_notice_nonce'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification is the purpose of this read.
+		$nonce = wp_unslash( (string) $_GET['_ran_booster_bulk_notice_nonce'] );
+		if ( false === wp_verify_nonce( $nonce, $this->bulkNoticeAction( $type, $data ) ) ) {
+			return;
+		}
+		try {
+			$result = BulkPackageResult::fromNoticeData( $data );
+		} catch ( InvalidArgumentException ) {
+			return;
+		}
+
+		$plural = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
+		if ( '' !== $result->errorCode ) {
+			$errors = array(
+				'credential_unavailable' => __( 'A selected package does not have its required repository credential.', 'ran-booster' ),
+				'invalid_request'        => __( 'Choose a bulk action and a supported number of managed packages.', 'ran-booster' ),
+				'provider_unavailable'   => __( 'A selected package uses an unavailable repository provider.', 'ran-booster' ),
+				'stale'                  => __( 'A selected managed package changed or is no longer available. Refresh and try again.', 'ran-booster' ),
+				'unavailable'            => __( 'Booster could not safely complete this bulk action. No success was reported.', 'ran-booster' ),
+				'webhook_unavailable'    => __( 'A selected package provider does not support Automatic deployment.', 'ran-booster' ),
+			);
+			$addContextMessage(
+				array(
+					'type'    => 'error',
+					'message' => $errors[ $result->errorCode ] ?? $errors['unavailable'],
+					'code'    => 'ran_booster_bulk_' . $result->errorCode,
+				),
+				array(
+					'operation'    => $result->operation,
+					'outcome_code' => $result->errorCode,
+					'step'         => 'bulk_package_action',
+				)
+			);
+			return;
+		}
+		if ( BulkPackageAction::QUEUE_UPDATE === $result->operation ) {
+			$message = sprintf(
+				/* translators: 1: queued count, 2: package type, 3: skipped count. */
+				__( 'Queued %1$d %2$s for sequential branch reinstall. Skipped: %3$d.', 'ran-booster' ),
+				$result->queued,
+				$plural,
+				$result->skipped()
+			);
+			$message = $this->appendBulkReasons(
+				$message,
+				$result->skippedByReason,
+				array(
+					'busy'                   => __( 'already queued, running, or needs attention', 'ran-booster' ),
+					'credential_unavailable' => __( 'credential unavailable', 'ran-booster' ),
+					'disabled'               => __( 'deployment disabled', 'ran-booster' ),
+					'provider_unavailable'   => __( 'provider unavailable', 'ran-booster' ),
+					'release_source'         => __( 'published-release source', 'ran-booster' ),
+					'self_update'            => __( 'Booster self-update blocked', 'ran-booster' ),
+					'stale'                  => __( 'selection stale', 'ran-booster' ),
+				)
+			);
+			if ( 'unavailable' === $result->runnerStatus && $result->queued > 0 ) {
+				$message .= ' ' . __( 'The updates remain queued, but WordPress could not schedule the deployment runner. Open Troubleshooting to request it.', 'ran-booster' );
+			}
+			$addContextMessage(
+				array(
+					'type'            => $result->skipped() > 0 || 'unavailable' === $result->runnerStatus ? 'warning' : 'success',
+					'message'         => $message,
+					'code'            => 'bulk_update_queue',
+					'queued_updates'  => $result->queued,
+					'skipped_updates' => $result->skipped(),
+				),
+				array(
+					'operation' => $result->operation,
+					'step'      => 'bulk_package_action',
+				)
+			);
+			return;
+		}
+		if ( in_array( $result->operation, BulkPackageAction::pluginActivationOperations(), true ) ) {
+			$enabled = BulkPackageAction::ACTIVATE_PLUGINS === $result->operation;
+			$message = sprintf(
+				/* translators: 1: changed count, 2: enabled or disabled label, 3: unchanged count, 4: skipped count. */
+				__( 'Changed %1$d plugins to %2$s in WordPress. Already in that state: %3$d. Skipped: %4$d.', 'ran-booster' ),
+				$result->changed,
+				$enabled ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ),
+				$result->unchanged,
+				$result->skipped()
+			);
+			$message = $this->appendBulkReasons(
+				$message,
+				$result->skippedByReason,
+				array(
+					'active_dependents'   => __( 'required by active plugins', 'ran-booster' ),
+					'activation_failed'   => __( 'activation failed', 'ran-booster' ),
+					'deactivation_failed' => __( 'deactivation failed', 'ran-booster' ),
+					'permission'          => __( 'permission denied', 'ran-booster' ),
+					'self_deactivation'   => __( 'Booster cannot disable itself', 'ran-booster' ),
+					'stale'               => __( 'selection stale', 'ran-booster' ),
+				)
+			);
+			$addContextMessage(
+				array(
+					'type'    => $result->skipped() > 0 ? 'warning' : 'success',
+					'message' => $message,
+					'code'    => 'bulk_plugin_state',
+				),
+				array(
+					'operation' => $result->operation,
+					'step'      => 'bulk_package_action',
+				)
+			);
+			return;
+		}
+
+		$policyLabel = match ( $result->operation ) {
+			BulkPackageAction::POLICY_DISABLED => __( 'Disabled', 'ran-booster' ),
+			BulkPackageAction::POLICY_AUTOMATIC => __( 'Automatic', 'ran-booster' ),
+			default => __( 'Manual', 'ran-booster' ),
+		};
+		$dashboard->addMessage(
+			array(
+				'type'    => 'success',
+				'message' => sprintf(
+					/* translators: 1: changed count, 2: package type, 3: policy label, 4: unchanged count. */
+					__( 'Changed %1$d %2$s to %3$s. Already in that state: %4$d.', 'ran-booster' ),
+					$result->changed,
+					$plural,
+					$policyLabel,
+					$result->unchanged
+				),
+			)
+		);
+	}
+
 	/** @param array<string, mixed> $request */
 	private function storedProviderAvailable( Dashboard $dashboard, string $action, array $request ): bool {
 		try {
@@ -296,6 +524,26 @@ final class PackageAdminController {
 
 	private function enabled( array $request, string $key ): bool {
 		return isset( $request[ $key ] ) && is_scalar( $request[ $key ] ) && '1' === (string) $request[ $key ];
+	}
+
+	/** @param array<string, string> $data */
+	private function bulkNoticeAction( string $type, array $data ): string {
+		ksort( $data, SORT_STRING );
+
+		return 'ran-booster-bulk-result|' . $type . '|' . hash(
+			'sha256',
+			http_build_query( $data, '', '&', PHP_QUERY_RFC3986 )
+		);
+	}
+
+	/** @param array<string, int> $reasons @param array<string, string> $labels */
+	private function appendBulkReasons( string $message, array $reasons, array $labels ): string {
+		$details = array();
+		foreach ( $reasons as $reason => $count ) {
+			$details[] = ( $labels[ $reason ] ?? $reason ) . ': ' . $count;
+		}
+
+		return array() === $details ? $message : $message . ' ' . implode( '; ', $details ) . '.';
 	}
 
 	private function activeDeployment( Dashboard $dashboard, DeploymentStorageFailure $failure, string $action ): bool {

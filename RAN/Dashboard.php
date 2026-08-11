@@ -7,7 +7,6 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminPackageProjection;
 use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabRegistry;
-use RAN\Admin\BulkPackageAction;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\Component\AdminPackageSourceChoiceNormalizer;
 use RAN\Admin\DevelopmentEnvironmentDetector;
@@ -1174,187 +1173,16 @@ class Dashboard {
 	}
 
 	public function bulkPackageRedirect( string $type, BulkPackageResult $result ): string {
-		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
-			throw new LogicException( 'The bulk package redirect type is invalid.' );
-		}
-
-		$data = $result->noticeData();
-		$args = array();
-		foreach ( $data as $key => $value ) {
-			$args[ 'ran_booster_bulk_' . $key ] = $value;
-		}
-		$args['_ran_booster_bulk_notice_nonce'] = wp_create_nonce( $this->bulkPackageNoticeAction( $type, $data ) );
-
-		$adminUrl = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
-
-		return $adminUrl . '?' . http_build_query(
-			array( 'page' => 'ran-booster-' . ( 'plugin' === $type ? 'plugins' : 'themes' ) ) + $this->packageListQueryArguments() + $args,
-			'',
-			'&',
-			PHP_QUERY_RFC3986
-		);
+		return $this->packageAdmin->bulkRedirect( $type, $result, $this->packageListQueryArguments() );
 	}
 
 	private function addBulkPackageNotice( string $type ): void {
-		$data = array();
-		foreach ( array( 'operation', 'selected', 'changed', 'unchanged', 'queued', 'skips', 'runner', 'error' ) as $key ) {
-			$queryKey = 'ran_booster_bulk_' . $key;
-			if ( ! isset( $_GET[ $queryKey ] ) || ! is_scalar( $_GET[ $queryKey ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
-				return;
+		$this->packageAdmin->addBulkNotice(
+			$this,
+			$type,
+			function ( array $message, array $context ): void {
+				$this->addMessageWithContext( $message, $context );
 			}
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
-			$data[ $key ] = wp_unslash( (string) $_GET[ $queryKey ] );
-		}
-		if ( ! isset( $_GET['_ran_booster_bulk_notice_nonce'] ) || ! is_scalar( $_GET['_ran_booster_bulk_notice_nonce'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
-			return;
-		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification is the purpose of this read.
-		$nonce = wp_unslash( (string) $_GET['_ran_booster_bulk_notice_nonce'] );
-		if ( false === wp_verify_nonce( $nonce, $this->bulkPackageNoticeAction( $type, $data ) ) ) {
-			return;
-		}
-
-		try {
-			$result = BulkPackageResult::fromNoticeData( $data );
-		} catch ( \InvalidArgumentException ) {
-			return;
-		}
-
-		$plural = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
-		if ( '' !== $result->errorCode ) {
-			$errors = array(
-				'credential_unavailable' => __( 'A selected package does not have its required repository credential.', 'ran-booster' ),
-				'invalid_request'        => __( 'Choose a bulk action and a supported number of managed packages.', 'ran-booster' ),
-				'provider_unavailable'   => __( 'A selected package uses an unavailable repository provider.', 'ran-booster' ),
-				'stale'                  => __( 'A selected managed package changed or is no longer available. Refresh and try again.', 'ran-booster' ),
-				'unavailable'            => __( 'Booster could not safely complete this bulk action. No success was reported.', 'ran-booster' ),
-				'webhook_unavailable'    => __( 'A selected package provider does not support Automatic deployment.', 'ran-booster' ),
-			);
-			$this->addMessageWithContext(
-				array(
-					'type'    => 'error',
-					'message' => $errors[ $result->errorCode ] ?? $errors['unavailable'],
-					'code'    => 'ran_booster_bulk_' . $result->errorCode,
-				),
-				array(
-					'operation'    => $result->operation,
-					'outcome_code' => $result->errorCode,
-					'step'         => 'bulk_package_action',
-				)
-			);
-
-			return;
-		}
-
-		if ( BulkPackageAction::QUEUE_UPDATE === $result->operation ) {
-			$message = sprintf(
-				/* translators: 1: queued count, 2: package type, 3: skipped count. */
-				__( 'Queued %1$d %2$s for sequential branch reinstall. Skipped: %3$d.', 'ran-booster' ),
-				$result->queued,
-				$plural,
-				$result->skipped()
-			);
-			$reasonLabels = array(
-				'busy'                   => __( 'already queued, running, or needs attention', 'ran-booster' ),
-				'credential_unavailable' => __( 'credential unavailable', 'ran-booster' ),
-				'disabled'               => __( 'deployment disabled', 'ran-booster' ),
-				'provider_unavailable'   => __( 'provider unavailable', 'ran-booster' ),
-				'release_source'         => __( 'published-release source', 'ran-booster' ),
-				'self_update'            => __( 'Booster self-update blocked', 'ran-booster' ),
-				'stale'                  => __( 'selection stale', 'ran-booster' ),
-			);
-			if ( array() !== $result->skippedByReason ) {
-				$details = array();
-				foreach ( $result->skippedByReason as $reason => $count ) {
-					$details[] = ( $reasonLabels[ $reason ] ?? $reason ) . ': ' . $count;
-				}
-				$message .= ' ' . implode( '; ', $details ) . '.';
-			}
-			if ( 'unavailable' === $result->runnerStatus && $result->queued > 0 ) {
-				$message .= ' ' . __( 'The updates remain queued, but WordPress could not schedule the deployment runner. Open Troubleshooting to request it.', 'ran-booster' );
-			}
-			$this->addMessageWithContext(
-				array(
-					'type'            => $result->skipped() > 0 || 'unavailable' === $result->runnerStatus ? 'warning' : 'success',
-					'message'         => $message,
-					'code'            => 'bulk_update_queue',
-					'queued_updates'  => $result->queued,
-					'skipped_updates' => $result->skipped(),
-				),
-				array(
-					'operation' => $result->operation,
-					'step'      => 'bulk_package_action',
-				)
-			);
-
-			return;
-		}
-
-		if ( in_array( $result->operation, BulkPackageAction::pluginActivationOperations(), true ) ) {
-			$enabled = BulkPackageAction::ACTIVATE_PLUGINS === $result->operation;
-			$message = sprintf(
-				/* translators: 1: changed count, 2: enabled or disabled label, 3: unchanged count, 4: skipped count. */
-				__( 'Changed %1$d plugins to %2$s in WordPress. Already in that state: %3$d. Skipped: %4$d.', 'ran-booster' ),
-				$result->changed,
-				$enabled ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ),
-				$result->unchanged,
-				$result->skipped()
-			);
-			$reasonLabels = array(
-				'active_dependents'   => __( 'required by active plugins', 'ran-booster' ),
-				'activation_failed'   => __( 'activation failed', 'ran-booster' ),
-				'deactivation_failed' => __( 'deactivation failed', 'ran-booster' ),
-				'permission'          => __( 'permission denied', 'ran-booster' ),
-				'self_deactivation'   => __( 'Booster cannot disable itself', 'ran-booster' ),
-				'stale'               => __( 'selection stale', 'ran-booster' ),
-			);
-			if ( array() !== $result->skippedByReason ) {
-				$details = array();
-				foreach ( $result->skippedByReason as $reason => $count ) {
-					$details[] = ( $reasonLabels[ $reason ] ?? $reason ) . ': ' . $count;
-				}
-				$message .= ' ' . implode( '; ', $details ) . '.';
-			}
-			$this->addMessageWithContext(
-				array(
-					'type'    => $result->skipped() > 0 ? 'warning' : 'success',
-					'message' => $message,
-					'code'    => 'bulk_plugin_state',
-				),
-				array(
-					'operation' => $result->operation,
-					'step'      => 'bulk_package_action',
-				)
-			);
-
-			return;
-		}
-
-		$policyLabel = match ( $result->operation ) {
-			BulkPackageAction::POLICY_DISABLED => __( 'Disabled', 'ran-booster' ),
-			BulkPackageAction::POLICY_AUTOMATIC => __( 'Automatic', 'ran-booster' ),
-			default => __( 'Manual', 'ran-booster' ),
-		};
-		$this->messages[] = array(
-			'type'    => 'success',
-			'message' => sprintf(
-				/* translators: 1: changed count, 2: package type, 3: policy label, 4: unchanged count. */
-				__( 'Changed %1$d %2$s to %3$s. Already in that state: %4$d.', 'ran-booster' ),
-				$result->changed,
-				$plural,
-				$policyLabel,
-				$result->unchanged
-			),
-		);
-	}
-
-	/** @param array<string, string> $data */
-	private function bulkPackageNoticeAction( string $type, array $data ): string {
-		ksort( $data, SORT_STRING );
-
-		return 'ran-booster-bulk-result|' . $type . '|' . hash(
-			'sha256',
-			http_build_query( $data, '', '&', PHP_QUERY_RFC3986 )
 		);
 	}
 

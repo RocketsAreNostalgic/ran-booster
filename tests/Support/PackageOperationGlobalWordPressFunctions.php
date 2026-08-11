@@ -22,6 +22,16 @@ if ( ! function_exists( 'admin_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_verify_nonce' ) ) {
+	function wp_verify_nonce( string $nonce, string $action ): int|false {
+		if ( function_exists( 'wp_create_nonce' ) && hash_equals( wp_create_nonce( $action ), $nonce ) ) {
+			return 1;
+		}
+
+		return false;
+	}
+}
+
 if ( ! function_exists( 'get_current_user_id' ) ) {
 	function get_current_user_id(): int {
 		return (int) ( $GLOBALS['ran_booster_package_operation_user_id'] ?? 1 );

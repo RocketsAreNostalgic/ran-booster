@@ -8,23 +8,29 @@ require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\Admin\PackageViewConfig;
+use RAN\Admin\PackagePagePresenter;
 
 final class PackageIndexFilterControlsTest extends TestCase {
+	protected function tearDown(): void {
+		unset(
+			$GLOBALS['ran_booster_package_view_multisite'],
+			$GLOBALS['ran_booster_dashboard_test_multisite']
+		);
+	}
 
 	/**
-	 * @return array<string, array{PackageViewConfig, string, string, string}>
+	 * @return array<string, array{PackagePagePresenter, string, string, string}>
 	 */
 	public static function packageTypes(): array {
 		return array(
 			'plugins' => array(
-				PackageViewConfig::plugin(),
+				PackagePagePresenter::plugin(),
 				'ran-booster-plugins',
 				'plugin',
 				'plugins',
 			),
 			'themes'  => array(
-				PackageViewConfig::theme(),
+				PackagePagePresenter::theme(),
 				'ran-booster-themes',
 				'theme',
 				'themes',
@@ -34,7 +40,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 
 	#[DataProvider( 'packageTypes' )]
 	public function testItRendersTheSharedSelectedQueryContract(
-		PackageViewConfig $packageView,
+		PackagePagePresenter $packageView,
 		string $pageSlug,
 		string $type,
 		string $plural
@@ -95,7 +101,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 
 	#[DataProvider( 'packageTypes' )]
 	public function testRawEmptyInventoryKeepsItsInstallActionAndDistinctMessage(
-		PackageViewConfig $packageView,
+		PackagePagePresenter $packageView,
 		string $pageSlug,
 		string $type,
 		string $plural
@@ -124,12 +130,40 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'match the current filters', $html );
 	}
 
+	#[DataProvider( 'packageTypes' )]
+	public function testNetworkPackageIndexesKeepEveryPackageRouteOnTheNetworkAdminBase(
+		PackagePagePresenter $packageView,
+		string $pageSlug,
+		string $type,
+		string $plural
+	): void {
+		unset( $type, $plural );
+		$GLOBALS['ran_booster_package_view_multisite']   = true;
+		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
+		$html = $this->render(
+			$packageView,
+			array(
+				'search'   => 'release',
+				'provider' => '',
+				'source'   => '',
+				'policy'   => '',
+			),
+			1,
+			array()
+		);
+
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $pageSlug . '-create"', $html );
+		self::assertStringContainsString( 'action="https://example.test/wp-admin/network/admin.php"', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $pageSlug . '">Clear filters</a>', $html );
+		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=' . $pageSlug, $html );
+	}
+
 	/**
 	 * @param array{search:string,provider:string,source:string,policy:string} $packageListState
 	 * @param list<array{code:string,label:string}>                           $packageProviderOptions
 	 */
 	private function render(
-		PackageViewConfig $packageView,
+		PackagePagePresenter $packageView,
 		array $packageListState,
 		int $packageListTotal,
 		array $packageProviderOptions

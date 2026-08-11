@@ -61,6 +61,7 @@ require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPres
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/DocumentationHookWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Logging/LoggingWordPressFunctions.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
@@ -71,24 +72,32 @@ final class DashboardIndexRoutingTest extends TestCase {
 	protected function setUp(): void {
 		$_GET = array();
 		$GLOBALS['ran_booster_dashboard_test_multisite']         = false;
+		$GLOBALS['ran_booster_package_view_multisite']           = false;
 		$GLOBALS['ran_booster_dashboard_test_environment_type']  = 'production';
 		$GLOBALS['ran_booster_dashboard_test_development_modes'] = array();
 		$GLOBALS['ran_booster_dashboard_test_user_id']           = 7;
 		$GLOBALS['ran_booster_dashboard_test_user_meta']         = array();
 		$GLOBALS['ran_booster_dashboard_test_actions']           = array();
 		$GLOBALS['ran_booster_dashboard_test_filters']           = array();
+		$GLOBALS['ran_booster_admin_view_actions']               = array();
+		$GLOBALS['ran_booster_admin_view_filters']               = array();
+		$GLOBALS['ran_booster_documentation_test_filters']       = array();
 	}
 
 	protected function tearDown(): void {
 		$_GET = array();
 		unset(
 			$GLOBALS['ran_booster_dashboard_test_multisite'],
+			$GLOBALS['ran_booster_package_view_multisite'],
 			$GLOBALS['ran_booster_dashboard_test_environment_type'],
 			$GLOBALS['ran_booster_dashboard_test_development_modes'],
 			$GLOBALS['ran_booster_dashboard_test_user_id'],
 			$GLOBALS['ran_booster_dashboard_test_user_meta'],
 			$GLOBALS['ran_booster_dashboard_test_actions'],
-			$GLOBALS['ran_booster_dashboard_test_filters']
+			$GLOBALS['ran_booster_dashboard_test_filters'],
+			$GLOBALS['ran_booster_admin_view_actions'],
+			$GLOBALS['ran_booster_admin_view_filters'],
+			$GLOBALS['ran_booster_documentation_test_filters']
 		);
 		unset( $GLOBALS['ran_booster_repository_admin_user_id'] );
 	}
@@ -521,12 +530,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function testNativePackageHooksReceiveBoundedProjectionsForSettingsRowsAndActions(): void {
 		$settingsReads   = array();
 		$managementReads = array();
-		$GLOBALS['ran_booster_dashboard_test_actions']['ran_booster_admin_package_settings_sections'][]  =
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_settings_sections'][]          =
 			static function ( \RAN\Admin\AdminPackageProjection $package, string $settingsUrl ) use ( &$settingsReads ): void {
 				$settingsReads[] = array( $package->identifier(), $settingsUrl );
 				echo '<section>Release settings</section>';
 			};
-		$GLOBALS['ran_booster_dashboard_test_filters']['ran_booster_admin_package_management_rows'][]    =
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_rows'][]    =
 			static function ( array $rows, string $surface, array $packages ) use ( &$managementReads ): array {
 				$managementReads[] = array( $surface, array_keys( $packages ) );
 
@@ -542,7 +551,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 				return $rows;
 			};
-		$GLOBALS['ran_booster_dashboard_test_filters']['ran_booster_admin_package_management_actions'][] =
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_actions'][] =
 			static function ( array $actions, string $surface, \RAN\Admin\AdminPackageProjection $package ): array {
 				self::assertSame( 'plugin', $surface );
 
@@ -554,24 +563,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 					),
 				);
 			};
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$package   = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'allBoosterPlugins' )->willReturn( array( $package ) );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
-		$panels  = ( new ReflectionMethod( Dashboard::class, 'packageExtensionPanels' ) )->invoke(
-			$dashboard,
-			$package,
-			\RAN\Admin\PackageViewConfig::plugin()
-		);
-		$rows    = ( new ReflectionMethod( Dashboard::class, 'packageExtensionRows' ) )->invoke(
-			$dashboard,
-			array( $package ),
-			\RAN\Admin\PackageViewConfig::plugin()
-		);
-		$actions = ( new ReflectionMethod( Dashboard::class, 'packageExtensionActions' ) )->invoke(
-			$dashboard,
-			array( $package ),
-			\RAN\Admin\PackageViewConfig::plugin()
-		);
+		$_GET  = array( 'package' => 'plugin/example.php' );
+		$edit  = $dashboard->getPlugins()['data'];
+		$_GET  = array();
+		$index = $dashboard->getPlugins()['data'];
 
 		self::assertSame(
 			array(
@@ -583,58 +584,175 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$settingsReads
 		);
 		self::assertSame( array( array( 'plugin', array( 'plugin/example.php' ) ) ), $managementReads );
-		self::assertSame( array( '<section>Release settings</section>' ), $panels );
-		self::assertSame( 'Latest release: 1.1.0.', $rows['plugin/example.php']['status'] );
+		self::assertSame( array( '<section>Release settings</section>' ), $edit['packageExtensionPanels'] );
+		self::assertSame( 'Latest release: 1.1.0.', $index['packageExtensionRows']['plugin/example.php']['status'] );
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
-			$actions['plugin/example.php']['fixture:manage']['url']
+			$index['packageExtensionActions']['plugin/example.php']['fixture:manage']['url']
 		);
 	}
 
 	public function testFailingNativePackageHooksDoNotBreakCorePackagePages(): void {
-		$GLOBALS['ran_booster_dashboard_test_actions']['ran_booster_admin_package_settings_sections'][] =
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_settings_sections'][]       =
 			static function (): void {
 				throw new RuntimeException( 'Settings unavailable.' );
 			};
-		$GLOBALS['ran_booster_dashboard_test_filters']['ran_booster_admin_package_management_rows'][]   =
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_rows'][] =
 			static function (): array {
 				throw new RuntimeException( 'Management unavailable.' );
 			};
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$package   = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'allBoosterPlugins' )->willReturn( array( $package ) );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
-		$panels = ( new ReflectionMethod( Dashboard::class, 'packageExtensionPanels' ) )->invoke(
-			$dashboard,
-			$package,
-			\RAN\Admin\PackageViewConfig::plugin()
-		);
-		$rows   = ( new ReflectionMethod( Dashboard::class, 'packageExtensionRows' ) )->invoke(
-			$dashboard,
-			array( $package ),
-			\RAN\Admin\PackageViewConfig::plugin()
-		);
-
-		self::assertSame( array(), $panels );
-		self::assertSame( array(), $rows );
+		$_GET = array( 'package' => 'plugin/example.php' );
+		self::assertSame( array(), $dashboard->getPlugins()['data']['packageExtensionPanels'] );
+		$_GET = array();
+		self::assertSame( array(), $dashboard->getPlugins()['data']['packageExtensionRows'] );
 	}
 
 	public function testExplicitPackageSourceViewUsesOnlySharedAdvancedSectionsForPluginsAndThemes(): void {
 		$_GET['source_view'] = 'branch';
-		$GLOBALS['ran_booster_dashboard_test_actions']['ran_booster_admin_package_advanced_source_sections'][] =
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_advanced_source_sections'][] =
 			static function (): void {
 				echo '<section>Advanced source settings</section>';
 			};
-		$dashboard   = $this->dashboard( $this->throwingSecrets() );
-		$package     = $this->managedPackage( 'plugin/example.php', 'Example Package', 'repository-id' );
-		$composition = new ReflectionMethod( Dashboard::class, 'packageSourceComposition' );
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$identifier = 'plugin' === $type ? 'plugin/example.php' : 'example-theme';
+			$package    = $this->managedPackage( $identifier, 'Example Package', 'repository-id' );
+			$plugins    = $this->createStub( PluginRepository::class );
+			$themes     = $this->createStub( ThemeRepository::class );
+			$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+			$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+			$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
+			$_GET      = array(
+				'package'     => $identifier,
+				'source_view' => 'branch',
+			);
+			$data      = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
 
-		foreach ( array( \RAN\Admin\PackageViewConfig::plugin(), \RAN\Admin\PackageViewConfig::theme() ) as $packageView ) {
-			$data = $composition->invoke( $dashboard, 'edit', $packageView, $package );
-
-			self::assertTrue( $data['advanced_open'], $packageView->getType() );
-			self::assertSame( array( '<section>Advanced source settings</section>' ), $data['advanced_sections'], $packageView->getType() );
-			self::assertArrayNotHasKey( 'sections', $data, $packageView->getType() );
+			self::assertTrue( $data['packageSource']['advanced_open'], $type );
+			self::assertSame( array( '<section>Advanced source settings</section>' ), $data['packageSource']['advanced_sections'], $type );
+			self::assertArrayNotHasKey( 'sections', $data['packageSource'], $type );
 		}
+	}
+
+	public function testReleaseDeploymentHooksReceiveExactOuterCreateEditAndIndexArguments(): void {
+		$sourceCalls  = array();
+		$sectionCalls = array();
+		$summaryCalls = array();
+		$rowCalls     = array();
+		$actionCalls  = array();
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_source_choices'][]          =
+			static function ( array $choices, string $mode, string $type, ?\RAN\Admin\AdminPackageProjection $package, string $pageUrl ) use ( &$sourceCalls ): array {
+				$sourceCalls[]                        = array( $mode, $type, $package?->identifier(), $pageUrl );
+				$choices['release_asset']['disabled'] = false;
+				$choices['release_asset']['hydrated'] = true;
+				$choices['release_asset']['url']      = add_query_arg( 'source_view', 'release_asset', $pageUrl );
+
+				return $choices;
+			};
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_advanced_source_sections'][]        =
+			static function ( string $mode, string $type, string $selected, ?\RAN\Admin\AdminPackageProjection $package, string $pageUrl ) use ( &$sectionCalls ): void {
+				$sectionCalls[] = array( $mode, $type, $selected, $package?->identifier(), $pageUrl );
+				echo '<section>Release deployment source</section>';
+			};
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_advanced_source_summary'][] =
+			static function ( string $summary, string $mode, string $type, string $selected, ?\RAN\Admin\AdminPackageProjection $package ) use ( &$summaryCalls ): string {
+				$summaryCalls[] = array( $summary, $mode, $type, $selected, $package?->identifier() );
+
+				return 'Published release fixture';
+			};
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_rows'][]         =
+			static function ( array $rows, string $type, array $packages ) use ( &$rowCalls ): array {
+				$rowCalls[] = array( array_keys( $rows ), $type, array_keys( $packages ) );
+
+				return $rows;
+			};
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_actions'][]      =
+			static function ( array $actions, string $type, \RAN\Admin\AdminPackageProjection $package ) use ( &$actionCalls ): array {
+				$actionCalls[] = array( $actions, $type, $package->identifier(), $package->settingsUrl() );
+
+				return $actions;
+			};
+
+		$package = $this->managedPackage(
+			'plugin/example.php',
+			'Example Plugin',
+			'plugin-repository-id',
+			\RAN\PackageSource::RELEASE_ASSET
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'allBoosterPlugins' )->willReturn( array( $package ) );
+		$dashboard = $this->dashboard(
+			$this->throwingSecrets(),
+			plugins: $plugins,
+			database: new ReadyDashboardDatabase()
+		);
+
+		$_GET   = array( 'source_view' => 'release_asset' );
+		$create = $dashboard->getPluginsCreate()['data'];
+		$_GET   = array(
+			'package'     => 'plugin/example.php',
+			'source_view' => 'release_asset',
+		);
+		$edit   = $dashboard->getPlugins()['data'];
+		$_GET   = array();
+		$index  = $dashboard->getPlugins()['data'];
+
+		$createUrl = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
+		$editUrl   = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
+		self::assertSame(
+			array(
+				array( 'create', 'plugin', null, $createUrl ),
+				array( 'edit', 'plugin', 'plugin/example.php', $editUrl ),
+			),
+			$sourceCalls
+		);
+		self::assertSame(
+			array(
+				array( 'create', 'plugin', 'branch', null, $createUrl ),
+				array( 'edit', 'plugin', 'release_asset', 'plugin/example.php', $editUrl ),
+			),
+			$sectionCalls
+		);
+		self::assertSame( array( 'create', 'edit' ), array_column( $summaryCalls, 1 ) );
+		self::assertSame( array( 'branch', 'release_asset' ), array_column( $summaryCalls, 3 ) );
+		self::assertSame( array( array( array( 'plugin/example.php' ), 'plugin', array( 'plugin/example.php' ) ) ), $rowCalls );
+		self::assertSame( array( array( array(), 'plugin', 'plugin/example.php', $editUrl ) ), $actionCalls );
+		self::assertSame( 'branch', $create['packageSource']['selected'] );
+		self::assertSame( 'release_asset', $edit['packageSource']['selected'] );
+		self::assertSame( 'Published release fixture', $edit['packageSource']['advanced_summary'] );
+		self::assertArrayHasKey( 'plugin/example.php', $index['packageExtensionRows'] );
+	}
+
+	#[DataProvider( 'packageTypeProvider' )]
+	public function testSavedReleaseSourceRemainsUnavailableWithoutItsAddOnForBothPackageTypes( string $type ): void {
+		$identifier = 'plugin' === $type ? 'release/release.php' : 'release-theme';
+		$package    = $this->managedPackage(
+			$identifier,
+			'Release Package',
+			'release-repository',
+			\RAN\PackageSource::RELEASE_ASSET
+		);
+		$plugins    = $this->createStub( PluginRepository::class );
+		$themes     = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
+		$_GET      = array(
+			'package'     => $identifier,
+			'source_view' => 'branch',
+		);
+
+		$data = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+
+		self::assertSame( 'release_asset', $data['packageSource']['current'] );
+		self::assertSame( 'release_asset', $data['packageSource']['selected'] );
+		self::assertTrue( $data['packageSource']['unavailable'] );
 	}
 
 	public function testTroubleshootingResultsRenderOnlyInTheSameDashboardRequest(): void {
@@ -769,6 +887,45 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	#[DataProvider( 'packageTypeProvider' )]
+	public function testNetworkCreateEditAndIndexRoutesShareTheCanonicalPackageAdminBase( string $type ): void {
+		$this->setMultisite( true );
+		$identifier   = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$package      = $this->managedPackage( $identifier, 'Example Package', 'example-repository' );
+		$settingsUrls = array();
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_settings_sections'][] =
+			static function ( \RAN\Admin\AdminPackageProjection $projection, string $settingsUrl ) use ( &$settingsUrls ): void {
+				$settingsUrls[] = array( $projection->settingsUrl(), $settingsUrl );
+			};
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'allBoosterPlugins' )->willReturn( 'plugin' === $type ? array( $package ) : array() );
+		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$themes->method( 'allBoosterThemes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
+		$dashboard = $this->dashboard(
+			$this->throwingSecrets(),
+			plugins: $plugins,
+			themes: $themes,
+			database: new ReadyDashboardDatabase()
+		);
+		$base      = 'https://example.test/wp-admin/network/admin.php';
+
+		$_GET   = array();
+		$create = 'plugin' === $type ? $dashboard->getPluginsCreate()['data'] : $dashboard->getThemesCreate()['data'];
+		$_GET   = array( 'package' => $identifier );
+		$edit   = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+		$_GET   = array();
+		$index  = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+
+		self::assertSame( $base, $create['packageView']->getAdminUrl() );
+		self::assertSame( $base, $edit['packageView']->getAdminUrl() );
+		self::assertSame( $base, $index['packageView']->getAdminUrl() );
+		self::assertStringStartsWith( $base . '?page=', $create['packageSource']['choices']['branch']['url'] );
+		self::assertSame( array( array( $settingsUrls[0][0], $settingsUrls[0][0] ) ), $settingsUrls );
+		self::assertStringStartsWith( $base . '?page=', $settingsUrls[0][0] );
+	}
+
+	#[DataProvider( 'packageTypeProvider' )]
 	public function testMissingSelectedPackagesFallBackToTheMatchingIndex( string $type ): void {
 		$identifier = 'plugin' === $type ? 'missing/missing.php' : 'missing-theme';
 		$fallback   = $this->managedPackage(
@@ -870,6 +1027,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		self::assertSame( array( 'Bitbucket', 'GitHub' ), array_column( $data['packageProviderOptions'], 'label' ) );
 		self::assertSame( array( $release->getIdentifier() ), array_map( static fn ( Package $package ): mixed => $package->getIdentifier(), $data['packages'] ) );
+	}
+
+	public function testRepeatedPackageIndexRenderingUsesFreshRepositoryReadback(): void {
+		$first   = $this->managedPackage( 'first/first.php', 'First Plugin', 'first-repository' );
+		$second  = $this->managedPackage( 'second/second.php', 'Second Plugin', 'second-repository' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::exactly( 2 ) )
+			->method( 'allBoosterPlugins' )
+			->willReturnOnConsecutiveCalls( array( $first ), array( $second ) );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+
+		$initial = $dashboard->getPlugins()['data'];
+		$fresh   = $dashboard->getPlugins()['data'];
+
+		self::assertSame( array( $first ), $initial['packages'] );
+		self::assertSame( array( $second ), $fresh['packages'] );
 	}
 
 	#[DataProvider( 'packageListFilterProvider' )]
@@ -1467,6 +1640,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	private function setMultisite( bool $multisite ): void {
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
+		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
 	}
 
 	private function deploymentAttempts( DashboardActivityWpdb $database ): DeploymentAttemptRepository {

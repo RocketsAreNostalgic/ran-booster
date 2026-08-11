@@ -13,26 +13,26 @@ The completed single-package mutation source result is recorded in
 `core-v3-package-admin-c2-3-evidence.md`.
 The completed bulk-package mutation source result is recorded in
 `core-v3-package-admin-c2-4-evidence.md`.
+The completed package-page source result is recorded in
+`core-v3-package-page-c3-1-evidence.md`.
 
-## Landed programme arithmetic after C2-4
+## Landed programme arithmetic after C3-1
 
-The source results now remove 355 physical production PHP lines from the Phase
+The source results now remove 410 physical production PHP lines from the Phase
 0 programme: C1 removes 20, C2-1 removes 136, C2-2 removes 145, C2-3 removes
-65, and the correctness-evidenced C2-4 source result adds 11. C3-1 must
-therefore remove at least 445 further lines to reach the 800-line
-physical-deletion floor. It must remove 485 further lines to retain the
-original final target of 46,254 shipped PHP and 45,602 backend PHP.
+65, the correctness-evidenced C2-4 source result adds 11, and C3-1 removes 55.
+A visible 390 lines remain to the 800-line physical-deletion floor, and 430
+remain to retain the original final target of 46,254 shipped PHP and 45,602
+backend PHP.
 
-The original C3-1 allocation is 300 lines, so it is 145 lines short of the
-programme floor and 185 lines short of the original final target. Scoped growth
-required for correctness remains permitted, but it does not relax the
-programme exit. The 445-line remainder is a visible programme target, not an
-automatic packet stop or NO-GO. Correctness and cohesive ownership remain
-primary; a sound approach must not be abandoned or distorted to manufacture
-LOC. If C3-1 cannot reclaim the remainder cleanly, the coordinator presents the
-measured tradeoff to the owner before any abandonment, scope, or programme-exit
-decision. The programme must not be reported complete by borrowing
-presentation credit or silently lowering its exit target.
+C3-1 missed its original local allocation by 245 lines, but the owner accepted
+its measured projection-only boundary rather than distorting correctness to
+manufacture LOC. The 390/430-line remainders are visible programme targets, not
+an automatic packet stop or NO-GO. C3-2 now performs the read-only base
+re-inventory and presents any remaining measured tradeoff to the owner before
+an abandonment, scope or programme-exit decision. The programme must not be
+reported complete by borrowing presentation credit or silently lowering its
+exit target.
 
 **Decision:** C2 and C3 may proceed only as the vertical packets below. This
 inventory changes no production PHP, public API, hook, action name, capability,
@@ -202,7 +202,7 @@ are internal and each lands at 253 - 1 + 1 types.
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Install/edit/update/unlink/delete one package              | Exact matrix above                                                                                              | `PackageOperationService`; updater lock, package repositories, removal service and coordinator retain their current invariants                                  | Exact package/deployment/WordPress postconditions; action-local failure or signed PRG success; package edit/index renders fresh state | No caller-forged provider replacement, Core self-update, multisite install, stale edit, unsafe delete, plaintext or unsigned success | Dispatcher owns guards/resolve; Dashboard owns execution/result/transport. **Propose single-package packet.**                                                   |
 | Bulk queue/policy/activation (`bulk-plugin`, `bulk-theme`) | Explicit POST; derive bounded operation only to choose authority; exact operation capability, then action nonce | `BulkPackageAction::fromInput()` and `BulkPackageActionService::execute()` return `BulkPackageResult`                                                           | Fresh package/WordPress/attempt state plus signed bounded bulk result notice on the matching list                                     | No more than 200 activation/deactivation or 20 queue/policy identities, mutation before nonce, forged notice, cross-type capability or result-as-durable-truth | Dispatcher retains the closed route/transport; `PackageAdminController` owns request execution and signed feedback. **Landed in C2-4.**                          |
-| Render package create/edit/index                           | Read-only registered menu callback; bounded package, search/provider/source/policy query                        | Package repositories and `ProviderSettingsPresenter::buildPackageList()` acquire state; Dashboard composes provider, source, extension and activity projections | Fresh package record/list, extension hooks and package activity; safe empty/disabled state on storage/database failure                | No GET mutation, raw add-on HTML, ambiguous package identity or business logic in views                                              | About 660 Dashboard lines mix selection, filtering, projection, URLs and rendering. **Propose package-page packet after mutation outcome ownership is stable.** |
+| Render package create/edit/index                           | Read-only registered menu callback; bounded package, search/provider/source/policy query                        | Package repositories and `ProviderSettingsPresenter` retain acquisition; `PackagePagePresenter` composes only already-acquired provider/form/readiness/retention data | Fresh package record/list, extension hooks and package activity; safe empty/disabled state on storage/database failure                | No GET mutation, raw add-on HTML, ambiguous package identity or business logic in views                                              | `Dashboard` retains request/acquisition/render compatibility; the stateless projection-only owner replaces `PackageViewConfig`. **Landed in C3-1.** |
 | Render and consume signed package success/bulk notices     | GET marker must contain the full allowlisted tuple and verify its operation-specific nonce/hash                 | Package-family request owner maps only fixed semantic results; message collection remains request-local                                                         | Fresh page state is authoritative; notice is feedback, not mutation proof                                                             | No unsigned/partial/stale marker and no notice treated as state                                                                      | **Move with the owning package packets; do not create a generic result/message hierarchy.**                                                                     |
 
 ### Package extension and public-contract boundary
@@ -282,16 +282,17 @@ abandonment or programme-scope decision rather than hidden or manufactured.
 | 2. Deployment recovery and activity journey | Three deployment actions, failure-notice AJAX dismissal, retained admin/network notice and asset hooks, plus activity list/detail/rejected admission. Replace `BackgroundDeploymentFailureNoticeController` with `DeploymentAdminController` and `BackgroundDeploymentFailureNotice` with `DeploymentAdminPresenter`; replace Dispatcher 183-190 and 611-717 plus Dashboard 1535-1564, 1584-1661 and 1956-2213. Both replacements plus delegates: at most 497 lines. | At least 130 further backend lines deleted; cumulative shipped PHP at most 46,814; backend at most 46,162. Types: 253 - 2 + 2 = 253. Zero schema/public delta.                   | Revert one source commit; durable attempt/audit rows and user-meta fingerprint remain readable by the old path. | Stop on notice/dismissal regression, broad activity fallback, caller-selected package capability, schema change, weakened exact-correlation readback or duplicated attempt-repository SQL.                 |
 | 3. Single-package mutation journey          | Exact ten-action matrix and signed PRG after packet 2. Add `PackageAdminController`; delete `PackageEditProviderGuard` (57 lines) and replace Dispatcher 198-285, 718-762 and 1403-1444 plus Dashboard 1110-1235, 1283-1349 and 1565-1583. Controller plus delegate: at most 264 lines.                                                                                                                                                                              | At least 180 further backend lines deleted; cumulative shipped PHP at most 46,634; backend at most 45,982. Types: 253 - 1 + 1 = 253. All package hooks/facades unchanged.        | Revert one source commit; package/attempt schemas and existing application services remain authoritative.       | Stop on action/capability/nonce drift, new public result type, Core self-update/multisite guard loss, stale-write/delete safety loss, unsigned success or facade/hook change.                              |
 | 4. Bulk-package mutation journey            | Only `bulk-plugin`/`bulk-theme`, typed result and signed notice; extend the packet-3 `PackageAdminController`. Replace Dispatcher 192-197 and 543-610 plus Dashboard 1350-1534. Added controller code: at most 179 lines.                                                                                                                                                                                                                                            | At least 80 further backend lines deleted; cumulative shipped PHP at most 46,554; backend at most 45,902. Types remain 253 + 0 = 253.                                            | Revert one source commit; signed notices are feedback and need no data migration.                               | Stop if the exact operation capability moves after mutation, more than 200 activation/deactivation identities or 20 queue/policy identities pass, a forged/cross-type marker renders success, or bulk result is treated as durable truth.                                    |
-| 5. Package create/edit/index page journey   | Read-only package selection, filters, source/extension/activity projection and rendering after mutation outcomes stabilize. Replace `PackageViewConfig` (88 lines) with `PackagePagePresenter`; replace Dashboard 405-1064, 1236-1282 and 1684-1785. Presenter plus menu wrappers: at most 597 lines.                                                                                                                                                                | At least 300 further backend lines deleted; final shipped PHP at most 46,254; backend at most 45,602. Types: 253 - 1 + 1 = 253. Final admin cluster at most 5,240 backend lines. | Revert one source commit; no persistent or installed state changes.                                             | Stop if the presenter becomes generic, views acquire I/O/business logic, plugin/theme vocabulary drifts, add-on projections become trusted HTML or the Release Deployments hook fixture fails.             |
+| 5. Package create/edit/index page journey   | Read-only package selection, filters, source/extension/activity projection and rendering after mutation outcomes stabilize. Replace `PackageViewConfig` (88 lines) with `PackagePagePresenter`; replace Dashboard 405-1064, 1236-1282 and 1684-1785. The landed presenter is stateless and projection-only; Dashboard retains request normalization, provider/repository acquisition and final rendering.                                                                                                               | Landed at 46,684 shipped / 46,032 backend: -55 physical lines, 253 - 1 + 1 = 253 types. Presenter plus four public menu wrappers: 653 lines. The accepted correctness-evidenced deviation is recorded in the C3-1 evidence. | Revert one source commit; no persistent or installed state changes.                                             | The presenter is not generic, views remain passive, plugin/theme vocabulary and add-on boundaries are stable, and the outer Release Deployments hook fixture passes. **Landed in C3-1.**                    |
 | 6. Base Dashboard GO/NO-GO                  | Read-only re-inventory after packets 1-5; diagnostics/debug/base routing remain unless this gate proves a new coherent zero-type proposal.                                                                                                                                                                                                                                                                                                                           | Zero production/type/public/state allowance.                                                                                                                                     | Documentation-only revert.                                                                                      | Retain the base coordinator unless a complete remaining route/hook responsibility and physical deletion are proven.                                                                                        |
 
-The landed C1 through C2-4 source results remove 355 physical backend lines from
-the frozen programme and retain 253 types. C3-1 now carries a visible 445-line
-programme-floor remainder and a 485-line original-final-target remainder. Its
-original 300-line allocation is not sufficient by itself. The coordinator must
-measure the correctness-preserving result and consult the owner before any
-abandonment or programme-scope decision if the remainder cannot be reclaimed
-cleanly. The four-type temporary allowance is not used by this programme.
+The landed C1 through C3-1 source results remove 410 physical backend lines from
+the frozen programme and retain 253 types. C3-2 now carries a visible 390-line
+programme-floor remainder and a 430-line original-final-target remainder. It is
+a read-only re-inventory, not authority to manufacture deletion or add a type.
+The coordinator must measure the correctness-preserving result and consult the
+owner before any abandonment or programme-scope decision if the remainder
+cannot be reclaimed cleanly. The four-type temporary allowance is not used by
+this programme.
 
 ## Global reject and defer register
 

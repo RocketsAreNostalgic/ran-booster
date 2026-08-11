@@ -11,7 +11,7 @@ require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionRenderer.p
 
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
-use RAN\Admin\PackageViewConfig;
+use RAN\Admin\PackagePagePresenter;
 use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentPolicy;
@@ -33,7 +33,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testEditViewPreservesUnknownProviderIdentityAndKeepsConfirmedRemovalAvailable(): void {
 		$package                 = $this->package();
-		$packageView             = PackageViewConfig::plugin();
+		$packageView             = PackagePagePresenter::plugin();
 		$packageProviderSettings = array(
 			'default_provider' => 'temporarily-offline',
 			'providers'        => array(
@@ -67,7 +67,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	public function testListViewLabelsUnavailableProviderAndDisablesOnlyDeploymentAction(): void {
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 		$packages                                   = array( $this->package() );
-		$packageView                                = PackageViewConfig::plugin();
+		$packageView                                = PackagePagePresenter::plugin();
 		$packageProviders                           = array(
 			array(
 				'code'      => 'gh',
@@ -130,7 +130,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	public function testListViewShowsConfiguredPrivateCredentialAndBoundedActivityTruth(): void {
 		$package          = $this->package( true, 'agency_profile' );
 		$packages         = array( $package );
-		$packageView      = PackageViewConfig::plugin();
+		$packageView      = PackagePagePresenter::plugin();
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(
@@ -158,7 +158,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testListViewDisablesPrivateDeploymentWhenTheLocalCredentialIdentityIsMissing(): void {
 		$packages         = array( $this->package( true, 'missing_profile' ) );
-		$packageView      = PackageViewConfig::plugin();
+		$packageView      = PackagePagePresenter::plugin();
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(),
@@ -185,7 +185,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 
 		$packages         = array( $package );
-		$packageView      = PackageViewConfig::plugin();
+		$packageView      = PackagePagePresenter::plugin();
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(
@@ -234,7 +234,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$package = $this->package();
 		$package->setDeploymentPolicy( DeploymentPolicy::MANUAL );
 		$packages         = array( $package );
-		$packageView      = PackageViewConfig::plugin();
+		$packageView      = PackagePagePresenter::plugin();
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(),
@@ -255,7 +255,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testThemeListDoesNotOfferOrDisplayPluginActivationControls(): void {
 		$packages         = array( $this->package() );
-		$packageView      = PackageViewConfig::theme();
+		$packageView      = PackagePagePresenter::theme();
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(),
@@ -280,7 +280,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	public function testReleaseManagedEditViewKeepsCoreAndAddOnFormsSeparate(): void {
 		$package = $this->package();
 		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
-		$packageView             = PackageViewConfig::plugin();
+		$packageView             = PackagePagePresenter::plugin();
 		$packageProviderSettings = array(
 			'default_provider' => 'temporarily-offline',
 			'providers'        => array( $this->providerOption( 'temporarily-offline', true ) ),
@@ -324,7 +324,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	public function testReleaseManagedEditShowsOnlyEvidenceBackedCleanupReview(): void {
 		$package = $this->package();
 		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
-		$packageView             = PackageViewConfig::plugin();
+		$packageView             = PackagePagePresenter::plugin();
 		$packageProviderSettings = array(
 			'default_provider' => 'temporarily-offline',
 			'providers'        => array( $this->providerOption( 'temporarily-offline', true ) ),
@@ -386,7 +386,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$package = $this->package();
 		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
 		$packages                = array( $package );
-		$packageView             = PackageViewConfig::plugin();
+		$packageView             = PackagePagePresenter::plugin();
 		$packageProviders        = array( $this->packageListProvider() );
 		$packageActivity         = array(
 			'items'       => array(
@@ -476,7 +476,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			list( , $spins )  = $expectation;
 			$package          = $this->package( true, 'agency_profile' );
 			$packages         = array( $package );
-			$packageView      = PackageViewConfig::plugin();
+			$packageView      = PackagePagePresenter::plugin();
 			$packageProviders = array( $this->packageListProvider() );
 			$packageActivity  = array(
 				'items'       => array(
@@ -501,7 +501,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	public function testResolvedNeedsAttentionHistoryDoesNotDisableABranchRetry(): void {
 		$package          = $this->package( true, 'agency_profile' );
 		$packages         = array( $package );
-		$packageView      = PackageViewConfig::plugin();
+		$packageView      = PackagePagePresenter::plugin();
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(
@@ -524,7 +524,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	}
 
 	public function testRepositoryFieldExplainsProviderOwnedNestedLocators(): void {
-		$packageView             = PackageViewConfig::plugin();
+		$packageView             = PackagePagePresenter::plugin();
 		$repositoryValue         = 'group/subgroup/example-plugin';
 		$providerBrowseAvailable = false;
 		$releaseManaged          = false;
@@ -540,7 +540,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	}
 
 	public function testRepositoryPickerRemainsVisibleForBrowsingProviders(): void {
-		$packageView             = PackageViewConfig::plugin();
+		$packageView             = PackagePagePresenter::plugin();
 		$repositoryValue         = 'owner/example-plugin';
 		$providerBrowseAvailable = true;
 		$releaseManaged          = false;

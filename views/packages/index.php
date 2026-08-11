@@ -40,7 +40,15 @@ $packageProviderOptions     = isset( $packageProviderOptions ) && is_array( $pac
 	? $packageProviderOptions
 	: array();
 $extensionActionRenderer    = new \RAN\Admin\Component\AdminActionRenderer();
-$activityDetailBaseUrl      = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
+$packageAdminUrl            = $packageView->getAdminUrl();
+$activityDetailBaseUrl      = add_query_arg(
+	array(
+		'page'  => 'ran-booster',
+		'tab'   => 'troubleshooting',
+		'panel' => 'activity',
+	),
+	$packageAdminUrl
+);
 $activityStateLabels        = array(
 	'queued'          => __( 'Queued', 'ran-booster' ),
 	'running'         => __( 'Running', 'ran-booster' ),
@@ -61,8 +69,8 @@ $bulkSelectAllId            = 'ran-booster-' . $packageView->getType() . '-selec
 $bulkTypeLabel              = strtolower( $packageView->getPluralLabel() );
 $bulkTypeSingular           = strtolower( $packageView->getSingularLabel() );
 $isPluginList               = 'plugin' === $packageView->getType();
-$installAnotherUrl          = add_query_arg( 'page', $packageView->getCreatePageSlug(), admin_url( 'admin.php' ) );
-$clearFiltersUrl            = add_query_arg( 'page', $packageView->getPageSlug(), admin_url( 'admin.php' ) );
+$installAnotherUrl          = add_query_arg( 'page', $packageView->getCreatePageSlug(), $packageAdminUrl );
+$clearFiltersUrl            = add_query_arg( 'page', $packageView->getPageSlug(), $packageAdminUrl );
 $hasPackageListFilters      = array() !== array_filter(
 	$packageListState,
 	static fn ( mixed $value ): bool => is_string( $value ) && '' !== $value
@@ -99,7 +107,7 @@ $policyLabels = array(
 
 <?php if ( $packageListTotal > 0 ) { ?>
 	<div class="ran-booster-package-list-controls">
-		<form class="ran-booster-package-list-filters" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
+		<form class="ran-booster-package-list-filters" method="get" action="<?php echo esc_url( $packageAdminUrl ); ?>">
 			<input type="hidden" name="page" value="<?php echo esc_attr( $packageView->getPageSlug() ); ?>">
 			<?php if ( '' !== $packageListState['search'] ) { ?>
 				<input type="hidden" name="s" value="<?php echo esc_attr( $packageListState['search'] ); ?>">
@@ -130,7 +138,7 @@ $policyLabels = array(
 			<?php } ?>
 		</form>
 
-		<form class="ran-booster-package-list-search search-form" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
+		<form class="ran-booster-package-list-search search-form" method="get" action="<?php echo esc_url( $packageAdminUrl ); ?>">
 			<input type="hidden" name="page" value="<?php echo esc_attr( $packageView->getPageSlug() ); ?>">
 			<?php foreach ( array( 'provider', 'source', 'policy' ) as $filterKey ) { ?>
 				<?php if ( '' !== $packageListState[ $filterKey ] ) { ?>
@@ -353,7 +361,7 @@ $policyLabels = array(
 					'page'    => $packageView->getPageSlug(),
 					'package' => $package->getIdentifier(),
 				),
-				admin_url( 'admin.php' )
+				$packageAdminUrl
 			);
 			$automationStateLabel = match ( $deploymentPolicy ) {
 				\RAN\Deployment\DeploymentPolicy::AUTOMATIC => __( 'Automatic', 'ran-booster' ),

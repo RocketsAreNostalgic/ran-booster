@@ -147,9 +147,7 @@ foreach ( $providerOptions as $providerOption ) {
 	}
 }
 $repositoryUrl            = $storedRepositoryUrlBase . ltrim( (string) $package->repository, '/' );
-$adminUrl                 = function_exists( 'is_multisite' ) && is_multisite()
-	? network_admin_url( 'admin.php' )
-	: admin_url( 'admin.php' );
+$adminUrl                 = $packageView->getAdminUrl();
 $installAnotherUrl        = add_query_arg(
 	array(
 		'page'        => $packageView->getCreatePageSlug(),

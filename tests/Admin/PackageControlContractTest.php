@@ -63,13 +63,13 @@ final class PackageControlContractTest extends TestCase {
 		foreach ( array( 'create.php', 'edit.php', 'index.php', 'danger-zone.php', 'source-choices.php' ) as $view ) {
 			$source = $this->view( $view );
 			self::assertStringContainsString( '$packageView', $source, $view );
-			self::assertStringNotContainsString( 'PackageViewConfig::plugin()', $source, $view );
-			self::assertStringNotContainsString( 'PackageViewConfig::theme()', $source, $view );
+			self::assertStringNotContainsString( 'PackagePagePresenter::plugin()', $source, $view );
+			self::assertStringNotContainsString( 'PackagePagePresenter::theme()', $source, $view );
 		}
 
 		$reinstall = $this->view( 'reinstall.php' );
-		self::assertStringNotContainsString( 'PackageViewConfig::plugin()', $reinstall );
-		self::assertStringNotContainsString( 'PackageViewConfig::theme()', $reinstall );
+		self::assertStringNotContainsString( 'PackagePagePresenter::plugin()', $reinstall );
+		self::assertStringNotContainsString( 'PackagePagePresenter::theme()', $reinstall );
 	}
 
 	/** @return array<string, array{string, string, string, string, string, string}> */

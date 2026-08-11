@@ -11,7 +11,7 @@ require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
-use RAN\Admin\PackageViewConfig;
+use RAN\Admin\PackagePagePresenter;
 use RAN\ManagedRepository;
 use RAN\PackageSource;
 
@@ -19,25 +19,25 @@ final class RepeatPackageViewTest extends TestCase {
 
 	protected function setUp(): void {
 		$_POST = array();
-		unset( $GLOBALS['ran_booster_package_view_multisite'] );
+		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
 	}
 
 	protected function tearDown(): void {
 		$_POST = array();
-		unset( $GLOBALS['ran_booster_package_view_multisite'] );
+		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
 	}
 
-	/** @return list<array{PackageViewConfig, bool, bool}> */
+	/** @return list<array{PackagePagePresenter, bool, bool}> */
 	public static function createViewMatrix(): array {
 		return array(
-			array( PackageViewConfig::plugin(), true, true ),
-			array( PackageViewConfig::theme(), false, false ),
+			array( PackagePagePresenter::plugin(), true, true ),
+			array( PackagePagePresenter::theme(), false, false ),
 		);
 	}
 
 	#[DataProvider( 'createViewMatrix' )]
 	public function testCreateViewKeepsPrimaryInstallAndAddsExplicitRepeatAction(
-		PackageViewConfig $packageView,
+		PackagePagePresenter $packageView,
 		bool $explicitProvider,
 		bool $openRepositoryPicker
 	): void {
@@ -123,25 +123,26 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'name="ran_booster[install_another]"' ) );
 	}
 
-	/** @return list<array{PackageViewConfig, bool, bool}> */
+	/** @return list<array{PackagePagePresenter, bool, bool}> */
 	public static function editViewMatrix(): array {
 		return array(
-			array( PackageViewConfig::plugin(), true, false ),
-			array( PackageViewConfig::theme(), false, false ),
-			array( PackageViewConfig::plugin(), false, false ),
-			array( PackageViewConfig::theme(), true, true ),
+			array( PackagePagePresenter::plugin(), true, false ),
+			array( PackagePagePresenter::theme(), false, false ),
+			array( PackagePagePresenter::plugin(), false, false ),
+			array( PackagePagePresenter::theme(), true, true ),
 		);
 	}
 
 	#[DataProvider( 'editViewMatrix' )]
 	public function testEditViewOffersMatchingInstallAnotherRouteEvenWhenProviderUnavailable(
-		PackageViewConfig $packageView,
+		PackagePagePresenter $packageView,
 		bool $providerAvailable,
 		bool $multisite
 	): void {
-		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
-		$package                                       = $this->package( $packageView );
-		$packageProviderSettings                       = $this->providerSettings( $providerAvailable );
+		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
+		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
+		$package                 = $this->package( $packageView );
+		$packageProviderSettings = $this->providerSettings( $providerAvailable );
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
@@ -258,7 +259,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function testSubmittedRemovalActionsReopenDangerZoneForNativeFailures(): void {
-		foreach ( array( PackageViewConfig::plugin(), PackageViewConfig::theme() ) as $packageView ) {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
 			foreach ( array( 'unlink', 'unlink-delete' ) as $action ) {
 				$package                 = $this->package( $packageView );
 				$packageProviderSettings = $this->providerSettings( true );
@@ -289,7 +290,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function testExplicitSourceViewOpensStableAdvancedDisclosureForPluginsAndThemes(): void {
-		foreach ( array( PackageViewConfig::plugin(), PackageViewConfig::theme() ) as $packageView ) {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
 			$package                 = $this->package( $packageView );
 			$packageProviderSettings = $this->providerSettings( true );
 			$packageSource           = array( 'advanced_open' => true );
@@ -307,7 +308,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function testEditAndReinstallSnapshotsStayAuthoritativeWhileAttemptedValuesAreRetained(): void {
-		foreach ( array( PackageViewConfig::plugin(), PackageViewConfig::theme() ) as $packageView ) {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
 			$package                 = $this->package( $packageView );
 			$packageProviderSettings = $this->providerSettings( true );
 			$_POST['ran_booster']    = array(
@@ -350,7 +351,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function testEditSourceChoicesUseInPlaceNavigationWithAnchoredFallback(): void {
-		foreach ( array( PackageViewConfig::plugin(), PackageViewConfig::theme() ) as $packageView ) {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
 			$identifierValue      = 'plugin' === $packageView->getType() ? 'example/example.php' : 'example-theme';
 			$packageSourceMode    = 'edit';
 			$packageSourceView    = 'branch';
@@ -385,7 +386,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function testReleaseManagedBranchViewShowsRetainedTargetWithoutBranchOperations(): void {
-		foreach ( array( PackageViewConfig::plugin(), PackageViewConfig::theme() ) as $packageView ) {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
 			$package = $this->package( $packageView );
 			$package->setSource( PackageSource::RELEASE_ASSET, 2 );
 
@@ -450,7 +451,7 @@ final class RepeatPackageViewTest extends TestCase {
 		);
 	}
 
-	private function package( PackageViewConfig $packageView ): RepeatPackageViewPackage {
+	private function package( PackagePagePresenter $packageView ): RepeatPackageViewPackage {
 		$identifier = 'plugin' === $packageView->getType() ? 'example/example.php' : 'example-theme';
 		$package    = new RepeatPackageViewPackage( $identifier );
 		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'provider-id', 'main' ) );

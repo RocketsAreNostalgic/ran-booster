@@ -4,16 +4,14 @@ namespace RAN;
 
 use LogicException;
 use RAN\Admin\AdminAddOnRegistry;
-use RAN\Admin\AdminPackageProjection;
 use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabRegistry;
 use RAN\Admin\BulkPackageResult;
-use RAN\Admin\Component\AdminPackageSourceChoiceNormalizer;
 use RAN\Admin\DevelopmentEnvironmentDetector;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\OnboardingPresenter;
-use RAN\Admin\PackageViewConfig;
+use RAN\Admin\PackagePagePresenter;
 use RAN\Admin\PackageAdminController;
 use RAN\Admin\ProviderDocumentationPresenter;
 use RAN\Admin\ProviderRepositoryCompositionRenderer;
@@ -23,7 +21,6 @@ use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
-use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\RejectedAdmissionAuditRepository;
@@ -74,6 +71,8 @@ class Dashboard {
 	private ?ProviderDocumentationPresenter $providerDocumentation;
 	private PackageAdminController $packageAdmin;
 	private DeploymentAdminPresenter $deploymentAdmin;
+	private PackagePagePresenter $pluginPages;
+	private PackagePagePresenter $themePages;
 	private ?TemporaryDebugCapture $debugCapture                    = null;
 	private ?SecretsStorageProvisioner $secretsStorage              = null;
 	private ?SecretsStorageProvisioningResult $secretsStorageResult = null;
@@ -124,6 +123,8 @@ class Dashboard {
 			themes: $themes
 		);
 		$this->packageAdmin          = new PackageAdminController( $packageOperations, deployments: $this->deploymentAdmin );
+		$this->pluginPages           = PackagePagePresenter::plugin();
+		$this->themePages            = PackagePagePresenter::theme();
 		$this->debugCapture          = $debugCapture;
 		$this->secretsStorage        = $secretsStorage;
 		$this->adminAddOns           = $adminAddOns;
@@ -403,22 +404,22 @@ class Dashboard {
 	}
 
 	public function getPlugins() {
-		return $this->renderPackagePage( PackageViewConfig::plugin() );
+		return $this->renderPackagePage( $this->pluginPages );
 	}
 
 	public function getPluginsCreate() {
-		return $this->renderPackageCreate( PackageViewConfig::plugin() );
+		return $this->renderPackageCreate( $this->pluginPages );
 	}
 
 	public function getThemes() {
-		return $this->renderPackagePage( PackageViewConfig::theme() );
+		return $this->renderPackagePage( $this->themePages );
 	}
 
 	public function getThemesCreate() {
-		return $this->renderPackageCreate( PackageViewConfig::theme() );
+		return $this->renderPackageCreate( $this->themePages );
 	}
 
-	private function renderPackagePage( PackageViewConfig $packageView ) {
+	private function renderPackagePage( PackagePagePresenter $packageView ) {
 		$type = $packageView->getType();
 		$this->packageAdmin->addSuccessNotice( $this, $type );
 		$this->addBulkPackageNotice( $type );
@@ -434,14 +435,12 @@ class Dashboard {
 					: $this->themes->boosterThemeFromStylesheet( $identifier );
 				return $this->render(
 					'packages/edit',
-					array_merge(
-						$this->existingPackageProviderData( $package, $packageView ),
-						array(
-							'package'                => $package,
-							'packageView'            => $packageView,
-							'packageExtensionPanels' => $this->packageExtensionPanels( $package, $packageView ),
-							'packageSource'          => $this->packageSourceComposition( 'edit', $packageView, $package ),
-						)
+					$packageView->edit(
+						$package,
+						$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
+						$this->providerSettings->buildPackageBranchReadiness( $package ),
+						$this->providerSettings->buildPackageWebhookRetention( $package ),
+						$this->requestedPackageSourceView()
 					)
 				);
 			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
@@ -467,27 +466,12 @@ class Dashboard {
 	 * @param array<string, Package>|list<Package> $packages
 	 * @return array<string, mixed>
 	 */
-	private function packageIndexData( array $packages, PackageViewConfig $packageView ): array {
-		$packageProviders       = $this->providerSettings->buildPackageList();
-		$packageListState       = $this->requestedPackageListState();
-		$packageProviderOptions = $this->packageProviderFilterOptions( $packages, $packageProviders );
-		if ( '' !== $packageListState['provider']
-			&& ! in_array( $packageListState['provider'], array_column( $packageProviderOptions, 'code' ), true )
-		) {
-			$packageListState['provider'] = '';
-		}
-		$filteredPackages = $this->filterPackages( $packages, $packageListState, $packageProviderOptions );
-
-		return array(
-			'packages'                => $filteredPackages,
-			'packageListTotal'        => count( $packages ),
-			'packageListState'        => $packageListState,
-			'packageProviderOptions'  => $packageProviderOptions,
-			'packageView'             => $packageView,
-			'packageProviders'        => $packageProviders,
-			'packageActivity'         => $this->deploymentAdmin->packageActivity( $filteredPackages, $packageView->getType() ),
-			'packageExtensionRows'    => $this->packageExtensionRows( $filteredPackages, $packageView ),
-			'packageExtensionActions' => $this->packageExtensionActions( $filteredPackages, $packageView ),
+	private function packageIndexData( array $packages, PackagePagePresenter $packageView ): array {
+		return $packageView->index(
+			$packages,
+			$this->providerSettings->buildPackageList(),
+			$this->requestedPackageListState(),
+			$this->deploymentAdmin
 		);
 	}
 
@@ -524,94 +508,6 @@ class Dashboard {
 		);
 	}
 
-	/**
-	 * @param array<string, Package>|list<Package> $packages
-	 * @param list<array<string, mixed>> $packageProviders
-	 * @return list<array{code: string, label: string}>
-	 */
-	private function packageProviderFilterOptions( array $packages, array $packageProviders ): array {
-		$providerLabels = array();
-		foreach ( $packageProviders as $provider ) {
-			if ( is_string( $provider['code'] ?? null ) && is_string( $provider['label'] ?? null ) ) {
-				$providerLabels[ $provider['code'] ] = $provider['label'];
-			}
-		}
-
-		$options = array();
-		foreach ( $packages as $package ) {
-			if ( ! $package instanceof Package ) {
-				continue;
-			}
-			$code = (string) ( $package->getProviderCode() ?? '' );
-			if ( '' === $code || isset( $options[ $code ] ) ) {
-				continue;
-			}
-			$options[ $code ] = array(
-				'code'  => $code,
-				'label' => $providerLabels[ $code ] ?? $code,
-			);
-		}
-
-		uasort(
-			$options,
-			static fn ( array $left, array $right ): int => strnatcasecmp( $left['label'], $right['label'] )
-		);
-
-		return array_values( $options );
-	}
-
-	/**
-	 * @param array<string, Package>|list<Package> $packages
-	 * @param array{search: string, provider: string, source: string, policy: string} $state
-	 * @param list<array{code: string, label: string}> $providerOptions
-	 * @return list<Package>
-	 */
-	private function filterPackages( array $packages, array $state, array $providerOptions ): array {
-		$providerLabels = array_column( $providerOptions, 'label', 'code' );
-		$search         = strtolower( $state['search'] );
-
-		return array_values(
-			array_filter(
-				$packages,
-				static function ( mixed $package ) use ( $state, $providerLabels, $search ): bool {
-					if ( ! $package instanceof Package ) {
-						return false;
-					}
-
-					$provider = (string) ( $package->getProviderCode() ?? '' );
-					if ( '' !== $state['provider'] && $provider !== $state['provider'] ) {
-						return false;
-					}
-					if ( '' !== $state['source'] && $package->getSource()->value !== $state['source'] ) {
-						return false;
-					}
-					if ( '' !== $state['policy'] && $package->getDeploymentPolicy()->value !== $state['policy'] ) {
-						return false;
-					}
-					if ( '' === $search ) {
-						return true;
-					}
-
-					$haystack = strtolower(
-						implode(
-							"\n",
-							array(
-								$package->getDisplayName(),
-								(string) $package->getIdentifier(),
-								(string) $package->getRepository(),
-								$provider,
-								$providerLabels[ $provider ] ?? '',
-								(string) $package->getBranch(),
-							)
-						)
-					);
-
-					return str_contains( $haystack, $search );
-				}
-			)
-		);
-	}
-
 	/** @return array<string, string> */
 	private function packageListQueryArguments(): array {
 		$state = $this->requestedPackageListState();
@@ -627,235 +523,6 @@ class Dashboard {
 		);
 	}
 
-	/** @return list<string> */
-	private function packageExtensionPanels( Package $package, PackageViewConfig $packageView ): array {
-		$projection  = $this->packageProjection( $package, $packageView );
-		$bufferLevel = ob_get_level();
-		ob_start();
-		try {
-			do_action( 'ran_booster_admin_package_settings_sections', $projection, $projection->settingsUrl() );
-			$content = (string) ob_get_clean();
-
-			return '' === trim( $content ) ? array() : array( $content );
-		} catch ( Throwable $failure ) {
-			while ( ob_get_level() > $bufferLevel ) {
-				ob_end_clean();
-			}
-			BoosterLogger::logException(
-				'package settings action unavailable',
-				$failure,
-				array(
-					'source'    => 'admin',
-					'step'      => 'package_settings_action',
-					'operation' => $packageView->getType(),
-				)
-			);
-		}
-
-		return array();
-	}
-
-	/**
-	 * Build the Core-rendered source selector and bounded add-on section.
-	 *
-	 * @return array{
-	 *   choices: array<string, array<string, mixed>>,
-	 *   advanced_sections: list<string>,
-	 *   advanced_summary: string,
-	 *   sections: list<string>,
-	 *   selected: string,
-	 *   current: string,
-	 *   advanced_open: bool,
-	 *   unavailable: bool
-	 * }
-	 */
-	private function packageSourceComposition(
-		string $mode,
-		PackageViewConfig $packageView,
-		?Package $package = null
-	): array {
-		$projection = null === $package ? null : $this->packageProjection( $package, $packageView );
-		$pageUrl    = null === $projection
-			? add_query_arg( 'page', $packageView->getCreatePageSlug(), $this->packageAdminUrl() )
-			: $projection->settingsUrl();
-		$base       = array(
-			'branch'        => array(
-				'key'               => 'branch',
-				'heading'           => __( 'Branch', 'ran-booster' ),
-				'description'       => __( 'Deploy a saved repository branch manually or when a signed push webhook arrives.', 'ran-booster' ),
-				'meta'              => __( 'Included with Booster', 'ran-booster' ),
-				'url'               => add_query_arg( 'source_view', 'branch', $pageUrl ),
-				'disabled'          => false,
-				'hydrated'          => true,
-				'client_hydratable' => false,
-			),
-			'release_asset' => array(
-				'key'               => 'release_asset',
-				'heading'           => __( 'Subscriber release deployments', 'ran-booster' ),
-				'description'       => __( 'Install verified published packages with the optional Release Deployments add-on.', 'ran-booster' ),
-				'meta'              => __( 'Subscriber feature', 'ran-booster' ),
-				'url'               => '',
-				'disabled'          => true,
-				'hydrated'          => false,
-				'client_hydratable' => false,
-			),
-		);
-
-		try {
-			$filtered = apply_filters(
-				'ran_booster_admin_package_source_choices',
-				$base,
-				$mode,
-				$packageView->getType(),
-				$projection,
-				$pageUrl
-			);
-			$choices  = ( new AdminPackageSourceChoiceNormalizer() )->normalize( $filtered );
-		} catch ( Throwable $failure ) {
-			$choices = ( new AdminPackageSourceChoiceNormalizer() )->normalize( $base );
-			BoosterLogger::logException(
-				'package source choices unavailable',
-				$failure,
-				array(
-					'source'    => 'admin',
-					'step'      => 'package_source_choices',
-					'operation' => $packageView->getType(),
-				)
-			);
-		}
-
-		$current   = null === $package ? PackageSource::BRANCH->value : $package->getSource()->value;
-		$requested = $this->requestedPackageSourceView();
-		$selected  = $current;
-		if ( null === $package ) {
-			$selected = PackageSource::BRANCH->value;
-		} elseif ( isset( $choices[ $requested ] )
-			&& ! $choices[ $requested ]['disabled']
-			&& ( PackageSource::BRANCH->value === $current || $choices[ $current ]['hydrated'] ) ) {
-			$selected = $requested;
-		}
-		$unavailable = PackageSource::BRANCH->value !== $current
-			&& ( ! isset( $choices[ $current ] ) || ! $choices[ $current ]['hydrated'] );
-
-		return array(
-			'choices'           => $choices,
-			'advanced_sections' => $this->packageAdvancedSourceSections(
-				$mode,
-				$packageView->getType(),
-				$selected,
-				$projection,
-				$pageUrl
-			),
-			'advanced_summary'  => $this->packageAdvancedSourceSummary(
-				$mode,
-				$packageView->getType(),
-				$selected,
-				$choices,
-				$projection,
-				$package
-			),
-			'selected'          => $selected,
-			'current'           => $current,
-			'advanced_open'     => '' !== $requested,
-			'unavailable'       => $unavailable,
-		);
-	}
-
-	/** @return list<string> */
-	private function packageAdvancedSourceSections(
-		string $mode,
-		string $type,
-		string $selected,
-		?AdminPackageProjection $projection,
-		string $pageUrl
-	): array {
-		$bufferLevel = ob_get_level();
-		ob_start();
-		try {
-			do_action(
-				'ran_booster_admin_package_advanced_source_sections',
-				$mode,
-				$type,
-				$selected,
-				$projection,
-				$pageUrl
-			);
-			$content = (string) ob_get_clean();
-
-			return '' === trim( $content ) ? array() : array( $content );
-		} catch ( Throwable $failure ) {
-			while ( ob_get_level() > $bufferLevel ) {
-				ob_end_clean();
-			}
-			BoosterLogger::logException(
-				'advanced package source section unavailable',
-				$failure,
-				array(
-					'source'    => 'admin',
-					'step'      => 'advanced_package_source_section',
-					'operation' => $type,
-				)
-			);
-		}
-
-		return array();
-	}
-
-	/**
-	 * @param array<string, array<string, mixed>> $choices
-	 */
-	private function packageAdvancedSourceSummary(
-		string $mode,
-		string $type,
-		string $selected,
-		array $choices,
-		?AdminPackageProjection $projection,
-		?Package $package
-	): string {
-		$sourceLabel = is_string( $choices[ $selected ]['heading'] ?? null )
-			? $choices[ $selected ]['heading']
-			: __( 'Package source', 'ran-booster' );
-		$summary     = PackageSource::BRANCH->value === $selected
-			? sprintf(
-				/* translators: 1: source label, 2: branch. */
-				__( '%1$s · %2$s', 'ran-booster' ),
-				$sourceLabel,
-				null !== $package && '' !== (string) $package->getBranch()
-					? (string) $package->getBranch()
-					: __( 'provider default', 'ran-booster' )
-			)
-			: $sourceLabel;
-
-		try {
-			$filtered = apply_filters(
-				'ran_booster_admin_package_advanced_source_summary',
-				$summary,
-				$mode,
-				$type,
-				$selected,
-				$projection
-			);
-			if ( is_string( $filtered ) ) {
-				$filtered = trim( wp_strip_all_tags( $filtered, true ) );
-				if ( '' !== $filtered && strlen( $filtered ) <= 180 ) {
-					return $filtered;
-				}
-			}
-		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
-				'advanced package source summary unavailable',
-				$failure,
-				array(
-					'source'    => 'admin',
-					'step'      => 'advanced_package_source_summary',
-					'operation' => $type,
-				)
-			);
-		}
-
-		return $summary;
-	}
-
 	private function requestedPackageSourceView(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
 		$value = isset( $_GET['source_view'] ) && is_string( $_GET['source_view'] )
@@ -866,181 +533,7 @@ class Dashboard {
 		return in_array( $value, array( 'branch', 'release_asset' ), true ) ? $value : '';
 	}
 
-	/**
-	 * @param array<string, Package>|list<Package> $packages
-	 * @return array<string, array{badges: list<array{label: string, tone: string}>, status: string}>
-	 */
-	private function packageExtensionRows( array $packages, PackageViewConfig $packageView ): array {
-		if ( array() === $packages ) {
-			return array();
-		}
-
-		$projections = array();
-		$baseRows    = array();
-		foreach ( $packages as $package ) {
-			if ( $package instanceof Package ) {
-				$projection                               = $this->packageProjection( $package, $packageView );
-				$projections[ $projection->identifier() ] = $projection;
-				$baseRows[ $projection->identifier() ]    = array(
-					'badges' => array(),
-					'status' => '',
-				);
-			}
-		}
-
-		try {
-			$presented = apply_filters(
-				'ran_booster_admin_package_management_rows',
-				$baseRows,
-				$packageView->getType(),
-				$projections
-			);
-
-			return $this->normalizePackageExtensionRows( $presented, $projections, $baseRows );
-		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
-				'package management filter unavailable',
-				$failure,
-				array(
-					'source'    => 'admin',
-					'step'      => 'package_management_filter',
-					'operation' => $packageView->getType(),
-				)
-			);
-		}
-
-		return array();
-	}
-
-	/**
-	 * @param array<string, Package>|list<Package> $packages
-	 * @return array<string, array<string, array<string, mixed>>>
-	 */
-	private function packageExtensionActions( array $packages, PackageViewConfig $packageView ): array {
-		$actions    = array();
-		$normalizer = new \RAN\Admin\Component\AdminActionNormalizer();
-
-		foreach ( $packages as $package ) {
-			if ( ! $package instanceof Package ) {
-				continue;
-			}
-			$projection = $this->packageProjection( $package, $packageView );
-			try {
-				$presented                            = apply_filters(
-					'ran_booster_admin_package_management_actions',
-					array(),
-					$packageView->getType(),
-					$projection
-				);
-				$actions[ $projection->identifier() ] = $normalizer->normalize( $presented );
-			} catch ( Throwable $failure ) {
-				BoosterLogger::logException(
-					'package management actions unavailable',
-					$failure,
-					array(
-						'source'    => 'admin',
-						'step'      => 'package_management_actions',
-						'operation' => $packageView->getType(),
-					)
-				);
-			}
-		}
-
-		return $actions;
-	}
-
-	/**
-	 * @param mixed $presented
-	 * @param array<string, AdminPackageProjection> $projections
-	 * @param array<string, array{badges: array<mixed>, status: string}> $baseRows
-	 * @return array<string, array{badges: list<array{label: string, tone: string}>, status: string}>
-	 */
-	private function normalizePackageExtensionRows( mixed $presented, array $projections, array $baseRows ): array {
-		if ( ! is_array( $presented ) ) {
-			throw new LogicException( 'Package management rows must be a keyed array.' );
-		}
-		if ( array_diff_key( $presented, $baseRows ) !== array()
-			|| array_diff_key( $baseRows, $presented ) !== array() ) {
-			throw new LogicException( 'Package management filters must preserve every projected package row.' );
-		}
-
-		$normalized = array();
-		foreach ( $presented as $identifier => $row ) {
-			if ( ! is_string( $identifier ) || ! isset( $projections[ $identifier ] ) || ! is_array( $row ) ) {
-				throw new LogicException( 'Package management rows may address only projected packages.' );
-			}
-			if ( array_diff( array_keys( $row ), array( 'badges', 'status' ) ) !== array() ) {
-				throw new LogicException( 'Package management rows may contain only badges and status.' );
-			}
-
-			$badges          = array();
-			$presentedBadges = $row['badges'] ?? array();
-			if ( ! is_array( $presentedBadges ) || count( $presentedBadges ) > 20 ) {
-				throw new LogicException( 'Package management badges must be a bounded list.' );
-			}
-			foreach ( $presentedBadges as $badge ) {
-				if ( ! is_array( $badge )
-					|| ! is_string( $badge['label'] ?? null )
-					|| '' === trim( $badge['label'] )
-					|| strlen( $badge['label'] ) > 96
-					|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $badge['label'] )
-					|| ! in_array( $badge['tone'] ?? null, array( 'neutral', 'ok', 'pending', 'warning', 'error' ), true ) ) {
-					throw new LogicException( 'Package management badges must be bounded display values.' );
-				}
-				$badges[] = array(
-					'label' => $badge['label'],
-					'tone'  => $badge['tone'],
-				);
-			}
-
-			if ( isset( $row['status'] ) && ! is_string( $row['status'] ) ) {
-				throw new LogicException( 'Package management status must be a string.' );
-			}
-			$status = trim( $row['status'] ?? '' );
-			if ( strlen( $status ) > 255 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $status ) ) {
-				throw new LogicException( 'Package management status must be bounded.' );
-			}
-			$normalized[ $identifier ] = array(
-				'badges' => $badges,
-				'status' => $status,
-			);
-		}
-
-		return $normalized;
-	}
-
-	private function packageProjection( Package $package, PackageViewConfig $packageView ): AdminPackageProjection {
-		$settingsUrl = $this->packageSettingsUrl( $package, $packageView );
-
-		return new AdminPackageProjection(
-			$packageView->getType(),
-			(string) $package->getIdentifier(),
-			$package->getDisplayName(),
-			(string) ( $package->getProviderCode() ?? '' ),
-			$package->getSource()->value,
-			$package->getSourceRevision(),
-			$package->getDeploymentPolicy()->value,
-			$settingsUrl
-		);
-	}
-
-	private function packageAdminUrl(): string {
-		return is_multisite()
-			? network_admin_url( 'admin.php' )
-			: admin_url( 'admin.php' );
-	}
-
-	private function packageSettingsUrl( Package $package, PackageViewConfig $packageView ): string {
-		return add_query_arg(
-			array(
-				'page'    => $packageView->getPageSlug(),
-				'package' => (string) $package->getIdentifier(),
-			),
-			$this->packageAdminUrl()
-		);
-	}
-
-	private function renderPackageCreate( PackageViewConfig $packageView ): mixed {
+	private function renderPackageCreate( PackagePagePresenter $packageView ): mixed {
 		try {
 			$this->db->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
@@ -1050,14 +543,11 @@ class Dashboard {
 
 		return $this->render(
 			'packages/create',
-			array_merge(
-				$this->packageProviderData( $this->requestedProvider() ),
-				array(
-					'packageView'          => $packageView,
-					'explicitProvider'     => $this->hasRequestedProvider(),
-					'openRepositoryPicker' => $this->requestedOpenPicker(),
-					'packageSource'        => $this->packageSourceComposition( 'create', $packageView ),
-				)
+			$packageView->create(
+				$this->providerSettings->buildPackageForm( $this->requestedProvider() ),
+				$this->hasRequestedProvider(),
+				$this->requestedOpenPicker(),
+				$this->requestedPackageSourceView()
 			)
 		);
 	}
@@ -1125,7 +615,7 @@ class Dashboard {
 		$this->packageAdmin->addSuccessNotice( $this, $type );
 	}
 
-	private function packageStorageFailureIndex( PackageViewConfig $packageView, string $type, PackageStorageFailure $failure ): mixed {
+	private function packageStorageFailureIndex( PackagePagePresenter $packageView, string $type, PackageStorageFailure $failure ): mixed {
 		$this->addFailureMessage(
 			$this->packageStorageError( $failure ),
 			$failure,
@@ -1139,7 +629,7 @@ class Dashboard {
 		return $this->render( 'packages/index', $this->packageIndexData( $packages, $packageView ) );
 	}
 
-	private function databaseUnavailableCreate( PackageViewConfig $packageView, string $type ): mixed {
+	private function databaseUnavailableCreate( PackagePagePresenter $packageView, string $type ): mixed {
 		$failure = PackageStorageFailure::unsupportedDatabase();
 		$this->addFailureMessage(
 			$this->packageStorageError( $failure ),
@@ -1152,14 +642,9 @@ class Dashboard {
 
 		return $this->render(
 			'packages/create',
-			array_merge(
-				$this->packageProviderData( $this->requestedProvider() ),
-				array(
-					'packageView'              => $packageView,
-					'explicitProvider'         => $this->hasRequestedProvider(),
-					'openRepositoryPicker'     => false,
-					'packageMutationAvailable' => false,
-				)
+			$packageView->unavailableCreate(
+				$this->providerSettings->buildPackageForm( $this->requestedProvider() ),
+				$this->hasRequestedProvider()
 			)
 		);
 	}
@@ -1205,109 +690,6 @@ class Dashboard {
 		return is_string( $diagnosticId ) && preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $diagnosticId ) === 1
 			? $diagnosticId
 			: 'ran_booster_admin_' . $severity;
-	}
-
-	/** @return array{packageProviderSettings: array<string, mixed>} */
-	private function packageProviderData( ?string $defaultProvider = null ): array {
-		return array(
-			'packageProviderSettings' => $this->providerSettings->buildPackageForm( $defaultProvider ),
-		);
-	}
-
-	/** @return array{packageProviderSettings: array<string, mixed>, packageBranchReadiness: array<string, mixed>|null, packageWebhookCleanup: array<string, mixed>|null} */
-	private function existingPackageProviderData( Package $package, PackageViewConfig $packageView ): array {
-		return array(
-			'packageProviderSettings' => $this->providerSettings->buildExistingPackageForm(
-				(string) ( $package->getProviderCode() ?? '' )
-			),
-			'packageBranchReadiness'  => $this->providerSettings->buildPackageBranchReadiness( $package ),
-			'packageWebhookCleanup'   => $this->packageWebhookCleanup( $package, $packageView ),
-		);
-	}
-
-	/** @return array{context: WebhookCleanupContext, actions: list<string>}|null */
-	private function packageWebhookCleanup( Package $package, PackageViewConfig $packageView ): ?array {
-		$retention = $this->providerSettings->buildPackageWebhookRetention( $package );
-		if ( null === $retention ) {
-			return null;
-		}
-
-		try {
-			$adminUrl = $this->packageAdminUrl();
-			$context  = new WebhookCleanupContext(
-				$packageView->getType(),
-				(string) $package->getIdentifier(),
-				(string) $retention['provider_code'],
-				(string) $retention['repository_id'],
-				(string) $retention['repository'],
-				(string) $retention['local_secret_coverage'],
-				true === $retention['available'],
-				true === $retention['branch_evidence_available'],
-				$retention['branch_package_references'],
-				(string) $retention['provider_webhooks_url'],
-				add_query_arg(
-					array(
-						'page' => 'ran-booster',
-						'tab'  => (string) $retention['provider_code'],
-						'view' => 'secrets',
-					),
-					$adminUrl
-				),
-				add_query_arg(
-					array(
-						'page' => 'ran-booster',
-						'tab'  => 'documentation',
-					),
-					$adminUrl
-				) . '#ran-booster-webhook-cleanup',
-				add_query_arg(
-					array(
-						'page'    => $packageView->getPageSlug(),
-						'package' => (string) $package->getIdentifier(),
-					),
-					$adminUrl
-				)
-			);
-		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
-				'package webhook cleanup context unavailable',
-				$failure,
-				array(
-					'source'    => 'admin',
-					'step'      => 'package_webhook_cleanup_context',
-					'operation' => $packageView->getType(),
-				)
-			);
-
-			return null;
-		}
-
-		$bufferLevel = ob_get_level();
-		ob_start();
-		try {
-			do_action( 'ran_booster_admin_package_webhook_cleanup_actions', $context );
-			$content = (string) ob_get_clean();
-			$actions = '' === trim( $content ) ? array() : array( $content );
-		} catch ( Throwable $failure ) {
-			while ( ob_get_level() > $bufferLevel ) {
-				ob_end_clean();
-			}
-			$actions = array();
-			BoosterLogger::logException(
-				'package webhook cleanup action unavailable',
-				$failure,
-				array(
-					'source'    => 'admin',
-					'step'      => 'package_webhook_cleanup_action',
-					'operation' => $packageView->getType(),
-				)
-			);
-		}
-
-		return array(
-			'context' => $context,
-			'actions' => $actions,
-		);
 	}
 
 	private function requestedProvider(): ?string {

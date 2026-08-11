@@ -6,15 +6,22 @@ namespace Tests\Deployment;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
+require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 
+use RAN\AbstractPackage;
+use RAN\Admin\BulkPackageActionService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Dashboard;
+use RAN\Deployment\DeploymentCoordinator;
+use RAN\Deployment\DeploymentPolicy;
 use RAN\Dispatcher;
+use RAN\ManagedRepository;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
@@ -51,7 +58,8 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	protected function setUp(): void {
-		$_POST = array();
+		$_POST                     = array();
+		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_test_capability_checks']           = array();
 		$GLOBALS['ran_booster_test_nonce_checks']                = array();
@@ -61,7 +69,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 
 	protected function tearDown(): void {
 		$_POST = array();
-		unset( $_SERVER['REQUEST_METHOD'] );
+		unset( $_SERVER['REQUEST_METHOD'], $_SERVER['HTTP_HX_REQUEST'] );
 		unset(
 			$GLOBALS['ran_booster_package_mutation_guard_multisite'],
 			$GLOBALS['ran_booster_test_capability_checks'],
@@ -69,6 +77,56 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$GLOBALS['ran_booster_test_capabilities'],
 			$GLOBALS['ran_booster_test_nonce_valid']
 		);
+	}
+
+	public function testPackageRouteRejectsANonPostRequestBeforeAuthorityOrMutation(): void {
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_POST['ran_booster']      = array(
+			'action' => 'update-plugin',
+			'file'   => 'example/example.php',
+		);
+		$dashboard                 = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+
+		$this->dispatcher( $dashboard )->dispatchPostRequests();
+
+		self::assertSame( array(), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	public function testBulkRouteRejectsANonPostRequestBeforeAuthorityOrMutation(): void {
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_POST['ran_booster']      = array(
+			'action'      => 'bulk-plugin',
+			'bulk_action' => 'activate-plugins',
+			'identifiers' => array( 'example/example.php' ),
+		);
+		$dashboard                 = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'bulkPackageRedirect' );
+
+		$this->dispatcher( $dashboard )->dispatchPostRequests();
+
+		self::assertSame( array(), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	public function testControllerRejectsAnUnknownBulkRouteBeforeAuthorityOrRequestParsing(): void {
+		$dashboard  = $this->createMock( Dashboard::class );
+		$controller = new PackageAdminController();
+
+		self::assertNull(
+			$controller->manageBulk(
+				$dashboard,
+				'bulk-plugin-unknown',
+				array(
+					'bulk_action' => new \stdClass(),
+					'identifiers' => array( new \stdClass() ),
+				),
+				true
+			)
+		);
+		self::assertSame( array(), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
 	#[DataProvider( 'bulkActionCapabilities' )]
@@ -91,6 +149,155 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		}
 
 		self::assertSame( array( $capability ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( $action ), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	#[DataProvider( 'bulkActionCapabilities' )]
+	public function testBulkRoutesStopBeforeNonceWithoutTheirExactCapability( string $action, string $operation, string $capability ): void {
+		$GLOBALS['ran_booster_test_capabilities'][ $capability ] = false;
+		$_POST['ran_booster']                                    = array(
+			'action'      => $action,
+			'bulk_action' => $operation,
+			'identifiers' => array( 'example/example.php' ),
+		);
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'bulkPackageRedirect' );
+
+		try {
+			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			self::fail( 'Expected the missing bulk capability to stop dispatch.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertStringContainsString( 'sufficient permissions', $exception->getMessage() );
+		}
+
+		self::assertSame( array( $capability ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	/** @return array<string, array{string, string, string, bool}> */
+	public static function bulkPolicyJourneys(): array {
+		return array(
+			'plugin native' => array( 'plugin', 'bulk-plugin', 'example/example.php', false ),
+			'plugin htmx'   => array( 'plugin', 'bulk-plugin', 'example/example.php', true ),
+			'theme native'  => array( 'theme', 'bulk-theme', 'example-theme', false ),
+			'theme htmx'    => array( 'theme', 'bulk-theme', 'example-theme', true ),
+		);
+	}
+
+	#[DataProvider( 'bulkPolicyJourneys' )]
+	public function testRealBulkPolicyJourneysKeepAuthorityMutationReadbackAndSignedTransportTogether(
+		string $type,
+		string $action,
+		string $identifier,
+		bool $htmx
+	): void {
+		if ( $htmx ) {
+			$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		}
+		$_POST['ran_booster'] = array(
+			'action'      => $action,
+			'bulk_action' => 'policy-disabled',
+			'identifiers' => array( $identifier ),
+		);
+		$package              = new class( $identifier ) extends AbstractPackage {
+			public function __construct( private readonly string $identifier ) {
+				$this->setInstallationSlug( str_contains( $identifier, '/' ) ? dirname( $identifier ) : $identifier );
+				$this->setRepository( new ManagedRepository( 'fixture', 'owner/repository', 'R_fixture', 'main' ) );
+			}
+
+			public function getIdentifier(): mixed {
+				return $this->identifier;
+			}
+		};
+		$plugins              = $this->createMock( PluginRepository::class );
+		$themes               = $this->createMock( ThemeRepository::class );
+		if ( 'plugin' === $type ) {
+			$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->with( $identifier )->willReturn( $package );
+			$plugins->expects( self::once() )
+				->method( 'setPluginDeploymentPolicies' )
+				->with(
+					self::callback( static fn ( array $snapshots ): bool => $identifier === ( $snapshots[0]['package'] ?? null ) ),
+					DeploymentPolicy::DISABLED
+				)
+				->willReturnCallback(
+					static function ( array $snapshots, DeploymentPolicy $policy ) use ( $package ): array {
+						$package->setDeploymentPolicy( $policy );
+
+						return array(
+							'selected'  => count( $snapshots ),
+							'changed'   => count( $snapshots ),
+							'unchanged' => 0,
+						);
+					}
+				);
+			$themes->expects( self::never() )->method( 'setThemeDeploymentPolicies' );
+		} else {
+			$themes->expects( self::once() )->method( 'boosterThemeFromStylesheet' )->with( $identifier )->willReturn( $package );
+			$themes->expects( self::once() )
+				->method( 'setThemeDeploymentPolicies' )
+				->with(
+					self::callback( static fn ( array $snapshots ): bool => $identifier === ( $snapshots[0]['package'] ?? null ) ),
+					DeploymentPolicy::DISABLED
+				)
+				->willReturnCallback(
+					static function ( array $snapshots, DeploymentPolicy $policy ) use ( $package ): array {
+						$package->setDeploymentPolicy( $policy );
+
+						return array(
+							'selected'  => count( $snapshots ),
+							'changed'   => count( $snapshots ),
+							'unchanged' => 0,
+						);
+					}
+				);
+			$plugins->expects( self::never() )->method( 'setPluginDeploymentPolicies' );
+		}
+		$lock = $this->createMock( WordPressUpdaterLock::class );
+		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'bulk-lock' );
+		$lock->expects( self::once() )->method( 'release' )->with( 'bulk-lock' )->willReturn( true );
+		$service    = new BulkPackageActionService(
+			$plugins,
+			$themes,
+			new ProviderRegistry(),
+			new SecretsFile( null, array() ),
+			$this->createStub( DeploymentCoordinator::class ),
+			$lock
+		);
+		$controller = new PackageAdminController( bulkActions: $service );
+		$dashboard  = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'bulkPackageRedirect' )
+			->with(
+				$type,
+				self::callback(
+					static fn ( \RAN\Admin\BulkPackageResult $result ): bool => 1 === $result->changed
+						&& 1 === $result->selected
+						&& '' === $result->errorCode
+				)
+			)
+			->willReturnCallback(
+				static fn ( string $actualType, \RAN\Admin\BulkPackageResult $result ): string => $controller->bulkRedirect(
+					$actualType,
+					$result,
+					array( 's' => 'preserved-filter' )
+				)
+			);
+
+		try {
+			$this->dispatcher( $dashboard, true, $controller )->dispatchPostRequests();
+			self::fail( 'Expected the test redirect interceptor to stop dispatch.' );
+		} catch ( \RuntimeException $exception ) {
+			$target = str_replace( 'redirect:', '', $exception->getMessage() );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Focused redirect-query assertion.
+			parse_str( (string) parse_url( $target, PHP_URL_QUERY ), $query );
+			self::assertSame( 'ran-booster-' . $type . 's', $query['page'] ?? null );
+			self::assertSame( 'preserved-filter', $query['s'] ?? null );
+			self::assertSame( '1', $query['ran_booster_bulk_changed'] ?? null );
+			self::assertStringStartsWith( 'nonce-for-', (string) ( $query['_ran_booster_bulk_notice_nonce'] ?? '' ) );
+		}
+
+		self::assertSame( DeploymentPolicy::DISABLED, $package->getDeploymentPolicy() );
+		self::assertSame( array( 'plugin' === $type ? 'update_plugins' : 'update_themes' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( $action ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
@@ -220,9 +427,53 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testReinstallAfterSaveRequiresBothEditAndUpdateNoncesBeforeMutation(): void {
+	/** @return array<string, array{string, list<string>, string}> */
+	public static function laterCapabilityDenials(): array {
+		return array(
+			'plugin delete'     => array( 'unlink-delete-plugin', array( 'update_plugins', 'delete_plugins' ), 'delete_plugins' ),
+			'plugin activation' => array( 'unlink-delete-plugin', array( 'update_plugins', 'delete_plugins', 'activate_plugins' ), 'activate_plugins' ),
+			'theme delete'      => array( 'unlink-delete-theme', array( 'update_themes', 'delete_themes' ), 'delete_themes' ),
+		);
+	}
+
+	#[DataProvider( 'laterCapabilityDenials' )]
+	public function testLaterDeleteCapabilitiesIndependentlyStopBeforeNonceAndMutation(
+		string $action,
+		array $expectedChecks,
+		string $deniedCapability
+	): void {
+		$GLOBALS['ran_booster_test_capabilities'][ $deniedCapability ] = false;
+		$_POST['ran_booster'] = array( 'action' => $action );
+		$dashboard            = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+
+		try {
+			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			self::fail( 'Expected the later missing capability to stop package dispatch.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertStringContainsString( 'sufficient permissions', $exception->getMessage() );
+		}
+
+		self::assertSame( $expectedChecks, $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	/** @return array<string, array{string, string, string}> */
+	public static function reinstallNonceActions(): array {
+		return array(
+			'plugin' => array( 'edit-plugin', 'update-plugin', 'update_plugins' ),
+			'theme'  => array( 'edit-theme', 'update-theme', 'update_themes' ),
+		);
+	}
+
+	#[DataProvider( 'reinstallNonceActions' )]
+	public function testReinstallAfterSaveRequiresBothEditAndUpdateNoncesBeforeMutation(
+		string $action,
+		string $updateAction,
+		string $capability
+	): void {
 		$_POST['ran_booster'] = array(
-			'action'               => 'edit-plugin',
+			'action'               => $action,
 			'reinstall_after_save' => '1',
 		);
 		$dashboard            = $this->createMock( Dashboard::class );
@@ -235,8 +486,8 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			self::assertSame( 'Invalid nonce.', $exception->getMessage() );
 		}
 
-		self::assertSame( array( 'update_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
-		self::assertSame( array( 'edit-plugin', 'update-plugin' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+		self::assertSame( array( $capability ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( $action, $updateAction ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
 	public function testUnknownPackageActionDoesNotEnterAnAuthorizationOrMutationRoute(): void {
@@ -250,7 +501,19 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testSuccessfulPackageOperationRedirectsToTheDashboardTarget(): void {
+	/** @return array<string, array{bool}> */
+	public static function packageTransports(): array {
+		return array(
+			'native'   => array( false ),
+			'enhanced' => array( true ),
+		);
+	}
+
+	#[DataProvider( 'packageTransports' )]
+	public function testSuccessfulPackageOperationUsesTheSameSignedDashboardTargetForNativeAndHtmx( bool $htmx ): void {
+		if ( $htmx ) {
+			$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		}
 		$input                = array(
 			'action' => 'update-plugin',
 			'file'   => 'example/example.php',
@@ -286,7 +549,8 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 
 	private function dispatcher(
 		Dashboard $dashboard,
-		bool $interceptRedirect = false
+		bool $interceptRedirect = false,
+		?PackageAdminController $packageAdmin = null
 	): Dispatcher {
 		$providers = new ProviderRegistry();
 		$secrets   = new SecretsFile( null, array() );
@@ -298,7 +562,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$secrets,
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $providers ),
+			$packageAdmin ?? new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$this->createStub( WordPressUpdaterLock::class ),
 		);
 		if ( $interceptRedirect ) {

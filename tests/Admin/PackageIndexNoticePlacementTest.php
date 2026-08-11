@@ -6,7 +6,7 @@ namespace Tests\Admin;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\Admin\PackageViewConfig;
+use RAN\Admin\PackagePagePresenter;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
@@ -30,16 +30,16 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( 'Review activity', $html );
 	}
 
-	/** @return array<string, array{PackageViewConfig, string}> */
+	/** @return array<string, array{PackagePagePresenter, string}> */
 	public static function packageTypes(): array {
 		return array(
-			'plugins' => array( PackageViewConfig::plugin(), 'Managed Plugins' ),
-			'themes'  => array( PackageViewConfig::theme(), 'Managed Themes' ),
+			'plugins' => array( PackagePagePresenter::plugin(), 'Managed Plugins' ),
+			'themes'  => array( PackagePagePresenter::theme(), 'Managed Themes' ),
 		);
 	}
 
 	#[DataProvider( 'packageTypes' )]
-	public function testPackageIndexPlacesNoticesAfterItsHeadingAndDescription( PackageViewConfig $packageView, string $heading ): void {
+	public function testPackageIndexPlacesNoticesAfterItsHeadingAndDescription( PackagePagePresenter $packageView, string $heading ): void {
 		$messages                = array(
 			array(
 				'type'            => 'success',

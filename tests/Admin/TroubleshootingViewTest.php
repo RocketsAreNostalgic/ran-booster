@@ -5,6 +5,12 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\Component\AdminStatusSummaryRenderer;
+use RAN\Admin\Component\ProviderManagementTableRenderer;
+use RAN\Admin\Component\RepositoryTableRenderer;
+use RAN\Admin\ProviderRepositoryCompositionRenderer;
+use RAN\Admin\ProviderRepositoryRowsNormalizer;
+use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Deployment\DeploymentAttempt;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
@@ -16,6 +22,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class TroubleshootingViewTest extends TestCase {
+
+	/** @param array<string,mixed> $data @return array<string,mixed> */
+	private function providerViewData( array $data ): array {
+		$composition                 = new ProviderRepositoryCompositionRenderer();
+		$presenter                   = ( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
+		$data['providerListState'] ??= array(
+			'search'   => '',
+			'kind'     => '',
+			'scope'    => '',
+			'status'   => '',
+			'orderby'  => 'name',
+			'order'    => 'asc',
+			'paged'    => 1,
+			'per_page' => 20,
+		);
+
+		return array_merge(
+			$data,
+			$presenter->buildProfileListProjection( $data ),
+			( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $composition ),
+			array(
+				'repositoryComposition'           => $composition,
+				'statusSummaryRenderer'           => new AdminStatusSummaryRenderer(),
+				'providerManagementTableRenderer' => new ProviderManagementTableRenderer(),
+				'repositoryTableRenderer'         => new RepositoryTableRenderer(),
+			)
+		);
+	}
 
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_view_filters'] = array();
@@ -605,6 +639,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$webhook_profiles    = array();
 		$secrets_path        = 'Deployment configuration';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -619,6 +656,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$webhook_profiles    = array();
 		$secrets_path        = '/safe/path';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -647,6 +687,9 @@ final class TroubleshootingViewTest extends TestCase {
 			$webhook_profiles                     = array();
 			$secrets_path                         = '/safe/path';
 
+			$providerViewData = $this->providerViewData( get_defined_vars() );
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $providerViewData );
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$html = (string) ob_get_clean();
@@ -754,6 +797,9 @@ final class TroubleshootingViewTest extends TestCase {
 				return $rows;
 			};
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -829,7 +875,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Copy the secret before saving.', $html );
 		self::assertStringContainsString( 'saving it here does not create or verify the remote webhook', $html );
 
-		$providerTask = 'setup';
+		$providerTask     = 'setup';
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$setupHtml    = (string) ob_get_clean();
@@ -840,11 +889,13 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Provider request ID in Booster Activity', $setupHtml );
 		self::assertStringContainsString( 'tab=documentation#ran-booster-push-to-deploy', html_entity_decode( $setupHtml ) );
 
-		$_GET['repository'] = 'repo-42';
+		$requestedRepositoryId = 'repo-42';
+		$providerViewData      = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryHtml = (string) ob_get_clean();
-		unset( $_GET['repository'] );
 
 		self::assertStringContainsString( '>Repository webhook</h4>', $repositoryHtml );
 		self::assertStringContainsString( 'Back to managed repositories', $repositoryHtml );
@@ -855,16 +906,22 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>Add repository secret</a>', $repositoryHtml );
 		self::assertStringNotContainsString( "\n\t\t\tManage webhook", $repositoryHtml );
 
-		$_GET['repository'] = 'stale-repository';
+		$requestedRepositoryId = 'stale-repository';
+		$providerViewData      = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
-		$staleRepositoryHtml = (string) ob_get_clean();
-		unset( $_GET['repository'] );
+		$staleRepositoryHtml   = (string) ob_get_clean();
+		$requestedRepositoryId = '';
 
 		self::assertStringContainsString( 'That managed repository is no longer available.', $staleRepositoryHtml );
 		self::assertSame( 0, substr_count( $staleRepositoryHtml, 'data-ran-booster-provider-repository' ) );
 
 		$GLOBALS['ran_booster_admin_view_filters'] = array();
+		$providerViewData                          = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$withoutAddOnHtml = (string) ob_get_clean();
@@ -937,6 +994,9 @@ final class TroubleshootingViewTest extends TestCase {
 				return $rows;
 			};
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -957,6 +1017,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 
 		$provider_repositories['repositories'][0]['retained_webhook']['local_secret_coverage'] = 'none';
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$withoutEvidence = (string) ob_get_clean();
@@ -1030,6 +1093,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$secrets_path                         = '/safe/path';
 		$providerTask                         = 'repositories';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -1071,6 +1137,9 @@ final class TroubleshootingViewTest extends TestCase {
 			'repositories' => array(),
 		);
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -1121,6 +1190,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$webhook_profiles             = array();
 		$secrets_path                 = '/safe/path';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -1173,6 +1245,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$webhook_profiles             = array();
 		$secrets_path                 = '/safe/path';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -1247,6 +1322,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$secrets_path                 = '/safe/path';
 		$providerView                 = 'credentials';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -1325,6 +1403,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$secrets_path                 = '/safe/path';
 		$providerView                 = 'credentials';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
@@ -1360,7 +1441,10 @@ final class TroubleshootingViewTest extends TestCase {
 			'repositories' => array(),
 		);
 
-		$providerTask = 'status';
+		$providerTask     = 'status';
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$statusHtml = (string) ob_get_clean();
@@ -1388,7 +1472,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title">Readiness overview</h4>', $statusHtml );
 		self::assertStringNotContainsString( 'id="ran-booster-webhook-instructions-heading"', $statusHtml );
 
-		$providerTask = 'setup';
+		$providerTask     = 'setup';
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$setupHtml = (string) ob_get_clean();
@@ -1403,7 +1490,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Repository push', $setupHtml );
 		self::assertStringNotContainsString( 'GitHub', $setupHtml );
 
-		$providerTask = 'repositories';
+		$providerTask     = 'repositories';
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoriesHtml = (string) ob_get_clean();
@@ -1468,6 +1558,9 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 		$providerView                         = 'secrets';
 
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();

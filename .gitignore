@@ -25,6 +25,11 @@ boosterlog
 /secrets.json.lock
 /.ran-booster/
 
+# Database backups are local evidence, never repository content.
+**/*-db-backups/
+**/database-backups/
+*.sql
+
 # Logs, caches, and generated test output.
 *.log
 /logs/

@@ -42,6 +42,10 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'needs.runtime-archive.outputs.archive-sha256', $workflow );
 		self::assertStringContainsString( 'sha256sum --check --strict', $workflow );
 		self::assertStringContainsString( 'wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"', $workflow );
+		self::assertStringContainsString( 'wp plugin get ran-booster --field=version', $workflow );
+		self::assertStringContainsString( '"$plugin_root/ran-booster-release.json"', $workflow );
+		self::assertStringContainsString( 'diff -qr', $workflow );
+		self::assertStringContainsString( '"$plugin_root/vendor/ran/wp-github-release-updater"', $workflow );
 	}
 
 	public function testReleaseWaitsForSuccessfulMainPushQualityAndUsesItsArtifact(): void {

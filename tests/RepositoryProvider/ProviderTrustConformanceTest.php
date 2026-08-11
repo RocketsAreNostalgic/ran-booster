@@ -76,8 +76,13 @@ final class ProviderTrustConformanceTest extends TestCase {
 		) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source inspection is the contract under test.
 			$source = file_get_contents( $root . '/' . $relativePath );
-
 			self::assertIsString( $source );
+			if ( 'views/provider.php' === $relativePath ) {
+				self::assertStringContainsString( '$providerTrustDescription', $source );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source inspection is the contract under test.
+				$source = file_get_contents( $root . '/RAN/Admin/ProviderSettingsPresenter.php' );
+				self::assertIsString( $source );
+			}
 			self::assertStringContainsString(
 				'does not authenticate a third-party publisher',
 				$source,

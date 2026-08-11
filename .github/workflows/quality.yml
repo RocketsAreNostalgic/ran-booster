@@ -272,6 +272,31 @@ jobs:
                   wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip" --path=build/wordpress --activate
                   wp plugin is-active ran-booster --path=build/wordpress
 
+            - name: Read back the installed release identity
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  archive="$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"
+                  plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
+                  expected_root="$RUNNER_TEMP/ran-booster-installed-readback"
+
+                  test "$(wp plugin get ran-booster --field=version --path=build/wordpress)" = '${{ needs.runtime-archive.outputs.version }}'
+                  jq -e \
+                      --arg version '${{ needs.runtime-archive.outputs.version }}' \
+                      --arg commit '${{ needs.runtime-archive.outputs.source-commit }}' \
+                      '.schema == "ran-booster-core-release"
+                        and .schema_version == 1
+                        and .version == $version
+                        and .commit == $commit' \
+                      "$plugin_root/ran-booster-release.json" >/dev/null
+
+                  mkdir -p "$expected_root"
+                  unzip -q "$archive" -d "$expected_root"
+                  diff -qr \
+                      "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
+                      "$plugin_root/vendor/ran/wp-github-release-updater"
+
             - name: Prove global Core container isolation
               run: |
                   wp eval '
@@ -299,7 +324,7 @@ jobs:
                     $expected = array(
                       "registered" => true,
                       "selection_fixed" => true,
-                      "selected_version" => "2.0.0-beta.4",
+                      "selected_version" => "2.0.0-beta.5",
                       "repository" => "RocketsAreNostalgic/ran-booster",
                       "channel" => "prerelease",
                       "type" => "plugin",

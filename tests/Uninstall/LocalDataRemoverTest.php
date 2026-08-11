@@ -11,7 +11,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use RAN\Admin\BackgroundDeploymentFailureNotice;
+use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DevelopmentSafetyNoticeController;
@@ -70,9 +70,9 @@ final class LocalDataRemoverTest extends TestCase {
 		);
 		$this->database->userMeta = array(
 			DevelopmentSafetyNoticeController::USER_META_KEY => array( 1 ),
-			CredentialExpiryNotice::USER_META_KEY => array( 2 ),
-			BackgroundDeploymentFailureNotice::USER_META_KEY => array( 3 ),
-			'unrelated_meta'                      => array( 4 ),
+			CredentialExpiryNotice::USER_META_KEY   => array( 2 ),
+			DeploymentAdminPresenter::USER_META_KEY => array( 3 ),
+			'unrelated_meta'                        => array( 4 ),
 		);
 	}
 

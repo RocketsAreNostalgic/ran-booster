@@ -64,9 +64,7 @@ $packageAdvancedOpen      = isset( $_POST['ran_booster'] ) && is_array( $_POST['
 $packageRepositoryReady   = '' !== trim( $repositoryValue )
 	&& strlen( $repositoryValue ) <= 512
 	&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $repositoryValue );
-$adminUrl                 = function_exists( 'is_multisite' ) && is_multisite()
-	? network_admin_url( 'admin.php' )
-	: admin_url( 'admin.php' );
+$adminUrl                 = $packageView->getAdminUrl();
 $backUrl                  = add_query_arg( 'page', $packageView->getPageSlug(), $adminUrl );
 
 ?>

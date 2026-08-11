@@ -12,13 +12,14 @@ require_once __DIR__ . '/BackgroundDeploymentFailureWordPressFunctions.php';
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
 use RAN\Admin\BackgroundDeploymentFailureMonitor;
-use RAN\Admin\BackgroundDeploymentFailureNotice;
-use RAN\Admin\BackgroundDeploymentFailureNoticeController;
+use RAN\Admin\DeploymentAdminController;
+use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Dashboard;
 use RAN\Deployment\DeploymentRequest;
 use RAN\ManagedRepository;
 use RAN\Plugin;
@@ -111,7 +112,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 			$this->row( 1, 'affected', 'affected', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),
 		);
 		$monitor              = $this->monitor();
-		$notice               = new BackgroundDeploymentFailureNotice( $monitor );
+		$notice               = new DeploymentAdminPresenter( $monitor );
 
 		ob_start();
 		$notice->render();
@@ -124,16 +125,16 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertStringContainsString( 'tab=gh&amp;replace_credential=profile_123', $html );
 		self::assertStringNotContainsString( 'secret-canary', $html );
 
-		$result = ( new BackgroundDeploymentFailureNoticeController( $monitor ) )->handle();
+		$result = ( new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $monitor ) )->handle();
 
 		self::assertTrue( $result['success'] );
-		self::assertFalse( ( new BackgroundDeploymentFailureNotice( $monitor ) )->shouldRender() );
+		self::assertFalse( ( new DeploymentAdminPresenter( $monitor ) )->shouldRender() );
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 18;
-		self::assertTrue( ( new BackgroundDeploymentFailureNotice( $monitor ) )->shouldRender() );
+		self::assertTrue( ( new DeploymentAdminPresenter( $monitor ) )->shouldRender() );
 
 		$GLOBALS['ran_booster_repository_admin_capabilities']['manage_options'] = false;
 		ob_start();
-		( new BackgroundDeploymentFailureNotice( $monitor ) )->render();
+		( new DeploymentAdminPresenter( $monitor ) )->render();
 		self::assertSame( '', (string) ob_get_clean() );
 	}
 
@@ -141,7 +142,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$this->database->rows = array(
 			$this->row( 1, 'affected', 'affected', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),
 		);
-		$controller           = new BackgroundDeploymentFailureNoticeController( $this->monitor() );
+		$controller           = new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $this->monitor() );
 
 		$GLOBALS['ran_booster_repository_admin_capabilities']['manage_options'] = false;
 		self::assertSame( 403, $controller->handle()['status'] );

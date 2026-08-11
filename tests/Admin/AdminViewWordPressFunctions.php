@@ -155,6 +155,15 @@ if ( ! function_exists( 'wp_kses_post' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	function wp_strip_all_tags( mixed $value, bool $removeBreaks = false ): string {
+		unset( $removeBreaks );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Focused WordPress test shim.
+		return strip_tags( (string) $value );
+	}
+}
+
 if ( ! function_exists( 'wp_unslash' ) ) {
 	function wp_unslash( mixed $value ): mixed {
 		return $value;

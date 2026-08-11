@@ -7,7 +7,7 @@ namespace RAN\Uninstall;
 // Exact inode and empty-directory checks require native local filesystem operations.
 // phpcs:disable WordPress.WP.AlternativeFunctions
 
-use RAN\Admin\BackgroundDeploymentFailureNotice;
+use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DevelopmentSafetyNoticeController;
@@ -34,7 +34,7 @@ class LocalDataRemover {
 	private const USER_META_KEYS = array(
 		DevelopmentSafetyNoticeController::USER_META_KEY,
 		CredentialExpiryNotice::USER_META_KEY,
-		BackgroundDeploymentFailureNotice::USER_META_KEY,
+		DeploymentAdminPresenter::USER_META_KEY,
 	);
 
 	private object $database;

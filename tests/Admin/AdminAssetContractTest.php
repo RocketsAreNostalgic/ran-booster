@@ -119,19 +119,20 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function testStatusUtilitiesOwnSharedPillAndTileContracts(): void {
-		$utilities = $this->asset( 'ran-booster/35-status-utilities.css' );
-		$debug     = $this->view( 'debug-capture.php' );
-		$packages  = $this->view( 'packages/index.php' );
-		$provider  = $this->view( 'provider.php' );
-		$component = $this->asset( 'ran-booster/40-tables-and-pills.css' );
-		$activity  = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		$utilities  = $this->asset( 'ran-booster/35-status-utilities.css' );
+		$debug      = $this->view( 'debug-capture.php' );
+		$packages   = $this->view( 'packages/index.php' );
+		$provider   = $this->view( 'provider.php' );
+		$projection = $this->source( 'RAN/Admin/ProviderSettingsPresenter.php' );
+		$component  = $this->asset( 'ran-booster/40-tables-and-pills.css' );
+		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 
 		self::assertStringContainsString( '.ran-booster-admin :is(.ran-booster-pill, .ran-booster-badge) {', $utilities );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-tile {', $utilities );
 		self::assertStringContainsString( '.ran-booster-badge--pending', $utilities );
 		self::assertStringContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
 		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activityBadgeVariants[ $latestActivity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
-		self::assertStringContainsString( 'Stored · Validity checked on use', $provider );
+		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
 		self::assertStringContainsString( 'ran-booster-pill--label ran-booster-pill--info ran-booster-delete-credential-package-pill', $provider );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-badge {', $component );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-deployment-state {', $activity );
@@ -367,12 +368,14 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function testCredentialTableShapesOwnTheirDesktopColumnWidths(): void {
-		$css      = $this->asset( 'ran-booster.css' );
-		$view     = $this->view( 'provider.php' );
-		$modals   = $this->view( 'provider/modals.php' );
-		$renderer = $this->source( 'RAN/Admin/Component/ProviderManagementTableRenderer.php' );
+		$css        = $this->asset( 'ran-booster.css' );
+		$view       = $this->view( 'provider.php' );
+		$modals     = $this->view( 'provider/modals.php' );
+		$renderer   = $this->source( 'RAN/Admin/Component/ProviderManagementTableRenderer.php' );
+		$dashboard  = $this->source( 'RAN/Dashboard.php' );
+		$projection = $this->source( 'RAN/Admin/ProviderSettingsPresenter.php' );
 
-		self::assertStringContainsString( 'ProviderManagementTableRenderer', $view );
+		self::assertStringContainsString( 'ProviderManagementTableRenderer', $dashboard );
 		self::assertStringContainsString( 'ran-booster-credential-table--<?php echo esc_attr( $type ); ?>', $renderer );
 		self::assertStringContainsString( "public const ACCESS  = 'access';", $renderer );
 		self::assertStringContainsString( "public const WEBHOOK = 'webhook';", $renderer );
@@ -381,9 +384,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'data-delete-credential-packages', $modals );
 		self::assertStringContainsString( 'ran-booster-delete-credential-package-pill', $view );
 		self::assertStringContainsString( 'ran_booster[expires_on]', $modals );
-		self::assertStringContainsString( "profile['expiry_status']['badge_label']", $view );
+		self::assertStringContainsString( "profile['expiry_status']['badge_label']", $projection );
 		self::assertStringContainsString( 'class="button button-delete ran-booster-open-delete-credential-modal"', $view );
-		self::assertStringContainsString( 'class="button button-delete" data-confirm="<?php echo esc_attr( $webhookDeleteConfirm ); ?>"', $view );
+		self::assertStringContainsString( 'class="button button-delete" data-confirm="<?php echo esc_attr( $profile[\'delete_confirmation\'] ); ?>"', $view );
 		self::assertStringNotContainsString( 'Before deleting a credential', $modals );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-delete-credential-package-list {', $css );
 		self::assertStringContainsString( 'max-block-size: 160px;', $css );
@@ -472,6 +475,7 @@ final class AdminAssetContractTest extends TestCase {
 		$script     = $this->asset( 'ran-booster.js' );
 		$renderer   = $this->source( 'RAN/Admin/Component/RepositoryTableRenderer.php' );
 		$github     = $this->source( 'RAN/RepositoryProvider/GitHubProvider.php' );
+		$dashboard  = $this->source( 'RAN/Dashboard.php' );
 
 		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-provider', $view );
 		self::assertStringContainsString( 'ran-booster-provider__header', $view );
@@ -488,7 +492,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-provider-task-tabs', $view );
 		self::assertStringContainsString( 'ran-booster-provider-disclosure', $view );
 		self::assertStringContainsString( 'ran-booster-provider-repository-tools', $view );
-		self::assertStringContainsString( 'RepositoryTableRenderer', $view );
+		self::assertStringContainsString( 'RepositoryTableRenderer', $dashboard );
 		self::assertStringContainsString( 'ran-booster-repository-list', $renderer );
 		self::assertStringContainsString( 'class="ran-booster-repository-record', $renderer );
 		self::assertStringContainsString( 'ran-booster-repository-record--release', $renderer );
@@ -501,7 +505,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-record__action-group', $renderer );
 		self::assertStringContainsString( 'ran-booster-repository-record__actions', $renderer );
 		self::assertStringContainsString( 'ran-booster-webhook-steps', $view );
-		self::assertStringContainsString( 'AdminStatusSummaryRenderer', $view );
+		self::assertStringContainsString( 'AdminStatusSummaryRenderer', $dashboard );
+		self::assertStringContainsString( '$statusSummaryRenderer->render(', $view );
 		self::assertSame( 2, substr_count( $view, '$statusSummaryRenderer->render(' ) );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-summary {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-neutral {', $css );

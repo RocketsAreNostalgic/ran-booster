@@ -14,6 +14,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\apply_filters' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\do_action' ) ) {
+	function do_action( string $hook, mixed ...$arguments ): void {
+		foreach ( $GLOBALS['ran_booster_admin_view_actions'][ $hook ] ?? array() as $callback ) {
+			$callback( ...$arguments );
+		}
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\wp_kses_post' ) ) {
 	function wp_kses_post( string $content ): string {
 		return (string) preg_replace( '#<script\b[^>]*>.*?</script>#is', '', $content );

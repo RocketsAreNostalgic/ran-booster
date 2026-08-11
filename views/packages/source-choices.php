@@ -5,8 +5,14 @@ defined( 'WPINC' ) || die;
 $sourceChoiceMode = isset( $packageSourceMode ) && 'create' === $packageSourceMode ? 'create' : 'edit';
 if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) {
 	$pageUrl              = 'create' === $sourceChoiceMode
-		? admin_url( 'admin.php?page=' . $packageView->getCreatePageSlug() )
-		: admin_url( 'admin.php?page=' . $packageView->getPageSlug() . '&package=' . rawurlencode( (string) ( $identifierValue ?? '' ) ) );
+		? add_query_arg( 'page', $packageView->getCreatePageSlug(), $packageView->getAdminUrl() )
+		: add_query_arg(
+			array(
+				'page'    => $packageView->getPageSlug(),
+				'package' => (string) ( $identifierValue ?? '' ),
+			),
+			$packageView->getAdminUrl()
+		);
 	$packageSourceChoices = array(
 		'branch'        => array(
 			'heading'           => __( 'Branch', 'ran-booster' ),

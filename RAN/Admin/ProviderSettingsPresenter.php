@@ -1118,4 +1118,363 @@ final readonly class ProviderSettingsPresenter {
 			'repositories' => $matches,
 		);
 	}
+	// Translation placeholders in this internal read model retain the provider,
+	// package-count and page-count meanings documented by their returned keys.
+	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
+
+	/**
+	 * Project credential and webhook-profile lists for the provider page.
+	 *
+	 * @param array<string, mixed> $data Provider settings and normalized list state.
+	 * @return array<string, mixed>
+	 */
+	public function buildProfileListProjection( array $data ): array {
+		$provider      = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
+		$credentials   = is_array( $data['credential_profiles'] ?? null ) ? $data['credential_profiles'] : array();
+		$webhooks      = is_array( $data['webhook_profiles'] ?? null ) ? $data['webhook_profiles'] : array();
+		$state         = $data['providerListState'];
+		$providerCode  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
+		$providerLabel = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
+		$ownerLabel    = is_string( $provider['owner_label'] ?? null ) && '' !== trim( $provider['owner_label'] )
+			? $provider['owner_label']
+			: __( 'Owner', 'ran-booster' );
+		$baseUrl       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
+		$providerUrl   = static fn ( array $args = array() ): string => add_query_arg( $args, $baseUrl );
+		$kindLabels    = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'label', 'code' );
+		$scopeLabels   = array_column( is_array( $provider['webhook_scopes'] ?? null ) ? $provider['webhook_scopes'] : array(), 'label', 'code' );
+		$fieldLabels   = array();
+		foreach ( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array() as $kind ) {
+			foreach ( is_array( $kind['fields'] ?? null ) ? $kind['fields'] : array() as $field ) {
+				if ( is_string( $field['key'] ?? null ) && is_string( $field['label'] ?? null ) ) {
+					$fieldLabels[ $field['key'] ] = $field['label'];
+				}
+			}
+		}
+		$credentialProjection = $this->credentialRows( $credentials, $kindLabels, $fieldLabels, $ownerLabel );
+		$webhookRows          = $this->webhookRows( $webhooks, $scopeLabels );
+		$credentialList       = $this->filterAndPage( $credentialProjection['rows'], 'credentials', $state );
+		$webhookList          = $this->filterAndPage( $webhookRows, 'secrets', $state );
+		$urls                 = $this->listUrls( $providerUrl, $providerCode, $state, $credentialList, $webhookList );
+		$storageUnavailable   = ! empty( $data['secrets_storage_unavailable'] );
+		$hasCredentials       = ! $storageUnavailable && ! empty( $provider['credential_kinds'] );
+		$providerHasWebhooks  = ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] );
+		$summaries            = $this->profileSummaries(
+			$storageUnavailable,
+			$this->needsAttention( $credentialProjection['rows'] ),
+			$this->needsAttention( $webhookRows ),
+			count( $credentialProjection['rows'] ),
+			count( $webhookRows ),
+			(int) ( $data['automaticPackageCount'] ?? 0 )
+		);
+		$mutationFields       = array( '_wpnonce' => wp_create_nonce( 'ran-booster-save-secrets' ) );
+		if ( is_string( $_SERVER['REQUEST_URI'] ?? null ) ) {
+			$mutationFields['_wp_http_referer'] = wp_unslash( $_SERVER['REQUEST_URI'] );
+		}
+		$interactionValues = wp_json_encode(
+			array(
+				'ran_booster_interaction[operation]' => 'core:delete-webhook-profile',
+				'ran_booster_interaction[target]'    => ProviderProfileAdminController::TARGET_KEY,
+			)
+		);
+
+		return array(
+			'providerView'                   => in_array( $data['providerView'] ?? null, array( 'credentials', 'secrets' ), true ) ? $data['providerView'] : 'overview',
+			'providerListState'              => $state,
+			'publicLookupProfile'            => is_array( $data['public_lookup_profile'] ?? null ) ? $data['public_lookup_profile'] : null,
+			'webhookSetup'                   => is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null,
+			'storageUnavailable'             => $storageUnavailable,
+			'hasCredentialSettings'          => $hasCredentials,
+			'providerHasWebhookSettings'     => $providerHasWebhooks,
+			'hasWebhookSettings'             => ! $storageUnavailable && $providerHasWebhooks,
+			'providerTrustDescription'       => sprintf( __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $providerLabel, $providerCode ),
+			'packageTypeLabels'              => array(
+				'plugin' => __( 'Plugin', 'ran-booster' ),
+				'theme'  => __( 'Theme', 'ran-booster' ),
+			),
+			'overviewUrl'                    => $providerUrl(),
+			'credentialsUrl'                 => $providerUrl( array( 'view' => 'credentials' ) ),
+			'secretsUrl'                     => $providerUrl( array( 'view' => 'secrets' ) ),
+			'providerListActionUrl'          => admin_url( 'admin.php' ),
+			'providerMutationFields'         => $mutationFields,
+			'deleteWebhookInteractionValues' => is_string( $interactionValues ) ? $interactionValues : '{}',
+			'credentialRowCount'             => count( $credentialProjection['rows'] ),
+			'credentialScopes'               => $credentialProjection['scopes'],
+			'webhookRowCount'                => count( $webhookRows ),
+			'credentialSummary'              => $summaries['credential'],
+			'webhookSummary'                 => $summaries['webhook'],
+			'credentialList'                 => $credentialList,
+			'webhookList'                    => $webhookList,
+			'credentialSortUrls'             => $urls['credentials']['sort'],
+			'webhookSortUrls'                => $urls['secrets']['sort'],
+			'credentialPagination'           => $urls['credentials']['pagination'],
+			'webhookPagination'              => $urls['secrets']['pagination'],
+		) + $this->profileCopy( $providerLabel );
+	}
+
+
+
+	/**
+	 * @param list<array<string,mixed>> $profiles
+	 * @param array<string,string> $kindLabels
+	 * @param array<string,string> $fieldLabels
+	 * @return array{rows:list<array<string,mixed>>,scopes:array<string,string>}
+	 */
+	private function credentialRows( array $profiles, array $kindLabels, array $fieldLabels, string $ownerLabel ): array {
+		$rows   = array();
+		$scopes = array();
+		foreach ( $profiles as $profileIndex => $profile ) {
+			if ( ! is_array( $profile ) ) {
+				continue;
+			}
+			$configuration = is_array( $profile['configuration'] ?? null ) ? $profile['configuration'] : array();
+			$summary       = array();
+			$scopeValue    = '';
+			foreach ( $configuration as $key => $value ) {
+				if ( ! is_string( $value ) || '' === $value ) {
+					continue;
+				}
+				$summary[] = ( $fieldLabels[ $key ] ?? ucfirst( (string) $key ) ) . ': ' . $value;
+				if ( '' === $scopeValue && in_array( $key, array( 'owner', 'workspace' ), true ) ) {
+					$scopeValue = $value;
+				}
+			}
+			$scopeKey            = '' === $scopeValue ? 'account' : sanitize_key( $scopeValue );
+			$scopeLabel          = '' === $scopeValue ? __( 'Account', 'ran-booster' ) : $ownerLabel . ' · ' . $scopeValue;
+			$scopes[ $scopeKey ] = $scopeLabel;
+			$usage               = is_array( $profile['usage'] ?? null ) ? $profile['usage'] : array(
+				'available' => false,
+				'total'     => null,
+				'packages'  => array(),
+			);
+			$usageTotal          = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
+			$usageLabel          = ! empty( $usage['available'] )
+				? sprintf( _n( '%d package', '%d packages', $usageTotal, 'ran-booster' ), $usageTotal )
+				: __( 'Usage unavailable', 'ran-booster' );
+			$healthLabel         = ! empty( $profile['configured'] )
+				? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Stored · Validity checked on use', 'ran-booster' ) )
+				: __( 'Not configured', 'ran-booster' );
+			$statusKey           = ! empty( $profile['configured'] )
+				&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'error' )
+				&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'warning' ) ? 'ready' : 'attention';
+			$kind                = is_string( $profile['kind'] ?? null ) ? $profile['kind'] : '';
+			$label               = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
+			$rows[]              = $profile + array(
+				'profile_index'       => $profileIndex,
+				'configuration_json'  => (string) wp_json_encode( $configuration ),
+				'provider_expires_on' => is_string( $profile['expiry']['provider_expires_at'] ?? null ) ? substr( $profile['expiry']['provider_expires_at'], 0, 10 ) : '',
+				'usage_listed'        => count( $usage['packages'] ),
+				'kind_label'          => $kindLabels[ $kind ] ?? $kind,
+				'configuration_label' => implode( ' · ', $summary ),
+				'scope_key'           => $scopeKey,
+				'scope_label'         => $scopeLabel,
+				'usage_total'         => $usageTotal,
+				'usage_label'         => $usageLabel,
+				'health_label'        => $healthLabel,
+				'status_key'          => $statusKey,
+				'search_value'        => strtolower( implode( ' ', array_merge( array( $label, $kindLabels[ $kind ] ?? $kind, $scopeLabel, $healthLabel ), array_values( array_filter( $configuration, 'is_string' ) ) ) ) ),
+			);
+		}
+
+		return array(
+			'rows'   => $rows,
+			'scopes' => $scopes,
+		);
+	}
+
+	/** @param list<array<string,mixed>> $profiles @param array<string,string> $scopeLabels @return list<array<string,mixed>> */
+	private function webhookRows( array $profiles, array $scopeLabels ): array {
+		$rows = array();
+		foreach ( $profiles as $profile ) {
+			if ( ! is_array( $profile ) ) {
+				continue;
+			}
+			$usage              = is_array( $profile['usage'] ?? null ) ? $profile['usage'] : array(
+				'available'    => false,
+				'total'        => null,
+				'repositories' => array(),
+			);
+			$usageTotal         = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
+			$usageLabel         = ! empty( $usage['available'] ) ? sprintf( _n( '%d package', '%d packages', $usageTotal, 'ran-booster' ), $usageTotal ) : __( 'Usage unavailable', 'ran-booster' );
+			$scope              = is_string( $profile['scope'] ?? null ) ? $profile['scope'] : '';
+			$label              = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
+			$target             = is_string( $profile['target'] ?? null ) ? $profile['target'] : '';
+			$health             = ! empty( $profile['configured'] ) ? __( 'Saved · Remote delivery not verified by Core', 'ran-booster' ) : __( 'Local secret not configured', 'ran-booster' );
+			$deleteConfirmation = ! empty( $usage['available'] ) && 0 < $usageTotal
+				? sprintf( _n( 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usageTotal, 'ran-booster' ), $usageTotal )
+				: __( 'Remove this local secret? Remote provider webhooks will not be removed.', 'ran-booster' );
+			$rows[]             = $profile + array(
+				'scope_label'         => $scopeLabels[ $scope ] ?? ucfirst( $scope ),
+				'usage_total'         => $usageTotal,
+				'usage_label'         => $usageLabel,
+				'health_label'        => $health,
+				'delete_confirmation' => $deleteConfirmation,
+				'status_key'          => ! empty( $profile['configured'] ) && ! empty( $usage['available'] ) ? 'ready' : 'attention',
+				'search_value'        => strtolower( implode( ' ', array( $label, $scope, $target, $usageLabel, $health ) ) ),
+			);
+		}
+
+		return $rows;
+	}
+
+	/** @param list<array<string,mixed>> $rows @param array<string,mixed> $state @return array{rows:list<array<string,mixed>>,total:int,pages:int,current:int} */
+	private function filterAndPage( array $rows, string $view, array $state ): array {
+		$search  = strtolower( trim( (string) $state['search'] ) );
+		$rows    = array_values(
+			array_filter(
+				$rows,
+				static function ( array $row ) use ( $state, $search, $view ): bool {
+					if ( '' !== $search && ! str_contains( (string) ( $row['search_value'] ?? '' ), $search ) ) {
+						return false;
+					}
+					if ( 'credentials' === $view ) {
+						return ( '' === $state['kind'] || $state['kind'] === ( $row['kind'] ?? null ) )
+						&& ( '' === $state['scope'] || $state['scope'] === ( $row['scope_key'] ?? null ) );
+					}
+
+					return ( '' === $state['scope'] || $state['scope'] === ( $row['scope'] ?? null ) )
+					&& ( '' === $state['status'] || $state['status'] === ( $row['status_key'] ?? null ) );
+				}
+			)
+		);
+		$sortKey = match ( $state['orderby'] ) {
+			'kind' => 'kind_label', 'scope' => 'scope_label', 'usage' => 'usage_total', 'health' => 'health_label', default => 'label' };
+		usort(
+			$rows,
+			static function ( array $left, array $right ) use ( $state, $sortKey ): int {
+				$leftValue  = $left[ $sortKey ] ?? '';
+				$rightValue = $right[ $sortKey ] ?? '';
+				$comparison = is_int( $leftValue ) && is_int( $rightValue ) ? $leftValue <=> $rightValue : strnatcasecmp( (string) $leftValue, (string) $rightValue );
+
+				return 'desc' === $state['order'] ? -$comparison : $comparison;
+			}
+		);
+		$total   = count( $rows );
+		$pages   = max( 1, (int) ceil( $total / (int) $state['per_page'] ) );
+		$current = min( (int) $state['paged'], $pages );
+
+		return array(
+			'rows'    => array_slice( $rows, ( $current - 1 ) * (int) $state['per_page'], (int) $state['per_page'] ),
+			'total'   => $total,
+			'pages'   => $pages,
+			'current' => $current,
+		);
+	}
+
+	/** @param list<array<string,mixed>> $rows */
+	private function needsAttention( array $rows ): bool {
+		return array() !== array_filter( $rows, static fn ( array $row ): bool => 'attention' === ( $row['status_key'] ?? null ) );
+	}
+
+	/** @return array{credential:array{tone:string,heading:string,description:string},webhook:array{tone:string,heading:string,description:string}} */
+	private function profileSummaries( bool $storageUnavailable, bool $credentialAttention, bool $webhookAttention, int $credentialCount, int $webhookCount, int $automaticCount ): array {
+		$credentialProblem = $storageUnavailable || $credentialAttention;
+		$webhookProblem    = $storageUnavailable || $webhookAttention || ( 0 === $webhookCount && 0 < $automaticCount );
+
+		return array(
+			'credential' => array(
+				'tone'        => $credentialProblem ? 'attention' : ( 0 < $credentialCount ? 'ready' : 'pending' ),
+				'heading'     => $credentialProblem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credentialCount ? __( 'No credential saved', 'ran-booster' ) : sprintf( _n( 'Ready · %d credential', 'Ready · %d credentials', $credentialCount, 'ran-booster' ), $credentialCount ) ),
+				'description' => $storageUnavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credentialAttention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credentialCount ? __( 'Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits.', 'ran-booster' ) : __( 'Private repository access is available. Open credential management to validate, replace, or review usage.', 'ran-booster' ) ) ),
+			),
+			'webhook'    => array(
+				'tone'        => $webhookProblem ? 'attention' : ( 0 < $webhookCount ? 'ready' : 'pending' ),
+				'heading'     => $webhookProblem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhookCount ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
+				'description' => $storageUnavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhookAttention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhookCount ? ( 0 < $automaticCount ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( _n( '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhookCount, 'ran-booster' ), $webhookCount ) ) ),
+			),
+		);
+	}
+
+
+
+
+	/**
+	 * @param callable(array<string,mixed>):string $providerUrl
+	 * @param array<string,mixed> $state
+	 * @param array<string,mixed> $credentials
+	 * @param array<string,mixed> $secrets
+	 * @return array<string,array<string,mixed>>
+	 */
+	private function listUrls( callable $providerUrl, string $providerCode, array $state, array $credentials, array $secrets ): array {
+		$result = array();
+		foreach ( array(
+			'credentials' => $credentials,
+			'secrets'     => $secrets,
+		) as $view => $list ) {
+			$sort = array();
+			foreach ( array( 'name', 'kind', 'scope', 'usage', 'health' ) as $orderby ) {
+				$order            = $state['orderby'] === $orderby && 'asc' === $state['order'] ? 'desc' : 'asc';
+				$sort[ $orderby ] = $providerUrl(
+					array_filter(
+						array(
+							'view'     => $view,
+							's'        => $state['search'],
+							'kind'     => $state['kind'],
+							'scope'    => $state['scope'],
+							'status'   => $state['status'],
+							'orderby'  => $orderby,
+							'order'    => $order,
+							'per_page' => $state['per_page'],
+						),
+						static fn ( mixed $value ): bool => '' !== $value
+					)
+				);
+			}
+			$pageUrl         = static fn ( int $page ): string => $providerUrl(
+				array_filter(
+					array(
+						'view'     => $view,
+						's'        => $state['search'],
+						'kind'     => $state['kind'],
+						'scope'    => $state['scope'],
+						'status'   => $state['status'],
+						'orderby'  => $state['orderby'],
+						'order'    => $state['order'],
+						'per_page' => $state['per_page'],
+						'paged'    => max( 1, $page ),
+					),
+					static fn ( mixed $value ): bool => '' !== $value
+				)
+			);
+			$result[ $view ] = array(
+				'sort'       => $sort,
+				'pagination' => array(
+					'item_count_label' => sprintf( _n( '%d item', '%d items', $list['total'], 'ran-booster' ), $list['total'] ),
+					'page_label'       => sprintf( __( 'Page %1$d of %2$d', 'ran-booster' ), $list['current'], $list['pages'] ),
+					'current'          => $list['current'],
+					'pages'            => $list['pages'],
+					'per_page'         => $state['per_page'],
+					'action_url'       => admin_url( 'admin.php' ),
+					'hidden_fields'    => array_filter(
+						array(
+							'page'    => 'ran-booster',
+							'tab'     => $providerCode,
+							'view'    => $view,
+							's'       => $state['search'],
+							'kind'    => 'credentials' === $view ? $state['kind'] : '',
+							'scope'   => $state['scope'],
+							'status'  => 'secrets' === $view ? $state['status'] : '',
+							'orderby' => $state['orderby'],
+							'order'   => $state['order'],
+						),
+						static fn ( mixed $value ): bool => '' !== $value
+					),
+					'previous_url'     => $pageUrl( $list['current'] - 1 ),
+					'next_url'         => $pageUrl( $list['current'] + 1 ),
+				),
+			);
+		}
+
+		return $result;
+	}
+
+	/** @return array<string,string> */
+	private function profileCopy( string $label ): array {
+		return array(
+			'providerBackLabel'               => sprintf( __( 'Back to %s overview', 'ran-booster' ), $label ),
+			'credentialManagementDescription' => sprintf( __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),
+			'secretManagementDescription'     => sprintf( __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
+		);
+	}
+
+	// phpcs:enable WordPress.WP.I18n.MissingTranslatorsComment
 }

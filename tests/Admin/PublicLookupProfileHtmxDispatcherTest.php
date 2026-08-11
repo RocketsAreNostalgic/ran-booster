@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
+use RAN\Admin\ProviderProfileAdminController;
+use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
@@ -24,10 +27,12 @@ use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
 use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
+	private HtmxPublicLookupTestController $controller;
 
 	protected function setUp(): void {
 		$_POST                     = array();
@@ -67,7 +72,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		$dispatcher->dispatchPostRequests();
 
 		self::assertSame( array(), $store->profiles );
-		self::assertNull( $dispatcher->response );
+		self::assertNull( $this->controller->response );
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-public-lookup-profile' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
@@ -130,7 +135,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		}
 	}
 
-	private function dispatcher( Dashboard $dashboard, InMemoryPublicRepositoryLookupProfileStore $store ): HtmxPublicLookupTestDispatcher {
+	private function dispatcher( Dashboard $dashboard, InMemoryPublicRepositoryLookupProfileStore $store ): Dispatcher {
 		$providers = new ProviderRegistry( array( $this->provider() ) );
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
@@ -138,15 +143,27 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		$lock->expects( self::never() )->method( 'acquire' );
 		$lock->expects( self::never() )->method( 'release' );
 
-		return new HtmxPublicLookupTestDispatcher(
+		$this->controller = new HtmxPublicLookupTestController(
+			$dashboard,
+			$providers,
+			new SecretsFile( null, array() ),
+			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
+			$lock,
+			new CredentialUsageReader(),
+			$store,
+			new CredentialExpiryObservationStore()
+		);
+
+		return new Dispatcher(
 			$dashboard,
 			$providers,
 			new SecretsFile( null, array() ),
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $providers ),
+			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$lock,
-			publicLookupProfiles: $store
+			publicLookupProfiles: $store,
+			providerProfileInteraction: $this->controller
 		);
 	}
 
@@ -183,7 +200,7 @@ final class HtmxPublicLookupResponse extends \RuntimeException {
 	}
 }
 
-final class HtmxPublicLookupTestDispatcher extends Dispatcher {
+final class HtmxPublicLookupTestController extends ProviderProfileAdminController {
 
 	/** @var array{provider:string,message:?string,error:?string,status:int}|null */
 	public ?array $response = null;

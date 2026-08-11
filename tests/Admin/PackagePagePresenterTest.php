@@ -6,12 +6,12 @@ namespace Tests\Admin;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use RAN\Admin\PackageViewConfig;
+use RAN\Admin\PackagePagePresenter;
 
-final class PackageViewConfigTest extends TestCase {
+final class PackagePagePresenterTest extends TestCase {
 
 	public function testPluginConfigurationPreservesPluginRouting(): void {
-		$config = PackageViewConfig::plugin();
+		$config = PackagePagePresenter::plugin();
 
 		self::assertSame( 'plugin', $config->getType() );
 		self::assertSame( 'Plugin', $config->getSingularLabel() );
@@ -27,7 +27,7 @@ final class PackageViewConfigTest extends TestCase {
 	}
 
 	public function testThemeConfigurationPreservesThemeRouting(): void {
-		$config = PackageViewConfig::theme();
+		$config = PackagePagePresenter::theme();
 
 		self::assertSame( 'theme', $config->getType() );
 		self::assertSame( 'Theme', $config->getSingularLabel() );
@@ -44,6 +44,6 @@ final class PackageViewConfigTest extends TestCase {
 	public function testUnsupportedActionsAreRejected(): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		PackageViewConfig::plugin()->getAction( 'publish' );
+		PackagePagePresenter::plugin()->getAction( 'publish' );
 	}
 }

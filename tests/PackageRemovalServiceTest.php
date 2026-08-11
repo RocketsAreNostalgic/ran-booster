@@ -14,6 +14,7 @@ require_once __DIR__ . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\PackageAdminController;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
@@ -28,6 +29,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\WordPress\WordPressUpdaterLock;
+use WP_Error;
 
 final class PackageRemovalServiceTest extends TestCase {
 
@@ -385,9 +387,10 @@ final class PackageRemovalServiceTest extends TestCase {
 	}
 
 	public function testDashboardMapsOnlyBoundedRemovalFailuresToSafeNotices(): void {
-		$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
-		$method    = new \ReflectionMethod( Dashboard::class, 'reportPackageRemovalFailure' );
-		$operation = PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() );
+		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
+		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
+		$method     = new \ReflectionMethod( PackageAdminController::class, 'removalFailure' );
+		$operation  = PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() );
 
 		foreach (
 			array(
@@ -404,7 +407,19 @@ final class PackageRemovalServiceTest extends TestCase {
 			) as $outcomeCode
 		) {
 			$dashboard->messages = array();
-			$method->invoke( $dashboard, $operation, $outcomeCode );
+			$method->invoke(
+				$controller,
+				$operation,
+				$outcomeCode,
+				static function ( WP_Error $message ) use ( $dashboard ): void {
+					$dashboard->messages[] = array(
+						'type'    => 'error',
+						'code'    => $message->get_error_code(),
+						'data'    => $message->get_error_data(),
+						'message' => $message->get_error_message(),
+					);
+				}
+			);
 			self::assertCount( 1, $dashboard->messages );
 			self::assertSame(
 				'ran_booster_package_removal_' . $outcomeCode,

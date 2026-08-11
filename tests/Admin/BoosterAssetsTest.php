@@ -6,8 +6,8 @@ namespace Tests\Admin;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\Admin\BackgroundDeploymentFailureNotice;
-use RAN\Admin\BackgroundDeploymentFailureNoticeController;
+use RAN\Admin\DeploymentAdminController;
+use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\DevelopmentSafetyNoticeController;
@@ -109,8 +109,8 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame(
 			array(
 				'ajaxUrl' => 'https://example.test/wp-admin/admin-ajax.php',
-				'action'  => BackgroundDeploymentFailureNoticeController::AJAX_ACTION,
-				'nonce'   => 'nonce-for-' . hash( 'sha256', BackgroundDeploymentFailureNoticeController::NONCE_ACTION ),
+				'action'  => DeploymentAdminController::AJAX_ACTION,
+				'nonce'   => 'nonce-for-' . hash( 'sha256', DeploymentAdminController::NONCE_ACTION ),
 			),
 			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-background-deployment-failure-notice']['ranBoosterBackgroundFailureNotice']
 		);
@@ -467,7 +467,7 @@ final class BoosterAssetsTest extends TestCase {
 			}
 		);
 		$container->bind(
-			BackgroundDeploymentFailureNotice::class,
+			DeploymentAdminPresenter::class,
 			static fn (): object => new class( $booster->backgroundFailureNoticeVisible ) {
 				public function __construct( private bool $visible ) {
 				}

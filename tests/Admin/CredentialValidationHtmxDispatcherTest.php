@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
+use RAN\Admin\ProviderProfileAdminController;
+use RAN\Admin\CredentialExpiryObservationStore;
+use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\RepositoryProvider\CredentialValidationResult;
@@ -18,9 +22,11 @@ use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
 
 final class CredentialValidationHtmxDispatcherTest extends TestCase {
+	private HtmxCredentialValidationTestController $controller;
 
 	protected function setUp(): void {
 		$_POST                     = array();
@@ -53,7 +59,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$_POST['ran_booster'] = $this->request();
 		$dispatcher->dispatchPostRequests();
 
-		self::assertNull( $dispatcher->response );
+		self::assertNull( $this->controller->response );
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-secrets' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
@@ -103,7 +109,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		);
 	}
 
-	private function dispatcher( Dashboard $dashboard, CredentialValidationResult $result ): HtmxCredentialValidationTestDispatcher {
+	private function dispatcher( Dashboard $dashboard, CredentialValidationResult $result ): Dispatcher {
 		$provider  = new CredentialValidationProvider( $result );
 		$providers = new ProviderRegistry( array( $provider ) );
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
@@ -112,14 +118,26 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$lock->expects( self::never() )->method( 'acquire' );
 		$lock->expects( self::never() )->method( 'release' );
 
-		return new HtmxCredentialValidationTestDispatcher(
+		$this->controller = new HtmxCredentialValidationTestController(
+			$dashboard,
+			$providers,
+			new SecretsFile( null, array() ),
+			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
+			$lock,
+			new CredentialUsageReader(),
+			new PublicRepositoryLookupProfileStore(),
+			new CredentialExpiryObservationStore()
+		);
+
+		return new Dispatcher(
 			$dashboard,
 			$providers,
 			new SecretsFile( null, array() ),
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $providers ),
-			$lock
+			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
+			$lock,
+			providerProfileInteraction: $this->controller
 		);
 	}
 }
@@ -137,7 +155,7 @@ final class HtmxCredentialValidationResponse extends \RuntimeException {
 	}
 }
 
-final class HtmxCredentialValidationTestDispatcher extends Dispatcher {
+final class HtmxCredentialValidationTestController extends ProviderProfileAdminController {
 
 	/** @var array{id:string,message:?string,error:?string,status:int}|null */
 	public ?array $response = null;

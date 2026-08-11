@@ -79,8 +79,8 @@ class Booster {
 			array( $this->service( \RAN\Admin\CredentialExpiryNoticeController::class ), 'handle' )
 		);
 		add_action(
-			'wp_ajax_' . \RAN\Admin\BackgroundDeploymentFailureNoticeController::AJAX_ACTION,
-			array( $this->service( \RAN\Admin\BackgroundDeploymentFailureNoticeController::class ), 'handle' )
+			'wp_ajax_' . \RAN\Admin\DeploymentAdminController::AJAX_ACTION,
+			array( $this->service( \RAN\Admin\DeploymentAdminController::class ), 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PackageUpdateProgressController::AJAX_ACTION,
@@ -115,7 +115,7 @@ class Booster {
 		$expiryNotice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
 		add_action( 'admin_notices', array( $expiryNotice, 'render' ) );
 		add_action( 'network_admin_notices', array( $expiryNotice, 'render' ) );
-		$failureNotice = $this->service( \RAN\Admin\BackgroundDeploymentFailureNotice::class );
+		$failureNotice = $this->service( \RAN\Admin\DeploymentAdminPresenter::class );
 		add_action( 'admin_notices', array( $failureNotice, 'render' ) );
 		add_action( 'network_admin_notices', array( $failureNotice, 'render' ) );
 		$runtimeNotice = $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class );
@@ -657,7 +657,7 @@ class Booster {
 	public function loadBackgroundDeploymentFailureNoticeScript( $hook ): void {
 		unset( $hook );
 
-		$notice = $this->service( \RAN\Admin\BackgroundDeploymentFailureNotice::class );
+		$notice = $this->service( \RAN\Admin\DeploymentAdminPresenter::class );
 		if ( ! $notice->shouldRender() ) {
 			return;
 		}
@@ -676,8 +676,8 @@ class Booster {
 			'ranBoosterBackgroundFailureNotice',
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'action'  => \RAN\Admin\BackgroundDeploymentFailureNoticeController::AJAX_ACTION,
-				'nonce'   => wp_create_nonce( \RAN\Admin\BackgroundDeploymentFailureNoticeController::NONCE_ACTION ),
+				'action'  => \RAN\Admin\DeploymentAdminController::AJAX_ACTION,
+				'nonce'   => wp_create_nonce( \RAN\Admin\DeploymentAdminController::NONCE_ACTION ),
 			)
 		);
 		wp_enqueue_script( 'ran-booster-background-deployment-failure-notice' );

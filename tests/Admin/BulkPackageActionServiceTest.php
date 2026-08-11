@@ -428,39 +428,76 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array(), $coordinator->targets );
 	}
 
-	public function testDeploymentRequestsRejectDuplicatesAndMoreThanTwentyIdentifiers(): void {
-		foreach (
-			array(
-				array( 'example/example.php', 'example/example.php' ),
-				array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 21 ) ),
-			) as $identifiers
-		) {
+	public function testDeploymentRequestsRejectDuplicateIdentifiers(): void {
+		$identifiers = array( 'example/example.php', 'example/example.php' );
+		try {
+			BulkPackageAction::fromInput(
+				'plugin',
+				array(
+					'bulk_action' => BulkPackageAction::QUEUE_UPDATE,
+					'identifiers' => $identifiers,
+				)
+			);
+			self::fail( 'Duplicate bulk selections must be rejected.' );
+		} catch ( \InvalidArgumentException ) {
+			self::assertTrue( true );
+		}
+	}
+
+	public function testQueueAndPolicyRequestsAcceptTwentyAndRejectTwentyOneIdentifiers(): void {
+		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 20 ) );
+		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 21 ) );
+		foreach ( array( BulkPackageAction::QUEUE_UPDATE, BulkPackageAction::POLICY_DISABLED ) as $operation ) {
+			$action = BulkPackageAction::fromInput(
+				'plugin',
+				array(
+					'bulk_action' => $operation,
+					'identifiers' => $accepted,
+				)
+			);
+			self::assertCount( 20, $action->identifiers );
+
 			try {
 				BulkPackageAction::fromInput(
 					'plugin',
 					array(
-						'bulk_action' => 'queue-update',
-						'identifiers' => $identifiers,
+						'bulk_action' => $operation,
+						'identifiers' => $rejected,
 					)
 				);
-				self::fail( 'Invalid bulk selections must be rejected.' );
+				self::fail( 'Deployment selections above twenty must be rejected.' );
 			} catch ( \InvalidArgumentException ) {
 				self::assertTrue( true );
 			}
 		}
 	}
 
-	public function testActivationRequestsAcceptSelectAllBeyondTheDeploymentBatchLimit(): void {
-		$identifiers = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 21 ) );
-		$action      = BulkPackageAction::fromInput(
-			'plugin',
-			array(
-				'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
-				'identifiers' => $identifiers,
-			)
-		);
+	public function testActivationRequestsAcceptTwoHundredAndRejectTwoHundredAndOneIdentifiers(): void {
+		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 200 ) );
+		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 201 ) );
+		foreach ( BulkPackageAction::pluginActivationOperations() as $operation ) {
+			$action = BulkPackageAction::fromInput(
+				'plugin',
+				array(
+					'bulk_action' => $operation,
+					'identifiers' => $accepted,
+				)
+			);
+			self::assertCount( 200, $action->identifiers );
 
-		self::assertCount( 21, $action->identifiers );
+			try {
+				BulkPackageAction::fromInput(
+					'plugin',
+					array(
+						'bulk_action' => $operation,
+						'identifiers' => $rejected,
+					)
+				);
+				self::fail( 'Activation selections above two hundred must be rejected.' );
+			} catch ( \InvalidArgumentException ) {
+				self::assertTrue( true );
+			}
+		}
 	}
 
 	public function testRequestRejectsMalformedAndWrongTypeIdentifiers(): void {

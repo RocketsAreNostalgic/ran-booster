@@ -8,13 +8,14 @@ namespace Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
+require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\PackageEditProviderGuard;
+use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Dashboard;
 use RAN\Dispatcher;
@@ -28,10 +29,11 @@ use RAN\WordPress\WordPressUpdaterLock;
 use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 use WP_Error;
 
-final class PackageEditProviderGuardDispatcherTest extends TestCase {
+final class PackageAdminControllerDispatcherTest extends TestCase {
 
 	protected function setUp(): void {
-		$_POST = array();
+		$_POST                     = array();
+		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_test_capability_checks']           = array();
 		$GLOBALS['ran_booster_test_nonce_checks']                = array();
@@ -41,6 +43,7 @@ final class PackageEditProviderGuardDispatcherTest extends TestCase {
 
 	protected function tearDown(): void {
 		$_POST = array();
+		unset( $_SERVER['REQUEST_METHOD'] );
 		unset(
 			$GLOBALS['ran_booster_package_mutation_guard_multisite'],
 			$GLOBALS['ran_booster_test_capability_checks'],
@@ -156,7 +159,7 @@ final class PackageEditProviderGuardDispatcherTest extends TestCase {
 			new SecretsFile( null, array() ),
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			new PackageEditProviderGuard( $plugins, $themes, $providers ),
+			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$this->createStub( WordPressUpdaterLock::class )
 		);
 	}

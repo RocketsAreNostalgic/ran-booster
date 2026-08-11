@@ -7,7 +7,7 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleasePlatformContractTest extends TestCase {
-	private const UPDATER_COMMIT = '0688b189c24bb5458cf27a417a743cfb011f499a';
+	private const UPDATER_COMMIT = '933eebd7cd00a9529477030e617bbdd893aab131';
 
 	public function testComposerDeclaresTheZipRuntimeRequirement(): void {
 		$composer = json_decode(

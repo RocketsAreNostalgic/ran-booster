@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2e47394fc156b8bb4f54537a61fce389",
+    "content-hash": "af6ac94d97c45aab326cb7d27e7fa097",
     "packages": [
         {
             "name": "ran/wp-github-release-updater",
-            "version": "v2.0.0-beta.4",
+            "version": "v2.0.0-beta.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater.git",
-                "reference": "0688b189c24bb5458cf27a417a743cfb011f499a"
+                "reference": "933eebd7cd00a9529477030e617bbdd893aab131"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-github-release-updater/zipball/0688b189c24bb5458cf27a417a743cfb011f499a",
-                "reference": "0688b189c24bb5458cf27a417a743cfb011f499a",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-github-release-updater/zipball/933eebd7cd00a9529477030e617bbdd893aab131",
+                "reference": "933eebd7cd00a9529477030e617bbdd893aab131",
                 "shasum": ""
             },
             "require": {
@@ -30,7 +30,7 @@
                 "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
                 "phpstan/phpstan": "^1.12",
                 "phpunit/phpunit": "^9.6",
-                "squizlabs/php_codesniffer": "^3.13",
+                "squizlabs/php_codesniffer": "^3.13.6",
                 "wp-coding-standards/wpcs": "^3.2"
             },
             "type": "library",
@@ -42,6 +42,9 @@
             "scripts": {
                 "test": [
                     "phpunit --configuration phpunit.xml"
+                ],
+                "test:release-publisher": [
+                    "node --test tests/release-publisher.test.mjs"
                 ],
                 "test:performance": [
                     "php tests/Characterization/managed-preflight-performance.php"
@@ -58,6 +61,7 @@
                 "check": [
                     "@validate:strict",
                     "@test",
+                    "@test:release-publisher",
                     "@test:performance",
                     "@lint",
                     "@analyze"
@@ -68,10 +72,10 @@
             ],
             "description": "GitHub Release update integration for WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/tree/v2.0.0-beta.4",
+                "source": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/tree/v2.0.0-beta.5",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/issues"
             },
-            "time": "2026-08-04T00:25:23+00:00"
+            "time": "2026-08-11T13:17:14+00:00"
         }
     ],
     "packages-dev": [

@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-beta.15](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-08-11)
+
+
+### Features
+
+* complete V3 Core and adopt updater beta.5 ([e52e42b](https://github.com/RocketsAreNostalgic/ran-booster/commit/e52e42b02ae48b868766d717ac343f10cb951700))
+* complete V3 Core and adopt updater beta.5 ([#25](https://github.com/RocketsAreNostalgic/ran-booster/issues/25)) ([e52e42b](https://github.com/RocketsAreNostalgic/ran-booster/commit/e52e42b02ae48b868766d717ac343f10cb951700))
+
+
+### Bug Fixes
+
+* clarify guidance on using local sibling as standards authority ([a993cf2](https://github.com/RocketsAreNostalgic/ran-booster/commit/a993cf2c29cdc6d17aaafe67cffa93aa8b317c2f))
+* **deps:** adopt updater beta.5 ([7b01f4d](https://github.com/RocketsAreNostalgic/ran-booster/commit/7b01f4d743c095a08a3f7966bf33d01000203315))
+
 ## [1.0.0-beta.14](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-08-09)
 
 

@@ -15,14 +15,23 @@ use RAN\Admin\BulkPackageAction;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\AdminTabRegistry;
 use RAN\Admin\DevelopmentSafetyNoticeController;
+use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\ProviderDocumentationPresenter;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Booster;
 use RAN\Dashboard;
+use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentAttemptRepository;
+use RAN\Deployment\DeploymentOutcome;
+use RAN\Deployment\DeploymentStorageFailure;
+use RAN\Deployment\RejectedAdmissionAuditRepository;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\ManagedRepository;
 use RAN\Package;
+use RAN\PackageOperation;
+use RAN\PackageOperationService;
+use RAN\PackageRemoval\PackageRemovalGateway;
+use RAN\PackageRemoval\PackageRemovalService;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
@@ -43,6 +52,7 @@ use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\Troubleshooting\LocalTroubleshootingService;
 use RAN\Troubleshooting\TroubleshootingService;
+use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 use Tests\Support\CredentialUsageDatabase;
@@ -80,6 +90,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$GLOBALS['ran_booster_dashboard_test_actions'],
 			$GLOBALS['ran_booster_dashboard_test_filters']
 		);
+		unset( $GLOBALS['ran_booster_repository_admin_user_id'] );
 	}
 
 	public function testDevelopmentSafetyNoticeDismissalIsScopedToTheCurrentAdministrator(): void {
@@ -1114,12 +1125,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function testPackageOverviewReadsBranchActivityOnly(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
-		$dashboard      = $this->dashboard(
-			$this->throwingSecrets(),
-			null,
-			null,
-			$this->deploymentAttempts( $database )
-		);
+		$attempts       = $this->deploymentAttempts( $database );
 		$branch         = $this->managedPackage( 'plugin/branch.php', 'Branch Plugin', 'branch-repository' );
 		$release        = $this->managedPackage(
 			'plugin/release.php',
@@ -1128,11 +1134,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			\RAN\PackageSource::RELEASE_ASSET
 		);
 
-		$activity = ( new ReflectionMethod( Dashboard::class, 'packageActivity' ) )->invoke(
-			$dashboard,
-			array( $branch, $release ),
-			'plugin'
-		);
+		$activity = ( new DeploymentAdminPresenter( attempts: $attempts ) )->packageActivity( array( $branch, $release ), 'plugin' );
 
 		self::assertFalse( $activity['unavailable'] );
 		self::assertArrayHasKey( 'plugin/branch.php', $activity['items'] );
@@ -1342,6 +1344,83 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'actions', $data );
 	}
 
+	public function testRejectedNeedsAttentionAdmissionIsStoredAndProjectedThroughDashboardActivity(): void {
+		$attemptDatabase         = new DashboardActivityWpdb();
+		$attempt                 = DashboardActivityWpdb::attempt( 43, 'failed' );
+		$attempt['state']        = 'needs_attention';
+		$attempt['outcome_code'] = DeploymentOutcome::CODE_INTERRUPTED;
+		$attemptDatabase->rows   = array( $attempt );
+		$attempts                = $this->deploymentAttempts( $attemptDatabase );
+		$auditDatabase           = new DashboardRejectedAdmissionWpdb();
+		$audit                   = new RejectedAdmissionAuditRepository(
+			$auditDatabase,
+			'wp_ran_booster_rejected_admission_audit',
+			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-27 12:00:00 UTC' ),
+			new ReadyDashboardDatabase()
+		);
+		$failure                 = DeploymentStorageFailure::contention(
+			array(
+				'id'             => 43,
+				'correlation_id' => $attempt['correlation_id'],
+				'state'          => 'needs_attention',
+				'package_type'   => 'plugin',
+				'package_slug'   => 'example',
+			)
+		);
+		$plugins                 = $this->createStub( PluginRepository::class );
+		$themes                  = $this->createStub( ThemeRepository::class );
+		$updaterLock             = $this->createStub( WordPressUpdaterLock::class );
+		$coordinator             = new DashboardRejectedAdmissionCoordinator( $failure );
+		$operations              = new PackageOperationService(
+			$plugins,
+			$themes,
+			$coordinator,
+			new PackageRemovalService(
+				$plugins,
+				$themes,
+				$this->createStub( PackageRemovalGateway::class ),
+				null,
+				$updaterLock
+			),
+			$updaterLock
+		);
+		$dashboard               = $this->dashboard(
+			$this->throwingSecrets(),
+			packageOperations: $operations,
+			deploymentAttempts: $attempts,
+			rejectedAdmissions: $audit
+		);
+		$GLOBALS['ran_booster_repository_admin_user_id'] = 23;
+		$request = array(
+			'provider'                            => 'gh',
+			'repository'                          => 'owner/example',
+			'branch'                              => 'main',
+			'package_slug'                        => 'example',
+			'provider_repository_id'              => 'R_example',
+			'provider_repository_identity_source' => 'manual',
+		);
+		self::assertFalse(
+			$dashboard->postPackageOperation(
+				'install-plugin',
+				$request
+			)
+		);
+		self::assertSame( 1, $coordinator->calls );
+		self::assertCount( 1, $auditDatabase->rows );
+		self::assertSame( array( 43, 23, 'install-plugin' ), array( $auditDatabase->rows[0]['attempt_id'], $auditDatabase->rows[0]['actor_id'], $auditDatabase->rows[0]['operation'] ) );
+
+		$_GET     = array(
+			'tab'       => 'troubleshooting',
+			'panel'     => 'deployment-activity',
+			'attempt'   => '43',
+			'reference' => $attempt['correlation_id'],
+		);
+		$activity = $dashboard->getIndex()['data']['deploymentActivity'];
+		self::assertSame( 43, $activity['detail']->getId() );
+		self::assertSame( 'blocked_by_needs_attention', $activity['rejected_admission_events'][0]['event'] );
+		self::assertSame( 23, $activity['rejected_admission_events'][0]['actor_id'] );
+	}
+
 	private function setMultisite( bool $multisite ): void {
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
 	}
@@ -1364,7 +1443,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?TemporaryDebugCapture $debugCapture = null,
 		?Database $database = null,
 		?AdminAddOnRegistry $adminAddOns = null,
-		bool $providerCredentials = false
+		bool $providerCredentials = false,
+		?RejectedAdmissionAuditRepository $rejectedAdmissions = null
 	): RoutingDashboard {
 		$providers        = $this->providers( $providerCredentials );
 		$pluginRepository = $plugins ?? new class() extends PluginRepository {
@@ -1407,7 +1487,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$deploymentAttempts,
 			$debugCapture,
 			null,
-			$adminAddOns
+			$adminAddOns,
+			$rejectedAdmissions
 		);
 	}
 
@@ -1527,6 +1608,60 @@ final class FailingDashboardThemeRepository extends ThemeRepository {
 
 	public function boosterThemeFromStylesheet( $stylesheet ) {
 		throw PackageStorageFailure::invalidProviderIdentity();
+	}
+}
+
+/** Bounded coordinator double that preserves the real package-operation boundary. */
+final class DashboardRejectedAdmissionCoordinator extends DeploymentCoordinator {
+	public int $calls = 0;
+
+	public function __construct( private DeploymentStorageFailure $failure ) {
+	}
+
+	public function executeManual( PackageOperation $command ): array {
+		unset( $command );
+		++$this->calls;
+		throw $this->failure;
+	}
+}
+
+/** Minimal real-repository database for the Dashboard rejected-admission journey. */
+final class DashboardRejectedAdmissionWpdb {
+
+	public string $last_error = '';
+	public int $insert_id     = 0;
+	/** @var list<array<string, int|string>> */
+	public array $rows = array();
+
+	public function prepare( string $query, mixed ...$arguments ): string {
+		unset( $arguments );
+		return $query;
+	}
+
+	public function query( string $query ): int|false {
+		unset( $query );
+		return 1;
+	}
+
+	/** @param array<string, int|string> $data */
+	public function insert( string $table, array $data ): int|false {
+		unset( $table );
+		$this->insert_id = count( $this->rows ) + 1;
+		$data['id']      = $this->insert_id;
+		$this->rows[]    = $data;
+		return 1;
+	}
+
+	/** @return array<string, int|string>|null */
+	public function get_row( string $query, mixed $output = null ): ?array {
+		unset( $query, $output );
+		return $this->rows[0] ?? null;
+	}
+
+	/** @return list<array<string, int|string>> */
+	public function get_results( string $query, mixed $output = null ): array {
+		unset( $query, $output );
+		return $this->rows;
 	}
 }
 

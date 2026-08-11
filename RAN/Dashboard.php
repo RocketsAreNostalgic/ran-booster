@@ -12,7 +12,7 @@ use RAN\Admin\BulkPackageResult;
 use RAN\Admin\Component\AdminPackageSourceChoiceNormalizer;
 use RAN\Admin\DevelopmentEnvironmentDetector;
 use RAN\Admin\DevelopmentSafetyNoticeController;
-use RAN\Admin\DeploymentOutcomeMessage;
+use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\OnboardingPresenter;
 use RAN\Admin\PackageViewConfig;
 use RAN\Admin\ProviderDocumentationPresenter;
@@ -46,8 +46,6 @@ use Throwable;
 use WP_Error;
 
 class Dashboard {
-	private const DEPLOYMENT_ACTIVITY_PAGE_SIZE = 50;
-
 	public $messages = array();
 
 	private $booster;
@@ -75,12 +73,11 @@ class Dashboard {
 	private ?AdminAddOnRegistry $adminAddOns;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
-	private ?PackageOperationService $packageOperations               = null;
-	private ?DeploymentAttemptRepository $deploymentAttempts          = null;
-	private ?RejectedAdmissionAuditRepository $rejectedAdmissionAudit = null;
-	private ?TemporaryDebugCapture $debugCapture                      = null;
-	private ?SecretsStorageProvisioner $secretsStorage                = null;
-	private ?SecretsStorageProvisioningResult $secretsStorageResult   = null;
+	private ?PackageOperationService $packageOperations = null;
+	private DeploymentAdminPresenter $deploymentAdmin;
+	private ?TemporaryDebugCapture $debugCapture                    = null;
+	private ?SecretsStorageProvisioner $secretsStorage              = null;
+	private ?SecretsStorageProvisioningResult $secretsStorageResult = null;
 
 	/**
 	 * @param Database $db
@@ -113,20 +110,24 @@ class Dashboard {
 		?AdminAddOnRegistry $adminAddOns = null,
 		?RejectedAdmissionAuditRepository $rejectedAdmissionAudit = null
 	) {
-		$this->db                     = $db;
-		$this->plugins                = $plugins;
-		$this->booster                = $booster;
-		$this->themes                 = $themes;
-		$this->providerSettings       = $providerSettings;
-		$this->troubleshooting        = $troubleshooting;
-		$this->adminTabs              = $adminTabs;
-		$this->providerDocumentation  = $providerDocumentation;
-		$this->packageOperations      = $packageOperations;
-		$this->deploymentAttempts     = $deploymentAttempts;
-		$this->rejectedAdmissionAudit = $rejectedAdmissionAudit;
-		$this->debugCapture           = $debugCapture;
-		$this->secretsStorage         = $secretsStorage;
-		$this->adminAddOns            = $adminAddOns;
+		$this->db                    = $db;
+		$this->plugins               = $plugins;
+		$this->booster               = $booster;
+		$this->themes                = $themes;
+		$this->providerSettings      = $providerSettings;
+		$this->troubleshooting       = $troubleshooting;
+		$this->adminTabs             = $adminTabs;
+		$this->providerDocumentation = $providerDocumentation;
+		$this->packageOperations     = $packageOperations;
+		$this->deploymentAdmin       = new DeploymentAdminPresenter(
+			attempts: $deploymentAttempts,
+			rejectedAdmissions: $rejectedAdmissionAudit,
+			plugins: $plugins,
+			themes: $themes
+		);
+		$this->debugCapture          = $debugCapture;
+		$this->secretsStorage        = $secretsStorage;
+		$this->adminAddOns           = $adminAddOns;
 	}
 
 	public function getIndex() {
@@ -260,7 +261,7 @@ class Dashboard {
 				$data['debugCapture']    = $this->debugCapturePayload();
 			} elseif ( 'activity' === $panel ) {
 				$data['troubleshooting']    = array();
-				$data['deploymentActivity'] = $this->activity();
+				$data['deploymentActivity'] = $this->deploymentAdmin->activity();
 			} else {
 				$data['troubleshooting'] = $this->troubleshootingPayload ?? $this->troubleshooting->formPayload();
 			}
@@ -485,7 +486,7 @@ class Dashboard {
 			'packageProviderOptions'  => $packageProviderOptions,
 			'packageView'             => $packageView,
 			'packageProviders'        => $packageProviders,
-			'packageActivity'         => $this->packageActivity( $filteredPackages, $packageView->getType() ),
+			'packageActivity'         => $this->deploymentAdmin->packageActivity( $filteredPackages, $packageView->getType() ),
 			'packageExtensionRows'    => $this->packageExtensionRows( $filteredPackages, $packageView ),
 			'packageExtensionActions' => $this->packageExtensionActions( $filteredPackages, $packageView ),
 		);
@@ -1533,33 +1534,12 @@ class Dashboard {
 	}
 
 	private function reportDeploymentFailure( mixed $outcomeCode, mixed $reference, string $operation ): void {
-		if ( ! is_string( $outcomeCode ) || ! is_string( $reference ) || preg_match( '/^[a-f0-9]{32}$/D', $reference ) !== 1 ) {
+		$notice = $this->deploymentAdmin->deploymentFailure( $outcomeCode, $reference, $operation );
+		if ( null === $notice ) {
 			$this->reportManualFailure( null, $operation );
-
 			return;
 		}
-		$message     = DeploymentOutcomeMessage::forCode( $outcomeCode );
-		$activityUrl = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
-		status_header( 400 );
-		$this->addMessageWithContext(
-			array(
-				'type'    => 'error',
-				'code'    => 'ran_booster_deployment_failed',
-				'message' => sprintf(
-					/* translators: 1: safe deployment result, 2: random support reference, 3: activity page URL. */
-					__( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ),
-					$message,
-					$reference,
-					$activityUrl
-				),
-			),
-			array(
-				'correlation_id' => $reference,
-				'operation'      => $operation,
-				'outcome_code'   => $outcomeCode,
-				'step'           => 'manual_package_operation',
-			)
-		);
+		$this->addMessageWithContext( $notice['message'], $notice['context'] );
 	}
 
 	private function reportManualFailure( ?Throwable $failure = null, string $operation = '' ): bool {
@@ -1582,81 +1562,12 @@ class Dashboard {
 	}
 
 	private function reportActiveDeployment( DeploymentStorageFailure $failure, string $operation ): bool {
-		$attempt = $failure->getActiveAttempt();
-		if ( null === $attempt ) {
+		$notice = $this->deploymentAdmin->activeDeployment( $failure, $operation );
+		if ( null === $notice ) {
 			return $this->reportManualFailure( $failure, $operation );
 		}
-
-		$reference   = (string) $attempt['correlation_id'];
-		$state       = (string) $attempt['state'];
-		$packageType = (string) $attempt['package_type'];
-		$packageSlug = (string) $attempt['package_slug'];
-		$activityUrl = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' )
-			. '&attempt=' . rawurlencode( (string) $attempt['id'] )
-			. '&reference=' . rawurlencode( $reference );
-		$severity    = 'needs_attention' === $state ? 'error' : 'info';
-		if ( 'needs_attention' === $state ) {
-			$this->recordRejectedNeedsAttentionRetry( $attempt, $operation );
-			$message = sprintf(
-				/* translators: 1: package type, 2: package slug, 3: activity record link. */
-				__( 'An earlier deployment for the %1$s %2$s could not be verified and must be acknowledged before retrying. It is not currently running. <a href="%3$s">Open its recovery details</a>.', 'ran-booster' ),
-				esc_html( $packageType ),
-				esc_html( $packageSlug ),
-				esc_url( $activityUrl )
-			);
-		} else {
-			$message = sprintf(
-				/* translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link. */
-				__( 'Booster is already tracking the %1$s %2$s in state %3$s. <a href="%4$s">Review this deployment activity record</a> before trying again.', 'ran-booster' ),
-				esc_html( $packageType ),
-				esc_html( $packageSlug ),
-				esc_html( $state ),
-				esc_url( $activityUrl )
-			);
-		}
-
-		status_header( 409 );
-		$this->addFailureMessage(
-			array(
-				'type'    => $severity,
-				'code'    => 'ran_booster_deployment_active',
-				'message' => $message,
-			),
-			$failure,
-			array(
-				'correlation_id' => $reference,
-				'operation'      => $operation,
-				'step'           => 'manual_package_operation',
-			)
-		);
-
+		$this->addFailureMessage( $notice['message'], $failure, $notice['context'] );
 		return false;
-	}
-
-	/** @param array<string, bool|int|string|null> $attempt */
-	private function recordRejectedNeedsAttentionRetry( array $attempt, string $operation ): void {
-		if ( null === $this->rejectedAdmissionAudit || ! function_exists( 'get_current_user_id' ) ) {
-			return;
-		}
-
-		$userId = (int) get_current_user_id();
-		if ( $userId < 1 ) {
-			return;
-		}
-
-		try {
-			$this->rejectedAdmissionAudit->recordBlockedByNeedsAttention( $attempt, $userId, $operation );
-		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
-				'rejected deployment admission audit unavailable',
-				$failure,
-				array(
-					'attempt_id' => $attempt['id'] ?? null,
-					'operation'  => $operation,
-					'step'       => 'rejected_admission_audit',
-				)
-			);
-		}
 	}
 
 	private function messageSeverity( mixed $message ): ?string {
@@ -1950,262 +1861,6 @@ class Dashboard {
 			'delete_after'  => $snapshot['expires_at'] ?? '',
 			'content'       => implode( "\n", $lines ),
 		);
-	}
-
-	/** @return array<string, mixed> */
-	private function activity(): array {
-		$base       = array(
-			'mode'                      => 'list',
-			'items'                     => array(),
-			'unavailable'               => null === $this->deploymentAttempts,
-			'has_cursor'                => false,
-			'next_cursor'               => null,
-			'rejected_admission_events' => array(),
-			'later_verified_attempt'    => null,
-			'package_settings_urls'     => array(),
-		);
-		$hasAttempt = $this->queryHasKey( 'attempt' );
-		$hasRef     = $this->queryHasKey( 'reference' );
-		if ( $hasAttempt || $hasRef ) {
-			$base['mode'] = 'detail';
-		}
-		if ( null === $this->deploymentAttempts ) {
-			return $base;
-		}
-		$base['package_settings_urls'] = $this->activityPackageSettingsUrls();
-
-		$attemptId = $this->positiveQueryInteger( 'attempt' );
-		$reference = $this->hexQueryValue( 'reference', 32 );
-		if ( $hasAttempt || $hasRef ) {
-			if ( null === $attemptId || null === $reference ) {
-				return $base;
-			}
-			try {
-				$detail         = $this->deploymentAttempts->findExact( $attemptId );
-				$base['detail'] = null !== $detail && hash_equals( $detail->getCorrelationId(), $reference ) ? $detail : null;
-				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->getOutcome()?->getCode() ) {
-					$detailData      = $base['detail']->safeData();
-					$packageActivity = $this->deploymentAttempts->packageActivitySummary( (string) $detailData['package_type'], (string) $detailData['package_slug'] );
-					$laterSuccess    = $packageActivity['last_successful'];
-					if ( null !== $laterSuccess && $laterSuccess->getId() > $base['detail']->getId() ) {
-						$base['later_verified_attempt'] = $laterSuccess;
-					}
-				}
-				$base['rejected_admission_events'] = $this->rejectedAdmissionEvents( $attemptId );
-			} catch ( Throwable $failure ) {
-				BoosterLogger::logException(
-					'deployment activity detail unavailable',
-					$failure,
-					array(
-						'source' => 'admin',
-						'step'   => 'deployment_activity_detail',
-					)
-				);
-				$base['unavailable'] = true;
-			}
-
-			return $base;
-		}
-
-		$hasBefore          = $this->queryHasKey( 'before' );
-		$before             = $this->queryScalarValue( 'before' );
-		$base['has_cursor'] = $hasBefore;
-		if ( $hasBefore && ( null === $before || '' === $before ) ) {
-			$base['unavailable'] = true;
-
-			return $base;
-		}
-		try {
-			$beforeId = null === $before ? null : ( ctype_digit( $before ) && (string) (int) $before === $before && (int) $before > 0 ? (int) $before : null );
-			if ( $hasBefore && null === $beforeId ) {
-				$base['unavailable'] = true;
-				return $base;
-			}
-			$items   = $this->deploymentAttempts->recentHistory( self::DEPLOYMENT_ACTIVITY_PAGE_SIZE + 1, $beforeId );
-			$hasMore = count( $items ) > self::DEPLOYMENT_ACTIVITY_PAGE_SIZE;
-			if ( $hasMore ) {
-				$items = array_slice( $items, 0, self::DEPLOYMENT_ACTIVITY_PAGE_SIZE );
-			}
-			$base['items']                     = $items;
-			$last                              = end( $items );
-			$base['next_cursor']               = $hasMore && false !== $last ? $last->getId() : null;
-			$base['rejected_admission_events'] = $this->rejectedAdmissionEvents();
-			$base['unavailable']               = false;
-		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
-				'deployment activity history unavailable',
-				$failure,
-				array(
-					'source' => 'admin',
-					'step'   => 'deployment_activity_history',
-				)
-			);
-			$base['unavailable'] = true;
-		}
-
-		return $base;
-	}
-
-	/** @return array<'plugin'|'theme', array<string, string>> */
-	private function activityPackageSettingsUrls(): array {
-		$urls = array(
-			'plugin' => array(),
-			'theme'  => array(),
-		);
-		foreach ( array( 'plugin', 'theme' ) as $type ) {
-			try {
-				$packages    = 'plugin' === $type
-					? $this->plugins->allDeploymentPlugins()
-					: $this->themes->allDeploymentThemes();
-				$packageView = 'plugin' === $type ? PackageViewConfig::plugin() : PackageViewConfig::theme();
-				$seen        = array();
-				foreach ( $packages as $package ) {
-					if ( ! $package instanceof Package ) {
-						continue;
-					}
-					$slug = (string) $package->getSlug();
-					if ( '' === $slug || isset( $seen[ $slug ] ) ) {
-						unset( $urls[ $type ][ $slug ] );
-						$seen[ $slug ] = true;
-						continue;
-					}
-					$seen[ $slug ]          = true;
-					$urls[ $type ][ $slug ] = $this->packageSettingsUrl( $package, $packageView );
-				}
-			} catch ( Throwable $failure ) {
-				BoosterLogger::logException(
-					'deployment activity package settings links unavailable',
-					$failure,
-					array(
-						'source' => 'admin',
-						'step'   => 'deployment_activity_package_links',
-					)
-				);
-			}
-		}
-
-		return $urls;
-	}
-
-	/** @return list<array{id: int, event: 'blocked_by_needs_attention', attempt_id: int, correlation_id: string, package_type: 'plugin'|'theme', package_slug: string, actor_id: int, operation: string, occurred_at: string}> */
-	private function rejectedAdmissionEvents( ?int $attemptId = null ): array {
-		if ( null === $this->rejectedAdmissionAudit ) {
-			return array();
-		}
-
-		try {
-			$events = $this->rejectedAdmissionAudit->recent();
-			if ( null === $attemptId ) {
-				return $events;
-			}
-
-			return array_values(
-				array_filter(
-					$events,
-					static fn ( array $event ): bool => $attemptId === $event['attempt_id']
-				)
-			);
-		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
-				'rejected deployment admission audit history unavailable',
-				$failure,
-				array(
-					'source' => 'admin',
-					'step'   => 'rejected_admission_audit_history',
-				)
-			);
-
-			return array();
-		}
-	}
-
-	/**
-	 * @param list<Package> $packages
-	 * @return array{items: array<string, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null}>, unavailable: bool}
-	 */
-	private function packageActivity( array $packages, string $type ): array {
-		if ( null === $this->deploymentAttempts || count( $packages ) > 50 ) {
-			return array(
-				'items'       => array(),
-				'unavailable' => true,
-			);
-		}
-		$items = array();
-		foreach ( $packages as $package ) {
-			if ( ! $package instanceof Package || ! is_string( $package->getIdentifier() ) ) {
-				return array(
-					'items'       => array(),
-					'unavailable' => true,
-				);
-			}
-			if ( PackageSource::RELEASE_ASSET === $package->getSource() ) {
-				continue;
-			}
-			try {
-				$items[ $package->getIdentifier() ] = $this->deploymentAttempts->packageActivitySummary(
-					$type,
-					(string) $package->getSlug()
-				);
-			} catch ( Throwable $failure ) {
-				BoosterLogger::logException(
-					'package deployment activity unavailable',
-					$failure,
-					array(
-						'operation' => 'read-' . $type . '-package-activity',
-						'source'    => 'admin',
-						'step'      => 'package_activity_summary',
-					)
-				);
-				return array(
-					'items'       => array(),
-					'unavailable' => true,
-				);
-			}
-		}
-
-		return array(
-			'items'       => $items,
-			'unavailable' => false,
-		);
-	}
-
-	private function queryHasScalar( string $key ): bool {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing state.
-		return isset( $_GET[ $key ] ) && is_scalar( $_GET[ $key ] );
-	}
-
-	private function queryScalarValue( string $key ): ?string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, subsequently validated paging state.
-		return isset( $_GET[ $key ] ) && is_scalar( $_GET[ $key ] ) ? (string) wp_unslash( $_GET[ $key ] ) : null;
-	}
-
-	private function queryHasKey( string $key ): bool {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Presence keeps malformed detail identities from broadening into a list query.
-		return array_key_exists( $key, $_GET );
-	}
-
-	private function positiveQueryInteger( string $key ): ?int {
-		if ( ! $this->queryHasScalar( $key ) ) {
-			return null;
-		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing state.
-		$value = wp_unslash( (string) $_GET[ $key ] );
-		if ( preg_match( '/^[1-9][0-9]*$/D', $value ) !== 1 || strlen( $value ) > strlen( (string) PHP_INT_MAX ) ) {
-			return null;
-		}
-		$integer = (int) $value;
-
-		return $integer > 0 && (string) $integer === $value ? $integer : null;
-	}
-
-	private function hexQueryValue( string $key, int $length ): ?string {
-		if ( ! $this->queryHasScalar( $key ) ) {
-			return null;
-		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing state.
-		$value = wp_unslash( (string) $_GET[ $key ] );
-
-		return preg_match( sprintf( '/^[a-f0-9]{%d}$/D', $length ), $value ) === 1 ? $value : null;
 	}
 
 	/**

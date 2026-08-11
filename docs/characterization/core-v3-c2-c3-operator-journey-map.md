@@ -7,6 +7,8 @@ Date: 2026-08-11
 
 The completed provider-profile source result is recorded in
 `core-v3-provider-profile-c2-1-evidence.md`.
+The completed deployment-admin source result is recorded in
+`core-v3-deployment-admin-c2-2-evidence.md`.
 
 **Decision:** C2 and C3 may proceed only as the vertical packets below. This
 inventory changes no production PHP, public API, hook, action name, capability,

@@ -8,6 +8,12 @@ function is_wp_error( mixed $value ): bool {
 	return $value instanceof \WP_Error;
 }
 
+function wp_strip_all_tags( mixed $value, bool $removeBreaks = false ): string {
+	unset( $removeBreaks );
+
+	return (string) $value;
+}
+
 function is_multisite(): bool {
 	return (bool) ( $GLOBALS['ran_booster_dashboard_test_multisite'] ?? false );
 }

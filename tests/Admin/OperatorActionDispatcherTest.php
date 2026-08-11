@@ -10,16 +10,20 @@ require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageEditProviderGuard;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentAttempt;
+use RAN\Deployment\DeploymentArchivePreflight;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
+use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Dispatcher;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -28,8 +32,11 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\Database;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
+use RAN\WordPress\CorePackageExecutor;
 use Tests\Deployment\AttemptRepositoryDatabase;
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState( false )]
 final class OperatorActionDispatcherTest extends TestCase {
 
 	private OperatorDispatcherCoordinator $coordinator;
@@ -37,6 +44,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 	private array $captureDirectories = array();
 
 	protected function setUp(): void {
+		require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$GLOBALS['ran_booster_test_capability_checks'] = array();
@@ -382,14 +390,67 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertNotNull( $database->rows[0]['resolved_at'] );
 	}
 
+	public function testDispatcherReconcilesOnlyTheConfirmedExactRunningAttemptThroughTheCoordinator(): void {
+		$database       = new AttemptRepositoryDatabase();
+		$database->rows = array( $this->runningAttemptRow( 12, str_repeat( 'b', 32 ) ) );
+		$attempts       = new DeploymentAttemptRepository(
+			$database,
+			'wp_ran_booster_deployment_attempts',
+			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:05:00 UTC' ),
+			databaseLifecycle: $this->createStub( Database::class )
+		);
+		$coordinator    = new DeploymentCoordinator(
+			$attempts,
+			$this->createStub( PluginRepository::class ),
+			$this->createStub( ThemeRepository::class ),
+			new ProviderRegistry(),
+			new DeploymentArchivePreflight(),
+			new CorePackageExecutor(),
+			new WordPressWorkerWakeup( $attempts ),
+			'/tmp/ran-booster-operator-test-maintenance',
+			$this->createStub( WordPressUpdaterLock::class )
+		);
+		$dashboard      = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::exactly( 2 ) )->method( 'addFailureMessage' );
+		$dashboard->expects( self::once() )->method( 'addMessage' )->with( 'The protected deployment action was accepted.' );
+		$request = array(
+			'action'         => 'reconcile-deployment-worker',
+			'attempt_id'     => '12',
+			'correlation_id' => str_repeat( 'b', 32 ),
+		);
+
+		$_POST['ran_booster'] = $request;
+		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
+		self::assertSame( 'running', $attempts->findExact( 12 )?->getState()->value );
+
+		$_POST['ran_booster']                   = $request + array( 'confirm_stopped' => '1' );
+		$_POST['ran_booster']['correlation_id'] = str_repeat( 'c', 32 );
+		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
+		self::assertSame( 'running', $attempts->findExact( 12 )?->getState()->value );
+
+		$_POST['ran_booster'] = $request + array( 'confirm_stopped' => '1' );
+		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
+
+		$fresh = $attempts->findExact( 12 );
+		self::assertSame( str_repeat( 'b', 32 ), $fresh?->getCorrelationId() );
+		self::assertSame( 'failed', $fresh?->getState()->value );
+		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh?->getOutcome()?->getCode() );
+		self::assertSame( array_fill( 0, 3, array( 'manage_options', 'update_plugins', 'update_themes' ) ), array_chunk( $GLOBALS['ran_booster_test_capability_checks'], 3 ) );
+		self::assertSame( array_fill( 0, 3, 'ran-booster-reconcile-deployment-worker' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+		self::assertStringContainsString( "WHERE id = 12 AND state = 'running'", implode( "\n", $database->queries ) );
+	}
+
 	private function dispatcher(
 		Dashboard $dashboard,
 		?TemporaryDebugCapture $capture = null,
-		?DeploymentAttemptRepository $attempts = null
+		?DeploymentAttemptRepository $attempts = null,
+		?DeploymentCoordinator $coordinator = null
 	): Dispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
+
+		$coordinator ??= $this->coordinator;
 
 		return new DebugCaptureTestDispatcher(
 			$dashboard,
@@ -399,12 +460,40 @@ final class OperatorActionDispatcherTest extends TestCase {
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			new PackageEditProviderGuard( $plugins, $themes, $providers ),
 			$this->createStub( WordPressUpdaterLock::class ),
-			$this->coordinator,
+			$coordinator,
 			null,
 			null,
 			null,
 			$capture,
 			deploymentAttempts: $attempts
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private function runningAttemptRow( int $id, string $correlationId ): array {
+		$request = new DeploymentRequest( 'owner/example', 'profile_123', true, 'main', 'example', null, DeploymentPolicy::MANUAL, null );
+
+		return array(
+			'id'                      => $id,
+			'correlation_id'          => $correlationId,
+			'source'                  => 'manual',
+			'operation'               => 'update',
+			'package_type'            => 'plugin',
+			'package_slug'            => 'example',
+			'package_source'          => 'branch',
+			'package_source_revision' => 1,
+			'provider'                => 'gh',
+			'provider_repository_id'  => 'R_example',
+			'requested_ref'           => 'main',
+			'resolved_ref'            => null,
+			'delivery_id'             => null,
+			'delivery_digest'         => null,
+			'state'                   => 'running',
+			'mutation_started_at'     => null,
+			'outcome_code'            => null,
+			'request_json'            => $request->toJson(),
+			'created_at'              => '2026-07-26 09:00:00',
+			'finished_at'             => null,
 		);
 	}
 
@@ -461,10 +550,6 @@ final class DebugCaptureRedirect extends \RuntimeException {
 }
 
 class DebugCaptureTestDispatcher extends Dispatcher {
-	protected function currentUserId(): int {
-		return 7;
-	}
-
 	protected function redirectTo( string $url ): never {
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The test spy preserves the fixed redirect URL for assertions.
 		throw new DebugCaptureRedirect( $url );

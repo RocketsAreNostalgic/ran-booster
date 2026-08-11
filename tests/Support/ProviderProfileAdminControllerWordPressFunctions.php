@@ -51,3 +51,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\esc_html__' ) ) {
 		return \RAN\esc_html__( $text, $domain );
 	}
 }
+
+if ( ! function_exists( __NAMESPACE__ . '\\get_current_user_id' ) ) {
+	function get_current_user_id(): int {
+		return 7;
+	}
+}

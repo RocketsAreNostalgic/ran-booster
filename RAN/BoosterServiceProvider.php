@@ -36,8 +36,6 @@ use RAN\Admin\CredentialSelfDestructPurger;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
 use RAN\Admin\BackgroundDeploymentFailureMonitor;
-use RAN\Admin\BackgroundDeploymentFailureNotice;
-use RAN\Admin\BackgroundDeploymentFailureNoticeController;
 use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
@@ -272,8 +270,6 @@ final class BoosterServiceProvider {
 			$container->make( ProviderRegistry::class )
 		);
 		$container->bind( BackgroundDeploymentFailureMonitor::class, $backgroundFailureMonitor );
-		$container->bind( BackgroundDeploymentFailureNotice::class, new BackgroundDeploymentFailureNotice( $backgroundFailureMonitor ) );
-		$container->bind( BackgroundDeploymentFailureNoticeController::class, new BackgroundDeploymentFailureNoticeController( $backgroundFailureMonitor ) );
 		$container->bind( BackgroundDeploymentFailureEmail::class, new BackgroundDeploymentFailureEmail() );
 		$container->bind(
 			ManagedPluginFailureRows::class,

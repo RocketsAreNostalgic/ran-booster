@@ -10,6 +10,7 @@ use RAN\Admin\BulkPackageActionFailure;
 use RAN\Admin\BulkPackageActionService;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\CredentialExpiryObservationStore;
+use RAN\Admin\DeploymentAdminController;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageEditProviderGuard;
 use RAN\Admin\PackageRepositoryRequestResolver;
@@ -40,12 +41,11 @@ class Dispatcher {
 	private $dashboard;
 	private PackageRepositoryRequestResolver $packageRepositories;
 	private PackageEditProviderGuard $packageEdits;
-	private ?DeploymentCoordinator $deploymentCoordinator;
 	private ?BulkPackageActionService $bulkPackageActions;
 	private ?TemporaryDebugCapture $debugCapture;
 	private ?SecretsStorageProvisioner $secretsStorage;
-	private ?DeploymentAttemptRepository $deploymentAttempts;
 	private ProviderProfileAdminController $providerProfiles;
+	private DeploymentAdminController $deploymentAdmin;
 
 	/**
 	 * @param Dashboard             $dashboard Dashboard message target.
@@ -77,15 +77,13 @@ class Dispatcher {
 		?DeploymentAttemptRepository $deploymentAttempts = null,
 		?ProviderProfileAdminController $providerProfileInteraction = null
 	) {
-		$this->dashboard             = $dashboard;
-		$this->packageRepositories   = $packageRepositories;
-		$this->packageEdits          = $packageEdits;
-		$this->deploymentCoordinator = $deploymentCoordinator;
-		$this->bulkPackageActions    = $bulkPackageActions;
-		$this->debugCapture          = $debugCapture;
-		$this->secretsStorage        = $secretsStorage;
-		$this->deploymentAttempts    = $deploymentAttempts;
-		$this->providerProfiles      = $providerProfileInteraction ?? new ProviderProfileAdminController(
+		$this->dashboard           = $dashboard;
+		$this->packageRepositories = $packageRepositories;
+		$this->packageEdits        = $packageEdits;
+		$this->bulkPackageActions  = $bulkPackageActions;
+		$this->debugCapture        = $debugCapture;
+		$this->secretsStorage      = $secretsStorage;
+		$this->providerProfiles    = $providerProfileInteraction ?? new ProviderProfileAdminController(
 			$dashboard,
 			$providers,
 			$secrets,
@@ -94,6 +92,11 @@ class Dispatcher {
 			$credentialUsage ?? new CredentialUsageReader(),
 			$publicLookupProfiles ?? new PublicRepositoryLookupProfileStore(),
 			$expiryObservations ?? new CredentialExpiryObservationStore()
+		);
+		$this->deploymentAdmin     = new DeploymentAdminController(
+			$dashboard,
+			$deploymentCoordinator,
+			$deploymentAttempts
 		);
 	}
 
@@ -168,7 +171,12 @@ class Dispatcher {
 				'resolve-needs-attention',
 			);
 			if ( in_array( $action, $deploymentActions, true ) ) {
-				$this->manageDeploymentAttempt( $action, $request );
+				$requestMethod = $_SERVER['REQUEST_METHOD'] ?? null;
+				$this->deploymentAdmin->manageDeploymentAttempt(
+					$action,
+					$request,
+					is_string( $requestMethod ) && 'POST' === strtoupper( $requestMethod )
+				);
 
 				return;
 			}
@@ -588,111 +596,6 @@ class Dispatcher {
 		}
 
 		$this->redirectTo( $this->dashboard->bulkPackageRedirect( $packageType, $result ) );
-	}
-
-	/** @param array<string, mixed> $request */
-	private function manageDeploymentAttempt( string $action, array $request ): void {
-		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
-			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
-			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
-			return;
-		}
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to manage Booster deployments.', 'ran-booster' ) );
-		}
-
-		check_admin_referer( 'ran-booster-' . $action );
-
-		try {
-			if ( 'resolve-needs-attention' === $action ) {
-				if ( null === $this->deploymentAttempts ) {
-					throw new \RuntimeException( 'The deployment attempt repository is unavailable.' );
-				}
-
-				$attemptId     = $this->canonicalAttemptId( $request['attempt_id'] ?? null );
-				$correlationId = $this->canonicalCorrelationId( $request['correlation_id'] ?? null );
-				if ( '1' !== ( $request['confirm_reviewed'] ?? null ) ) {
-					throw new \RuntimeException( 'Explicit uncertainty-review confirmation is required.' );
-				}
-
-				$attempt = $this->deploymentAttempts->findExact( $attemptId );
-				if ( null === $attempt || ! hash_equals( $attempt->getCorrelationId(), $correlationId ) ) {
-					throw new \RuntimeException( 'The deployment activity identity no longer matches.' );
-				}
-
-				$attemptData = $attempt->safeData();
-				$capability  = 'plugin' === $attemptData['package_type'] ? 'update_plugins' : 'update_themes';
-				if ( ! current_user_can( $capability ) ) {
-					wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
-				}
-
-				$this->deploymentAttempts->resolveNeedsAttention(
-					$attemptId,
-					$correlationId,
-					$this->currentUserId()
-				);
-				$this->dashboard->addMessage( __( 'The deployment review was recorded. This package may now be retried.', 'ran-booster' ) );
-
-				return;
-			}
-
-			if ( null === $this->deploymentCoordinator ) {
-				throw new \RuntimeException( 'The deployment coordinator is unavailable.' );
-			}
-			if ( ! current_user_can( 'update_plugins' ) || ! current_user_can( 'update_themes' ) ) {
-				wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
-			}
-			if ( 'request-deployment-runner' === $action ) {
-				$this->deploymentCoordinator->requestRunner();
-				$this->dashboard->addMessage( __( 'The deployment runner was requested.', 'ran-booster' ) );
-
-				return;
-			}
-			$attemptId     = $this->canonicalAttemptId( $request['attempt_id'] ?? null );
-			$correlationId = $this->canonicalCorrelationId( $request['correlation_id'] ?? null );
-			if ( '1' !== ( $request['confirm_stopped'] ?? null ) ) {
-				throw new \RuntimeException( 'Explicit stopped-worker confirmation is required.' );
-			}
-			$this->deploymentCoordinator->reconcileConfirmedStopped( $attemptId, $correlationId );
-
-			$this->dashboard->addMessage( __( 'The protected deployment action was accepted.', 'ran-booster' ) );
-		} catch ( \Throwable $exception ) {
-			$this->dashboard->addFailureMessage(
-				new \WP_Error(
-					'ran_booster_deployment_action_unavailable',
-					__( 'Booster could not safely accept this deployment action. Refresh the activity record and try again.', 'ran-booster' )
-				),
-				$exception,
-				array(
-					'operation' => $action,
-					'step'      => 'deployment_action_dispatch',
-				)
-			);
-		}
-	}
-
-	protected function currentUserId(): int {
-		return (int) get_current_user_id();
-	}
-
-	private function canonicalAttemptId( mixed $value ): int {
-		if ( ! is_string( $value ) || preg_match( '/^[1-9][0-9]*$/D', $value ) !== 1 || strlen( $value ) > strlen( (string) PHP_INT_MAX ) ) {
-			throw new \RuntimeException( 'The deployment attempt identity is invalid.' );
-		}
-		$attemptId = (int) $value;
-		if ( $attemptId <= 0 || (string) $attemptId !== $value ) {
-			throw new \RuntimeException( 'The deployment attempt identity is invalid.' );
-		}
-
-		return $attemptId;
-	}
-
-	private function canonicalCorrelationId( mixed $value ): string {
-		if ( ! is_string( $value ) || preg_match( '/^[a-f0-9]{32}$/D', $value ) !== 1 ) {
-			throw new \RuntimeException( 'The deployment activity reference is invalid.' );
-		}
-
-		return $value;
 	}
 
 	/**

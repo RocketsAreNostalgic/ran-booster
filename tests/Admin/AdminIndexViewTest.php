@@ -109,7 +109,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertTrue( $straplinePosition < $markerPosition );
 		self::assertTrue( $markerPosition < $noticePosition );
 		self::assertTrue( $noticePosition < $tabsPosition );
-		self::assertStringContainsString( 'Copyright &copy; 2042', $html );
+		self::assertStringContainsString( 'Copyright © 2042', $html );
 		self::assertStringContainsString(
 			'<a href="https://example.test/header-author">Header Author</a>',
 			$html

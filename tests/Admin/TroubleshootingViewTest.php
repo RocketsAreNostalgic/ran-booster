@@ -481,11 +481,15 @@ final class TroubleshootingViewTest extends TestCase {
 
 	public function testRendersProtectedProviderFormAccessibleResultsAndWhitelistReport(): void {
 		$troubleshooting = array(
-			'providers'         => array(
+			'providers'              => array(
 				'gh' => 'GitHub',
 				'bb' => 'Bitbucket',
 			),
-			'credentials'       => array(
+			'provider_locator_hints' => array(
+				'gh' => 'owner/repository',
+				'bb' => 'workspace/repository',
+			),
+			'credentials'            => array(
 				'gh' => array(
 					array(
 						'id'    => 'github-private',
@@ -499,14 +503,14 @@ final class TroubleshootingViewTest extends TestCase {
 					),
 				),
 			),
-			'selected_provider' => 'bb',
-			'credential_id'     => 'bitbucket-private',
-			'repository'        => 'workspace/repository',
-			'ran'               => true,
-			'partial'           => true,
-			'partial_reason'    => 'remote_calls_exhausted',
-			'report'            => "RAN Booster troubleshooting report\n[pass] local.runtime.ready",
-			'results'           => array(
+			'selected_provider'      => 'bb',
+			'credential_id'          => 'bitbucket-private',
+			'repository'             => 'workspace/repository',
+			'ran'                    => true,
+			'partial'                => true,
+			'partial_reason'         => 'remote_calls_exhausted',
+			'report'                 => "RAN Booster troubleshooting report\n[pass] local.runtime.ready",
+			'results'                => array(
 				array(
 					'status'      => 'pass',
 					'code'        => 'local.runtime.ready',

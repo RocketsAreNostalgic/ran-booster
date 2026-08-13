@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RAN\GitHub;
+namespace RAN\Booster\GitHub;
 
 use DateTimeImmutable;
 use DateTimeZone;

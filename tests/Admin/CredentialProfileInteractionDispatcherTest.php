@@ -669,7 +669,12 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 		$secrets->expects( self::once() )
 			->method( 'saveCredential' )
-			->willThrowException( new InvalidCredentialInput( InvalidCredentialInput::LOOKS_CLASSIC ) );
+			->willThrowException(
+				new InvalidCredentialInput(
+					InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH,
+					'This token begins with ghp_, which identifies a classic personal access token. Choose Classic personal access token or paste a fine-grained token.'
+				)
+			);
 		$interaction        = new CapturingProviderProfileInteraction();
 		$dashboard          = $this->createMock( Dashboard::class );
 		$expiryObservations = new InMemoryCredentialExpiryObservationStore();

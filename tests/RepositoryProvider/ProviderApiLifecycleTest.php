@@ -20,7 +20,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 1 );
 
 		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'RAN Booster Provider API 8 conflicts with an existing API version marker.' );
+		$this->expectExceptionMessage( 'RAN Booster Provider API 9 conflicts with an existing API version marker.' );
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 	}
@@ -39,7 +39,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		$registry = new ReflectionClass( ProviderRegistry::class );
 
 		self::assertFalse( $registry->hasMethod( 'logging' ) );
-		self::assertCount( 3, $registry->getConstructor()?->getParameters() ?? array() );
+		self::assertCount( 4, $registry->getConstructor()?->getParameters() ?? array() );
 	}
 
 	public function testProviderRegistryRequiresNoLoggingFacade(): void {

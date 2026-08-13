@@ -288,7 +288,7 @@ final class AdminAssetContractTest extends TestCase {
 		$script = $this->asset( 'ran-booster-secure-inputs.js' );
 		$styles = $this->asset( 'ran-booster-onboarding.css' );
 		$dialog = $this->asset( 'ran-booster/70-credential-dialog.css' );
-		$github = $this->source( 'RAN/RepositoryProvider/GitHubProvider.php' );
+		$github = $this->source( 'RAN/Booster/GitHub/GitHubProvider.php' );
 
 		self::assertStringContainsString( 'class="ran-booster-credential-modal__form" autocomplete="off"', $modals );
 		self::assertStringContainsString( 'id="ran-booster-access-secret" type="password"', $modals );
@@ -474,7 +474,7 @@ final class AdminAssetContractTest extends TestCase {
 		$view       = $this->view( 'provider.php' ) . $this->view( 'provider-public-lookup-profile.php' );
 		$script     = $this->asset( 'ran-booster.js' );
 		$renderer   = $this->source( 'RAN/Admin/Component/RepositoryTableRenderer.php' );
-		$github     = $this->source( 'RAN/RepositoryProvider/GitHubProvider.php' );
+		$github     = $this->source( 'RAN/Booster/GitHub/GitHubProvider.php' );
 		$dashboard  = $this->source( 'RAN/Dashboard.php' );
 
 		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-provider', $view );

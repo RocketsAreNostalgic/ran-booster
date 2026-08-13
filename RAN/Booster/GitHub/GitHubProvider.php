@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
 use Closure;
-use RAN\GitHub\RepositoryBrowser as GitHubRepositoryBrowser;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -13,9 +12,40 @@ use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
 use RAN\RepositoryProvider\Admin\ProviderSetupMetadata;
 use RAN\RepositoryProvider\Admin\ProviderWebhookAssistanceMetadata;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
+use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\AuthenticatedPreparedArchive;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\RepositoryProvider\CredentialValidationResult;
+use RAN\RepositoryProvider\CredentialValidator;
+use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
+use RAN\RepositoryProvider\PreparedArchive;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderCredentialPolicy;
+use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
+use RAN\RepositoryProvider\ProviderCredentialStore;
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
+use RAN\RepositoryProvider\ProviderDiagnostics;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderWebhookPolicy;
+use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
+use RAN\RepositoryProvider\RepositoryBrowseRequest;
+use RAN\RepositoryProvider\RepositoryBrowseResult;
+use RAN\RepositoryProvider\RepositoryDescriptor;
+use RAN\RepositoryProvider\RepositoryLookupRequest;
+use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryWebhookFitness;
+use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
+use RAN\RepositoryProvider\RepositoryWebhookManagement;
+use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
+use RAN\RepositoryProvider\StaleDeployment;
+use RAN\RepositoryProvider\WebhookEnvelope;
+use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
+use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizer, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement {
+final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
 
@@ -23,19 +53,28 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 
 	private ProviderCredentialStore $credentials;
 
-	private GitHubRepositoryBrowser $browser;
-	private \RAN\GitHub\RepositoryWebhookClient $webhookClient;
-	private GitHubWebhookNormalizer $webhooks;
-	private GitHubDiagnostics $diagnostics;
-	private GitHubCredentialPolicy $credentialPolicy;
+	private RepositoryBrowser $browser;
+	private RepositoryWebhookClient $webhookClient;
+	private WebhookNormalizer $webhooks;
+	private Diagnostics $diagnostics;
+	private CredentialPolicy $credentialPolicy;
 
-	public function __construct( ProviderCredentialStore $credentials, GitHubRepositoryBrowser $browser, GitHubWebhookNormalizer $webhooks, ?\RAN\GitHub\RepositoryWebhookClient $webhookClient = null ) {
+	public static function create( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider {
+		return new self(
+			$credentials,
+			new RepositoryBrowser( $credentials ),
+			new WebhookNormalizer( $credentials, $deliveryEvidence ),
+			new RepositoryWebhookClient()
+		);
+	}
+
+	private function __construct( ProviderCredentialStore $credentials, RepositoryBrowser $browser, WebhookNormalizer $webhooks, RepositoryWebhookClient $webhookClient ) {
 		$this->credentials      = $credentials;
 		$this->browser          = $browser;
 		$this->webhooks         = $webhooks;
-		$this->webhookClient    = $webhookClient ?? new \RAN\GitHub\RepositoryWebhookClient();
-		$this->diagnostics      = new GitHubDiagnostics( $browser );
-		$this->credentialPolicy = new GitHubCredentialPolicy();
+		$this->webhookClient    = $webhookClient;
+		$this->diagnostics      = new Diagnostics( $browser );
+		$this->credentialPolicy = new CredentialPolicy();
 		$this->metadata         = new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
@@ -76,7 +115,8 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 						true,
 						'Owner',
 						'organization-or-user',
-						'Use this secret for repositories belonging to one organization or user.'
+						'Use this secret for repositories belonging to one organization or user.',
+						true
 					),
 					new WebhookScopeMetadata(
 						'repository',
@@ -110,7 +150,7 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 				),
 				new ProviderNavigationPlacement(
 					ProviderNavigationPlacement::GIT_HOST,
-					ProviderNavigationPlacement::GITHUB_SLOT
+					100
 				),
 				'owner/repository',
 				new ProviderWebhookAssistanceMetadata(

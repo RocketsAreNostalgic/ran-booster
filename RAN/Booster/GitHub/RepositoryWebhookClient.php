@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace RAN\GitHub;
+namespace RAN\Booster\GitHub;
 
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;

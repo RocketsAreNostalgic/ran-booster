@@ -45,19 +45,27 @@ RAN Booster supports custom git vendors through the
 `ran_booster_register_providers` action. Use it to register a new provider,
 define its metadata and capability contracts, and wire in diagnostics,
 credential policy, repository browsing, and webhook handling as needed.
-Provider plugins must require exact Provider API 8. Core publishes no add-on
-logging facade; providers return bounded diagnostics and operation results
-instead of forwarding their messages or exceptions into Core logs.
+Provider plugins must require exact Provider API 9. Core publishes no add-on
+logging facade; providers return bounded diagnostics and operation results.
+An unexpected provider failure may travel only as request-local diagnostic
+evidence for Core to log at its troubleshooting boundary; it is never included
+in the serialized result or administrator copy.
 WordPress's `Requires Plugins` header can express the package dependency, but it
 does not prove contract compatibility. Every provider or ordinary add-on must
 also fail closed unless each API marker it consumes is present at the exact
 documented generation.
 
-Core publishes no global service-container accessor and no bulk credential
-plaintext enumerator. Ordinary add-ons receive only purpose-specific facades;
-credential-bearing providers receive the existing read-only store permanently
-bound to their own provider code. These supported-contract limits do not claim
+Core publishes no global service-container accessor, credential writer, bulk
+credential plaintext enumerator or deployment repository. Ordinary add-ons
+receive only purpose-specific facades. A credential-bearing provider factory
+receives a read-only credential store and authenticated webhook-delivery
+evidence reader, each permanently bound to its own provider code; neither
+accepts a provider argument. These supported-contract limits do not claim
 confidentiality from hostile PHP running in the same WordPress process.
+
+GitHub remains a bundled, Core-owned provider module. Provider API 9 makes that
+module obey the same ordinary vendor boundary as external providers; it does
+not authorize extracting GitHub into another package or release stream.
 
 Start with the [custom git vendor setup guide](docs/custom-git-vendors.md).
 

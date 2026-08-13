@@ -62,7 +62,7 @@ $assert( DeploymentState::NEEDS_ATTENTION === $unsafe->getState(), 'Interrupted 
 $source = file_get_contents( dirname( __DIR__ ) . '/ran-booster.php' );
 $assert( is_string( $source ) && ! str_contains( $source, 'WorkerCliCommand' ), 'Bootstrap must not expose a second executor.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'ActionHandlerProvider' ), 'Bootstrap must not restore the inherited action bus.' );
-$assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_PROVIDER_API_VERSION', 8" ), 'Provider API 8 must remain explicit.' );
+$assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_PROVIDER_API_VERSION', 9" ), 'Provider API 9 must remain explicit.' );
 $assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_ADDON_API_VERSION', 14" ), 'Add-on API 14 must remain explicit.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION' ), 'The removed Webhook Cleanup marker must stay absent.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_LOGGING_API_VERSION' ), 'The removed Logging API marker must stay absent.' );

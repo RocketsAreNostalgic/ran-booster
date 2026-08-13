@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace Tests\Booster\GitHub;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
-use RAN\RepositoryProvider\GitHubWebhookNormalizer;
+use RAN\Booster\GitHub\WebhookNormalizer;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\RepositoryProvider\SignedWebhookVerification;
 use RAN\RepositoryProvider\WebhookEnvelope;
 use RAN\RepositoryProvider\WebhookRejected;
 use RAN\RepositoryProvider\WebhookRequest;
-use RAN\Secrets\SecretsFile;
-use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\Booster\GitHub\Support\WebhookProfileReaderStub;
 
-final class GitHubWebhookNormalizerTest extends TestCase {
+final class WebhookNormalizerTest extends TestCase {
 
 	private const OWNER_SECRET     = 'owner-test-webhook-secret-0001';
 	private const OTHER_SECRET     = 'other-test-webhook-secret';
@@ -497,7 +497,7 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 		$deliveries = new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
 			public int $calls = 0;
 
-			public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 				++$this->calls;
 
 				return null;
@@ -552,7 +552,7 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 
 	public function testWebhookReadinessSafelyReportsUnavailableDeliveryEvidence(): void {
 		$deliveries = new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
-			public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 				throw new \RuntimeException( 'delivery-evidence-canary' );
 			}
 		};
@@ -565,17 +565,11 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 	}
 
 	public function testWebhookReadinessSafelyReportsUnreadableConfiguration(): void {
-		$secrets = new class() extends SecretsFile {
-			public function __construct() {
-				parent::__construct( '/unused/test-secrets.php', array() );
-			}
-
-			public function webhookProfiles( ProviderCode|string $provider ): array {
-				throw new \RuntimeException( 'github-webhook-secret-canary' );
-			}
-		};
-		$result  = ( new GitHubWebhookNormalizer( $secrets->credentialsFor( 'gh' ), new EmptyAuthenticatedWebhookDeliveryEvidenceReader() ) )->diagnoseWebhookReadiness();
-		$output  = implode( ' ', $result->toArray() );
+		$result = ( new WebhookNormalizer(
+			new WebhookProfileReaderStub( unreadable: true ),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
+		) )->diagnoseWebhookReadiness();
+		$output = implode( ' ', $result->toArray() );
 
 		self::assertSame( ProviderDiagnosticResult::FAILED, $result->status );
 		self::assertSame( 'gh.webhook.configuration_unavailable', $result->code );
@@ -607,13 +601,13 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 	private function normalizer(
 		?array $profiles = null,
 		?AuthenticatedWebhookDeliveryEvidenceReader $deliveries = null
-	): GitHubWebhookNormalizer {
+	): WebhookNormalizer {
 		return $this->countingNormalizer( $profiles, $deliveries )[0];
 	}
 
 	/**
 	 * @param list<array<string, mixed>>|null $profiles Secret profiles.
-	 * @return array{GitHubWebhookNormalizer, object}
+	 * @return array{WebhookNormalizer, object}
 	 */
 	private function countingNormalizer(
 		?array $profiles = null,
@@ -622,34 +616,9 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 		$profiles   ??= array( $this->profile( self::OWNER_SECRET, 'owner', 'RocketsAreNostalgic' ) );
 		$deliveries ??= new EmptyAuthenticatedWebhookDeliveryEvidenceReader();
 
-		$secrets = new class( $profiles ) extends SecretsFile {
-			public int $calls = 0;
+		$profileReader = new WebhookProfileReaderStub( array() !== $profiles );
 
-			/**
-			 * @param list<array<string, mixed>> $profiles Secret profiles.
-			 */
-			public function __construct( private array $profiles ) {
-				parent::__construct( '/unused/test-secrets.php', array() );
-			}
-
-			/**
-			 * @return list<array<string, mixed>>
-			 */
-			public function webhookProfiles( ProviderCode|string $provider ): array {
-				return $this->profiles;
-			}
-
-			/**
-			 * @return list<array<string, mixed>>
-			 */
-			public function webhookMaterials( ProviderCode|string $provider ): array {
-				++$this->calls;
-
-				return $this->profiles;
-			}
-		};
-
-		return array( new GitHubWebhookNormalizer( $secrets->credentialsFor( 'gh' ), $deliveries ), $secrets );
+		return array( new WebhookNormalizer( $profileReader, $deliveries ), $profileReader );
 	}
 
 	private function deliveryReader( ?AuthenticatedWebhookDeliveryEvidence $evidence ): AuthenticatedWebhookDeliveryEvidenceReader {
@@ -657,11 +626,7 @@ final class GitHubWebhookNormalizerTest extends TestCase {
 			public function __construct( private ?AuthenticatedWebhookDeliveryEvidence $evidence ) {
 			}
 
-			public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
-				if ( null !== $this->evidence && ! $this->evidence->provider->equals( $provider ) ) {
-					throw new \RuntimeException( 'Unexpected provider.' );
-				}
-
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 				return $this->evidence;
 			}
 		};

@@ -2,22 +2,31 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
 use JsonException;
-use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
+use RAN\RepositoryProvider\ProviderWebhookPolicy;
+use RAN\RepositoryProvider\ProviderWebhookProfileReader;
+use RAN\RepositoryProvider\PushEvent;
+use RAN\RepositoryProvider\WebhookEnvelope;
+use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
+use RAN\RepositoryProvider\WebhookRejected;
+use RAN\RepositoryProvider\WebhookRequest;
 
-final readonly class GitHubWebhookNormalizer implements WebhookNormalizer {
+final readonly class WebhookNormalizer implements WebhookNormalizerContract {
 	private const MAX_EVENT_BYTES    = 64;
 	private const MAX_DELIVERY_BYTES = 191;
 
-	private GitHubWebhookPolicy $policy;
+	private WebhookPolicy $policy;
 
 	public function __construct(
 		private ProviderWebhookProfileReader $webhookProfiles,
 		private AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
 	) {
-		$this->policy = new GitHubWebhookPolicy();
+		$this->policy = new WebhookPolicy();
 	}
 
 	public function getWebhookPolicy(): ProviderWebhookPolicy {
@@ -44,19 +53,14 @@ final readonly class GitHubWebhookNormalizer implements WebhookNormalizer {
 		}
 
 		try {
-			$evidence = $this->deliveryEvidence->latestAuthenticatedDelivery( ProviderCode::parse( 'gh' ) );
+			$evidence = $this->deliveryEvidence->latestAuthenticatedDelivery();
 		} catch ( \Throwable $exception ) {
-			BoosterLogger::logException(
-				'GitHub webhook delivery evidence check failed',
-				$exception,
-				array( 'step' => 'gh_webhook_delivery_evidence' )
-			);
-
 			return new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::FAILED,
 				'gh.webhook.delivery_evidence_unavailable',
 				'Site-wide Push-to-Deploy check: Booster could not read retained GitHub webhook delivery evidence.',
-				'Check the Booster database schema and connection, then run diagnostics again.'
+				'Check the Booster database schema and connection, then run diagnostics again.',
+				$exception
 			);
 		}
 

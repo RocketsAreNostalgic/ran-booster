@@ -1784,7 +1784,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 					'Owner',
 					new ProviderAdminMetadata(
 						$this->withCredentials ? array( new CredentialKindMetadata( 'api-key', 'API key', 'API key' ) ) : array(),
-						$this->withCredentials ? array( new WebhookScopeMetadata( 'repository', 'Repository', true, 'Repository' ) ) : array()
+						$this->withCredentials ? array( new WebhookScopeMetadata( 'repository', 'Repository', true, 'Repository' ) ) : array(),
+						navigation: new \RAN\RepositoryProvider\Admin\ProviderNavigationPlacement(
+							\RAN\RepositoryProvider\Admin\ProviderNavigationPlacement::GIT_HOST,
+							'gh' === $this->code->value ? 100 : 200
+						)
 					)
 				);
 			}

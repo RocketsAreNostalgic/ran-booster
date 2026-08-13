@@ -24,6 +24,7 @@ final class ProviderRegistry {
 	private bool $registrationInProgress = false;
 	private ProviderSecretPolicyCatalog $secretPolicies;
 	private ?\Closure $credentialStoreFactory;
+	private ?\Closure $deliveryEvidenceReaderFactory;
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
@@ -31,12 +32,16 @@ final class ProviderRegistry {
 	public function __construct(
 		iterable $providers = array(),
 		?ProviderSecretPolicyCatalog $secretPolicies = null,
-		?callable $credentialStoreFactory = null
+		?callable $credentialStoreFactory = null,
+		?callable $deliveryEvidenceReaderFactory = null
 	) {
-		$this->secretPolicies         = $secretPolicies ?? new ProviderSecretPolicyCatalog();
-		$this->credentialStoreFactory = null === $credentialStoreFactory
+		$this->secretPolicies                = $secretPolicies ?? new ProviderSecretPolicyCatalog();
+		$this->credentialStoreFactory        = null === $credentialStoreFactory
 			? null
 			: \Closure::fromCallable( $credentialStoreFactory );
+		$this->deliveryEvidenceReaderFactory = null === $deliveryEvidenceReaderFactory
+			? null
+			: \Closure::fromCallable( $deliveryEvidenceReaderFactory );
 
 		foreach ( $providers as $provider ) {
 			$this->register( $provider );
@@ -50,7 +55,7 @@ final class ProviderRegistry {
 	 * The factory must construct its aggregate locally without network or other
 	 * side effects. Registration remains atomic after the aggregate is returned.
 	 *
-	 * @param callable(ProviderCredentialStore): RepositoryProvider $factory Provider factory.
+	 * @param callable(ProviderCredentialStore, AuthenticatedWebhookDeliveryEvidenceReader): RepositoryProvider $factory Provider factory.
 	 */
 	public function registerWithCredentialStore( ProviderCode|string $code, callable $factory ): void {
 		$this->beginRegistration();
@@ -61,6 +66,9 @@ final class ProviderRegistry {
 
 			if ( null === $this->credentialStoreFactory ) {
 				throw InvalidProviderPolicy::credentialStoreUnavailable();
+			}
+			if ( null === $this->deliveryEvidenceReaderFactory ) {
+				throw InvalidProviderPolicy::deliveryEvidenceReaderUnavailable();
 			}
 
 			try {
@@ -73,9 +81,19 @@ final class ProviderRegistry {
 			if ( ! $credentials instanceof ProviderCredentialStore ) {
 				throw InvalidProviderPolicy::invalidCredentialStoreFactory();
 			}
+			try {
+				$deliveryEvidence = ( $this->deliveryEvidenceReaderFactory )( $code );
+			} catch ( \Throwable $exception ) {
+				BoosterLogger::logException( 'provider registration delivery evidence factory failed', $exception, array( 'step' => 'provider_delivery_evidence_factory' ) );
+				throw InvalidProviderPolicy::invalidDeliveryEvidenceReaderFactory();
+			}
+
+			if ( ! $deliveryEvidence instanceof AuthenticatedWebhookDeliveryEvidenceReader ) {
+				throw InvalidProviderPolicy::invalidDeliveryEvidenceReaderFactory();
+			}
 
 			try {
-				$provider = $factory( $credentials );
+				$provider = $factory( $credentials, $deliveryEvidence );
 			} catch ( \Throwable $exception ) {
 				BoosterLogger::logException( 'provider registration provider factory failed', $exception, array( 'step' => 'provider_factory' ) );
 				throw InvalidProviderPolicy::invalidProviderFactory();

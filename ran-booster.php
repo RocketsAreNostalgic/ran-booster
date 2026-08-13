@@ -23,9 +23,9 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 8 );
-} elseif ( 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Provider API 8 conflicts with an existing API version marker.' );
+	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
+} elseif ( 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new LogicException( 'RAN Booster Provider API 9 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {

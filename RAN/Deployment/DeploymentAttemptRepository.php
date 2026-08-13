@@ -8,7 +8,6 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
-use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\Database;
@@ -22,7 +21,7 @@ use Throwable;
  * The database transaction owns admission and claiming. WordPress's updater
  * lock guards the later filesystem-mutation boundary.
  */
-final class DeploymentAttemptRepository implements AuthenticatedWebhookDeliveryEvidenceReader {
+final class DeploymentAttemptRepository {
 
 	public const DEFAULT_MAX_ATTEMPT_ROWS = 200;
 	public const MAX_ATTEMPT_ROWS         = 100000;

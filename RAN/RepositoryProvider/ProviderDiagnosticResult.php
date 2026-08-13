@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use InvalidArgumentException;
+use Throwable;
 
 final readonly class ProviderDiagnosticResult {
 
@@ -24,7 +25,8 @@ final readonly class ProviderDiagnosticResult {
 		public string $status,
 		public string $code,
 		public string $message,
-		public string $remediation
+		public string $remediation,
+		public ?Throwable $failure = null
 	) {
 		if ( ! in_array( $status, self::STATUSES, true ) ) {
 			throw new InvalidArgumentException( 'Provider diagnostic status is invalid.' );

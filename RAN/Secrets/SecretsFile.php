@@ -1133,7 +1133,7 @@ class SecretsFile {
 				: $metadata + array( 'secret' => $secret );
 		} catch ( InvalidCredentialInput $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
-			throw new InvalidCredentialInput( $failure->reason );
+			throw new InvalidCredentialInput( $failure->reason, $failure->getMessage() );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential material could not be validated.' );
 		}
@@ -1161,7 +1161,7 @@ class SecretsFile {
 				);
 			} catch ( InvalidCredentialInput $failure ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
-				throw new InvalidCredentialInput( $failure->reason );
+				throw new InvalidCredentialInput( $failure->reason, $failure->getMessage() );
 			} catch ( \Throwable ) {
 				throw new RuntimeException( 'Provider credential material could not be validated.' );
 			}

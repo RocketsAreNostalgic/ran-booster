@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Troubleshooting;
 
 use Closure;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticBudgetExceeded;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;
@@ -125,7 +126,15 @@ final class TroubleshootingService {
 				: 'remote_calls_exhausted';
 
 			return $this->payload( $providerCode->value, $credentialId, $repository, $results, $reason, true, $options );
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $exception ) {
+			BoosterLogger::logException(
+				'provider diagnostic operation failed',
+				$exception,
+				array(
+					'provider' => $providerCode->value,
+					'step'     => 'provider_diagnostics',
+				)
+			);
 			$reason = $this->budgetPartialReason( $request ) ?? 'provider_unavailable';
 
 			return $this->payload( $providerCode->value, $credentialId, $repository, $results, $reason, true, $options );
@@ -158,6 +167,7 @@ final class TroubleshootingService {
 				$partial = $this->higherPriority( $partial, 'provider_results_invalid' );
 				break;
 			}
+			$this->recordProviderFailure( $result, $providerCode, 'provider_diagnostics' );
 
 			$seen[ $result->code ] = true;
 			$results[]             = $result;
@@ -173,11 +183,20 @@ final class TroubleshootingService {
 				try {
 					$readiness = $aggregate->diagnoseWebhookReadiness();
 					if ( $this->validProviderResult( $readiness, $providerCode, $seen ) ) {
+						$this->recordProviderFailure( $readiness, $providerCode, 'provider_webhook_readiness' );
 						$results[] = $readiness;
 					} else {
 						$partial = $this->higherPriority( $partial, 'provider_results_invalid' );
 					}
-				} catch ( \Throwable ) {
+				} catch ( \Throwable $exception ) {
+					BoosterLogger::logException(
+						'provider diagnostic operation failed',
+						$exception,
+						array(
+							'provider' => $providerCode->value,
+							'step'     => 'provider_webhook_readiness',
+						)
+					);
 					$partial = $this->higherPriority( $partial, 'provider_unavailable' );
 				}
 			}
@@ -195,6 +214,21 @@ final class TroubleshootingService {
 			$partial,
 			true,
 			$options
+		);
+	}
+
+	private function recordProviderFailure( ProviderDiagnosticResult $result, ProviderCode $provider, string $step ): void {
+		if ( null === $result->failure ) {
+			return;
+		}
+
+		BoosterLogger::logException(
+			'provider diagnostic operation failed',
+			$result->failure,
+			array(
+				'provider' => $provider->value,
+				'step'     => $step,
+			)
 		);
 	}
 

@@ -18,6 +18,7 @@ use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
@@ -47,6 +48,7 @@ use RAN\Storage\CredentialUsageReader;
 use Tests\Secrets\SecretsFileTestFactory;
 use Tests\Support\CredentialUsageDatabase;
 use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 
 final class ProviderDiagnosticsContractTest extends TestCase {
 
@@ -58,12 +60,16 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$registry       = new ProviderRegistry(
 			array(),
 			$secretPolicies,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		$registry->registerWithCredentialStore(
 			'fixture',
-			static function ( ProviderCredentialStore $credentials ) use ( &$provider ): ExternalFixtureProvider {
+			static function (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+			) use ( &$provider ): ExternalFixtureProvider {
 				$provider = new ExternalFixtureProvider( 'fixture', $credentials );
 
 				return $provider;
@@ -255,6 +261,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 	public static function reentrantRegistrationCallbacks(): array {
 		$boundaries = array(
 			'credential_store_factory'   => array( InvalidProviderPolicy::class, 'The provider credential-store factory returned an invalid store.' ),
+			'delivery_evidence_factory'  => array( InvalidProviderPolicy::class, 'The provider delivery-evidence factory returned an invalid reader.' ),
 			'provider_factory'           => array( InvalidProviderPolicy::class, 'The provider factory returned an invalid provider.' ),
 			'metadata'                   => array( InvalidProviderPolicy::class, 'Repository provider metadata could not be supplied.' ),
 			'diagnostics'                => array( LogicException::class, 'Repository provider diagnostics could not be supplied.' ),
@@ -296,7 +303,10 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			} elseif ( 'register_with_store' === $operation ) {
 				$registry->registerWithCredentialStore(
 					'nested',
-					static fn ( ProviderCredentialStore $store ): ExternalFixtureProvider => new ExternalFixtureProvider( 'nested', $store )
+					static fn (
+						ProviderCredentialStore $store,
+						AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+					): ExternalFixtureProvider => new ExternalFixtureProvider( 'nested', $store )
 				);
 			} else {
 				$registry->seal();
@@ -305,17 +315,25 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static function () use ( $callback ): ProviderCredentialStore {
+			static function ( ProviderCode $code ) use ( $callback ): ProviderCredentialStore {
 				$callback( 'credential_store_factory' );
 
 				return new RegistrationGuardCredentialStore();
+			},
+			static function ( ProviderCode $code ) use ( $callback ): AuthenticatedWebhookDeliveryEvidenceReader {
+				$callback( 'delivery_evidence_factory' );
+
+				return new EmptyAuthenticatedWebhookDeliveryEvidenceReader();
 			}
 		);
 
 		try {
 			$registry->registerWithCredentialStore(
 				'outer',
-				static function ( ProviderCredentialStore $store ) use ( $callback ): RepositoryProvider {
+				static function (
+					ProviderCredentialStore $store,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				) use ( $callback ): RepositoryProvider {
 					$callback( 'provider_factory' );
 
 					return new RegistrationGuardProvider( 'outer', $callback );

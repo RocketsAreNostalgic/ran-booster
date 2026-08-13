@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
+use RAN\RepositoryProvider\InvalidCredentialInput;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderCredentialPolicy;
+use RAN\RepositoryProvider\SubmittedCredentialValidator;
 use RuntimeException;
 
-final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy, SubmittedCredentialValidator {
+final readonly class CredentialPolicy implements ProviderCredentialPolicy, SubmittedCredentialValidator {
 
 	private const TOKEN_CONSTANT  = 'RAN_BOOSTER_GITHUB_TOKEN';
 	private const MIN_TOKEN_BYTES = 40;
@@ -36,8 +40,12 @@ final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy,
 			: '';
 
 		if ( 'fine-grained' === $kind && ! $this->isOwner( $owner ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
-			throw new InvalidCredentialInput( InvalidCredentialInput::INVALID_RESOURCE_OWNER );
+			// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Core revalidates the closed reason and safe fixed copy.
+			throw new InvalidCredentialInput(
+				InvalidCredentialInput::INVALID_CONFIGURATION,
+				'Enter the GitHub user or organisation selected as the token\'s resource owner, not an email address.'
+			);
+			// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 		return array(
 			'label'         => $label,
@@ -53,15 +61,19 @@ final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy,
 	): void {
 		$kind = $metadata['kind'] ?? '';
 		if ( 'classic' === $kind && ! str_starts_with( $secret, 'ghp_' ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
-			throw new InvalidCredentialInput( InvalidCredentialInput::REQUIRES_CLASSIC );
+			// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Core revalidates the closed reason and safe fixed copy.
+			throw new InvalidCredentialInput(
+				InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH,
+				'Classic personal access tokens must begin with ghp_. Choose Fine-grained personal access token if the token begins with github_pat_.'
+			);
+			// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 		if ( 'fine-grained' === $kind && ! str_starts_with( $secret, 'github_pat_' ) ) {
-			$reason = str_starts_with( $secret, 'ghp_' )
-				? InvalidCredentialInput::LOOKS_CLASSIC
-				: InvalidCredentialInput::REQUIRES_FINE_GRAINED;
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
-			throw new InvalidCredentialInput( $reason );
+			$message = str_starts_with( $secret, 'ghp_' )
+				? 'This token begins with ghp_, which identifies a classic personal access token. Choose Classic personal access token or paste a fine-grained token.'
+				: 'Fine-grained personal access tokens must begin with github_pat_. Choose Classic personal access token if the token begins with ghp_.';
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Core revalidates the closed reason and one of two fixed safe messages.
+			throw new InvalidCredentialInput( InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH, $message );
 		}
 
 		$length = strlen( $secret );
@@ -69,8 +81,12 @@ final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy,
 			|| $length > self::MAX_TOKEN_BYTES
 			|| 1 !== preg_match( '/\A[A-Za-z0-9_]+\z/D', $secret )
 		) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
-			throw new InvalidCredentialInput( InvalidCredentialInput::INVALID_TOKEN_SHAPE );
+			// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Core revalidates the closed reason and safe fixed copy.
+			throw new InvalidCredentialInput(
+				InvalidCredentialInput::INVALID_SECRET_SHAPE,
+				'Enter a GitHub personal access token containing 40 to 255 letters, numbers, or underscores.'
+			);
+			// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
 	}
 

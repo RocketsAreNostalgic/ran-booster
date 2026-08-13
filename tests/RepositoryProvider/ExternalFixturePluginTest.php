@@ -16,7 +16,10 @@ require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 	use RAN\Admin\PackageRepositoryRequestResolver;
 	use RAN\Admin\ProviderSettingsPresenter;
 	use RAN\RepositoryProvider\ArchiveRequest;
+	use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
+	use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 	use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
+	use RAN\RepositoryProvider\InvalidCredentialInput;
 	use RAN\RepositoryProvider\ProviderCode;
 	use RAN\RepositoryProvider\ProviderCredentialStore;
 	use RAN\RepositoryProvider\ProviderDiagnosticRequest;
@@ -41,7 +44,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	public function testPluginLoadedBeforeTheApiMarkerRegistersOnTheLaterHook(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 8 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
 
 		list( $registry, , $path ) = $this->registry();
 		$this->runRegistrationHook( $registry );
@@ -53,7 +56,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterTheApiMarkerExercisesTheCompleteProviderContract(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 8 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
 		$this->loadFixturePlugin();
 		list( $registry, $secrets, $path ) = $this->registry();
 
@@ -63,6 +66,24 @@ final class ExternalFixturePluginTest extends TestCase {
 			$provider = $registry->get( 'fixture-provider' );
 			self::assertInstanceOf( Provider::class, $provider );
 			self::assertSame( 0, $provider->getClient()->getRequestCount(), 'Registration must not run provider diagnostics or contact the provider client.' );
+			self::assertFalse( $provider->latestDeliveryWasObserved() );
+			try {
+				$secrets->saveCredential(
+					'fixture-provider',
+					null,
+					array(
+						'label'         => 'Invalid fixture',
+						'kind'          => 'api-key',
+						'configuration' => array( 'tenant' => 'ran-lab' ),
+					),
+					'wrong-prefix-secret',
+					true
+				);
+				self::fail( 'The fixture submitted-credential contract must run.' );
+			} catch ( InvalidCredentialInput $failure ) {
+				self::assertSame( InvalidCredentialInput::INVALID_SECRET_SHAPE, $failure->reason );
+				self::assertSame( 'Fixture API keys must begin with fixture_.', $failure->getMessage() );
+			}
 
 			$credentialId = $secrets->saveCredential(
 				'fixture-provider',
@@ -72,7 +93,8 @@ final class ExternalFixturePluginTest extends TestCase {
 					'kind'          => 'api-key',
 					'configuration' => array( 'tenant' => 'ran-lab' ),
 				),
-				'not-a-real-secret'
+				'fixture_not-a-real-secret',
+				true
 			);
 
 			self::assertTrue( $provider->validateCredential( $credentialId )->isValid() );
@@ -163,7 +185,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			$management = $registry->requireCapability( 'fixture-provider', RepositoryWebhookManagement::class );
 			$operation  = $management->setup( $resolved['provider_repository_id'], $resolved['repository'], 'https://site.example/webhook', $credentialId, null, str_repeat( 's', 32 ) );
 			self::assertSame( 'configured_pending_delivery', $operation->code() );
-			self::assertStringNotContainsString( 'not-a-real-secret', json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
+			self::assertStringNotContainsString( 'fixture_not-a-real-secret', json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
 			self::assertStringNotContainsString( str_repeat( 's', 32 ), json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
 
 			foreach ( array( RepositoryBrowser::class, CredentialedPublicRepositoryBrowser::class, WebhookNormalizer::class ) as $capability ) {
@@ -182,7 +204,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function testPluginDoesNotRegisterWithAnOlderProviderApi(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 7 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 8 );
 		$this->loadFixturePlugin();
 		list( $registry, , $path ) = $this->registry();
 
@@ -220,7 +242,12 @@ final class ExternalFixturePluginTest extends TestCase {
 		$registry       = new ProviderRegistry(
 			array(),
 			$secretPolicies,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
+				public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
+					return null;
+				}
+			}
 		);
 
 		return array( $registry, $secrets, $path );

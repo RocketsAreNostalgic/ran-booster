@@ -5,34 +5,59 @@ declare(strict_types=1);
 namespace Tests\RepositoryProvider;
 
 use PHPUnit\Framework\TestCase;
-use RAN\GitHub\RepositoryBrowser;
-use RAN\RepositoryProvider\GitHubProvider;
-use RAN\RepositoryProvider\GitHubWebhookNormalizer;
+use RAN\Booster\GitHub\GitHubProvider;
+use RAN\Booster\GitHub\RepositoryBrowser;
+use RAN\Booster\GitHub\WebhookNormalizer as GitHubWebhookNormalizer;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderBoundWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderWebhookProfileReader;
 use ReflectionClass;
-use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use ReflectionMethod;
 
 final class ProviderTrustConformanceTest extends TestCase {
 
 	public function testBuiltInGitHubDependsOnlyOnProviderBoundReaders(): void {
-		$browserParameter  = ( new ReflectionClass( RepositoryBrowser::class ) )
+		$browserParameter   = ( new ReflectionClass( RepositoryBrowser::class ) )
 			->getConstructor()?->getParameters()[0] ?? null;
-		$providerParameter = ( new ReflectionClass( GitHubProvider::class ) )
-			->getConstructor()?->getParameters()[0] ?? null;
-		$webhookParameter  = ( new ReflectionClass( GitHubWebhookNormalizer::class ) )
+		$providerParameters = ( new ReflectionClass( GitHubProvider::class ) )
+			->getMethod( 'create' )->getParameters();
+		$providerReflection = new ReflectionClass( GitHubProvider::class );
+		$compositionMethod  = $providerReflection->getMethod( 'create' );
+		$webhookParameter   = ( new ReflectionClass( GitHubWebhookNormalizer::class ) )
 			->getConstructor()?->getParameters()[0] ?? null;
 
 		self::assertNotNull( $browserParameter );
-		self::assertNotNull( $providerParameter );
+		self::assertCount( 2, $providerParameters );
 		self::assertNotNull( $webhookParameter );
 		self::assertSame( ProviderCredentialStore::class, (string) $browserParameter->getType() );
-		self::assertSame( ProviderCredentialStore::class, (string) $providerParameter->getType() );
+		self::assertSame( ProviderCredentialStore::class, (string) $providerParameters[0]->getType() );
+		self::assertSame( AuthenticatedWebhookDeliveryEvidenceReader::class, (string) $providerParameters[1]->getType() );
+		self::assertSame( \RAN\RepositoryProvider\RepositoryProvider::class, (string) $compositionMethod->getReturnType() );
+		self::assertTrue( $compositionMethod->isPublic() );
+		self::assertTrue( $compositionMethod->isStatic() );
+		self::assertTrue( $providerReflection->getConstructor()?->isPrivate() );
+		self::assertSame(
+			array( 'create' ),
+			array_values(
+				array_map(
+					static fn ( ReflectionMethod $method ): string => $method->getName(),
+					array_filter(
+						$providerReflection->getMethods( ReflectionMethod::IS_PUBLIC | ReflectionMethod::IS_STATIC ),
+						static fn ( ReflectionMethod $method ): bool => $method->isPublic()
+							&& $method->isStatic()
+							&& GitHubProvider::class === $method->getDeclaringClass()->getName()
+					)
+				)
+			)
+		);
 		self::assertSame( ProviderWebhookProfileReader::class, (string) $webhookParameter->getType() );
 	}
 
 	public function testGitHubConstructionPerformsNoCredentialOrWebhookRead(): void {
-		$store    = new class() implements ProviderCredentialStore {
+		$store            = new class() implements ProviderCredentialStore {
 			public int $reads = 0;
 
 			public function credentialProfiles(): array {
@@ -54,12 +79,50 @@ final class ProviderTrustConformanceTest extends TestCase {
 				return false;
 			}
 		};
-		$browser  = new RepositoryBrowser( $store );
-		$webhooks = new GitHubWebhookNormalizer( $store, new EmptyAuthenticatedWebhookDeliveryEvidenceReader() );
+		$deliveryEvidence = new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
+			public int $reads = 0;
 
-		new GitHubProvider( $store, $browser, $webhooks );
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
+				unset( $provider );
+				++$this->reads;
+
+				return null;
+			}
+		};
+		GitHubProvider::create( $store, $deliveryEvidence );
 
 		self::assertSame( 0, $store->reads );
+		self::assertSame( 0, $deliveryEvidence->reads );
+	}
+
+	public function testDeliveryEvidenceAdapterBindsTheProviderBeforeTheModuleReads(): void {
+		$requested = null;
+		$reader    = new ProviderBoundWebhookDeliveryEvidenceReader(
+			ProviderCode::parse( 'gh' ),
+			static function ( ProviderCode $provider ) use ( &$requested ): AuthenticatedWebhookDeliveryEvidence {
+				$requested = $provider->value;
+
+				return new AuthenticatedWebhookDeliveryEvidence( $provider, '2026-08-13 12:00:00', true );
+			}
+		);
+
+		self::assertSame( '2026-08-13 12:00:00', $reader->latestAuthenticatedDelivery()?->receivedAt );
+		self::assertSame( 'gh', $requested );
+	}
+
+	public function testDeliveryEvidenceAdapterRejectsCrossProviderEvidence(): void {
+		$reader = new ProviderBoundWebhookDeliveryEvidenceReader(
+			ProviderCode::parse( 'gh' ),
+			static fn (): AuthenticatedWebhookDeliveryEvidence => new AuthenticatedWebhookDeliveryEvidence(
+				ProviderCode::parse( 'bb' ),
+				'2026-08-13 12:00:00',
+				true
+			)
+		);
+
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'does not match its provider binding' );
+		$reader->latestAuthenticatedDelivery();
 	}
 
 	public function testCredentialSurfacesDiscloseTheProviderTrustDecision(): void {

@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
 use RAN\RepositoryProvider\InvalidProviderPolicy;
 use RAN\RepositoryProvider\ProviderCode;
@@ -34,6 +35,7 @@ use Tests\Support\CredentialUsageDatabase;
 use RuntimeException;
 use Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
 use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use Tests\RepositoryProvider\Support\InertWebhookPolicy;
 use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 use Tests\Secrets\SecretsFileTestFactory;
@@ -186,11 +188,15 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->registerWithCredentialStore(
 			'fixture',
-			static function ( ProviderCredentialStore $credentials ) use ( &$provider ): ExternalFixtureProvider {
+			static function (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+			) use ( &$provider ): ExternalFixtureProvider {
 				$provider = new ExternalFixtureProvider( 'fixture', $credentials );
 
 				return $provider;
@@ -209,15 +215,19 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static function (): ProviderCredentialStore {
+			static function ( ProviderCode $code ): ProviderCredentialStore {
 				throw new RuntimeException( 'credential-store-token-canary' );
-			}
+			},
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->registerWithCredentialStore(
 				'fixture',
-				static fn ( ProviderCredentialStore $credentials ): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
+				static fn (
+					ProviderCredentialStore $credentials,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 			);
 			self::fail( 'A failing internal store factory must reject registration.' );
 		} catch ( InvalidProviderPolicy $exception ) {
@@ -235,13 +245,17 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->registerWithCredentialStore(
 				'fixture',
-				static function (): RepositoryProvider {
+				static function (
+					ProviderCredentialStore $credentials,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				): RepositoryProvider {
 					throw new RuntimeException( 'provider-factory-path-canary' );
 				}
 			);
@@ -262,7 +276,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -275,7 +290,10 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		try {
 			$registry->registerWithCredentialStore(
 				'fixture',
-				static fn (): RepositoryProvider => $provider
+				static fn (
+					ProviderCredentialStore $credentials,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				): RepositoryProvider => $provider
 			);
 			self::fail( 'A provider with unavailable metadata must be rejected.' );
 		} catch ( InvalidProviderPolicy $exception ) {
@@ -320,13 +338,17 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->registerWithCredentialStore(
 				'fixture',
-				static function ( ProviderCredentialStore $credentials ): ExternalFixtureProvider {
+				static function (
+					ProviderCredentialStore $credentials,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				): ExternalFixtureProvider {
 					$credentials->credentialMaterial();
 
 					return new ExternalFixtureProvider( 'fixture', $credentials );
@@ -354,13 +376,17 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				++$issued;
 
 				return $secrets->credentialsFor( $code );
-			}
+			},
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->registerWithCredentialStore(
 				'fixture',
-				static fn ( ProviderCredentialStore $credentials ): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
+				static fn (
+					ProviderCredentialStore $credentials,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 			);
 			self::fail( 'A duplicate code must fail before credentials are issued.' );
 		} catch ( \LogicException $exception ) {
@@ -381,14 +407,18 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				++$credentialStoreCalls;
 
 				throw new RuntimeException( 'The credential-store factory must not run after sealing.' );
-			}
+			},
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->seal();
 
 		try {
 			$registry->registerWithCredentialStore(
 				'fixture',
-				static function ( ProviderCredentialStore $credentials ) use ( &$providerCalls ): RepositoryProvider {
+				static function (
+					ProviderCredentialStore $credentials,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				) use ( &$providerCalls ): RepositoryProvider {
 					++$providerCalls;
 
 					return new ExternalFixtureProvider( 'fixture', $credentials );
@@ -412,13 +442,17 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->registerWithCredentialStore(
 				'fixture',
-				static fn ( ProviderCredentialStore $credentials ): ExternalFixtureProvider => new ExternalFixtureProvider( 'other-fixture', $credentials )
+				static fn (
+					ProviderCredentialStore $credentials,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				): ExternalFixtureProvider => new ExternalFixtureProvider( 'other-fixture', $credentials )
 			);
 			self::fail( 'A mismatched provider factory must reject registration.' );
 		} catch ( InvalidProviderPolicy ) {
@@ -437,12 +471,16 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		$registry->registerWithCredentialStore(
 			'fixture',
-			static fn (): RepositoryProvider => $provider
+			static fn (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+			): RepositoryProvider => $provider
 		);
 
 		self::assertSame( 1, $provider->metadataCalls );
@@ -507,11 +545,15 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry      = new ProviderRegistry(
 			array(),
 			$activeCatalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $activeSecrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $activeSecrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->registerWithCredentialStore(
 			'fixture',
-			static fn ( ProviderCredentialStore $credentials ): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
+			static fn (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+			): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 		);
 
 		$activeSecrets->saveCredential(

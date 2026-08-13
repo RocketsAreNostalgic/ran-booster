@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
-use RAN\GitHub\RepositoryBrowser;
-use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\CredentialValidationResult;
+use RAN\RepositoryProvider\ProviderDiagnosticBudgetExceeded;
+use RAN\RepositoryProvider\ProviderDiagnosticRequest;
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
+use RAN\RepositoryProvider\ProviderDiagnostics;
 use RuntimeException;
 
-final readonly class GitHubDiagnostics implements ProviderDiagnostics {
+final readonly class Diagnostics implements ProviderDiagnostics {
 
 	public function __construct( private RepositoryBrowser $browser ) {
 	}
@@ -36,8 +39,7 @@ final readonly class GitHubDiagnostics implements ProviderDiagnostics {
 		} catch ( ProviderDiagnosticBudgetExceeded ) {
 			return $this->budgetResult( 'gh.credential.budget_exhausted' );
 		} catch ( \Throwable $exception ) {
-			BoosterLogger::logException( 'GitHub diagnostics credential check failed', $exception, array( 'step' => 'gh_credential_diagnostics' ) );
-			return $this->unavailableResult( 'gh.credential.unavailable', 'GitHub credential validation could not be completed.' );
+			return $this->unavailableResult( 'gh.credential.unavailable', 'GitHub credential validation could not be completed.', $exception );
 		}
 
 		if ( $result->isValid() ) {
@@ -88,8 +90,7 @@ final readonly class GitHubDiagnostics implements ProviderDiagnostics {
 		} catch ( RuntimeException $exception ) {
 			return $this->repositoryFailure( $exception );
 		} catch ( \Throwable $exception ) {
-			BoosterLogger::logException( 'GitHub diagnostics repository check failed', $exception, array( 'step' => 'gh_repository_diagnostics' ) );
-			return $this->unavailableResult( 'gh.repository.unavailable', 'GitHub repository access could not be completed.' );
+			return $this->unavailableResult( 'gh.repository.unavailable', 'GitHub repository access could not be completed.', $exception );
 		}
 
 		return new ProviderDiagnosticResult(
@@ -133,12 +134,13 @@ final readonly class GitHubDiagnostics implements ProviderDiagnostics {
 		);
 	}
 
-	private function unavailableResult( string $code, string $message ): ProviderDiagnosticResult {
+	private function unavailableResult( string $code, string $message, ?\Throwable $failure = null ): ProviderDiagnosticResult {
 		return new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::WARNING,
 			$code,
 			$message,
-			'Try again and check GitHub service status if the problem continues.'
+			'Try again and check GitHub service status if the problem continues.',
+			$failure
 		);
 	}
 }

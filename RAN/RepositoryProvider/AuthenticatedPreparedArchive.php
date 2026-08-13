@@ -9,7 +9,7 @@ use RuntimeException;
 use Throwable;
 use WeakReference;
 
-/** @internal Built-in providers may compose this one-request authentication lifecycle. */
+/** Provider API one-request archive authentication and cleanup lifecycle. */
 final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 	public const REDIRECT_HOOK = 'requests-requests.before_redirect';

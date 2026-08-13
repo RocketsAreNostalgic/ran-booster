@@ -42,7 +42,7 @@ Core's container, repositories, provider clients, credential store, filesystem
 paths, or cleanup authority.
 
 Portability API 2 is independently versioned. A source bridge does not need
-Add-on API 14 or Provider API 8, although Core continues to use its registered
+Add-on API 14 or Provider API 9, although Core continues to use its registered
 providers internally.
 
 A source bridge may separately feature-detect Core's additive

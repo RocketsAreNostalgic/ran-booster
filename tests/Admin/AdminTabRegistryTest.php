@@ -11,6 +11,7 @@ use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabKind;
 use RAN\Admin\AdminTabRegistry;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
+use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -43,6 +44,23 @@ final class AdminTabRegistryTest extends TestCase {
 		self::assertSame( 'documentation.php', $registry->resolve( 'documentation' )->getView() );
 		self::assertSame( 'portability.php', $registry->resolve( 'portability' )->getView() );
 		self::assertSame( AdminTabKind::PAGE, $registry->resolve( 'documentation' )->getKind() );
+	}
+
+	public function testProviderTabsUseDeterministicHostOrderInsteadOfRegistrationOrder(): void {
+		$registry = new AdminTabRegistry(
+			new ProviderRegistry(
+				array(
+					$this->provider( ProviderCode::parse( 'fixture' ), 'Fixture' ),
+					$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ),
+					$this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ),
+				)
+			)
+		);
+
+		self::assertSame(
+			array( 'overview', 'gh', 'bb', 'fixture', 'portability', 'documentation', 'troubleshooting' ),
+			array_map( static fn ( AdminTab $tab ): string => $tab->getKey(), $registry->all() )
+		);
 	}
 
 	/** @return list<array{mixed}> */
@@ -115,7 +133,18 @@ final class AdminTabRegistryTest extends TestCase {
 					$this->label,
 					'https://example.test/',
 					'Owner',
-					new ProviderAdminMetadata( array(), array() )
+					new ProviderAdminMetadata(
+						array(),
+						array(),
+						navigation: new ProviderNavigationPlacement(
+							'fixture' === $this->code->value ? ProviderNavigationPlacement::OTHER_PROVIDER : ProviderNavigationPlacement::GIT_HOST,
+							match ( $this->code->value ) {
+								'gh' => 100,
+								'bb' => 200,
+								default => 300,
+							}
+						)
+					)
 				);
 			}
 		};

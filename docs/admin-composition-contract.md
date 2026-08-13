@@ -41,7 +41,7 @@ if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
 
 Add-on API 14 publishes only the named facade needed by each ready action. Core
 does not deliver an add-on logging facade, generic resolver or container.
-Provider API 8 remains a separate contract. Provider add-ons must continue to
+Provider API 9 remains a separate contract. Provider add-ons must continue to
 perform the exact checks described in the
 [Provider extension contract](provider-extension-contract.md).
 

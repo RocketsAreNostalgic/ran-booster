@@ -78,6 +78,6 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 			}
 		}
 
-		throw new CredentialRequestException( 'Choose an owner from the managed repositories before creating an owner-scoped webhook secret.' );
+		throw new CredentialRequestException( 'Choose an account owner from the managed repositories before creating an owner-scoped webhook secret.' );
 	}
 }

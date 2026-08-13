@@ -42,15 +42,9 @@ final class ProviderNavigationOrderer {
 			return $metadata->admin->navigation;
 		}
 
-		$slot = match ( $metadata->code->value ) {
-			'gh'    => ProviderNavigationPlacement::GITHUB_SLOT,
-			'bb'    => ProviderNavigationPlacement::BITBUCKET_SLOT,
-			default => 10000,
-		};
-
 		return new ProviderNavigationPlacement(
-			10000 === $slot ? ProviderNavigationPlacement::OTHER_PROVIDER : ProviderNavigationPlacement::GIT_HOST,
-			$slot
+			ProviderNavigationPlacement::OTHER_PROVIDER,
+			10000
 		);
 	}
 }

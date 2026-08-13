@@ -250,6 +250,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '@media screen and (max-width: 600px)', $documentation );
 		self::assertStringContainsString( '@media screen and (max-width: 782px)', $onboarding );
 		self::assertStringContainsString( 'class="ran-booster-footer"', $base );
+		self::assertStringContainsString( "__( 'Copyright © %s', 'ran-booster' )", $base );
 		self::assertStringNotContainsString( 'style="text-align: center;', $base );
 	}
 

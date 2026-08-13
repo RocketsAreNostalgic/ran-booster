@@ -1,6 +1,6 @@
 # Provider extension contract
 
-RAN Booster Provider API 8 accepts trusted repository providers through its late
+RAN Booster Provider API 9 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading:
 
@@ -9,26 +9,30 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
 		$registry->registerWithCredentialStore(
 			'example',
-			static fn ( \RAN\RepositoryProvider\ProviderCredentialStore $credentials ): ExampleProvider => new ExampleProvider( $credentials )
+			static fn (
+				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
+				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+			): ExampleProvider => new ExampleProvider( $credentials, $deliveryEvidence )
 		);
 	}
 );
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 8.
+registration action can run. The callback must check for exact Provider API 9.
 `Requires Plugins: ran-booster` only tells WordPress about the package
 dependency; it does not replace this exact runtime marker check or make a
 mismatched provider contract safe.
-Provider API 8 publishes no logging facade, generic resolver or Core container.
-Providers report bounded diagnostics and operation results; Core owns logging
-for failures inside Core-owned code.
+Provider API 9 publishes no logging facade, generic resolver, Core container,
+credential writer, sidecar path or database/deployment repository. Providers
+report bounded diagnostics and operation results. Core owns logging at its call
+boundaries and never supplies a logger to provider code.
 Booster fires the action once on `plugins_loaded` at priority 100, after plugin
 files have loaded and before the dashboard, dispatcher, repository picker or
 webhook controller is resolved. It then seals the registry. This works whether
@@ -38,21 +42,29 @@ a newly activated provider becomes available on the next request.
 
 `registerWithCredentialStore()` is the required path for a provider that reads
 stored credentials. Booster verifies that the requested code is novel before it
-issues a read-only store bound to that code, then verifies that the returned
-provider uses the same code before atomic registration. The store has no
-provider argument, write methods, path access or webhook-secret access. It
-exposes display-safe `credentialProfiles()`, one selected/default
-`credentialMaterial()` read and boolean `hasWebhookProfile()` readiness, so a
-retained store cannot cross provider namespaces. Repeated exact reads mean an
+issues two read-only values bound to that code, then verifies that the returned
+provider uses the same code before atomic registration:
+
+- `ProviderCredentialStore` exposes display-safe `credentialProfiles()`, one
+  selected/default `credentialMaterial()` read and boolean
+  `hasWebhookProfile()` readiness. It has no provider argument, write methods,
+  path access or webhook-secret access.
+- `AuthenticatedWebhookDeliveryEvidenceReader` exposes only
+  `latestAuthenticatedDelivery()` for the already-bound provider. It has no
+  provider argument and exposes neither the deployment database repository nor
+  general attempt history.
+
+Core binds both values before invoking the callback, so retaining either value
+cannot cross provider namespaces. Repeated exact credential reads mean an
 activated credential-bearing provider is trusted with all credentials saved
 under its code. Core does not authenticate the provider publisher, and cannot
 control private provider logging or exfiltration after authorized disclosure.
-The factory and provider
-constructor must remain local and non-I/O and must not read the store during
-construction: its provider policy becomes active only after the factory returns
-successfully. Validators, discovery clients and archive clients may retain the
-store and read it after registration; they then use the same live sidecar graph
-as Booster's admin credential forms.
+The factory and provider constructor must remain local and non-I/O and must not
+read either supplied value during construction: provider policy becomes active
+only after the factory returns successfully. Validators, discovery clients and
+archive clients may retain the credential store and read it after registration;
+webhook diagnostics may retain the evidence reader. Both use Core's live state
+without receiving its storage implementations.
 
 Registration failures expose fixed, redacted messages and retain no upstream
 exception. A rejected provider publishes neither provider nor policy state, so
@@ -133,6 +145,13 @@ strings nor fragments. Providers should treat constructor rejection as a
 registration-time metadata error rather than attempting to sanitize unsafe
 content later.
 
+Admin metadata may include an ordinary `ProviderNavigationPlacement`. Its group
+is `git-host` or `other-provider` and its slot is an integer from 1 through
+10,000. These values are provider-declared ordering metadata, not reserved
+GitHub or Bitbucket privileges. Providers without an explicit placement sort in
+the `other-provider` group at slot 10,000; equal placements are ordered by the
+stable provider code.
+
 Provider metadata supplies concise setup and webhook guidance; it does not
 register or render a full add-on guide. A provider add-on that contributes
 non-interactive documentation attaches separately to the provider-specific
@@ -187,6 +206,19 @@ archive into its private preflight file; WordPress receives only that verified
 local file. Providers remain responsible for any stricter origin, path and
 signed query policy required by their service.
 
+Provider API 9 owns two shared helpers for ordinary vendor implementations:
+
+- `GitReferenceSyntax::isValidNamedReference()` applies Core's bounded generic
+  branch/ref syntax check without assuming a particular hosting vendor.
+- `AuthenticatedPreparedArchive` implements `PreparedArchive` and owns the
+  one-request authentication, redirect scrubbing, current-head verification and
+  cleanup lifecycle. Its optional authorizer is consumed only for the exact
+  archive URL, and reusable authorization must not survive a redirect.
+
+Providers may enforce stricter vendor syntax and archive-origin policy. They
+must not weaken the shared authentication cleanup lifecycle or reproduce Core's
+storage or deployment machinery.
+
 `prepareArchive()` resolves the requested branch, tag or commit exactly once to
 an immutable commit and builds the archive URL from that resolved value.
 `PreparedArchive::getResolvedRef()` exposes it to the deployment journal. For an
@@ -212,7 +244,17 @@ and deployment. It returns only `ProviderDiagnosticResult` objects containing:
 - `status`: `pass`, `warning`, `fail` or `not_configured`;
 - a stable machine code;
 - a safe, single-line message; and
-- safe remediation text.
+- safe remediation text; and
+- only for an unexpected caught failure, an optional request-local `Throwable`
+  for Core-owned observability.
+
+Core validates the bounded display fields before it logs that request-local
+failure at the troubleshooting call boundary. `ProviderDiagnosticResult::toArray()`
+omits the failure, so it is never administrator copy, persisted diagnostic
+state or a transport value. Expected denial, not-found, rate-limit, invalid-data
+and ordinary unavailability outcomes remain typed results without a failure.
+Providers receive no logging facade and must not attach upstream messages,
+headers, responses or credentials to the safe display fields.
 
 The request permits at most five remote calls and has a monotonic deadline of
 ten seconds. Provider code calls `claimRemoteCall()` immediately before each
@@ -295,6 +337,23 @@ credential under its current provider policy immediately before delivery, and
 provider callbacks never run while Core holds the sidecar lock. A displayed
 file-backed profile is stored; its provider validity is checked on use.
 
+A credential policy may additionally implement the optional
+`SubmittedCredentialValidator`. Core calls
+`validateSubmittedCredential( $metadata, $secret )` only for newly submitted or
+replacement material; existing saved, constant-backed and imported credentials
+continue to bypass this shape check so a later provider-format change cannot
+make historical material unreadable.
+
+Validation may throw `InvalidCredentialInput` with one of three provider-neutral
+reasons: `invalid_configuration`, `credential_kind_mismatch` or
+`invalid_secret_shape`. Its provider-owned display message must be non-empty,
+single-line plain text of at most 512 bytes. Core rejects unknown reasons and
+text containing control characters, markup, structured data, paths, credentialed
+URLs, authentication/cookie headers, token-shaped values or authorization
+material. An invalid bounded failure or any other exception collapses to Core's
+one generic administrator-safe message. Core reconstructs an accepted failure
+at its secret-custody boundary, so provider exception arguments never cross it.
+
 ### Transporter credential boundary
 
 Core owns Transporter package and credential selection, password-protected
@@ -346,3 +405,8 @@ package-form presentation, selected-provider diagnostics and explicit
 unsupported-capability behavior in WordPress. The fixture is excluded from the
 runtime release archive and requires no provider-name branches in Booster,
 GitHub or Bitbucket code.
+
+GitHub remains bundled and owned by Core under this same public boundary.
+Provider API 9 proves ordinary-vendor independence; it does not authorize a
+separate GitHub package, repository, dependency or release stream. Extraction
+remains NO-GO unless separately approved after isolation evidence is complete.

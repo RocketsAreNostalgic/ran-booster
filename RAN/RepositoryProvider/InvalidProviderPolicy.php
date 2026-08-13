@@ -40,6 +40,14 @@ final class InvalidProviderPolicy extends RuntimeException {
 		return new self( 'The provider credential-store factory returned an invalid store.' );
 	}
 
+	public static function deliveryEvidenceReaderUnavailable(): self {
+		return new self( 'A provider-bound delivery-evidence reader is unavailable.' );
+	}
+
+	public static function invalidDeliveryEvidenceReaderFactory(): self {
+		return new self( 'The provider delivery-evidence factory returned an invalid reader.' );
+	}
+
 	public static function invalidProviderFactory(): self {
 		return new self( 'The provider factory returned an invalid provider.' );
 	}

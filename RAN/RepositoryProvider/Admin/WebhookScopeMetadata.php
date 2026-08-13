@@ -20,7 +20,8 @@ final readonly class WebhookScopeMetadata {
 		public bool $requiresTarget,
 		string $targetLabel = '',
 		string $targetPlaceholder = '',
-		string $description = ''
+		string $description = '',
+		public bool $requiresManagedTarget = false
 	) {
 		$code              = MetadataRules::identifier( $code );
 		$label             = MetadataRules::requiredText( $label, MetadataRules::LABEL_LENGTH );

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Booster\GitHub;
 
 use JsonException;
-use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
@@ -54,19 +53,14 @@ final readonly class WebhookNormalizer implements WebhookNormalizerContract {
 		}
 
 		try {
-			$evidence = $this->deliveryEvidence->latestAuthenticatedDelivery( ProviderCode::parse( 'gh' ) );
+			$evidence = $this->deliveryEvidence->latestAuthenticatedDelivery();
 		} catch ( \Throwable $exception ) {
-			BoosterLogger::logException(
-				'GitHub webhook delivery evidence check failed',
-				$exception,
-				array( 'step' => 'gh_webhook_delivery_evidence' )
-			);
-
 			return new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::FAILED,
 				'gh.webhook.delivery_evidence_unavailable',
 				'Site-wide Push-to-Deploy check: Booster could not read retained GitHub webhook delivery evidence.',
-				'Check the Booster database schema and connection, then run diagnostics again.'
+				'Check the Booster database schema and connection, then run diagnostics again.',
+				$exception
 			);
 		}
 

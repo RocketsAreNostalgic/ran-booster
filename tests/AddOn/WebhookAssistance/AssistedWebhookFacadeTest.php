@@ -40,7 +40,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source contract inspection.
 		$bootstrap = file_get_contents( dirname( __DIR__, 3 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
-		self::assertStringContainsString( "RAN_BOOSTER_PROVIDER_API_VERSION', 8", $bootstrap );
+		self::assertStringContainsString( "RAN_BOOSTER_PROVIDER_API_VERSION', 9", $bootstrap );
 		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 14", $bootstrap );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION', $bootstrap );
 		self::assertStringNotContainsString( 'ran_booster_webhook_cleanup_ready', $bootstrap );

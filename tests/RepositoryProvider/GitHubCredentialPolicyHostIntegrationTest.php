@@ -151,7 +151,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			);
 			self::fail( 'The submitted token prefix mismatch must be rejected.' );
 		} catch ( InvalidCredentialInput $failure ) {
-			self::assertSame( InvalidCredentialInput::REQUIRES_CLASSIC, $failure->reason );
+			self::assertSame( InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH, $failure->reason );
 			self::assertStringContainsString( 'must begin with ghp_', $failure->getMessage() );
 			self::assertFalse(
 				str_contains( (string) json_encode( $failure->getTrace() ), $token ),
@@ -197,7 +197,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			$secrets->importCredentialsIfAbsent( $blueprint, $credential );
 			self::fail( 'Blueprint material with a mismatched token prefix must be rejected.' );
 		} catch ( InvalidCredentialInput $failure ) {
-			self::assertSame( InvalidCredentialInput::REQUIRES_CLASSIC, $failure->reason );
+			self::assertSame( InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH, $failure->reason );
 			self::assertFileDoesNotExist( $path );
 			self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
 		} finally {

@@ -63,12 +63,6 @@ $locatorHints     = is_array( $troubleshooting['provider_locator_hints'] ?? null
 $locatorExamples  = array();
 foreach ( $troubleshooting['providers'] ?? array() as $providerCode => $providerLabel ) {
 	$hint = $locatorHints[ $providerCode ] ?? '';
-	if ( '' === $hint && 'gh' === $providerCode ) {
-		$hint = 'owner/repository';
-	}
-	if ( '' === $hint && 'bb' === $providerCode ) {
-		$hint = 'workspace/repository';
-	}
 	if ( is_string( $hint ) && is_string( $providerLabel ) && '' !== $hint ) {
 		$locatorExamples[] = $hint . ' (' . $providerLabel . ')';
 	}

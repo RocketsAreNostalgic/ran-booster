@@ -11,6 +11,7 @@ use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabKind;
 use RAN\Admin\AdminTabRegistry;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
+use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -132,7 +133,18 @@ final class AdminTabRegistryTest extends TestCase {
 					$this->label,
 					'https://example.test/',
 					'Owner',
-					new ProviderAdminMetadata( array(), array() )
+					new ProviderAdminMetadata(
+						array(),
+						array(),
+						navigation: new ProviderNavigationPlacement(
+							'fixture' === $this->code->value ? ProviderNavigationPlacement::OTHER_PROVIDER : ProviderNavigationPlacement::GIT_HOST,
+							match ( $this->code->value ) {
+								'gh' => 100,
+								'bb' => 200,
+								default => 300,
+							}
+						)
+					)
 				);
 			}
 		};

@@ -183,7 +183,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'value="ran-booster-adopt-secure-storage"', $html );
 		self::assertStringContainsString( 'name="ran_booster[recovery_token]" value="' . $token . '"', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[candidate_path]"', $html );
-		self::assertStringContainsString( 'including GitHub token prefixes', $html );
+		self::assertStringContainsString( 'current registered provider credential shape', $html );
 	}
 
 	public function testRendersAnExplicitTypedOrphanedKeyResetWithPermanentLossWarning(): void {

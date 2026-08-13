@@ -14,7 +14,7 @@ final class CredentialPolicyTest extends TestCase {
 	/** @return array<string, array{string, string, string, string}> */
 	public static function invalidInput(): array {
 		return array(
-			'email owner' => array( 'fine-grained', 'person@example.test', 'github_pat_example', InvalidCredentialInput::INVALID_RESOURCE_OWNER ),
+			'email owner' => array( 'fine-grained', 'person@example.test', 'github_pat_example', InvalidCredentialInput::INVALID_CONFIGURATION ),
 		);
 	}
 
@@ -39,14 +39,14 @@ final class CredentialPolicyTest extends TestCase {
 	/** @return array<string, array{string, string, string}> */
 	public static function invalidSubmittedToken(): array {
 		return array(
-			'classic uses fine prefix'           => array( 'classic', 'github_pat_' . str_repeat( 'a', 40 ), InvalidCredentialInput::REQUIRES_CLASSIC ),
-			'classic has unknown prefix'         => array( 'classic', 'future_' . str_repeat( 'a', 40 ), InvalidCredentialInput::REQUIRES_CLASSIC ),
-			'fine-grained uses classic prefix'   => array( 'fine-grained', 'ghp_' . str_repeat( 'a', 40 ), InvalidCredentialInput::LOOKS_CLASSIC ),
-			'fine-grained has unknown prefix'    => array( 'fine-grained', 'future_' . str_repeat( 'a', 40 ), InvalidCredentialInput::REQUIRES_FINE_GRAINED ),
-			'token is truncated'                 => array( 'classic', 'ghp_short', InvalidCredentialInput::INVALID_TOKEN_SHAPE ),
-			'token is over the defensive bound'  => array( 'classic', 'ghp_' . str_repeat( 'a', 252 ), InvalidCredentialInput::INVALID_TOKEN_SHAPE ),
-			'token contains punctuation'         => array( 'classic', 'ghp_' . str_repeat( 'a', 35 ) . '-', InvalidCredentialInput::INVALID_TOKEN_SHAPE ),
-			'token contains a control character' => array( 'fine-grained', 'github_pat_' . str_repeat( 'a', 29 ) . "\n", InvalidCredentialInput::INVALID_TOKEN_SHAPE ),
+			'classic uses fine prefix'           => array( 'classic', 'github_pat_' . str_repeat( 'a', 40 ), InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH ),
+			'classic has unknown prefix'         => array( 'classic', 'future_' . str_repeat( 'a', 40 ), InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH ),
+			'fine-grained uses classic prefix'   => array( 'fine-grained', 'ghp_' . str_repeat( 'a', 40 ), InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH ),
+			'fine-grained has unknown prefix'    => array( 'fine-grained', 'future_' . str_repeat( 'a', 40 ), InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH ),
+			'token is truncated'                 => array( 'classic', 'ghp_short', InvalidCredentialInput::INVALID_SECRET_SHAPE ),
+			'token is over the defensive bound'  => array( 'classic', 'ghp_' . str_repeat( 'a', 252 ), InvalidCredentialInput::INVALID_SECRET_SHAPE ),
+			'token contains punctuation'         => array( 'classic', 'ghp_' . str_repeat( 'a', 35 ) . '-', InvalidCredentialInput::INVALID_SECRET_SHAPE ),
+			'token contains a control character' => array( 'fine-grained', 'github_pat_' . str_repeat( 'a', 29 ) . "\n", InvalidCredentialInput::INVALID_SECRET_SHAPE ),
 		);
 	}
 

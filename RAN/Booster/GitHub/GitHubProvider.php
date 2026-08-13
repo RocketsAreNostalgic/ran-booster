@@ -115,7 +115,8 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 						true,
 						'Owner',
 						'organization-or-user',
-						'Use this secret for repositories belonging to one organization or user.'
+						'Use this secret for repositories belonging to one organization or user.',
+						true
 					),
 					new WebhookScopeMetadata(
 						'repository',
@@ -149,7 +150,7 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 				),
 				new ProviderNavigationPlacement(
 					ProviderNavigationPlacement::GIT_HOST,
-					ProviderNavigationPlacement::GITHUB_SLOT
+					100
 				),
 				'owner/repository',
 				new ProviderWebhookAssistanceMetadata(

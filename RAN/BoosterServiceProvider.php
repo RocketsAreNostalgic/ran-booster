@@ -232,13 +232,19 @@ final class BoosterServiceProvider {
 		$providers = new ProviderRegistry(
 			array(),
 			$secretPolicies,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader => new \RAN\RepositoryProvider\ProviderBoundWebhookDeliveryEvidenceReader(
+				$code,
+				static fn ( ProviderCode $boundCode ): ?\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence => $container
+					->make( DeploymentAttemptRepository::class )
+					->latestAuthenticatedDelivery( $boundCode )
+			)
 		);
 		$providers->registerWithCredentialStore(
 			'gh',
-			static fn ( ProviderCredentialStore $credentials ): RepositoryProvider => GitHubProvider::create(
+			static fn ( ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(
 				$credentials,
-				$container->make( DeploymentAttemptRepository::class )
+				$deliveryEvidence
 			)
 		);
 		$container->bind( ProviderRegistry::class, $providers );

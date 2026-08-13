@@ -497,7 +497,7 @@ final class WebhookNormalizerTest extends TestCase {
 		$deliveries = new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
 			public int $calls = 0;
 
-			public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 				++$this->calls;
 
 				return null;
@@ -552,7 +552,7 @@ final class WebhookNormalizerTest extends TestCase {
 
 	public function testWebhookReadinessSafelyReportsUnavailableDeliveryEvidence(): void {
 		$deliveries = new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
-			public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 				throw new \RuntimeException( 'delivery-evidence-canary' );
 			}
 		};
@@ -626,11 +626,7 @@ final class WebhookNormalizerTest extends TestCase {
 			public function __construct( private ?AuthenticatedWebhookDeliveryEvidence $evidence ) {
 			}
 
-			public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
-				if ( null !== $this->evidence && ! $this->evidence->provider->equals( $provider ) ) {
-					throw new \RuntimeException( 'Unexpected provider.' );
-				}
-
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 				return $this->evidence;
 			}
 		};

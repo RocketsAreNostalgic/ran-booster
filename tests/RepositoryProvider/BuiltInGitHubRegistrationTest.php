@@ -73,7 +73,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertSame( 'GitHub', $metadata->label );
 		self::assertSame( 'https://github.com/', $metadata->repositoryUrlBase );
 		self::assertSame( ProviderNavigationPlacement::GIT_HOST, $metadata->admin?->navigation?->group );
-		self::assertSame( ProviderNavigationPlacement::GITHUB_SLOT, $metadata->admin?->navigation?->slot );
+		self::assertSame( 100, $metadata->admin?->navigation?->slot );
 		self::assertSame( 1, $secrets->credentialStoresIssued );
 		self::assertSame( 0, $secrets->credentialStore->reads );
 	}

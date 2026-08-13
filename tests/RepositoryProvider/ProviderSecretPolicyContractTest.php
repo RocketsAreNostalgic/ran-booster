@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
 use RAN\RepositoryProvider\InvalidProviderPolicy;
 use RAN\RepositoryProvider\ProviderCode;
@@ -34,6 +35,7 @@ use Tests\Support\CredentialUsageDatabase;
 use RuntimeException;
 use Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
 use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use Tests\RepositoryProvider\Support\InertWebhookPolicy;
 use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 use Tests\Secrets\SecretsFileTestFactory;
@@ -186,7 +188,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->registerWithCredentialStore(
 			'fixture',
@@ -211,7 +214,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			$catalog,
 			static function (): ProviderCredentialStore {
 				throw new RuntimeException( 'credential-store-token-canary' );
-			}
+			},
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
@@ -235,7 +239,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
@@ -262,7 +267,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -320,7 +326,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
@@ -354,7 +361,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				++$issued;
 
 				return $secrets->credentialsFor( $code );
-			}
+			},
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
@@ -381,7 +389,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				++$credentialStoreCalls;
 
 				throw new RuntimeException( 'The credential-store factory must not run after sealing.' );
-			}
+			},
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->seal();
 
@@ -412,7 +421,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
@@ -437,7 +447,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		$registry->registerWithCredentialStore(
@@ -507,7 +518,8 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry      = new ProviderRegistry(
 			array(),
 			$activeCatalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $activeSecrets->credentialsFor( $code )
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $activeSecrets->credentialsFor( $code ),
+			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->registerWithCredentialStore(
 			'fixture',

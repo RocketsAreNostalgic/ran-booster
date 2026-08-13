@@ -11,6 +11,7 @@ use RAN\Booster\GitHub\WebhookNormalizer as GitHubWebhookNormalizer;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderBoundWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderWebhookProfileReader;
 use ReflectionClass;
@@ -81,7 +82,7 @@ final class ProviderTrustConformanceTest extends TestCase {
 		$deliveryEvidence = new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
 			public int $reads = 0;
 
-			public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
+			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 				unset( $provider );
 				++$this->reads;
 
@@ -92,6 +93,36 @@ final class ProviderTrustConformanceTest extends TestCase {
 
 		self::assertSame( 0, $store->reads );
 		self::assertSame( 0, $deliveryEvidence->reads );
+	}
+
+	public function testDeliveryEvidenceAdapterBindsTheProviderBeforeTheModuleReads(): void {
+		$requested = null;
+		$reader    = new ProviderBoundWebhookDeliveryEvidenceReader(
+			ProviderCode::parse( 'gh' ),
+			static function ( ProviderCode $provider ) use ( &$requested ): AuthenticatedWebhookDeliveryEvidence {
+				$requested = $provider->value;
+
+				return new AuthenticatedWebhookDeliveryEvidence( $provider, '2026-08-13 12:00:00', true );
+			}
+		);
+
+		self::assertSame( '2026-08-13 12:00:00', $reader->latestAuthenticatedDelivery()?->receivedAt );
+		self::assertSame( 'gh', $requested );
+	}
+
+	public function testDeliveryEvidenceAdapterRejectsCrossProviderEvidence(): void {
+		$reader = new ProviderBoundWebhookDeliveryEvidenceReader(
+			ProviderCode::parse( 'gh' ),
+			static fn (): AuthenticatedWebhookDeliveryEvidence => new AuthenticatedWebhookDeliveryEvidence(
+				ProviderCode::parse( 'bb' ),
+				'2026-08-13 12:00:00',
+				true
+			)
+		);
+
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'does not match its provider binding' );
+		$reader->latestAuthenticatedDelivery();
 	}
 
 	public function testCredentialSurfacesDiscloseTheProviderTrustDecision(): void {

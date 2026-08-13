@@ -291,7 +291,7 @@ class ProviderProfileAdminController {
 		$authorityId = '';
 		if ( 'repository' === $scope ) {
 			$authorityId = $this->webhookAuthorities->resolve( $provider, $normalizer->getWebhookPolicy(), $target );
-		} elseif ( 'owner' === $scope && 'gh' === $provider->value ) {
+		} elseif ( 'owner' === $scope && $scopeMetadata->requiresManagedTarget ) {
 			$target = $this->webhookAuthorities->resolveOwner( $provider, $target );
 		}
 		$savedId      = $this->secrets->saveWebhook(

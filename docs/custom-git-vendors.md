@@ -34,27 +34,39 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 8 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+      || 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
     $registry->registerWithCredentialStore(
       'example-vendor',
-      static fn ( \RAN\RepositoryProvider\ProviderCredentialStore $credentials ): \RAN\RepositoryProvider\RepositoryProvider => new ExampleVendorProvider( $credentials )
+      static fn (
+        \RAN\RepositoryProvider\ProviderCredentialStore $credentials,
+        \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+      ): \RAN\RepositoryProvider\RepositoryProvider => new ExampleVendorProvider( $credentials, $deliveryEvidence )
     );
   }
 );
 ```
 
 Use `registerWithCredentialStore()` when the provider reads stored credentials.
-The supplied store exposes display-safe profiles, one selected or default
-credential under that provider code and the boolean `hasWebhookProfile()`
-diagnostic readiness check. It cannot select another provider, read signing
-material, inspect paths or write state. The factory must remain local and
-non-I/O, and the returned provider must use exactly the code that was requested.
-Activating a credential-bearing provider therefore trusts it with credentials
-saved under its code; registration order is not publisher authentication, and
-Core cannot control the provider's private code after authorized disclosure.
+Its callback receives two read-only values already bound to the requested
+provider code. `ProviderCredentialStore` exposes display-safe profiles, one
+selected or default credential and the boolean `hasWebhookProfile()` diagnostic
+readiness check. `AuthenticatedWebhookDeliveryEvidenceReader` exposes only
+`latestAuthenticatedDelivery()` for that provider. Neither value accepts a
+provider argument, selects another provider, writes state or exposes sidecar
+paths, signing material, a credential writer or a database/deployment
+repository. The factory must remain local and non-I/O, and the returned provider
+must use exactly the code that was requested. Activating a credential-bearing
+provider therefore trusts it with credentials saved under its code;
+registration order is not publisher authentication, and Core cannot control the
+provider's private code after authorized disclosure.
+
+Provider API 9 supplies no logger, service container or generic resolver. An
+unexpected caught diagnostic failure may be attached only to a bounded
+request-local `ProviderDiagnosticResult` for Core to log; it is omitted from
+serialization and administrator copy.
 
 ## Core contract
 
@@ -92,6 +104,12 @@ If the provider has admin-facing credential kinds or web hook scopes, include
 placeholders, descriptions, scope names, and web hook guidance within the
 constructor limits.
 
+Use an optional `ProviderNavigationPlacement` when the provider should declare
+its position in Core's provider navigation. Choose the ordinary `git-host` or
+`other-provider` group and a slot from 1 through 10,000. No slot is reserved for
+a built-in provider. Omitted placement falls back to `other-provider` at slot
+10,000, and equal placements are ordered by provider code.
+
 ### Diagnostics
 
 `RAN\RepositoryProvider\ProviderDiagnostics` is the troubleshooting suite.
@@ -108,6 +126,13 @@ Diagnostics should stay bounded, local where possible, and redacted. Use the
 request's `claimRemoteCall()` method before each outbound call so your code
 respects the remaining time budget.
 
+For an unexpected exception that the provider must catch to return a bounded
+result, pass the original `Throwable` only through the optional request-local
+failure field. Core first validates the result's status, code and safe display
+text, then logs the failure at its troubleshooting boundary.
+`ProviderDiagnosticResult::toArray()` omits it. Expected provider outcomes use
+ordinary typed results without a failure; there is no Provider API logger.
+
 ### Repository resolution and archive preparation
 
 A vendor's `resolveRepository()` method should convert a lookup request into a
@@ -121,6 +146,13 @@ branch, credential selection, and package slug.
 a host, and must not contain user info or fragments. Providers must not place
 reusable secrets in archive URLs.
 
+Provider API 9 supplies `GitReferenceSyntax::isValidNamedReference()` for the
+generic bounded branch/ref syntax check and `AuthenticatedPreparedArchive` for
+the one-request archive authentication, redirect scrubbing, head verification
+and cleanup lifecycle. A vendor may impose stricter syntax or origin rules, but
+must not weaken that authentication cleanup or import Core deployment/storage
+implementations.
+
 ### Optional capabilities
 
 Custom vendors can add optional capability interfaces when the vendor supports
@@ -132,6 +164,8 @@ them:
   provider-default applicability.
 - `RAN\RepositoryProvider\ProviderCredentialPolicySupplier` for credential
   normalization and deployment constant mapping.
+- `RAN\RepositoryProvider\SubmittedCredentialValidator` on the returned
+  credential policy for new or replacement credential-shape checks.
 - `RAN\RepositoryProvider\WebhookNormalizer` for push-to-deploy web hook
   normalization and signing policy.
 - `RAN\RepositoryProvider\RepositoryWebhookSettingsLink` to link a managed
@@ -154,6 +188,15 @@ metadata is missing or malformed; do not pass raw provider headers into Core.
 Vendors that report no expiry remain compatible and use Booster's optional
 manual credential date.
 
+`SubmittedCredentialValidator` may reject new or replacement material with
+`InvalidCredentialInput`. Use only the provider-neutral reasons
+`invalid_configuration`, `credential_kind_mismatch` or `invalid_secret_shape`
+and a non-empty, single-line administrator message of at most 512 bytes. Core
+rejects unknown reasons and unsafe, structured, token-shaped, path-like or
+authorization-bearing text to one generic message. Existing saved,
+constant-backed and imported credentials deliberately bypass this submitted
+shape check.
+
 ## Methodology for a new vendor
 
 1. Choose a unique `ProviderCode` and decide whether the provider needs admin
@@ -163,6 +206,9 @@ manual credential date.
    path before any deployment work is attempted.
 1. Add `ProviderCredentialPolicySupplier` if the vendor uses named credential
    profiles or deployment constants.
+1. Add `SubmittedCredentialValidator` to that policy only when current
+   submissions need a provider-specific shape check; test both accepted bounded
+   copy and Core's generic fallback for unsafe failures.
 1. Add `WebhookNormalizer` only if the vendor can normalize and authorize
    signed web hooks safely.
 1. Add `RepositoryWebhookSettingsLink` only if the provider has a stable HTTPS
@@ -211,7 +257,7 @@ Common setup failures and what they mean:
 
 If the vendor registers in tests but not in WordPress, confirm that the callback
 runs on the active plugin load path and that `RAN_BOOSTER_PROVIDER_API_VERSION`
-is exactly `8`.
+is exactly `9`.
 
 ## Related types
 
@@ -224,16 +270,25 @@ The main types you will usually touch while adding a new vendor are:
 - `RAN\RepositoryProvider\ProviderDiagnostics`
 - `RAN\RepositoryProvider\ProviderDiagnosticRequest`
 - `RAN\RepositoryProvider\ProviderDiagnosticResult`
+- `RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader`
 - `RAN\RepositoryProvider\RepositoryLookupRequest`
 - `RAN\RepositoryProvider\RepositoryDescriptor`
 - `RAN\RepositoryProvider\RepositoryBrowser`
 - `RAN\RepositoryProvider\ProviderCredentialPolicySupplier`
+- `RAN\RepositoryProvider\SubmittedCredentialValidator`
+- `RAN\RepositoryProvider\InvalidCredentialInput`
 - `RAN\RepositoryProvider\ProviderWebhookPolicy`
 - `RAN\RepositoryProvider\RepositoryWebhookFitness`
 - `RAN\RepositoryProvider\RepositoryWebhookManagement`
 - `RAN\RepositoryProvider\RepositoryWebhookFitnessResult`
 - `RAN\RepositoryProvider\RepositoryWebhookOperationResult`
 - `RAN\RepositoryProvider\PreparedArchive`
+- `RAN\RepositoryProvider\AuthenticatedPreparedArchive`
+- `RAN\RepositoryProvider\GitReferenceSyntax`
 
 For a deeper discussion of the provider contract itself, see the
 [provider extension contract](provider-extension-contract.md).
+
+The bundled GitHub module uses this same ordinary-vendor contract and remains
+owned and shipped by Core. Provider API 9 does not authorize extracting it into
+a separate package or release stream; extraction remains NO-GO.

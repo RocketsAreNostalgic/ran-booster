@@ -10,7 +10,7 @@ use RAN\RepositoryProvider\ProviderCode;
 
 final class EmptyAuthenticatedWebhookDeliveryEvidenceReader implements AuthenticatedWebhookDeliveryEvidenceReader {
 
-	public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
+	public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 		return null;
 	}
 }

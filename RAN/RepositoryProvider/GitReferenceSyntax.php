@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\RepositoryProvider;
 
+/**
+ * Shared Provider API validation for repository-owned named Git references.
+ */
 final class GitReferenceSyntax {
 
 	public static function isValidNamedReference( string $reference ): bool {

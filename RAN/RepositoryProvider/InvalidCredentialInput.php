@@ -7,30 +7,44 @@ namespace RAN\RepositoryProvider;
 use InvalidArgumentException;
 use RuntimeException;
 
-/**
- * A closed provider-input failure whose fixed message is safe for administrators.
- */
+/** A bounded provider-input failure safe for an administrator boundary. */
 final class InvalidCredentialInput extends RuntimeException {
 
-	public const INVALID_RESOURCE_OWNER = 'invalid_resource_owner';
-	public const LOOKS_CLASSIC          = 'looks_classic';
-	public const REQUIRES_CLASSIC       = 'requires_classic';
-	public const REQUIRES_FINE_GRAINED  = 'requires_fine_grained';
-	public const INVALID_TOKEN_SHAPE    = 'invalid_token_shape';
+	public const INVALID_CONFIGURATION    = 'invalid_configuration';
+	public const CREDENTIAL_KIND_MISMATCH = 'credential_kind_mismatch';
+	public const INVALID_SECRET_SHAPE     = 'invalid_secret_shape';
 
-	private const MESSAGES = array(
-		self::INVALID_RESOURCE_OWNER => 'Enter the GitHub user or organisation selected as the token\'s resource owner, not an email address.',
-		self::LOOKS_CLASSIC          => 'This token begins with ghp_, which identifies a classic personal access token. Choose Classic personal access token or paste a fine-grained token.',
-		self::REQUIRES_CLASSIC       => 'Classic personal access tokens must begin with ghp_. Choose Fine-grained personal access token if the token begins with github_pat_.',
-		self::REQUIRES_FINE_GRAINED  => 'Fine-grained personal access tokens must begin with github_pat_. Choose Classic personal access token if the token begins with ghp_.',
-		self::INVALID_TOKEN_SHAPE    => 'Enter a GitHub personal access token containing 40 to 255 letters, numbers, or underscores.',
+	private const REASONS = array(
+		self::INVALID_CONFIGURATION    => true,
+		self::CREDENTIAL_KIND_MISMATCH => true,
+		self::INVALID_SECRET_SHAPE     => true,
 	);
 
-	public function __construct( public readonly string $reason ) {
-		if ( ! isset( self::MESSAGES[ $reason ] ) ) {
+	public function __construct( public readonly string $reason, string $message ) {
+		if ( ! isset( self::REASONS[ $reason ] ) ) {
 			throw new InvalidArgumentException( 'Credential input failure reason is invalid.' );
 		}
+		$this->assertSafeText( $message );
 
-		parent::__construct( self::MESSAGES[ $reason ] );
+		parent::__construct( $message );
+	}
+
+	private function assertSafeText( string $value ): void {
+		if ( '' === trim( $value )
+			|| strlen( $value ) > 512
+			|| 1 !== preg_match( '//u', $value )
+			|| 1 === preg_match( '/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u', $value )
+			|| 1 === preg_match( '/<\/?[A-Za-z][^>]*>/', $value )
+			|| 1 === preg_match( '/\b(?:authorization|proxy-authorization|cookie|set-cookie|x-hub-signature(?:-256)?|x-api-key|x-auth-token|private-token)\s*:/i', $value )
+			|| 1 === preg_match( '/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+\/=:-]{8,}/i', $value )
+			|| 1 === preg_match( '/\b(?:gh[pousr]_|github_pat_|ATATT3)[A-Za-z0-9_-]{6,}/', $value )
+			|| 1 === preg_match( '/\bglpat-[A-Za-z0-9_-]{6,}/', $value )
+			|| 1 === preg_match( '#(?:^|[\s(])(?:[A-Za-z]:[\\\\/]|/(?!/)[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*)#', $value )
+			|| 1 === preg_match( '#(?:^|[\s(])\\\\\\\\[^\\\\\s]+\\\\[^\\\\\s]+#', $value )
+			|| 1 === preg_match( '/[{}\[\]]/', $value )
+			|| 1 === preg_match( '#https?://[^/\s]+@#i', $value )
+		) {
+			throw new InvalidArgumentException( 'Credential input failure text must be safe, plain, single-line text.' );
+		}
 	}
 }

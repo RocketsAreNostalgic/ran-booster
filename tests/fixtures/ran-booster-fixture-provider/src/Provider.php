@@ -8,6 +8,7 @@ use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\CredentialValidationResult;
 use RAN\RepositoryProvider\CredentialValidator;
 use RAN\RepositoryProvider\PreparedArchive as PreparedArchiveContract;
@@ -36,7 +37,10 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 	private CredentialPolicy $credentialPolicy;
 	private Diagnostics $diagnostics;
 
-	public function __construct( private ProviderCredentialStore $credentials ) {
+	public function __construct(
+		private ProviderCredentialStore $credentials,
+		private AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+	) {
 		$this->code             = ProviderCode::parse( 'fixture-provider' );
 		$this->client           = new Client();
 		$this->credentialPolicy = new CredentialPolicy();
@@ -135,6 +139,10 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 
 	public function getClient(): Client {
 		return $this->client;
+	}
+
+	public function latestDeliveryWasObserved(): bool {
+		return null !== $this->deliveryEvidence->latestAuthenticatedDelivery();
 	}
 
 	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {

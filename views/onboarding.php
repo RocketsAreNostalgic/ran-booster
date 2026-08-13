@@ -199,7 +199,7 @@ $hasStorageDetails                 = null !== $secretsStorage
 									<?php if ( null !== $storageRecovery['candidate_directory'] ) { ?>
 										<p class="description"><strong><?php esc_html_e( 'Verified storage directory:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storageRecovery['candidate_directory'] ); ?></code></p>
 									<?php } ?>
-									<p class="description"><?php esc_html_e( 'This proves decryption, canonical storage and current provider credential shape, including GitHub token prefixes. It does not contact the provider or prove that a token is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files.', 'ran-booster' ); ?></p>
+									<p class="description"><?php esc_html_e( 'This proves decryption, canonical storage and the current registered provider credential shape. It does not contact a provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files.', 'ran-booster' ); ?></p>
 									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secretsStorage['action_url'] ); ?>">
 										<?php wp_nonce_field( 'ran-booster-adopt-secure-storage' ); ?>
 										<input type="hidden" name="ran_booster[action]" value="adopt-secure-storage">

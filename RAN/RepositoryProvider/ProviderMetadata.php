@@ -59,10 +59,6 @@ final readonly class ProviderMetadata {
 		$this->label             = $label;
 		$this->ownerLabel        = $ownerLabel;
 		$this->repositoryUrlBase = 'https://' . strtolower( $parts['host'] ) . $port . $path;
-
-		if ( null !== $this->admin && null !== $this->admin->navigation ) {
-			$this->admin->navigation->assertProvider( $this->code );
-		}
 	}
 
 	/**

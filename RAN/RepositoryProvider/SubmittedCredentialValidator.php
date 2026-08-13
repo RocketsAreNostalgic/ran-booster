@@ -10,7 +10,8 @@ namespace RAN\RepositoryProvider;
  * Existing saved, constant, and imported credentials deliberately bypass this
  * check so provider format changes do not make historical material unreadable.
  *
- * @internal Core-owned compatibility seam; not part of Provider API 8.
+ * This optional Provider API contract must reject invalid input with a bounded
+ * InvalidCredentialInput or another failure that Core maps to generic copy.
  */
 interface SubmittedCredentialValidator {
 

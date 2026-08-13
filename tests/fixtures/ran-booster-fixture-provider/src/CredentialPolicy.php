@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace RANBoosterFixtureProvider;
 
+use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialPolicy;
+use RAN\RepositoryProvider\SubmittedCredentialValidator;
 use RuntimeException;
 
-final readonly class CredentialPolicy implements ProviderCredentialPolicy {
+final readonly class CredentialPolicy implements ProviderCredentialPolicy, SubmittedCredentialValidator {
 
 	public function getProvider(): ProviderCode {
 		return ProviderCode::parse( 'fixture-provider' );
@@ -40,6 +42,17 @@ final readonly class CredentialPolicy implements ProviderCredentialPolicy {
 
 	public function getConstantNames(): array {
 		return array();
+	}
+
+	public function validateSubmittedCredential( array $metadata, #[\SensitiveParameter] string $secret ): void {
+		if ( ! str_starts_with( $secret, 'fixture_' ) ) {
+			// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Core revalidates this conformance fixture's fixed safe copy.
+			throw new InvalidCredentialInput(
+				InvalidCredentialInput::INVALID_SECRET_SHAPE,
+				'Fixture API keys must begin with fixture_.'
+			);
+			// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		}
 	}
 
 	public function credentialFromConstants( array $constants ): ?array {

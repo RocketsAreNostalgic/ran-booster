@@ -47,7 +47,10 @@ $footerPluginAuthorLink = esc_url( $footerPluginAuthorUrl );
 	<div class="ran-booster-footer">
 		<?php require __DIR__ . '/admin-feedback-toast.php'; ?>
 		<p>
-			Copyright &copy; <?php echo esc_html( wp_date( 'Y' ) ); ?>
+			<?php
+			/* translators: %s: current year. */
+			echo esc_html( sprintf( __( 'Copyright © %s', 'ran-booster' ), wp_date( 'Y' ) ) );
+			?>
 			<?php if ( '' !== $footerPluginAuthor && '' !== $footerPluginAuthorLink ) { ?>
 				<a href="<?php echo esc_url( $footerPluginAuthorLink ); ?>"><?php echo esc_html( $footerPluginAuthor ); ?></a>
 			<?php } else { ?>

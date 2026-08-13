@@ -45,6 +45,23 @@ final class AdminTabRegistryTest extends TestCase {
 		self::assertSame( AdminTabKind::PAGE, $registry->resolve( 'documentation' )->getKind() );
 	}
 
+	public function testProviderTabsUseDeterministicHostOrderInsteadOfRegistrationOrder(): void {
+		$registry = new AdminTabRegistry(
+			new ProviderRegistry(
+				array(
+					$this->provider( ProviderCode::parse( 'fixture' ), 'Fixture' ),
+					$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ),
+					$this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ),
+				)
+			)
+		);
+
+		self::assertSame(
+			array( 'overview', 'gh', 'bb', 'fixture', 'portability', 'documentation', 'troubleshooting' ),
+			array_map( static fn ( AdminTab $tab ): string => $tab->getKey(), $registry->all() )
+		);
+	}
+
 	/** @return list<array{mixed}> */
 	public static function invalidRequestedTabProvider(): array {
 		return array(

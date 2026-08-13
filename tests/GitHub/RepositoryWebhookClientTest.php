@@ -16,18 +16,40 @@ final class RepositoryWebhookClientTest extends TestCase {
 	private const TOKEN  = 'request-token-canary';
 	private const SECRET = 'webhook-signing-canary-which-must-not-return';
 
-	public function testFitnessUsesOneBoundedReadAndReturnsNoCredential(): void {
+	/** @return iterable<string, array{string}> */
+	public static function fitnessActions(): iterable {
+		yield 'setup' => array( 'assessSetup' );
+		yield 'check' => array( 'assessCheck' );
+		yield 'reconfigure' => array( 'assessReconfigure' );
+		yield 'remove' => array( 'assessRemove' );
+	}
+
+	#[DataProvider( 'fitnessActions' )]
+	public function testFitnessUsesOneBoundedReadAndReturnsNoCredential( string $method ): void {
 		\RAN\GitHub\repository_resolver_http_queue(
-			array( $this->response( 200, array( 'id' => 101 ) ) )
+			array( $this->response( 200, array( 'id' => 101 ), array( 'x-oauth-scopes' => 'repo, admin:repo_hook' ) ) )
 		);
-		$result   = ( new RepositoryWebhookClient() )->assessSetup( '101', 'owner/example', self::TOKEN );
+		$result   = ( new RepositoryWebhookClient() )->{$method}( '101', 'owner/example', self::TOKEN );
 		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$evidence = $result->toArray();
 
 		self::assertCount( 1, $requests );
 		self::assertSame( 65536, $requests[0]['arguments']['limit_response_size'] );
 		self::assertSame( 0, $requests[0]['arguments']['redirection'] );
+		self::assertSame( 'classic_scope_broad', $evidence['code'] );
+		self::assertSame( 'observed', $evidence['evidence'] );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
-		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+		self::assertStringNotContainsString( self::TOKEN, json_encode( $evidence, JSON_THROW_ON_ERROR ) );
+	}
+
+	#[DataProvider( 'fitnessActions' )]
+	public function testFitnessFailurePreservesTheRequestedAction( string $method ): void {
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 503, array() ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->{$method}( '101', 'owner/example', self::TOKEN );
+		$action = strtolower( substr( $method, strlen( 'assess' ) ) );
+
+		self::assertSame( $action . '_assessment_unavailable', $result->toArray()['code'] );
 	}
 
 	public function testSetupUsesAtMostFiveSuccessfulCallsAcrossThreePages(): void {
@@ -227,6 +249,42 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertSame( array( 'GET', 'PATCH', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
 	}
 
+	public function testReconfigureSucceedsOnlyAfterConfirmedReadback(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, $hook ),
+				$this->response( 200, $hook ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->reconfigure( 'owner/example', '55', 'https://site.example/hook', self::TOKEN, self::SECRET );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'configured_pending_delivery', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertSame( array( 'GET', 'PATCH', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+		self::assertSame( array( 65536, 65536, 65536 ), array_column( array_column( $requests, 'arguments' ), 'limit_response_size' ) );
+		self::assertSame(
+			array(
+				'name'   => 'web',
+				'active' => true,
+				'events' => array( 'push' ),
+				'config' => array(
+					'url'          => 'https://site.example/hook',
+					'content_type' => 'json',
+					'insecure_ssl' => '0',
+					'secret'       => self::SECRET,
+				),
+			),
+			json_decode( $requests[1]['arguments']['body'], true, 32, JSON_THROW_ON_ERROR )
+		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( self::SECRET, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+	}
+
 	public function testRemoveAbsenceReadbackFailureRemainsAmbiguousWithTheKnownHookIdentity(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
 		\RAN\GitHub\repository_resolver_http_queue(
@@ -255,6 +313,23 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertSame( 'hook_readback_invalid', $result->code() );
 	}
 
+	public function testCheckSucceedsWithOneBoundedReadOfTheExactHook(): void {
+		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://site.example/hook' ) ) ) );
+
+		$result   = ( new RepositoryWebhookClient() )->check( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+		$requests = \RAN\GitHub\repository_resolver_http_requests();
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'configuration_confirmed', $result->code() );
+		self::assertSame( '55', $result->hookId() );
+		self::assertCount( 1, $requests );
+		self::assertSame( 'GET', $requests[0]['arguments']['method'] );
+		self::assertSame( 65536, $requests[0]['arguments']['limit_response_size'] );
+		self::assertSame( 0, $requests[0]['arguments']['redirection'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+	}
+
 	/** @return array<string,mixed> */
 	private function hook( int $id, string $url ): array {
 		return array(
@@ -269,10 +344,10 @@ final class RepositoryWebhookClientTest extends TestCase {
 	}
 
 	/** @param mixed $body @return array<string,mixed> */
-	private function response( int $status, mixed $body ): array {
+	private function response( int $status, mixed $body, array $headers = array() ): array {
 		return array(
 			'response' => array( 'code' => $status ),
-			'headers'  => array(),
+			'headers'  => $headers,
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test transport fixture.
 			'body'     => json_encode( $body, JSON_THROW_ON_ERROR ),
 		);

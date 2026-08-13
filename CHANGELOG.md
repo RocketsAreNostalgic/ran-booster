@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-beta.16](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-08-13)
+
+
+### Features
+
+* publish provider API 9 ([89d5817](https://github.com/RocketsAreNostalgic/ran-booster/commit/89d5817f9331bfe9d7ca19439f8024b0b09affda))
+* publish Provider API 9 ([70ce8bc](https://github.com/RocketsAreNostalgic/ran-booster/commit/70ce8bc6453e53e33634aa3f7a6f863894d1273e))
+
 ## [1.0.0-beta.15](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-08-11)
 
 

@@ -213,7 +213,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 				</summary>
 				<div class="ran-booster-documentation__content">
 					<?php if ( $setupAvailable ) { ?>
-						<h3><?php esc_html_e( 'Minimum token permissions', 'ran-booster' ); ?></h3>
+						<h3><?php esc_html_e( 'Minimum credential permissions', 'ran-booster' ); ?></h3>
 						<p><?php echo esc_html( $credentials['summary'] ?? '' ); ?></p>
 						<?php if ( '' !== $settingsUrl ) { ?>
 							<p><a class="button" href="<?php echo esc_url( $settingsUrl ); ?>">
@@ -349,7 +349,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 				<ul>
 					<li><strong><?php esc_html_e( 'Safety.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Booster verifies a repository’s identity and an archive’s contents before it touches a file, and will not let a delayed or out-of-order webhook roll back code that has already been updated. Saved credentials use authenticated encryption in a file with restrictive', 'ran-booster' ); ?> <code>0600</code> <?php esc_html_e( 'permissions; the independent key remains in the WordPress database, so neither a file-only nor database-only copy contains usable credentials.', 'ran-booster' ); ?></li>
 					<li><strong><?php esc_html_e( 'Transporter.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'A password-protected Transporter Blueprint moves package and repository configuration, and any credentials you choose, between sites without copying a development checkout.', 'ran-booster' ); ?></li>
-					<li><strong><?php esc_html_e( 'Independence & Security.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'No vendor-hosted licensing, OAuth broker or repository-picker service. Further, the inherited codebase stored a private repository’s access token as a WordPress option in the database; Booster instead saves your personal access token in a file on your own site, never in the WordPress database.', 'ran-booster' ); ?></li>
+					<li><strong><?php esc_html_e( 'Independence & Security.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'No vendor-hosted licensing, OAuth broker or repository-picker service. Further, the inherited codebase stored a private repository’s access token as a WordPress option in the database; Booster instead saves your repository credential in a file on your own site, never in the WordPress database.', 'ran-booster' ); ?></li>
 					<li><strong><?php esc_html_e( 'Extensibility.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Additional git providers can be added through a documented registration hook without modifying Booster itself.', 'ran-booster' ); ?></li>
 				</ul>
 

@@ -33,6 +33,7 @@
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",
+        "test:github-module": "phpunit --configuration phpunit.github-module.xml",
         "test:unit": "phpunit --configuration phpunit.xml",
         "test:delivery-intake-race": "bash tests/WordPress/delivery-intake-race.sh",
         "test:worker-hard-stop": "bash tests/WordPress/worker-hard-stop.sh",
@@ -43,6 +44,7 @@
         "test:database-storage-smoke": "bash tests/WordPress/database-storage-smoke.sh",
         "test": [
             "@test:characterization",
+            "@test:github-module",
             "@test:unit",
             "@test:github-release-updater-bootstrap"
         ],

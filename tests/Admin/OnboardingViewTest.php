@@ -32,7 +32,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertIsInt( $move );
 		self::assertLessThan( $private, $install );
 		self::assertLessThan( $move, $private );
-		self::assertStringContainsString( 'Public repositories do not need access tokens or webhooks.', $html );
+		self::assertStringContainsString( 'Public repositories do not need repository credentials or webhooks.', $html );
 		self::assertStringContainsString( 'Install and manage custom plugins and themes from supported Git repositories; private access and Push-to-Deploy are optional.', $html );
 		self::assertStringContainsString( 'Packages begin in Manual mode.', $html );
 	}

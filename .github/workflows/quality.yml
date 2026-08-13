@@ -297,6 +297,9 @@ jobs:
                       "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
                       "$plugin_root/vendor/ran/wp-github-release-updater"
 
+            - name: Read back the installed GitHub provider contract
+              run: wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress
+
             - name: Prove global Core container isolation
               run: |
                   wp eval '

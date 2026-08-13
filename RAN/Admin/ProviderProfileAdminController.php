@@ -260,10 +260,10 @@ class ProviderProfileAdminController {
 					$this->expiryObservations->setManualExpiry( $provider->value, $savedId, $manualExpiry );
 				}
 				return $selfDestruct
-					? 'Repository access token saved with automatic removal enabled.'
+					? 'Repository credential saved with automatic removal enabled.'
 					: ( $isReplacement
-						? 'Repository access token replaced. Validate it to refresh provider expiry information.'
-						: 'Repository access token saved.' );
+						? 'Repository credential replaced. Validate it to refresh provider expiry information.'
+						: 'Repository credential saved.' );
 			}
 		);
 	}
@@ -332,7 +332,7 @@ class ProviderProfileAdminController {
 				if ( $usageCount > 0 ) {
 					throw new CredentialRequestException(
 						sprintf(
-							'This repository access token is used by %d managed package%s. Assign another credential before deleting it.',
+							'This repository credential is used by %d managed package%s. Assign another credential before deleting it.',
 							$usageCount, // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal count is escaped at the response boundary.
 							1 === $usageCount ? '' : 's'
 						)
@@ -347,8 +347,8 @@ class ProviderProfileAdminController {
 				}
 				$this->expiryObservations->clear( $provider->value, $id );
 				return $clearedDefault
-					? 'Repository access token removed. Public repository lookup now uses anonymous access.'
-					: 'Repository access token removed.';
+					? 'Repository credential removed. Public repository lookup now uses anonymous access.'
+					: 'Repository credential removed.';
 			}
 		);
 	}

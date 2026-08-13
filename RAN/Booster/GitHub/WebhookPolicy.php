@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
+use RAN\RepositoryProvider\InvalidWebhookInput;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderWebhookPolicy;
+use RAN\RepositoryProvider\SignedWebhookVerification;
 use RuntimeException;
 
-final readonly class GitHubWebhookPolicy implements ProviderWebhookPolicy {
+final readonly class WebhookPolicy implements ProviderWebhookPolicy {
 
 	public function getProvider(): ProviderCode {
 		return ProviderCode::parse( 'gh' );

@@ -39,14 +39,12 @@ use RAN\Admin\BackgroundDeploymentFailureMonitor;
 use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
-use RAN\GitHub\RepositoryBrowser as GitHubRepositoryBrowser;
-use RAN\GitHub\RepositoryWebhookClient as GitHubRepositoryWebhookClient;
+use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Internal\CoreContainer;
-use RAN\RepositoryProvider\GitHubProvider;
-use RAN\RepositoryProvider\GitHubWebhookNormalizer;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsRuntimeAvailability;
@@ -238,15 +236,10 @@ final class BoosterServiceProvider {
 		);
 		$providers->registerWithCredentialStore(
 			'gh',
-			static function ( ProviderCredentialStore $credentials ) use ( $container ): GitHubProvider {
-				$browser  = new GitHubRepositoryBrowser( $credentials );
-				$webhooks = new GitHubWebhookNormalizer(
-					$credentials,
-					$container->make( DeploymentAttemptRepository::class )
-				);
-
-				return new GitHubProvider( $credentials, $browser, $webhooks, new GitHubRepositoryWebhookClient() );
-			}
+			static fn ( ProviderCredentialStore $credentials ): RepositoryProvider => GitHubProvider::create(
+				$credentials,
+				$container->make( DeploymentAttemptRepository::class )
+			)
 		);
 		$container->bind( ProviderRegistry::class, $providers );
 		$container->bind(

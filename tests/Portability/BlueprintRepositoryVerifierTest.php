@@ -16,7 +16,7 @@ use RAN\Portability\BlueprintPlanItem;
 use RAN\Portability\BlueprintRepositoryVerifier;
 use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
-use RAN\RepositoryProvider\GitHubCredentialPolicy;
+use RAN\Booster\GitHub\CredentialPolicy as GitHubCredentialPolicy;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;

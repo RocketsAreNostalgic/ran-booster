@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Portability;
 
 use RAN\RepositoryProvider\ArchiveRequest;
-use RAN\RepositoryProvider\GitHubCredentialPolicy;
+use RAN\Booster\GitHub\CredentialPolicy as GitHubCredentialPolicy;
 use RAN\RepositoryProvider\PreparedArchive;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialPolicy;

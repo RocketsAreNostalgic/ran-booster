@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Tests\GitHub;
+namespace Tests\Booster\GitHub;
 
-require_once __DIR__ . '/RepositoryResolverWordPressFunctions.php';
+require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\GitHub\RepositoryWebhookClient;
-use RAN\GitHub\RepositoryResolverWpError;
+use RAN\Booster\GitHub\RepositoryWebhookClient;
+use RAN\Booster\GitHub\RepositoryResolverWpError;
 
 final class RepositoryWebhookClientTest extends TestCase {
 
@@ -26,11 +26,11 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 	#[DataProvider( 'fitnessActions' )]
 	public function testFitnessUsesOneBoundedReadAndReturnsNoCredential( string $method ): void {
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array( $this->response( 200, array( 'id' => 101 ), array( 'x-oauth-scopes' => 'repo, admin:repo_hook' ) ) )
 		);
 		$result   = ( new RepositoryWebhookClient() )->{$method}( '101', 'owner/example', self::TOKEN );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 		$evidence = $result->toArray();
 
 		self::assertCount( 1, $requests );
@@ -44,7 +44,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 	#[DataProvider( 'fitnessActions' )]
 	public function testFitnessFailurePreservesTheRequestedAction( string $method ): void {
-		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 503, array() ) ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 503, array() ) ) );
 
 		$result = ( new RepositoryWebhookClient() )->{$method}( '101', 'owner/example', self::TOKEN );
 		$action = strtolower( substr( $method, strlen( 'assess' ) ) );
@@ -58,7 +58,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 			$page[] = $this->hook( $id, 'https://other.example/' . $id );
 		}
 		$created = $this->hook( 999, 'https://site.example/hook' );
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, $page ),
 				$this->response( 200, $page ),
@@ -69,7 +69,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		);
 
 		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertTrue( $result->succeeded() );
 		self::assertSame( 'configured_pending_delivery', $result->code() );
@@ -93,7 +93,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 	#[DataProvider( 'deterministicCreateFailures' )]
 	public function testDeterministicCreateFailureIsFailedWithoutAHookIdentity( int $status ): void {
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, array() ),
 				$this->response( $status, array( 'message' => 'request rejected' ) ),
@@ -101,7 +101,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		);
 
 		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertSame( 'failed', $result->state() );
 		self::assertSame( 'setup_failed', $result->code() );
@@ -110,7 +110,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 	}
 
 	public function testTransientCreateFailureIsAmbiguousWithoutAHookIdentity(): void {
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, array() ),
 				$this->response( 503, array( 'message' => 'temporarily unavailable' ) ),
@@ -122,11 +122,11 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertSame( 'ambiguous', $result->state() );
 		self::assertSame( 'setup_failed_ambiguous', $result->code() );
 		self::assertNull( $result->hookId() );
-		self::assertCount( 2, \RAN\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 2, \RAN\Booster\GitHub\repository_resolver_http_requests() );
 	}
 
 	public function testLostCreateResponseIsAmbiguousWithoutAHookIdentity(): void {
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, array() ),
 				new RepositoryResolverWpError( 'http_request_failed' ),
@@ -138,12 +138,12 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertSame( 'ambiguous', $result->state() );
 		self::assertSame( 'setup_failed_ambiguous', $result->code() );
 		self::assertNull( $result->hookId() );
-		self::assertCount( 2, \RAN\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 2, \RAN\Booster\GitHub\repository_resolver_http_requests() );
 	}
 
 	public function testFailedSetupReadbackIsCompensatedOnlyAfterConfirmedAbsence(): void {
 		$created = $this->hook( 55, 'https://site.example/hook' );
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, array() ),
 				$this->response( 201, $created ),
@@ -154,7 +154,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		);
 
 		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertSame( 'failed', $result->state() );
 		self::assertSame( 'setup_compensated', $result->code() );
@@ -165,7 +165,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 	public function testFailedSetupCompensationRemainsPartialWithTheKnownHookIdentity(): void {
 		$created = $this->hook( 55, 'https://site.example/hook' );
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, array() ),
 				$this->response( 201, $created ),
@@ -176,7 +176,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		);
 
 		$result   = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertSame( 'partial', $result->state() );
 		self::assertSame( 'setup_compensation_incomplete', $result->code() );
@@ -190,49 +190,49 @@ final class RepositoryWebhookClientTest extends TestCase {
 		for ( $id = 1; $id <= 100; ++$id ) {
 			$page[] = $this->hook( $id, 'https://other.example/' . $id );
 		}
-		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $page ), $this->response( 200, $page ), $this->response( 200, $page ) ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, $page ), $this->response( 200, $page ), $this->response( 200, $page ) ) );
 
 		$result = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
 
 		self::assertSame( 'ambiguous', $result->state() );
 		self::assertSame( 'hook_inventory_incomplete', $result->code() );
-		self::assertCount( 3, \RAN\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 3, \RAN\Booster\GitHub\repository_resolver_http_requests() );
 	}
 
 	public function testSetupDoesNotAdoptAnExistingEndpointWithAnUnreadableSecret(): void {
-		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, array( $this->hook( 55, 'https://site.example/hook' ) ) ) ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, array( $this->hook( 55, 'https://site.example/hook' ) ) ) ) );
 
 		$result = ( new RepositoryWebhookClient() )->setup( 'owner/example', 'https://site.example/hook', self::TOKEN, self::SECRET );
 
 		self::assertSame( 'ambiguous', $result->state() );
 		self::assertSame( 'existing_hook_requires_reconfigure', $result->code() );
 		self::assertNull( $result->hookId(), 'An unowned hook ID must not seed a later remove operation.' );
-		self::assertCount( 1, \RAN\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 1, \RAN\Booster\GitHub\repository_resolver_http_requests() );
 	}
 
 	public function testRemoveRequiresAbsenceReadbackWithinThreeCalls(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
-		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $hook ), $this->response( 204, array() ), $this->response( 404, array() ) ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, $hook ), $this->response( 204, array() ), $this->response( 404, array() ) ) );
 
 		$result = ( new RepositoryWebhookClient() )->remove( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
 
 		self::assertTrue( $result->confirmsAbsence() );
-		self::assertCount( 3, \RAN\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 3, \RAN\Booster\GitHub\repository_resolver_http_requests() );
 	}
 
 	public function testReconfigureRefusesAHookOwnedByAnotherEndpoint(): void {
-		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://other.example/hook' ) ) ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://other.example/hook' ) ) ) );
 
 		$result = ( new RepositoryWebhookClient() )->reconfigure( 'owner/example', '55', 'https://site.example/hook', self::TOKEN, self::SECRET );
 
 		self::assertSame( 'failed', $result->state() );
 		self::assertSame( 'hook_ownership_mismatch', $result->code() );
-		self::assertCount( 1, \RAN\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 1, \RAN\Booster\GitHub\repository_resolver_http_requests() );
 	}
 
 	public function testReconfigureReadbackFailureRemainsAmbiguousWithTheKnownHookIdentity(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, $hook ),
 				$this->response( 200, $hook ),
@@ -241,7 +241,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		);
 
 		$result   = ( new RepositoryWebhookClient() )->reconfigure( 'owner/example', '55', 'https://site.example/hook', self::TOKEN, self::SECRET );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertSame( 'ambiguous', $result->state() );
 		self::assertSame( 'reconfigure_readback_unavailable', $result->code() );
@@ -251,7 +251,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 	public function testReconfigureSucceedsOnlyAfterConfirmedReadback(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, $hook ),
 				$this->response( 200, $hook ),
@@ -260,7 +260,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		);
 
 		$result   = ( new RepositoryWebhookClient() )->reconfigure( 'owner/example', '55', 'https://site.example/hook', self::TOKEN, self::SECRET );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertTrue( $result->succeeded() );
 		self::assertSame( 'configured_pending_delivery', $result->code() );
@@ -287,7 +287,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 	public function testRemoveAbsenceReadbackFailureRemainsAmbiguousWithTheKnownHookIdentity(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
-		\RAN\GitHub\repository_resolver_http_queue(
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
 				$this->response( 200, $hook ),
 				$this->response( 204, array() ),
@@ -296,7 +296,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		);
 
 		$result   = ( new RepositoryWebhookClient() )->remove( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertSame( 'ambiguous', $result->state() );
 		self::assertSame( 'remove_readback_unavailable', $result->code() );
@@ -305,7 +305,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 	}
 
 	public function testCheckCannotConfirmAnIncompleteReadback(): void {
-		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, array( 'id' => 55 ) ) ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, array( 'id' => 55 ) ) ) );
 
 		$result = ( new RepositoryWebhookClient() )->check( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
 
@@ -314,10 +314,10 @@ final class RepositoryWebhookClientTest extends TestCase {
 	}
 
 	public function testCheckSucceedsWithOneBoundedReadOfTheExactHook(): void {
-		\RAN\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://site.example/hook' ) ) ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://site.example/hook' ) ) ) );
 
 		$result   = ( new RepositoryWebhookClient() )->check( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertTrue( $result->succeeded() );
 		self::assertSame( 'configuration_confirmed', $result->code() );

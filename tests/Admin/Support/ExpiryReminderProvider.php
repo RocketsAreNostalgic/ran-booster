@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Admin\Support;
 
-use RAN\RepositoryProvider\GitHubCredentialPolicy;
+use RAN\Booster\GitHub\CredentialPolicy as GitHubCredentialPolicy;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialPolicy;
 use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;

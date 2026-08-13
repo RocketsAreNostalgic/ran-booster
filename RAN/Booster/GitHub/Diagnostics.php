@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
-use RAN\GitHub\RepositoryBrowser;
 use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\CredentialValidationResult;
+use RAN\RepositoryProvider\ProviderDiagnosticBudgetExceeded;
+use RAN\RepositoryProvider\ProviderDiagnosticRequest;
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
+use RAN\RepositoryProvider\ProviderDiagnostics;
 use RuntimeException;
 
-final readonly class GitHubDiagnostics implements ProviderDiagnostics {
+final readonly class Diagnostics implements ProviderDiagnostics {
 
 	public function __construct( private RepositoryBrowser $browser ) {
 	}

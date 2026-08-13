@@ -2,22 +2,32 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
 use JsonException;
 use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
+use RAN\RepositoryProvider\ProviderWebhookPolicy;
+use RAN\RepositoryProvider\ProviderWebhookProfileReader;
+use RAN\RepositoryProvider\PushEvent;
+use RAN\RepositoryProvider\WebhookEnvelope;
+use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
+use RAN\RepositoryProvider\WebhookRejected;
+use RAN\RepositoryProvider\WebhookRequest;
 
-final readonly class GitHubWebhookNormalizer implements WebhookNormalizer {
+final readonly class WebhookNormalizer implements WebhookNormalizerContract {
 	private const MAX_EVENT_BYTES    = 64;
 	private const MAX_DELIVERY_BYTES = 191;
 
-	private GitHubWebhookPolicy $policy;
+	private WebhookPolicy $policy;
 
 	public function __construct(
 		private ProviderWebhookProfileReader $webhookProfiles,
 		private AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
 	) {
-		$this->policy = new GitHubWebhookPolicy();
+		$this->policy = new WebhookPolicy();
 	}
 
 	public function getWebhookPolicy(): ProviderWebhookPolicy {

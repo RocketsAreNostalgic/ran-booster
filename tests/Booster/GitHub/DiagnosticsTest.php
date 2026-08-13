@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tests\GitHub;
+namespace Tests\Booster\GitHub;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\GitHub\RepositoryBrowser;
+use RAN\Booster\GitHub\Diagnostics;
+use RAN\Booster\GitHub\RepositoryBrowser;
 use RAN\RepositoryProvider\CredentialValidationResult;
-use RAN\RepositoryProvider\GitHubDiagnostics;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
@@ -16,7 +16,7 @@ use RAN\RepositoryProvider\RepositoryDescriptor;
 use RuntimeException;
 use Throwable;
 
-final class GitHubDiagnosticsTest extends TestCase {
+final class DiagnosticsTest extends TestCase {
 
 	private const SECRET_CANARY = 'github_pat_diagnostic_canary_secret';
 
@@ -24,7 +24,7 @@ final class GitHubDiagnosticsTest extends TestCase {
 		$browser = $this->browser();
 		$request = new ProviderDiagnosticRequest();
 
-		$results = ( new GitHubDiagnostics( $browser ) )->diagnose( $request );
+		$results = ( new Diagnostics( $browser ) )->diagnose( $request );
 
 		self::assertSame(
 			array(
@@ -111,7 +111,7 @@ final class GitHubDiagnosticsTest extends TestCase {
 			clock: static fn(): float => 100.0
 		);
 
-		$results = ( new GitHubDiagnostics( $browser ) )->diagnose( $request );
+		$results = ( new Diagnostics( $browser ) )->diagnose( $request );
 
 		self::assertSame( $expected, $results[0]->toArray() );
 		self::assertSame( array( array( 'diagnostic-profile', 10.0 ) ), $browser->credentialCalls );
@@ -188,7 +188,7 @@ final class GitHubDiagnosticsTest extends TestCase {
 			clock: static fn(): float => 100.0
 		);
 
-		$results = ( new GitHubDiagnostics( $browser ) )->diagnose( $request );
+		$results = ( new Diagnostics( $browser ) )->diagnose( $request );
 
 		self::assertSame( $expected, $results[1]->toArray() );
 		self::assertSame(
@@ -202,7 +202,7 @@ final class GitHubDiagnosticsTest extends TestCase {
 		$browser = $this->browser();
 		$request = new ProviderDiagnosticRequest( 'diagnostic-profile', 'owner/repository', 1 );
 
-		$results = ( new GitHubDiagnostics( $browser ) )->diagnose( $request );
+		$results = ( new Diagnostics( $browser ) )->diagnose( $request );
 
 		self::assertSame( 'gh.credential.valid', $results[0]->code );
 		self::assertSame(
@@ -232,7 +232,7 @@ final class GitHubDiagnosticsTest extends TestCase {
 		$now     = 111.0;
 		$browser = $this->browser();
 
-		$results = ( new GitHubDiagnostics( $browser ) )->diagnose( $request );
+		$results = ( new Diagnostics( $browser ) )->diagnose( $request );
 
 		self::assertSame( 'gh.credential.budget_exhausted', $results[0]->code );
 		self::assertSame( 'gh.repository.budget_exhausted', $results[1]->code );

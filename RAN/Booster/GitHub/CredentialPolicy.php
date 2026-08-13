@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
-namespace RAN\RepositoryProvider;
+namespace RAN\Booster\GitHub;
 
+use RAN\RepositoryProvider\InvalidCredentialInput;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderCredentialPolicy;
+use RAN\RepositoryProvider\SubmittedCredentialValidator;
 use RuntimeException;
 
-final readonly class GitHubCredentialPolicy implements ProviderCredentialPolicy, SubmittedCredentialValidator {
+final readonly class CredentialPolicy implements ProviderCredentialPolicy, SubmittedCredentialValidator {
 
 	private const TOKEN_CONSTANT  = 'RAN_BOOSTER_GITHUB_TOKEN';
 	private const MIN_TOKEN_BYTES = 40;

@@ -2,18 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tests\GitHub;
+namespace Tests\Booster\GitHub;
 
-require_once __DIR__ . '/RepositoryResolverWordPressFunctions.php';
+require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\GitHub\RepositoryBrowser;
-use RAN\RepositoryProvider\GitHubProvider;
-use RAN\RepositoryProvider\GitHubWebhookNormalizer;
+use RAN\Booster\GitHub\GitHubProvider;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
 final class GitHubProviderWebhookManagementTest extends TestCase {
 
@@ -37,10 +36,10 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 		$profile  = $saved ? 'saved-profile' : null;
 		$request  = $saved ? null : self::REQUEST_TOKEN;
 
-		\RAN\GitHub\repository_resolver_http_queue( $this->responsesFor( $operation ) );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( $this->responsesFor( $operation ) );
 
 		$result   = $this->operate( $provider, $operation, $profile, $request );
-		$requests = \RAN\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 		$expected = $this->operationExpectation( $operation );
 
 		self::assertTrue( $result->succeeded() );
@@ -86,7 +85,7 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 	): void {
 		$store    = new RepositoryResolverSecretsStub( array( 'saved-profile' => self::SAVED_TOKEN ) );
 		$provider = $this->provider( $store );
-		\RAN\GitHub\repository_resolver_http_queue( array() );
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array() );
 
 		try {
 			$provider->check( '101', 'owner/example', '55', 'https://site.example/hook', $profile, $request );
@@ -97,15 +96,17 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 		}
 
 		self::assertCount( $lookups, $store->lookups );
-		self::assertSame( array(), \RAN\GitHub\repository_resolver_http_requests() );
+		self::assertSame( array(), \RAN\Booster\GitHub\repository_resolver_http_requests() );
 	}
 
 	private function provider( RepositoryResolverSecretsStub $store ): GitHubProvider {
-		return new GitHubProvider(
+		$provider = GitHubProvider::create(
 			$store,
-			new RepositoryBrowser( $store ),
-			new GitHubWebhookNormalizer( $store, new EmptyAuthenticatedWebhookDeliveryEvidenceReader() )
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
+		self::assertInstanceOf( GitHubProvider::class, $provider );
+
+		return $provider;
 	}
 
 	private function operate( GitHubProvider $provider, string $operation, ?string $profile, ?string $request ): RepositoryWebhookOperationResult {

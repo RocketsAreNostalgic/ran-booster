@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\GitHub;
+namespace Tests\Booster\GitHub\Support;
 
 use RAN\RepositoryProvider\ProviderCredentialStore;
 

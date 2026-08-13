@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Tests\GitHub;
+namespace Tests\Booster\GitHub;
 
-require_once __DIR__ . '/RepositoryResolverWordPressFunctions.php';
-require_once __DIR__ . '/RepositoryResolverSecretsStub.php';
+require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
+require_once __DIR__ . '/Support/RepositoryResolverSecretsStub.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\GitHub\RepositoryBrowser;
+use RAN\Booster\GitHub\RepositoryBrowser;
+use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
 final class CredentialExpiryValidationTest extends TestCase {
 
@@ -27,7 +28,7 @@ final class CredentialExpiryValidationTest extends TestCase {
 
 	#[DataProvider( 'validExpiryHeaders' )]
 	public function testValidationReturnsStrictlyParsedProviderExpiry( string $header, string $expected ): void {
-		\RAN\GitHub\repository_resolver_http_reset( $this->response( $header ) );
+		\RAN\Booster\GitHub\repository_resolver_http_reset( $this->response( $header ) );
 
 		$result = ( new RepositoryBrowser(
 			new RepositoryResolverSecretsStub( array( 'expiry-profile' => self::TOKEN ) )
@@ -54,7 +55,7 @@ final class CredentialExpiryValidationTest extends TestCase {
 
 	#[DataProvider( 'unknownExpiryHeaders' )]
 	public function testMissingOrMalformedExpiryMetadataIsUnknown( ?string $header ): void {
-		\RAN\GitHub\repository_resolver_http_reset( $this->response( $header ) );
+		\RAN\Booster\GitHub\repository_resolver_http_reset( $this->response( $header ) );
 
 		$result = ( new RepositoryBrowser(
 			new RepositoryResolverSecretsStub( array( 'expiry-profile' => self::TOKEN ) )
@@ -68,7 +69,7 @@ final class CredentialExpiryValidationTest extends TestCase {
 
 	public function testFailedValidationNeverReturnsExpiryMetadataOrLeaksHeader(): void {
 		$header = '2026-08-31 14:25:30 UTC';
-		\RAN\GitHub\repository_resolver_http_reset(
+		\RAN\Booster\GitHub\repository_resolver_http_reset(
 			array(
 				'response' => array( 'code' => 401 ),
 				'headers'  => array( 'GitHub-Authentication-Token-Expiration' => $header ),

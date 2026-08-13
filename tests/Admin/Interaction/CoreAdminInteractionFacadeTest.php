@@ -373,7 +373,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			array(
 				'action'    => 'save-access-profile',
 				'view'      => 'credentials',
-				'message'   => 'Repository access token saved.',
+				'message'   => 'Repository credential saved.',
 				'list_args' => array(
 					's'        => 'Deployment',
 					'kind'     => 'api-key',
@@ -444,7 +444,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 	public function testCoreProviderProfileDeleteSuccessKeepsTheAuthoritativeRegionSwap(): void {
 		foreach (
 			array(
-				array( 'delete-access-profile', 'credentials', 'Repository access token removed.' ),
+				array( 'delete-access-profile', 'credentials', 'Repository credential removed.' ),
 				array( 'delete-webhook-profile', 'secrets', 'Push-to-Deploy secret removed.' ),
 			) as $case
 		) {
@@ -479,7 +479,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$request      = $facade->providerProfileRequest( 'save-access-profile', 'fixture' );
 
 		$this->captureTermination(
-			fn () => $facade->respondToProviderProfileSuccess( $request, 'Repository access token saved.' )
+			fn () => $facade->respondToProviderProfileSuccess( $request, 'Repository credential saved.' )
 		);
 
 		self::assertSame( array(), $this->headers );

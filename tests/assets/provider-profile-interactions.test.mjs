@@ -86,7 +86,7 @@ test('authoritative provider profile swaps rebind only the replaced controls', (
 	]);
 });
 
-test('access token visibility reveals only entered text and resets to masked', () => {
+test('credential secret visibility reveals only entered text and resets to masked', () => {
 	const listeners = new Map();
 	const classes = new Set(['dashicons-visibility']);
 	const attributes = new Map();

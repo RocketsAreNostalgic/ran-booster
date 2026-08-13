@@ -67,7 +67,7 @@ $hasStorageDetails                 = null !== $secretsStorage
 	<header class="ran-booster-page-shell__header ran-booster-onboarding__header">
 		<p class="ran-booster-eyebrow">Ignition</p>
 		<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Start with a repository', 'ran-booster' ); ?></h2>
-		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Public repositories do not need access tokens or webhooks.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Public repositories do not need repository credentials or webhooks.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install and manage custom plugins and themes from supported Git repositories; private access and Push-to-Deploy are optional.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
 			<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>

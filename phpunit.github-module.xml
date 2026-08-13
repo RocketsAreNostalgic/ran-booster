@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
+	bootstrap="tests/Booster/GitHub/bootstrap.php"
+	cacheDirectory=".phpunit.cache/github-module"
+	colors="true"
+	backupGlobals="false">
+	<testsuites>
+		<testsuite name="GitHub Module">
+			<directory suffix="Test.php">tests/Booster/GitHub</directory>
+		</testsuite>
+	</testsuites>
+</phpunit>

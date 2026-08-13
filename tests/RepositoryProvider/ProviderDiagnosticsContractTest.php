@@ -61,12 +61,15 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			array(),
 			$secretPolicies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
-			static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
+			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		$registry->registerWithCredentialStore(
 			'fixture',
-			static function ( ProviderCredentialStore $credentials ) use ( &$provider ): ExternalFixtureProvider {
+			static function (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+			) use ( &$provider ): ExternalFixtureProvider {
 				$provider = new ExternalFixtureProvider( 'fixture', $credentials );
 
 				return $provider;
@@ -300,7 +303,10 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			} elseif ( 'register_with_store' === $operation ) {
 				$registry->registerWithCredentialStore(
 					'nested',
-					static fn ( ProviderCredentialStore $store ): ExternalFixtureProvider => new ExternalFixtureProvider( 'nested', $store )
+					static fn (
+						ProviderCredentialStore $store,
+						AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+					): ExternalFixtureProvider => new ExternalFixtureProvider( 'nested', $store )
 				);
 			} else {
 				$registry->seal();
@@ -309,12 +315,12 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static function () use ( $callback ): ProviderCredentialStore {
+			static function ( ProviderCode $code ) use ( $callback ): ProviderCredentialStore {
 				$callback( 'credential_store_factory' );
 
 				return new RegistrationGuardCredentialStore();
 			},
-			static function () use ( $callback ): AuthenticatedWebhookDeliveryEvidenceReader {
+			static function ( ProviderCode $code ) use ( $callback ): AuthenticatedWebhookDeliveryEvidenceReader {
 				$callback( 'delivery_evidence_factory' );
 
 				return new EmptyAuthenticatedWebhookDeliveryEvidenceReader();
@@ -324,7 +330,10 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		try {
 			$registry->registerWithCredentialStore(
 				'outer',
-				static function ( ProviderCredentialStore $store ) use ( $callback ): RepositoryProvider {
+				static function (
+					ProviderCredentialStore $store,
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				) use ( $callback ): RepositoryProvider {
 					$callback( 'provider_factory' );
 
 					return new RegistrationGuardProvider( 'outer', $callback );

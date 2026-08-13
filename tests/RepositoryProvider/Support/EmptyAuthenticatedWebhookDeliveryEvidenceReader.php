@@ -6,7 +6,6 @@ namespace Tests\RepositoryProvider\Support;
 
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
-use RAN\RepositoryProvider\ProviderCode;
 
 final class EmptyAuthenticatedWebhookDeliveryEvidenceReader implements AuthenticatedWebhookDeliveryEvidenceReader {
 

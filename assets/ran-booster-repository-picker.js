@@ -675,7 +675,7 @@
 				'<select id="ran-booster-repository-picker-public-profile" class="ran-booster-repository-picker__public-profile"></select>' +
 				'</div>' +
 				'<div class="notice notice-info inline ran-booster-repository-picker__public-limit-notice" hidden>' +
-				'<p>Anonymous API requests have lower rate limits. <a class="ran-booster-repository-picker__public-limit-link" href="#">Manage credentials</a> to add a search access token for more reliable repository lookup.</p>' +
+				'<p>Anonymous API requests have lower rate limits. <a class="ran-booster-repository-picker__public-limit-link" href="#">Manage credentials</a> to add a search credential for more reliable repository lookup.</p>' +
 				'</div>' +
 				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label">Repository owner</label>' +
 				'<div class="ran-booster-repository-picker__public-search-fields">' +

@@ -170,6 +170,9 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<strong>Safety.</strong>', $html );
 		self::assertStringContainsString( '<strong>Transporter.</strong>', $html );
 		self::assertStringContainsString( '<strong>Independence &amp; Security.</strong>', $html );
+		self::assertStringContainsString( 'the inherited codebase stored a private repository’s access token as a WordPress option in the database', $html );
+		self::assertStringContainsString( 'Booster instead saves your repository credential in a file on your own site', $html );
+		self::assertStringNotContainsString( 'Booster instead saves your personal access token', $html );
 		self::assertStringContainsString( '<strong>Extensibility.</strong>', $html );
 		self::assertStringContainsString( 'documented registration hook without modifying Booster itself', $html );
 		self::assertStringContainsString( 'does not build, test or make untrusted repository code safe', $html );
@@ -239,7 +242,7 @@ final class DocumentationViewTest extends TestCase {
 		$html = $this->renderView( $this->providerDocumentation() );
 
 		self::assertStringContainsString( 'id="ran-booster-portability-guidance"', $html );
-		self::assertStringContainsString( 'Minimum token permissions', $html );
+		self::assertStringContainsString( 'Minimum credential permissions', $html );
 		self::assertStringContainsString( 'page=ran-booster&amp;tab=portability', $html );
 		self::assertStringContainsString( 'Move managed packages without copying a development checkout', $html );
 		self::assertStringContainsString( 'local uncommitted changes, and local-only', $html );

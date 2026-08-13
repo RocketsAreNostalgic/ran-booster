@@ -544,7 +544,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<details class="ran-booster-troubleshooting__specific" open>', $html );
 		self::assertStringContainsString( 'Start with a provider to run a general health check.', $html );
 		self::assertStringContainsString( 'check only credential and repository access; they do not scope Push-to-Deploy delivery results.', $html );
-		self::assertStringContainsString( 'This is not a personal access token;', $html );
+		self::assertStringContainsString( 'This is a credential reference, not the credential secret;', $html );
 		self::assertStringContainsString( 'placeholder="owner/repository (GitHub) or workspace/repository (Bitbucket)"', $html );
 		self::assertStringContainsString( 'class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap"', $html );
 		self::assertStringContainsString( 'class="widefat ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table"', $html );

@@ -149,7 +149,7 @@ test('public lookup identity stays distinct from the durable package credential'
 	assert.doesNotMatch(source, /Use Anonymous for this lookup/);
 	assert.match(
 		source,
-		/Anonymous API requests have lower rate limits\.[\s\S]*Manage credentials[\s\S]*search access token/
+		/Anonymous API requests have lower rate limits\.[\s\S]*Manage credentials[\s\S]*search credential/
 	);
 	assert.match(
 		source,

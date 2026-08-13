@@ -46,6 +46,19 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( '"$plugin_root/ran-booster-release.json"', $workflow );
 		self::assertStringContainsString( 'diff -qr', $workflow );
 		self::assertStringContainsString( '"$plugin_root/vendor/ran/wp-github-release-updater"', $workflow );
+		self::assertStringContainsString(
+			'wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress',
+			$workflow
+		);
+
+		$installation = strpos( $workflow, '- name: Install and activate runtime archive' );
+		$identity     = strpos( $workflow, '- name: Read back the installed release identity' );
+		$provider     = strpos( $workflow, '- name: Read back the installed GitHub provider contract' );
+		self::assertIsInt( $installation );
+		self::assertIsInt( $identity );
+		self::assertIsInt( $provider );
+		self::assertTrue( $installation < $identity );
+		self::assertTrue( $identity < $provider );
 	}
 
 	public function testReleaseWaitsForSuccessfulMainPushQualityAndUsesItsArtifact(): void {

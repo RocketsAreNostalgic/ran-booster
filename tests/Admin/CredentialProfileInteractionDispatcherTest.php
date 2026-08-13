@@ -119,7 +119,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 					'configuration' => array( 'tenant' => 'deployment' ),
 					'secret'        => 'secret-canary-access',
 				),
-				'Repository access token saved.',
+				'Repository credential saved.',
 			),
 			'delete access'  => array(
 				array(
@@ -127,7 +127,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 					'provider' => 'fixture',
 					'id'       => 'credential_existing',
 				),
-				'Repository access token removed. Public repository lookup now uses anonymous access.',
+				'Repository credential removed. Public repository lookup now uses anonymous access.',
 			),
 			'save webhook'   => array(
 				array(
@@ -657,7 +657,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary', $response->feedbackMessage );
 	}
 
-	public function testClosedProviderInputFailureRemainsActionableAndNeverReflectsTheToken(): void {
+	public function testClosedProviderInputFailureRemainsActionableAndNeverReflectsTheCredentialSecret(): void {
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->method( 'credentialProfiles' )->willReturn(
 			array(
@@ -672,7 +672,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			->willThrowException(
 				new InvalidCredentialInput(
 					InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH,
-					'This token begins with ghp_, which identifies a classic personal access token. Choose Classic personal access token or paste a fine-grained token.'
+					'The submitted credential does not match the selected credential kind. Choose the matching kind or enter another credential secret.'
 				)
 			);
 		$interaction        = new CapturingProviderProfileInteraction();
@@ -694,7 +694,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'label'         => 'Deployment access',
 			'kind'          => 'api-key',
 			'configuration' => array( 'tenant' => 'deployment' ),
-			'secret'        => 'ghp_token-value-must-not-render',
+			'secret'        => 'credential-secret-value-must-not-render',
 			'expires_on'    => '',
 		);
 		$_GET['view']         = 'credentials';
@@ -711,10 +711,10 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertNotNull( $response );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
-			'This token begins with ghp_, which identifies a classic personal access token. Choose Classic personal access token or paste a fine-grained token.',
+			'The submitted credential does not match the selected credential kind. Choose the matching kind or enter another credential secret.',
 			$response->feedbackMessage
 		);
-		self::assertStringNotContainsString( 'token-value', $response->feedbackMessage );
+		self::assertStringNotContainsString( 'secret-value', $response->feedbackMessage );
 		self::assertSame( $observationBefore, $expiryObservations->document );
 	}
 

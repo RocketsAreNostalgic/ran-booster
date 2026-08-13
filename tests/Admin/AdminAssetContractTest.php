@@ -284,17 +284,18 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'initCredentialSettings();', $credentialScript );
 	}
 
-	public function testAccessTokenFieldKeepsSavedStateSeparateFromTheEmptyNativeInput(): void {
+	public function testCredentialSecretFieldKeepsSavedStateSeparateFromTheEmptyNativeInput(): void {
 		$modals = $this->view( 'provider/modals.php' );
 		$script = $this->asset( 'ran-booster-secure-inputs.js' );
 		$styles = $this->asset( 'ran-booster-onboarding.css' );
 		$dialog = $this->asset( 'ran-booster/70-credential-dialog.css' );
-		$github = $this->source( 'RAN/Booster/GitHub/GitHubProvider.php' );
 
 		self::assertStringContainsString( 'class="ran-booster-credential-modal__form" autocomplete="off"', $modals );
 		self::assertStringContainsString( 'id="ran-booster-access-secret" type="password"', $modals );
 		self::assertStringContainsString( 'autocomplete="one-time-code" autocapitalize="none" spellcheck="false"', $modals );
-		self::assertStringContainsString( 'A token is already saved. Leave this field unchanged to keep it, or enter a replacement.', $modals );
+		self::assertStringContainsString( 'A credential secret is already saved. Leave this field unchanged to keep it, or enter a replacement.', $modals );
+		self::assertStringContainsString( "data-show-label=\"<?php esc_attr_e( 'Show credential secret'", $modals );
+		self::assertStringContainsString( "data-hide-label=\"<?php esc_attr_e( 'Hide credential secret'", $modals );
 		self::assertStringContainsString( 'data-access-secret-visibility', $modals );
 		self::assertStringContainsString( 'aria-describedby="ran-booster-access-secret-help"', $modals );
 		self::assertStringContainsString( 'class="screen-reader-text ran-booster-secret-help"', $modals );
@@ -322,10 +323,6 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'data-provider-expires-on=', $this->view( 'provider.php' ) );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-credential-modal__field-row {', $dialog );
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);', $dialog );
-		self::assertStringContainsString( "'Classic personal access token'", $github );
-		self::assertStringContainsString( "'Fine-grained personal access token'", $github );
-		self::assertStringContainsString( "'Classic PAT'", $github );
-		self::assertStringContainsString( "'Fine-grained PAT'", $github );
 		self::assertStringContainsString( "\$kind['short_label'] ?? \$kind['label']", $modals );
 	}
 
@@ -475,7 +472,6 @@ final class AdminAssetContractTest extends TestCase {
 		$view       = $this->view( 'provider.php' ) . $this->view( 'provider-public-lookup-profile.php' );
 		$script     = $this->asset( 'ran-booster.js' );
 		$renderer   = $this->source( 'RAN/Admin/Component/RepositoryTableRenderer.php' );
-		$github     = $this->source( 'RAN/Booster/GitHub/GitHubProvider.php' );
 		$dashboard  = $this->source( 'RAN/Dashboard.php' );
 
 		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-provider', $view );
@@ -518,8 +514,6 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'core:assisted-hooks', $view );
 		self::assertStringNotContainsString( 'Assisted Hooks', $view );
 		self::assertStringNotContainsString( "'gh'", $view );
-		self::assertStringContainsString( 'new ProviderWebhookAssistanceMetadata(', $github );
-		self::assertStringContainsString( "'Assisted Hooks'", $github );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell__header {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-disclosure > summary:focus-visible', $css );

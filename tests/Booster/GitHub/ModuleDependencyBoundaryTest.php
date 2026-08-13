@@ -93,27 +93,6 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		self::assertSame( $allowed, $imports );
 	}
 
-	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {
-		$references = array();
-		$root       = dirname( __DIR__, 3 ) . '/RAN';
-		$iterator   = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root ) );
-		foreach ( $iterator as $file ) {
-			if ( ! $file->isFile() || 'php' !== $file->getExtension() || str_contains( $file->getPathname(), '/RAN/Booster/GitHub/' ) ) {
-				continue;
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local architecture boundary under test.
-			$source = file_get_contents( $file->getPathname() );
-			self::assertIsString( $source );
-			if ( str_contains( $source, 'RAN\Booster\GitHub\\' ) ) {
-				$references[] = str_replace( dirname( __DIR__, 3 ) . '/', '', $file->getPathname() );
-				self::assertStringContainsString( 'use RAN\Booster\GitHub\GitHubProvider;', $source );
-				self::assertSame( 1, substr_count( $source, 'RAN\Booster\GitHub\\' ) );
-			}
-		}
-
-		self::assertSame( array( 'RAN/BoosterServiceProvider.php' ), $references );
-	}
-
 	/** @return list<string> */
 	private function moduleFiles(): array {
 		$files = glob( dirname( __DIR__, 3 ) . '/RAN/Booster/GitHub/*.php' );

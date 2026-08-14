@@ -5,12 +5,14 @@
 
 defined( 'ABSPATH' ) || exit;
 ?>
-<div class="wrap ran-booster-admin ran-booster-extensions">
-	<header class="ran-booster-extensions__header">
-		<h1><?php esc_html_e( 'RAN Booster Extensions', 'ran-booster' ); ?></h1>
-		<p><?php esc_html_e( 'Add focused capabilities to Booster. Every extension is currently in beta.', 'ran-booster' ); ?></p>
+<section class="ran-booster-page-shell ran-booster-extensions" aria-labelledby="ran-booster-extensions-heading">
+	<header class="ran-booster-page-shell__header ran-booster-extensions__header">
+		<p class="ran-booster-eyebrow"><?php esc_html_e( 'Add-ons', 'ran-booster' ); ?></p>
+		<h2 id="ran-booster-extensions-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Extensions', 'ran-booster' ); ?></h2>
+		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Add focused capabilities to Booster. Every extension is currently in beta.', 'ran-booster' ); ?></p>
 	</header>
-	<div class="ran-booster-extensions__grid">
+	<div class="ran-booster-page-shell__body ran-booster-extensions__body">
+		<div class="ran-booster-extensions__grid">
 		<?php foreach ( $extensions as $extension ) : ?>
 			<article class="plugin-card ran-booster-extension-card" data-extension="<?php echo esc_attr( $extension['id'] ); ?>">
 				<div class="plugin-card-top">
@@ -58,6 +60,7 @@ defined( 'ABSPATH' ) || exit;
 				</div>
 			</article>
 		<?php endforeach; ?>
+		</div>
+		<p class="description ran-booster-extensions__note"><?php esc_html_e( 'Free downloads will be enabled after their public beta releases are ready. Sponsor packages are delivered manually during beta.', 'ran-booster' ); ?></p>
 	</div>
-	<p class="description ran-booster-extensions__note"><?php esc_html_e( 'Free downloads will be enabled after their public beta releases are ready. Sponsor packages are delivered manually during beta.', 'ran-booster' ); ?></p>
-</div>
+</section>

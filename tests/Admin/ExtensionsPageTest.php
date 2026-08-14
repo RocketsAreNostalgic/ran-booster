@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
+use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
@@ -73,6 +74,29 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( array( $booster, 'renderExtensionsPage' ), $GLOBALS['ran_booster_extensions_page_submenus'][4]['callback'] );
 	}
 
+	public function testDashboardRoutesExtensionsThroughTheSharedPageFrame(): void {
+		$dashboard = new class() extends Dashboard {
+			/** @var array<string, mixed> */
+			public array $captured = array();
+
+			public function __construct() {}
+
+			protected function render( $view, $data = array() ) {
+				$this->captured = array(
+					'view' => $view,
+					'data' => $data,
+				);
+
+				return true;
+			}
+		};
+
+		self::assertTrue( $dashboard->getExtensions( array( array( 'id' => 'example' ) ), '/plugins.php' ) );
+		self::assertSame( 'extensions', $dashboard->captured['view'] );
+		self::assertSame( array(), $dashboard->captured['data']['tabs'] );
+		self::assertSame( '/plugins.php', $dashboard->captured['data']['pluginsUrl'] );
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testRendersFourOfflineCardsWithTruthfulUnavailableControls(): void {
@@ -81,6 +105,9 @@ final class ExtensionsPageTest extends TestCase {
 		$output = $this->render();
 
 		self::assertSame( 4, substr_count( $output, 'class="plugin-card ran-booster-extension-card"' ) );
+		self::assertStringContainsString( 'class="ran-booster-page-heading__title">Extensions</h2>', $output );
+		self::assertStringContainsString( 'class="ran-booster-page-heading__description">Add focused capabilities', $output );
+		self::assertStringNotContainsString( '<h1', $output );
 		self::assertSame( 2, substr_count( $output, '>Free<' ) );
 		self::assertSame( 2, substr_count( $output, '>Sponsor<' ) );
 		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
@@ -175,6 +202,10 @@ final class ExtensionsPageTest extends TestCase {
 				public function getPlugins(): void {}
 				public function getThemesCreate(): void {}
 				public function getThemes(): void {}
+				/** @param list<array<string, mixed>> $extensions */
+				public function getExtensions( array $extensions, string $pluginsUrl ): void {
+					require dirname( __DIR__, 2 ) . '/views/extensions.php';
+				}
 			}
 		);
 		$booster              = new Booster( $container );

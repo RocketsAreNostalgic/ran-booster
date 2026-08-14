@@ -240,7 +240,7 @@ class Booster {
 			$installedPlugins = get_plugins();
 			$extensions       = $this->extensionCards( is_array( $installedPlugins ) ? $installedPlugins : array() );
 			$pluginsUrl       = is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' );
-			require trailingslashit( $this->boosterPath ) . 'views/extensions.php';
+			$this->service( 'RAN\Dashboard' )->getExtensions( $extensions, $pluginsUrl );
 		} catch ( \Throwable $failure ) {
 			BoosterLogger::logException(
 				'Extensions page unavailable',

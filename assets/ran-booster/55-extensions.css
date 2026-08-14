@@ -1,12 +1,10 @@
 /* Release-bundled Extensions catalogue using WordPress plugin-card language. */
-.ran-booster-admin.ran-booster-extensions {
+.ran-booster-admin .ran-booster-extensions {
 	max-inline-size: 1200px;
 }
 
-.ran-booster-extensions__header p {
-	max-inline-size: 760px;
-	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-base);
+.ran-booster-extensions__body {
+	padding-block-start: 0;
 }
 
 .ran-booster-extensions__grid {

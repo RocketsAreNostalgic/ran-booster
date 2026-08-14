@@ -415,6 +415,18 @@ class Dashboard {
 		return $this->renderPackageCreate( $this->themePages );
 	}
 
+	/** @param list<array<string, mixed>> $extensions */
+	public function getExtensions( array $extensions, string $pluginsUrl ) {
+		return $this->render(
+			'extensions',
+			array(
+				'extensions' => $extensions,
+				'pluginsUrl' => $pluginsUrl,
+				'tabs'       => array(),
+			)
+		);
+	}
+
 	private function renderPackagePage( PackagePagePresenter $packageView ) {
 		$type = $packageView->getType();
 		$this->packageAdmin->addSuccessNotice( $this, $type );

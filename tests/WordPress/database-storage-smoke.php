@@ -26,10 +26,9 @@ $database->install();
 global $wpdb;
 $packageTable = ran_booster_table_name();
 $attemptTable = Database::attemptTableName();
-$auditTable   = Database::rejectedAdmissionAuditTableName();
 
-if ( '12.0' !== Database::$booster_db_version ) {
-	throw new RuntimeException( 'The database smoke requires the schema 12.0 lifecycle.' );
+if ( '13.0' !== Database::$booster_db_version ) {
+	throw new RuntimeException( 'The database smoke requires the schema 13.0 lifecycle.' );
 }
 
 $schemaSevenPackage = array(
@@ -136,16 +135,30 @@ $assertRejectedVersion = static function (
 	}
 };
 
-$originalPrefix       = $wpdb->prefix;
-$isolatedPrefix       = $originalPrefix . 'ran_booster_schema_smoke_';
-$isolatedPackageTable = $isolatedPrefix . 'ran_booster_packages';
-$isolatedAttemptTable = $isolatedPrefix . 'ran_booster_deployment_attempts';
-$isolatedAuditTable   = $isolatedPrefix . 'ran_booster_rejected_admission_audit';
-$dropIsolatedTables   = static function () use ( $isolatedAttemptTable, $isolatedPackageTable, $isolatedAuditTable, $wpdb ): void {
+$originalPrefix        = $wpdb->prefix;
+$isolatedPrefix        = $originalPrefix . 'ran_booster_schema_smoke_';
+$isolatedPackageTable  = $isolatedPrefix . 'ran_booster_packages';
+$isolatedAttemptTable  = $isolatedPrefix . 'ran_booster_deployment_attempts';
+$isolatedAuditTable    = $isolatedPrefix . 'ran_booster_rejected_admission_audit';
+$wrongPrefixAuditTable = $originalPrefix . 'ran_booster_rejected_admission_audit';
+$ownsWrongPrefixAudit  = false;
+$dropIsolatedTables    = static function () use ( $isolatedAttemptTable, $isolatedPackageTable, $isolatedAuditTable, $wrongPrefixAuditTable, $wpdb, &$ownsWrongPrefixAudit ): void {
 	foreach ( array( $isolatedPackageTable, $isolatedAttemptTable, $isolatedAuditTable ) as $table ) {
 		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 	}
+	if ( $ownsWrongPrefixAudit ) {
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $wrongPrefixAuditTable ) );
+		$ownsWrongPrefixAudit = false;
+	}
 };
+$wpdb->last_error      = '';
+$existingAuditTable    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wrongPrefixAuditTable ) ) );
+if ( '' !== trim( (string) $wpdb->last_error ) ) {
+	throw new RuntimeException( 'The database smoke could not preflight the current-prefix legacy audit table.' );
+}
+if ( null !== $existingAuditTable ) {
+	throw new RuntimeException( 'The database smoke refuses to replace a pre-existing current-prefix legacy audit table.' );
+}
 $dropIsolatedTables();
 try {
 	if ( false === $wpdb->insert( $packageTable, $schemaSevenPackage )
@@ -157,10 +170,10 @@ try {
 	$assertRejectedVersion( '8.0', 'unsupported_old_schema' );
 	$assertRejectedVersion( '9.0', 'unsupported_old_schema' );
 	$assertRejectedVersion( '10.5', 'unknown_schema_version' );
-	$assertRejectedVersion( '13.0', 'newer_schema' );
+	$assertRejectedVersion( '14.0', 'newer_schema' );
 	$assertRejectedVersion( 'not-a-version', 'malformed_schema_version' );
 
-	foreach ( array( $packageTable, $attemptTable, $auditTable ) as $table ) {
+	foreach ( array( $packageTable, $attemptTable ) as $table ) {
 		$tableStatus = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table ) );
 		if ( ! is_object( $tableStatus ) || 0 !== strcasecmp( 'InnoDB', (string) ( $tableStatus->Engine ?? '' ) ) ) {
 			throw new RuntimeException( 'The database smoke found a non-InnoDB Booster table.' );
@@ -171,22 +184,38 @@ try {
 		|| false === $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i LIKE %i', $isolatedAttemptTable, $attemptTable ) )
 		|| false === $wpdb->query(
 			$wpdb->prepare(
-				'ALTER TABLE %i
-					DROP COLUMN resolved_at,
-					DROP COLUMN resolved_by',
-				$isolatedAttemptTable
+				'CREATE TABLE %i (
+					id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+					event varchar(32) NOT NULL,
+					attempt_id bigint(20) unsigned NOT NULL,
+					correlation_id char(32) NOT NULL,
+					package_type varchar(8) NOT NULL,
+					package_slug varchar(191) NOT NULL,
+					actor_id bigint(20) unsigned NOT NULL,
+					operation varchar(32) NOT NULL,
+					occurred_at datetime NOT NULL,
+					PRIMARY KEY (id),
+					KEY deduplication (event, attempt_id, actor_id, operation, occurred_at, id),
+					KEY activity (occurred_at, id),
+					KEY attempt_activity (attempt_id, occurred_at, id)
+				) ENGINE=InnoDB',
+				$isolatedAuditTable
 			)
 		) ) {
-		throw new RuntimeException( 'The database smoke could not create its isolated schema 10.0 tables.' );
+		throw new RuntimeException( 'The database smoke could not create its isolated schema 12.0 tables.' );
 	}
+	if ( false === $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i LIKE %i', $wrongPrefixAuditTable, $isolatedAuditTable ) ) ) {
+		throw new RuntimeException( 'The database smoke could not create its wrong-prefix containment fixture.' );
+	}
+	$ownsWrongPrefixAudit = true;
 	if ( false === $wpdb->insert( $isolatedPackageTable, $schemaSevenPackage )
 		|| false === $wpdb->insert( $isolatedAttemptTable, $schemaSevenAttempt ) ) {
-		throw new RuntimeException( 'The database smoke could not seed its schema 10.0 fixture.' );
+		throw new RuntimeException( 'The database smoke could not seed its schema 12.0 fixture.' );
 	}
 
 	// Point only this disposable lifecycle instance at isolated, prefixed clones.
 	$wpdb->prefix = $isolatedPrefix;
-	$setSchemaVersion( '10.0' );
+	$setSchemaVersion( '12.0' );
 	$isolatedPackageBefore = $fetchRow( $isolatedPackageTable, 'package', $schemaSevenPackage['package'] );
 	$isolatedAttemptBefore = $fetchRow( $isolatedAttemptTable, 'correlation_id', $schemaSevenAttempt['correlation_id'] );
 	( new Database( $wpdb ) )->maybeUpgrade();
@@ -194,21 +223,22 @@ try {
 	$isolatedAttemptAfter = $fetchRow( $isolatedAttemptTable, 'correlation_id', $schemaSevenAttempt['correlation_id'] );
 	foreach ( array_keys( $schemaSevenPackage ) as $column ) {
 		if ( $isolatedPackageBefore[ $column ] !== $isolatedPackageAfter[ $column ] ) {
-			throw new RuntimeException( 'The database smoke changed a schema 10.0 package field.' );
+			throw new RuntimeException( 'The database smoke changed a schema 12.0 package field.' );
 		}
 	}
 	foreach ( array_keys( $schemaSevenAttempt ) as $column ) {
 		if ( $isolatedAttemptBefore[ $column ] !== $isolatedAttemptAfter[ $column ] ) {
-			throw new RuntimeException( 'The database smoke changed a schema 10.0 attempt field.' );
+			throw new RuntimeException( 'The database smoke changed a schema 12.0 attempt field.' );
 		}
 	}
-	if ( '12.0' !== (string) get_option( Database::VERSION_OPTION, '' )
+	if ( '13.0' !== (string) get_option( Database::VERSION_OPTION, '' )
 		|| ! array_key_exists( 'resolved_at', $isolatedAttemptAfter )
 		|| ! array_key_exists( 'resolved_by', $isolatedAttemptAfter )
 		|| null !== $isolatedAttemptAfter['resolved_at']
 		|| null !== $isolatedAttemptAfter['resolved_by']
-		|| ! is_object( $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $isolatedAuditTable ) ) ) ) {
-		throw new RuntimeException( 'The database smoke could not verify the schema 10.0 to 12.0 lifecycle.' );
+		|| null !== $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $isolatedAuditTable ) )
+		|| ! is_object( $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $wrongPrefixAuditTable ) ) ) ) {
+		throw new RuntimeException( 'The database smoke could not verify the schema 12.0 to 13.0 lifecycle.' );
 	}
 
 	if ( false === $wpdb->query( $wpdb->prepare( 'ALTER TABLE %i DROP COLUMN %i', $isolatedPackageTable, 'subdirectory' ) ) ) {

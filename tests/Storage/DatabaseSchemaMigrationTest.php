@@ -43,10 +43,10 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		( new Database() )->install();
 
-		self::assertCount( 3, $wpdb->schemas );
+		self::assertCount( 2, $wpdb->schemas );
 		self::assertArrayHasKey( 'wp_ran_booster_packages', $wpdb->schemaTables );
 		self::assertArrayHasKey( 'wp_ran_booster_deployment_attempts', $wpdb->schemaTables );
-		self::assertArrayHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
+		self::assertArrayNotHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
 
 		$packageSchema = $wpdb->schemas[0];
 		self::assertStringContainsString( 'deployment_policy varchar(10) NOT NULL', $packageSchema );
@@ -79,12 +79,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertCount( 5, $wpdb->schemaTables['wp_ran_booster_deployment_attempts']['indexes'] );
 		self::assertStringContainsString( 'ENGINE=InnoDB', $attemptSchema );
 
-		$auditSchema = $wpdb->schemas[2];
-		self::assertStringContainsString( 'event varchar(32) NOT NULL', $auditSchema );
-		self::assertStringContainsString( 'KEY deduplication (event, attempt_id, actor_id, operation, occurred_at, id)', $auditSchema );
-		self::assertCount( 9, $wpdb->schemaTables['wp_ran_booster_rejected_admission_audit']['columns'] );
-		self::assertCount( 4, $wpdb->schemaTables['wp_ran_booster_rejected_admission_audit']['indexes'] );
-		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	/** @return list<array{string, bool}> */
@@ -191,7 +186,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		( new Database() )->install();
 		$attemptSchema = $wpdb->schemaTables['wp_ran_booster_deployment_attempts'];
 		unset( $wpdb->schemaTables['wp_ran_booster_packages'] );
-		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '12.0';
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
 		$wpdb->schemas = array();
 		$wpdb->queries = array();
 
@@ -207,7 +202,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		( new Database() )->install();
 		$wpdb->schemas = array();
-		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '12.0';
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
 		$wpdb->successfulReadsBeforeFailure                           = 0;
 		$database = new Database();
 
@@ -241,7 +236,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		( new Database() )->maybeUpgrade();
 
-		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		self::assertCount( 1, $wpdb->schemas );
 		self::assertArrayHasKey( 'resolved_at', $wpdb->schemaTables['wp_ran_booster_deployment_attempts']['columns'] );
 		self::assertArrayHasKey( 'resolved_by', $wpdb->schemaTables['wp_ran_booster_deployment_attempts']['columns'] );
@@ -254,6 +249,117 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			),
 			$wpdb->rows
 		);
+	}
+
+	/** @return list<array{string}> */
+	public static function supportedLegacyVersionProvider(): array {
+		return array(
+			array( '10.0' ),
+			array( '11.0' ),
+			array( '12.0' ),
+		);
+	}
+
+	#[DataProvider( 'supportedLegacyVersionProvider' )]
+	public function testSupportedLegacyVersionsRetireOnlyTheCurrentPrefixAuditTable( string $legacyVersion ): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		( new Database() )->install();
+		$preservedRows = array(
+			array(
+				'id'      => 1,
+				'package' => 'preserved/plugin.php',
+			),
+		);
+		$wpdb->rows    = $preservedRows;
+		$wpdb->schemaTables['wp_ran_booster_rejected_admission_audit']    = $wpdb->schemaTables['wp_ran_booster_deployment_attempts'];
+		$wpdb->schemaTables['other_ran_booster_rejected_admission_audit'] = $wpdb->schemaTables['wp_ran_booster_deployment_attempts'];
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ]     = $legacyVersion;
+		$wpdb->schemas = array();
+		$wpdb->queries = array();
+
+		( new Database() )->maybeUpgrade();
+
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertArrayNotHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
+		self::assertArrayHasKey( 'other_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
+		self::assertSame( $preservedRows, $wpdb->rows );
+		self::assertContains( 'DROP TABLE IF EXISTS `wp_ran_booster_rejected_admission_audit`', $wpdb->queries );
+	}
+
+	public function testTwelvePointZeroUpgradeSucceedsWhenTheLegacyAuditTableIsAlreadyAbsent(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		( new Database() )->install();
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '12.0';
+		$wpdb->schemas = array();
+		$wpdb->queries = array();
+
+		( new Database() )->maybeUpgrade();
+
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( array(), $wpdb->queries );
+	}
+
+	public function testLegacyAuditDropFailureLeavesTheOldVersionAndTable(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		( new Database() )->install();
+		$wpdb->schemaTables['wp_ran_booster_rejected_admission_audit'] = $wpdb->schemaTables['wp_ran_booster_deployment_attempts'];
+		$wpdb->queryFailureContains                                    = 'DROP TABLE';
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ]  = '12.0';
+
+		try {
+			( new Database() )->maybeUpgrade();
+			self::fail( 'Expected the legacy audit drop to fail closed.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'legacy_audit_drop_failed', $failure->reason() );
+		}
+
+		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertArrayHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
+	}
+
+	public function testLegacyAuditDropMustBeVerifiedBeforeTheVersionAdvances(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		( new Database() )->install();
+		$wpdb->schemaTables['wp_ran_booster_rejected_admission_audit'] = $wpdb->schemaTables['wp_ran_booster_deployment_attempts'];
+		$wpdb->keepDroppedTables                                       = true;
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ]  = '12.0';
+
+		try {
+			( new Database() )->maybeUpgrade();
+			self::fail( 'Expected the legacy audit absence check to fail closed.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'legacy_audit_drop_unverified', $failure->reason() );
+		}
+
+		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertArrayHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
+	}
+
+	public function testLegacyAuditAbsenceReadFailureLeavesTheOldVersionForSafeReentry(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		( new Database() )->install();
+		$wpdb->schemaTables['wp_ran_booster_rejected_admission_audit'] = $wpdb->schemaTables['wp_ran_booster_deployment_attempts'];
+		$wpdb->successfulTableReadsBeforeFailure                       = 3;
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ]  = '12.0';
+
+		try {
+			( new Database() )->maybeUpgrade();
+			self::fail( 'Expected the legacy audit absence read to fail closed.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'legacy_audit_read_failed', $failure->reason() );
+			self::assertStringNotContainsString( 'database details', $failure->getMessage() );
+		}
+
+		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertArrayNotHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
+		$wpdb->successfulTableReadsBeforeFailure = null;
+		( new Database() )->maybeUpgrade();
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	/** @return array<string, array{string, string, string}> */
@@ -300,7 +406,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			'untagged schema 8'  => array( '8.0', 'unsupported_old_schema' ),
 			'untagged schema 9'  => array( '9.0', 'unsupported_old_schema' ),
 			'unknown transition' => array( '10.5', 'unknown_schema_version' ),
-			'newer'              => array( '13.0', 'newer_schema' ),
+			'newer'              => array( '14.0', 'newer_schema' ),
 			'wrong type'         => array( 5, 'malformed_schema_version' ),
 		);
 	}
@@ -456,11 +562,15 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	public function testVersionWriteFailureIsCachedAndRetryableWithANewLifecycle(): void {
 		global $ran_booster_storage_test_option_apply_write,
 			$ran_booster_storage_test_option_write_result,
-			$ran_booster_storage_test_options;
+			$ran_booster_storage_test_options,
+			$wpdb;
 
-		$ran_booster_storage_test_option_apply_write  = false;
-		$ran_booster_storage_test_option_write_result = false;
-		$database                                     = new Database();
+		( new Database() )->install();
+		$wpdb->schemaTables['wp_ran_booster_rejected_admission_audit'] = $wpdb->schemaTables['wp_ran_booster_deployment_attempts'];
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ]  = '12.0';
+		$ran_booster_storage_test_option_apply_write                   = false;
+		$ran_booster_storage_test_option_write_result                  = false;
+		$database = new Database();
 
 		foreach ( array( 1, 2 ) as $_attempt ) {
 			try {
@@ -470,13 +580,14 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 				self::assertSame( 'version_write_failed', $failure->reason() );
 			}
 		}
-		self::assertArrayNotHasKey( Database::VERSION_OPTION, $ran_booster_storage_test_options );
+		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertArrayNotHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schemaTables );
 
 		$ran_booster_storage_test_option_apply_write  = true;
 		$ran_booster_storage_test_option_write_result = true;
 		( new Database() )->requireReady();
 
-		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	public function testVersionVerificationFailureDoesNotClaimReadiness(): void {
@@ -522,7 +633,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		$database->requireReady();
 		self::assertTrue( $database->isReady() );
-		self::assertCount( 3, $wpdb->schemas );
+		self::assertCount( 2, $wpdb->schemas );
 	}
 
 	public function testWordPressOptionsEngineDoesNotGatePluginSchemaInstallation(): void {
@@ -532,7 +643,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		( new Database() )->install();
 
-		self::assertSame( '12.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		self::assertStringNotContainsString( 'wp_options', implode( "\n", $wpdb->queries ) );
 	}
 

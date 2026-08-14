@@ -16,7 +16,6 @@ use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Deployment\DeploymentAttemptRepository;
-use RAN\Deployment\RejectedAdmissionAuditRepository;
 use RAN\Deployment\DeploymentArchivePreflight;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentWorker;
@@ -211,19 +210,6 @@ final class BoosterServiceProvider {
 					$wpdb,
 					Database::attemptTableName(),
 					null,
-					null,
-					$container->make( Database::class )
-				);
-			}
-		);
-		$container->bind(
-			RejectedAdmissionAuditRepository::class,
-			static function ( CoreContainer $container ): RejectedAdmissionAuditRepository {
-				global $wpdb;
-
-				return new RejectedAdmissionAuditRepository(
-					$wpdb,
-					Database::rejectedAdmissionAuditTableName(),
 					null,
 					$container->make( Database::class )
 				);

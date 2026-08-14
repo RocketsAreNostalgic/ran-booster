@@ -145,7 +145,7 @@ work is in neither record.
 - **Extensions** — the Core-owned Extensions page lists the four first-party
   beta extensions using local WordPress plugin state and release-bundled
   artwork. Free downloads remain disabled until their public repositories and
-  releases are ready for people; Subscriber install controls remain disabled
+  releases are ready for people; Sponsor install controls remain disabled
   and link separately to access information.
 - **GitHub** — public repositories need no credential. Private repositories use
   named personal access token profiles: narrowly scoped fine-grained tokens for

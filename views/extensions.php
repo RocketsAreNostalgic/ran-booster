@@ -27,7 +27,7 @@ defined( 'ABSPATH' ) || exit;
 								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php echo esc_html( $extension['state'] ); ?></button>
 								<a href="<?php echo esc_url( $pluginsUrl ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a>
 							<?php elseif ( 'Subscriber' === $extension['availability'] ) : ?>
-								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Subscriber install', 'ran-booster' ); ?></button>
+								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Sponsor install', 'ran-booster' ); ?></button>
 								<a href="https://github.com/sponsors/RocketsAreNostalgic"><?php esc_html_e( 'Get access', 'ran-booster' ); ?></a>
 							<?php else : ?>
 								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Install unavailable', 'ran-booster' ); ?></button>
@@ -47,7 +47,7 @@ defined( 'ABSPATH' ) || exit;
 				</div>
 				<div class="plugin-card-bottom">
 					<div class="ran-booster-extension-card__metadata">
-						<span class="ran-booster-extension-card__badge"><?php echo esc_html( $extension['availability'] ); ?></span>
+						<span class="ran-booster-extension-card__badge"><?php echo esc_html( 'Subscriber' === $extension['availability'] ? __( 'Sponsor', 'ran-booster' ) : $extension['availability'] ); ?></span>
 						<span class="ran-booster-extension-card__badge"><?php esc_html_e( 'Beta', 'ran-booster' ); ?></span>
 						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $extension['state_kind'] ); ?>"><?php echo esc_html( $extension['state'] ); ?></span>
 					</div>
@@ -59,5 +59,5 @@ defined( 'ABSPATH' ) || exit;
 			</article>
 		<?php endforeach; ?>
 	</div>
-	<p class="description ran-booster-extensions__note"><?php esc_html_e( 'Free downloads will be enabled after their public beta releases are ready. Subscriber packages are delivered manually during beta.', 'ran-booster' ); ?></p>
+	<p class="description ran-booster-extensions__note"><?php esc_html_e( 'Free downloads will be enabled after their public beta releases are ready. Sponsor packages are delivered manually during beta.', 'ran-booster' ); ?></p>
 </div>

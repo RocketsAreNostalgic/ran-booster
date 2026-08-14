@@ -302,7 +302,7 @@ The page uses WordPress plugin-card presentation language without invoking the
 WordPress.org Plugins API or installer. It performs no remote request, mutation,
 entitlement check, update registration or add-on callback. Free acquisition is
 disabled until the corresponding repository and public release pass their
-human-readiness gate. Subscriber install controls are always disabled; the
+human-readiness gate. Sponsor install controls are always disabled; the
 separate access-information link is descriptive, not an entitlement signal.
 
 Installed and active state comes only from local WordPress plugin state. Exact

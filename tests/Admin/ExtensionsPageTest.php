@@ -82,9 +82,9 @@ final class ExtensionsPageTest extends TestCase {
 
 		self::assertSame( 4, substr_count( $output, 'class="plugin-card ran-booster-extension-card"' ) );
 		self::assertSame( 2, substr_count( $output, '>Free<' ) );
-		self::assertSame( 2, substr_count( $output, '>Subscriber<' ) );
+		self::assertSame( 2, substr_count( $output, '>Sponsor<' ) );
 		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
-		self::assertSame( 2, substr_count( $output, '>Subscriber install<' ) );
+		self::assertSame( 2, substr_count( $output, '>Sponsor install<' ) );
 		self::assertSame( 2, substr_count( $output, '>Install unavailable<' ) );
 		self::assertSame( 4, substr_count( $output, ' disabled aria-disabled="true"' ) );
 		self::assertSame( 4, substr_count( $output, 'Compatible with your version of Booster' ) );

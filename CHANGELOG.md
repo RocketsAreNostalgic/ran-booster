@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-beta.17](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2026-08-14)
+
+
+### Bug Fixes
+
+* release rejected-admission ledger removal ([567c5c1](https://github.com/RocketsAreNostalgic/ran-booster/commit/567c5c1062309c496a2da0cb5f9bd46285705b83))
+* release rejected-admission ledger removal ([a96437a](https://github.com/RocketsAreNostalgic/ran-booster/commit/a96437adda2fa3d678ef817acef96146ce39496d))
+
 ## [1.0.0-beta.16](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-08-13)
 
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
-use RAN\Deployment\{DeploymentAttemptRepository, DeploymentStorageFailure};
+use RAN\Deployment\{DeploymentAttemptRepository, DeploymentStorageFailure, RejectedAdmissionAuditRepository};
 use RAN\Logging\BoosterLogger;
 use RAN\{Package, PackageSource};
 use RAN\Storage\{PluginRepository, ThemeRepository};
@@ -22,6 +22,7 @@ final class DeploymentAdminPresenter {
 	public function __construct(
 		private ?BackgroundDeploymentFailureMonitor $monitor = null,
 		private ?DeploymentAttemptRepository $attempts = null,
+		private ?RejectedAdmissionAuditRepository $rejectedAdmissions = null,
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null
 	) {
@@ -87,6 +88,7 @@ final class DeploymentAdminPresenter {
 		$activityUrl = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' )
 			. '&attempt=' . rawurlencode( (string) $attempt['id'] ) . '&reference=' . rawurlencode( $reference );
 		if ( 'needs_attention' === $state ) {
+			$this->recordRejectedRetry( $attempt, $operation );
 			/* translators: 1: package type, 2: package slug, 3: activity record link. */
 			$message = sprintf( __( 'An earlier deployment for the %1$s %2$s could not be verified and must be acknowledged before retrying. It is not currently running. <a href="%3$s">Open its recovery details</a>.', 'ran-booster' ), esc_html( $packageType ), esc_html( $packageSlug ), esc_url( $activityUrl ) );
 		} else {
@@ -100,17 +102,18 @@ final class DeploymentAdminPresenter {
 
 	/** @return array<string, mixed> */
 	public function activity(): array {
-		$mode                   = 'list';
-		$items                  = array();
-		$unavailable            = null === $this->attempts;
-		$has_cursor             = false;
-		$next_cursor            = null;
-		$later_verified_attempt = null;
-		$package_settings_urls  = array();
-		$base                   = compact( 'mode', 'items', 'unavailable', 'has_cursor', 'next_cursor', 'later_verified_attempt', 'package_settings_urls' );
-		$hasAttempt             = $this->queryHasKey( 'attempt' );
-		$hasRef                 = $this->queryHasKey( 'reference' );
-		$base['mode']           = $hasAttempt || $hasRef ? 'detail' : 'list';
+		$mode                      = 'list';
+		$items                     = array();
+		$unavailable               = null === $this->attempts;
+		$has_cursor                = false;
+		$next_cursor               = null;
+		$later_verified_attempt    = null;
+		$rejected_admission_events = array();
+		$package_settings_urls     = array();
+		$base                      = compact( 'mode', 'items', 'unavailable', 'has_cursor', 'next_cursor', 'rejected_admission_events', 'later_verified_attempt', 'package_settings_urls' );
+		$hasAttempt                = $this->queryHasKey( 'attempt' );
+		$hasRef                    = $this->queryHasKey( 'reference' );
+		$base['mode']              = $hasAttempt || $hasRef ? 'detail' : 'list';
 		if ( null === $this->attempts ) {
 			return $base;
 		}
@@ -133,6 +136,7 @@ final class DeploymentAdminPresenter {
 						$base['later_verified_attempt'] = $summary['last_successful'];
 					}
 				}
+				$base['rejected_admission_events'] = $this->rejectedAdmissionEvents( $attemptId );
 			} catch ( Throwable $failure ) {
 				$this->logReadFailure( 'deployment activity detail unavailable', $failure, 'deployment_activity_detail' );
 				$base['unavailable'] = true;
@@ -152,13 +156,14 @@ final class DeploymentAdminPresenter {
 				$base['unavailable'] = true;
 				return $base;
 			}
-			$items               = $this->attempts->recentHistory( self::PAGE_SIZE + 1, $beforeId );
-			$hasMore             = count( $items ) > self::PAGE_SIZE;
-			$items               = $hasMore ? array_slice( $items, 0, self::PAGE_SIZE ) : $items;
-			$last                = end( $items );
-			$base['items']       = $items;
-			$base['next_cursor'] = $hasMore && false !== $last ? $last->getId() : null;
-			$base['unavailable'] = false;
+			$items                             = $this->attempts->recentHistory( self::PAGE_SIZE + 1, $beforeId );
+			$hasMore                           = count( $items ) > self::PAGE_SIZE;
+			$items                             = $hasMore ? array_slice( $items, 0, self::PAGE_SIZE ) : $items;
+			$last                              = end( $items );
+			$base['items']                     = $items;
+			$base['next_cursor']               = $hasMore && false !== $last ? $last->getId() : null;
+			$base['rejected_admission_events'] = $this->rejectedAdmissionEvents();
+			$base['unavailable']               = false;
 		} catch ( Throwable $failure ) {
 			$this->logReadFailure( 'deployment activity history unavailable', $failure, 'deployment_activity_history' );
 			$base['unavailable'] = true;
@@ -206,6 +211,19 @@ final class DeploymentAdminPresenter {
 		return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] ) . '&replace_credential=' . rawurlencode( (string) $failure['credential_id'] ) );
 	}
 
+	/** @param array<string, bool|int|string|null> $attempt */
+	private function recordRejectedRetry( array $attempt, string $operation ): void {
+		$userId = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
+		if ( null === $this->rejectedAdmissions || $userId < 1 ) {
+			return;
+		}
+		try {
+			$this->rejectedAdmissions->recordBlockedByNeedsAttention( $attempt, $userId, $operation );
+		} catch ( Throwable $failure ) {
+			$this->logReadFailure( 'rejected deployment admission audit unavailable', $failure, 'rejected_admission_audit', $operation, $attempt['id'] ?? null );
+		}
+	}
+
 	/** @return array<'plugin'|'theme', array<string, string>> */
 	private function packageSettingsUrls(): array {
 		$urls = array(
@@ -239,6 +257,21 @@ final class DeploymentAdminPresenter {
 		}
 
 		return $urls;
+	}
+
+	/** @return list<array{id: int, event: 'blocked_by_needs_attention', attempt_id: int, correlation_id: string, package_type: 'plugin'|'theme', package_slug: string, actor_id: int, operation: string, occurred_at: string}> */
+	private function rejectedAdmissionEvents( ?int $attemptId = null ): array {
+		if ( null === $this->rejectedAdmissions ) {
+			return array();
+		}
+		try {
+			$events = $this->rejectedAdmissions->recent();
+
+			return null === $attemptId ? $events : array_values( array_filter( $events, static fn ( array $event ): bool => $attemptId === $event['attempt_id'] ) );
+		} catch ( Throwable $failure ) {
+			$this->logReadFailure( 'rejected deployment admission audit history unavailable', $failure, 'rejected_admission_audit_history' );
+			return array();
+		}
 	}
 
 	private function queryHasKey( string $key ): bool {

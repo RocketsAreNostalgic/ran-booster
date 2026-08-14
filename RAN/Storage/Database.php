@@ -8,7 +8,7 @@ use RAN\Runtime\RuntimeSupport;
 
 class Database {
 
-	public static string $booster_db_version = '13.0';
+	public static string $booster_db_version = '12.0';
 
 	public const VERSION_OPTION = 'ran_booster_db_version';
 
@@ -151,6 +151,7 @@ class Database {
 
 		$packageTable   = ran_booster_table_name();
 		$attemptTable   = self::attemptTableName();
+		$auditTable     = self::rejectedAdmissionAuditTableName();
 		$charsetCollate = $wpdb->get_charset_collate();
 		$tables         = array(
 			$packageTable => array(
@@ -165,6 +166,13 @@ class Database {
 				'columns'         => $this->attemptColumns(),
 				'indexes'         => $this->attemptIndexes(),
 				'additiveColumns' => array( 'resolved_at', 'resolved_by' ),
+				'additiveIndexes' => array(),
+			),
+			$auditTable   => array(
+				'schema'          => $this->rejectedAdmissionAuditSchema( $auditTable, $charsetCollate ),
+				'columns'         => $this->rejectedAdmissionAuditColumns(),
+				'indexes'         => $this->rejectedAdmissionAuditIndexes(),
+				'additiveColumns' => array(),
 				'additiveIndexes' => array(),
 			),
 		);
@@ -191,10 +199,6 @@ class Database {
 			$this->verifyTable( $table, $contract['columns'], $contract['indexes'] );
 		}
 
-		if ( null !== $installedVersion && version_compare( $installedVersion, self::$booster_db_version, '<' ) ) {
-			$this->retireRejectedAdmissionAuditTable();
-		}
-
 		if ( ! update_option( self::VERSION_OPTION, self::$booster_db_version, false )
 			&& self::$booster_db_version !== get_option( self::VERSION_OPTION, false ) ) {
 			throw new DatabaseLifecycleFailure( 'version_write_failed' );
@@ -211,6 +215,12 @@ class Database {
 		global $wpdb;
 
 		return $wpdb->prefix . 'ran_booster_deployment_attempts';
+	}
+
+	public static function rejectedAdmissionAuditTableName(): string {
+		global $wpdb;
+
+		return $wpdb->prefix . 'ran_booster_rejected_admission_audit';
 	}
 
 	private function packageSchema( string $tableName, string $charsetCollate ): string {
@@ -267,6 +277,24 @@ class Database {
             UNIQUE KEY webhook_target (provider, delivery_id, package_type, package_slug),
             KEY queue (state, created_at, id),
             KEY package_history (package_type, package_slug, created_at, id)
+        ) ENGINE=InnoDB $charsetCollate;";
+	}
+
+	private function rejectedAdmissionAuditSchema( string $tableName, string $charsetCollate ): string {
+		return "CREATE TABLE $tableName (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            event varchar(32) NOT NULL,
+            attempt_id bigint(20) unsigned NOT NULL,
+            correlation_id char(32) NOT NULL,
+            package_type varchar(8) NOT NULL,
+            package_slug varchar(191) NOT NULL,
+            actor_id bigint(20) unsigned NOT NULL,
+            operation varchar(32) NOT NULL,
+            occurred_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            KEY deduplication (event, attempt_id, actor_id, operation, occurred_at, id),
+            KEY activity (occurred_at, id),
+            KEY attempt_activity (attempt_id, occurred_at, id)
         ) ENGINE=InnoDB $charsetCollate;";
 	}
 
@@ -520,6 +548,36 @@ class Database {
 	}
 
 	/**
+	 * @return array<string, array{type: string, nullable: bool, default: ?string, extra: string}>
+	 */
+	private function rejectedAdmissionAuditColumns(): array {
+		$columns = array(
+			'id'             => $this->column( 'bigint(20) unsigned', false, null, 'auto_increment' ),
+			'event'          => $this->column( 'varchar(32)' ),
+			'attempt_id'     => $this->column( 'bigint(20) unsigned' ),
+			'correlation_id' => $this->column( 'char(32)' ),
+			'package_type'   => $this->column( 'varchar(8)' ),
+			'package_slug'   => $this->column( 'varchar(191)' ),
+			'actor_id'       => $this->column( 'bigint(20) unsigned' ),
+			'operation'      => $this->column( 'varchar(32)' ),
+			'occurred_at'    => $this->column( 'datetime' ),
+		);
+		ksort( $columns, SORT_STRING );
+
+		return $columns;
+	}
+
+	/** @return array<string, array{0: bool, 1: list<string>}> */
+	private function rejectedAdmissionAuditIndexes(): array {
+		return array(
+			'PRIMARY'          => array( true, array( 'id' ) ),
+			'activity'         => array( false, array( 'occurred_at', 'id' ) ),
+			'attempt_activity' => array( false, array( 'attempt_id', 'occurred_at', 'id' ) ),
+			'deduplication'    => array( false, array( 'event', 'attempt_id', 'actor_id', 'operation', 'occurred_at', 'id' ) ),
+		);
+	}
+
+	/**
 	 * @return array{type: string, nullable: bool, default: ?string, extra: string}
 	 */
 	private function column(
@@ -550,45 +608,11 @@ class Database {
 		if ( version_compare( $value, self::$booster_db_version, '>' ) ) {
 			throw new DatabaseLifecycleFailure( 'newer_schema' );
 		}
-		if ( ! in_array( $value, array( '10.0', '11.0', '12.0', self::$booster_db_version ), true ) ) {
+		if ( ! in_array( $value, array( '10.0', '11.0', self::$booster_db_version ), true ) ) {
 			throw new DatabaseLifecycleFailure( 'unknown_schema_version' );
 		}
 
 		return $value;
-	}
-
-	private function retireRejectedAdmissionAuditTable(): void {
-		$wpdb     = $this->connection();
-		$table    = $wpdb->prefix . 'ran_booster_rejected_admission_audit';
-		$readback = function () use ( $table, $wpdb ): mixed {
-			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) );
-			$wpdb->last_error = '';
-			// The exact current-prefix table identity is prepared immediately above.
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$result = $wpdb->get_var( $query );
-			if ( '' !== trim( (string) $wpdb->last_error ) ) {
-				throw new DatabaseLifecycleFailure( 'legacy_audit_read_failed' );
-			}
-
-			return $result;
-		};
-		$existing = $readback();
-		if ( null === $existing ) {
-			return;
-		}
-		if ( ! is_string( $existing ) || ! hash_equals( $table, $existing ) ) {
-			throw new DatabaseLifecycleFailure( 'legacy_audit_identity_failed' );
-		}
-
-		$query = $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table );
-		// The exact current-prefix table identifier is prepared immediately above.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		if ( false === $wpdb->query( $query ) ) {
-			throw new DatabaseLifecycleFailure( 'legacy_audit_drop_failed' );
-		}
-		if ( null !== $readback() ) {
-			throw new DatabaseLifecycleFailure( 'legacy_audit_drop_unverified' );
-		}
 	}
 
 	private function normalizeColumnType( string $type ): string {

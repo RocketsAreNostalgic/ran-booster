@@ -102,8 +102,6 @@ namespace Tests\Storage {
 		/** @var list<string> */
 		public array $queries = array();
 		public ?string $queryFailureContains = null;
-		public bool $keepDroppedTables = false;
-		public ?int $successfulTableReadsBeforeFailure = null;
 
 		/** @var list<array<string, mixed>> */
 		public array $rows = array();
@@ -175,9 +173,7 @@ namespace Tests\Storage {
 				return false;
 			}
 			if ( 1 === preg_match( '/^DROP TABLE IF EXISTS `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! $this->keepDroppedTables ) {
-					unset( $this->schemaTables[ $matches[1] ] );
-				}
+				unset( $this->schemaTables[ $matches[1] ] );
 
 				return 1;
 			}
@@ -229,13 +225,6 @@ namespace Tests\Storage {
 			}
 
 			if ( 1 === preg_match( "/^SHOW TABLES LIKE '(.+)'$/", $query, $matches ) ) {
-				if ( 0 === $this->successfulTableReadsBeforeFailure ) {
-					$this->last_error = 'database details must not escape';
-					return null;
-				}
-				if ( null !== $this->successfulTableReadsBeforeFailure ) {
-					--$this->successfulTableReadsBeforeFailure;
-				}
 				$table = stripslashes( str_replace( array( '\\_', '\\%' ), array( '_', '%' ), $matches[1] ) );
 
 				return isset( $this->schemaTables[ $table ] ) ? $table : null;

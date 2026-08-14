@@ -23,6 +23,7 @@ use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\RejectedAdmissionAuditRepository;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Portability\BlueprintPackage;
@@ -89,6 +90,7 @@ class Dashboard {
 	 * @param DeploymentAttemptRepository|null $deploymentAttempts    Bounded operator history reads.
 	 * @param TemporaryDebugCapture|null        $debugCapture          Bounded Booster-only event capture.
 	 * @param AdminAddOnRegistry|null            $adminAddOns           Registered public add-on tabs.
+	 * @param RejectedAdmissionAuditRepository|null $rejectedAdmissionAudit Bounded non-mutation retry audit.
 	 */
 	public function __construct(
 		Database $db,
@@ -103,7 +105,8 @@ class Dashboard {
 		?DeploymentAttemptRepository $deploymentAttempts = null,
 		?TemporaryDebugCapture $debugCapture = null,
 		?SecretsStorageProvisioner $secretsStorage = null,
-		?AdminAddOnRegistry $adminAddOns = null
+		?AdminAddOnRegistry $adminAddOns = null,
+		?RejectedAdmissionAuditRepository $rejectedAdmissionAudit = null
 	) {
 		$this->db                    = $db;
 		$this->plugins               = $plugins;
@@ -115,6 +118,7 @@ class Dashboard {
 		$this->providerDocumentation = $providerDocumentation;
 		$this->deploymentAdmin       = new DeploymentAdminPresenter(
 			attempts: $deploymentAttempts,
+			rejectedAdmissions: $rejectedAdmissionAudit,
 			plugins: $plugins,
 			themes: $themes
 		);

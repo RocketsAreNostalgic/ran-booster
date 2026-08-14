@@ -7,14 +7,47 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$items        = array_map(
+$items                   = array_map(
 	static fn ( DeploymentAttempt $attempt ): array => $attempt->safeData(),
 	array_filter(
 		$deploymentActivity['items'] ?? array(),
 		static fn ( mixed $item ): bool => $item instanceof DeploymentAttempt
 	)
 );
-$unavailable  = true === ( $deploymentActivity['unavailable'] ?? false );
+$unavailable             = true === ( $deploymentActivity['unavailable'] ?? false );
+$rejectedAdmissionEvents = is_array( $deploymentActivity['rejected_admission_events'] ?? null )
+	? $deploymentActivity['rejected_admission_events']
+	: array();
+$activityRows            = array();
+$activityRows            = array_merge(
+	array_map(
+		static fn ( array $item ): array => array(
+			'kind'        => 'deployment',
+			'occurred_at' => (string) ( $item['created_at'] ?? '' ),
+			'item'        => $item,
+		),
+		$items
+	),
+	array_values(
+		array_filter(
+			array_map(
+				static fn ( mixed $event ): ?array => is_array( $event )
+					? array(
+						'kind'        => 'rejected_admission',
+						'occurred_at' => (string) ( $event['occurred_at'] ?? '' ),
+						'event'       => $event,
+					)
+					: null,
+				$rejectedAdmissionEvents
+			),
+			static fn ( ?array $row ): bool => null !== $row
+		)
+	)
+);
+usort(
+	$activityRows,
+	static fn ( array $left, array $right ): int => strcmp( (string) $right['occurred_at'], (string) $left['occurred_at'] )
+);
 $hasCursor    = true === ( $deploymentActivity['has_cursor'] ?? false );
 $baseUrl      = $troubleshootingBase . '&panel=activity';
 $settingsUrls = is_array( $deploymentActivity['package_settings_urls'] ?? null )
@@ -57,10 +90,10 @@ $originLabels = array(
 	<?php } ?>
 	<?php if ( $unavailable ) { ?>
 		<div class="notice notice-error inline"><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div>
-	<?php } elseif ( array() === $items && $hasCursor ) { ?>
+	<?php } elseif ( array() === $activityRows && $hasCursor ) { ?>
 		<p><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
 		<p><a class="button" href="<?php echo esc_url( $baseUrl ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
-	<?php } elseif ( array() === $items ) { ?>
+	<?php } elseif ( array() === $activityRows ) { ?>
 		<p><?php esc_html_e( 'No activity has been recorded yet.', 'ran-booster' ); ?></p>
 	<?php } else { ?>
 		<div class="ran-booster-data-table-wrap ran-booster-attempt-table" role="table">
@@ -73,22 +106,30 @@ $originLabels = array(
 			</div>
 			<ul class="ran-booster-attempt-list">
 			<?php
-			foreach ( $items as $item ) {
-				$state                = (string) ( $item['state'] ?? '' );
-				$summary              = DeploymentOutcomeMessage::forCode( (string) ( $item['outcome_code'] ?? 'pending' ) );
-				$projectLabel         = (string) ( $item['package_slug'] ?? '' );
-				$packageType          = (string) ( $item['package_type'] ?? '' );
+			foreach ( $activityRows as $row ) {
+				$isRejectedAdmission  = 'rejected_admission' === $row['kind'];
+				$item                 = $isRejectedAdmission ? array() : $row['item'];
+				$event                = $isRejectedAdmission ? $row['event'] : array();
+				$state                = $isRejectedAdmission ? 'failed' : (string) ( $item['state'] ?? '' );
+				$summary              = $isRejectedAdmission
+					? __( 'This reinstall request was blocked because the linked prior deployment still needs review.', 'ran-booster' )
+					: DeploymentOutcomeMessage::forCode( (string) ( $item['outcome_code'] ?? 'pending' ) );
+				$projectLabel         = (string) ( $isRejectedAdmission ? ( $event['package_slug'] ?? '' ) : ( $item['package_slug'] ?? '' ) );
+				$packageType          = (string) ( $isRejectedAdmission ? ( $event['package_type'] ?? '' ) : ( $item['package_type'] ?? '' ) );
 				$packageSettingsUrl   = is_string( $settingsUrls[ $packageType ][ $projectLabel ] ?? null )
 					? $settingsUrls[ $packageType ][ $projectLabel ]
 					: '';
 				$packageSettingsLabel = 'theme' === $packageType
 					? __( 'Open theme settings', 'ran-booster' )
 					: __( 'Open plugin settings', 'ran-booster' );
-				$activityLabel        = ucfirst( (string) ( $item['operation'] ?? '' ) );
+				$activityLabel        = $isRejectedAdmission ? __( 'Reinstall', 'ran-booster' ) : ucfirst( (string) ( $item['operation'] ?? '' ) );
+				$detailUrl            = $isRejectedAdmission
+					? $baseUrl . '&attempt=' . rawurlencode( (string) ( $event['attempt_id'] ?? '' ) ) . '&reference=' . rawurlencode( (string) ( $event['correlation_id'] ?? '' ) )
+					: '';
 				?>
-				<li class="ran-booster-attempt-row">
+				<li class="ran-booster-attempt-row<?php echo $isRejectedAdmission ? ' ran-booster-attempt-row--rejected-admission' : ''; ?>">
 					<div class="ran-booster-attempt-row__summary" role="row">
-						<span class="ran-booster-attempt-row__time" role="cell" data-label="<?php esc_attr_e( 'Time', 'ran-booster' ); ?>"><?php echo esc_html( (string) ( $item['created_at'] ?? '' ) ); ?></span>
+						<span class="ran-booster-attempt-row__time" role="cell" data-label="<?php esc_attr_e( 'Time', 'ran-booster' ); ?>"><?php echo esc_html( (string) $row['occurred_at'] ); ?></span>
 						<span class="ran-booster-attempt-row__package" role="cell" data-label="<?php esc_attr_e( 'Project', 'ran-booster' ); ?>">
 						<?php
 						if ( '' !== $packageSettingsUrl ) {
@@ -105,22 +146,29 @@ $originLabels = array(
 					<details class="ran-booster-attempt-row__details">
 						<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>
 						<dl class="ran-booster-activity__details">
-							<div><dt><?php echo esc_html( in_array( $state, array( 'failed', 'needs_attention' ), true ) ? __( 'Failure reason', 'ran-booster' ) : __( 'Outcome', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( $summary ); ?></dd></div>
-							<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['correlation_id'] ?? '' ) ); ?></code></dd></div>
-							<div><dt><?php esc_html_e( 'Package', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $projectLabel ); ?> (<?php echo esc_html( (string) ( $item['package_type'] ?? '' ) ); ?>)</dd></div>
-							<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $originLabels[ $item['source'] ?? '' ] ?? (string) ( $item['source'] ?? '' ) ); ?></dd></div>
-							<div><dt><?php esc_html_e( 'Requested reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['requested_ref'] ?? '' ) ); ?></code></dd></div>
-							<div><dt><?php esc_html_e( 'Resolved reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['resolved_ref'] ?? __( 'Not resolved', 'ran-booster' ) ) ); ?></code></dd></div>
-							<div><dt><?php esc_html_e( 'Mutation began', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) ( $item['mutation_started_at'] ?? __( 'No', 'ran-booster' ) ) ); ?></dd></div>
-							<div><dt><?php esc_html_e( 'Finished', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) ( $item['finished_at'] ?? __( 'Not finished', 'ran-booster' ) ) ); ?></dd></div>
-							<?php if ( null !== ( $item['resolved_at'] ?? null ) && null !== ( $item['resolved_by'] ?? null ) ) { ?>
-								<div><dt><?php esc_html_e( 'Operator review', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: review date and time, 2: WordPress user ID. */ __( 'Resolved %1$s by user #%2$d', 'ran-booster' ), $item['resolved_at'], $item['resolved_by'] ) ); ?></dd></div>
+							<?php if ( $isRejectedAdmission ) { ?>
+								<div><dt><?php esc_html_e( 'Failure reason', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $summary ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Package', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $projectLabel ); ?> (<?php echo esc_html( (string) ( $event['package_type'] ?? '' ) ); ?>)</dd></div>
+								<div><dt><?php esc_html_e( 'Requested by', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d: WordPress user ID. */ __( 'User #%d', 'ran-booster' ), (int) ( $event['actor_id'] ?? 0 ) ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Prior deployment', 'ran-booster' ); ?></dt><dd><a href="<?php echo esc_url( $detailUrl ); ?>"><?php esc_html_e( 'Review activity record', 'ran-booster' ); ?></a></dd></div>
+							<?php } else { ?>
+								<div><dt><?php echo esc_html( in_array( $state, array( 'failed', 'needs_attention' ), true ) ? __( 'Failure reason', 'ran-booster' ) : __( 'Outcome', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( $summary ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['correlation_id'] ?? '' ) ); ?></code></dd></div>
+								<div><dt><?php esc_html_e( 'Package', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $projectLabel ); ?> (<?php echo esc_html( (string) ( $item['package_type'] ?? '' ) ); ?>)</dd></div>
+								<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $originLabels[ $item['source'] ?? '' ] ?? (string) ( $item['source'] ?? '' ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Requested reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['requested_ref'] ?? '' ) ); ?></code></dd></div>
+								<div><dt><?php esc_html_e( 'Resolved reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['resolved_ref'] ?? __( 'Not resolved', 'ran-booster' ) ) ); ?></code></dd></div>
+								<div><dt><?php esc_html_e( 'Mutation began', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) ( $item['mutation_started_at'] ?? __( 'No', 'ran-booster' ) ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Finished', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) ( $item['finished_at'] ?? __( 'Not finished', 'ran-booster' ) ) ); ?></dd></div>
+								<?php if ( null !== ( $item['resolved_at'] ?? null ) && null !== ( $item['resolved_by'] ?? null ) ) { ?>
+									<div><dt><?php esc_html_e( 'Operator review', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: review date and time, 2: WordPress user ID. */ __( 'Resolved %1$s by user #%2$d', 'ran-booster' ), $item['resolved_at'], $item['resolved_by'] ) ); ?></dd></div>
+								<?php } ?>
 							<?php } ?>
 							<?php if ( '' !== $packageSettingsUrl ) { ?>
 								<div><dt><?php esc_html_e( 'Package settings', 'ran-booster' ); ?></dt><dd><a href="<?php echo esc_url( $packageSettingsUrl ); ?>"><?php echo esc_html( $packageSettingsLabel ); ?></a></dd></div>
 							<?php } ?>
 						</dl>
-						<?php if ( 'running' === $state ) { ?>
+						<?php if ( ! $isRejectedAdmission && 'running' === $state ) { ?>
 							<form method="post" action="">
 								<?php wp_nonce_field( 'ran-booster-reconcile-deployment-worker' ); ?>
 								<input type="hidden" name="ran_booster[action]" value="reconcile-deployment-worker">

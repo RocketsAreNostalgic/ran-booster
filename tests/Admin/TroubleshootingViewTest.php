@@ -263,11 +263,18 @@ final class TroubleshootingViewTest extends TestCase {
 			)
 		);
 		$deploymentActivity  = array(
-			'detail'                => $attempt,
-			'unavailable'           => false,
-			'package_settings_urls' => array(
+			'detail'                    => $attempt,
+			'unavailable'               => false,
+			'package_settings_urls'     => array(
 				'theme' => array(
 					'example-theme' => 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme',
+				),
+			),
+			'rejected_admission_events' => array(
+				array(
+					'attempt_id'  => 7,
+					'actor_id'    => 3,
+					'occurred_at' => '2026-07-27 15:30:00',
 				),
 			),
 		);
@@ -378,6 +385,78 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'activity #8', $html );
 		self::assertStringContainsString( 'Acknowledge historical uncertainty', $html );
 		self::assertStringNotContainsString( 'Provider request ID', $html );
+	}
+
+	public function testActivityRendersBlockedRetriesAsTimestampOrderedFailures(): void {
+		$attempt             = DeploymentAttempt::fromDatabase(
+			array(
+				'id'                      => 8,
+				'correlation_id'          => str_repeat( 'a', 32 ),
+				'source'                  => 'manual',
+				'operation'               => 'update',
+				'package_type'            => 'plugin',
+				'package_slug'            => 'newer-deployment',
+				'package_source'          => 'branch',
+				'package_source_revision' => 1,
+				'provider'                => 'gh',
+				'provider_repository_id'  => 'repository-8',
+				'requested_ref'           => 'main',
+				'resolved_ref'            => null,
+				'delivery_id'             => null,
+				'delivery_digest'         => null,
+				'state'                   => 'succeeded',
+				'mutation_started_at'     => null,
+				'outcome_code'            => 'deployed',
+				'request_json'            => '{"repository":"org/newer-deployment","credential_id":null,"private":false,"configured_branch":"main","package_slug":"newer-deployment","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1}',
+				'created_at'              => '2026-07-27 15:31:00',
+				'finished_at'             => '2026-07-27 15:31:01',
+			)
+		);
+		$deploymentActivity  = array(
+			'items'                     => array( $attempt ),
+			'unavailable'               => false,
+			'has_cursor'                => false,
+			'next_cursor'               => null,
+			'rejected_admission_events' => array(
+				array(
+					'attempt_id'     => 7,
+					'correlation_id' => str_repeat( 'd', 32 ),
+					'package_type'   => 'plugin',
+					'package_slug'   => 'example',
+					'actor_id'       => 3,
+					'occurred_at'    => '2026-07-27 15:30:00',
+				),
+			),
+			'package_settings_urls'     => array(
+				'plugin' => array(
+					'example' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
+				),
+			),
+		);
+		$troubleshootingBase = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+
+		$deploymentPosition = strpos( $html, 'newer-deployment' );
+		$retryPosition      = strpos( $html, 'example' );
+
+		self::assertIsInt( $deploymentPosition );
+		self::assertIsInt( $retryPosition );
+		self::assertLessThan( $retryPosition, $deploymentPosition );
+		self::assertStringNotContainsString( 'Blocked retry requests', $html );
+		self::assertStringNotContainsString( 'No activity has been recorded yet.', $html );
+		self::assertStringContainsString( '>Reinstall</span>', $html );
+		self::assertStringContainsString( '>Failed</span>', $html );
+		self::assertStringContainsString( 'Branch deployment', $html );
+		self::assertStringContainsString( 'This reinstall request was blocked because the linked prior deployment still needs review.', $html );
+		self::assertStringContainsString( 'User #3', $html );
+		self::assertStringContainsString( 'Review activity record', $html );
+		self::assertStringContainsString( 'attempt=7', $html );
+		self::assertStringContainsString( 'reference=' . str_repeat( 'd', 32 ), $html );
+		self::assertStringContainsString( 'Open plugin settings', $html );
+		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
 	}
 
 	public function testExhaustedDeploymentHistoryOffersTheLatestPage(): void {

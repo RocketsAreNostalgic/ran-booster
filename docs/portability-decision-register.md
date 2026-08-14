@@ -18,7 +18,7 @@ public extension boundary is documented in
 
 Reconciled 2026-08-08 against RAN Booster Core
 `6ea2644d1f458add4b49828b0e7cd629e19ea593` (`1.0.0-beta.9`), Blueprint V1,
-Portability API 2, Provider API 8, and Add-on API 14.
+Portability API 2, Provider API 8, and Add-on API 15.
 
 The historical 2026-07-29 review used Core merge `534d484`, exact WP Pusher
 3.0.13 source commit `6608ffef25b9f7b6ed376b647aa04c261deab665`, tree
@@ -84,7 +84,7 @@ reports credential availability separately from the package outcome, without
 claiming whether a deterministic imported profile was newly created. Source
 profile IDs, target profile IDs, and both export and import choices remain
 request-only authority selectors and are not added to `blueprint.json`.
-Blueprint V1, Portability API 2, Provider API 8, and Add-on API 14 are
+Blueprint V1, Portability API 2, Provider API 8, and Add-on API 15 are
 unchanged.
 
 ## Implemented corrections

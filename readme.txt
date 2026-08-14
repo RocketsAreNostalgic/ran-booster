@@ -20,6 +20,12 @@ public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
 
+The Core-owned Extensions page lists four first-party beta extensions using
+only local WordPress plugin state and release-bundled artwork. Free downloads
+remain unavailable until their public repositories and releases are ready for
+people. Subscriber install controls stay disabled and link separately to access
+information; Core stores no subscriber or entitlement state.
+
 The plugin and theme installation screens include a native repository picker.
 For operational providers, it can search public repositories without a token or
 list repositories accessible to a saved credential profile. Manual repository

@@ -1,0 +1,162 @@
+/* Release-bundled Extensions catalogue using WordPress plugin-card language. */
+.ran-booster-admin.ran-booster-extensions {
+	max-inline-size: 1200px;
+}
+
+.ran-booster-extensions__header p {
+	max-inline-size: 760px;
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-base);
+}
+
+.ran-booster-extensions__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--ran-booster-space-16);
+	margin-block-start: var(--ran-booster-space-20);
+}
+
+.ran-booster-extension-card.plugin-card {
+	position: relative;
+	box-sizing: border-box;
+	inline-size: auto;
+	margin: 0;
+	border: 1px solid var(--ran-booster-border);
+	border-color: var(--ran-booster-border);
+	background: var(--ran-booster-surface);
+	box-shadow: var(--ran-booster-shadow-surface);
+}
+
+.ran-booster-extension-card .plugin-card-top {
+	display: grid;
+	grid-template-columns: 128px minmax(0, 1fr);
+	gap: var(--ran-booster-space-24);
+	min-block-size: 240px;
+	padding: var(--ran-booster-space-20);
+}
+
+.ran-booster-extension-card .plugin-icon {
+	position: static;
+	inline-size: 128px;
+	block-size: 128px;
+	margin: 0;
+	border-radius: var(--ran-booster-radius-surface);
+}
+
+.ran-booster-extension-card .name,
+.ran-booster-extension-card .desc {
+	margin: 0;
+}
+
+.ran-booster-extension-card .desc > p {
+	margin: 0;
+}
+
+.ran-booster-extension-card .name h2 {
+	margin: 0;
+	font-size: 18px;
+	line-height: 1.3;
+}
+
+.ran-booster-extension-card .name a {
+	text-decoration: none;
+}
+
+.ran-booster-extension-card .action-links {
+	display: flex;
+	position: static;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-16);
+	width: auto;
+	margin: var(--ran-booster-space-20) 0;
+	text-align: start;
+}
+
+.ran-booster-extension-card .button[disabled] {
+	cursor: default;
+}
+
+.ran-booster-extension-card__byline {
+	margin-block: var(--ran-booster-space-20) 0;
+	font-style: italic;
+}
+
+.ran-booster-extension-card .plugin-card-bottom {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: var(--ran-booster-space-20);
+	padding: var(--ran-booster-space-16) var(--ran-booster-space-20);
+	border-block-start: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-extension-card__metadata {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-6);
+}
+
+.ran-booster-extension-card__compatibility {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--ran-booster-space-6);
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-sm);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	text-align: end;
+}
+
+.ran-booster-extension-card__compatibility > span:first-child {
+	color: var(--ran-booster-text-success);
+}
+
+.ran-booster-extension-card__compatibility--incompatible > span:first-child {
+	color: var(--ran-booster-status-error);
+}
+
+.ran-booster-extension-card__badge {
+	padding: var(--ran-booster-space-2) var(--ran-booster-space-8);
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-pill);
+	background: var(--ran-booster-surface);
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-extensions__note {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+@media screen and (max-width: 900px) {
+	.ran-booster-extensions__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media screen and (max-width: 600px) {
+	.ran-booster-extension-card .plugin-card-top {
+		grid-template-columns: 88px minmax(0, 1fr);
+		gap: var(--ran-booster-space-12);
+	}
+
+	.ran-booster-extension-card .plugin-icon {
+		inline-size: 88px;
+		block-size: 88px;
+	}
+
+	.ran-booster-extension-card .action-links {
+		margin-block: var(--ran-booster-space-12);
+	}
+
+	.ran-booster-extension-card .plugin-card-bottom {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.ran-booster-extension-card__compatibility {
+		justify-content: flex-start;
+		text-align: start;
+	}
+}

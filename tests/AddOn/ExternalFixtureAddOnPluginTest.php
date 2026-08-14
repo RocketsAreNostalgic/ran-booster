@@ -25,7 +25,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 	public function testPluginLoadedBeforeCoreComposesTheReservedGitHubAction(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 
 		$facade = new FixtureAddOnFacade( array( $this->target() ) );
 		$rows   = $this->compose( $facade );
@@ -39,7 +39,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterCoreUsesTheSamePublishedHooks(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 		$this->loadFixturePlugin();
 
 		$facade = new FixtureAddOnFacade();
@@ -58,7 +58,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_webhook_assistance_ready', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 13 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_webhook_assistance_ready', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
@@ -67,7 +67,7 @@ final class ExternalFixtureAddOnPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testUnavailableFacadeLeavesTheCoreActionDisabled(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 		$this->loadFixturePlugin();
 
 		$rows = $this->compose( new FixtureAddOnFacade( failure: true ) );

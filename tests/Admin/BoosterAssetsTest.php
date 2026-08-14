@@ -49,8 +49,18 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'plugins.php' ),
 			array( 'themes.php' ),
 			array( 'settings_page_ran-booster' ),
-			array( 'ran-booster_page_ran-booster-pro' ),
+			array( 'ran-booster_page_unrelated' ),
 		);
+	}
+
+	public function testExtensionsPageReceivesOnlyTheCommonOfflineAssets(): void {
+		$this->booster()->loadScripts( 'ran-booster_page_ran-booster-extensions' );
+
+		self::assertSame( array( 'ran-booster-styles' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_scripts'] );
+		self::assertArrayHasKey( 'ran-booster-55-extensions', $GLOBALS['ran_booster_asset_test_registered_styles'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
 	}
 
 	#[DataProvider( 'unrelatedAdminHookProvider' )]
@@ -243,6 +253,7 @@ final class BoosterAssetsTest extends TestCase {
 			'ran-booster-35-status-utilities'             => '35-status-utilities.css',
 			'ran-booster-40-tables-and-pills'             => '40-tables-and-pills.css',
 			'ran-booster-50-troubleshooting-and-activity' => '50-troubleshooting-and-activity.css',
+			'ran-booster-55-extensions'                   => '55-extensions.css',
 			'ran-booster-60-packages'                     => '60-packages.css',
 			'ran-booster-65-package-settings'             => '65-package-settings.css',
 			'ran-booster-70-credential-dialog'            => '70-credential-dialog.css',

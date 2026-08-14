@@ -8,7 +8,7 @@
 of the frozen source object. It changes no PHP file.
 
 **Decision:** This is the compatibility and measurement boundary for the Core
-cohesion work. It authorizes no runtime change. Provider API 8, Add-on API 14,
+cohesion work. It authorizes no runtime change. Provider API 8, Add-on API 15,
 Admin Interaction API 2, Portability API 2 and Prospective Release API 5 remain
 stable. The provider-page slice may replace the internal ownership named below,
 but it may not add a public API, hook, persistent field, dependency or generic
@@ -118,12 +118,12 @@ every replacement owner.
 | Marker / delivery point                       | Frozen contract                                                                                                                                                                            |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `RAN_BOOSTER_PROVIDER_API_VERSION`            | `8`; one sealed `ProviderRegistry`; providers register before the priority-100 `plugins_loaded` seal                                                                                       |
-| `RAN_BOOSTER_ADDON_API_VERSION`               | `14`; request-local ready actions and the bounded dashboard-tab registry                                                                                                                   |
+| `RAN_BOOSTER_ADDON_API_VERSION`               | `15`; request-local ready actions and the bounded dashboard-tab registry                                                                                                                   |
 | `RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION`   | `2`; `AdminInteractionFacade::{renderFormAttributes,isEnhancedRequest,respond}` plus feature-detected `TransporterRowAdminInteractionFacade::respondWithTransporterRowFragment`            |
 | `RAN_BOOSTER_PORTABILITY_API_VERSION`         | `2`; `PortabilityFacade::{nonceAction,review,apply}`                                                                                                                                       |
 | `RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` | `5`, defined only when the selected updater reports the matching prospective API; `ProspectiveReleaseFacade::{nonceAction,supportedProviderCodes,listCandidates,discover,inspect,install}` |
-| Add-on API 14 release tracking                | `ReleaseTrackingFacade::{status,statuses,nonceAction,preflight,enable,changeChannel,refresh,returnToBranch}`                                                                               |
-| Add-on API 14 webhook assistance              | `WebhookAssistanceFacade::{readiness,target,credentialChoices,profile,assessSetup,assessCheck,assessReconfigure,assessRemove,setup,check,reconfigure,remove}`                              |
+| Add-on API 15 release tracking                | `ReleaseTrackingFacade::{status,statuses,nonceAction,preflight,enable,changeChannel,refresh,returnToBranch}`                                                                               |
+| Add-on API 15 webhook assistance              | `WebhookAssistanceFacade::{readiness,target,credentialChoices,profile,assessSetup,assessCheck,assessReconfigure,assessRemove,setup,check,reconfigure,remove}`                              |
 | Dashboard tab allowlist                       | Facade names `webhook_assistance` and `release_tracking` only                                                                                                                              |
 | `RAN_BOOSTER_RUNTIME_MODE`                    | Current runtime support marker; incompatible multisite does not enter managed-operation bootstrap                                                                                          |
 
@@ -162,7 +162,6 @@ payloads.
 | `ran_booster_overview_render_migration_prompt`                     | action             |                                                            0 |
 | `ran_booster_portability_render_migration_modes`                   | action             |                                                            0 |
 | `ran_booster_portability_render_migration_flows`                   | action             |                                                            0 |
-| `ran_booster_pro_page_body`                                        | action             |                             2: Pro URL, administration scope |
 | `ran_booster_background_deployment_failure_email`                  | filter             |           2: normalized mail record, deployment outcome data |
 
 The assistance-active filter, webhook-cleanup action and background-email
@@ -178,9 +177,9 @@ above remain protected.
 
 | Consumer object                                                | Actual Core dependency                                                                                                                                                                                                   |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Assisted Hooks `d46d016098d0ac7a3ce7af9c446241e813ae670a`      | Add-on API 14; Admin Interaction API 2; exact webhook-assistance facade and its fitness/operation result types; provider-repository active/rows/panel hooks; provider documentation filter                               |
-| Bitbucket Cloud `0a3de24a46b4f55a3d8dcbf3cf97d6591b6df8e8`     | Provider API 8 and Add-on API 14; `ProviderRegistry::registerWithCredentialStore`; provider metadata, credential, browser, archive, webhook and diagnostics interfaces/value types; provider documentation filter        |
-| Release Deployments `f674226a4f8e450789082e68d63e5961150f7fad` | Add-on API 14; Prospective Release API 5; release-tracking and prospective-release ready actions; structural gateways requiring the exact facade methods listed above; package management/source and documentation hooks |
+| Assisted Hooks `d46d016098d0ac7a3ce7af9c446241e813ae670a`      | Add-on API 15; Admin Interaction API 2; exact webhook-assistance facade and its fitness/operation result types; provider-repository active/rows/panel hooks; provider documentation filter                               |
+| Bitbucket Cloud `0a3de24a46b4f55a3d8dcbf3cf97d6591b6df8e8`     | Provider API 8 and Add-on API 15; `ProviderRegistry::registerWithCredentialStore`; provider metadata, credential, browser, archive, webhook and diagnostics interfaces/value types; provider documentation filter        |
+| Release Deployments `f674226a4f8e450789082e68d63e5961150f7fad` | Add-on API 15; Prospective Release API 5; release-tracking and prospective-release ready actions; structural gateways requiring the exact facade methods listed above; package management/source and documentation hooks |
 | WP Pusher Migrator `47cedf05310c4bbf49cc57d76aa9974ff5165f25`  | Portability API 2; Admin Interaction API 2 and feature-detected Transporter-row capability; portability and overview rendering hooks                                                                                     |
 
 No checked-out production sibling directly constructs, subclasses or

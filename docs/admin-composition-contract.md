@@ -39,7 +39,7 @@ if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
 }
 ```
 
-Add-on API 14 publishes only the named facade needed by each ready action. Core
+Add-on API 15 publishes only the named facade needed by each ready action. Core
 does not deliver an add-on logging facade, generic resolver or container.
 Provider API 9 remains a separate contract. Provider add-ons must continue to
 perform the exact checks described in the
@@ -290,43 +290,25 @@ and Release Deployments contribute to existing Core surfaces through the hooks
 below, while Bitbucket uses the provider-tab contract. Their migration does not
 remove the public tab capability for other add-ons.
 
-## Fixed Pro page
+## Fixed Extensions page
 
-Core also owns one fixed **RAN Booster > Pro** submenu. This is a dedicated
-control-plane route for a compatible supporter manager, not a second dashboard
-tab or a general add-on-page API. Its parent, label, capability and slug are
-always `ran-booster`, `Pro`, `manage_options` and `ran-booster-pro`.
+Core owns the **RAN Booster > Extensions** submenu at
+`ran-booster-extensions`. The `manage_options`-gated page renders exactly four
+release-bundled first-party cards in deterministic order. Its catalogue, local
+placeholder images, installed-plugin reads, compatibility labels and failure
+shell are all Core-owned.
 
-An add-on may render the page body only after it has checked exact Add-on API 14
-above, by attaching a normal WordPress action:
+The page uses WordPress plugin-card presentation language without invoking the
+WordPress.org Plugins API or installer. It performs no remote request, mutation,
+entitlement check, update registration or add-on callback. Free acquisition is
+disabled until the corresponding repository and public release pass their
+human-readiness gate. Subscriber install controls are always disabled; the
+separate access-information link is descriptive, not an entitlement signal.
 
-```php
-add_action(
-	'ran_booster_pro_page_body',
-	static function ( string $proUrl, string $scope ): void {
-		if ( 'administration' !== $scope ) {
-			return;
-		}
-
-		// Render escaped, add-on-owned markup.
-	}
-);
-```
-
-Core fires the action only after independently checking `manage_options`. It
-passes exactly the canonical Pro URL and the literal `administration` scope;
-it does not supply a facade, service container, database, credentials, secrets,
-provider client, package, request data or Core view. The add-on owns its
-options, assets, nonces and capability-checked `admin_post_*` (or equivalent)
-handlers. It must enqueue its own assets only for the `ran-booster_page_ran-booster-pro`
-screen hook.
-
-When no compatible add-on produces body output, Core shows its static fallback.
-If a callback throws, Core discards its partial output, records only a redacted
-stable diagnostic and shows an unavailable notice instead. The callback cannot
-change the route or replace the failure shell. The existing dashboard-tab API
-remains unchanged; a manager using this route must not also add a dashboard
-tab, top-level menu or second route.
+Installed and active state comes only from local WordPress plugin state. Exact
+runtime compatibility remains owned by each installed extension's fail-closed
+API guard. The page exposes no new action, filter, facade, registry or persistent
+state, and its local stylesheet is limited to the Extensions screen hook.
 
 ## Provider repository surface
 

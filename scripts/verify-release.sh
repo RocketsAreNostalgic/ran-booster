@@ -119,7 +119,7 @@ done
 bootstrap_source=$(git show "$commit:ran-booster.php")
 for required_api_marker in \
 	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );" \
-	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );" \
+	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );" \
 	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );" \
 	"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );"; do
 	grep -Fq "$required_api_marker" <<< "$bootstrap_source" \

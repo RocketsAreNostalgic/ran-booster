@@ -103,6 +103,7 @@ final class AdminAssetContractTest extends TestCase {
 				'35-status-utilities.css',
 				'40-tables-and-pills.css',
 				'50-troubleshooting-and-activity.css',
+				'55-extensions.css',
 				'60-packages.css',
 				'65-package-settings.css',
 				'70-credential-dialog.css',

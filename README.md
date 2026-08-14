@@ -142,6 +142,11 @@ work is in neither record.
 
 ## Current status
 
+- **Extensions** — the Core-owned Extensions page lists the four first-party
+  beta extensions using local WordPress plugin state and release-bundled
+  artwork. Free downloads remain disabled until their public repositories and
+  releases are ready for people; Subscriber install controls remain disabled
+  and link separately to access information.
 - **GitHub** — public repositories need no credential. Private repositories use
   named personal access token profiles: narrowly scoped fine-grained tokens for
   known resource owners, or a classic token when one credential must span several
@@ -154,7 +159,7 @@ work is in neither record.
   Read and write permission. An administrator can paste a request-only token,
   or select an eligible saved Core GitHub credential; the matching provider
   resolves a saved token only inside its fixed operation, without granting the
-  add-on sidecar access. Core Add-on API 14 supplies the add-on with explicit
+  add-on sidecar access. Core Add-on API 15 supplies the add-on with explicit
   setup, check, reconfigure and remove methods; none accepts a callback that
   could receive a saved credential or signing secret. The add-on can enrich
   Core's existing GitHub repository table and append a selected-repository

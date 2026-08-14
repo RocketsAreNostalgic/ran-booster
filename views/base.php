@@ -20,8 +20,13 @@ $footerPluginAuthorUrl  = is_string( $footerPluginHeaders['author_uri'] ?? null 
 	? trim( $footerPluginHeaders['author_uri'] )
 	: '';
 $footerPluginAuthorLink = esc_url( $footerPluginAuthorUrl );
+$adminPageModifier      = match ( $view ) {
+	'extensions'     => ' ran-booster-admin--extensions',
+	'packages/index' => ' ran-booster-admin--package-index',
+	default          => '',
+};
 
-?><div class="wrap ran-booster-admin<?php echo 'packages/index' === $view ? ' ran-booster-admin--package-index' : ''; ?>">
+?><div class="wrap ran-booster-admin<?php echo esc_attr( $adminPageModifier ); ?>">
 	<header class="ran-booster-masthead">
 		<h1 class="ran-booster-brand"><a class="ran-booster-brand__link" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster' ) ); ?>"><span class="ran-booster-brand__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10,2 C11.5,2 13,5 13,8 L13,15 L7,15 L7,8 C7,5 8.5,2 10,2 Z M7,12 L4,17 L7,15 Z M13,12 L16,17 L13,15 Z M8,15 L10,18.5 L12,15 Z"></path></svg></span> <?php esc_html_e( 'RAN Booster', 'ran-booster' ); ?></a></h1>
 		<p><?php esc_html_e( 'Safe, portable and extensible repository deployment for WordPress — modern and independent.', 'ran-booster' ); ?></p>

@@ -124,6 +124,10 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertStringContainsString( '.ran-booster-extension-card__badge {', $extensions );
 		self::assertStringContainsString( '.ran-booster-extension-details {', $extensions );
+		self::assertStringContainsString( '.ran-booster-admin--extensions {', $extensions );
+		self::assertStringContainsString( 'max-inline-size: 1400px;', $extensions );
+		self::assertStringContainsString( 'width: calc(50% - 8px);', $extensions );
+		self::assertStringContainsString( '@media screen and (max-width: 782px)', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-icon', $extensions );
@@ -557,10 +561,8 @@ final class AdminAssetContractTest extends TestCase {
 		$base       = $this->view( 'base.php' );
 		$view       = $this->view( 'packages/index.php' );
 
-		self::assertStringContainsString(
-			"'packages/index' === \$view ? ' ran-booster-admin--package-index' : ''",
-			$base
-		);
+		self::assertStringContainsString( "'extensions'     => ' ran-booster-admin--extensions'", $base );
+		self::assertStringContainsString( "'packages/index' => ' ran-booster-admin--package-index'", $base );
 		self::assertStringContainsString( "! str_starts_with( \$view, 'packages/' )", $base );
 		self::assertStringContainsString( 'ran-booster-package-table', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__name', $view );

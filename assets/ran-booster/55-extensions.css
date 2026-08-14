@@ -1,4 +1,8 @@
 /* Release-bundled Extensions catalogue using WordPress plugin-card markup. */
+.ran-booster-admin--extensions {
+	max-inline-size: 1400px;
+}
+
 .ran-booster-extensions__body {
 	padding-block-start: 0;
 }
@@ -6,6 +10,21 @@
 .ran-booster-extensions__grid {
 	display: flow-root;
 	margin-block-start: var(--ran-booster-space-20);
+}
+
+.ran-booster-extensions__grid .plugin-card {
+	clear: none;
+	width: calc(50% - 8px);
+	margin-inline: 8px;
+}
+
+.ran-booster-extensions__grid .plugin-card:nth-child(odd) {
+	clear: both;
+	margin-inline-start: 0;
+}
+
+.ran-booster-extensions__grid .plugin-card:nth-child(even) {
+	margin-inline-end: 0;
 }
 
 .ran-booster-extension-card__metadata {
@@ -192,5 +211,12 @@
 	.ran-booster-extension-details__sidebar {
 		border-block-start: 1px solid var(--ran-booster-divider);
 		border-inline-start: 0;
+	}
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-extensions__grid .plugin-card {
+		width: 100%;
+		margin-inline: 0;
 	}
 }

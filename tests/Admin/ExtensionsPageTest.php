@@ -120,8 +120,9 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 4, substr_count( $output, '>Free<' ) );
 		self::assertSame( 4, substr_count( $output, '>Sponsor<' ) );
 		self::assertSame( 8, substr_count( $output, '>Beta<' ) );
-		self::assertSame( 2, substr_count( $output, '>Sponsor install<' ) );
-		self::assertSame( 2, substr_count( $output, '>Install unavailable<' ) );
+		self::assertSame( 4, substr_count( $output, '>Install<' ) );
+		self::assertStringNotContainsString( '>Sponsor install<', $output );
+		self::assertStringNotContainsString( '>Install unavailable<', $output );
 		self::assertSame( 4, substr_count( $output, ' disabled aria-disabled="true"' ) );
 		self::assertSame( 4, substr_count( $output, 'Compatible with your version of Booster' ) );
 		self::assertSame( 4, substr_count( $output, 'class="compatibility-compatible"' ) );
@@ -164,7 +165,8 @@ final class ExtensionsPageTest extends TestCase {
 		$output = $this->render();
 
 		self::assertSame( 6, substr_count( $output, '>Active<' ) );
-		self::assertSame( 3, substr_count( $output, '>Installed, inactive<' ) );
+		self::assertSame( 1, substr_count( $output, '>Inactive<' ) );
+		self::assertSame( 2, substr_count( $output, '>Installed, inactive<' ) );
 		self::assertSame( 1, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
 		self::assertSame( 4, substr_count( $output, '>More Details</a>' ) );
 	}
@@ -180,7 +182,8 @@ final class ExtensionsPageTest extends TestCase {
 
 		$output = $this->render();
 
-		self::assertSame( 3, substr_count( $output, '>Incompatible<' ) );
+		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
+		self::assertSame( 1, substr_count( $output, '>Inactive<' ) );
 		self::assertStringContainsString( 'ran-booster-badge--error', $output );
 		self::assertStringContainsString( 'Requires a different version of Booster', $output );
 		self::assertStringNotContainsString( '>Active<', $output );

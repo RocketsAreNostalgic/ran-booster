@@ -41,11 +41,9 @@ defined( 'ABSPATH' ) || exit;
 								<?php if ( 'Active' === $extension['state'] ) : ?>
 									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Active', 'ran-booster' ); ?></button>
 								<?php elseif ( 'Not installed' !== $extension['state'] ) : ?>
-									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php echo esc_html( $extension['state'] ); ?></button>
-								<?php elseif ( 'Subscriber' === $extension['availability'] ) : ?>
-									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Sponsor install', 'ran-booster' ); ?></button>
+									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Inactive', 'ran-booster' ); ?></button>
 								<?php else : ?>
-									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Install unavailable', 'ran-booster' ); ?></button>
+									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
 								<?php endif; ?>
 								</li>
 								<li>

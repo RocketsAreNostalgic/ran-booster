@@ -119,6 +119,19 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $buttons );
 	}
 
+	public function testExtensionsStylesDoNotReimplementTheWordPressPluginCardLayout(): void {
+		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
+
+		self::assertStringContainsString( '.ran-booster-extension-card__badge {', $extensions );
+		self::assertStringContainsString( '.ran-booster-extension-details {', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-icon', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .action-links', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-action-buttons', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-bottom', $extensions );
+	}
+
 	public function testStatusUtilitiesOwnSharedPillAndTileContracts(): void {
 		$utilities  = $this->asset( 'ran-booster/35-status-utilities.css' );
 		$debug      = $this->view( 'debug-capture.php' );

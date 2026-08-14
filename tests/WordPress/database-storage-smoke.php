@@ -141,11 +141,24 @@ $isolatedPackageTable  = $isolatedPrefix . 'ran_booster_packages';
 $isolatedAttemptTable  = $isolatedPrefix . 'ran_booster_deployment_attempts';
 $isolatedAuditTable    = $isolatedPrefix . 'ran_booster_rejected_admission_audit';
 $wrongPrefixAuditTable = $originalPrefix . 'ran_booster_rejected_admission_audit';
-$dropIsolatedTables    = static function () use ( $isolatedAttemptTable, $isolatedPackageTable, $isolatedAuditTable, $wrongPrefixAuditTable, $wpdb ): void {
-	foreach ( array( $isolatedPackageTable, $isolatedAttemptTable, $isolatedAuditTable, $wrongPrefixAuditTable ) as $table ) {
+$ownsWrongPrefixAudit  = false;
+$dropIsolatedTables    = static function () use ( $isolatedAttemptTable, $isolatedPackageTable, $isolatedAuditTable, $wrongPrefixAuditTable, $wpdb, &$ownsWrongPrefixAudit ): void {
+	foreach ( array( $isolatedPackageTable, $isolatedAttemptTable, $isolatedAuditTable ) as $table ) {
 		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 	}
+	if ( $ownsWrongPrefixAudit ) {
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $wrongPrefixAuditTable ) );
+		$ownsWrongPrefixAudit = false;
+	}
 };
+$wpdb->last_error      = '';
+$existingAuditTable    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wrongPrefixAuditTable ) ) );
+if ( '' !== trim( (string) $wpdb->last_error ) ) {
+	throw new RuntimeException( 'The database smoke could not preflight the current-prefix legacy audit table.' );
+}
+if ( null !== $existingAuditTable ) {
+	throw new RuntimeException( 'The database smoke refuses to replace a pre-existing current-prefix legacy audit table.' );
+}
 $dropIsolatedTables();
 try {
 	if ( false === $wpdb->insert( $packageTable, $schemaSevenPackage )
@@ -188,10 +201,13 @@ try {
 				) ENGINE=InnoDB',
 				$isolatedAuditTable
 			)
-		)
-		|| false === $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i LIKE %i', $wrongPrefixAuditTable, $isolatedAuditTable ) ) ) {
+		) ) {
 		throw new RuntimeException( 'The database smoke could not create its isolated schema 12.0 tables.' );
 	}
+	if ( false === $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i LIKE %i', $wrongPrefixAuditTable, $isolatedAuditTable ) ) ) {
+		throw new RuntimeException( 'The database smoke could not create its wrong-prefix containment fixture.' );
+	}
+	$ownsWrongPrefixAudit = true;
 	if ( false === $wpdb->insert( $isolatedPackageTable, $schemaSevenPackage )
 		|| false === $wpdb->insert( $isolatedAttemptTable, $schemaSevenAttempt ) ) {
 		throw new RuntimeException( 'The database smoke could not seed its schema 12.0 fixture.' );

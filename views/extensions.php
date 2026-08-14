@@ -33,21 +33,25 @@ defined( 'ABSPATH' ) || exit;
 							<h2><a href="<?php echo esc_url( $extension['docs_url'] ); ?>"><?php echo esc_html( $extension['name'] ); ?></a></h2>
 						</div>
 						<div class="action-links">
-							<?php if ( 'Active' === $extension['state'] ) : ?>
-								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Active', 'ran-booster' ); ?></button>
-							<?php elseif ( 'Not installed' !== $extension['state'] ) : ?>
-								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php echo esc_html( $extension['state'] ); ?></button>
-							<?php elseif ( 'Subscriber' === $extension['availability'] ) : ?>
-								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Sponsor install', 'ran-booster' ); ?></button>
-							<?php else : ?>
-								<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Install unavailable', 'ran-booster' ); ?></button>
-							<?php endif; ?>
-							<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $detailsUrl ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $moreDetailsLabel ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
-							<?php if ( 'Active' !== $extension['state'] && 'Not installed' !== $extension['state'] ) : ?>
-								<a href="<?php echo esc_url( $pluginsUrl ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a>
-							<?php elseif ( 'Not installed' === $extension['state'] && 'Subscriber' === $extension['availability'] ) : ?>
-								<a href="https://github.com/sponsors/RocketsAreNostalgic"><?php esc_html_e( 'Get access', 'ran-booster' ); ?></a>
-							<?php endif; ?>
+							<ul class="plugin-action-buttons">
+								<li>
+								<?php if ( 'Active' === $extension['state'] ) : ?>
+									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Active', 'ran-booster' ); ?></button>
+								<?php elseif ( 'Not installed' !== $extension['state'] ) : ?>
+									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php echo esc_html( $extension['state'] ); ?></button>
+								<?php elseif ( 'Subscriber' === $extension['availability'] ) : ?>
+									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Sponsor install', 'ran-booster' ); ?></button>
+								<?php else : ?>
+									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Install unavailable', 'ran-booster' ); ?></button>
+								<?php endif; ?>
+								</li>
+								<li><a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $detailsUrl ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $moreDetailsLabel ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a></li>
+								<?php if ( 'Active' !== $extension['state'] && 'Not installed' !== $extension['state'] ) : ?>
+									<li><a href="<?php echo esc_url( $pluginsUrl ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a></li>
+								<?php elseif ( 'Not installed' === $extension['state'] && 'Subscriber' === $extension['availability'] ) : ?>
+									<li><a href="https://github.com/sponsors/RocketsAreNostalgic"><?php esc_html_e( 'Get access', 'ran-booster' ); ?></a></li>
+								<?php endif; ?>
+							</ul>
 						</div>
 						<div class="desc column-description">
 							<p><?php echo esc_html( $extension['description'] ); ?></p>

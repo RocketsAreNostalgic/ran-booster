@@ -116,6 +116,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 4, substr_count( $output, ' disabled aria-disabled="true"' ) );
 		self::assertSame( 8, substr_count( $output, 'Compatible with your version of Booster' ) );
 		self::assertSame( 4, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 4, substr_count( $output, '<ul class="plugin-action-buttons">' ) );
 		self::assertSame( 4, substr_count( $output, 'class="thickbox ran-booster-extension-details-link"' ) );
 		self::assertSame( 4, substr_count( $output, 'aria-label="More details about ' ) );
 		self::assertSame( 4, substr_count( $output, 'class="ran-booster-extension-details"' ) );

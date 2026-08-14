@@ -108,18 +108,30 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-page-heading__title">Extensions</h2>', $output );
 		self::assertStringContainsString( 'class="ran-booster-page-heading__description">Add focused capabilities', $output );
 		self::assertStringNotContainsString( '<h1', $output );
-		self::assertSame( 2, substr_count( $output, '>Free<' ) );
-		self::assertSame( 2, substr_count( $output, '>Sponsor<' ) );
-		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
+		self::assertSame( 4, substr_count( $output, '>Free<' ) );
+		self::assertSame( 4, substr_count( $output, '>Sponsor<' ) );
+		self::assertSame( 8, substr_count( $output, '>Beta<' ) );
 		self::assertSame( 2, substr_count( $output, '>Sponsor install<' ) );
 		self::assertSame( 2, substr_count( $output, '>Install unavailable<' ) );
 		self::assertSame( 4, substr_count( $output, ' disabled aria-disabled="true"' ) );
-		self::assertSame( 4, substr_count( $output, 'Compatible with your version of Booster' ) );
+		self::assertSame( 8, substr_count( $output, 'Compatible with your version of Booster' ) );
+		self::assertSame( 4, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 4, substr_count( $output, 'class="thickbox ran-booster-extension-details-link"' ) );
+		self::assertSame( 4, substr_count( $output, 'aria-label="More details about ' ) );
+		self::assertSame( 4, substr_count( $output, 'class="ran-booster-extension-details"' ) );
+		self::assertSame( 4, substr_count( $output, '>About this extension<' ) );
+		self::assertStringContainsString( '#TB_inline?width=772', $output );
+		self::assertStringContainsString( 'inlineId=ran-booster-extension-details-ran-booster-assisted-hooks', $output );
+		self::assertStringContainsString( 'Set up, check, reconfigure, or remove one GitHub repository webhook', $output );
+		self::assertStringContainsString( 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation.', $output );
 		self::assertStringContainsString( '/assets/extensions/bitbucket-cloud.svg', $output );
 		self::assertStringContainsString( '/assets/extensions/release-deployments.svg', $output );
 		self::assertStringNotContainsString( 'placehold.co', $output );
 		self::assertStringNotContainsString( 'install-now', $output );
+		self::assertStringNotContainsString( 'plugin-information?', $output );
+		self::assertStringNotContainsString( '<iframe', $output );
 		self::assertStringNotContainsString( '<form', $output );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_', $output );
 		self::assertLessThan( strpos( $output, 'WP Pusher Migrator' ), strpos( $output, 'Bitbucket Cloud' ) );
 		self::assertLessThan( strpos( $output, 'Assisted Hooks' ), strpos( $output, 'WP Pusher Migrator' ) );
 		self::assertLessThan( strpos( $output, 'Release Deployments' ), strpos( $output, 'Assisted Hooks' ) );
@@ -139,9 +151,10 @@ final class ExtensionsPageTest extends TestCase {
 
 		$output = $this->render();
 
-		self::assertSame( 4, substr_count( $output, '>Active<' ) );
-		self::assertSame( 2, substr_count( $output, '>Installed, inactive<' ) );
+		self::assertSame( 6, substr_count( $output, '>Active<' ) );
+		self::assertSame( 3, substr_count( $output, '>Installed, inactive<' ) );
 		self::assertSame( 1, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
+		self::assertSame( 4, substr_count( $output, '>More Details</a>' ) );
 	}
 
 	#[RunInSeparateProcess]
@@ -155,7 +168,7 @@ final class ExtensionsPageTest extends TestCase {
 
 		$output = $this->render();
 
-		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
+		self::assertSame( 3, substr_count( $output, '>Incompatible<' ) );
 		self::assertStringContainsString( 'ran-booster-badge--error', $output );
 		self::assertStringContainsString( 'Requires a different version of Booster', $output );
 		self::assertStringNotContainsString( '>Active<', $output );

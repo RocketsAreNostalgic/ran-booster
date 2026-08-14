@@ -128,6 +128,141 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
+/* stylelint-disable-next-line selector-id-pattern -- WordPress ThickBox owns these IDs. */
+#TB_window.plugin-details-modal #TB_ajaxContent {
+	box-sizing: border-box;
+	inline-size: 100% !important;
+	block-size: 100% !important;
+	padding: 0;
+	overflow: auto;
+}
+
+.ran-booster-extension-details {
+	min-block-size: 100%;
+	background: var(--ran-booster-surface);
+	color: var(--ran-booster-text);
+}
+
+.ran-booster-extension-details__header {
+	display: grid;
+	grid-template-columns: 96px minmax(0, 1fr);
+	align-items: center;
+	gap: 20px;
+	padding: 20px 26px;
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-extension-details__header img {
+	inline-size: 96px;
+	block-size: 96px;
+	border-radius: 4px;
+}
+
+.ran-booster-extension-details__header h2 {
+	margin: 0 0 6px;
+	font-size: 24px;
+	line-height: 1.3;
+}
+
+.ran-booster-extension-details__header p {
+	margin: 0;
+	color: var(--ran-booster-text-muted);
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+.ran-booster-extension-details__tabs {
+	min-block-size: 36px;
+	padding-inline: 16px;
+	border-block: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-extension-details__tabs span {
+	display: inline-block;
+	box-sizing: border-box;
+	block-size: 37px;
+	margin-block: -1px;
+	padding: 9px 10px;
+	border: 1px solid var(--ran-booster-divider);
+	border-block-end-color: var(--ran-booster-surface);
+	background: var(--ran-booster-surface);
+	font-size: 14px;
+	line-height: 1.3;
+}
+
+.ran-booster-extension-details__content {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 250px;
+	align-items: stretch;
+	min-block-size: 360px;
+}
+
+.ran-booster-extension-details__main {
+	padding: 16px 26px 28px;
+	font-size: 14px;
+	line-height: 1.7;
+}
+
+.ran-booster-extension-details__main h3 {
+	margin-block: 20px 8px;
+	font-size: 18px;
+}
+
+.ran-booster-extension-details__main p {
+	margin-block: 0 16px;
+}
+
+.ran-booster-extension-details__main ul {
+	margin: 0 0 16px 24px;
+	list-style: disc;
+}
+
+.ran-booster-extension-details__sidebar {
+	padding: 20px 16px;
+	border-inline-start: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+	color: var(--ran-booster-text-subtle);
+}
+
+.ran-booster-extension-details__sidebar h3,
+.ran-booster-extension-details__sidebar dt {
+	color: var(--ran-booster-text-subtle);
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+
+.ran-booster-extension-details__sidebar h3 {
+	margin: 0 0 16px;
+}
+
+.ran-booster-extension-details__sidebar dl {
+	margin: 0 0 20px;
+}
+
+.ran-booster-extension-details__sidebar dt {
+	margin-block-start: 14px;
+}
+
+.ran-booster-extension-details__sidebar dd {
+	margin: 3px 0 0;
+	color: var(--ran-booster-text);
+}
+
+.ran-booster-extension-details__compatibility span {
+	color: var(--ran-booster-status-ok);
+	font-weight: 600;
+}
+
+.ran-booster-extension-details__compatibility--incompatible span {
+	color: var(--ran-booster-status-error);
+}
+
+.ran-booster-extension-details__sidebar p {
+	margin: 8px 0 0;
+}
+
 @media screen and (max-width: 900px) {
 	.ran-booster-extensions__grid {
 		grid-template-columns: minmax(0, 1fr);
@@ -156,5 +291,33 @@
 	.ran-booster-extension-card__compatibility {
 		justify-content: flex-start;
 		text-align: start;
+	}
+
+	.ran-booster-extension-details__header {
+		grid-template-columns: 64px minmax(0, 1fr);
+		gap: 14px;
+		padding: 16px;
+	}
+
+	.ran-booster-extension-details__header img {
+		inline-size: 64px;
+		block-size: 64px;
+	}
+
+	.ran-booster-extension-details__header h2 {
+		font-size: 20px;
+	}
+
+	.ran-booster-extension-details__content {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.ran-booster-extension-details__main {
+		padding-inline: 20px;
+	}
+
+	.ran-booster-extension-details__sidebar {
+		border-block-start: 1px solid var(--ran-booster-divider);
+		border-inline-start: 0;
 	}
 }

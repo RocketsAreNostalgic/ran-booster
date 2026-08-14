@@ -53,12 +53,16 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	public function testExtensionsPageReceivesOnlyTheCommonOfflineAssets(): void {
+	public function testExtensionsPageReceivesTheCommonAndNativeModalAssets(): void {
 		$this->booster()->loadScripts( 'ran-booster_page_ran-booster-extensions' );
 
-		self::assertSame( array( 'ran-booster-styles' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
-		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
-		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_scripts'] );
+		self::assertSame( array( 'ran-booster-styles', 'thickbox' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+		self::assertSame( array( 'thickbox', 'ran-booster-extension-details' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		self::assertSame( array( 'ran-booster-extension-details' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
+		self::assertSame(
+			array( 'jquery', 'thickbox' ),
+			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['dependencies']
+		);
 		self::assertArrayHasKey( 'ran-booster-55-extensions', $GLOBALS['ran_booster_asset_test_registered_styles'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
 	}

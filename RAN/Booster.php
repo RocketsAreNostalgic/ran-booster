@@ -268,6 +268,17 @@ class Booster {
 				'id'            => 'ran-booster-bitbucket',
 				'name'          => 'Bitbucket Cloud',
 				'description'   => 'Connect Booster to Bitbucket Cloud repositories for managed deployments.',
+				'details'       => 'Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy.',
+				'features'      => array(
+					'Connect and configure Bitbucket Cloud repositories in Booster.',
+					'Use provider-specific package and credential guidance.',
+					'Carry eligible file-stored credentials through Transporter for explicit import on the target site.',
+				),
+				'requirements'  => array(
+					'WordPress 7.0 or later and PHP 8.2 or later.',
+					'A version of Booster compatible with this extension.',
+					'Manual Bitbucket webhook setup for Push-to-Deploy.',
+				),
 				'plugin'        => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
 				'image'         => 'bitbucket-cloud.svg',
 				'availability'  => 'Free',
@@ -282,6 +293,17 @@ class Booster {
 				'id'            => 'ran-booster-wp-pusher-migrator',
 				'name'          => 'WP Pusher Migrator',
 				'description'   => 'Move existing WP Pusher-managed plugins into Booster without reinstalling them.',
+				'details'       => 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so activation remains an explicit decision.',
+				'features'      => array(
+					'Review retained WP Pusher package records before migration.',
+					'Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter.',
+					'Keep the source records in place until you verify the result and remove them yourself.',
+				),
+				'requirements'  => array(
+					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
+					'A single site with WP Pusher 3.0.13 installed but inactive.',
+					'Existing Booster credentials for private repositories; GitLab packages are not supported.',
+				),
 				'plugin'        => 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php',
 				'image'         => 'wp-pusher-migrator.svg',
 				'availability'  => 'Free',
@@ -296,6 +318,17 @@ class Booster {
 				'id'            => 'ran-booster-assisted-hooks',
 				'name'          => 'Assisted Hooks',
 				'description'   => 'Set up and recover GitHub Push-to-Deploy webhooks with guided checks.',
+				'details'       => 'Set up, check, reconfigure, or remove one GitHub repository webhook without giving Booster standing GitHub administration permission.',
+				'features'      => array(
+					'Guide webhook setup and recovery for eligible managed GitHub repositories.',
+					'Use a fresh request-only token or an eligible saved Booster credential.',
+					'Show recorded hook status and recovery information in the GitHub package table.',
+				),
+				'requirements'  => array(
+					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
+					'A single site, a managed GitHub repository, and a public HTTPS callback URL.',
+					'A repository-scoped token with permission to read and write webhooks.',
+				),
 				'plugin'        => 'ran-booster-assisted-hooks/ran-booster-assisted-hooks.php',
 				'image'         => 'assisted-hooks.svg',
 				'availability'  => 'Subscriber',
@@ -307,6 +340,17 @@ class Booster {
 				'id'            => 'ran-booster-release-deployments',
 				'name'          => 'Release Deployments',
 				'description'   => 'Track verified GitHub releases and prepare release-based deployment workflows.',
+				'details'       => 'Let eligible Booster-managed plugins and themes track exact published GitHub Release ZIPs instead of branch deployments, while WordPress continues to perform the final installation.',
+				'features'      => array(
+					'Validate and switch eligible branch-managed packages to published releases.',
+					'Check the release ZIP and package version before an update is offered.',
+					'Choose Manual, Automatic, or Disabled update policy and prepare a reviewable release-workflow pull request.',
+				),
+				'requirements'  => array(
+					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
+					'An eligible GitHub repository with a published release; draft releases are excluded.',
+					'Prerelease tracking must be enabled explicitly when required.',
+				),
 				'plugin'        => 'ran-booster-release-deployments/ran-booster-release-deployments.php',
 				'image'         => 'release-deployments.svg',
 				'availability'  => 'Subscriber',
@@ -512,6 +556,19 @@ class Booster {
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
+			$extensionDetailsPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-extension-details.js';
+			$extensionDetailsVersion = file_exists( $extensionDetailsPath ) ? filemtime( $extensionDetailsPath ) : null;
+
+			wp_enqueue_style( 'thickbox' );
+			wp_enqueue_script( 'thickbox' );
+			wp_register_script(
+				'ran-booster-extension-details',
+				trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-extension-details.js',
+				array( 'jquery', 'thickbox' ),
+				$extensionDetailsVersion,
+				true
+			);
+			wp_enqueue_script( 'ran-booster-extension-details' );
 			return;
 		}
 		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', $scriptDependencies, $scriptVersion, true );

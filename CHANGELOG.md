@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0-beta.18](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.17...v1.0.0-beta.18) (2026-08-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* bundle GitHub webhook management in Core ([#34](https://github.com/RocketsAreNostalgic/ran-booster/issues/34))
+
+### Features
+
+* bundle GitHub webhook management in Core ([#34](https://github.com/RocketsAreNostalgic/ran-booster/issues/34)) ([8ae76b8](https://github.com/RocketsAreNostalgic/ran-booster/commit/8ae76b88b3444a20d7e9be2e3440e109b98c4831))
+
 ## [1.0.0-beta.17](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2026-08-14)
 
 

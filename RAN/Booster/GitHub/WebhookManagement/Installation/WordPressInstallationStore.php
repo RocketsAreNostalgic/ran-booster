@@ -64,43 +64,59 @@ final class WordPressInstallationStore implements InstallationStore {
 	/** @return array<string, InstallationRecord> */
 	private function records(): array {
 		$snapshot = $this->snapshot();
+		$parsed   = $this->parseRecords( $snapshot['value'] );
 
-		return $this->parseRecords( $snapshot['value'] );
+		return $parsed['records'];
 	}
 
-	/** @return array<string, InstallationRecord> */
+	/** @return array{records:array<string, InstallationRecord>,complete:bool} */
 	private function parseRecords( mixed $raw ): array {
-		$records = array();
+		$records  = array();
+		$complete = true;
 
 		if ( ! is_array( $raw ) || count( $raw ) > 1000 ) {
-			return $records;
+			return array(
+				'records'  => $records,
+				'complete' => false,
+			);
 		}
 
 		foreach ( $raw as $key => $record ) {
 			if ( ! is_string( $key ) || ! is_array( $record ) ) {
+				$complete = false;
 				continue;
 			}
 
 			try {
 				$parsed = InstallationRecord::fromArray( $record );
 			} catch ( Throwable ) {
+				$complete = false;
 				continue;
 			}
 
 			if ( hash_equals( $parsed->storageKey(), $key ) ) {
 				$records[ $key ] = $parsed;
+			} else {
+				$complete = false;
 			}
 		}
 
-		return $records;
+		return array(
+			'records'  => $records,
+			'complete' => $complete,
+		);
 	}
 
 	private function write( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		$key = $record->storageKey();
 		for ( $attempt = 0; $attempt < self::CAS_ATTEMPTS; ++$attempt ) {
 			$snapshot = $this->snapshot();
-			$records  = $this->parseRecords( $snapshot['value'] );
-			$current  = $records[ $key ] ?? null;
+			$parsed   = $this->parseRecords( $snapshot['value'] );
+			if ( ! $parsed['complete'] ) {
+				return self::WRITE_FAILED;
+			}
+			$records = $parsed['records'];
+			$current = $records[ $key ] ?? null;
 			if ( $this->same( $current, $record ) ) {
 				return self::WRITE_UNCHANGED;
 			}
@@ -124,8 +140,12 @@ final class WordPressInstallationStore implements InstallationStore {
 		$key = InstallationRecord::key( $providerCode, $repositoryId );
 		for ( $attempt = 0; $attempt < self::CAS_ATTEMPTS; ++$attempt ) {
 			$snapshot = $this->snapshot();
-			$records  = $this->parseRecords( $snapshot['value'] );
-			$current  = $records[ $key ] ?? null;
+			$parsed   = $this->parseRecords( $snapshot['value'] );
+			if ( ! $parsed['complete'] ) {
+				return self::WRITE_FAILED;
+			}
+			$records = $parsed['records'];
+			$current = $records[ $key ] ?? null;
 			if ( null === $current ) {
 				return self::WRITE_UNCHANGED;
 			}

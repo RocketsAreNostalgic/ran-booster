@@ -118,8 +118,41 @@ final class WordPressInstallationStoreTest extends TestCase {
 		self::assertSame( $raw, $GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 
+	public function testSaveFailsWithoutRewritingAnOptionContainingMalformedOrFutureRecords(): void {
+		$raw = $this->incompleteRaw();
+		$GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
+
+		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->saveIfCurrent( $this->record( 'gh', 'new', 'owner/new', '88' ), null ) );
+		self::assertSame( $raw, $GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
+	}
+
+	public function testRemoveFailsWithoutRewritingAnOptionContainingMalformedOrFutureRecords(): void {
+		$record = $this->record( 'gh', 'valid', 'owner/repository', '77' );
+		$raw    = $this->incompleteRaw();
+		$GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
+
+		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->deleteIfCurrent( $record->providerCode(), $record->repositoryId(), $record ) );
+		self::assertSame( $raw, $GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
+	}
+
 	private function record( string $providerCode, string $repositoryId, string $repository, string $hookId, string $status = 'configured' ): InstallationRecord {
 		return new InstallationRecord( $providerCode, $repositoryId, $repository, $hookId, 'profile_1', 'repository', 1, 'created', 'https://example.test/wp-json/ran-booster/webhook', $status, '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
+	}
+
+	/** @return array<string, array<string, int|string>> */
+	private function incompleteRaw(): array {
+		$valid                    = $this->record( 'gh', 'valid', 'owner/repository', '77' );
+		$future                   = $valid->toArray();
+		$future['schema_version'] = 4;
+
+		return array(
+			$valid->storageKey() => $valid->toArray(),
+			'gh:future'          => $future,
+			'gh:malformed'       => array(
+				'schema_version' => 3,
+				'token'          => 'must-not-be-read',
+			),
+		);
 	}
 
 	private function store( ?callable $beforeFirstCas = null ): WordPressInstallationStore {

@@ -66,6 +66,18 @@
 	<!-- The focused container unit test keeps its tiny fixture classes beside the assertions. -->
 	<rule ref="Generic.Files.OneObjectStructurePerFile">
 		<exclude-pattern>/tests/Container/ContainerTest.php</exclude-pattern>
+		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
+	</rule>
+
+	<!-- The migrated behavior fixture intentionally exercises raw request arrays and exact serialized legacy records. -->
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize">
+		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions.parse_url_parse_url">
+		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Security.NonceVerification.Recommended">
+		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
 	</rule>
 
 	<!--

@@ -51,6 +51,7 @@ use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\GitHubReleaseUpdateNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Booster;
+use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
 use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
@@ -136,6 +137,11 @@ add_action(
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
 	$ran_booster_runtime->boosterUrl  = plugin_dir_url( __FILE__ );
 	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime );
+	if ( ! defined( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION' ) ) {
+		define( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION', 1 );
+	} elseif ( 1 !== RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION ) {
+		throw new LogicException( 'RAN Booster bundled GitHub webhook management conflicts with an existing feature marker.' );
+	}
 	$ran_booster_container->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
 	$ran_booster_container->bind(
 		CoreSelfUpdateStatus::class,
@@ -173,7 +179,12 @@ add_action(
 			$releaseTracking   = $ran_booster_container->make( ReleaseTrackingFacade::class );
 			$portability       = $ran_booster_container->make( PortabilityFacade::class );
 			$adminInteraction  = $ran_booster_container->make( AdminInteractionFacade::class );
-			$addOnRegistry     = new AdminAddOnRegistry(
+			if ( GitHubWebhookManagement::legacyAddOnIsActive() ) {
+				GitHubWebhookManagement::registerLegacyAddOnNotice();
+			} else {
+				$ran_booster_container->make( GitHubWebhookManagement::class )->register();
+			}
+			$addOnRegistry = new AdminAddOnRegistry(
 				array(
 					'webhook_assistance' => $webhookAssistance,
 					'release_tracking'   => $releaseTracking,

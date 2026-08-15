@@ -7,9 +7,11 @@ $ranBoosterRoot = dirname( __DIR__, 3 );
 spl_autoload_register(
 	static function ( string $class ) use ( $ranBoosterRoot ): void {
 		$prefixes = array(
-			'RAN\\Booster\\GitHub\\'    => $ranBoosterRoot . '/RAN/Booster/GitHub/',
-			'RAN\\RepositoryProvider\\' => $ranBoosterRoot . '/RAN/RepositoryProvider/',
-			'Tests\\Booster\\GitHub\\'  => __DIR__ . '/',
+			'RAN\\Booster\\GitHub\\'          => $ranBoosterRoot . '/RAN/Booster/GitHub/',
+			'RAN\\RepositoryProvider\\'       => $ranBoosterRoot . '/RAN/RepositoryProvider/',
+			'RAN\\AddOn\\WebhookAssistance\\' => $ranBoosterRoot . '/RAN/AddOn/WebhookAssistance/',
+			'RAN\\Admin\\Interaction\\'       => $ranBoosterRoot . '/RAN/Admin/Interaction/',
+			'Tests\\Booster\\GitHub\\'        => __DIR__ . '/',
 		);
 
 		foreach ( $prefixes as $prefix => $directory ) {

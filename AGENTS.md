@@ -23,12 +23,23 @@ directory and preserve unrelated work.
 - Never commit or print personal access tokens, Bitbucket tokens, webhook
   secrets, the site-owned secrets sidecar, logs, `vendor`, or `node_modules`.
 - Keep GitHub and Bitbucket behavior behind provider contracts.
+- Core owns the fixed GitHub webhook-management adapter under
+  `RAN\Booster\GitHub\WebhookManagement`. It reuses the existing
+  webhook-assistance and admin-interaction facades and retains the schema-3
+  `ran_booster_assisted_hooks_installations` option without migration.
+  `RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION` and
+  `RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION` are exact,
+  request-local coexistence markers. An exact retirement bridge is inert; a
+  loaded pre-retirement add-on keeps temporary runtime and uninstall custody
+  while Core suppresses its bundled presentation and shows one administrator
+  notice.
 - Extend existing administration surfaces only through the documented
   WordPress-native actions and filters. Preserve the separate, bounded public
   add-on tab registry for add-ons that genuinely need their own dashboard
   surface. Do not turn either mechanism into a generic slot or whole-view
   replacement system. Core owns routes, base rows, normalization and rendering;
-  add-ons own their capability- and nonce-checked `admin_post_*` mutations.
+  external add-ons own their capability- and nonce-checked `admin_post_*`
+  mutations.
 - Do not treat the unavailable local `../ran-starter-plugin` sibling as a
   standards authority. Use Booster's reviewed contracts, component guidance and
   live repository evidence. Restoring a versioned, testable starter baseline

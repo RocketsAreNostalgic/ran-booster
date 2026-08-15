@@ -56,11 +56,6 @@ do_action(
 );
 
 do_action(
-	'ran_booster_webhook_assistance_ready',
-	$webhookAssistance
-);
-
-do_action(
 	'ran_booster_release_tracking_ready',
 	$releaseTracking
 );
@@ -73,10 +68,9 @@ do_action(
 );
 ```
 
-The first three arguments are respectively a
-`\RAN\AddOn\Portability\PortabilityFacade`,
-`\RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade` or
-`\RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade`. The optional fourth action
+The arguments are respectively a
+`\RAN\AddOn\Portability\PortabilityFacade` or
+`\RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade`. The optional third action
 supplies only its named
 `\RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade`.
 
@@ -86,13 +80,6 @@ listener during normal plugin loading, retain only the supplied allowlisted
 facades for the current request and perform no remote work in the ready
 callback. A late listener is not replayed. Core catches a failed ready listener
 and continues without exposing its exception to the administrator.
-
-Webhook Assistance mutations and assessments use the exact nonce action
-`ran_booster_repository_webhook_{action}_{providerCode}_{repositoryId}`, where
-`action` is one of `setup`, `check`, `reconfigure` or `remove`. The add-on
-creates that WordPress nonce for its form and passes the submitted value to the
-matching facade method. Core independently re-derives the action from the
-current target and rejects a stale or mismatched nonce before provider work.
 
 Portability API 2 is an independently versioned adoption-only contract for a
 trusted source bridge. Its consumer checks exact Portability API 2, not Add-on
@@ -285,15 +272,15 @@ does not expose the service container, repositories, credentials, secrets or
 arbitrary Core models. Core contains a renderer failure and keeps the remaining
 dashboard usable.
 
-The current official premium add-ons do not need separate tabs: Assisted Hooks
-and Release Deployments contribute to existing Core surfaces through the hooks
-below, while Bitbucket uses the provider-tab contract. Their migration does not
-remove the public tab capability for other add-ons.
+Release Deployments contributes to existing package surfaces, while Bitbucket
+uses the provider-tab contract. Bundled GitHub webhook management is Core code,
+not an add-on composition consumer. This does not remove the public tab
+capability for other add-ons.
 
 ## Fixed Extensions page
 
 Core owns the **RAN Booster > Extensions** submenu at
-`ran-booster-extensions`. The `manage_options`-gated page renders exactly four
+`ran-booster-extensions`. The `manage_options`-gated page renders the remaining
 release-bundled first-party cards in deterministic order. Its catalogue, local
 placeholder images, installed-plugin reads, compatibility labels and failure
 shell are all Core-owned.
@@ -312,59 +299,15 @@ state, and its local stylesheet is limited to the Extensions screen hook.
 
 ## Provider repository surface
 
-Core owns and renders the provider repository table. Before rendering it, Core
-passes an associative map of its base rows through:
+Core owns and renders the provider repository table. Bundled GitHub webhook
+management enriches GitHub rows and renders the selected-repository panel
+through a direct first-party call. Core validates the resulting rows, preserves
+the fixed `core:webhook-management` action, and permits only bounded historical
+records from its own schema. There is no public row or panel composition hook.
 
-```php
-$rows = apply_filters(
-	'ran_booster_admin_provider_repository_rows',
-	$rows,
-	$providerCode,
-	$repositoryProjections,
-	$returnUrl
-);
-```
-
-All four values are arrays or strings as shown by their names, and the filter
-must return the keyed row array.
-
-`$repositoryProjections` is keyed by the same stable repository identity as the
-base rows. Each value contains display-safe data only:
-
-- `provider_code`, `repository_id`, `repository` and `label`;
-- `package_references`;
-- `deployment_policies` counts for `automatic`, `manual` and `disabled`;
-- the display-safe site `endpoint`;
-- `eligible` and bounded `reason_codes`; and
-- `local_secret_coverage`.
-
-A filter may append details and namespaced actions to an existing row. It must
-preserve every Core row, immutable field and manual action. On GitHub rows only,
-the reserved `core:webhook-management` action may have its `url`, `disabled` and
-`described_by` fields changed; its identity, label and type remain Core-owned.
-An add-on may append a clearly marked provider-matched historical row only
-under a bounded namespaced synthetic key. A historical row may not carry the
-reserved Core action.
-
-Core validates the accumulated result and renders it with the same repository
-table renderer as its base rows. Invalid output or a thrown callback is logged
-with redacted context and Core falls back to its untouched rows.
-
-The bounded operation-panel action runs immediately below the table:
-
-```php
-do_action(
-	'ran_booster_admin_provider_repository_panel',
-	$providerCode,
-	$selectedRepositoryId,
-	$returnUrl
-);
-```
-
-The selected ID is an empty string when no repository is selected. Core
-output-buffers the action and contains failure at this section. The contributing
-add-on owns escaping inside its interactive markup and must use its own
-capability and nonce-checked `admin_post_*` handlers for mutations.
+Other providers retain their provider-owned webhook settings link and manual
+setup guidance. A provider backend capability does not create a generic
+management form, credential schema, or operation route.
 
 ## Package screen anatomy
 

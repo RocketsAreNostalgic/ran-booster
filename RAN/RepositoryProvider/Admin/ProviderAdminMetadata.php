@@ -27,8 +27,7 @@ final readonly class ProviderAdminMetadata {
 		array $webhookScopes,
 		public ?ProviderSetupMetadata $setup = null,
 		public ?ProviderNavigationPlacement $navigation = null,
-		public string $repositoryLocatorHint = '',
-		public ?ProviderWebhookManagementMetadata $webhookAssistance = null
+		public string $repositoryLocatorHint = ''
 	) {
 		$this->credentialKinds = $this->validateCredentialKinds( $credentialKinds );
 		$this->webhookScopes   = $this->validateWebhookScopes( $webhookScopes );

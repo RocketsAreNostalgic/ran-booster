@@ -25,7 +25,7 @@ directory and preserve unrelated work.
 - Keep GitHub and Bitbucket behavior behind provider contracts.
 - Core owns the fixed GitHub webhook-management adapter under
   `RAN\Booster\GitHub\WebhookManagement`. It reuses the existing
-  webhook-assistance and admin-interaction facades and retains the schema-3
+  internal webhook operation and admin-interaction services and retains the schema-3
   `ran_booster_assisted_hooks_installations` option without migration.
   `RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION` and
   `RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION` are exact,

@@ -53,7 +53,7 @@ final class RepositoryTableRendererTest extends TestCase {
 				),
 				'actions'            => array(
 					array(
-						'label'        => 'Assisted Hooks',
+						'label'        => 'Manage webhook',
 						'disabled'     => true,
 						'described_by' => 'reason-id',
 					),
@@ -90,7 +90,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'disabled aria-disabled="true" aria-describedby="reason-id"', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text">: first/plugin.php</span>', $html );
-		self::assertLessThan( strpos( $html, 'GitHub Hooks' ), strpos( $html, 'Assisted Hooks' ) );
+		self::assertLessThan( strpos( $html, 'GitHub Hooks' ), strpos( $html, 'Manage webhook' ) );
 		self::assertLessThan( strpos( $html, 'Plugin settings' ), strpos( $html, 'GitHub Hooks' ) );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
@@ -145,7 +145,7 @@ final class RepositoryTableRendererTest extends TestCase {
 				'actions'            => array(
 					array(
 						'key'          => 'core:webhook-management',
-						'label'        => 'Assisted Hooks',
+						'label'        => 'Manage webhook',
 						'disabled'     => true,
 						'described_by' => 'release-source-reason',
 					),

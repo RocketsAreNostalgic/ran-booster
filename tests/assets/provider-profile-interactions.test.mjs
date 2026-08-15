@@ -238,7 +238,7 @@ test('only verified provider profile success operations restore focus', () => {
 		);
 
 		handleProviderProfileSuccess({
-			detail: { operation: 'assisted-hooks:manage-webhook' },
+			detail: { operation: 'github-webhook-management:manage-webhook' },
 		});
 		handleProviderProfileSuccess({ detail: {} });
 		assert.equal(focusCount, 0);

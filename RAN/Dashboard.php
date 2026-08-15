@@ -14,13 +14,13 @@ use RAN\Admin\OnboardingPresenter;
 use RAN\Admin\PackagePagePresenter;
 use RAN\Admin\PackageAdminController;
 use RAN\Admin\ProviderDocumentationPresenter;
-use RAN\Admin\ProviderRepositoryCompositionRenderer;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
+use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
@@ -66,6 +66,7 @@ class Dashboard {
 
 	private ?AdminTabRegistry $adminTabs;
 	private ?AdminAddOnRegistry $adminAddOns;
+	private ?GitHubWebhookManagement $githubWebhookManagement;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
 	private PackageAdminController $packageAdmin;
@@ -103,27 +104,29 @@ class Dashboard {
 		?DeploymentAttemptRepository $deploymentAttempts = null,
 		?TemporaryDebugCapture $debugCapture = null,
 		?SecretsStorageProvisioner $secretsStorage = null,
-		?AdminAddOnRegistry $adminAddOns = null
+		?AdminAddOnRegistry $adminAddOns = null,
+		?GitHubWebhookManagement $githubWebhookManagement = null
 	) {
-		$this->db                    = $db;
-		$this->plugins               = $plugins;
-		$this->booster               = $booster;
-		$this->themes                = $themes;
-		$this->providerSettings      = $providerSettings;
-		$this->troubleshooting       = $troubleshooting;
-		$this->adminTabs             = $adminTabs;
-		$this->providerDocumentation = $providerDocumentation;
-		$this->deploymentAdmin       = new DeploymentAdminPresenter(
+		$this->db                      = $db;
+		$this->plugins                 = $plugins;
+		$this->booster                 = $booster;
+		$this->themes                  = $themes;
+		$this->providerSettings        = $providerSettings;
+		$this->troubleshooting         = $troubleshooting;
+		$this->adminTabs               = $adminTabs;
+		$this->providerDocumentation   = $providerDocumentation;
+		$this->deploymentAdmin         = new DeploymentAdminPresenter(
 			attempts: $deploymentAttempts,
 			plugins: $plugins,
 			themes: $themes
 		);
-		$this->packageAdmin          = new PackageAdminController( $packageOperations, deployments: $this->deploymentAdmin );
-		$this->pluginPages           = PackagePagePresenter::plugin();
-		$this->themePages            = PackagePagePresenter::theme();
-		$this->debugCapture          = $debugCapture;
-		$this->secretsStorage        = $secretsStorage;
-		$this->adminAddOns           = $adminAddOns;
+		$this->packageAdmin            = new PackageAdminController( $packageOperations, deployments: $this->deploymentAdmin );
+		$this->pluginPages             = PackagePagePresenter::plugin();
+		$this->themePages              = PackagePagePresenter::theme();
+		$this->debugCapture            = $debugCapture;
+		$this->secretsStorage          = $secretsStorage;
+		$this->adminAddOns             = $adminAddOns;
+		$this->githubWebhookManagement = $githubWebhookManagement;
 	}
 
 	public function getIndex() {
@@ -201,11 +204,10 @@ class Dashboard {
 			$data['providerTask']      = $this->requestedProviderTask();
 			$data['providerListState'] = $this->requestedProviderListState();
 
-			$repositoryComposition                   = new ProviderRepositoryCompositionRenderer();
 			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
-			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $repositoryComposition ) );
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->githubWebhookManagement ) );
 			$data                                    = array_merge( $data, $this->providerSettings->buildProfileListProjection( $data ) );
-			$data['repositoryComposition']           = $repositoryComposition;
+			$data['githubWebhookManagement']         = $this->githubWebhookManagement;
 			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
 			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
 			$data['repositoryTableRenderer']         = new RepositoryTableRenderer();
@@ -761,7 +763,7 @@ class Dashboard {
 
 	private function requestedProviderRepositoryId(): string {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository selection.
-		$value = $_GET['repository'] ?? $_GET['assisted_repository'] ?? null;
+		$value = $_GET['repository'] ?? null;
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		if ( ! is_string( $value ) ) {
 			return '';

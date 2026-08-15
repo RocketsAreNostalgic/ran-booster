@@ -14,14 +14,14 @@ use RAN\Admin\ProviderRepositoryRowsNormalizer;
 
 final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
-	public function testAllowsReservedAssistedStateAndNamespacedHistoricalRows(): void {
+	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {
 		$base                              = $this->baseRows();
 		$presented                         = $base;
 		$presented['repo-42']['details'][] = array(
 			'label' => 'Remote hook',
 			'value' => 'Configured',
 		);
-		$presented['repo-42']['actions']['core:webhook-management']['url']      = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&assisted_repository=repo-42';
+		$presented['repo-42']['actions']['core:webhook-management']['url']      = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&repository=repo-42';
 		$presented['repo-42']['actions']['core:webhook-management']['disabled'] = false;
 		$presented['fixture:historical:abc123']                                 = array(
 			'provider_code'  => 'gh',
@@ -95,12 +95,12 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 				),
 				'actions'       => array(
 					'core:webhook-management' => array(
-						'label'        => 'Assisted Hooks',
+						'label'        => 'Manage webhook',
 						'type'         => 'link',
 						'url'          => '',
 						'disabled'     => true,
 						'external'     => false,
-						'described_by' => 'assisted-reason',
+						'described_by' => 'webhook-management-reason',
 					),
 					'core:settings'           => array(
 						'label' => 'Plugin settings',

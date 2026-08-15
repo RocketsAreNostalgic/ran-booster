@@ -7,7 +7,6 @@ namespace RANBoosterFixtureProvider;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
-use RAN\RepositoryProvider\Admin\ProviderWebhookManagementMetadata;
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\CredentialValidationResult;
@@ -64,14 +63,7 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 						array( new CredentialFieldMetadata( 'tenant', 'Tenant', 'text', true ) )
 					),
 				),
-				array(),
-				webhookAssistance: new ProviderWebhookManagementMetadata(
-					'Manage webhook',
-					'Fixture webhook management unavailable.',
-					'Activate the fixture provider adapter to manage this repository webhook.',
-					'Fixture webhook management available.',
-					'Use the repository action to inspect or change the fixture webhook.'
-				)
+				array()
 			)
 		);
 	}

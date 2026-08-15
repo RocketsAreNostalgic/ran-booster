@@ -28,15 +28,12 @@ final class GitHubWebhookManagementTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'ran_booster_admin_provider_repository_assistance_active',
-				'ran_booster_admin_provider_repository_rows',
 				'ran_booster_documentation_sections_after_provider_gh',
 			),
 			array_keys( $GLOBALS['ran_booster_github_webhook_management_filters'] )
 		);
 		self::assertSame(
 			array(
-				'ran_booster_admin_provider_repository_panel',
 				'admin_post_ran_booster_github_webhook_management_operation',
 				'admin_enqueue_scripts',
 			),

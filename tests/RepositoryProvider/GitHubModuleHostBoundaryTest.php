@@ -41,17 +41,26 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 				if ( 'RAN/BoosterServiceProvider.php' === $relative ) {
 					self::assertStringContainsString( 'use RAN\Booster\GitHub\GitHubProvider;', $source );
 					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;', $source );
-				} else {
-					self::assertSame( 'RAN/Uninstall/LocalDataRemover.php', $relative );
+				} elseif ( 'RAN/Uninstall/LocalDataRemover.php' === $relative ) {
 					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;', $source );
 					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\Installation\WordPressInstallationStore;', $source );
+				} else {
+					self::assertContains( $relative, array( 'RAN/Dashboard.php', 'RAN/Admin/ProviderRepositoryRowsNormalizer.php' ) );
+					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;', $source );
 				}
-				self::assertSame( 2, substr_count( $source, 'RAN\Booster\GitHub\\' ) );
 			}
 		}
 
 		sort( $references );
-		self::assertSame( array( 'RAN/BoosterServiceProvider.php', 'RAN/Uninstall/LocalDataRemover.php' ), $references );
+		self::assertSame(
+			array(
+				'RAN/Admin/ProviderRepositoryRowsNormalizer.php',
+				'RAN/BoosterServiceProvider.php',
+				'RAN/Dashboard.php',
+				'RAN/Uninstall/LocalDataRemover.php',
+			),
+			$references
+		);
 	}
 
 	public function testCoreTestsReferenceGitHubConcretesOnlyThroughExplicitHostIntegrationOwners(): void {

@@ -315,28 +315,6 @@ class Booster {
 				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/issues',
 			),
 			array(
-				'id'            => 'ran-booster-assisted-hooks',
-				'name'          => 'Assisted Hooks',
-				'description'   => 'Set up and recover GitHub Push-to-Deploy webhooks with guided checks.',
-				'details'       => 'Set up, check, reconfigure, or remove one GitHub repository webhook without giving Booster standing GitHub administration permission.',
-				'features'      => array(
-					'Guide webhook setup and recovery for eligible managed GitHub repositories.',
-					'Use a fresh request-only token or an eligible saved Booster credential.',
-					'Show recorded hook status and recovery information in the GitHub package table.',
-				),
-				'requirements'  => array(
-					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
-					'A single site, a managed GitHub repository, and a public HTTPS callback URL.',
-					'A repository-scoped token with permission to read and write webhooks.',
-				),
-				'plugin'        => 'ran-booster-assisted-hooks/ran-booster-assisted-hooks.php',
-				'image'         => 'assisted-hooks.svg',
-				'availability'  => 'Subscriber',
-				'required_apis' => array( 'RAN_BOOSTER_ADDON_API_VERSION' => 15 ),
-				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-assisted-hooks#readme',
-				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-assisted-hooks/issues',
-			),
-			array(
 				'id'            => 'ran-booster-release-deployments',
 				'name'          => 'Release Deployments',
 				'description'   => 'Track verified GitHub releases and prepare release-based deployment workflows.',

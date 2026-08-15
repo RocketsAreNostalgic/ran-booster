@@ -97,7 +97,7 @@ final class ExternalFixturePluginTest extends TestCase {
 				$metadata->admin
 			);
 
-			self::assertNull( $projection['webhook_assistance'] );
+			self::assertArrayNotHasKey( 'webhook_assistance', $projection );
 		} finally {
 			$this->cleanSidecar( $path );
 		}
@@ -180,8 +180,7 @@ final class ExternalFixturePluginTest extends TestCase {
 
 			$settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build( 'fixture-provider' );
 			self::assertSame( 'fixture-provider', $settings['provider']['code'] );
-			self::assertSame( 'core:webhook-management', $settings['provider']['webhook_assistance']['action_key'] );
-			self::assertSame( 'Manage webhook', $settings['provider']['webhook_assistance']['action_label'] );
+			self::assertArrayNotHasKey( 'webhook_assistance', $settings['provider'] );
 			self::assertFalse( $settings['provider']['capabilities']['browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['credentialed_public_browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['provider_default_public_lookup_profile'] );

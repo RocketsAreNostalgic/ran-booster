@@ -26,15 +26,6 @@ final class GitHubProviderMetadataTest extends TestCase {
 		self::assertSame( 'Fine-grained PAT', $fineGrained->shortLabel );
 	}
 
-	public function testGitHubOwnsItsWebhookAssistanceVocabulary(): void {
-		$assistance = $this->provider()->getMetadata()->admin?->webhookAssistance;
-
-		self::assertNotNull( $assistance );
-		self::assertSame( 'Assisted Hooks', $assistance->actionLabel );
-		self::assertSame( 'Assisted Hooks add-on not active.', $assistance->inactiveHeading );
-		self::assertSame( 'Assisted Hooks is active.', $assistance->activeHeading );
-	}
-
 	private function provider(): GitHubProvider {
 		$provider = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),

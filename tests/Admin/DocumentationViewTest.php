@@ -50,7 +50,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'any branch-managed package using the same repository can continue to need the webhook', $html );
 		self::assertStringContainsString( 'Remove the remote provider webhook first, then remove only a local signing secret that is no longer used', $html );
 		self::assertStringContainsString( 'Never remove an owner-shared secret merely because one package changed source', $html );
-		self::assertStringContainsString( 'its verified Remove action can remove that remote hook', $html );
+		self::assertStringContainsString( 'the verified Remove action can remove the remote hook', $html );
 		self::assertStringContainsString( 'then use Manage secrets to remove an unused local secret', $html );
 		self::assertStringContainsString( 'GitHub webhook settings', $html );
 		self::assertStringContainsString( 'Bitbucket webhook settings', $html );

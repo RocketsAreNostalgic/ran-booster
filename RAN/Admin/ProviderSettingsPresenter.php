@@ -17,8 +17,6 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
-use RAN\RepositoryProvider\RepositoryWebhookFitness;
-use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\Secrets\SecretsFile;
@@ -581,32 +579,21 @@ final readonly class ProviderSettingsPresenter {
 	 * @return array<string, mixed>
 	 */
 	private function provider( RepositoryProvider $provider, ProviderMetadata $metadata, ProviderAdminMetadata $admin ): array {
-		$setup             = $admin->setup;
-		$webhookManagement = $provider instanceof RepositoryWebhookFitness && $provider instanceof RepositoryWebhookManagement
-			? $admin->webhookAssistance
-			: null;
+		$setup = $admin->setup;
 
 		return array(
-			'code'               => $metadata->code->value,
-			'label'              => $metadata->label,
-			'owner_label'        => $metadata->ownerLabel,
-			'credential_kinds'   => array_map( $this->credentialKind( ... ), $admin->credentialKinds ),
-			'webhook_scopes'     => array_map( $this->webhookScope( ... ), $admin->webhookScopes ),
-			'webhook_setup'      => null === $setup ? null : array(
+			'code'             => $metadata->code->value,
+			'label'            => $metadata->label,
+			'owner_label'      => $metadata->ownerLabel,
+			'credential_kinds' => array_map( $this->credentialKind( ... ), $admin->credentialKinds ),
+			'webhook_scopes'   => array_map( $this->webhookScope( ... ), $admin->webhookScopes ),
+			'webhook_setup'    => null === $setup ? null : array(
 				'location'                   => $setup->webhookLocation,
 				'event'                      => $setup->webhookEvent,
 				'documentation_url'          => $setup->webhookDocumentationUrl,
 				'delivery_documentation_url' => $setup->deliveryDocumentationUrl,
 			),
-			'webhook_assistance' => null === $webhookManagement ? null : array(
-				'action_key'           => $webhookManagement->actionKey,
-				'action_label'         => $webhookManagement->actionLabel,
-				'inactive_heading'     => $webhookManagement->inactiveHeading,
-				'inactive_description' => $webhookManagement->inactiveDescription,
-				'active_heading'       => $webhookManagement->activeHeading,
-				'active_description'   => $webhookManagement->activeDescription,
-			),
-			'capabilities'       => array(
+			'capabilities'     => array(
 				'browse'                                 => $provider instanceof RepositoryBrowser,
 				'credentialed_public_browse'             => $provider instanceof CredentialedPublicRepositoryBrowser,
 				'provider_default_public_lookup_profile' => $provider instanceof CredentialedPublicRepositoryBrowser

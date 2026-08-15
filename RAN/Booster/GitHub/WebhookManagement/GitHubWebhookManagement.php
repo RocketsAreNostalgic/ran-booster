@@ -18,6 +18,7 @@ final class GitHubWebhookManagement {
 	private readonly WebhookManagementController $controller;
 
 	private readonly WebhookDisplayModel $display;
+	private bool $enabled = false;
 
 	public function __construct(
 		WebhookAssistanceFacade $facade,
@@ -35,10 +36,8 @@ final class GitHubWebhookManagement {
 	}
 
 	public function register(): void {
-		add_filter( 'ran_booster_admin_provider_repository_assistance_active', array( $this, 'repositoryManagementActive' ), 10, 2 );
-		add_filter( 'ran_booster_admin_provider_repository_rows', array( $this, 'enrichRepositoryRows' ), 10, 4 );
+		$this->enabled = true;
 		add_filter( 'ran_booster_documentation_sections_after_provider_gh', array( $this, 'filterDocumentationSections' ), 10, 3 );
-		add_action( 'ran_booster_admin_provider_repository_panel', array( $this, 'renderRepositoryPanel' ), 10, 3 );
 		add_action( 'admin_post_' . WebhookManagementController::ADMIN_POST_ACTION, array( $this, 'handleAdminPost' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAdminAssets' ) );
 	}
@@ -72,14 +71,18 @@ final class GitHubWebhookManagement {
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
+		if ( ! $this->enabled ) {
+			return $rows;
+		}
+
 		return $this->display->enrichRows( $rows, $providerCode, $repositoryProjections, $returnUrl );
 	}
 
-	public function repositoryManagementActive( bool $active, string $providerCode ): bool {
-		return $active || 'gh' === $providerCode;
-	}
-
 	public function renderRepositoryPanel( string $providerCode, string $repositoryId, string $returnUrl ): void {
+		if ( ! $this->enabled ) {
+			return;
+		}
+
 		$context = $this->controller->panelContext();
 		$model   = $this->display->panel( $providerCode, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ) );
 		if ( null === $model ) {

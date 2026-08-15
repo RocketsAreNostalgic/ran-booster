@@ -175,10 +175,9 @@ add_action(
 			$providerRegistry = $ran_booster_container->make( ProviderRegistry::class );
 			do_action( 'ran_booster_register_providers', $providerRegistry );
 			$providerRegistry->seal();
-			$webhookAssistance = $ran_booster_container->make( WebhookAssistanceFacade::class );
-			$releaseTracking   = $ran_booster_container->make( ReleaseTrackingFacade::class );
-			$portability       = $ran_booster_container->make( PortabilityFacade::class );
-			$adminInteraction  = $ran_booster_container->make( AdminInteractionFacade::class );
+			$releaseTracking  = $ran_booster_container->make( ReleaseTrackingFacade::class );
+			$portability      = $ran_booster_container->make( PortabilityFacade::class );
+			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
 			if ( GitHubWebhookManagement::legacyAddOnIsActive() ) {
 				GitHubWebhookManagement::registerLegacyAddOnNotice();
 			} else {
@@ -186,8 +185,7 @@ add_action(
 			}
 			$addOnRegistry = new AdminAddOnRegistry(
 				array(
-					'webhook_assistance' => $webhookAssistance,
-					'release_tracking'   => $releaseTracking,
+					'release_tracking' => $releaseTracking,
 				),
 				RAN_BOOSTER_ADDON_API_VERSION,
 				RAN_BOOSTER_ADDON_API_VERSION
@@ -220,20 +218,6 @@ add_action(
 						'source' => 'admin',
 						'step'   => 'add_on_service_ready',
 						'event'  => 'ran_booster_portability_ready',
-					)
-				);
-			}
-
-			try {
-				do_action( 'ran_booster_webhook_assistance_ready', $webhookAssistance );
-			} catch ( Throwable $failure ) {
-				\RAN\Logging\BoosterLogger::logException(
-					'add-on service listener failed',
-					$failure,
-					array(
-						'source' => 'admin',
-						'step'   => 'add_on_service_ready',
-						'event'  => 'ran_booster_webhook_assistance_ready',
 					)
 				);
 			}

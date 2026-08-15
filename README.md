@@ -142,6 +142,11 @@ work is in neither record.
 
 ## Current status
 
+- **Extensions** — the Core-owned Extensions page lists the remaining first-party
+  beta extensions using local WordPress plugin state and release-bundled
+  artwork. Free downloads remain disabled until their public repositories and
+  releases are ready for people; Sponsor install controls remain disabled
+  and link separately to access information.
 - **GitHub** — public repositories need no credential. Private repositories use
   named personal access token profiles: narrowly scoped fine-grained tokens for
   known resource owners, or a classic token when one credential must span several
@@ -149,18 +154,12 @@ work is in neither record.
   the callback URL, event, repository context and manual setup links. Successful credential
   validation records GitHub's token-expiration response header when GitHub
   supplies it.
-- **Assisted Hooks add-on** — optionally sets up, checks, reconfigures and
-  removes GitHub repository webhooks using a fine-grained token with Webhooks:
-  Read and write permission. An administrator can paste a request-only token,
-  or select an eligible saved Core GitHub credential; the matching provider
-  resolves a saved token only inside its fixed operation, without granting the
-  add-on sidecar access. Core Add-on API 14 supplies the add-on with explicit
-  setup, check, reconfigure and remove methods; none accepts a callback that
-  could receive a saved credential or signing secret. The add-on can enrich
-  Core's existing GitHub repository table and append a selected-repository
-  operation panel through documented WordPress hooks. When the add-on is absent,
-  Core keeps the Assisted Hooks affordance visible but disabled. Core and the
-  add-on use the same
+- **GitHub webhook management** — Core sets up, checks, reconfigures and removes
+  GitHub repository webhooks using a fine-grained token with Webhooks: Read and
+  write permission. An administrator can paste a request-only token or select
+  an eligible saved GitHub credential. Core resolves a saved token only inside
+  the fixed operation and never exposes the credential or signing secret to UI
+  code. The GitHub repository table and selected-repository panel use the same
   provider-scoped, display-safe site and repository readiness result, including
   public HTTPS, repository identity and local signing-secret coverage. GitHub
   signing secrets are either bound to a canonical GitHub organization or user
@@ -351,10 +350,10 @@ For a long-term release source, site or repository retirement, or a callback or
 credential change, review the retained setup. First confirm that no
 branch-managed package still needs it. Remove the remote provider webhook
 before deleting an unused local secret, and preserve owner-shared secrets or
-other profiles that still serve branch packages. Assisted Hooks can remove an
-identified hook through its verified Remove workflow. Without that add-on,
-remove the hook in the provider UI, then use the provider screen's **Manage
-secrets** action to remove only an unused local secret.
+other profiles that still serve branch packages. GitHub webhook management can
+remove an identified hook through its verified Remove workflow. For other
+providers, remove the hook in the provider UI, then use the provider screen's
+**Manage secrets** action to remove only an unused local secret.
 
 ### Transporter and extensibility
 
@@ -417,8 +416,8 @@ credentials that the target may need. Blueprints do not contain webhook
 secrets, provider-side hooks,
 constants or deployment history, and restored packages start with deployment
 **Disabled**. Revoke provider credentials and remove remote webhooks separately
-before uninstalling; Assisted Hooks can remove an identified GitHub hook when
-supplied with a fresh Webhooks-write token. Booster removes only a
+before uninstalling; bundled GitHub webhook management can remove an identified
+GitHub hook when supplied with a fresh Webhooks-write token. Booster removes only a
 `wp-config.php` definition that it can prove it created and leaves manually
 authored configuration untouched.
 

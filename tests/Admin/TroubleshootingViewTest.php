@@ -8,7 +8,6 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
-use RAN\Admin\ProviderRepositoryCompositionRenderer;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Deployment\DeploymentAttempt;
@@ -25,7 +24,6 @@ final class TroubleshootingViewTest extends TestCase {
 
 	/** @param array<string,mixed> $data @return array<string,mixed> */
 	private function providerViewData( array $data ): array {
-		$composition                 = new ProviderRepositoryCompositionRenderer();
 		$presenter                   = ( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
 		$data['providerListState'] ??= array(
 			'search'   => '',
@@ -41,9 +39,9 @@ final class TroubleshootingViewTest extends TestCase {
 		return array_merge(
 			$data,
 			$presenter->buildProfileListProjection( $data ),
-			( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $composition ),
+			( new ProviderRepositoryRowsNormalizer() )->projectPage( $data ),
 			array(
-				'repositoryComposition'           => $composition,
+				'githubWebhookManagement'         => null,
 				'statusSummaryRenderer'           => new AdminStatusSummaryRenderer(),
 				'providerManagementTableRenderer' => new ProviderManagementTableRenderer(),
 				'repositoryTableRenderer'         => new RepositoryTableRenderer(),
@@ -644,7 +642,6 @@ final class TroubleshootingViewTest extends TestCase {
 			'documentation_url'          => 'https://provider.example/webhooks',
 			'delivery_documentation_url' => 'https://provider.example/deliveries',
 		);
-		$provider['webhook_assistance']       = $this->webhookAssistance();
 		$credential_profiles                  = array();
 		$webhook_profiles                     = array();
 		$managed_webhook_repositories         = array(
@@ -694,35 +691,7 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 		$secrets_path                         = '/absolute/path-secret-canary/secrets.json';
 		$providerTask                         = 'repositories';
-		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_provider_repository_assistance_active'][] =
-			static fn ( bool $active ): bool => true;
-		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_provider_repository_rows'][]              =
-			static function ( array $rows ): array {
-				foreach ( $rows as &$row ) {
-					if ( isset( $row['actions']['core:assisted-hooks'] ) ) {
-						$row['actions']['core:assisted-hooks']['url']      = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&assisted_repository=repo-42';
-						$row['actions']['core:assisted-hooks']['disabled'] = false;
-					}
-					$row['details'][] = array(
-						'label' => 'Assisted hook status',
-						'value' => 'No assisted hook recorded',
-						'tone'  => 'warning',
-					);
-					$row['details'][] = array(
-						'label' => 'Recorded hook profile',
-						'value' => 'Assisted hook not yet set',
-					);
-					$row['details'][] = array(
-						'label' => 'Last checked',
-						'value' => 'Never',
-					);
-				}
-				unset( $row );
-
-				return $rows;
-			};
-
-		$providerViewData = $this->providerViewData( get_defined_vars() );
+		$providerViewData                     = $this->providerViewData( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $providerViewData );
 		ob_start();
@@ -769,21 +738,13 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-webhook-target-options="repository"', $html );
 		self::assertStringContainsString( '<option value="owner">owner</option>', $html );
 		self::assertStringContainsString( '<option value="owner/example">owner/example</option>', $html );
-		self::assertStringContainsString( 'tab=gh&amp;assisted_repository=repo-42', $html );
-		self::assertStringContainsString( 'class="button" href=', $html );
-		self::assertStringContainsString( 'Assisted Hooks', $html );
-		self::assertStringContainsString( 'Assisted Hooks is active.', $html );
-		self::assertStringNotContainsString( 'Assisted Hooks add-on not active.', $html );
+		self::assertStringNotContainsString( 'assisted_repository=repo-42', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhook</button>', $html );
 		self::assertStringContainsString( 'Fixture webhooks', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'source_view=branch#ran-booster-branch-readiness', html_entity_decode( $html ) );
-		self::assertStringNotContainsString( '>Manage webhook', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text">: plugin/example.php</span>', $html );
-		self::assertStringContainsString( 'class="ran-booster-repository-record__details"', $html );
-		self::assertStringContainsString( 'Assisted hook status', $html );
-		self::assertStringContainsString( 'Recorded hook profile', $html );
-		self::assertStringContainsString( 'Last checked', $html );
-		self::assertLessThan( strpos( $html, 'Fixture webhooks' ), strpos( $html, 'Assisted Hooks' ) );
+		self::assertStringNotContainsString( 'class="ran-booster-repository-record__details"', $html );
 		self::assertLessThan( strpos( $html, 'Plugin settings' ), strpos( $html, 'Fixture webhooks' ) );
 		self::assertStringNotContainsString( '>Set up in GitHub</a>', $html );
 		self::assertStringContainsString( '>Add webhook secret</button>', $html );
@@ -850,11 +811,10 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$withoutAddOnHtml = (string) ob_get_clean();
-			self::assertStringContainsString( 'Assisted Hooks', $withoutAddOnHtml );
-			self::assertStringContainsString( 'disabled aria-disabled="true"', $withoutAddOnHtml );
-			self::assertStringNotContainsString( 'assisted_repository=', $withoutAddOnHtml );
-			self::assertStringNotContainsString( 'ran-booster-repository-record__details', $withoutAddOnHtml );
-			self::assertStringContainsString( 'Assisted Hooks add-on not active.', $withoutAddOnHtml );
+		self::assertStringContainsString( 'Manage webhook', $withoutAddOnHtml );
+		self::assertStringContainsString( 'disabled aria-disabled="true"', $withoutAddOnHtml );
+		self::assertStringNotContainsString( 'assisted_repository=', $withoutAddOnHtml );
+		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $withoutAddOnHtml );
 		self::assertStringContainsString( 'Fixture webhooks', $withoutAddOnHtml );
 		self::assertStringContainsString( 'Plugin settings', $withoutAddOnHtml );
 	}
@@ -864,7 +824,6 @@ final class TroubleshootingViewTest extends TestCase {
 		$provider['code']                     = 'gh';
 		$provider['webhook_scopes']           = $this->webhookScopes();
 		$provider['capabilities']['webhooks'] = true;
-		$provider['webhook_assistance']       = $this->webhookAssistance();
 		$credential_profiles                  = array();
 		$webhook_profiles                     = array();
 		$managed_webhook_repositories         = array(
@@ -908,31 +867,19 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 		$secrets_path                         = '/safe/path';
 		$providerTask                         = 'repositories';
-		$capturedProjections                  = null;
-		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_provider_repository_assistance_active'][] =
-			static fn ( bool $active ): bool => true;
-		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_provider_repository_rows'][]              =
-			static function ( array $rows, string $providerCode, array $projections ) use ( &$capturedProjections ): array {
-				unset( $providerCode );
-				$capturedProjections = $projections;
-
-				return $rows;
-			};
-
-		$providerViewData = $this->providerViewData( get_defined_vars() );
+		$providerViewData                     = $this->providerViewData( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $providerViewData );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertSame( array(), $capturedProjections );
 		self::assertStringContainsString( 'ran-booster-repository-record--release', $html );
 		self::assertStringContainsString( 'Theme · Published release · 1 package', $html );
 		self::assertStringContainsString( 'Published release', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--info">Push-to-Deploy unavailable</span>', $html );
 		self::assertStringContainsString( 'Local signing setup is retained for an easier return to Branch.', $html );
-		self::assertSame( 1, substr_count( $html, 'disabled aria-disabled="true"' ) );
+		self::assertSame( 0, substr_count( $html, 'disabled aria-disabled="true"' ) );
 		self::assertStringContainsString( 'Review webhook cleanup', $html );
 		self::assertStringContainsString( 'webhook_cleanup=1#ran-booster-webhook-cleanup', html_entity_decode( $html ) );
 		self::assertStringContainsString( 'Theme settings', $html );
@@ -971,7 +918,6 @@ final class TroubleshootingViewTest extends TestCase {
 			'documentation_url'          => 'https://provider.example/webhooks',
 			'delivery_documentation_url' => 'https://provider.example/deliveries',
 		);
-		$provider['webhook_assistance']       = $this->webhookAssistance();
 		$credential_profiles                  = array();
 		$webhook_profiles                     = array();
 		$managed_webhook_repositories         = array(
@@ -1033,7 +979,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Repository identity conflict', $html );
 		self::assertStringNotContainsString( 'Managed packages for this repository disagree about its provider identity.', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
-		self::assertStringContainsString( 'aria-describedby="ran-booster-provider-assistance-description ran-booster-provider-readiness-reason-0 ran-booster-provider-readiness-reason-0-site"', $html );
+		self::assertStringContainsString( 'aria-describedby="ran-booster-provider-readiness-reason-0 ran-booster-provider-readiness-reason-0-site"', $html );
 		self::assertStringNotContainsString( 'assisted_repository=repo-42', $html );
 	}
 
@@ -1528,18 +1474,6 @@ final class TroubleshootingViewTest extends TestCase {
 				'credentials' => false,
 				'webhooks'    => false,
 			),
-		);
-	}
-
-	/** @return array<string, string> */
-	private function webhookAssistance(): array {
-		return array(
-			'action_key'           => 'core:assisted-hooks',
-			'action_label'         => 'Assisted Hooks',
-			'inactive_heading'     => 'Assisted Hooks add-on not active.',
-			'inactive_description' => 'Activating the compatible add-on adds repository-level provisioning here.',
-			'active_heading'       => 'Assisted Hooks is active.',
-			'active_description'   => 'Repository status and assisted configuration actions are available below.',
 		);
 	}
 

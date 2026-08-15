@@ -29,9 +29,9 @@ if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );
-} elseif ( 14 !== RAN_BOOSTER_ADDON_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Add-on API 14 conflicts with an existing API version marker.' );
+	define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
+} elseif ( 15 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+	throw new LogicException( 'RAN Booster Add-on API 15 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' ) ) {
@@ -51,6 +51,7 @@ use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\GitHubReleaseUpdateNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Booster;
+use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
 use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
@@ -136,6 +137,11 @@ add_action(
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
 	$ran_booster_runtime->boosterUrl  = plugin_dir_url( __FILE__ );
 	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime );
+	if ( ! defined( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION' ) ) {
+		define( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION', 1 );
+	} elseif ( 1 !== RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION ) {
+		throw new LogicException( 'RAN Booster bundled GitHub webhook management conflicts with an existing feature marker.' );
+	}
 	$ran_booster_container->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
 	$ran_booster_container->bind(
 		CoreSelfUpdateStatus::class,
@@ -169,14 +175,17 @@ add_action(
 			$providerRegistry = $ran_booster_container->make( ProviderRegistry::class );
 			do_action( 'ran_booster_register_providers', $providerRegistry );
 			$providerRegistry->seal();
-			$webhookAssistance = $ran_booster_container->make( WebhookAssistanceFacade::class );
-			$releaseTracking   = $ran_booster_container->make( ReleaseTrackingFacade::class );
-			$portability       = $ran_booster_container->make( PortabilityFacade::class );
-			$adminInteraction  = $ran_booster_container->make( AdminInteractionFacade::class );
-			$addOnRegistry     = new AdminAddOnRegistry(
+			$releaseTracking  = $ran_booster_container->make( ReleaseTrackingFacade::class );
+			$portability      = $ran_booster_container->make( PortabilityFacade::class );
+			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
+			if ( GitHubWebhookManagement::legacyAddOnIsActive() ) {
+				GitHubWebhookManagement::registerLegacyAddOnNotice();
+			} else {
+				$ran_booster_container->make( GitHubWebhookManagement::class )->register();
+			}
+			$addOnRegistry = new AdminAddOnRegistry(
 				array(
-					'webhook_assistance' => $webhookAssistance,
-					'release_tracking'   => $releaseTracking,
+					'release_tracking' => $releaseTracking,
 				),
 				RAN_BOOSTER_ADDON_API_VERSION,
 				RAN_BOOSTER_ADDON_API_VERSION
@@ -209,20 +218,6 @@ add_action(
 						'source' => 'admin',
 						'step'   => 'add_on_service_ready',
 						'event'  => 'ran_booster_portability_ready',
-					)
-				);
-			}
-
-			try {
-				do_action( 'ran_booster_webhook_assistance_ready', $webhookAssistance );
-			} catch ( Throwable $failure ) {
-				\RAN\Logging\BoosterLogger::logException(
-					'add-on service listener failed',
-					$failure,
-					array(
-						'source' => 'admin',
-						'step'   => 'add_on_service_ready',
-						'event'  => 'ran_booster_webhook_assistance_ready',
 					)
 				);
 			}

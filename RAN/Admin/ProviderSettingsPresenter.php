@@ -582,26 +582,18 @@ final readonly class ProviderSettingsPresenter {
 		$setup = $admin->setup;
 
 		return array(
-			'code'               => $metadata->code->value,
-			'label'              => $metadata->label,
-			'owner_label'        => $metadata->ownerLabel,
-			'credential_kinds'   => array_map( $this->credentialKind( ... ), $admin->credentialKinds ),
-			'webhook_scopes'     => array_map( $this->webhookScope( ... ), $admin->webhookScopes ),
-			'webhook_setup'      => null === $setup ? null : array(
+			'code'             => $metadata->code->value,
+			'label'            => $metadata->label,
+			'owner_label'      => $metadata->ownerLabel,
+			'credential_kinds' => array_map( $this->credentialKind( ... ), $admin->credentialKinds ),
+			'webhook_scopes'   => array_map( $this->webhookScope( ... ), $admin->webhookScopes ),
+			'webhook_setup'    => null === $setup ? null : array(
 				'location'                   => $setup->webhookLocation,
 				'event'                      => $setup->webhookEvent,
 				'documentation_url'          => $setup->webhookDocumentationUrl,
 				'delivery_documentation_url' => $setup->deliveryDocumentationUrl,
 			),
-			'webhook_assistance' => null === $admin->webhookAssistance ? null : array(
-				'action_key'           => $admin->webhookAssistance->actionKey,
-				'action_label'         => $admin->webhookAssistance->actionLabel,
-				'inactive_heading'     => $admin->webhookAssistance->inactiveHeading,
-				'inactive_description' => $admin->webhookAssistance->inactiveDescription,
-				'active_heading'       => $admin->webhookAssistance->activeHeading,
-				'active_description'   => $admin->webhookAssistance->activeDescription,
-			),
-			'capabilities'       => array(
+			'capabilities'     => array(
 				'browse'                                 => $provider instanceof RepositoryBrowser,
 				'credentialed_public_browse'             => $provider instanceof CredentialedPublicRepositoryBrowser,
 				'provider_default_public_lookup_profile' => $provider instanceof CredentialedPublicRepositoryBrowser

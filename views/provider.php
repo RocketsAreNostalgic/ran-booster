@@ -339,9 +339,6 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 								<p class="ran-booster-section__description"><?php echo esc_html( $repositoryWebhookDescription ); ?></p>
 							</div>
 						</div>
-						<?php if ( null !== $providerWebhookAssistance ) { ?>
-								<?php $repositoryComposition->renderAssistanceNote( $providerWebhookAssistance, $provider['code'], $providerAssistanceDescriptionId ); ?>
-							<?php } ?>
 							<?php if ( '' !== $requestedRepositoryId ) { ?>
 								<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to managed repositories', 'ran-booster' ); ?></a></p>
 								<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
@@ -373,8 +370,8 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 								<p class="description"><?php esc_html_e( 'Managed repository status is temporarily unavailable.', 'ran-booster' ); ?></p>
 							<?php } ?>
 							<?php
-							if ( is_array( $selectedRepositoryRow ) ) {
-								$repositoryComposition->renderPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
+							if ( is_array( $selectedRepositoryRow ) && null !== $githubWebhookManagement ) {
+								$githubWebhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
 							}
 							?>
 				</section>

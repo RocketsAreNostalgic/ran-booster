@@ -2,7 +2,7 @@
 
 **Decision:** Complete for the coordinated Alpha contract replacement. Core,
 the migrated Assisted Hooks consumer and the combined compatibility proof pass
-against exact Provider API 8 / Add-on API 14. Release publication remains a
+against exact Provider API 8 / Add-on API 15. Release publication remains a
 separate authorization.
 
 ## Core implementation checkpoint

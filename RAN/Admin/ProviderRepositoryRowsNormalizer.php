@@ -6,15 +6,16 @@ namespace RAN\Admin;
 
 use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
+use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
 
 /**
- * Protects Core repository rows while accepting bounded add-on enrichment.
+ * Builds and protects Core-owned provider repository rows.
  */
 final class ProviderRepositoryRowsNormalizer {
 	// Placeholder meanings are fixed by the named projection fields below.
 	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
 	/** Build the managed-repository projection consumed by the provider page. */
-	public function projectPage( array $data, ProviderRepositoryCompositionRenderer $composition ): array {
+	public function projectPage( array $data, ?GitHubWebhookManagement $githubWebhookManagement = null ): array {
 		$provider      = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$providerCode  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
 		$providerLabel = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
@@ -29,8 +30,6 @@ final class ProviderRepositoryRowsNormalizer {
 		$siteEndpoint  = is_string( $site['callback_url'] ?? null ) ? $site['callback_url'] : $endpoint;
 		$reasonCodes   = is_array( $site['reason_codes'] ?? null ) ? $site['reason_codes'] : array();
 		$siteReady     = null !== $site && 'ready' === ( $site['status'] ?? null );
-		$assistance    = $composition->assistancePresentation( $provider['webhook_assistance'] ?? null );
-		$assistanceId  = null === $assistance ? '' : 'ran-booster-provider-assistance-description';
 		$baseUrl       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
 		$providerUrl   = static fn ( array $args = array() ): string => add_query_arg( $args, $baseUrl );
 		$taskUrls      = array();
@@ -50,7 +49,6 @@ final class ProviderRepositoryRowsNormalizer {
 		$sharedLabel  = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
 		$webhookLabel = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
 		$model        = $this->project(
-			$composition,
 			$repositories['repositories'],
 			$providerCode,
 			$providerLabel,
@@ -59,8 +57,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$siteEndpoint,
 			$siteReady,
 			$this->readinessIndexes( $readiness['repositories'] ?? null, $providerCode ),
-			$assistance,
-			$assistanceId,
+			$githubWebhookManagement,
 			is_string( $data['requestedRepositoryId'] ?? null ) ? $data['requestedRepositoryId'] : '',
 			$providerUrl,
 			$taskUrls['repositories']
@@ -69,8 +66,6 @@ final class ProviderRepositoryRowsNormalizer {
 		return array(
 			'providerTask'                     => in_array( $data['providerTask'] ?? null, array( 'repositories', 'setup' ), true ) ? $data['providerTask'] : 'status',
 			'managedRepositories'              => $managed,
-			'providerWebhookAssistance'        => $assistance,
-			'providerAssistanceDescriptionId'  => $assistanceId,
 			'webhookEndpoint'                  => $endpoint,
 			'webhookAssistanceProviderCapable' => null !== $site,
 			'webhookAssistanceSiteReady'       => $siteReady,
@@ -137,7 +132,7 @@ final class ProviderRepositoryRowsNormalizer {
 				if ( ! isset( $actions[ $actionKey ] ) || ! is_array( $actions[ $actionKey ] ) ) {
 					throw new LogicException( 'Provider filters must preserve every Core action.' );
 				}
-				if ( 'core:assisted-hooks' !== $actionKey ) {
+				if ( 'core:webhook-management' !== $actionKey ) {
 					if ( $actions[ $actionKey ] !== $baseAction ) {
 						throw new LogicException( 'Provider filters must not rewrite Core actions.' );
 					}
@@ -148,7 +143,7 @@ final class ProviderRepositoryRowsNormalizer {
 						continue;
 					}
 					if ( ! array_key_exists( $field, $actions[ $actionKey ] ) || $actions[ $actionKey ][ $field ] !== $value ) {
-						throw new LogicException( 'Assisted Hooks may change only its reserved action state.' );
+						throw new LogicException( 'Webhook management may change only its reserved action state.' );
 					}
 				}
 			}
@@ -170,7 +165,7 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Provider filters may append only namespaced historical rows.' );
 			}
 			$rowActions = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
-			if ( isset( $rowActions['core:assisted-hooks'] ) ) {
+			if ( isset( $rowActions['core:webhook-management'] ) ) {
 				throw new LogicException( 'Historical rows must not claim Core actions.' );
 			}
 			$row['actions'] = $normalizer->normalize( $rowActions );
@@ -183,12 +178,10 @@ final class ProviderRepositoryRowsNormalizer {
 	/**
 	 * @param list<array<string,mixed>> $repositories
 	 * @param array{by_id:array<string,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
-	 * @param array<string,string>|null $assistance
 	 * @param callable(array<string,mixed>):string $providerUrl
 	 * @return array{requested_id:string,list_url:string,return_url:string,rows:array<string,array<string,mixed>>,selected:?array}
 	 */
 	public function project(
-		ProviderRepositoryCompositionRenderer $composition,
 		array $repositories,
 		string $providerCode,
 		string $providerLabel,
@@ -197,8 +190,7 @@ final class ProviderRepositoryRowsNormalizer {
 		string $endpoint,
 		bool $siteReady,
 		array $readiness,
-		?array $assistance,
-		string $assistanceId,
+		?GitHubWebhookManagement $githubWebhookManagement,
 		string $requestedId,
 		callable $providerUrl,
 		string $listUrl
@@ -334,8 +326,10 @@ final class ProviderRepositoryRowsNormalizer {
 				$managementDetail = __( 'Push-to-Deploy unavailable', 'ran-booster' );
 				$managementTone   = 'info'; }
 			$releaseReasonId = $isRelease && '' !== $consequence ? $reasonId . '-release-source' : '';
-			$describedBy     = array_filter( array( $assistanceId, $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $siteReady && ! $isRelease ? $reasonId . '-site' : '' ) );
-			$actions         = null === $assistance ? array() : $composition->dormantAssistanceAction( $assistance, $locator, $describedBy );
+			$describedBy     = array_filter( array( $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $siteReady && ! $isRelease ? $reasonId . '-site' : '' ) );
+			$actions         = 'gh' === $providerCode && ! $isRelease
+				? $this->webhookManagementAction( $locator, $describedBy )
+				: array();
 			$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator );
 			$secretTarget    = 'shared' === $coverage ? (string) strtok( $locator, '/' ) : $locator;
 			$secretLink      = 'none' === $coverage ? array(
@@ -410,8 +404,11 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$rows     = $composition->rows( $rows, $providerCode, $projections, $returnUrl );
-		$selected = null;
+		$presented = 'gh' === $providerCode && null !== $githubWebhookManagement
+			? $githubWebhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
+			: $rows;
+		$rows      = $this->normalize( $rows, $presented, $providerCode );
+		$selected  = null;
 		foreach ( $rows as $row ) {
 			if ( '' !== $requestedId && false === ( $row['historical'] ?? false ) && $requestedId === ( $row['repository_id'] ?? null ) ) {
 				$selected = $row;
@@ -424,6 +421,23 @@ final class ProviderRepositoryRowsNormalizer {
 			'return_url'   => $returnUrl,
 			'rows'         => $rows,
 			'selected'     => $selected,
+		);
+	}
+
+	/** @param list<string> $describedBy @return array<string,array<string,mixed>> */
+	private function webhookManagementAction( string $repository, array $describedBy ): array {
+		return array(
+			'core:webhook-management' => array(
+				'key'           => 'core:webhook-management',
+				'label'         => __( 'Manage webhook', 'ran-booster' ),
+				'type'          => 'link',
+				'url'           => '',
+				'hidden'        => array(),
+				'disabled'      => true,
+				'external'      => false,
+				'described_by'  => implode( ' ', $describedBy ),
+				'screen_reader' => $repository,
+			),
 		);
 	}
 

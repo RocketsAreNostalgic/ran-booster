@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: RAN Booster Fixture Tab Add-on
- * Description: Test-only Booster Add-on API 14 tab conformance fixture.
+ * Description: Test-only Booster Add-on API 15 tab conformance fixture.
  * Version: 0.0.0
  * Requires PHP: 8.2
  * License: GPL-2.0-only
@@ -17,7 +17,7 @@ add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-			|| 14 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+			|| 15 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 			return;
 		}
 

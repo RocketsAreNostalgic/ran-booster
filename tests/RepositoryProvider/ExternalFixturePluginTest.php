@@ -28,6 +28,7 @@ use RAN\RepositoryProvider\ProviderRegistry;
 	use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryReference;
 	use RAN\RepositoryProvider\RepositoryWebhookFitness;
+	use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 	use RAN\RepositoryProvider\RepositoryWebhookManagement;
 	use RAN\RepositoryProvider\UnsupportedProviderCapability;
 	use RAN\RepositoryProvider\WebhookNormalizer;
@@ -38,6 +39,69 @@ use Tests\Support\CredentialUsageDatabase;
 	use RANBoosterFixtureProvider\Provider;
 
 final class ExternalFixturePluginTest extends TestCase {
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testPresenterSuppressesManagementPresentationForAPartialCapabilityProvider(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
+		$this->loadFixturePlugin();
+		list( $registry, , $path ) = $this->registry();
+
+		try {
+			$this->runRegistrationHook( $registry );
+			$provider = $registry->get( 'fixture-provider' );
+			self::assertInstanceOf( Provider::class, $provider );
+			$partial = new class( $provider ) implements \RAN\RepositoryProvider\RepositoryProvider, RepositoryWebhookFitness {
+				public function __construct( private Provider $provider ) {
+				}
+
+				public function getMetadata(): \RAN\RepositoryProvider\ProviderMetadata {
+					return $this->provider->getMetadata();
+				}
+
+				public function getProviderDiagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
+					return $this->provider->getProviderDiagnostics();
+				}
+
+				public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+					return $this->provider->resolveRepository( $request );
+				}
+
+				public function prepareArchive( ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+					return $this->provider->prepareArchive( $request );
+				}
+
+				public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessSetup( $repositoryId, $repository, $credentialProfileId, $requestCredential );
+				}
+
+				public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessCheck( $repositoryId, $repository, $credentialProfileId, $hookId, $requestCredential );
+				}
+
+				public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessReconfigure( $repositoryId, $repository, $credentialProfileId, $hookId, $requestCredential );
+				}
+
+				public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessRemove( $repositoryId, $repository, $credentialProfileId, $hookId, $requestCredential );
+				}
+			};
+
+			$metadata   = $partial->getMetadata();
+			$reflection = new \ReflectionClass( ProviderSettingsPresenter::class );
+			$projection = $reflection->getMethod( 'provider' )->invoke(
+				$reflection->newInstanceWithoutConstructor(),
+				$partial,
+				$metadata,
+				$metadata->admin
+			);
+
+			self::assertArrayNotHasKey( 'webhook_assistance', $projection );
+		} finally {
+			$this->cleanSidecar( $path );
+		}
+	}
 
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
@@ -116,6 +180,7 @@ final class ExternalFixturePluginTest extends TestCase {
 
 			$settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build( 'fixture-provider' );
 			self::assertSame( 'fixture-provider', $settings['provider']['code'] );
+			self::assertArrayNotHasKey( 'webhook_assistance', $settings['provider'] );
 			self::assertFalse( $settings['provider']['capabilities']['browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['credentialed_public_browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['provider_default_public_lookup_profile'] );

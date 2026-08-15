@@ -103,6 +103,7 @@ final class AdminAssetContractTest extends TestCase {
 				'35-status-utilities.css',
 				'40-tables-and-pills.css',
 				'50-troubleshooting-and-activity.css',
+				'55-extensions.css',
 				'60-packages.css',
 				'65-package-settings.css',
 				'70-credential-dialog.css',
@@ -116,6 +117,23 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.wp-core-ui .ran-booster-admin .button-delete', $buttons );
 		self::assertStringContainsString( '.button-update-package.ran-booster-update-is-active', $buttons );
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $buttons );
+	}
+
+	public function testExtensionsStylesDoNotReimplementTheWordPressPluginCardLayout(): void {
+		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
+
+		self::assertStringContainsString( '.ran-booster-extension-card__badge {', $extensions );
+		self::assertStringContainsString( '.ran-booster-extension-details {', $extensions );
+		self::assertStringContainsString( '.ran-booster-admin--extensions {', $extensions );
+		self::assertStringContainsString( 'max-inline-size: 1400px;', $extensions );
+		self::assertStringContainsString( 'width: calc(50% - 8px);', $extensions );
+		self::assertStringContainsString( '@media screen and (max-width: 782px)', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-icon', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .action-links', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-action-buttons', $extensions );
+		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-bottom', $extensions );
 	}
 
 	public function testStatusUtilitiesOwnSharedPillAndTileContracts(): void {
@@ -511,7 +529,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-webhook-endpoint', $view );
 		self::assertStringContainsString( 'data-webhook-url-tools', $view );
 		self::assertStringContainsString( 'ran-booster-provider__footer', $view );
-		self::assertStringNotContainsString( 'core:assisted-hooks', $view );
+		self::assertStringNotContainsString( 'core:webhook-management', $view );
 		self::assertStringNotContainsString( 'Assisted Hooks', $view );
 		self::assertStringNotContainsString( "'gh'", $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell {', $primitives );
@@ -543,10 +561,8 @@ final class AdminAssetContractTest extends TestCase {
 		$base       = $this->view( 'base.php' );
 		$view       = $this->view( 'packages/index.php' );
 
-		self::assertStringContainsString(
-			"'packages/index' === \$view ? ' ran-booster-admin--package-index' : ''",
-			$base
-		);
+		self::assertStringContainsString( "'extensions'     => ' ran-booster-admin--extensions'", $base );
+		self::assertStringContainsString( "'packages/index' => ' ran-booster-admin--package-index'", $base );
 		self::assertStringContainsString( "! str_starts_with( \$view, 'packages/' )", $base );
 		self::assertStringContainsString( 'ran-booster-package-table', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__name', $view );

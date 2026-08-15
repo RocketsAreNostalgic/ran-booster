@@ -102,8 +102,7 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertSame( array( 'unrelated_meta' => array( 4 ) ), $this->database->userMeta );
 		self::assertSame(
 			array(
-				'ran_booster_assisted_hooks_installations' => array( 'owned-by-addon' ),
-				'unrelated_option'                         => 'preserved',
+				'unrelated_option' => 'preserved',
 			),
 			$GLOBALS['ran_booster_uninstall_options']
 		);
@@ -122,6 +121,59 @@ final class LocalDataRemoverTest extends TestCase {
 				WordPressWorkerWakeup::HOOK,
 			),
 			$GLOBALS['ran_booster_uninstall_cron_calls']
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testLegacyActiveAddOnRetainsItsWebhookManagementRecords(): void {
+		$this->setUp();
+		require dirname( __DIR__ ) . '/fixtures/LegacyAssistedHooksPlugin.php';
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'path' )->willReturn( null );
+		$secrets->method( 'deleteManagedStorage' )
+			->willReturnCallback(
+				static function (): void {
+					unset( $GLOBALS['ran_booster_uninstall_options'][ SiteKeyStore::OPTION_NAME ] );
+				}
+			);
+
+		$this->remover( $secrets, $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+
+		self::assertSame(
+			array( 'owned-by-addon' ),
+			$GLOBALS['ran_booster_uninstall_options']['ran_booster_assisted_hooks_installations']
+		);
+		self::assertNotContains(
+			'ran_booster_assisted_hooks_installations',
+			$GLOBALS['ran_booster_uninstall_deleted_options']
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testRetirementBridgeLeavesWebhookRecordCustodyWithCoreUninstall(): void {
+		$this->setUp();
+		require dirname( __DIR__ ) . '/fixtures/LegacyAssistedHooksPlugin.php';
+		define( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION', 1 );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'path' )->willReturn( null );
+		$secrets->method( 'deleteManagedStorage' )
+			->willReturnCallback(
+				static function (): void {
+					unset( $GLOBALS['ran_booster_uninstall_options'][ SiteKeyStore::OPTION_NAME ] );
+				}
+			);
+
+		$this->remover( $secrets, $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+
+		self::assertArrayNotHasKey(
+			'ran_booster_assisted_hooks_installations',
+			$GLOBALS['ran_booster_uninstall_options']
+		);
+		self::assertContains(
+			'ran_booster_assisted_hooks_installations',
+			$GLOBALS['ran_booster_uninstall_deleted_options']
 		);
 	}
 

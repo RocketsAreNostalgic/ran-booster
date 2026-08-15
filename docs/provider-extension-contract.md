@@ -101,6 +101,15 @@ the recorded hook ID. This is the minimum input needed for the provider to
 prove that the exact remote hook is owned by the selected Core target before
 readback or mutation; the URL is not a configurable transport seam.
 
+#### Management presentation
+
+The backend capability does not create an administration form or operation
+route. Bundled GitHub management is an explicit first-party adapter with fixed
+copy, credential fields, result interpretation, record schema and request
+handler. Core does not derive those decisions from provider metadata and does
+not publish a renderer registry, callable transport, generic dispatcher or raw
+credential handle for custom providers.
+
 `RepositoryWebhookFitnessResult` and `RepositoryWebhookOperationResult` admit
 only bounded, closed, non-secret evidence. Setup and reconfigure can establish
 `configured_pending_delivery`, not delivery verification. Remove confirms

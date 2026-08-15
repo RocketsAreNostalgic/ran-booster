@@ -24,7 +24,6 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\Admin\ProviderAdminMetadata',
 		'RAN\RepositoryProvider\Admin\ProviderNavigationPlacement',
 		'RAN\RepositoryProvider\Admin\ProviderSetupMetadata',
-		'RAN\RepositoryProvider\Admin\ProviderWebhookAssistanceMetadata',
 		'RAN\RepositoryProvider\Admin\WebhookScopeMetadata',
 		'RAN\RepositoryProvider\ArchiveRequest',
 		'RAN\RepositoryProvider\AuthenticatedPreparedArchive',

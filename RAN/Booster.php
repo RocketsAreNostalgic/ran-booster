@@ -22,6 +22,7 @@ class Booster {
 		'ran-booster_page_ran-booster-plugins',
 		'ran-booster_page_ran-booster-themes-create',
 		'ran-booster_page_ran-booster-themes',
+		'ran-booster_page_ran-booster-extensions',
 	);
 
 	private const PACKAGE_PAGE_HOOKS = array(
@@ -46,6 +47,7 @@ class Booster {
 		'35-status-utilities.css',
 		'40-tables-and-pills.css',
 		'50-troubleshooting-and-activity.css',
+		'55-extensions.css',
 		'60-packages.css',
 		'65-package-settings.css',
 		'70-credential-dialog.css',
@@ -219,77 +221,145 @@ class Booster {
 		add_submenu_page( 'ran-booster', 'Managed Plugins', 'Plugins', 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
 		add_submenu_page( 'ran-booster', 'Install Theme', 'Install Theme', 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
 		add_submenu_page( 'ran-booster', 'Managed Themes', 'Themes', 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
-		add_submenu_page( 'ran-booster', 'Pro', 'Pro', 'manage_options', 'ran-booster-pro', array( $this, 'renderProPage' ) );
+		add_submenu_page( 'ran-booster', 'Extensions', 'Extensions', 'manage_options', 'ran-booster-extensions', array( $this, 'renderExtensionsPage' ) );
 	}
 
 	/**
-	 * Render the fixed add-on-owned Pro page body within a Core-owned route.
+	 * Render the fixed, release-bundled Extensions catalogue.
 	 */
-	public function renderProPage(): void {
+	public function renderExtensionsPage(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		$proUrl      = $this->proPageUrl();
-		$bufferLevel = ob_get_level();
-		ob_start();
-
 		try {
-			do_action( 'ran_booster_pro_page_body', $proUrl, 'administration' );
-			$content = (string) ob_get_clean();
-		} catch ( \Throwable $failure ) {
-			while ( ob_get_level() > $bufferLevel ) {
-				ob_end_clean();
+			if ( ! function_exists( __NAMESPACE__ . '\\get_plugins' ) && ! function_exists( 'get_plugins' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/plugin.php';
 			}
 
+			$installedPlugins = get_plugins();
+			$extensions       = $this->extensionCards( is_array( $installedPlugins ) ? $installedPlugins : array() );
+			$pluginsUrl       = is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' );
+			$this->service( 'RAN\Dashboard' )->getExtensions( $extensions, $pluginsUrl );
+		} catch ( \Throwable $failure ) {
 			BoosterLogger::logException(
-				'Pro page body action unavailable',
+				'Extensions page unavailable',
 				$failure,
 				array(
 					'source' => 'admin',
-					'step'   => 'pro_page_body',
-					'event'  => 'ran_booster_pro_page_body',
+					'step'   => 'extensions_page',
 				)
 			);
-			$this->renderProPageUnavailable();
-
-			return;
+			?>
+			<div class="wrap ran-booster-admin">
+				<h1><?php esc_html_e( 'RAN Booster Extensions', 'ran-booster' ); ?></h1>
+				<div class="notice notice-error"><p><?php esc_html_e( 'Extensions are temporarily unavailable. Reload the page or check the Booster installation.', 'ran-booster' ); ?></p></div>
+			</div>
+			<?php
 		}
+	}
 
-		if ( '' === trim( $content ) ) {
-			$this->renderProPageFallback();
+	/** @param array<string, array<string, mixed>> $installedPlugins
+	 *  @return list<array<string, mixed>>
+	 */
+	private function extensionCards( array $installedPlugins ): array {
+		$catalogue = array(
+			array(
+				'id'            => 'ran-booster-bitbucket',
+				'name'          => 'Bitbucket Cloud',
+				'description'   => 'Connect Booster to Bitbucket Cloud repositories for managed deployments.',
+				'details'       => 'Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy.',
+				'features'      => array(
+					'Connect and configure Bitbucket Cloud repositories in Booster.',
+					'Use provider-specific package and credential guidance.',
+					'Carry eligible file-stored credentials through Transporter for explicit import on the target site.',
+				),
+				'requirements'  => array(
+					'WordPress 7.0 or later and PHP 8.2 or later.',
+					'A version of Booster compatible with this extension.',
+					'Manual Bitbucket webhook setup for Push-to-Deploy.',
+				),
+				'plugin'        => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
+				'image'         => 'bitbucket-cloud.svg',
+				'availability'  => 'Free',
+				'required_apis' => array(
+					'RAN_BOOSTER_PROVIDER_API_VERSION' => 9,
+					'RAN_BOOSTER_ADDON_API_VERSION'    => 15,
+				),
+				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
+				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/issues',
+			),
+			array(
+				'id'            => 'ran-booster-wp-pusher-migrator',
+				'name'          => 'WP Pusher Migrator',
+				'description'   => 'Move existing WP Pusher-managed plugins into Booster without reinstalling them.',
+				'details'       => 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so activation remains an explicit decision.',
+				'features'      => array(
+					'Review retained WP Pusher package records before migration.',
+					'Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter.',
+					'Keep the source records in place until you verify the result and remove them yourself.',
+				),
+				'requirements'  => array(
+					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
+					'A single site with WP Pusher 3.0.13 installed but inactive.',
+					'Existing Booster credentials for private repositories; GitLab packages are not supported.',
+				),
+				'plugin'        => 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php',
+				'image'         => 'wp-pusher-migrator.svg',
+				'availability'  => 'Free',
+				'required_apis' => array(
+					'RAN_BOOSTER_PORTABILITY_API_VERSION' => 2,
+					'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 2,
+				),
+				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme',
+				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/issues',
+			),
+			array(
+				'id'            => 'ran-booster-release-deployments',
+				'name'          => 'Release Deployments',
+				'description'   => 'Track verified GitHub releases and prepare release-based deployment workflows.',
+				'details'       => 'Let eligible Booster-managed plugins and themes track exact published GitHub Release ZIPs instead of branch deployments, while WordPress continues to perform the final installation.',
+				'features'      => array(
+					'Validate and switch eligible branch-managed packages to published releases.',
+					'Check the release ZIP and package version before an update is offered.',
+					'Choose Manual, Automatic, or Disabled update policy and prepare a reviewable release-workflow pull request.',
+				),
+				'requirements'  => array(
+					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
+					'An eligible GitHub repository with a published release; draft releases are excluded.',
+					'Prerelease tracking must be enabled explicitly when required.',
+				),
+				'plugin'        => 'ran-booster-release-deployments/ran-booster-release-deployments.php',
+				'image'         => 'release-deployments.svg',
+				'availability'  => 'Subscriber',
+				'required_apis' => array( 'RAN_BOOSTER_ADDON_API_VERSION' => 15 ),
+				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-release-deployments#readme',
+				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-release-deployments/issues',
+			),
+		);
 
-			return;
+		foreach ( $catalogue as &$extension ) {
+			$installed              = array_key_exists( $extension['plugin'], $installedPlugins );
+			$networkActiveAvailable = function_exists( __NAMESPACE__ . '\\is_plugin_active_for_network' ) || function_exists( 'is_plugin_active_for_network' );
+			$active                 = $installed && ( is_plugin_active( $extension['plugin'] ) || ( $networkActiveAvailable && is_plugin_active_for_network( $extension['plugin'] ) ) );
+			$compatible             = true;
+			foreach ( $extension['required_apis'] as $marker => $version ) {
+				if ( ! defined( $marker ) || constant( $marker ) !== $version ) {
+					$compatible = false;
+					break;
+				}
+			}
+
+			$extension['image_url']  = trailingslashit( $this->boosterUrl ) . 'assets/extensions/' . $extension['image'];
+			$extension['compatible'] = $compatible;
+			$extension['state']      = ! $installed
+				? 'Not installed'
+				: ( ! $compatible ? 'Incompatible' : ( $active ? 'Active' : 'Installed, inactive' ) );
+			$extension['state_kind'] = $installed && ! $compatible ? 'error' : ( $active ? 'ok' : 'neutral' );
 		}
+		unset( $extension );
 
-		echo wp_kses_post( $content );
-	}
-
-	private function proPageUrl(): string {
-		$path = 'admin.php?page=ran-booster-pro';
-
-		return is_multisite() ? network_admin_url( $path ) : admin_url( $path );
-	}
-
-	private function renderProPageFallback(): void {
-		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'RAN Booster Pro', 'ran-booster' ); ?></h1>
-			<p><?php esc_html_e( 'Support RAN Booster to help fund compatible add-ons and ongoing maintenance.', 'ran-booster' ); ?></p>
-			<p><a href="https://github.com/sponsors/RocketsAreNostalgic"><?php esc_html_e( 'Support RAN Booster on GitHub Sponsors', 'ran-booster' ); ?></a></p>
-			<p><?php esc_html_e( 'A compatible supporter manager can provide its controls here. Install it through its approved distribution, then activate it from the Plugins screen.', 'ran-booster' ); ?></p>
-			<p><a href="<?php echo esc_url( is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a></p>
-		</div>
-		<?php
-	}
-
-	private function renderProPageUnavailable(): void {
-		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'RAN Booster Pro', 'ran-booster' ); ?></h1>
-			<div class="notice notice-error"><p><?php esc_html_e( 'The Pro page is temporarily unavailable. Check the compatible add-on and try again.', 'ran-booster' ); ?></p></div>
-		</div>
-		<?php
+		return $catalogue;
 	}
 
 	public function getName() {
@@ -463,6 +533,22 @@ class Booster {
 			$styleDependencies = array( $styleHandle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
+		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
+			$extensionDetailsPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-extension-details.js';
+			$extensionDetailsVersion = file_exists( $extensionDetailsPath ) ? filemtime( $extensionDetailsPath ) : null;
+
+			wp_enqueue_style( 'thickbox' );
+			wp_enqueue_script( 'thickbox' );
+			wp_register_script(
+				'ran-booster-extension-details',
+				trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-extension-details.js',
+				array( 'jquery', 'thickbox' ),
+				$extensionDetailsVersion,
+				true
+			);
+			wp_enqueue_script( 'ran-booster-extension-details' );
+			return;
+		}
 		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', $scriptDependencies, $scriptVersion, true );
 		wp_register_script(
 			'ran-booster-secure-inputs',

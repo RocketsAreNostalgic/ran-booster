@@ -209,7 +209,7 @@ are internal and each lands at 253 - 1 + 1 types.
 
 The package packets retain the exact package source, advanced-source,
 management-row/action, settings-section and webhook-cleanup hooks and their
-argument order. Release Deployments remains a fixture for Add-on API 14,
+argument order. Release Deployments remains a fixture for Add-on API 15,
 Prospective Release API 5 and release-tracking facades. No package packet may
 add template, GitHub workflow, release-publication or draft-pull-request
 authority to Core.

@@ -20,6 +20,12 @@ public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
 
+The Core-owned Extensions page lists four first-party beta extensions using
+only local WordPress plugin state and release-bundled artwork. Free downloads
+remain unavailable until their public repositories and releases are ready for
+people. Sponsor install controls stay disabled and link separately to access
+information; Core stores no sponsor or entitlement state.
+
 The plugin and theme installation screens include a native repository picker.
 For operational providers, it can search public repositories without a token or
 list repositories accessible to a saved credential profile. Manual repository
@@ -57,14 +63,14 @@ repository ID; the exact repository secret takes precedence.
 Each provider tab shows the callback URL, required event, repository context,
 and manual setup links beside the saved local secrets. Every repository still
 needs its own remote webhook; a saved local secret alone is not a ready hook.
-The optional Assisted Hooks add-on can set up, check, reconfigure and remove
-GitHub repository webhooks with a separate fine-grained token granting
+Bundled GitHub webhook management can set up, check, reconfigure and remove
+GitHub repository webhooks with a fine-grained token granting
 Webhooks: Read and write permission. It reuses an applicable Core profile or
 creates an exact repository profile. Reconfigure sends the current Core secret
 and callback settings to the identified remote hook; it does not replace the
 secret. The token is used only for the submitted operation and is never saved.
-Assisted Hooks never enables Automatic deployment, and manual webhook setup
-remains available without it.
+Webhook management never enables Automatic deployment; deployment policy
+remains a separate administrator decision.
 
 Webhook signatures authorize deployment after WordPress accepts a request;
 they do not protect the host, PHP workers, or WordPress bootstrap from traffic.
@@ -86,8 +92,8 @@ repository may still need that hook. Keep the setup for a temporary source switc
 release management, site or repository retirement, or callback or credential
 changes, first confirm that no branch package still needs it. Remove the remote
 provider webhook before removing an unused local secret, and preserve shared
-owner secrets that still serve other packages. Assisted Hooks can use its
-verified Remove workflow for an identified hook. Without it, remove the hook in
+owner secrets that still serve other packages. Use the bundled verified Remove
+workflow for an identified GitHub hook. For other providers, remove the hook in
 the provider UI and then use Manage secrets for unused local material.
 
 Credential profiles accept an optional expiry date. Successful GitHub

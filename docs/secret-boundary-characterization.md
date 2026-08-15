@@ -182,7 +182,7 @@ operation checkpoint below.
 
 ### Fixed provider operation checkpoint
 
-Add-on API 14 replaces `withCredential()`, `provision()` and callback-based
+Add-on API 15 replaces `withCredential()`, `provision()` and callback-based
 `reconfigure()` with explicit assess/setup/check/reconfigure/remove methods.
 Provider API 8 adds the exact optional
 `repository-webhook-management/1` fitness and management capabilities. A saved
@@ -205,7 +205,7 @@ instead of replacing it with another general-purpose vocabulary. Core keeps its
 private, bounded operational logging, while add-on and provider contracts no
 longer receive a logger, expose `ProviderRegistry::logging()`, or publish the
 `RAN_BOOSTER_LOGGING_API_VERSION` marker. The coordinated compatibility cut is
-Add-on API 14, Provider API 8, Portability API 2, and Admin Interaction API 2;
+Add-on API 15, Provider API 8, Portability API 2, and Admin Interaction API 2;
 Prospective Release API is 5 after the coordinated published-release-only
 contract cut.
 

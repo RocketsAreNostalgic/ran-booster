@@ -101,6 +101,29 @@ the recorded hook ID. This is the minimum input needed for the provider to
 prove that the exact remote hook is owned by the selected Core target before
 readback or mutation; the URL is not a configurable transport seam.
 
+#### Optional management presentation
+
+The backend capability does not create an administration form or operation
+route. A provider that offers an adapter may supply
+`ProviderWebhookManagementMetadata` in its administration metadata. Core
+renders the provider-owned copy and the disabled
+`core:webhook-management` repository action only when the provider implements
+both fitness and management capabilities.
+
+The adapter captures the exact `WebhookAssistanceFacade`, then uses the bounded
+provider repository composition hooks documented in
+`docs/admin-composition-contract.md`. It may enable only the reserved action
+for an eligible projection, render one provider-matched panel and register one
+fixed capability- and nonce-checked `admin_post_*` handler. The adapter owns its
+credential field name, provider copy, result interpretation and any local
+non-secret record. Request-only credentials remain sensitive facade arguments
+and must be cleared after the call.
+
+Omitting the adapter leaves the action disabled. Core does not derive a form,
+credential schema or operation route from provider metadata, and does not
+publish a renderer registry, callable transport, generic dispatcher or raw
+credential handle for this purpose.
+
 `RepositoryWebhookFitnessResult` and `RepositoryWebhookOperationResult` admit
 only bounded, closed, non-secret evidence. Setup and reconfigure can establish
 `configured_pending_delivery`, not delivery verification. Remove confirms

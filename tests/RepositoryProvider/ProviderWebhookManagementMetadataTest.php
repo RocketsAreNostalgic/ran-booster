@@ -7,12 +7,12 @@ namespace Tests\RepositoryProvider;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
-use RAN\RepositoryProvider\Admin\ProviderWebhookAssistanceMetadata;
+use RAN\RepositoryProvider\Admin\ProviderWebhookManagementMetadata;
 
-final class ProviderWebhookAssistanceMetadataTest extends TestCase {
+final class ProviderWebhookManagementMetadataTest extends TestCase {
 
-	public function testProviderOwnsTheDormantWebhookAssistancePresentation(): void {
-		$assistance = new ProviderWebhookAssistanceMetadata(
+	public function testProviderOwnsTheDormantWebhookManagementPresentation(): void {
+		$management = new ProviderWebhookManagementMetadata(
 			'Assisted Hooks',
 			'Assisted Hooks add-on not active.',
 			'Activate the compatible add-on to configure repository webhooks here.',
@@ -22,19 +22,19 @@ final class ProviderWebhookAssistanceMetadataTest extends TestCase {
 		$admin      = new ProviderAdminMetadata(
 			array(),
 			array(),
-			webhookAssistance: $assistance
+			webhookAssistance: $management
 		);
 
-		self::assertSame( 'core:assisted-hooks', $admin->webhookAssistance?->actionKey );
+		self::assertSame( 'core:webhook-management', $admin->webhookAssistance?->actionKey );
 		self::assertSame( 'Assisted Hooks', $admin->webhookAssistance?->actionLabel );
 		self::assertSame( 'Assisted Hooks add-on not active.', $admin->webhookAssistance?->inactiveHeading );
 		self::assertSame( 'Assisted Hooks is active.', $admin->webhookAssistance?->activeHeading );
 	}
 
-	public function testWebhookAssistancePresentationRejectsEmptyCopy(): void {
+	public function testWebhookManagementPresentationRejectsEmptyCopy(): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		new ProviderWebhookAssistanceMetadata(
+		new ProviderWebhookManagementMetadata(
 			'',
 			'Inactive',
 			'Inactive description',

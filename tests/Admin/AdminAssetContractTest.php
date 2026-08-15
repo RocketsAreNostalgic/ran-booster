@@ -529,7 +529,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-webhook-endpoint', $view );
 		self::assertStringContainsString( 'data-webhook-url-tools', $view );
 		self::assertStringContainsString( 'ran-booster-provider__footer', $view );
-		self::assertStringNotContainsString( 'core:assisted-hooks', $view );
+		self::assertStringNotContainsString( 'core:webhook-management', $view );
 		self::assertStringNotContainsString( 'Assisted Hooks', $view );
 		self::assertStringNotContainsString( "'gh'", $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell {', $primitives );

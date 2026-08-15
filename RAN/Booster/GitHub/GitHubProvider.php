@@ -10,7 +10,7 @@ use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
 use RAN\RepositoryProvider\Admin\ProviderSetupMetadata;
-use RAN\RepositoryProvider\Admin\ProviderWebhookAssistanceMetadata;
+use RAN\RepositoryProvider\Admin\ProviderWebhookManagementMetadata;
 use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\AuthenticatedPreparedArchive;
@@ -153,7 +153,7 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 					100
 				),
 				'owner/repository',
-				new ProviderWebhookAssistanceMetadata(
+				new ProviderWebhookManagementMetadata(
 					'Assisted Hooks',
 					'Assisted Hooks add-on not active.',
 					'Webhooks remain available through GitHub. Activating the compatible add-on adds repository-level provisioning here.',

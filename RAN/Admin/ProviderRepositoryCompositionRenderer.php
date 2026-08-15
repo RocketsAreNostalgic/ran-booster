@@ -35,7 +35,7 @@ final class ProviderRepositoryCompositionRenderer {
 				return null;
 			}
 		}
-		if ( 'core:assisted-hooks' !== $presentation['action_key'] ) {
+		if ( 'core:webhook-management' !== $presentation['action_key'] ) {
 			return null;
 		}
 
@@ -166,17 +166,17 @@ final class ProviderRepositoryCompositionRenderer {
 		$normalizer = new AdminActionNormalizer();
 		foreach ( $baseRows as $rowKey => $baseRow ) {
 			if ( isset( $projections[ $rowKey ] )
-				|| ! isset( $rows[ $rowKey ]['actions']['core:assisted-hooks'] )
-				|| ! isset( $baseRow['actions']['core:assisted-hooks'] ) ) {
+				|| ! isset( $rows[ $rowKey ]['actions']['core:webhook-management'] )
+				|| ! isset( $baseRow['actions']['core:webhook-management'] ) ) {
 				continue;
 			}
 
 			$action = $normalizer->normalize(
 				array(
-					'core:assisted-hooks' => $baseRow['actions']['core:assisted-hooks'],
+					'core:webhook-management' => $baseRow['actions']['core:webhook-management'],
 				)
 			);
-			$rows[ $rowKey ]['actions']['core:assisted-hooks'] = $action['core:assisted-hooks'];
+			$rows[ $rowKey ]['actions']['core:webhook-management'] = $action['core:webhook-management'];
 		}
 
 		return $rows;

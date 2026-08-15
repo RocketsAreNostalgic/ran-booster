@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider\Admin;
 
 /**
- * Provider-owned presentation for Booster's optional webhook-assistance seam.
+ * Provider-owned presentation for Booster's optional webhook-management seam.
  *
- * Core renders the shared repository surface and reserved disabled action. The
- * compatible add-on may hydrate that action and append bounded status details.
+ * Core renders the shared repository surface and reserved disabled action. A
+ * compatible provider adapter may hydrate that action and append bounded status
+ * details.
  */
-final readonly class ProviderWebhookAssistanceMetadata {
+final readonly class ProviderWebhookManagementMetadata {
 
 	public string $actionKey;
 	public string $actionLabel;
@@ -26,7 +27,7 @@ final readonly class ProviderWebhookAssistanceMetadata {
 		string $activeHeading,
 		string $activeDescription
 	) {
-		$this->actionKey           = 'core:assisted-hooks';
+		$this->actionKey           = 'core:webhook-management';
 		$this->actionLabel         = MetadataRules::requiredText( $actionLabel, MetadataRules::LABEL_LENGTH );
 		$this->inactiveHeading     = MetadataRules::requiredText( $inactiveHeading, MetadataRules::LABEL_LENGTH );
 		$this->inactiveDescription = MetadataRules::requiredText( $inactiveDescription, MetadataRules::SUMMARY_LENGTH );

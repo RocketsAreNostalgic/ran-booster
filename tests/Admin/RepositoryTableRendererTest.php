@@ -144,7 +144,7 @@ final class RepositoryTableRendererTest extends TestCase {
 				'package_references' => array( 'release-theme' ),
 				'actions'            => array(
 					array(
-						'key'          => 'core:assisted-hooks',
+						'key'          => 'core:webhook-management',
 						'label'        => 'Assisted Hooks',
 						'disabled'     => true,
 						'described_by' => 'release-source-reason',

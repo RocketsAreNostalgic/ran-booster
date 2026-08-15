@@ -137,7 +137,7 @@ final class ProviderRepositoryRowsNormalizer {
 				if ( ! isset( $actions[ $actionKey ] ) || ! is_array( $actions[ $actionKey ] ) ) {
 					throw new LogicException( 'Provider filters must preserve every Core action.' );
 				}
-				if ( 'core:assisted-hooks' !== $actionKey ) {
+				if ( 'core:webhook-management' !== $actionKey ) {
 					if ( $actions[ $actionKey ] !== $baseAction ) {
 						throw new LogicException( 'Provider filters must not rewrite Core actions.' );
 					}
@@ -170,7 +170,7 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Provider filters may append only namespaced historical rows.' );
 			}
 			$rowActions = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
-			if ( isset( $rowActions['core:assisted-hooks'] ) ) {
+			if ( isset( $rowActions['core:webhook-management'] ) ) {
 				throw new LogicException( 'Historical rows must not claim Core actions.' );
 			}
 			$row['actions'] = $normalizer->normalize( $rowActions );

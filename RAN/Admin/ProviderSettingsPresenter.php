@@ -17,6 +17,8 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryWebhookFitness;
+use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\Secrets\SecretsFile;
@@ -579,7 +581,10 @@ final readonly class ProviderSettingsPresenter {
 	 * @return array<string, mixed>
 	 */
 	private function provider( RepositoryProvider $provider, ProviderMetadata $metadata, ProviderAdminMetadata $admin ): array {
-		$setup = $admin->setup;
+		$setup             = $admin->setup;
+		$webhookManagement = $provider instanceof RepositoryWebhookFitness && $provider instanceof RepositoryWebhookManagement
+			? $admin->webhookAssistance
+			: null;
 
 		return array(
 			'code'               => $metadata->code->value,
@@ -593,13 +598,13 @@ final readonly class ProviderSettingsPresenter {
 				'documentation_url'          => $setup->webhookDocumentationUrl,
 				'delivery_documentation_url' => $setup->deliveryDocumentationUrl,
 			),
-			'webhook_assistance' => null === $admin->webhookAssistance ? null : array(
-				'action_key'           => $admin->webhookAssistance->actionKey,
-				'action_label'         => $admin->webhookAssistance->actionLabel,
-				'inactive_heading'     => $admin->webhookAssistance->inactiveHeading,
-				'inactive_description' => $admin->webhookAssistance->inactiveDescription,
-				'active_heading'       => $admin->webhookAssistance->activeHeading,
-				'active_description'   => $admin->webhookAssistance->activeDescription,
+			'webhook_assistance' => null === $webhookManagement ? null : array(
+				'action_key'           => $webhookManagement->actionKey,
+				'action_label'         => $webhookManagement->actionLabel,
+				'inactive_heading'     => $webhookManagement->inactiveHeading,
+				'inactive_description' => $webhookManagement->inactiveDescription,
+				'active_heading'       => $webhookManagement->activeHeading,
+				'active_description'   => $webhookManagement->activeDescription,
 			),
 			'capabilities'       => array(
 				'browse'                                 => $provider instanceof RepositoryBrowser,

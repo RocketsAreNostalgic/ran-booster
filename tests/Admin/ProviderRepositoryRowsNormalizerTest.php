@@ -21,9 +21,9 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			'label' => 'Remote hook',
 			'value' => 'Configured',
 		);
-		$presented['repo-42']['actions']['core:assisted-hooks']['url']      = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&assisted_repository=repo-42';
-		$presented['repo-42']['actions']['core:assisted-hooks']['disabled'] = false;
-		$presented['fixture:historical:abc123']                             = array(
+		$presented['repo-42']['actions']['core:webhook-management']['url']      = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&assisted_repository=repo-42';
+		$presented['repo-42']['actions']['core:webhook-management']['disabled'] = false;
+		$presented['fixture:historical:abc123']                                 = array(
 			'provider_code'  => 'gh',
 			'provider_label' => 'GitHub',
 			'repository_id'  => 'old-42',
@@ -41,7 +41,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$rows = ( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $presented, 'gh' );
 
-		self::assertFalse( $rows['repo-42']['actions']['core:assisted-hooks']['disabled'] );
+		self::assertFalse( $rows['repo-42']['actions']['core:webhook-management']['disabled'] );
 		self::assertCount( 2, $rows['repo-42']['details'] );
 		self::assertTrue( $rows['fixture:historical:abc123']['historical'] );
 		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
@@ -94,7 +94,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					),
 				),
 				'actions'       => array(
-					'core:assisted-hooks' => array(
+					'core:webhook-management' => array(
 						'label'        => 'Assisted Hooks',
 						'type'         => 'link',
 						'url'          => '',
@@ -102,7 +102,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 						'external'     => false,
 						'described_by' => 'assisted-reason',
 					),
-					'core:settings'       => array(
+					'core:settings'           => array(
 						'label' => 'Plugin settings',
 						'type'  => 'link',
 						'url'   => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php',

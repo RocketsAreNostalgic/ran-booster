@@ -340,7 +340,7 @@ base rows. Each value contains display-safe data only:
 
 A filter may append details and namespaced actions to an existing row. It must
 preserve every Core row, immutable field and manual action. On GitHub rows only,
-the reserved `core:assisted-hooks` action may have its `url`, `disabled` and
+the reserved `core:webhook-management` action may have its `url`, `disabled` and
 `described_by` fields changed; its identity, label and type remain Core-owned.
 An add-on may append a clearly marked provider-matched historical row only
 under a bounded namespaced synthetic key. A historical row may not carry the

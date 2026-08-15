@@ -699,9 +699,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_provider_repository_rows'][]              =
 			static function ( array $rows ): array {
 				foreach ( $rows as &$row ) {
-					if ( isset( $row['actions']['core:assisted-hooks'] ) ) {
-						$row['actions']['core:assisted-hooks']['url']      = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&assisted_repository=repo-42';
-						$row['actions']['core:assisted-hooks']['disabled'] = false;
+					if ( isset( $row['actions']['core:webhook-management'] ) ) {
+						$row['actions']['core:webhook-management']['url']      = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&assisted_repository=repo-42';
+						$row['actions']['core:webhook-management']['disabled'] = false;
 					}
 					$row['details'][] = array(
 						'label' => 'Assisted hook status',
@@ -1534,7 +1534,7 @@ final class TroubleshootingViewTest extends TestCase {
 	/** @return array<string, string> */
 	private function webhookAssistance(): array {
 		return array(
-			'action_key'           => 'core:assisted-hooks',
+			'action_key'           => 'core:webhook-management',
 			'action_label'         => 'Assisted Hooks',
 			'inactive_heading'     => 'Assisted Hooks add-on not active.',
 			'inactive_description' => 'Activating the compatible add-on adds repository-level provisioning here.',

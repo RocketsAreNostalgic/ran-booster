@@ -174,7 +174,10 @@ them:
   `RAN\RepositoryProvider\RepositoryWebhookManagement` together for the exact
   `repository-webhook-management/1` setup, check, reconfigure and remove
   operation. The provider owns its fixed vendor calls; Core owns authorization,
-  binding, secret custody and bounded results.
+  binding, secret custody and bounded results. A provider-owned administration
+  adapter may use `ProviderWebhookManagementMetadata` and the bounded
+  composition recipe in `docs/provider-extension-contract.md`; Core does not
+  generate a management form from the backend capability.
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits a capability, Booster will keep the corresponding feature disabled rather

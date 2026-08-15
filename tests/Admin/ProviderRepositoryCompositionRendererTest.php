@@ -79,7 +79,7 @@ final class ProviderRepositoryCompositionRendererTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'key'           => 'core:assisted-hooks',
+				'key'           => 'core:webhook-management',
 				'label'         => 'Assisted Hooks',
 				'type'          => 'link',
 				'url'           => '',
@@ -89,7 +89,7 @@ final class ProviderRepositoryCompositionRendererTest extends TestCase {
 				'described_by'  => 'promotion-description readiness-reason',
 				'screen_reader' => 'owner/repository',
 			),
-			$actions['core:assisted-hooks']
+			$actions['core:webhook-management']
 		);
 	}
 
@@ -134,8 +134,8 @@ final class ProviderRepositoryCompositionRendererTest extends TestCase {
 				'key'        => 'release-row',
 				'source_key' => 'release_asset',
 				'actions'    => array(
-					'core:assisted-hooks' => array(
-						'key'           => 'core:assisted-hooks',
+					'core:webhook-management' => array(
+						'key'           => 'core:webhook-management',
 						'label'         => 'Assisted Hooks',
 						'type'          => 'link',
 						'url'           => '',
@@ -150,10 +150,10 @@ final class ProviderRepositoryCompositionRendererTest extends TestCase {
 		);
 		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_provider_repository_rows'][] =
 			static function ( array $rows ): array {
-				$rows['release-row']['actions']['core:assisted-hooks']['url']          = 'https://example.test/unsafe-assistance';
-				$rows['release-row']['actions']['core:assisted-hooks']['disabled']     = false;
-				$rows['release-row']['actions']['core:assisted-hooks']['described_by'] = '';
-				$rows['release-row']['details'][]                                      = array(
+				$rows['release-row']['actions']['core:webhook-management']['url']          = 'https://example.test/unsafe-assistance';
+				$rows['release-row']['actions']['core:webhook-management']['disabled']     = false;
+				$rows['release-row']['actions']['core:webhook-management']['described_by'] = '';
+				$rows['release-row']['details'][] = array(
 					'label' => 'Recorded hook profile',
 					'value' => 'Previous profile',
 				);
@@ -168,16 +168,16 @@ final class ProviderRepositoryCompositionRendererTest extends TestCase {
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh'
 		);
 
-		self::assertTrue( $rows['release-row']['actions']['core:assisted-hooks']['disabled'] );
-		self::assertSame( '', $rows['release-row']['actions']['core:assisted-hooks']['url'] );
-		self::assertSame( 'release-source-reason', $rows['release-row']['actions']['core:assisted-hooks']['described_by'] );
+		self::assertTrue( $rows['release-row']['actions']['core:webhook-management']['disabled'] );
+		self::assertSame( '', $rows['release-row']['actions']['core:webhook-management']['url'] );
+		self::assertSame( 'release-source-reason', $rows['release-row']['actions']['core:webhook-management']['described_by'] );
 		self::assertSame( 'Previous profile', $rows['release-row']['details'][0]['value'] );
 	}
 
 	/** @return array<string, string> */
 	private function assistancePresentation(): array {
 		return array(
-			'action_key'           => 'core:assisted-hooks',
+			'action_key'           => 'core:webhook-management',
 			'action_label'         => 'Assisted Hooks',
 			'inactive_heading'     => 'Assisted Hooks add-on not active.',
 			'inactive_description' => 'Activate the compatible add-on.',

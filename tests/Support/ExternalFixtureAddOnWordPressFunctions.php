@@ -29,6 +29,12 @@ if ( ! function_exists( 'current_user_can' ) ) {
 	}
 }
 
+if ( ! function_exists( 'admin_url' ) ) {
+	function admin_url( string $path = '' ): string {
+		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
+	}
+}
+
 if ( ! function_exists( 'esc_attr' ) ) {
 	function esc_attr( mixed $value ): string {
 		return htmlspecialchars( (string) $value, ENT_QUOTES, 'UTF-8' );

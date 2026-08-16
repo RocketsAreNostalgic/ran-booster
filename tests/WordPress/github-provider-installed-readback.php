@@ -3,8 +3,8 @@
 // Executed by WP-CLI against the installed release ZIP in a disposable site.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'The installed runtime does not expose Provider API 9.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 10 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'The installed runtime does not expose Provider API 10.' );
 }
 
 $plugin_root = realpath( WP_PLUGIN_DIR . '/ran-booster' );

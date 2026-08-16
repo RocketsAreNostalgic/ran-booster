@@ -238,6 +238,7 @@ final class ProviderRegistry {
 	 */
 	public function requireCapability( ProviderCode|string $code, string $capability ): object {
 		if ( RepositoryProvider::class === $capability
+			|| ProviderCapabilityContract::class === $capability
 			|| ! interface_exists( $capability )
 			|| ! is_a( $capability, ProviderCapabilityContract::class, true ) ) {
 			throw UnsupportedProviderCapability::unknownContract();

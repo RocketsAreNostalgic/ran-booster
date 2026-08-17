@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.0-beta.20](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.19...v1.0.0-beta.20) (2026-08-17)
+
+
+### Features
+
+* **provider:** add release metadata capability ([9c545e1](https://github.com/RocketsAreNostalgic/ran-booster/commit/9c545e1904189daf634c71368df2e07bef1bfb4a))
+* **provider:** add release metadata capability ([20c0b6a](https://github.com/RocketsAreNostalgic/ran-booster/commit/20c0b6abd37f3bcc673a4f5718810b2cfe9d8fb4))
+
+
+### Bug Fixes
+
+* **provider:** normalize metadata predicate contract ([2875ee2](https://github.com/RocketsAreNostalgic/ran-booster/commit/2875ee2634b834e6451e31ecd328eaed2d5fb148))
+
 ## [1.0.0-beta.19](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.18...v1.0.0-beta.19) (2026-08-17)
 
 

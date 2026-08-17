@@ -8,8 +8,11 @@ use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 use RAN\Runtime\RuntimeSupport;
-use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeNotFound;
@@ -23,8 +26,8 @@ use Throwable;
  */
 final class ManagedReleaseTargetRegistrar {
 
-	/** @var array<string, object> */
-	private array $facades = array();
+	/** @var array<string, RepositoryReleaseNativeTarget> */
+	private array $targets = array();
 
 	/** @var array<string, array<string, int|string>> */
 	private array $registeredAuthorities = array();
@@ -34,21 +37,16 @@ final class ManagedReleaseTargetRegistrar {
 
 	private bool $registered = false;
 
-	/** @var callable|null */
-	private mixed $factory;
-
 	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool}> */
 	private array $nativeUpdates = array();
 
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
-		private SecretsFile $secrets,
 		private ManagedReleaseStore $store,
 		private WordPressUpdaterLock $updaterLock,
-		?callable $factory = null
+		private ProviderRegistry $providers
 	) {
-		$this->factory = $factory;
 	}
 
 	public function register(): void {
@@ -87,10 +85,20 @@ final class ManagedReleaseTargetRegistrar {
 			);
 		}
 		if ( function_exists( 'add_filter' ) ) {
-			add_filter( 'upgrader_pre_download', array( $this, 'authorizeNativeDownload' ), PHP_INT_MAX - 1, 4 );
+			add_filter( 'upgrader_pre_download', array( $this, 'authorizeNativeDownload' ), PHP_INT_MIN, 4 );
 			add_filter( 'upgrader_pre_install', array( $this, 'fenceNativeMutation' ), 1, 2 );
+			add_filter( 'site_transient_update_plugins', array( $this, 'suppressUnauthorizedPluginOffers' ), PHP_INT_MAX );
+			add_filter( 'site_transient_update_themes', array( $this, 'suppressUnauthorizedThemeOffers' ), PHP_INT_MAX );
 			add_action( 'upgrader_process_complete', array( $this, 'completeNativeMutation' ), PHP_INT_MAX, 2 );
 		}
+	}
+
+	public function suppressUnauthorizedPluginOffers( mixed $transient ): mixed {
+		return $this->suppressUnauthorizedOffers( 'plugin', $transient );
+	}
+
+	public function suppressUnauthorizedThemeOffers( mixed $transient ): mixed {
+		return $this->suppressUnauthorizedOffers( 'theme', $transient );
 	}
 
 	/**
@@ -122,7 +130,9 @@ final class ManagedReleaseTargetRegistrar {
 		try {
 			$authority = $this->nativeAuthority( $target['type'], $target['identifier'] );
 		} catch ( PluginNotFound | ThemeNotFound ) {
-			return $reply;
+			return isset( $this->registeredAuthorities[ $key ] ) || isset( $this->targets[ $key ] )
+				? $this->nativeUpdateError( 'authority_changed' )
+				: $reply;
 		} catch ( Throwable ) {
 			return $this->nativeUpdateError( 'authority_changed' );
 		}
@@ -189,7 +199,9 @@ final class ManagedReleaseTargetRegistrar {
 			try {
 				$this->nativeAuthority( $target['type'], $target['identifier'] );
 			} catch ( PluginNotFound | ThemeNotFound ) {
-				return $reply;
+				return isset( $this->registeredAuthorities[ $key ] ) || isset( $this->targets[ $key ] )
+					? $this->nativeUpdateError( 'authority_changed' )
+					: $reply;
 			} catch ( Throwable ) {
 				return $this->nativeUpdateError( 'authority_changed' );
 			}
@@ -272,23 +284,19 @@ final class ManagedReleaseTargetRegistrar {
 		$release();
 	}
 
-	public function facade( string $type, string $identifier ): ?object {
-		return $this->facades[ self::key( $type, $identifier ) ] ?? null;
+	public function target( string $type, string $identifier ): ?RepositoryReleaseNativeTarget {
+		return $this->targets[ self::key( $type, $identifier ) ] ?? null;
 	}
 
-	/** @return array<string, mixed> */
-	public function diagnostics( string $type, string $identifier ): array {
-		$facade = $this->facade( $type, $identifier );
-		if ( null === $facade || ! is_callable( array( $facade, 'diagnostics' ) ) ) {
-			return array();
+	public function status( string $type, string $identifier ): ?RepositoryReleaseNativeTargetStatus {
+		$target = $this->target( $type, $identifier );
+		if ( null === $target ) {
+			return null;
 		}
-
 		try {
-			$value = $facade->diagnostics();
-
-			return is_array( $value ) ? $value : array();
+			return $target->status();
 		} catch ( Throwable ) {
-			return array();
+			return null;
 		}
 	}
 
@@ -307,53 +315,44 @@ final class ManagedReleaseTargetRegistrar {
 			$identifier = (string) $package->getIdentifier();
 			$key        = self::key( $type, $identifier );
 			try {
-				$this->facades[ $key ] = $this->registerPackage( $type, $package );
+				$this->targets[ $key ] = $this->registerPackage( $type, $package );
 			} catch ( Throwable ) {
-				unset( $this->facades[ $key ], $this->registeredAuthorities[ $key ] );
+				unset( $this->targets[ $key ], $this->registeredAuthorities[ $key ] );
 				$this->failures[ $key ] = 'target_registration_failed';
 			}
 		}
 	}
 
-	private function registerPackage( string $type, Package $package ): object {
+	private function registerPackage( string $type, Package $package ): RepositoryReleaseNativeTarget {
 		$identifier    = (string) $package->getIdentifier();
 		$configuration = $this->store->configuration( $type, $identifier );
+		$providerCode  = $package->getProviderCode();
 		if ( null === $configuration
-			|| 'gh' !== $package->getProviderCode()
-			|| 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\z/D', (string) $package->getRepository() )
+			|| null === $providerCode
+			|| ! $this->providers->isSealed()
 			|| ! $this->configurationMatchesPackage( $type, $identifier, $configuration ) ) {
 			throw new \RuntimeException( 'The managed release target is ineligible.' );
 		}
-
-		$credentialId = '' === $package->getCredentialId() ? null : $package->getCredentialId();
-		$accessToken  = $package->getPrivate() || null !== $credentialId
-			? function () use ( $credentialId ): ?string {
-				$credential = $this->secrets->credentialMaterial( 'gh', $credentialId );
-				$secret     = is_array( $credential ) ? ( $credential['secret'] ?? null ) : null;
-
-				return is_string( $secret ) && '' !== $secret ? $secret : null;
-			}
-			: null;
-		$metadataFile = $this->metadataPath( $type, $configuration, $identifier );
-
-		$facade = GitHubReleaseUpdaterBootstrap::registerManaged(
+		$nativeTargets = $this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );
+		$metadataFile  = $this->metadataPath( $type, $configuration, $identifier );
+		$target        = $nativeTargets->createNativeTarget(
 			$type,
+			$package->getRepository()->reference,
 			$metadataFile,
-			(string) $package->getRepository(),
-			(string) $package->getProviderRepositoryId(),
 			$configuration->packageRoot(),
 			$identifier,
-			$accessToken,
 			$configuration->channel(),
-			$package->getDeploymentPolicy()->value,
-			$this->factory
+			$package->getDeploymentPolicy()->value
 		);
+		if ( ! $target->register() ) {
+			throw new \RuntimeException( 'The managed release target could not be registered.' );
+		}
 		$this->registeredAuthorities[ self::key( $type, $identifier ) ] = $this->authority(
 			$package,
 			$configuration
 		);
 
-		return $facade;
+		return $target;
 	}
 
 	/**
@@ -410,12 +409,18 @@ final class ManagedReleaseTargetRegistrar {
 			: $this->themes->boosterThemeFromStylesheet( $identifier );
 		$configuration = $this->store->configuration( $type, $identifier );
 		$repositoryId  = $package->getProviderRepositoryId();
+		$providerCode  = $package->getProviderCode();
 		if ( PackageSource::RELEASE_ASSET !== $package->getSource()
-			|| 'gh' !== $package->getProviderCode()
+			|| null === $providerCode
 			|| ! is_string( $repositoryId )
 			|| '' === $repositoryId
 			|| null === $configuration
 			|| ! $this->configurationMatchesPackage( $type, $identifier, $configuration ) ) {
+			return null;
+		}
+		try {
+			$this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );
+		} catch ( Throwable ) {
 			return null;
 		}
 
@@ -423,22 +428,52 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	private function nativeTargetIsActive( string $type, string $identifier ): bool {
-		$diagnostics = $this->diagnostics( $type, $identifier );
-		$state       = $diagnostics['state'] ?? null;
-		$version     = $diagnostics['selected_version'] ?? null;
+		return true === $this->status( $type, $identifier )?->active;
+	}
 
-		return true === ( $diagnostics['registered'] ?? null )
-			&& true === ( $diagnostics['selection_fixed'] ?? null )
-			&& is_string( $version )
-			&& '' !== $version
-			&& is_string( $state )
-			&& '' !== $state
-			&& 'inactive' !== $state;
+	private function suppressUnauthorizedOffers( string $type, mixed $transient ): mixed {
+		if ( ! is_object( $transient ) || ! isset( $transient->response ) || ! is_array( $transient->response ) ) {
+			return $transient;
+		}
+		try {
+			$packages = 'plugin' === $type
+				? $this->plugins->allDeploymentPlugins()
+				: $this->themes->allDeploymentThemes();
+		} catch ( Throwable ) {
+			$transient->response = array();
+
+			return $transient;
+		}
+		foreach ( $packages as $package ) {
+			if ( ! $package instanceof Package ) {
+				continue;
+			}
+			$identifier = (string) $package->getIdentifier();
+			if ( PackageSource::RELEASE_ASSET !== $package->getSource() ) {
+				unset( $transient->response[ $identifier ] );
+
+				continue;
+			}
+			$key = self::key( $type, $identifier );
+			try {
+				$current = $this->nativeAuthority( $type, $identifier );
+			} catch ( Throwable ) {
+				$current = null;
+			}
+			if ( null === $current
+				|| ( $this->registeredAuthorities[ $key ] ?? null ) !== $current
+				|| ! $this->nativeTargetIsActive( $type, $identifier ) ) {
+				unset( $transient->response[ $identifier ] );
+			}
+		}
+
+		return $transient;
 	}
 
 	/** @return array<string, int|string> */
 	private function authority( Package $package, ManagedReleaseConfiguration $configuration ): array {
 		return array(
+			'provider'               => (string) $package->getProviderCode(),
 			'source_revision'        => $package->getSourceRevision(),
 			'provider_repository_id' => (string) $package->getProviderRepositoryId(),
 			'repository'             => (string) $package->getRepository(),

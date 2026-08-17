@@ -194,6 +194,13 @@ them:
   one inspected release and returning a typed, single-use artifact. The
   provider owns remote access, verification and custody until handoff; Core
   alone installs, reads back and adopts the package.
+- `RAN\RepositoryProvider\RepositoryReleaseNativeTargets` to construct and
+  register provider-owned WordPress native update targets, detect an existing
+  provider target, normalize passive status and perform an explicit refresh.
+  Implement it together with `RepositoryReleaseMetadata` to make a provider
+  eligible for managed published-release tracking. Core retains installed
+  package enumeration, authority snapshots, mutation fences, locks and source
+  transitions.
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits a capability, Booster will keep the corresponding feature disabled rather

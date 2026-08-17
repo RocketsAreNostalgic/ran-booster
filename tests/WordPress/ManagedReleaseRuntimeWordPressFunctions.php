@@ -36,3 +36,14 @@ if ( ! function_exists( 'add_action' ) ) {
 		return true;
 	}
 }
+
+if ( ! function_exists( 'add_filter' ) ) {
+	function add_filter(
+		string $hook,
+		callable $callback,
+		int $priority = 10,
+		int $acceptedArgs = 1
+	): bool {
+		return add_action( $hook, $callback, $priority, $acceptedArgs );
+	}
+}

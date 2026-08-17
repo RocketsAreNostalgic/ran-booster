@@ -46,7 +46,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		self::assertInstanceOf( ProviderRegistry::class, new ProviderRegistry() );
 	}
 
-	public function testManagedReleaseTargetsFollowProviderSealingAndPrecedeUpdaterReadiness(): void {
+	public function testManagedReleaseTargetsAndBundledControlsFollowProviderSealing(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local bootstrap contract.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 
@@ -54,16 +54,23 @@ final class ProviderApiLifecycleTest extends TestCase {
 		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
 		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
 		$targetRegistration   = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
-		$prospectiveReady     = strpos( $bootstrap, "do_action( 'ran_booster_prospective_release_ready'" );
+		$releaseControls      = strpos( $bootstrap, 'make( ReleaseManagementControls::class )->register()' );
+		$workflowControls     = strpos( $bootstrap, 'make( GitHubReleaseWorkflowControls::class )->register()' );
 
 		self::assertIsInt( $providerRegistration );
 		self::assertIsInt( $providerSeal );
 		self::assertIsInt( $targetRegistration );
-		self::assertIsInt( $prospectiveReady );
-		self::assertLessThan( $providerSeal, $providerRegistration );
-		self::assertLessThan( $targetRegistration, $providerSeal );
-		self::assertLessThan( $prospectiveReady, $targetRegistration );
+		self::assertIsInt( $releaseControls );
+		self::assertIsInt( $workflowControls );
+		self::assertTrue( $providerRegistration < $providerSeal );
+		self::assertTrue( $providerSeal < $targetRegistration );
+		self::assertTrue( $targetRegistration < $releaseControls );
+		self::assertTrue( $releaseControls < $workflowControls );
 		self::assertSame( 1, substr_count( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' ) );
-		self::assertStringContainsString( "\t\tPHP_INT_MAX\n\t);", $bootstrap );
+		self::assertSame( 1, substr_count( $bootstrap, 'make( ReleaseManagementControls::class )->register()' ) );
+		self::assertSame( 1, substr_count( $bootstrap, 'make( GitHubReleaseWorkflowControls::class )->register()' ) );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION', $bootstrap );
+		self::assertStringNotContainsString( 'ran_booster_release_tracking_ready', $bootstrap );
+		self::assertStringNotContainsString( 'ran_booster_prospective_release_ready', $bootstrap );
 	}
 }

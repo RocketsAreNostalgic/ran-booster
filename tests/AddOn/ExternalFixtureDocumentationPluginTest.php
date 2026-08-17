@@ -15,7 +15,7 @@ final class ExternalFixtureDocumentationPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPluginRegistersOneStructuredProviderDocumentationFilter(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 
@@ -45,7 +45,7 @@ final class ExternalFixtureDocumentationPluginTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_after_provider_gh', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_after_provider_gh', $GLOBALS['ran_booster_external_fixture_addon_actions'] );

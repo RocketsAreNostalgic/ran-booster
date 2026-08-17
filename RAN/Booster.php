@@ -284,7 +284,7 @@ class Booster {
 				'availability'  => 'Free',
 				'required_apis' => array(
 					'RAN_BOOSTER_PROVIDER_API_VERSION' => 10,
-					'RAN_BOOSTER_ADDON_API_VERSION'    => 15,
+					'RAN_BOOSTER_ADDON_API_VERSION'    => 16,
 				),
 				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
 				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/issues',
@@ -313,28 +313,6 @@ class Booster {
 				),
 				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme',
 				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/issues',
-			),
-			array(
-				'id'            => 'ran-booster-release-deployments',
-				'name'          => 'Release Deployments',
-				'description'   => 'Track verified GitHub releases and prepare release-based deployment workflows.',
-				'details'       => 'Let eligible Booster-managed plugins and themes track exact published GitHub Release ZIPs instead of branch deployments, while WordPress continues to perform the final installation.',
-				'features'      => array(
-					'Validate and switch eligible branch-managed packages to published releases.',
-					'Check the release ZIP and package version before an update is offered.',
-					'Choose Manual, Automatic, or Disabled update policy and prepare a reviewable release-workflow pull request.',
-				),
-				'requirements'  => array(
-					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
-					'An eligible GitHub repository with a published release; draft releases are excluded.',
-					'Prerelease tracking must be enabled explicitly when required.',
-				),
-				'plugin'        => 'ran-booster-release-deployments/ran-booster-release-deployments.php',
-				'image'         => 'release-deployments.svg',
-				'availability'  => 'Subscriber',
-				'required_apis' => array( 'RAN_BOOSTER_ADDON_API_VERSION' => 15 ),
-				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-release-deployments#readme',
-				'support_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-release-deployments/issues',
 			),
 		);
 

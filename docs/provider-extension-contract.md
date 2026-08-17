@@ -71,6 +71,12 @@ exception. A rejected provider publishes neither provider nor policy state, so
 the same provider code may be corrected and registered again during the same
 registration window.
 
+The current collision and same-vendor coexistence behavior is characterized in
+[Provider registration and coexistence](provider-registration-and-coexistence.md).
+Provider API 10 rejects an exact duplicate code but does not reserve vendor
+aliases, identify two implementations of the same vendor, or merge their
+capabilities and state.
+
 ### Optional repository-webhook operation
 
 A provider may implement both `RepositoryWebhookFitness` and

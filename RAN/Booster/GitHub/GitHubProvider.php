@@ -43,6 +43,8 @@ use RAN\RepositoryProvider\RepositoryReleaseInspection;
 use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
@@ -54,7 +56,7 @@ use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer {
+final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
 
@@ -295,6 +297,48 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 		}
 
 		return $updateUri . '/releases/tag/' . rawurlencode( $tag );
+	}
+
+	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true )
+			|| '' === $installedIdentifier ) {
+			return false;
+		}
+		$signal = 'ran_wp_github_release_updater_v1_has_registered_target';
+		if ( ! function_exists( $signal ) ) {
+			return false;
+		}
+
+		$identity = strtolower( str_replace( '\\', '/', $installedIdentifier ) );
+
+		return true === $signal( $packageType, 'plugin' === $packageType ? ltrim( $identity, '/' ) : $identity );
+	}
+
+	public function createNativeTarget(
+		string $packageType,
+		RepositoryReference $repository,
+		string $metadataFile,
+		string $packageRoot,
+		string $installedIdentifier,
+		string $channel,
+		string $deploymentPolicy
+	): RepositoryReleaseNativeTarget {
+		$repositoryId = $repository->providerRepositoryId;
+		if ( '' === $this->expectedUpdateUri( $repository ) || null === $repositoryId ) {
+			throw new RuntimeException( 'The GitHub release native target repository is invalid.' );
+		}
+
+		return new GitHubReleaseNativeTarget(
+			$packageType,
+			$metadataFile,
+			$repository->locator,
+			$repositoryId,
+			$packageRoot,
+			$installedIdentifier,
+			$this->releaseAccessToken( $repository ),
+			$channel,
+			$deploymentPolicy
+		);
 	}
 
 	public function listReleaseCandidates(

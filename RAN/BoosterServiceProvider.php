@@ -389,9 +389,9 @@ final class BoosterServiceProvider {
 		$releaseRegistrar = new ManagedReleaseTargetRegistrar(
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
-			$secrets,
 			$releaseStore,
-			$container->make( WordPressUpdaterLock::class )
+			$container->make( WordPressUpdaterLock::class ),
+			$container->make( ProviderRegistry::class )
 		);
 		$container->bind( ManagedReleaseTargetRegistrar::class, $releaseRegistrar );
 		$releaseFacade = new NativeReleaseTrackingFacade(

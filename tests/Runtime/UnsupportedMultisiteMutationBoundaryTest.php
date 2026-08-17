@@ -61,15 +61,14 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		$registrar = new ManagedReleaseTargetRegistrar(
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
-			$this->blank( SecretsFile::class ),
 			$this->blank( ManagedReleaseStore::class ),
 			$this->blank( WordPressUpdaterLock::class ),
-			static fn (): never => throw new \RuntimeException( 'The updater factory must stay inert.' )
+			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class )
 		);
 
 		$registrar->register();
 
-		self::assertNull( $registrar->facade( 'plugin', 'example/example.php' ) );
+		self::assertNull( $registrar->target( 'plugin', 'example/example.php' ) );
 		self::assertSame( '', $registrar->failureCode( 'plugin', 'example/example.php' ) );
 	}
 

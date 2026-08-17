@@ -361,6 +361,25 @@ The facet grants no WordPress installation or adoption authority. Core retains
 the updater claim through `PreparedArtifact`, owns installation and installed
 readback, and discards the exact claim after use.
 
+`RepositoryReleaseNativeTargets` is the exact optional capability for joining
+WordPress's native plugin or theme update flow. Core supplies the resolved
+repository, Core-derived metadata path, installed identity, channel and
+deployment policy. The provider owns collision detection, lazy credential use,
+updater construction and registration, and projects only a typed
+`RepositoryReleaseNativeTarget`. Its `RepositoryReleaseNativeTargetStatus` is a
+bounded passive value: it contains normalized availability, offered-version,
+check-time, failure and candidate-validation fields, never the provider's raw
+updater object, diagnostics array or internal runtime state. Refresh returns an
+exact boolean. Missing capabilities, failed registration, invalid status and
+failed refresh all fail closed. Release tracking requires this capability and
+`RepositoryReleaseMetadata` on the same registered provider aggregate;
+metadata alone is not eligibility. Core retains package enumeration, metadata
+path derivation, authority snapshots, WordPress hook timing, locks, stale-offer
+suppression and package-source transitions. Native target implementations must
+perform credential use, remote acquisition and download only after Core's
+earliest `upgrader_pre_download` authority fence; the bundled GitHub updater
+runs its acquisition filter at `PHP_INT_MAX`.
+
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
 settings screen. Core treats locators as opaque, validates the returned URL, and

@@ -41,6 +41,9 @@ namespace Tests\AddOn;
 	use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
 	use RAN\RepositoryProvider\RepositoryReleaseInspector;
 	use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+	use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
+	use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+	use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 	use RAN\Secrets\SecretsFile;
 	use RAN\Storage\PackageMutationResult;
 	use RAN\Storage\PackageStorageOperation;
@@ -1254,7 +1257,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 }
 
-final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata {
+final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata, RepositoryReleaseNativeTargets {
 	private const EXPECTED_FINGERPRINT = 'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 	public static int $resolveCalls                                     = 0;
@@ -1291,6 +1294,38 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 				unset( $request );
 
 				return array();
+			}
+		};
+	}
+
+	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+		unset( $packageType, $installedIdentifier );
+
+		return false;
+	}
+
+	public function createNativeTarget(
+		string $packageType,
+		RepositoryReference $repository,
+		string $metadataFile,
+		string $packageRoot,
+		string $installedIdentifier,
+		string $channel,
+		string $deploymentPolicy
+	): RepositoryReleaseNativeTarget {
+		unset( $packageType, $repository, $metadataFile, $packageRoot, $installedIdentifier, $channel, $deploymentPolicy );
+
+		return new class() implements RepositoryReleaseNativeTarget {
+			public function register(): bool {
+				return true;
+			}
+
+			public function status(): RepositoryReleaseNativeTargetStatus {
+				return new RepositoryReleaseNativeTargetStatus( true );
+			}
+
+			public function refresh(): bool {
+				return true;
 			}
 		};
 	}

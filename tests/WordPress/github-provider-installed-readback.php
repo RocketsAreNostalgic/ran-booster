@@ -57,6 +57,7 @@ foreach (
 		RAN\RepositoryProvider\RepositoryReleaseCandidateListing::class,
 		RAN\RepositoryProvider\RepositoryReleaseInspector::class,
 		RAN\RepositoryProvider\RepositoryReleaseMetadata::class,
+		RAN\RepositoryProvider\RepositoryReleaseNativeTargets::class,
 	) as $capability
 ) {
 	if ( $provider !== $registry->requireCapability( 'gh', $capability ) ) {

@@ -304,6 +304,27 @@ URL. Implementing it performs no discovery or download and does not, by itself,
 enable release deployments. Core keeps release tracking unavailable when the
 facet is absent or returns no canonical Update URI.
 
+`RepositoryReleaseCandidateListing` is the independent, read-only remote facet
+for listing at most eight published releases for one resolved repository,
+package type and exact `stable` or `prerelease` channel. It returns only typed,
+bounded candidate values; an empty list means that no eligible release exists,
+while an exception means listing was unavailable. The provider owns its remote
+calls, credential use and response normalization. The facet downloads no
+archive and grants no inspection, acquisition, installation or mutation
+authority. Publication time and expected ZIP names remain in the typed value
+only because the unchanged standalone facade still validates them; they grant no
+artifact authority. The bounded list wrapper enforces the result limit, typed
+members and unique provider identities at the capability boundary. The facet
+does not by itself make the complete release product available. Until those
+remaining operations have their own provider facets,
+Core's complete-product projection continues to advertise only the bundled
+GitHub implementation. A provider implementing candidate listing alone remains
+available to an authorized listing consumer but receives no complete-product UI
+or later-operation authority. The temporary standalone-add-on facade can project
+only positive integer release identities; opaque provider identities remain
+valid contract values but require the later hard cut before that facade can
+consume them.
+
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
 settings screen. Core treats locators as opaque, validates the returned URL, and
@@ -417,14 +438,19 @@ Webhook signing-secret scope codes are universally `owner` or `repository`.
 Providers may relabel `owner` for their interface—for example **GitHub Owner**
 or **Bitbucket Workspace**—but may not introduce additional logical scopes.
 
-Published-release candidate discovery is not yet a Provider API capability. It is
-owned by Core's separately versioned prospective-release facade and the selected
-shared updater runtime. `supportedProviderCodes()` exposes the current bounded,
-request-local provider allowlist for plugins or themes without resolving a
-repository, reading credentials or making a remote request. Registering a
-provider does not imply published-release support. Core rejects a prospective
-operation with `unsupported_provider` before repository resolution when the
-selected provider is not in that list.
+Core's separately versioned prospective-release facade resolves
+`RepositoryReleaseCandidateListing` before repository resolution and maps its
+typed values to the current add-on response. Candidate listing can therefore be
+implemented independently without granting authority over inspection,
+acquisition or installation. `supportedProviderCodes()` remains the
+complete-product projection used by the unchanged add-on and currently exposes
+only the bundled GitHub provider when it implements the listing facet. It does
+not resolve a repository, read credentials or make a remote request.
+Registering a provider, or implementing listing alone, does not imply complete
+published-release support. Core rejects listing with `unsupported_provider`
+when the selected provider omits the listing facet, and rejects later
+prospective operations when the provider is absent from the complete-product
+projection; both checks happen before repository resolution.
 
 The physically separate conformance plugin in
 `tests/fixtures/ran-booster-fixture-provider/` registers a novel provider ID,

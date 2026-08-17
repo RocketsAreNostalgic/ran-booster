@@ -181,6 +181,11 @@ them:
   canonical Update URI and public release-details URL. This is local metadata
   only; it does not opt the provider into discovery, archive inspection,
   downloads or WordPress updates.
+- `RAN\RepositoryProvider\RepositoryReleaseCandidateListing` for a bounded,
+  read-only list of typed release candidates for one resolved repository and
+  stable or prerelease channel. The provider owns remote calls and credential
+  use; the facet grants no download, inspection, installation or mutation
+  authority.
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits a capability, Booster will keep the corresponding feature disabled rather
@@ -229,6 +234,9 @@ shape check.
 1. Add `CredentialedPublicRepositoryBrowser` only if the provider can
    authenticate public-owner browsing without returning private repositories or
    turning the lookup profile into a package credential.
+1. Add `RepositoryReleaseCandidateListing` only when the provider can return a
+   bounded typed list and distinguish no eligible release from operational
+   failure without exposing upstream payloads.
 1. Test registration from the main plugin file with the version guard in place.
 1. Verify the provider registers cleanly, seals cleanly, and surfaces the
    correct optional capabilities.

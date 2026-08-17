@@ -143,45 +143,6 @@ final class ManagedReleasePreflight {
 	}
 
 	/**
-	 * List the bounded published releases allowed by the requested channel
-	 * without downloading ZIP archives.
-	 *
-	 * @param array<string, mixed> $repository
-	 * @return array{candidates: list<array{release_id: int, tag: string, version: string, prerelease: bool, published_at: string, expected_asset_names: list<string>}>, channel: string}|\WP_Error
-	 */
-	public function listProspective(
-		string $type,
-		array $repository,
-		string $channel
-	): array|\WP_Error {
-		$candidate = $this->prospectiveCandidate( $type, $repository, $channel );
-		if ( $candidate instanceof \WP_Error ) {
-			return $candidate;
-		}
-		$releases = $candidate->listCandidates();
-		if ( $releases instanceof \WP_Error ) {
-			return $releases;
-		}
-
-		$summaries = array();
-		foreach ( $releases as $release ) {
-			$summaries[] = array(
-				'release_id'           => $release->releaseId(),
-				'tag'                  => $release->tag(),
-				'version'              => $release->version(),
-				'prerelease'           => $release->isPrerelease(),
-				'published_at'         => $release->publishedAt(),
-				'expected_asset_names' => $release->expectedAssetNames(),
-			);
-		}
-
-		return array(
-			'candidates' => $summaries,
-			'channel'    => $channel,
-		);
-	}
-
-	/**
 	 * Inspect and discard one exact release ZIP from the requested channel.
 	 *
 	 * @param array<string, mixed> $repository

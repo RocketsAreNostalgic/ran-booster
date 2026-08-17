@@ -14,10 +14,11 @@ interface ProspectiveReleaseFacade {
 	public function nonceAction( string $operation, string $type ): string;
 
 	/**
-	 * Return the bounded provider codes supported for one prospective package type.
+	 * Return the bounded provider codes supporting the complete prospective workflow.
 	 *
-	 * This is a request-local capability projection. It performs no repository
-	 * resolution, credential access, remote request, discovery or mutation.
+	 * This is a request-local complete-product projection, not an enumeration of
+	 * individual provider facets. It performs no repository resolution, credential
+	 * access, remote request, discovery or mutation.
 	 *
 	 * @return list<string>
 	 */

@@ -29,6 +29,8 @@ WP Pusher 3.0.13 shipped with built-in support for several Git hosts through its
 vendor-hosted OAuth relay. RAN Booster bundles GitHub. Additional providers can be contributed
 through a documented `ran_booster_register_providers` hook without modifying
 Booster itself (see [provider extension contract](docs/provider-extension-contract.md)).
+The [provider registration and coexistence characterization](docs/provider-registration-and-coexistence.md)
+records the current exact-code collision protections and their limits.
 Premium functionality contributes to existing Core screens through the
 [WordPress-native administration composition
 contract](docs/admin-composition-contract.md). Add-ons whose workflow genuinely
@@ -68,6 +70,8 @@ module obey the same ordinary vendor boundary as external providers; it does
 not authorize extracting GitHub into another package or release stream.
 
 Start with the [custom git vendor setup guide](docs/custom-git-vendors.md).
+Before choosing a provider code, also read the current
+[registration and coexistence behavior](docs/provider-registration-and-coexistence.md).
 
 GitHub recommends fine-grained personal access tokens for scripted and automated
 API access. Booster keeps provider credentials as authenticated ciphertext in an

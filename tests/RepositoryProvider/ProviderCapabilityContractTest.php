@@ -30,6 +30,10 @@ final class ProviderCapabilityContractTest extends TestCase {
 		self::assertSame( array(), $marker->getMethods() );
 		self::assertFalse( $registry->hasMethod( 'capabilities' ) );
 		self::assertFalse( $registry->hasMethod( 'supportsCapability' ) );
+		self::assertFalse( $registry->hasMethod( 'capabilityDescriptors' ) );
+		self::assertFalse( $registry->hasMethod( 'describeCapabilities' ) );
+		self::assertFalse( $registry->hasMethod( 'dispatchCapability' ) );
+		self::assertFalse( $registry->hasMethod( 'executeCapability' ) );
 	}
 
 	public function testProviderOwnedFacetsResolveToTheSameRegisteredAggregate(): void {

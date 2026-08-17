@@ -33,6 +33,7 @@ use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
@@ -44,7 +45,7 @@ use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement {
+final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
 
@@ -264,6 +265,23 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 
 	public function repositoryWebhookSettingsUrl( string $locator ): string {
 		return 'https://github.com/' . $this->encodeRepositoryName( $locator ) . '/settings/hooks';
+	}
+
+	public function expectedUpdateUri( RepositoryReference $repository ): string {
+		if ( 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\z/D', $repository->locator ) ) {
+			return '';
+		}
+
+		return 'https://github.com/' . $this->encodeRepositoryName( $repository->locator );
+	}
+
+	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+		$updateUri = $this->expectedUpdateUri( $repository );
+		if ( '' === $updateUri || '' === $tag || strlen( $tag ) > 100 ) {
+			return '';
+		}
+
+		return $updateUri . '/releases/tag/' . rawurlencode( $tag );
 	}
 
 	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {

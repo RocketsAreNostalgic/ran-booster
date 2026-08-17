@@ -299,6 +299,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$this->blank( ManagedReleaseStore::class ),
 			$this->blank( ManagedReleaseTargetRegistrar::class ),
 			$this->blank( WordPressUpdaterLock::class ),
+			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class ),
 			static fn (): never => throw new \RuntimeException( 'Capabilities must not be checked.' ),
 			static fn (): never => throw new \RuntimeException( 'Nonces must not be checked.' )
 		);

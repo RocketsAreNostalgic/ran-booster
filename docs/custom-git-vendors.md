@@ -177,6 +177,10 @@ them:
   operation. The provider owns its fixed vendor calls; Core owns authorization,
   binding, secret custody and bounded results. Core does not generate a
   management form, credential schema or route from the backend capability.
+- `RAN\RepositoryProvider\RepositoryReleaseMetadata` for the provider's
+  canonical Update URI and public release-details URL. This is local metadata
+  only; it does not opt the provider into discovery, archive inspection,
+  downloads or WordPress updates.
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits a capability, Booster will keep the corresponding feature disabled rather

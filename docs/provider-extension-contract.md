@@ -297,6 +297,13 @@ capabilities, negotiate versions, or accept string descriptors; a breaking
 change to a published capability interface requires a new Provider API
 generation.
 
+`RepositoryReleaseMetadata` is an independent, local release capability. It
+maps a provider-owned repository reference to its canonical WordPress Update
+URI and maps one exact release tag to the provider's public release-details
+URL. Implementing it performs no discovery or download and does not, by itself,
+enable release deployments. Core keeps release tracking unavailable when the
+facet is absent or returns no canonical Update URI.
+
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
 settings screen. Core treats locators as opaque, validates the returned URL, and
@@ -410,7 +417,7 @@ Webhook signing-secret scope codes are universally `owner` or `repository`.
 Providers may relabel `owner` for their interface—for example **GitHub Owner**
 or **Bitbucket Workspace**—but may not introduce additional logical scopes.
 
-Published-release candidate discovery is not a Provider API capability. It is
+Published-release candidate discovery is not yet a Provider API capability. It is
 owned by Core's separately versioned prospective-release facade and the selected
 shared updater runtime. `supportedProviderCodes()` exposes the current bounded,
 request-local provider allowlist for plugins or themes without resolving a

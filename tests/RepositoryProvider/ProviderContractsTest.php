@@ -15,11 +15,35 @@ use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 
 final class ProviderContractsTest extends TestCase {
+	public function testReleaseMetadataIsAnExactOptionalCapability(): void {
+		self::assertTrue( is_subclass_of( RepositoryReleaseMetadata::class, \RAN\Provider\ProviderCapability::class ) );
+
+		$methods = get_class_methods( RepositoryReleaseMetadata::class );
+		sort( $methods );
+
+		self::assertSame( array( 'expectedUpdateUri', 'releaseDetailsUrl' ), $methods );
+		self::assertSame(
+			array( 'repository' ),
+			array_map(
+				static fn ( \ReflectionParameter $parameter ): string => $parameter->name,
+				( new \ReflectionMethod( RepositoryReleaseMetadata::class, 'expectedUpdateUri' ) )->getParameters()
+			)
+		);
+		self::assertSame(
+			array( 'repository', 'tag' ),
+			array_map(
+				static fn ( \ReflectionParameter $parameter ): string => $parameter->name,
+				( new \ReflectionMethod( RepositoryReleaseMetadata::class, 'releaseDetailsUrl' ) )->getParameters()
+			)
+		);
+	}
+
 	public function testRepositoryProviderHasTheExactMandatoryApiFourSurface(): void {
 		$methods = get_class_methods( RepositoryProvider::class );
 		sort( $methods );

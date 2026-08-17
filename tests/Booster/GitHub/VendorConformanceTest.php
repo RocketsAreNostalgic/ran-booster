@@ -23,6 +23,8 @@ use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\RepositoryProvider\ProviderWebhookProfileReader;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
@@ -149,11 +151,18 @@ final class VendorConformanceTest extends TestCase {
 				RepositoryWebhookSettingsLink::class,
 				RepositoryWebhookFitness::class,
 				RepositoryWebhookManagement::class,
+				RepositoryReleaseMetadata::class,
 			) as $capability
 		) {
 			self::assertTrue( is_a( $capability, ProviderCapability::class, true ) );
 			self::assertSame( $provider, $registry->requireCapability( 'gh', $capability ) );
 		}
+		$releaseMetadata = $registry->requireCapability( 'gh', RepositoryReleaseMetadata::class );
+		$repository      = new RepositoryReference( 'owner/repository', '42', false, null );
+		self::assertSame( 'https://github.com/owner/repository', $releaseMetadata->expectedUpdateUri( $repository ) );
+		self::assertSame( 'https://github.com/owner/repository/releases/tag/v1.0.0%2Bbuild', $releaseMetadata->releaseDetailsUrl( $repository, 'v1.0.0+build' ) );
+		self::assertSame( '', $releaseMetadata->releaseDetailsUrl( $repository, '' ) );
+		self::assertSame( '', $releaseMetadata->expectedUpdateUri( new RepositoryReference( 'owner name/repository', '42', false, null ) ) );
 
 		self::assertSame( $provider->getCredentialPolicy(), $policies->credentialPolicy( 'gh' ) );
 		self::assertSame( $provider->getWebhookPolicy(), $policies->webhookPolicy( 'gh' ) );

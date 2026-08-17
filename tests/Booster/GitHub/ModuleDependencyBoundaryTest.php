@@ -56,6 +56,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\RepositoryLookupRequest',
 		'RAN\RepositoryProvider\RepositoryProvider',
 		'RAN\RepositoryProvider\RepositoryReference',
+		'RAN\RepositoryProvider\RepositoryReleaseMetadata',
 		'RAN\RepositoryProvider\RepositoryWebhookFitness',
 		'RAN\RepositoryProvider\RepositoryWebhookFitnessResult',
 		'RAN\RepositoryProvider\RepositoryWebhookManagement',

@@ -7,7 +7,7 @@ namespace RAN\AddOn\ReleaseTracking;
 use InvalidArgumentException;
 
 /**
- * Bounded result of a read-only GitHub Release artifact preflight.
+ * Bounded result of a read-only repository release artifact preflight.
  */
 final readonly class ReleaseTrackingPreflight {
 
@@ -98,45 +98,11 @@ final readonly class ReleaseTrackingPreflight {
 	/** @return list<string> */
 	private static function reasonCodes(): array {
 		return array(
-			'release_runtime_unavailable',
-			'github_updater_invalid_preflight_target',
-			'github_updater_no_eligible_release',
-			'github_updater_release_search_budget_exhausted',
-			'github_updater_ambiguous_release_asset',
-			'github_updater_invalid_release_asset',
-			'github_updater_release_asset_too_large',
-			'github_updater_missing_asset_digest',
-			'github_updater_invalid_release',
-			'github_updater_release_is_draft',
-			'github_updater_invalid_release_tag',
-			'github_updater_prerelease_not_allowed',
-			'github_updater_invalid_release_url',
-			'github_updater_invalid_tag_commit',
-			'github_updater_artifact_continuity_failed',
-			'github_updater_repository_identity_changed',
-			'github_updater_credentials_unavailable',
-			'github_updater_invalid_access_token',
-			'github_updater_github_authentication_failed',
-			'github_updater_github_forbidden',
-			'github_updater_downloaded_artifact_invalid',
-			'github_updater_downloaded_digest_mismatch',
-			'github_updater_rate_limited',
-			'github_updater_http_transport_failed',
-			'github_updater_github_http_error',
-			'github_updater_download_failed',
-			'github_updater_expired_release_asset_url',
-			'github_updater_redirect_limit_exceeded',
-			'github_updater_response_too_large',
-			'github_updater_invalid_json',
-			'github_updater_unsafe_release_asset_redirect',
-			'github_updater_temp_file_failed',
-			'github_updater_invalid_runtime_version',
-			'github_updater_check_in_progress',
-			'github_updater_release_artifact_unavailable',
-			'github_updater_release_check_failed',
-			'github_updater_release_preflight_unavailable',
-			'github_updater_operation_failed',
-			'github_updater_release_assurance_failed',
+			'provider_unavailable',
+			'no_releases',
+			'invalid_release',
+			'release_identity_mismatch',
+			'release_incompatible',
 			'release_version_mismatch',
 			'package_header_missing',
 			'package_header_invalid',
@@ -154,19 +120,26 @@ final readonly class ReleaseTrackingPreflight {
 			'package_update_uri_invalid',
 			'package_compatibility_missing',
 			'package_compatibility_invalid',
-			'github_updater_release_incompatible',
 			'package_header_ambiguous',
 		);
 	}
 
 	private function validReleaseUrl( string $url ): bool {
+		if ( 1 === preg_match( '/[\x00-\x20\x7F]/', $url )
+			|| false === filter_var( $url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
 		$parts = function_exists( 'wp_parse_url' )
 			? wp_parse_url( $url )
 			: parse_url( $url ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- This value object is also exercised without a WordPress bootstrap.
 
 		return is_array( $parts )
 			&& 'https' === ( $parts['scheme'] ?? null )
-			&& 'github.com' === ( $parts['host'] ?? null )
+			&& is_string( $parts['host'] ?? null )
+			&& '' !== $parts['host']
+			&& ! isset( $parts['user'] )
+			&& ! isset( $parts['pass'] )
 			&& is_string( $parts['path'] ?? null )
 			&& str_starts_with( $parts['path'], '/' );
 	}

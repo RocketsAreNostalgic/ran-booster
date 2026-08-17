@@ -250,13 +250,16 @@ final class ProviderContractsTest extends TestCase {
 		}
 	}
 
-	public function testReleaseInspectionRejectionHasOnlyTheTwoBoundedDomainReasons(): void {
-		$noReleases = RepositoryReleaseInspectionRejected::noReleases();
-		$invalid    = RepositoryReleaseInspectionRejected::invalidRelease();
+	public function testReleaseInspectionRejectionHasOnlyTheBoundedDomainReasons(): void {
+		$noReleases   = RepositoryReleaseInspectionRejected::noReleases();
+		$invalid      = RepositoryReleaseInspectionRejected::invalidRelease();
+		$incompatible = RepositoryReleaseInspectionRejected::incompatible();
 
 		self::assertSame( RepositoryReleaseInspectionRejected::NO_RELEASES, $noReleases->reason );
 		self::assertSame( RepositoryReleaseInspectionRejected::INVALID_RELEASE, $invalid->reason );
+		self::assertSame( RepositoryReleaseInspectionRejected::INCOMPATIBLE, $incompatible->reason );
 		self::assertSame( $noReleases->getMessage(), $invalid->getMessage() );
+		self::assertSame( $noReleases->getMessage(), $incompatible->getMessage() );
 		self::assertTrue(
 			( new \ReflectionClass( RepositoryReleaseInspectionRejected::class ) )->getConstructor()?->isPrivate()
 		);

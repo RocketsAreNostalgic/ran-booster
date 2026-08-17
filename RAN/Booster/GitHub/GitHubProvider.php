@@ -746,6 +746,9 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 
 	private function rejectReleaseInspection( \WP_Error $failure ): never {
 		$code = $failure->get_error_code();
+		if ( 'github_updater_release_incompatible' === $code ) {
+			throw RepositoryReleaseInspectionRejected::incompatible();
+		}
 		if ( $this->isInvalidReleaseFailureCode( $code ) ) {
 			throw RepositoryReleaseInspectionRejected::invalidRelease();
 		}

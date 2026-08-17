@@ -18,6 +18,8 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 	);
 
 	private const ALLOWED_CORE_IMPORTS = array(
+		'RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade',
+		'RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus',
 		'RAN\Deployment\PreparedArtifact',
 		'RAN\RepositoryProvider\Admin\CredentialFieldMetadata',
 		'RAN\RepositoryProvider\Admin\CredentialKindMetadata',
@@ -107,8 +109,12 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 
 	/** @return list<string> */
 	private function moduleFiles(): array {
-		$files = glob( dirname( __DIR__, 3 ) . '/RAN/Booster/GitHub/*.php' );
-		self::assertIsArray( $files );
+		$module        = dirname( __DIR__, 3 ) . '/RAN/Booster/GitHub';
+		$rootFiles     = glob( $module . '/*.php' );
+		$workflowFiles = glob( $module . '/ReleaseDeployments/WorkflowAssistance/*.php' );
+		self::assertIsArray( $rootFiles );
+		self::assertIsArray( $workflowFiles );
+		$files = array_merge( $rootFiles, $workflowFiles );
 		sort( $files );
 
 		return $files;

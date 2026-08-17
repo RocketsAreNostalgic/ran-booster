@@ -20,20 +20,19 @@ public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
 
-The Core-owned Extensions page lists four first-party beta extensions using
+The Core-owned Extensions page lists the remaining first-party beta extensions using
 only local WordPress plugin state and release-bundled artwork. Free downloads
 remain unavailable until their public repositories and releases are ready for
-people. Sponsor install controls stay disabled and link separately to access
-information; Core stores no sponsor or entitlement state.
+people. Core stores no sponsor or entitlement state.
 
 The plugin and theme installation screens include a native repository picker.
 For operational providers, it can search public repositories without a token or
 list repositories accessible to a saved credential profile. Manual repository
 account/name entry remains available and is verified through the provider API.
 
-When the optional Release Deployments add-on and negotiated Prospective Release
-API 4 are both available, a not-yet-installed plugin or theme can be inspected
-without downloading its ZIP. Install performs fresh fingerprint-bound
+When the selected provider implements the complete release capability set, a
+not-yet-installed plugin or theme can be inspected through Core's bundled
+release controls. Install performs fresh fingerprint-bound
 acquisition and delegates mutation to WordPress Core; the target must be absent
 and inactive, remain inactive after install, pass identity checks and then be
 adopted by Booster. Partial installed-but-unmanaged, uncertain-state and cleanup

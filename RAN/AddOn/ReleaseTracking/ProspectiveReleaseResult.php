@@ -7,7 +7,7 @@ namespace RAN\AddOn\ReleaseTracking;
 use InvalidArgumentException;
 
 /**
- * Bounded, secret-free result published to Release Deployments.
+ * Bounded, secret-free result consumed by Core release controls.
  */
 final readonly class ProspectiveReleaseResult {
 

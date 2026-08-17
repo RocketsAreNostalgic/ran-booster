@@ -55,7 +55,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): bool|null         $canManage
 	 * @param callable(string, string): bool|null $verifyNonce
 	 * @param callable(string): void|null         $refreshNative
-	 * @param callable(string, string, string): bool|null $metadataEligible
+	 * @param callable(): bool|null $metadataEligible
 	 * @param callable(string): void|null         $invalidateNative
 	 * @param callable(string, Package, string, string, bool, string): ReleaseTrackingPreflight|null $releasePreflight
 	 * @param callable(string, string): bool|null $hasRegisteredTarget
@@ -558,14 +558,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$packageRoot = $parts[0];
 		}
 
-		if ( $this->metadataEligibilityOverridden && ( $this->metadataEligible )( $type, $identifier, $repository ) ) {
+		if ( $this->metadataEligibilityOverridden && ( $this->metadataEligible )() ) {
 			return $this->eligibleOrSelfManagedTarget( $type, $identifier, $package, $expected, $packageRoot );
 		}
 		$updateUri = $this->updateUri( $type, $identifier );
 		if ( '' === $updateUri ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::MISSING_UPDATE_URI, $expected, $packageRoot );
 		}
-		if ( ! hash_equals( $expected, $updateUri ) || ! ( $this->metadataEligible )( $type, $identifier, $repository ) ) {
+		if ( ! hash_equals( $expected, $updateUri ) || ! ( $this->metadataEligible )() ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::MISMATCHED_UPDATE_URI, $expected, $packageRoot );
 		}
 

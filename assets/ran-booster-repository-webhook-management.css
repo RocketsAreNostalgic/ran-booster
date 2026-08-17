@@ -1,0 +1,34 @@
+.ran-booster-admin .ran-booster-repository-webhook-management__form {
+	display: grid;
+	gap: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__field input {
+	width: 100%;
+	max-width: none;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-management__field
+	.description {
+	display: block;
+	margin-top: 6px;
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__action-help {
+	margin: 0;
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-repository-webhook-management__actions {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.ran-booster-admin
+		.ran-booster-repository-webhook-management__actions
+		.button {
+		width: 100%;
+		text-align: center;
+	}
+}

@@ -2,7 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace RAN\Booster\GitHub\WebhookManagement\Installation;
+namespace RAN\Admin\WebhookManagement\Installation;
 
 use Closure;
 use Throwable;

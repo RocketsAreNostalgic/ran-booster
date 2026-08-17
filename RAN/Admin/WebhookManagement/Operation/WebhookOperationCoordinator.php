@@ -2,13 +2,13 @@
 
 declare( strict_types = 1 );
 
-namespace RAN\Booster\GitHub\WebhookManagement\Operation;
+namespace RAN\Admin\WebhookManagement\Operation;
 
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\WebhookAssistance\WebhookProfileMetadata;
-use RAN\Booster\GitHub\WebhookManagement\Installation\InstallationRecord;
-use RAN\Booster\GitHub\WebhookManagement\Installation\InstallationStore;
+use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
+use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 
 /** Owns one authorized webhook operation and its local recovery transition. */
@@ -20,7 +20,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/**
-	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null}
+	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
 	 */
 	public function execute(
 		string $operation,
@@ -38,7 +38,7 @@ final class WebhookOperationCoordinator {
 		if ( ! $target instanceof AssistanceTarget
 			|| ! hash_equals( $providerCode, $target->providerCode() )
 			|| ! hash_equals( $repositoryId, $target->repositoryId() ) ) {
-			return $this->outcome( 'invalid_request' );
+			return $this->outcome( 'invalid_request', inlineSafe: true );
 		}
 
 		$record = $this->records->find( $providerCode, $repositoryId );
@@ -49,7 +49,7 @@ final class WebhookOperationCoordinator {
 			|| ( 'setup' === $operation && null !== $record )
 			|| ( 'setup' !== $operation && ( null === $record
 				|| ! hash_equals( $target->repository(), $record->repository() ) ) ) ) {
-			return $this->outcome( 'invalid_token' );
+			return $this->outcome( 'invalid_token', inlineSafe: true );
 		}
 
 		try {
@@ -69,7 +69,7 @@ final class WebhookOperationCoordinator {
 		return $this->applyResult( $operation, $target, $record, $result );
 	}
 
-	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null} */
+	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
 	private function applyResult( string $operation, AssistanceTarget $target, ?InstallationRecord $record, RepositoryWebhookOperationResult $result ): array {
 		$projection    = $result->toArray();
 		$state         = $projection['state'] ?? null;
@@ -77,29 +77,52 @@ final class WebhookOperationCoordinator {
 		$observed      = $projection['observed_at'] ?? null;
 		$delivery      = $projection['delivery'] ?? null;
 		$configuration = $projection['configuration'] ?? null;
+		$remediation   = $projection['remediation'] ?? null;
 		if ( ! in_array( $state, array( 'succeeded', 'partial', 'ambiguous', 'failed' ), true )
 			|| ! is_string( $observed )
 			|| 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $observed )
 			|| ! in_array( $delivery, array( 'configured_pending_delivery', 'verified', 'unverified', 'unknown', 'absent' ), true )
-			|| ! is_array( $configuration ) ) {
+			|| ! is_array( $configuration )
+			|| ! is_string( $remediation )
+			|| '' === trim( $remediation )
+			|| strlen( $remediation ) > 512
+			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $remediation ) ) {
 			return $this->outcome( 'operation_failed' );
 		}
 
 		if ( 'setup' === $operation ) {
-			return $this->recordSetup( $target, $result, $state, $code, $observed, $delivery );
+			$outcome    = $this->recordSetup( $target, $result, $state, $code, $observed, $delivery );
+			$successful = 'succeeded' === $state && $this->successfulCode( $outcome['code'] );
+
+			return $this->finalizeOutcome( $outcome, $remediation, $successful, $successful || 'failed' === $state );
 		}
 		if ( ! $record instanceof InstallationRecord ) {
 			return $this->outcome( 'invalid_request' );
 		}
 
-		return match ( $operation ) {
+		$outcome = match ( $operation ) {
 			'check'       => $this->outcome( $this->recordCheck( $record, $state, $code, $observed, $target->endpoint(), $delivery, $configuration ) ),
 			'reconfigure' => $this->recordReconfigure( $record, $target, $result, $state, $code, $observed, $delivery ),
 			'remove'      => $this->outcome( $this->recordRemove( $record, $result, $state, $code, $observed ) ),
 		};
+
+		$successful = match ( $operation ) {
+			'check' => 'succeeded' === $state && (
+				( 'verified' === $outcome['code'] && 'verified' === $delivery )
+				|| ( 'configured_pending_delivery' === $outcome['code'] && 'configured_pending_delivery' === $delivery )
+			),
+			'reconfigure' => 'succeeded' === $state && $this->successfulCode( $outcome['code'] ),
+			'remove' => $result->confirmsAbsence() && 'removed' === $outcome['code'],
+		};
+		$inlineSafe = match ( $operation ) {
+			'check', 'remove' => $successful || 'failed' === $state,
+			'reconfigure' => $successful || ( 'failed' === $state && 'absent' !== $delivery ),
+		};
+
+		return $this->finalizeOutcome( $outcome, $remediation, $successful, $inlineSafe );
 	}
 
-	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null} */
+	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
 	private function recordSetup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $state, string $code, string $observed, string $delivery ): array {
 		if ( 'failed' === $state ) {
 			return $this->outcome( $code );
@@ -185,7 +208,7 @@ final class WebhookOperationCoordinator {
 		return $this->writeResultCode( $this->records->saveIfCurrent( $next, $record ), $resultCode );
 	}
 
-	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null} */
+	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
 	private function recordReconfigure( InstallationRecord $record, AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $state, string $code, string $observed, string $delivery ): array {
 		if ( 'absent' === $delivery ) {
 			return $this->outcome( $this->writeResultCode( $this->records->saveIfCurrent( $record->withCheck( 'remote_missing', $observed ), $record ), 'remote_missing' ) );
@@ -256,17 +279,39 @@ final class WebhookOperationCoordinator {
 		};
 	}
 
-	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null} */
-	private function outcome( string $code, ?string $hookId = null, ?string $profileId = null ): array {
+	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
+	private function outcome( string $code, ?string $hookId = null, ?string $profileId = null, bool $successful = false, bool $inlineSafe = false ): array {
 		return array(
-			'code'     => $code,
-			'recovery' => null !== $hookId && null !== $profileId
+			'code'        => $code,
+			'recovery'    => null !== $hookId && null !== $profileId
 				? array(
 					'hook_id'    => $hookId,
 					'profile_id' => $profileId,
 				)
-				: null,
+					: null,
+			'remediation' => null,
+			'successful'  => $successful,
+			'inline_safe' => $inlineSafe,
 		);
+	}
+
+	/**
+	 * @param array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} $outcome
+	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
+	 */
+	private function finalizeOutcome( array $outcome, string $remediation, bool $successful, bool $inlineSafe ): array {
+		if ( ! $successful && $this->successfulCode( $outcome['code'] ) ) {
+			$outcome['code'] = 'operation_failed';
+		}
+		$outcome['remediation'] = $remediation;
+		$outcome['successful']  = $successful;
+		$outcome['inline_safe'] = $inlineSafe;
+
+		return $outcome;
+	}
+
+	private function successfulCode( string $code ): bool {
+		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
 	}
 
 	private function safeCode( mixed $code, string $fallback ): string {

@@ -39,7 +39,7 @@ use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\Booster\GitHub\GitHubProvider;
-use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -243,10 +243,11 @@ final class BoosterServiceProvider {
 			)
 		);
 		$container->bind(
-			GitHubWebhookManagement::class,
-			static fn ( CoreContainer $container ): GitHubWebhookManagement => new GitHubWebhookManagement(
+			RepositoryWebhookManagementControls::class,
+			static fn ( CoreContainer $container ): RepositoryWebhookManagementControls => new RepositoryWebhookManagementControls(
 				$container->make( WebhookAssistanceFacade::class ),
 				$container->make( AdminInteractionFacade::class ),
+				$container->make( ProviderRegistry::class ),
 				(string) $runtime->boosterPath,
 				(string) $runtime->boosterUrl
 			)

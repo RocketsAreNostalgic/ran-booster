@@ -20,7 +20,7 @@ use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
-use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
@@ -66,7 +66,7 @@ class Dashboard {
 
 	private ?AdminTabRegistry $adminTabs;
 	private ?AdminAddOnRegistry $adminAddOns;
-	private ?GitHubWebhookManagement $githubWebhookManagement;
+	private ?RepositoryWebhookManagementControls $webhookManagement;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
 	private PackageAdminController $packageAdmin;
@@ -105,28 +105,28 @@ class Dashboard {
 		?TemporaryDebugCapture $debugCapture = null,
 		?SecretsStorageProvisioner $secretsStorage = null,
 		?AdminAddOnRegistry $adminAddOns = null,
-		?GitHubWebhookManagement $githubWebhookManagement = null
+		?RepositoryWebhookManagementControls $webhookManagement = null
 	) {
-		$this->db                      = $db;
-		$this->plugins                 = $plugins;
-		$this->booster                 = $booster;
-		$this->themes                  = $themes;
-		$this->providerSettings        = $providerSettings;
-		$this->troubleshooting         = $troubleshooting;
-		$this->adminTabs               = $adminTabs;
-		$this->providerDocumentation   = $providerDocumentation;
-		$this->deploymentAdmin         = new DeploymentAdminPresenter(
+		$this->db                    = $db;
+		$this->plugins               = $plugins;
+		$this->booster               = $booster;
+		$this->themes                = $themes;
+		$this->providerSettings      = $providerSettings;
+		$this->troubleshooting       = $troubleshooting;
+		$this->adminTabs             = $adminTabs;
+		$this->providerDocumentation = $providerDocumentation;
+		$this->deploymentAdmin       = new DeploymentAdminPresenter(
 			attempts: $deploymentAttempts,
 			plugins: $plugins,
 			themes: $themes
 		);
-		$this->packageAdmin            = new PackageAdminController( $packageOperations, deployments: $this->deploymentAdmin );
-		$this->pluginPages             = PackagePagePresenter::plugin();
-		$this->themePages              = PackagePagePresenter::theme();
-		$this->debugCapture            = $debugCapture;
-		$this->secretsStorage          = $secretsStorage;
-		$this->adminAddOns             = $adminAddOns;
-		$this->githubWebhookManagement = $githubWebhookManagement;
+		$this->packageAdmin          = new PackageAdminController( $packageOperations, deployments: $this->deploymentAdmin );
+		$this->pluginPages           = PackagePagePresenter::plugin();
+		$this->themePages            = PackagePagePresenter::theme();
+		$this->debugCapture          = $debugCapture;
+		$this->secretsStorage        = $secretsStorage;
+		$this->adminAddOns           = $adminAddOns;
+		$this->webhookManagement     = $webhookManagement;
 	}
 
 	public function getIndex() {
@@ -205,9 +205,9 @@ class Dashboard {
 			$data['providerListState'] = $this->requestedProviderListState();
 
 			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
-			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->githubWebhookManagement ) );
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement ) );
 			$data                                    = array_merge( $data, $this->providerSettings->buildProfileListProjection( $data ) );
-			$data['githubWebhookManagement']         = $this->githubWebhookManagement;
+			$data['webhookManagement']               = $this->webhookManagement;
 			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
 			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
 			$data['repositoryTableRenderer']         = new RepositoryTableRenderer();

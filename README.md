@@ -158,10 +158,12 @@ work is in neither record.
   the callback URL, event, repository context and manual setup links. Successful credential
   validation records GitHub's token-expiration response header when GitHub
   supplies it.
-- **GitHub webhook management** — Core sets up, checks, reconfigures and removes
-  GitHub repository webhooks using a fine-grained token with Webhooks: Read and
-  write permission. An administrator can paste a request-only token or select
-  an eligible saved GitHub credential. Core resolves a saved token only inside
+- **Provider webhook management** — Core places the same setup, check,
+  reconfigure and remove controls for any registered provider implementing both
+  exact webhook fitness and management facets on one aggregate. The bundled
+  GitHub provider uses a fine-grained token with Webhooks: Read and write
+  permission. An administrator can paste a request-only credential or select
+  an eligible saved credential. Core resolves a saved credential only inside
   the fixed operation and never exposes the credential or signing secret to UI
   code. The GitHub repository table and selected-repository panel use the same
   provider-scoped, display-safe site and repository readiness result, including
@@ -172,8 +174,8 @@ work is in neither record.
   Core profile or creates an exact repository profile; explicit reconfiguration
   sends the current Core secret and callback settings to the identified remote hook.
   Replacing a secret remains a separate Core action. A saved local secret does
-  not prove that a remote hook exists, so the add-on labels remote state as
-  last observed. The add-on never enables Automatic deployment; manual webhook
+  not prove that a remote hook exists, so Core labels remote state as last
+  observed. Webhook management never enables Automatic deployment; manual webhook
   setup remains available without it. Each assisted operation rechecks the
   stable repository identity with the same saved or request-only credential and
   takes a target-keyed, non-persistent database lock before remote work.

@@ -38,29 +38,45 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			if ( str_contains( $source, 'RAN\Booster\GitHub\\' ) ) {
 				$relative     = str_replace( dirname( __DIR__, 2 ) . '/', '', $file->getPathname() );
 				$references[] = $relative;
-				if ( 'RAN/BoosterServiceProvider.php' === $relative ) {
-					self::assertStringContainsString( 'use RAN\Booster\GitHub\GitHubProvider;', $source );
-					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;', $source );
-				} elseif ( 'RAN/Uninstall/LocalDataRemover.php' === $relative ) {
-					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;', $source );
-					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\Installation\WordPressInstallationStore;', $source );
-				} else {
-					self::assertContains( $relative, array( 'RAN/Dashboard.php', 'RAN/Admin/ProviderRepositoryRowsNormalizer.php' ) );
-					self::assertStringContainsString( 'use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;', $source );
-				}
+				self::assertContains( $relative, array( 'RAN/BoosterServiceProvider.php', 'RAN/Uninstall/LocalDataRemover.php' ) );
+				self::assertStringContainsString( 'use RAN\Booster\GitHub\GitHubProvider;', $source );
 			}
 		}
 
 		sort( $references );
 		self::assertSame(
 			array(
-				'RAN/Admin/ProviderRepositoryRowsNormalizer.php',
 				'RAN/BoosterServiceProvider.php',
-				'RAN/Dashboard.php',
 				'RAN/Uninstall/LocalDataRemover.php',
 			),
 			$references
 		);
+	}
+
+	public function testNeutralAdminWebhookManagementHasNoGitHubBranchOrGenericDispatcherSurface(): void {
+		$root     = dirname( __DIR__, 2 );
+		$paths    = array(
+			$root . '/RAN/Dashboard.php',
+			$root . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php',
+		);
+		$iterator = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root . '/RAN/Admin/WebhookManagement' ) );
+		foreach ( $iterator as $file ) {
+			if ( $file->isFile() && 'php' === $file->getExtension() ) {
+				$paths[] = $file->getPathname();
+			}
+		}
+
+		foreach ( $paths as $path ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local architecture boundary under test.
+			$source = file_get_contents( $path );
+			self::assertIsString( $source );
+			self::assertStringNotContainsString( 'RAN\\Booster\\GitHub', $source, $path );
+			self::assertStringNotContainsString( 'GitHubProvider', $source, $path );
+			self::assertDoesNotMatchRegularExpression( "/(?:===|!==)\\s*['\"]gh['\"]|['\"]gh['\"]\\s*(?:===|!==)/", $source, $path );
+			self::assertStringNotContainsString( 'dispatchCapability', $source, $path );
+			self::assertStringNotContainsString( 'executeCapability', $source, $path );
+			self::assertStringNotContainsString( 'capabilityDescriptors', $source, $path );
+		}
 	}
 
 	public function testCoreTestsReferenceGitHubConcretesOnlyThroughExplicitHostIntegrationOwners(): void {

@@ -21,6 +21,12 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
@@ -86,6 +92,56 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				self::assertTrue( true );
 			}
 		}
+	}
+
+	public function testEligibilityUsesTheSelectedProvidersReleaseMetadataFacet(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			provider: 'vendor-fixture',
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore();
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			$this->createStub( SecretsFile::class ),
+			$store,
+			new RuntimeUpdaterLock()
+		);
+		$facade    = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry( 'vendor-fixture', 'https://vendor.example/' ),
+			metadataEligible: static fn (): bool => true
+		);
+
+		$status = $facade->status( 'plugin', 'example/example.php' );
+
+		self::assertTrue( $status->eligible() );
+		self::assertSame( 'https://vendor.example/owner/example', $status->eligibility()->expectedUpdateUri() );
+
+		$unsupported = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			new ProviderRegistry(),
+			metadataEligible: static fn (): bool => true
+		);
+		self::assertSame(
+			ReleaseTrackingEligibility::UNSUPPORTED_PROVIDER,
+			$unsupported->status( 'plugin', 'example/example.php' )->eligibility()->code()
+		);
 	}
 
 	public function testConfigurationRejectsTraversalAndInvalidChannel(): void {
@@ -650,6 +706,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			$lock,
+			$this->releaseMetadataRegistry(),
 			static fn ( string $type ): bool => 'plugin' === $type,
 			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && $expectedAction === $action,
 			metadataEligible: static fn (): bool => true,
@@ -750,6 +807,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				$lock
 			),
 			$lock,
+			$this->releaseMetadataRegistry(),
 			static function () use ( &$allowed ): bool {
 				return $allowed;
 			},
@@ -842,6 +900,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && $expectedAction === $action,
 			metadataEligible: static fn (): bool => true,
@@ -891,6 +950,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn (): bool => true,
 			metadataEligible: static fn (): bool => true,
@@ -954,6 +1014,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			$lock,
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn (): bool => true,
 			static function ( string $type ) use ( &$refreshes ): void {
@@ -1002,6 +1063,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn (): bool => true
 		);
@@ -1040,6 +1102,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			$lock,
+			$this->releaseMetadataRegistry(),
 			metadataEligible: static fn (): bool => true,
 			releasePreflight: static function () use ( &$preflightCalls ): \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight {
 				++$preflightCalls;
@@ -1134,6 +1197,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn (): bool => true,
 			null,
@@ -1184,6 +1248,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			$lock,
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn (): bool => true,
 			metadataEligible: static fn (): bool => true,
@@ -1241,6 +1306,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			$lock,
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn ( string $nonce, string $action ): bool =>
 				'valid' === $nonce && $expectedNonce === $action,
@@ -1338,6 +1404,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			$lock,
+			$this->releaseMetadataRegistry(),
 			static fn (): bool => true,
 			static fn (): bool => true,
 			metadataEligible: static fn (): bool => true,
@@ -1381,8 +1448,32 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				$store,
 				new RuntimeUpdaterLock()
 			),
-			new RuntimeUpdaterLock()
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry()
 		);
+	}
+
+	private function releaseMetadataRegistry( string $code = 'gh', string $baseUrl = 'https://github.com/' ): ProviderRegistry {
+		$provider = new class( $code, $baseUrl ) implements RepositoryProvider, RepositoryReleaseMetadata {
+			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+			public function __construct( private string $code, private string $baseUrl ) {
+			}
+
+			public function getMetadata(): ProviderMetadata {
+				return new ProviderMetadata( ProviderCode::parse( $this->code ), 'Release metadata fixture', $this->baseUrl, 'Owner' );
+			}
+
+			public function expectedUpdateUri( RepositoryReference $repository ): string {
+				return $this->baseUrl . $repository->locator;
+			}
+
+			public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+				return '' === $tag ? '' : $this->expectedUpdateUri( $repository ) . '/releases/tag/' . rawurlencode( $tag );
+			}
+		};
+
+		return new ProviderRegistry( array( $provider ) );
 	}
 
 	/**

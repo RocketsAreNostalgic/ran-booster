@@ -8,6 +8,10 @@ use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+use RAN\RepositoryProvider\UnsupportedProviderCapability;
+use RAN\RepositoryProvider\UnknownProvider;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use RAN\Storage\PluginRepository;
@@ -51,7 +55,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): bool|null         $canManage
 	 * @param callable(string, string): bool|null $verifyNonce
 	 * @param callable(string): void|null         $refreshNative
-	 * @param callable(string, string, string): bool|null $metadataEligible
+	 * @param callable(): bool|null $metadataEligible
 	 * @param callable(string): void|null         $invalidateNative
 	 * @param callable(string, Package, string, string, bool, string): ReleaseTrackingPreflight|null $releasePreflight
 	 * @param callable(string, string): bool|null $hasRegisteredTarget
@@ -62,6 +66,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		private ManagedReleaseStore $store,
 		private ManagedReleaseTargetRegistrar $registrar,
 		WordPressUpdaterLock $updaterLock,
+		private ProviderRegistry $providers,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
 		?callable $refreshNative = null,
@@ -171,7 +176,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		if ( PackageSource::RELEASE_ASSET === $package->getSource() && null !== $configuration ) {
 			$preflight = $this->projectCandidateValidation(
 				$packageRoot,
-				(string) $package->getRepository(),
+				$package,
 				$diagnostics
 			);
 			if ( '' === $latestVersion && null !== $preflight ) {
@@ -524,11 +529,20 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private function eligibility( string $type, string $identifier, Package $package ): ReleaseTrackingEligibility {
-		if ( 'gh' !== $package->getProviderCode() ) {
+		$providerCode = $package->getProviderCode();
+		if ( null === $providerCode ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::UNSUPPORTED_PROVIDER );
 		}
+		try {
+			$metadata = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );
+			$expected = $metadata->expectedUpdateUri( $package->getRepository()->reference );
+		} catch ( UnsupportedProviderCapability | UnknownProvider ) {
+			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::UNSUPPORTED_PROVIDER );
+		} catch ( Throwable ) {
+			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::INVALID_REPOSITORY );
+		}
 		$repository = (string) $package->getRepository();
-		if ( 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\z/D', $repository ) ) {
+		if ( '' === $expected ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::INVALID_REPOSITORY );
 		}
 		if ( 'theme' === $type ) {
@@ -544,15 +558,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$packageRoot = $parts[0];
 		}
 
-		$expected = 'https://github.com/' . $repository;
-		if ( $this->metadataEligibilityOverridden && ( $this->metadataEligible )( $type, $identifier, $repository ) ) {
+		if ( $this->metadataEligibilityOverridden && ( $this->metadataEligible )() ) {
 			return $this->eligibleOrSelfManagedTarget( $type, $identifier, $package, $expected, $packageRoot );
 		}
 		$updateUri = $this->updateUri( $type, $identifier );
 		if ( '' === $updateUri ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::MISSING_UPDATE_URI, $expected, $packageRoot );
 		}
-		if ( ! hash_equals( $expected, $updateUri ) || ! ( $this->metadataEligible )( $type, $identifier, $repository ) ) {
+		if ( ! hash_equals( $expected, $updateUri ) || ! ( $this->metadataEligible )() ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::MISMATCHED_UPDATE_URI, $expected, $packageRoot );
 		}
 
@@ -683,7 +696,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** @param array<string, mixed> $diagnostics */
 	private function projectCandidateValidation(
 		string $packageRoot,
-		string $repository,
+		Package $package,
 		array $diagnostics
 	): ?ReleaseTrackingPreflight {
 		$validation = $diagnostics['candidate_validation'] ?? null;
@@ -710,7 +723,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$code,
 				$packageRoot,
 				$validation['release_version'],
-				$this->releaseUrl( $repository, $validation['release_tag'] ),
+				$this->releaseUrl( $package, $validation['release_tag'] ),
 				$validation['release_tag'],
 				$validation['package_header_version'] ?? '',
 				is_string( $diagnostics['version_relationship'] ?? null )
@@ -723,12 +736,17 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 	}
 
-	private function releaseUrl( string $repository, string $tag ): string {
-		if ( 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\z/D', $repository )
-			|| '' === $tag || strlen( $tag ) > 100 ) {
+	private function releaseUrl( Package $package, string $tag ): string {
+		$providerCode = $package->getProviderCode();
+		if ( null === $providerCode ) {
 			return '';
 		}
+		try {
+			$metadata = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );
 
-		return 'https://github.com/' . $repository . '/releases/tag/' . rawurlencode( $tag );
+			return $metadata->releaseDetailsUrl( $package->getRepository()->reference, $tag );
+		} catch ( Throwable ) {
+			return '';
+		}
 	}
 }

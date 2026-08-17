@@ -50,8 +50,8 @@ committed_entries=(
 	'views'
 )
 package_root='vendor/ran/wp-github-release-updater'
-updater_version='v2.0.0-beta.5'
-updater_commit='933eebd7cd00a9529477030e617bbdd893aab131'
+updater_version='v2.0.0-beta.6'
+updater_commit='1e64357a2954e4512bfdb11d3ad9cf4515d3c1a0'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"

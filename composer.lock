@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "af6ac94d97c45aab326cb7d27e7fa097",
+    "content-hash": "eeaaab0f2352a9c22f661bc4a1c05eb9",
     "packages": [
         {
             "name": "ran/wp-github-release-updater",
-            "version": "v2.0.0-beta.5",
+            "version": "v2.0.0-beta.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater.git",
-                "reference": "933eebd7cd00a9529477030e617bbdd893aab131"
+                "reference": "1e64357a2954e4512bfdb11d3ad9cf4515d3c1a0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-github-release-updater/zipball/933eebd7cd00a9529477030e617bbdd893aab131",
-                "reference": "933eebd7cd00a9529477030e617bbdd893aab131",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-github-release-updater/zipball/1e64357a2954e4512bfdb11d3ad9cf4515d3c1a0",
+                "reference": "1e64357a2954e4512bfdb11d3ad9cf4515d3c1a0",
                 "shasum": ""
             },
             "require": {
@@ -72,10 +72,10 @@
             ],
             "description": "GitHub Release update integration for WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/tree/v2.0.0-beta.5",
+                "source": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/tree/v2.0.0-beta.6",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/issues"
             },
-            "time": "2026-08-11T13:17:14+00:00"
+            "time": "2026-08-17T10:16:11+00:00"
         }
     ],
     "packages-dev": [

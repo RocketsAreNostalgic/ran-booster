@@ -13,6 +13,9 @@ use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\Plugin;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use RAN\Storage\PluginRepository;
@@ -51,6 +54,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
 		private WordPressUpdaterLock $updaterLock,
+		private ProviderRegistry $providers,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
 		?callable $currentUserId = null
@@ -77,9 +81,21 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	public function supportedProviderCodes( string $type ): array {
-		return in_array( $type, array( 'plugin', 'theme' ), true )
-			? array( 'gh' )
-			: array();
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
+			return array();
+		}
+
+		$supported = array();
+		foreach ( $this->providers->orderedMetadata() as $metadata ) {
+			try {
+				$this->providers->requireCapability( $metadata->code, RepositoryReleaseCandidateListing::class );
+				$supported[] = $metadata->code->value;
+			} catch ( Throwable ) {
+				continue;
+			}
+		}
+
+		return $supported;
 	}
 
 	public function listCandidates(
@@ -96,19 +112,44 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			|| ! $this->authorized( 'list_candidates', $type, $nonce ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		if ( ! $this->supportsRequestedProvider( $type, $repositoryRequest ) ) {
+		$listing = $this->releaseCandidateListing( $repositoryRequest );
+		if ( null === $listing ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 
 		try {
 			$repository = $this->resolveRepository( $repositoryRequest );
-			$result     = $this->preflight->listProspective(
+			$result     = $listing->listReleaseCandidates(
 				$type,
-				$repository,
+				$this->repositoryReference( $repository ),
 				$channel
 			);
+			if ( array() === $result->candidates ) {
+				return ProspectiveReleaseResult::failure( 'no_releases' );
+			}
 
-			return $this->preflightResult( $result, 'release_candidates_available' );
+			$candidates = array();
+			foreach ( $result->candidates as $candidate ) {
+				if ( 1 !== preg_match( '/\A[1-9][0-9]{0,18}\z/D', $candidate->providerReleaseId ) ) {
+					throw new InvalidArgumentException( 'The release candidate identity is incompatible.' );
+				}
+				$candidates[] = array(
+					'release_id'           => (int) $candidate->providerReleaseId,
+					'tag'                  => $candidate->tag,
+					'version'              => $candidate->version,
+					'prerelease'           => $candidate->prerelease,
+					'published_at'         => $candidate->publishedAt,
+					'expected_asset_names' => $candidate->expectedAssetNames,
+				);
+			}
+
+			return ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'candidates' => $candidates,
+					'channel'    => $channel,
+				)
+			);
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
@@ -487,10 +528,37 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	/** @param array<string, mixed> $repositoryRequest */
 	private function supportsRequestedProvider( string $type, array $repositoryRequest ): bool {
-		$provider = $repositoryRequest['provider'] ?? null;
+		return in_array( $type, array( 'plugin', 'theme' ), true )
+			&& null !== $this->releaseCandidateListing( $repositoryRequest );
+	}
 
-		return is_string( $provider )
-			&& in_array( $provider, $this->supportedProviderCodes( $type ), true );
+	/** @param array<string, mixed> $repositoryRequest */
+	private function releaseCandidateListing( array $repositoryRequest ): ?RepositoryReleaseCandidateListing {
+		$provider = $repositoryRequest['provider'] ?? null;
+		if ( ! is_string( $provider ) ) {
+			return null;
+		}
+
+		try {
+			$capability = $this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
+		} catch ( Throwable ) {
+			return null;
+		}
+
+		return $capability instanceof RepositoryReleaseCandidateListing ? $capability : null;
+	}
+
+	/** @param array<string, mixed> $repository */
+	private function repositoryReference( array $repository ): RepositoryReference {
+		$repositoryId = $repository['provider_repository_id'] ?? null;
+		$credentialId = $repository['credential_id'] ?? null;
+
+		return new RepositoryReference(
+			(string) ( $repository['repository'] ?? '' ),
+			is_string( $repositoryId ) && '' !== $repositoryId ? $repositoryId : null,
+			'1' === ( $repository['private'] ?? null ),
+			is_string( $credentialId ) && '' !== $credentialId ? $credentialId : null
+		);
 	}
 
 	private function validExactRelease( int $releaseId, string $tag ): bool {

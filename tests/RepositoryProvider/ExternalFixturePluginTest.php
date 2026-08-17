@@ -27,6 +27,7 @@ use RAN\RepositoryProvider\ProviderRegistry;
 	use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 	use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryReference;
+	use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 	use RAN\RepositoryProvider\RepositoryWebhookFitness;
 	use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 	use RAN\RepositoryProvider\RepositoryWebhookManagement;
@@ -253,7 +254,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertStringNotContainsString( 'fixture_not-a-real-secret', json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
 			self::assertStringNotContainsString( str_repeat( 's', 32 ), json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
 
-			foreach ( array( RepositoryBrowser::class, CredentialedPublicRepositoryBrowser::class, WebhookNormalizer::class ) as $capability ) {
+			foreach ( array( RepositoryBrowser::class, CredentialedPublicRepositoryBrowser::class, RepositoryReleaseCandidateListing::class, WebhookNormalizer::class ) as $capability ) {
 				try {
 					$registry->requireCapability( 'fixture-provider', $capability );
 					self::fail( 'The fixture must not expose unsupported optional capabilities.' );

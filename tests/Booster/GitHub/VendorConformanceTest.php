@@ -24,6 +24,7 @@ use RAN\RepositoryProvider\ProviderWebhookProfileReader;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
@@ -151,6 +152,7 @@ final class VendorConformanceTest extends TestCase {
 				RepositoryWebhookSettingsLink::class,
 				RepositoryWebhookFitness::class,
 				RepositoryWebhookManagement::class,
+				RepositoryReleaseCandidateListing::class,
 				RepositoryReleaseMetadata::class,
 			) as $capability
 		) {

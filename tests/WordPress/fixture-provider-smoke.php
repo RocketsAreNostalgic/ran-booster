@@ -114,7 +114,7 @@ if ( in_array( $troubleshooting['partial_reason'] ?? null, array( 'provider_resu
 	throw new RuntimeException( 'The external fixture troubleshooting integration is invalid.' );
 }
 
-foreach ( array( RAN\RepositoryProvider\RepositoryBrowser::class, RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser::class, RAN\RepositoryProvider\WebhookNormalizer::class ) as $capability ) {
+foreach ( array( RAN\RepositoryProvider\RepositoryBrowser::class, RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser::class, RAN\RepositoryProvider\RepositoryReleaseCandidateListing::class, RAN\RepositoryProvider\WebhookNormalizer::class ) as $capability ) {
 	try {
 		$registry->requireCapability( 'fixture-provider', $capability );
 		throw new RuntimeException( 'The external fixture exposed an unsupported capability.' );

@@ -33,6 +33,9 @@ use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseCandidate;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
@@ -45,9 +48,12 @@ use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata {
+final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
+
+	private const RELEASE_PREFLIGHT_CLASS       = 'RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\ReleaseCandidatePreflight';
+	private const RELEASE_PREFLIGHT_API_VERSION = 4;
 
 	private ProviderMetadata $metadata;
 
@@ -284,6 +290,86 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 		return $updateUri . '/releases/tag/' . rawurlencode( $tag );
 	}
 
+	public function listReleaseCandidates(
+		string $packageType,
+		RepositoryReference $repository,
+		string $channel
+	): RepositoryReleaseCandidateList {
+		$preflightClass = self::RELEASE_PREFLIGHT_CLASS;
+		$repositoryId   = $repository->providerRepositoryId;
+		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true )
+			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
+			|| null === $repositoryId
+			|| 1 !== preg_match( '/\A[1-9][0-9]{0,18}\z/D', $repositoryId )
+			|| ! class_exists( $preflightClass )
+			|| ! defined( $preflightClass . '::PROSPECTIVE_API_VERSION' )
+			|| self::RELEASE_PREFLIGHT_API_VERSION !== constant( $preflightClass . '::PROSPECTIVE_API_VERSION' )
+			|| ! method_exists( $preflightClass, 'fromProspectiveTarget' ) ) {
+			throw new RuntimeException( 'GitHub release candidate listing is unavailable.', 503 );
+		}
+
+		$preflight = $preflightClass::fromProspectiveTarget(
+			array(
+				'repository'           => $repository->locator,
+				'providerRepositoryId' => $repositoryId,
+				'channel'              => $channel,
+				'accessToken'          => $this->releaseAccessToken( $repository ),
+				'packageType'          => $packageType,
+			)
+		);
+		if ( $preflight instanceof \WP_Error || ! is_callable( array( $preflight, 'listCandidates' ) ) ) {
+			throw new RuntimeException( 'GitHub release candidate listing is unavailable.', 503 );
+		}
+		$releases = $preflight->listCandidates();
+		if ( $releases instanceof \WP_Error ) {
+			if ( 'github_updater_no_eligible_release' === $releases->get_error_code() ) {
+				return new RepositoryReleaseCandidateList( array() );
+			}
+
+			throw new RuntimeException( 'GitHub could not list release candidates.', 502 );
+		}
+		if ( ! is_array( $releases ) || ! array_is_list( $releases ) || count( $releases ) > 8 ) {
+			throw new RuntimeException( 'GitHub returned invalid release candidates.', 502 );
+		}
+
+		$candidates = array();
+		foreach ( $releases as $release ) {
+			if ( ! is_object( $release )
+				|| ! is_callable( array( $release, 'releaseId' ) )
+				|| ! is_callable( array( $release, 'tag' ) )
+				|| ! is_callable( array( $release, 'version' ) )
+				|| ! is_callable( array( $release, 'isPrerelease' ) )
+				|| ! is_callable( array( $release, 'publishedAt' ) )
+				|| ! is_callable( array( $release, 'expectedAssetNames' ) ) ) {
+				throw new RuntimeException( 'GitHub returned invalid release candidates.', 502 );
+			}
+			$releaseId          = $release->releaseId();
+			$tag                = $release->tag();
+			$version            = $release->version();
+			$prerelease         = $release->isPrerelease();
+			$publishedAt        = $release->publishedAt();
+			$expectedAssetNames = $release->expectedAssetNames();
+			if ( ! is_int( $releaseId )
+				|| ! is_string( $tag )
+				|| ! is_string( $version )
+				|| ! is_bool( $prerelease )
+				|| ! is_string( $publishedAt )
+				|| ! is_array( $expectedAssetNames ) ) {
+				throw new RuntimeException( 'GitHub returned invalid release candidates.', 502 );
+			}
+			$candidates[] = new RepositoryReleaseCandidate(
+				(string) $releaseId,
+				$tag,
+				$version,
+				$prerelease,
+				$publishedAt,
+				$expectedAssetNames
+			);
+		}
+
+		return new RepositoryReleaseCandidateList( $candidates );
+	}
+
 	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		return $this->webhookClient->assessSetup( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
 	}
@@ -398,6 +484,22 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 			$arguments['headers']['Authorization'] = $authorization;
 
 			return $arguments;
+		};
+	}
+
+	private function releaseAccessToken( RepositoryReference $repository ): ?Closure {
+		if ( ! $repository->private && null === $repository->credentialId ) {
+			return null;
+		}
+
+		return function () use ( $repository ): string {
+			$credential = $this->credentials->credentialMaterial( $repository->credentialId );
+			$token      = is_array( $credential ) ? $credential['secret'] ?? null : null;
+			if ( ! is_string( $token ) || '' === trim( $token ) ) {
+				throw new RuntimeException( 'The selected GitHub credential is unavailable.', 400 );
+			}
+
+			return trim( $token );
 		};
 	}
 }

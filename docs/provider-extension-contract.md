@@ -304,6 +304,16 @@ URL. Implementing it performs no discovery or download and does not, by itself,
 enable release deployments. Core keeps release tracking unavailable when the
 facet is absent or returns no canonical Update URI.
 
+`RepositoryReleaseCandidateListing` is the independent, read-only remote facet
+for listing at most eight published releases for one resolved repository,
+package type and exact `stable` or `prerelease` channel. It returns only typed,
+bounded candidate values; an empty list means that no eligible release exists,
+while an exception means listing was unavailable. The provider owns its remote
+calls, credential use and response normalization. The facet downloads no
+archive and grants no inspection, acquisition, installation or mutation
+authority, so it does not by itself make the complete release product
+available.
+
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
 settings screen. Core treats locators as opaque, validates the returned URL, and
@@ -417,14 +427,14 @@ Webhook signing-secret scope codes are universally `owner` or `repository`.
 Providers may relabel `owner` for their interface—for example **GitHub Owner**
 or **Bitbucket Workspace**—but may not introduce additional logical scopes.
 
-Published-release candidate discovery is not yet a Provider API capability. It is
-owned by Core's separately versioned prospective-release facade and the selected
-shared updater runtime. `supportedProviderCodes()` exposes the current bounded,
-request-local provider allowlist for plugins or themes without resolving a
+Core's separately versioned prospective-release facade resolves
+`RepositoryReleaseCandidateListing` before repository resolution and maps its
+typed values to the current add-on response. `supportedProviderCodes()` exposes
+only registered providers implementing that exact facet, without resolving a
 repository, reading credentials or making a remote request. Registering a
 provider does not imply published-release support. Core rejects a prospective
 operation with `unsupported_provider` before repository resolution when the
-selected provider is not in that list.
+selected provider omits the facet.
 
 The physically separate conformance plugin in
 `tests/fixtures/ran-booster-fixture-provider/` registers a novel provider ID,

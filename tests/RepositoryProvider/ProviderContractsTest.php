@@ -15,12 +15,86 @@ use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseCandidate;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 
 final class ProviderContractsTest extends TestCase {
+	public function testReleaseCandidateListingIsOneExactTypedCapability(): void {
+		self::assertTrue( is_subclass_of( RepositoryReleaseCandidateListing::class, \RAN\Provider\ProviderCapability::class ) );
+
+		$methods = get_class_methods( RepositoryReleaseCandidateListing::class );
+		self::assertSame( array( 'listReleaseCandidates' ), $methods );
+
+		$method = new \ReflectionMethod( RepositoryReleaseCandidateListing::class, 'listReleaseCandidates' );
+		self::assertSame( RepositoryReleaseCandidateList::class, (string) $method->getReturnType() );
+		self::assertSame(
+			array( 'packageType', 'repository', 'channel' ),
+			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $method->getParameters() )
+		);
+		self::assertSame( RepositoryReference::class, (string) $method->getParameters()[1]->getType() );
+	}
+
+	public function testReleaseCandidateValuesAreBoundedAndTyped(): void {
+		$candidate = new RepositoryReleaseCandidate(
+			'42',
+			'v1.2.3',
+			'1.2.3',
+			false,
+			'2026-08-17T12:00:00Z',
+			array( 'example-1.2.3.zip' )
+		);
+		$list      = new RepositoryReleaseCandidateList( array( $candidate ) );
+
+		self::assertSame( array( $candidate ), $list->candidates );
+		self::assertSame( '42', $candidate->providerReleaseId );
+		self::assertSame( array( 'example-1.2.3.zip' ), $candidate->expectedAssetNames );
+	}
+
+	public function testReleaseCandidateListRejectsUnboundedLists(): void {
+		$candidate = new RepositoryReleaseCandidate(
+			'42',
+			'v1.2.3',
+			'1.2.3',
+			false,
+			'2026-08-17T12:00:00Z',
+			array( 'example-1.2.3.zip' )
+		);
+
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseCandidateList( array_fill( 0, 9, $candidate ) );
+	}
+
+	public function testReleaseCandidateListRejectsDuplicateIdentities(): void {
+		$candidate = new RepositoryReleaseCandidate(
+			'42',
+			'v1.2.3',
+			'1.2.3',
+			false,
+			'2026-08-17T12:00:00Z',
+			array( 'example-1.2.3.zip' )
+		);
+
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseCandidateList( array( $candidate, $candidate ) );
+	}
+
+	public function testReleaseCandidateRejectsUnboundedProviderValues(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseCandidate(
+			'42',
+			"invalid\ntag",
+			'1.2.3',
+			false,
+			'2026-08-17T12:00:00Z',
+			array( 'example-1.2.3.zip' )
+		);
+	}
+
 	public function testReleaseMetadataIsAnExactOptionalCapability(): void {
 		self::assertTrue( is_subclass_of( RepositoryReleaseMetadata::class, \RAN\Provider\ProviderCapability::class ) );
 

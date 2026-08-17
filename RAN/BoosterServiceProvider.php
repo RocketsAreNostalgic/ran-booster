@@ -412,7 +412,8 @@ final class BoosterServiceProvider {
 			$container->make( CorePackageExecutor::class ),
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
-			$container->make( WordPressUpdaterLock::class )
+			$container->make( WordPressUpdaterLock::class ),
+			$container->make( ProviderRegistry::class )
 		);
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
 		$container->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );

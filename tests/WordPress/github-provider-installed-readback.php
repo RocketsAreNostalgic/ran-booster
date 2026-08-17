@@ -54,6 +54,7 @@ foreach (
 		RAN\RepositoryProvider\RepositoryWebhookFitness::class,
 		RAN\RepositoryProvider\RepositoryWebhookManagement::class,
 		RAN\RepositoryProvider\RepositoryReleaseCandidateListing::class,
+		RAN\RepositoryProvider\RepositoryReleaseInspector::class,
 		RAN\RepositoryProvider\RepositoryReleaseMetadata::class,
 	) as $capability
 ) {

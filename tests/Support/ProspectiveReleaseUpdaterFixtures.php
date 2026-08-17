@@ -214,7 +214,10 @@ final readonly class ProspectiveCandidateFixture {
 
 final readonly class ProspectiveInspectionFixture {
 
-	public function __construct( private string $version = '1.2.3' ) {
+	public function __construct(
+		private string $version = '1.2.3',
+		private string $packageType = 'plugin'
+	) {
 	}
 
 	public function releaseId(): int {
@@ -235,6 +238,10 @@ final readonly class ProspectiveInspectionFixture {
 
 	public function detailsUrl(): string {
 		return 'https://github.com/owner/example/releases/tag/v1.2.3';
+	}
+
+	public function packageType(): string {
+		return $this->packageType;
 	}
 
 	public function packageRoot(): string {

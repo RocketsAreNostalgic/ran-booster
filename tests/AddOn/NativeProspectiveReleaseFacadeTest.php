@@ -34,6 +34,10 @@ namespace Tests\AddOn;
 	use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 	use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 	use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+	use RAN\RepositoryProvider\RepositoryReleaseInspection;
+	use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
+	use RAN\RepositoryProvider\RepositoryReleaseInspector;
+	use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 	use RAN\Secrets\SecretsFile;
 	use RAN\Storage\PackageMutationResult;
 	use RAN\Storage\PackageStorageOperation;
@@ -52,6 +56,7 @@ namespace Tests\AddOn;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveInspectionFixture;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseCandidatePreflight;
 	use RuntimeException;
+	use Throwable;
 
 	// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused collaborators stay with the facade contract tests.
 
@@ -64,7 +69,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	protected function setUp(): void {
 		ReleaseCandidatePreflight::reset();
-		ProspectiveRepositoryProvider::$resolveCalls = 0;
+		ProspectiveRepositoryProvider::$resolveCalls    = 0;
+		ProspectiveRepositoryProvider::$inspectionCalls = 0;
+		ProspectiveRepositoryProvider::$metadataCalls   = 0;
+		ProspectiveRepositoryProvider::$inspectionInput = array();
 
 		$GLOBALS['ran_booster_prospective_options']              = array();
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
@@ -175,7 +183,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				array( 'example-1.2.3.zip' )
 			),
 		);
-		$provider                              = new ProspectiveRepositoryProvider( 'forge' );
+		$provider                              = new ProspectiveListingOnlyProvider( 'forge' );
 		$plugins                               = new ProspectivePluginRepository();
 		$executor                              = new ProspectiveExecutor();
 		$facade                                = $this->facade( $plugins, $executor, provider: $provider );
@@ -552,9 +560,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function testInspectReturnsTheFingerprintRequiredForInstallContinuity(): void {
-		ReleaseCandidatePreflight::$inspection = new ProspectiveInspectionFixture();
-		$plugins                               = new ProspectivePluginRepository();
-		$facade                                = $this->facade( $plugins, new ProspectiveExecutor() );
+		$plugins = new ProspectivePluginRepository();
+		$facade  = $this->facade( $plugins, new ProspectiveExecutor() );
 
 		$result = $facade->inspect(
 			'plugin',
@@ -566,8 +573,166 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		);
 
 		self::assertTrue( $result->successful() );
-		self::assertSame( self::FINGERPRINT, $result->data()['fingerprint'] );
-		self::assertSame( 'stable', $result->data()['channel'] );
+		self::assertSame( 'release_ready', $result->code() );
+		self::assertSame(
+			array(
+				'release_id'   => 42,
+				'tag'          => 'v1.2.3',
+				'version'      => '1.2.3',
+				'commit'       => str_repeat( 'a', 40 ),
+				'details_url'  => 'https://github.com/owner/example/releases/tag/v1.2.3',
+				'package_root' => 'example',
+				'main_file'    => 'example.php',
+				'fingerprint'  => self::FINGERPRINT,
+				'channel'      => 'stable',
+			),
+			$result->data()
+		);
+		self::assertSame( 1, ProspectiveRepositoryProvider::$inspectionCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$metadataCalls );
+		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$inspectionInput['package_type'] ?? null );
+		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$inspectionInput['repository']?->locator );
+		self::assertSame( '123456789', ProspectiveRepositoryProvider::$inspectionInput['repository']?->providerRepositoryId );
+		self::assertSame( '42', ProspectiveRepositoryProvider::$inspectionInput['release_id'] ?? null );
+		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$inspectionInput['tag'] ?? null );
+		self::assertSame( 'stable', ProspectiveRepositoryProvider::$inspectionInput['channel'] ?? null );
+		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
+	}
+
+	public function testInspectRequiresBothProviderFacetsBeforeRepositoryResolution(): void {
+		$metadataOnly  = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseMetadata {
+			public int $metadataCalls = 0;
+
+			public function expectedUpdateUri( RepositoryReference $repository ): string {
+				unset( $repository );
+				++$this->metadataCalls;
+
+				return 'https://example.com/owner/example';
+			}
+
+			public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+				unset( $repository, $tag );
+				++$this->metadataCalls;
+
+				return 'https://example.com/owner/example/releases/tag/v1.2.3';
+			}
+		};
+		$inspectorOnly = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseInspector {
+			public int $inspectionCalls = 0;
+
+			public function inspectRelease(
+				string $packageType,
+				RepositoryReference $repository,
+				string $providerReleaseId,
+				string $tag,
+				string $channel
+			): RepositoryReleaseInspection {
+				unset( $packageType, $repository, $providerReleaseId, $tag, $channel );
+				++$this->inspectionCalls;
+
+				return ProspectiveRepositoryProvider::defaultInspection();
+			}
+		};
+
+		foreach ( array( $metadataOnly, $inspectorOnly ) as $provider ) {
+			$facade = $this->facade(
+				new ProspectivePluginRepository(),
+				new ProspectiveExecutor(),
+				provider: $provider
+			);
+			$result = $facade->inspect(
+				'plugin',
+				$this->repositoryRequest(),
+				42,
+				'v1.2.3',
+				'stable',
+				'valid-nonce'
+			);
+
+			self::assertFalse( $result->successful() );
+			self::assertSame( 'unsupported_provider', $result->code() );
+			self::assertSame( 0, $provider->resolveCalls );
+		}
+		self::assertSame( 0, $metadataOnly->metadataCalls );
+		self::assertSame( 0, $inspectorOnly->inspectionCalls );
+		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
+		self::assertSame( array(), ReleaseCandidatePreflight::$target );
+	}
+
+	public function testInspectMapsOnlyClosedProviderRejections(): void {
+		$cases = array(
+			'no_releases'     => RepositoryReleaseInspectionRejected::noReleases(),
+			'release_invalid' => RepositoryReleaseInspectionRejected::invalidRelease(),
+			'unable_to_check' => new RuntimeException( 'provider-secret-message' ),
+		);
+
+		foreach ( $cases as $expectedCode => $failure ) {
+			$provider = new ProspectiveRepositoryProvider( inspection: $failure );
+			$facade   = $this->facade(
+				new ProspectivePluginRepository(),
+				new ProspectiveExecutor(),
+				provider: $provider
+			);
+			$result   = $facade->inspect(
+				'plugin',
+				$this->repositoryRequest(),
+				42,
+				'v1.2.3',
+				'stable',
+				'valid-nonce'
+			);
+
+			self::assertFalse( $result->successful() );
+			self::assertSame( $expectedCode, $result->code() );
+			self::assertSame( array(), $result->data() );
+		}
+		self::assertSame( 0, ProspectiveRepositoryProvider::$metadataCalls );
+		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
+	}
+
+	public function testInspectRejectsProviderIdentityDriftBeforeMetadataProjection(): void {
+		$cases = array(
+			new RepositoryReleaseInspection(
+				'43',
+				'v1.2.3',
+				'1.2.3',
+				str_repeat( 'a', 40 ),
+				'example',
+				'example.php',
+				self::FINGERPRINT
+			),
+			new RepositoryReleaseInspection(
+				'42',
+				'v1.2.4',
+				'1.2.4',
+				str_repeat( 'b', 40 ),
+				'example',
+				'example.php',
+				self::FINGERPRINT
+			),
+		);
+
+		foreach ( $cases as $inspection ) {
+			$provider = new ProspectiveRepositoryProvider( inspection: $inspection );
+			$facade   = $this->facade(
+				new ProspectivePluginRepository(),
+				new ProspectiveExecutor(),
+				provider: $provider
+			);
+			$result   = $facade->inspect(
+				'plugin',
+				$this->repositoryRequest(),
+				42,
+				'v1.2.3',
+				'stable',
+				'valid-nonce'
+			);
+
+			self::assertFalse( $result->successful() );
+			self::assertSame( 'release_invalid', $result->code() );
+		}
+		self::assertSame( 0, ProspectiveRepositoryProvider::$metadataCalls );
+		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
 	}
 
 	public function testFingerprintMismatchCannotReachCore(): void {
@@ -1033,13 +1198,19 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 }
 
-final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing {
+final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseMetadata {
 
-	public static int $resolveCalls = 0;
+	public static int $resolveCalls    = 0;
+	public static int $inspectionCalls = 0;
+	public static int $metadataCalls   = 0;
+
+	/** @var array{package_type?: string, repository?: RepositoryReference, release_id?: string, tag?: string, channel?: string} */
+	public static array $inspectionInput = array();
 
 	public function __construct(
 		private readonly string $code = 'gh',
-		private readonly ?RepositoryReleaseCandidateList $candidateList = null
+		private readonly ?RepositoryReleaseCandidateList $candidateList = null,
+		private readonly RepositoryReleaseInspection|Throwable|null $inspection = null
 	) {
 	}
 
@@ -1121,6 +1292,131 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		}
 
 		return new RepositoryReleaseCandidateList( $candidates );
+	}
+
+	public function inspectRelease(
+		string $packageType,
+		RepositoryReference $repository,
+		string $providerReleaseId,
+		string $tag,
+		string $channel
+	): RepositoryReleaseInspection {
+		++self::$inspectionCalls;
+		self::$inspectionInput = array(
+			'package_type' => $packageType,
+			'repository'   => $repository,
+			'release_id'   => $providerReleaseId,
+			'tag'          => $tag,
+			'channel'      => $channel,
+		);
+		if ( $this->inspection instanceof Throwable ) {
+			throw $this->inspection;
+		}
+
+		return $this->inspection ?? self::defaultInspection();
+	}
+
+	public function expectedUpdateUri( RepositoryReference $repository ): string {
+		++self::$metadataCalls;
+
+		return ( 'gh' === $this->code ? 'https://github.com/' : 'https://example.com/' ) . $repository->locator;
+	}
+
+	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+		++self::$metadataCalls;
+
+		return $this->expectedUpdateUriWithoutTracking( $repository ) . '/releases/tag/' . rawurlencode( $tag );
+	}
+
+	public static function defaultInspection(): RepositoryReleaseInspection {
+		return new RepositoryReleaseInspection(
+			'42',
+			'v1.2.3',
+			'1.2.3',
+			str_repeat( 'a', 40 ),
+			'example',
+			'example.php',
+			'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+		);
+	}
+
+	private function expectedUpdateUriWithoutTracking( RepositoryReference $repository ): string {
+		return ( 'gh' === $this->code ? 'https://github.com/' : 'https://example.com/' ) . $repository->locator;
+	}
+}
+
+final class ProspectiveListingOnlyProvider implements RepositoryProvider, RepositoryReleaseCandidateListing {
+	private ProspectiveRepositoryProvider $provider;
+
+	public function __construct( string $code ) {
+		$this->provider = new ProspectiveRepositoryProvider( $code );
+	}
+
+	public function getMetadata(): ProviderMetadata {
+		return $this->provider->getMetadata();
+	}
+
+	public function getProviderDiagnostics(): ProviderDiagnostics {
+		return $this->provider->getProviderDiagnostics();
+	}
+
+	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		return $this->provider->resolveRepository( $request );
+	}
+
+	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		return $this->provider->prepareArchive( $request );
+	}
+
+	public function listReleaseCandidates(
+		string $packageType,
+		RepositoryReference $repository,
+		string $channel
+	): RepositoryReleaseCandidateList {
+		return $this->provider->listReleaseCandidates( $packageType, $repository, $channel );
+	}
+}
+
+abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
+	public int $resolveCalls = 0;
+
+	public function getMetadata(): ProviderMetadata {
+		return new ProviderMetadata(
+			ProviderCode::parse( 'gh' ),
+			'Partial release provider',
+			'https://example.com/',
+			'Owner'
+		);
+	}
+
+	public function getProviderDiagnostics(): ProviderDiagnostics {
+		return new class() implements ProviderDiagnostics {
+			public function diagnose( ProviderDiagnosticRequest $request ): array {
+				unset( $request );
+
+				return array();
+			}
+		};
+	}
+
+	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		++$this->resolveCalls;
+
+		return new RepositoryDescriptor(
+			ProviderCode::parse( 'gh' ),
+			$request->locator,
+			'example',
+			'123456789',
+			false,
+			'main',
+			null
+		);
+	}
+
+	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		unset( $request );
+
+		throw new RuntimeException( 'Branch archive preparation is outside this test.' );
 	}
 }
 

@@ -46,11 +46,13 @@
             "@test:characterization",
             "@test:github-module",
             "@test:unit",
-            "@test:github-release-updater-bootstrap"
+            "@test:github-release-updater-bootstrap",
+            "@test:release-candidate-contract"
         ],
         "lint:php": "phpcs --standard=.phpcs.xml --report=summary",
         "lint:php:fix": "phpcbf --standard=.phpcs.xml --report=summary",
         "test:release-uploader": "bash tests/upload-release-assets.sh",
+        "test:release-candidate-contract": "bash tests/release-candidate-contract.sh",
         "build:release": "bash scripts/build-release.sh",
         "verify:release": "bash scripts/verify-release.sh",
         "check": [

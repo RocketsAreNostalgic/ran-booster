@@ -51,12 +51,33 @@ jobs:
 
                   if git diff --quiet "${RAN_QUALITY_COMMIT}^1" "$RAN_QUALITY_COMMIT" -- .release-please-manifest.json; then
                       echo 'release-required=false' >> "$GITHUB_OUTPUT"
+                      current_main="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+                      if [[ "$current_main" == "$RAN_QUALITY_COMMIT" ]]; then
+                          echo 'release-please-required=true' >> "$GITHUB_OUTPUT"
+                      else
+                          echo 'release-please-required=false' >> "$GITHUB_OUTPUT"
+                          echo 'A newer main commit already has its own Quality lifecycle; skipping stale Release Please reconciliation.'
+                      fi
                       exit 0
                   fi
 
+                  test "$(git rev-list --parents -n 1 "$RAN_QUALITY_COMMIT" | awk '{ print NF }')" -eq 3
+                  base_commit="$(git rev-parse "${RAN_QUALITY_COMMIT}^1")"
                   release_commit="$(git rev-parse "${RAN_QUALITY_COMMIT}^2")"
+                  test "$(git rev-parse "${release_commit}^")" = "$base_commit"
                   test "$(git log -1 --format=%H "$RAN_QUALITY_COMMIT" -- .release-please-manifest.json)" = "$release_commit"
                   test "$(git rev-parse "${RAN_QUALITY_COMMIT}^{tree}")" = "$(git rev-parse "${release_commit}^{tree}")"
+                  release_tree="$(git rev-parse "${release_commit}^{tree}")"
+
+                  expected_paths="$({
+                      printf 'M\t%s\n' '.release-please-manifest.json'
+                      printf 'M\t%s\n' 'CHANGELOG.md'
+                      printf 'M\t%s\n' 'ran-booster.php'
+                      printf 'M\t%s\n' 'readme.txt'
+                  } | LC_ALL=C sort)"
+                  actual_paths="$(git diff --name-status --no-renames "$base_commit" "$release_commit" | LC_ALL=C sort)"
+                  test "$actual_paths" = "$expected_paths"
+                  bash scripts/validate-release-candidate.sh "$base_commit" "$release_commit"
 
                   version="$(git show "${release_commit}:.release-please-manifest.json" \
                       | jq -er '."." | select(type == "string")')"
@@ -64,19 +85,22 @@ jobs:
                   tag="v${version}"
 
                   release_pr="$(
-                      gh api \
+                      gh api --paginate --slurp \
                           -H 'Accept: application/vnd.github+json' \
-                          "repos/${GITHUB_REPOSITORY}/commits/${release_commit}/pulls" \
+                          "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=main&per_page=100" \
                       | jq -cer \
                           --arg base main \
                           --arg bot 'github-actions[bot]' \
                           --arg head 'release-please--branches--main--components--ran-booster' \
+                          --arg base_commit "$base_commit" \
                           --arg quality "$RAN_QUALITY_COMMIT" \
                           --arg release "$release_commit" \
                           --arg repository "$GITHUB_REPOSITORY" \
-                          '[.[] | select(
+                          'add
+                          | [.[] | select(
                               .merged_at != null
                               and .base.ref == $base
+                              and .base.sha == $base_commit
                               and .head.sha == $release
                               and .merge_commit_sha == $quality
                               and .head.ref == $head
@@ -117,16 +141,20 @@ jobs:
                   fi
 
                   printf 'release-required=true\n' >> "$GITHUB_OUTPUT"
+                  printf 'release-please-required=true\n' >> "$GITHUB_OUTPUT"
                   {
+                      printf 'RAN_RELEASE_BASE_COMMIT=%s\n' "$base_commit"
                       printf 'RAN_RELEASE_COMMIT=%s\n' "$release_commit"
                       printf 'RAN_RELEASE_PENDING=%s\n' "$release_pending"
                       printf 'RAN_RELEASE_PR_NUMBER=%s\n' "$release_pr_number"
                       printf 'RAN_RELEASE_STATE=%s\n' "$state"
                       printf 'RAN_RELEASE_TAG=%s\n' "$tag"
+                      printf 'RAN_RELEASE_TREE=%s\n' "$release_tree"
                       printf 'RAN_RELEASE_VERSION=%s\n' "$version"
                   } >> "$GITHUB_ENV"
 
             - name: Open or update the release pull request
+              if: steps.release-state.outputs.release-please-required == 'true'
               uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
@@ -148,7 +176,11 @@ jobs:
               if: steps.release-state.outputs.release-required == 'true'
               shell: bash
               env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   RAN_QUALITY_COMMIT: ${{ github.event.workflow_run.head_sha }}
+                  RAN_QUALITY_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+                  RAN_QUALITY_RUN_ID: ${{ github.event.workflow_run.id }}
+                  RAN_QUALITY_WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
               run: |
                   set -euo pipefail
                   metadata='build/ran-booster-ci-runtime.json'
@@ -156,17 +188,119 @@ jobs:
                   test -f "$metadata"
                   test -f "$archive"
                   archive_sha256="$(jq -er '.sha256' "$metadata")"
+                  evidence_mode="$(jq -er '.mode' "$metadata")"
+                  original_run_id="$(jq -er '.run.id | select(type == "number" and . > 0)' "$metadata")"
+                  original_run_attempt="$(jq -er '.run.attempt | select(type == "number" and . > 0)' "$metadata")"
+                  candidate_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/pull/${RAN_RELEASE_PR_NUMBER}/merge"
+                  main_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/heads/main"
                   jq -e \
-                      --arg quality_commit "$RAN_QUALITY_COMMIT" \
+                      --arg admission_merge "$RAN_QUALITY_COMMIT" \
+                      --arg admission_tree "$RAN_RELEASE_TREE" \
+                      --arg base_commit "$RAN_RELEASE_BASE_COMMIT" \
+                      --arg base_ref main \
+                      --arg head_ref 'release-please--branches--main--components--ran-booster' \
+                      --arg pr_number "$RAN_RELEASE_PR_NUMBER" \
+                      --arg repository "$GITHUB_REPOSITORY" \
                       --arg source_commit "$RAN_RELEASE_COMMIT" \
+                      --arg source_tree "$RAN_RELEASE_TREE" \
                       --arg version "$RAN_RELEASE_VERSION" \
+                      --arg candidate_workflow_ref "$candidate_workflow_ref" \
+                      --arg main_workflow_ref "$main_workflow_ref" \
+                      --argjson current_run_attempt "$RAN_QUALITY_RUN_ATTEMPT" \
+                      --argjson current_run_id "$RAN_QUALITY_RUN_ID" \
+                      --argjson workflow_id "$RAN_QUALITY_WORKFLOW_ID" \
                       '.schema == "ran-booster-ci-runtime"
-                        and .schema_version == 1
-                        and .quality_commit == $quality_commit
+                        and .schema_version == 2
                         and .source_commit == $source_commit
+                        and .source_tree == $source_tree
                         and .version == $version
-                        and (.sha256 | test("^[0-9a-f]{64}$"))' \
+                        and (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+                        and (.quality_commit | type == "string" and test("^[0-9a-f]{40}$"))
+                        and .run.workflow_id == $workflow_id
+                        and (.run.workflow_sha | type == "string" and test("^[0-9a-f]{40}$"))
+                        and .pull_request.number == ($pr_number | tonumber)
+                        and .pull_request.base_ref == $base_ref
+                        and .pull_request.base_sha == $base_commit
+                        and .pull_request.head_ref == $head_ref
+                        and .pull_request.head_repository == $repository
+                        and .pull_request.head_sha == $source_commit
+                        and (
+                          (
+                            .mode == "admitted"
+                            and .lane == "release-candidate"
+                            and .run.event == "pull_request"
+                            and .run.workflow_ref == $candidate_workflow_ref
+                            and .pull_request.tested_commit == .quality_commit
+                            and .pull_request.tested_tree == $source_tree
+                            and .admission.merge_commit == $admission_merge
+                            and .admission.merge_tree == $admission_tree
+                            and .admission.original_run_id == .run.id
+                            and .admission.original_run_attempt == .run.attempt
+                          )
+                          or
+                          (
+                            .mode == "built"
+                            and .lane == "full"
+                            and .quality_commit == $admission_merge
+                            and .run.id == $current_run_id
+                            and .run.attempt == $current_run_attempt
+                            and .run.event == "push"
+                            and .run.workflow_ref == $main_workflow_ref
+                            and .pull_request.tested_commit == $admission_merge
+                            and .pull_request.tested_tree == $source_tree
+                            and (has("admission") | not)
+                          )
+                        )' \
                       "$metadata" >/dev/null
+
+                  if [[ "$evidence_mode" == admitted ]]; then
+                      original_run="$(gh api \
+                          "repos/${GITHUB_REPOSITORY}/actions/runs/${original_run_id}/attempts/${original_run_attempt}")"
+                      jq -e \
+                          --arg bot 'github-actions[bot]' \
+                          --arg branch 'release-please--branches--main--components--ran-booster' \
+                          --arg head "$RAN_RELEASE_COMMIT" \
+                          --arg repository "$GITHUB_REPOSITORY" \
+                          --argjson attempt "$original_run_attempt" \
+                          --argjson run_id "$original_run_id" \
+                          --argjson workflow_id "$RAN_QUALITY_WORKFLOW_ID" \
+                          '.id == $run_id
+                            and .run_attempt == $attempt
+                            and .workflow_id == $workflow_id
+                            and .path == ".github/workflows/quality.yml"
+                            and .event == "pull_request"
+                            and .status == "completed"
+                            and .conclusion == "success"
+                            and .actor.login == $bot
+                            and .head_branch == $branch
+                            and .head_sha == $head
+                            and .head_repository.full_name == $repository
+                            and .repository.full_name == $repository' \
+                          <<< "$original_run" >/dev/null
+                  else
+                      candidate_runs="$(gh api \
+                          "repos/${GITHUB_REPOSITORY}/actions/workflows/${RAN_QUALITY_WORKFLOW_ID}/runs?event=pull_request&head_sha=${RAN_RELEASE_COMMIT}&status=completed&per_page=100")"
+                      jq -e \
+                          --arg bot 'github-actions[bot]' \
+                          --arg branch 'release-please--branches--main--components--ran-booster' \
+                          --arg head "$RAN_RELEASE_COMMIT" \
+                          --arg repository "$GITHUB_REPOSITORY" \
+                          --argjson workflow_id "$RAN_QUALITY_WORKFLOW_ID" \
+                          'any(.workflow_runs[];
+                            .workflow_id == $workflow_id
+                            and .path == ".github/workflows/quality.yml"
+                            and .event == "pull_request"
+                            and .status == "completed"
+                            and .conclusion == "success"
+                            and .actor.login == $bot
+                            and .head_branch == $branch
+                            and .head_sha == $head
+                            and .head_repository.full_name == $repository
+                            and .repository.full_name == $repository
+                          )' \
+                          <<< "$candidate_runs" >/dev/null
+                  fi
+
                   printf '%s  %s\n' "$archive_sha256" "$archive" | sha256sum --check --strict
                   unzip -tqq "$archive"
                   unzip -p "$archive" ran-booster/ran-booster-release.json \

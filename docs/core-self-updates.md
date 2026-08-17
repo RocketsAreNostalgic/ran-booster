@@ -265,13 +265,22 @@ The dependency order is:
 
 Release Please owns version proposals, version sources and changelogs. Its
 action does not create the WordPress ZIP or publish the GitHub release directly.
-Quality builds, verifies and uploads the runtime archive once; the WordPress
-matrix installs and exercises that same artifact. After the proposal merges,
-the Release Please workflow runs only after Quality succeeds for the exact
-merge SHA, proves the merged proposal and source identities, downloads and
-re-verifies that exact Quality artifact, then creates or resumes a draft,
-attaches and byte-verifies the ZIP, and publishes only under the explicitly
-enabled immutable-release contract.
+An ordinary pull request builds one runtime archive and runs the full source and
+WordPress matrix against it. Its merge to `main` reuses that evidence only when
+the exact pull request, successful Quality run, immutable artifact and tested
+Git tree all agree; missing or stale evidence, non-merge pushes and changes to
+the trust-defining workflow files fall back to the full suite.
+
+The automated Release Please pull request is reduced only after a fail-closed
+validator proves that its head changes exactly the four expected generated
+release files and keeps their versions and accepted changelog history aligned.
+Quality builds the publishable ZIP from that exact pull-request head and runs a
+focused install, activation and installed-identity readback. After the proposal
+merges, main Quality admits and re-uploads those exact verified bytes. The
+Release Please workflow then proves the merge and source identities, downloads
+that exact Quality artifact, creates or resumes a draft, attaches and
+byte-verifies the ZIP, and publishes only under the explicitly enabled
+immutable-release contract.
 
 The completed native-ZIP set is updater `v1.6.0-beta.1`, Core
 `v0.1.0-alpha.29` and Release Deployments `v0.1.0-alpha.4`. Exact commits,

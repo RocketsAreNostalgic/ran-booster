@@ -2,21 +2,23 @@
 
 declare( strict_types = 1 );
 
-namespace RAN\Booster\GitHub\WebhookManagement\Admin;
+namespace RAN\Admin\WebhookManagement;
 
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
 use RAN\Admin\Interaction\AdminInteractionRequest;
-use RAN\Booster\GitHub\WebhookManagement\Display\WebhookDisplayModel;
-use RAN\Booster\GitHub\WebhookManagement\Operation\WebhookOperationCoordinator;
+use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
+use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryWebhookFitness;
+use RAN\RepositoryProvider\RepositoryWebhookManagement;
 
-/** Owns the registered request boundary and response transport. */
+/** @internal Owns the registered request boundary and response transport. */
 final class WebhookManagementController {
-	public const ADMIN_POST_ACTION = 'ran_booster_github_webhook_management_operation';
+	public const ADMIN_POST_ACTION = 'ran_booster_repository_webhook_management_operation';
 
 	private const NONCE_ACTION_PREFIX = 'ran_booster_repository_webhook_';
-
-	private const PROVIDER_CODE = 'gh';
 
 	/** @var \Closure(): bool */
 	private \Closure $canManage;
@@ -29,6 +31,7 @@ final class WebhookManagementController {
 	public function __construct(
 		private readonly WebhookOperationCoordinator $operations,
 		private readonly WebhookDisplayModel $display,
+		private readonly ProviderRegistry $providers,
 		?callable $canManage = null,
 		?callable $verifyNonce = null
 	) {
@@ -49,25 +52,29 @@ final class WebhookManagementController {
 	 *
 	 * @param array<string, mixed> $request
 	 */
-	public function handleAdminPost( array $request, string $nonce ): string {
-		$operation         = $this->stringValue( $request, 'github_webhook_management_operation' );
-		$providerCode      = $this->stringValue( $request, 'provider_code' );
-		$repositoryId      = $this->stringValue( $request, 'repository_id' );
-		$credentialId      = $this->stringValue( $request, 'booster_credential_id' );
-		$requestCredential = $this->stringValue( $request, 'github_pat' );
-		$result            = array(
-			'code'     => 'invalid_request',
-			'recovery' => null,
+	public function handleAdminPost( #[\SensitiveParameter] array $request, string $nonce ): string {
+		$operation    = $this->stringValue( $request, 'repository_webhook_management_operation' );
+		$providerCode = $this->stringValue( $request, 'provider_code' );
+		$repositoryId = $this->stringValue( $request, 'repository_id' );
+		$credentialId = $this->stringValue( $request, 'booster_credential_id' );
+		$metadata     = $this->providerMetadata( $providerCode );
+		$result       = array(
+			'code'        => 'invalid_request',
+			'recovery'    => null,
+			'remediation' => null,
+			'successful'  => false,
+			'inline_safe' => true,
 		);
 
 		if ( ! ( $this->canManage )() ) {
 			$result['code'] = 'forbidden';
-		} elseif ( in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove' ), true )
-			&& hash_equals( self::PROVIDER_CODE, $providerCode )
+		} elseif ( $metadata instanceof ProviderMetadata
+			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove' ), true )
 			&& ( $this->verifyNonce )( $nonce, $this->nonceAction( $operation, $providerCode, $repositoryId ) ) ) {
-			$savedCredential = '' === $credentialId ? null : $credentialId;
-			$requestOnly     = '' === $requestCredential ? null : $requestCredential;
-			unset( $request['github_pat'] );
+			$requestCredential = $this->stringValue( $request, 'request_credential' );
+			$savedCredential   = '' === $credentialId ? null : $credentialId;
+			$requestOnly       = '' === $requestCredential ? null : $requestCredential;
+			unset( $request['request_credential'] );
 			$requestCredential = '';
 			try {
 				$result = $this->operations->execute( $operation, $providerCode, $repositoryId, $savedCredential, $requestOnly, $nonce );
@@ -79,11 +86,12 @@ final class WebhookManagementController {
 
 		$safeRepositoryId = strlen( $repositoryId ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ? $repositoryId : '';
 		if ( null !== $this->adminInteraction
-			&& ( $this->display->isSuccessfulResult( $resultCode ) || $this->display->canRespondInlineToFailure( $resultCode ) ) ) {
-			$request = $this->interactionRequest( self::PROVIDER_CODE, $safeRepositoryId );
-			$outcome = $this->display->isSuccessfulResult( $resultCode )
-				? AdminInteractionOutcome::success( $request, $this->display->notice( $resultCode, $result['recovery'] ) )
-				: AdminInteractionOutcome::validationFailure( $request, $this->display->notice( $resultCode, $result['recovery'] ) );
+			&& $metadata instanceof ProviderMetadata
+			&& true === $result['inline_safe'] ) {
+			$request = $this->interactionRequest( $providerCode, $safeRepositoryId );
+			$outcome = true === $result['successful']
+				? AdminInteractionOutcome::success( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) )
+				: AdminInteractionOutcome::validationFailure( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) );
 			$this->adminInteraction->respond( $outcome );
 		}
 
@@ -91,12 +99,34 @@ final class WebhookManagementController {
 			? ''
 			: '&recovery_hook=' . rawurlencode( $result['recovery']['hook_id'] ) . '&recovery_profile=' . rawurlencode( $result['recovery']['profile_id'] );
 
-		return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( self::PROVIDER_CODE ) )
+		$redirect = admin_url( 'admin.php?page=ran-booster' );
+		if ( $metadata instanceof ProviderMetadata ) {
+			$redirect .= '&tab=' . rawurlencode( $metadata->code->value );
+		}
+
+		return $redirect
 			. '&panel=repositories'
 			. ( '' === $safeRepositoryId ? '' : '&repository=' . rawurlencode( $safeRepositoryId ) )
 			. '&webhook_management_result=' . rawurlencode( $resultCode )
 			. $recoveryQuery
-			. '#ran-booster-github-webhook-management-operation-heading';
+			. '#ran-booster-repository-webhook-management-operation-heading';
+	}
+
+	/** @return list<ProviderMetadata> */
+	public function providerMetadataList(): array {
+		$metadata = array();
+		foreach ( $this->providers->orderedMetadata() as $candidate ) {
+			$capable = $this->capableProviderMetadata( $candidate->code->value );
+			if ( $capable instanceof ProviderMetadata ) {
+				$metadata[] = $capable;
+			}
+		}
+
+		return $metadata;
+	}
+
+	public function providerMetadata( string $providerCode ): ?ProviderMetadata {
+		return $this->capableProviderMetadata( $providerCode );
 	}
 
 	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null} */
@@ -121,10 +151,25 @@ final class WebhookManagementController {
 
 	private function interactionRequest( string $providerCode, string $repositoryId ): AdminInteractionRequest {
 		return AdminInteractionRequest::providerRepositories(
-			'github-webhook-management:manage-webhook',
-			admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . '#ran-booster-github-webhook-management-operation-heading',
-			'github-webhook-management-error'
+			'repository-webhook-management:manage-webhook',
+			admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . '#ran-booster-repository-webhook-management-operation-heading',
+			'repository-webhook-management-error'
 		);
+	}
+
+	private function capableProviderMetadata( string $providerCode ): ?ProviderMetadata {
+		try {
+			$fitness    = $this->providers->requireCapability( $providerCode, RepositoryWebhookFitness::class );
+			$management = $this->providers->requireCapability( $providerCode, RepositoryWebhookManagement::class );
+			$metadata   = $this->providers->metadata()[ $providerCode ] ?? null;
+		} catch ( \Throwable ) {
+			return null;
+		}
+
+		return $fitness === $management && $metadata instanceof ProviderMetadata
+			&& hash_equals( $providerCode, $metadata->code->value )
+			? $metadata
+			: null;
 	}
 
 	private function nonceAction( string $operation, string $providerCode, string $repositoryId ): string {

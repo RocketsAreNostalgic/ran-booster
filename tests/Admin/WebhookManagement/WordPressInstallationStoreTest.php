@@ -2,18 +2,18 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Booster\GitHub\WebhookManagement;
+namespace Tests\Admin\WebhookManagement;
 
 use PHPUnit\Framework\TestCase;
-use RAN\Booster\GitHub\WebhookManagement\Installation\InstallationRecord;
-use RAN\Booster\GitHub\WebhookManagement\Installation\InstallationStore;
-use RAN\Booster\GitHub\WebhookManagement\Installation\WordPressInstallationStore;
+use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
+use RAN\Admin\WebhookManagement\Installation\InstallationStore;
+use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
 
 require_once __DIR__ . '/WordPressInstallationStoreWordPressFunctions.php';
 
 final class WordPressInstallationStoreTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['ran_booster_assisted_hooks_test_options'] = array();
+		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
 	}
 
 	public function testNumericRepositoryIdentityRoundTripsAcrossStoreInstancesAndRemainsIdempotent(): void {
@@ -56,7 +56,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$other  = $this->record( 'fixture', 'other', 'workspace/repository', 'opaque-hook' );
 		$store  = $this->store(
 			static function () use ( $other ): void {
-				$GLOBALS['ran_booster_assisted_hooks_test_options']['ran_booster_assisted_hooks_installations'] = array(
+				$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 					$other->storageKey() => $other->toArray(),
 				);
 			}
@@ -72,7 +72,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$recovery = $this->record( 'gh', 'github', 'owner/repository', InstallationRecord::unknownHookId(), 'orphaned' );
 		$store    = $this->store(
 			static function () use ( $known ): void {
-				$GLOBALS['ran_booster_assisted_hooks_test_options']['ran_booster_assisted_hooks_installations'] = array(
+				$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 					$known->storageKey() => $known->toArray(),
 				);
 			}
@@ -87,7 +87,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$recovery = $this->record( 'gh', 'github', 'owner/repository', InstallationRecord::unknownHookId(), 'orphaned' );
 		$store    = $this->store(
 			static function () use ( $recovery ): void {
-				$GLOBALS['ran_booster_assisted_hooks_test_options']['ran_booster_assisted_hooks_installations'] = array(
+				$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 					$recovery->storageKey() => $recovery->toArray(),
 				);
 			}
@@ -109,30 +109,30 @@ final class WordPressInstallationStoreTest extends TestCase {
 				'token'          => 'must-not-be-read',
 			),
 		);
-		$GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
 
 		$records = $this->store()->all();
 
 		self::assertSame( array( $valid->storageKey() ), array_keys( $records ) );
 		self::assertSame( $valid->toArray(), $records[ $valid->storageKey() ]->toArray() );
-		self::assertSame( $raw, $GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
+		self::assertSame( $raw, $GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 
 	public function testSaveFailsWithoutRewritingAnOptionContainingMalformedOrFutureRecords(): void {
 		$raw = $this->incompleteRaw();
-		$GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
 
 		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->saveIfCurrent( $this->record( 'gh', 'new', 'owner/new', '88' ), null ) );
-		self::assertSame( $raw, $GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
+		self::assertSame( $raw, $GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 
 	public function testRemoveFailsWithoutRewritingAnOptionContainingMalformedOrFutureRecords(): void {
 		$record = $this->record( 'gh', 'valid', 'owner/repository', '77' );
 		$raw    = $this->incompleteRaw();
-		$GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
 
 		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->deleteIfCurrent( $record->providerCode(), $record->repositoryId(), $record ) );
-		self::assertSame( $raw, $GLOBALS['ran_booster_assisted_hooks_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
+		self::assertSame( $raw, $GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 
 	private function record( string $providerCode, string $repositoryId, string $repository, string $hookId, string $status = 'configured' ): InstallationRecord {
@@ -165,12 +165,12 @@ final class WordPressInstallationStoreTest extends TestCase {
 					$before     = null;
 					$interleave();
 				}
-				$currentExists = array_key_exists( $option, $GLOBALS['ran_booster_assisted_hooks_test_options'] );
-				$current       = $GLOBALS['ran_booster_assisted_hooks_test_options'][ $option ] ?? null;
+				$currentExists = array_key_exists( $option, $GLOBALS['ran_booster_repository_webhook_management_test_options'] );
+				$current       = $GLOBALS['ran_booster_repository_webhook_management_test_options'][ $option ] ?? null;
 				if ( $exists !== $currentExists || ( $exists && $expected !== $current ) ) {
 					return false;
 				}
-				$GLOBALS['ran_booster_assisted_hooks_test_options'][ $option ] = $replacement;
+				$GLOBALS['ran_booster_repository_webhook_management_test_options'][ $option ] = $replacement;
 
 				return true;
 			}

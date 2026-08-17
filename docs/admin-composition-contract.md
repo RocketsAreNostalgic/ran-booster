@@ -275,8 +275,8 @@ arbitrary Core models. Core contains a renderer failure and keeps the remaining
 dashboard usable.
 
 Release Deployments contributes to existing package surfaces, while Bitbucket
-uses the provider-tab contract. Bundled GitHub webhook management is Core code,
-not an add-on composition consumer. This does not remove the public tab
+uses the provider-tab contract. Repository webhook-management placement is Core
+code, not an add-on composition consumer. This does not remove the public tab
 capability for other add-ons.
 
 ## Fixed Extensions page
@@ -301,15 +301,20 @@ state, and its local stylesheet is limited to the Extensions screen hook.
 
 ## Provider repository surface
 
-Core owns and renders the provider repository table. Bundled GitHub webhook
-management enriches GitHub rows and renders the selected-repository panel
-through a direct first-party call. Core validates the resulting rows, preserves
-the fixed `core:webhook-management` action, and permits only bounded historical
-records from its own schema. There is no public row or panel composition hook.
+Core owns and renders the provider repository table. Its internal webhook
+controls enrich rows and render the selected-repository panel only when the
+selected provider resolves both `RepositoryWebhookFitness` and
+`RepositoryWebhookManagement` to the same registered aggregate. Core validates
+the resulting rows, preserves the fixed `core:webhook-management` action, and
+permits only bounded historical records from its own schema. There is no public
+row or panel composition hook, renderer callback or provider-supplied field
+schema.
 
-Other providers retain their provider-owned webhook settings link and manual
-setup guidance. A provider backend capability does not create a generic
-management form, credential schema, or operation route.
+Missing, partial or incompatible webhook facets create no action, panel,
+documentation section, asset or mutation authority. A complete non-GitHub
+provider receives the same fixed Core placement; its bounded metadata supplies
+the provider code and label, while its facet implementation owns remote calls,
+credentials and provider-specific remediation.
 
 ## Package screen anatomy
 

@@ -6,7 +6,7 @@ namespace RAN\Admin;
 
 use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
-use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 
 /**
  * Builds and protects Core-owned provider repository rows.
@@ -15,7 +15,7 @@ final class ProviderRepositoryRowsNormalizer {
 	// Placeholder meanings are fixed by the named projection fields below.
 	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
 	/** Build the managed-repository projection consumed by the provider page. */
-	public function projectPage( array $data, ?GitHubWebhookManagement $githubWebhookManagement = null ): array {
+	public function projectPage( array $data, ?RepositoryWebhookManagementControls $webhookManagement = null ): array {
 		$provider      = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$providerCode  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
 		$providerLabel = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
@@ -57,7 +57,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$siteEndpoint,
 			$siteReady,
 			$this->readinessIndexes( $readiness['repositories'] ?? null, $providerCode ),
-			$githubWebhookManagement,
+			$webhookManagement,
 			is_string( $data['requestedRepositoryId'] ?? null ) ? $data['requestedRepositoryId'] : '',
 			$providerUrl,
 			$taskUrls['repositories']
@@ -190,7 +190,7 @@ final class ProviderRepositoryRowsNormalizer {
 		string $endpoint,
 		bool $siteReady,
 		array $readiness,
-		?GitHubWebhookManagement $githubWebhookManagement,
+		?RepositoryWebhookManagementControls $webhookManagement,
 		string $requestedId,
 		callable $providerUrl,
 		string $listUrl
@@ -327,7 +327,7 @@ final class ProviderRepositoryRowsNormalizer {
 				$managementTone   = 'info'; }
 			$releaseReasonId = $isRelease && '' !== $consequence ? $reasonId . '-release-source' : '';
 			$describedBy     = array_filter( array( $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $siteReady && ! $isRelease ? $reasonId . '-site' : '' ) );
-			$actions         = 'gh' === $providerCode && ! $isRelease
+			$actions         = null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode ) && ! $isRelease
 				? $this->webhookManagementAction( $locator, $describedBy )
 				: array();
 			$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator );
@@ -404,8 +404,8 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$presented = 'gh' === $providerCode && null !== $githubWebhookManagement
-			? $githubWebhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
+		$presented = null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode )
+			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
 		$rows      = $this->normalize( $rows, $presented, $providerCode );
 		$selected  = null;

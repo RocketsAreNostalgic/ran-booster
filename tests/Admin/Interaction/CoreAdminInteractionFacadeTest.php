@@ -93,18 +93,18 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$attributes = (string) ob_get_clean();
 
 		self::assertStringContainsString( ' data-ran-booster-enhanced-mutation', $attributes );
-		self::assertStringContainsString( ' data-ran-booster-error-target="#github-webhook-management-error"', $attributes );
+		self::assertStringContainsString( ' data-ran-booster-error-target="#repository-webhook-management-error"', $attributes );
 		self::assertStringContainsString( ' hx-post="https://example.test/wp-admin/admin-post.php"', $attributes );
 		self::assertSame( 2, substr_count( $attributes, '#ran-booster-provider-task-panel' ) );
 		self::assertStringContainsString( ' hx-sync="this:drop"', $attributes );
-		self::assertStringContainsString( '&quot;github-webhook-management:manage-webhook&quot;', $attributes );
+		self::assertStringContainsString( '&quot;repository-webhook-management:manage-webhook&quot;', $attributes );
 
 		$this->expectException( InvalidArgumentException::class );
 		$facade->renderFormAttributes(
 			AdminInteractionRequest::providerRepositories(
-				'github-webhook-management:manage-webhook',
+				'repository-webhook-management:manage-webhook',
 				'https://attacker.example/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories',
-				'github-webhook-management-error'
+				'repository-webhook-management-error'
 			)
 		);
 	}
@@ -115,7 +115,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$_SERVER['HTTP_HX_REQUEST']       = 'true';
 		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-task-panel';
 		$_POST['ran_booster_interaction'] = array(
-			'operation' => 'github-webhook-management:manage-webhook',
+			'operation' => 'repository-webhook-management:manage-webhook',
 			'target'    => 'provider_repositories',
 		);
 
@@ -332,7 +332,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertSame( array( 422 ), $this->statuses );
-		self::assertSame( '#github-webhook-management-error', $this->header( 'HX-Retarget' ) );
+		self::assertSame( '#repository-webhook-management-error', $this->header( 'HX-Retarget' ) );
 		self::assertSame( 'unset', $this->header( 'HX-Reselect' ) );
 		self::assertSame( 'outerHTML', $this->header( 'HX-Reswap' ) );
 		self::assertStringContainsString( 'Could not verify &lt;the hook&gt;.', $html );
@@ -574,14 +574,14 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 	private function request(): AdminInteractionRequest {
 		return AdminInteractionRequest::providerRepositories(
-			'github-webhook-management:manage-webhook',
+			'repository-webhook-management:manage-webhook',
 			$this->canonicalUrl(),
-			'github-webhook-management-error'
+			'repository-webhook-management-error'
 		);
 	}
 
 	private function canonicalUrl(): string {
-		return 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101#ran-booster-github-webhook-management-operation-heading';
+		return 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101#ran-booster-repository-webhook-management-operation-heading';
 	}
 
 	private function transporterRequest(): AdminInteractionRequest {
@@ -618,7 +618,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$_SERVER['HTTP_HX_REQUEST']       = 'true';
 		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-task-panel';
 		$_POST['ran_booster_interaction'] = array(
-			'operation' => 'github-webhook-management:manage-webhook',
+			'operation' => 'repository-webhook-management:manage-webhook',
 			'target'    => 'provider_repositories',
 		);
 	}

@@ -2,10 +2,10 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Booster\GitHub\WebhookManagement;
+namespace Tests\Admin\WebhookManagement;
 
 use PHPUnit\Framework\TestCase;
-use RAN\Booster\GitHub\WebhookManagement\Installation\InstallationRecord;
+use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 
 final class InstallationRecordTest extends TestCase {
 	public function testItPersistsOnlyNonSecretMetadata(): void {

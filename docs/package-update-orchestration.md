@@ -717,7 +717,10 @@ The current contracts are implemented in:
 - `RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php`
 - `RAN/WordPress/ManagedReleaseTargetRegistrar.php`
 - `RAN/WordPress/ManagedReleasePreflight.php`
-- `RAN/WordPress/ProspectiveReleaseArtifact.php`
+- `RAN/RepositoryProvider/RepositoryReleaseAcquirer.php`
+- `RAN/RepositoryProvider/RepositoryReleaseArtifact.php`
+- `RAN/Booster/GitHub/GitHubReleaseArtifact.php`
+- `RAN/Deployment/PreparedArtifact.php`
 - `RAN/WordPress/CorePackageExecutor.php`
 - `vendor/ran/wp-github-release-updater/src/WordPress/ReleaseAssurance.php`
 - `vendor/ran/wp-github-release-updater/src/WordPress/NativePluginUpdater.php`

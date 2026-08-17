@@ -38,6 +38,11 @@ spl_autoload_register(
 			require $ranBoosterRoot . '/RAN/PackageSubdirectory.php';
 			return;
 		}
+		if ( 'RAN\\Deployment\\PreparedArtifact' === $class ) {
+			// Exact reviewed one-shot custody handoff from the provider module to Core.
+			require $ranBoosterRoot . '/RAN/Deployment/PreparedArtifact.php';
+			return;
+		}
 
 		if ( str_starts_with( $class, 'RAN\\' ) || str_starts_with( $class, 'Tests\\' ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only exception text is not rendered.

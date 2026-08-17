@@ -338,6 +338,22 @@ inspection operation was unavailable. The facet grants no installation,
 updater or mutation authority and does not by itself make the complete release
 product available.
 
+`RepositoryReleaseAcquirer` is the independent custody facet for freshly
+acquiring the exact release selected after inspection. It accepts the same
+resolved repository, package type, provider release identity, tag and channel,
+plus the opaque fingerprint returned by inspection. The provider must
+re-describe, re-download and revalidate the release before returning one
+`RepositoryReleaseArtifact`. That artifact exposes no URL, path, credential or
+archive bytes. It permits one typed handoff to Core and otherwise owns bounded
+discard. `RepositoryReleaseAcquisitionRejected::invalidRelease()` is the only
+release-domain rejection. If cleanup of provider-owned bytes fails before Core
+can take custody, the provider must instead throw the bounded
+`cleanup_failed` rejection; Core reports that failure without attempting an
+install. Other exceptions mean acquisition was unavailable.
+The facet grants no WordPress installation or adoption authority. Core retains
+the updater claim through `PreparedArtifact`, owns installation and installed
+readback, and discards the exact claim after use.
+
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
 settings screen. Core treats locators as opaque, validates the returned URL, and

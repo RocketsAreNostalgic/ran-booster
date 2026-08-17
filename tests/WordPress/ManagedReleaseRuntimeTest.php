@@ -22,7 +22,9 @@ use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\Secrets\SecretsFile;
+use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
@@ -341,6 +343,161 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertInstanceOf( \WP_Error::class, $result );
 		self::assertSame( 'ran_booster_native_update_authority_changed', $result->get_error_code() );
 		self::assertSame( 0, $lock->acquires );
+	}
+
+	public function testStaleManagedOffersFailClosedWhenTargetRegistrationFails(): void {
+		$plugin  = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$theme   = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $plugin );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			$this->createStub( SecretsFile::class ),
+			new RuntimeReleaseStore(
+				array(
+					"plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ),
+					"theme\0example-theme"           => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
+				)
+			),
+			new RuntimeUpdaterLock(),
+			static function (): never {
+				throw new \RuntimeException( 'target rejected' );
+			}
+		);
+		$registrar->register();
+		$incoming = new \WP_Error( 'download_failed', 'Download already failed.' );
+		self::assertSame(
+			$incoming,
+			$registrar->authorizeNativeDownload( $incoming, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+
+		foreach (
+			array(
+				self::NATIVE_EXTRA,
+				array(
+					'theme'  => 'example-theme',
+					'action' => 'update',
+					'type'   => 'theme',
+				),
+			) as $extra
+		) {
+			$this->assertNativeAuthorityError(
+				$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), $extra )
+			);
+			$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, $extra ) );
+		}
+	}
+
+	public function testStaleOfferFailsClosedAfterPackageReturnsToBranch(): void {
+		$release       = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$branch        = $this->package(
+			'plugin',
+			self::NATIVE_PLUGIN,
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		[ $registrar ] = $this->nativePluginRegistrar( $release, $branch );
+
+		$this->assertNativeAuthorityError(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+		$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, self::NATIVE_EXTRA ) );
+	}
+
+	public function testUnmanagedPluginAndThemeOffersRemainWordPressOwned(): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
+		$plugins->method( 'boosterPluginFromFile' )->willThrowException( new PluginNotFound() );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'boosterThemeFromStylesheet' )->willThrowException( new ThemeNotFound() );
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			$this->createStub( SecretsFile::class ),
+			new RuntimeReleaseStore(),
+			new RuntimeUpdaterLock()
+		);
+		$registrar->register();
+
+		foreach (
+			array(
+				self::NATIVE_EXTRA,
+				array(
+					'theme'  => 'example-theme',
+					'action' => 'update',
+					'type'   => 'theme',
+				),
+			) as $extra
+		) {
+			self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), $extra ) );
+			self::assertFalse( $registrar->fenceNativeMutation( false, $extra ) );
+		}
+	}
+
+	public function testManagedOfferFailsClosedWhenRepositoryReadIsUncertain(): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
+		$plugins->method( 'boosterPluginFromFile' )->willThrowException( new \RuntimeException( 'read failed' ) );
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$this->createStub( ThemeRepository::class ),
+			$this->createStub( SecretsFile::class ),
+			new RuntimeReleaseStore(),
+			new RuntimeUpdaterLock()
+		);
+		$registrar->register();
+
+		$this->assertNativeAuthorityError(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+		$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, self::NATIVE_EXTRA ) );
+	}
+
+	public function testInactiveOrThrowingTargetDiagnosticsFenceNativeUpdate(): void {
+		$package                  = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		[ $registrar, , $facade ] = $this->nativePluginRegistrar( $package );
+		$facade->replaceDiagnostics( array( 'state' => 'inactive' ) );
+
+		$this->assertNativeAuthorityError(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+
+		[ $registrar, , $facade ] = $this->nativePluginRegistrar( $package );
+		self::assertFalse(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+		$facade->replaceDiagnostics( array( 'state' => 'inactive' ) );
+		$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, self::NATIVE_EXTRA ) );
+
+		[ $registrar, , $facade ] = $this->nativePluginRegistrar( $package );
+		$facade->failDiagnostics();
+		$this->assertNativeAuthorityError(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+
+		[ $registrar, , $facade ] = $this->nativePluginRegistrar( $package );
+		self::assertFalse(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+		$facade->failDiagnostics();
+		$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, self::NATIVE_EXTRA ) );
+	}
+
+	public function testSelectedTargetWithUnavailableReleaseStateStillOwnsItsOffer(): void {
+		$package                  = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		[ $registrar, , $facade ] = $this->nativePluginRegistrar( $package );
+		$facade->replaceDiagnostics( array( 'state' => 'unavailable' ) );
+
+		self::assertFalse(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
 	}
 
 	public function testNativeUpdateRechecksWpPusherConflictBeforeDownloadAndMutation(): void {
@@ -1230,7 +1387,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	/**
 	 * @param Package|callable(): Package|null $live
-	 * @return array{ManagedReleaseTargetRegistrar, RuntimeUpdaterLock}
+	 * @return array{ManagedReleaseTargetRegistrar, RuntimeUpdaterLock, RuntimeUpdaterFacade}
 	 */
 	private function nativePluginRegistrar(
 		Package $registered,
@@ -1247,6 +1404,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
 		$lock      = new RuntimeUpdaterLock();
+		$facade    = new RuntimeUpdaterFacade();
 		$registrar = new ManagedReleaseTargetRegistrar(
 			$plugins,
 			$themes,
@@ -1257,11 +1415,20 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				)
 			),
 			$lock,
-			static fn ( mixed ...$options ): object => new RuntimeUpdaterFacade( $options )
+			static function ( mixed ...$options ) use ( $facade ): object {
+				unset( $options );
+
+				return $facade;
+			}
 		);
 		$registrar->register();
 
-		return array( $registrar, $lock );
+		return array( $registrar, $lock, $facade );
+	}
+
+	private function assertNativeAuthorityError( mixed $result ): void {
+		self::assertInstanceOf( \WP_Error::class, $result );
+		self::assertSame( 'ran_booster_native_update_authority_changed', $result->get_error_code() );
 	}
 
 	private function package(

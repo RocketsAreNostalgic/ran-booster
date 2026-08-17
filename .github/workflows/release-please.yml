@@ -1,245 +1,640 @@
 name: Release Please
 
 on:
-    workflow_run:
-        workflows:
-            - Quality
-        types:
-            - completed
-        branches:
-            - main
+  workflow_run:
+    workflows:
+      - Quality
+    types:
+      - completed
+    branches:
+      - main
 
 permissions: {}
 
 concurrency:
-    group: release-please-main
-    cancel-in-progress: false
+  group: release-please-main
+  cancel-in-progress: false
 
 jobs:
-    release-please:
-        name: Release Please
-        if: >-
-            ${{
-                github.event.workflow_run.event == 'push'
-                && github.event.workflow_run.conclusion == 'success'
-                && github.event.workflow_run.head_branch == 'main'
-                && github.event.workflow_run.head_repository.full_name == github.repository
-            }}
-        runs-on: blacksmith-2vcpu-ubuntu-2404
-        timeout-minutes: 10
-        permissions:
-            actions: read
-            contents: write
-            pull-requests: write
-            issues: write
-        steps:
-            - name: Check out the exact Quality commit
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-              with:
-                  fetch-depth: 0
-                  persist-credentials: false
-                  ref: ${{ github.event.workflow_run.head_sha }}
+  release-please:
+    name: Release Please
+    if: >-
+      ${{
+        github.event.workflow_run.event == 'push'
+        && github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.head_branch == 'main'
+        && github.event.workflow_run.head_repository.full_name == github.repository
+      }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check out exact Quality commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-            - name: Prove an exact merged Release Please candidate before publication
-              id: release-state
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  RAN_QUALITY_COMMIT: ${{ github.event.workflow_run.head_sha }}
-              run: |
-                  set -euo pipefail
-                  test "$(git rev-parse HEAD)" = "$RAN_QUALITY_COMMIT"
+      - name: Prove exact merged lifecycle before mutation
+        id: release-state
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RAN_QUALITY_COMMIT: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_branch='release-please--branches--main--components--ran-booster'
+          test "$(git rev-parse HEAD)" = "$RAN_QUALITY_COMMIT"
+          current_main="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
 
-                  if git diff --quiet "${RAN_QUALITY_COMMIT}^1" "$RAN_QUALITY_COMMIT" -- .release-please-manifest.json; then
-                      echo 'release-required=false' >> "$GITHUB_OUTPUT"
-                      exit 0
-                  fi
+          pr_pages="$(gh api --paginate --slurp \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=main&per_page=100")"
+          if ! merged_pr="$(jq -cer \
+            --arg base main \
+            --arg merge "$RAN_QUALITY_COMMIT" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            'add
+            | [.[] | select(
+                .merged_at != null
+                and .base.ref == $base
+                and .head.repo.full_name == $repository
+                and .merge_commit_sha == $merge
+            )]
+            | if length == 1 then .[0] else error("No unique merged pull request owns the Quality commit.") end' \
+            <<< "$pr_pages")"; then
+            release_please_required=false
+            [[ "$current_main" == "$RAN_QUALITY_COMMIT" ]] && release_please_required=true
+            printf 'release-required=false\nrelease-please-required=%s\n' "$release_please_required" >> "$GITHUB_OUTPUT"
+            [[ "$release_please_required" == true ]] \
+              || echo 'A newer main commit already has its own Quality lifecycle; skipping stale reconciliation.'
+            exit 0
+          fi
 
-                  release_commit="$(git rev-parse "${RAN_QUALITY_COMMIT}^2")"
-                  test "$(git log -1 --format=%H "$RAN_QUALITY_COMMIT" -- .release-please-manifest.json)" = "$release_commit"
-                  test "$(git rev-parse "${RAN_QUALITY_COMMIT}^{tree}")" = "$(git rev-parse "${release_commit}^{tree}")"
+          merged_pr_number="$(jq -er '.number' <<< "$merged_pr")"
+          files_json="$(gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/pulls/${merged_pr_number}/files?per_page=100")"
+          for trust_path in \
+            .github/workflows/quality.yml \
+            .github/workflows/release-please.yml \
+            scripts/build-release.sh \
+            scripts/verify-release.sh \
+            scripts/validate-release-candidate.sh \
+            scripts/select-merged-release-pr.sh \
+            scripts/reconcile-release-candidate-marker.sh \
+            scripts/verify-release-tag-target.sh \
+            scripts/has-trusted-release-candidate-run.sh \
+            scripts/verify-immutable-release-assets.sh; do
+            if jq -e --arg path "$trust_path" 'add | any(.[]; .filename == $path)' <<< "$files_json" >/dev/null; then
+              printf 'release-required=false\nrelease-please-required=false\n' >> "$GITHUB_OUTPUT"
+              echo "::notice::Merged pull request ${merged_pr_number} changed release authority ${trust_path}; privileged reconciliation is intentionally deferred."
+              exit 0
+            fi
+          done
 
-                  version="$(git show "${release_commit}:.release-please-manifest.json" \
-                      | jq -er '."." | select(type == "string")')"
-                  [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
-                  tag="v${version}"
+          if ! jq -e \
+            --arg bot 'github-actions[bot]' \
+            --arg head "$release_branch" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            '.user.login == $bot and .head.ref == $head and .head.repo.full_name == $repository' \
+            <<< "$merged_pr" >/dev/null; then
+            release_please_required=false
+            [[ "$current_main" == "$RAN_QUALITY_COMMIT" ]] && release_please_required=true
+            printf 'release-required=false\nrelease-please-required=%s\n' "$release_please_required" >> "$GITHUB_OUTPUT"
+            [[ "$release_please_required" == true ]] \
+              || echo 'A newer main commit already has its own Quality lifecycle; skipping stale reconciliation.'
+            exit 0
+          fi
 
-                  release_pr="$(
-                      gh api \
-                          -H 'Accept: application/vnd.github+json' \
-                          "repos/${GITHUB_REPOSITORY}/commits/${release_commit}/pulls" \
-                      | jq -cer \
-                          --arg base main \
-                          --arg bot 'github-actions[bot]' \
-                          --arg head 'release-please--branches--main--components--ran-booster' \
-                          --arg quality "$RAN_QUALITY_COMMIT" \
-                          --arg release "$release_commit" \
-                          --arg repository "$GITHUB_REPOSITORY" \
-                          '[.[] | select(
-                              .merged_at != null
-                              and .base.ref == $base
-                              and .head.sha == $release
-                              and .merge_commit_sha == $quality
-                              and .head.ref == $head
-                              and .head.repo.full_name == $repository
-                              and .user.login == $bot
-                          )]
-                          | if length == 1 then .[0] else error("Expected exactly one merged Release Please PR for the Quality commit.") end'
-                  )"
-                  release_pr_number="$(jq -er '.number' <<< "$release_pr")"
-                  pending="$(jq -r 'any(.labels[]?; .name == "autorelease: pending")' <<< "$release_pr")"
-                  tagged="$(jq -r 'any(.labels[]?; .name == "autorelease: tagged")' <<< "$release_pr")"
+          release_pr_number="$merged_pr_number"
+          release_base="$(jq -er '.base.sha' <<< "$merged_pr")"
+          release_head="$(jq -er '.head.sha' <<< "$merged_pr")"
+          if ! git cat-file -e "${release_base}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$release_base"
+          fi
+          git fetch --no-tags origin "refs/pull/${release_pr_number}/head"
+          test "$(git rev-parse FETCH_HEAD)" = "$release_head"
+          bash scripts/validate-release-candidate.sh "$release_base" "$release_head"
 
-                  release_pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
-                  if release_json="$(jq -cer --arg tag "$tag" 'add | .[] | select(.tag_name == $tag)' <<< "$release_pages")"; then
-                      test "$(jq -er '.target_commitish' <<< "$release_json")" = "$release_commit"
-                      if [[ "$(jq -er '.draft' <<< "$release_json")" == false ]]; then
-                          if [[ "$(jq -er '.immutable' <<< "$release_json")" != true ]]; then
-                              echo '::error::The published release is not immutable and cannot be accepted.'
-                              exit 1
-                          fi
-                          state=published
-                          release_pending=false
-                      else
-                          state=draft
-                          release_pending=true
-                      fi
-                  else
-                      state=absent
-                      release_pending=true
-                  fi
+          main_tree="$(git rev-parse "${RAN_QUALITY_COMMIT}^{tree}")"
+          head_tree="$(git rev-parse "${release_head}^{tree}")"
+          test "$main_tree" = "$head_tree"
+          version="$(git show "${RAN_QUALITY_COMMIT}:.release-please-manifest.json" \
+            | jq -er 'select(type == "object" and keys == ["."]) | ."." | select(type == "string")')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          test "$(git show "${RAN_QUALITY_COMMIT}:ran-booster.php" \
+            | sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p')" = "$version"
+          test "$(git show "${RAN_QUALITY_COMMIT}:readme.txt" \
+            | sed -nE 's/^Stable tag:[[:space:]]*([^[:space:]]+).*/\1/p')" = "$version"
+          tag="v${version}"
+          pending="$(jq -r 'any(.labels[]?; .name == "autorelease: pending")' <<< "$merged_pr")"
+          tagged="$(jq -r 'any(.labels[]?; .name == "autorelease: tagged")' <<< "$merged_pr")"
 
-                  if [[ "$release_pending" == true ]]; then
-                      test "$pending" = true
-                      test "$tagged" = false
-                  elif [[ "$pending" != true && "$tagged" != true ]]; then
-                      echo '::error::The published release PR has neither the pending nor tagged Release Please label.'
-                      exit 1
-                  fi
+          release_pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+          if release_json="$(jq -cer --arg tag "$tag" 'add | .[] | select(.tag_name == $tag)' <<< "$release_pages")"; then
+            test "$(jq -er '.target_commitish' <<< "$release_json")" = "$RAN_QUALITY_COMMIT"
+            if [[ "$(jq -er '.draft' <<< "$release_json")" == false ]]; then
+              if [[ "$(jq -er '.immutable' <<< "$release_json")" != true ]]; then
+                echo '::error::The published release is not immutable and cannot be accepted.'
+                exit 1
+              fi
+              state=published
+              release_pending=false
+            else
+              state=draft
+              release_pending=true
+            fi
+          else
+            state=absent
+            release_pending=true
+          fi
 
-                  printf 'release-required=true\n' >> "$GITHUB_OUTPUT"
-                  {
-                      printf 'RAN_RELEASE_COMMIT=%s\n' "$release_commit"
-                      printf 'RAN_RELEASE_PENDING=%s\n' "$release_pending"
-                      printf 'RAN_RELEASE_PR_NUMBER=%s\n' "$release_pr_number"
-                      printf 'RAN_RELEASE_STATE=%s\n' "$state"
-                      printf 'RAN_RELEASE_TAG=%s\n' "$tag"
-                      printf 'RAN_RELEASE_VERSION=%s\n' "$version"
-                  } >> "$GITHUB_ENV"
+          if [[ "$release_pending" == true ]]; then
+            test "$pending" = true
+            test "$tagged" = false
+          elif [[ "$pending" != true && "$tagged" != true ]]; then
+            echo '::error::The published release PR has neither the pending nor tagged Release Please label.'
+            exit 1
+          fi
 
-            - name: Open or update the release pull request
-              uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-              with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  config-file: release-please-config.json
-                  manifest-file: .release-please-manifest.json
-                  skip-github-release: true
+          printf 'release-required=true\nrelease-please-required=false\n' >> "$GITHUB_OUTPUT"
+          {
+            printf 'RAN_RELEASE_BASE_COMMIT=%s\n' "$release_base"
+            printf 'RAN_RELEASE_COMMIT=%s\n' "$RAN_QUALITY_COMMIT"
+            printf 'RAN_RELEASE_HEAD_COMMIT=%s\n' "$release_head"
+            printf 'RAN_RELEASE_PENDING=%s\n' "$release_pending"
+            printf 'RAN_RELEASE_PR_NUMBER=%s\n' "$release_pr_number"
+            printf 'RAN_RELEASE_STATE=%s\n' "$state"
+            printf 'RAN_RELEASE_TAG=%s\n' "$tag"
+            printf 'RAN_RELEASE_TREE=%s\n' "$main_tree"
+            printf 'RAN_RELEASE_VERSION=%s\n' "$version"
+          } >> "$GITHUB_ENV"
 
-            - name: Download the exact archive tested by Quality
-              if: steps.release-state.outputs.release-required == 'true'
-              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-              with:
-                  name: ran-booster-runtime-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
-                  path: build
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
-                  repository: ${{ github.repository }}
-                  run-id: ${{ github.event.workflow_run.id }}
+      - name: Open or update release pull request
+        id: release-please
+        if: steps.release-state.outputs.release-please-required == 'true'
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true
 
-            - name: Verify the downloaded release identity
-              if: steps.release-state.outputs.release-required == 'true'
-              shell: bash
-              env:
-                  RAN_QUALITY_COMMIT: ${{ github.event.workflow_run.head_sha }}
-              run: |
-                  set -euo pipefail
-                  metadata='build/ran-booster-ci-runtime.json'
-                  archive="build/ran-booster-${RAN_RELEASE_VERSION}.zip"
-                  test -f "$metadata"
-                  test -f "$archive"
-                  archive_sha256="$(jq -er '.sha256' "$metadata")"
-                  jq -e \
-                      --arg quality_commit "$RAN_QUALITY_COMMIT" \
-                      --arg source_commit "$RAN_RELEASE_COMMIT" \
-                      --arg version "$RAN_RELEASE_VERSION" \
-                      '.schema == "ran-booster-ci-runtime"
-                        and .schema_version == 1
-                        and .quality_commit == $quality_commit
-                        and .source_commit == $source_commit
-                        and .version == $version
-                        and (.sha256 | test("^[0-9a-f]{64}$"))' \
-                      "$metadata" >/dev/null
-                  printf '%s  %s\n' "$archive_sha256" "$archive" | sha256sum --check --strict
-                  unzip -tqq "$archive"
-                  unzip -p "$archive" ran-booster/ran-booster-release.json \
-                      | jq -e \
-                          --arg commit "$RAN_RELEASE_COMMIT" \
-                          --arg version "$RAN_RELEASE_VERSION" \
-                          '.schema == "ran-booster-core-release"
-                            and .schema_version == 1
-                            and .commit == $commit
-                            and .version == $version' >/dev/null
+      - name: Validate and dispatch exact Release Please candidate
+        if: steps.release-state.outputs.release-please-required == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RAN_RELEASE_PRS: ${{ steps.release-please.outputs.prs }}
+          RAN_RELEASE_PRS_CREATED: ${{ steps.release-please.outputs.prs_created }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_branch='release-please--branches--main--components--ran-booster'
+          expected_files='[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt"]'
+          action_output=false
+          if [[ "$RAN_RELEASE_PRS_CREATED" == true ]]; then
+            action_output=true
+            action_pr="$(jq -cer \
+              --arg base main \
+              --arg head "$release_branch" \
+              --argjson expected_files "$expected_files" \
+              'if length != 1 then error("Expected exactly one Release Please action output pull request.") else .[0] end
+              | select((.number | type) == "number" and .number > 0)
+              | select(.baseBranchName == $base and .headBranchName == $head)
+              | select(.sha | type == "string" and test("^[0-9a-f]{40}$"))
+              | select(
+                  (.files
+                    | map(if type == "string" then . else (.filename // .path // error("Release Please output file has no path.")) end)
+                    | sort) == $expected_files
+                )' <<< "$RAN_RELEASE_PRS")"
+            action_pr_number="$(jq -er '.number' <<< "$action_pr")"
+            action_head_sha="$(jq -er '.sha' <<< "$action_pr")"
+          elif [[ -n "$RAN_RELEASE_PRS_CREATED" && "$RAN_RELEASE_PRS_CREATED" != false ]]; then
+            echo '::error::Release Please returned an invalid prs_created output.'
+            exit 1
+          fi
 
-            - name: Create or reuse the draft and attach verified assets
-              if: steps.release-state.outputs.release-required == 'true' && env.RAN_RELEASE_PENDING == 'true'
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  set -euo pipefail
-                  if [[ "$RAN_RELEASE_STATE" == absent ]]; then
-                      prerelease=()
-                      [[ "$RAN_RELEASE_VERSION" == *-* ]] && prerelease=(--prerelease)
-                      gh release create "$RAN_RELEASE_TAG" --draft --target "$RAN_RELEASE_COMMIT" --title "$RAN_RELEASE_TAG" --generate-notes "${prerelease[@]}"
-                  fi
-                  bash scripts/upload-release-assets.sh \
-                      "$RAN_RELEASE_TAG" \
-                      "build/ran-booster-${RAN_RELEASE_VERSION}.zip"
+          owner="${GITHUB_REPOSITORY%%/*}"
+          repository_name="${GITHUB_REPOSITORY#*/}"
+          pulls="$(gh api --paginate --slurp \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/pulls?state=open&base=main&head=${owner}%3A${release_branch}&per_page=100")"
+          release_pr="$(jq -cr \
+            --arg base main \
+            --arg bot 'github-actions[bot]' \
+            --arg head "$release_branch" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            'add
+            | [.[] | select(
+                .base.ref == $base
+                and .head.ref == $head
+                and .head.repo.full_name == $repository
+                and .user.login == $bot
+                and .merged_at == null
+                and any(.labels[]?; .name == "autorelease: pending")
+            )]
+            | if length == 0 then empty
+              elif length == 1 then .[0]
+              else error("Expected at most one exact Release Please pull request.") end' \
+            <<< "$pulls")"
+          if [[ -z "$release_pr" ]]; then
+            if [[ "$action_output" == true ]]; then
+              echo '::error::The Release Please action output has no exact live bot-owned pull request.'
+              exit 1
+            fi
+            echo 'No releasable changes produced an open Release Please pull request.'
+            exit 0
+          fi
 
-            - name: Publish only under the immutable-release contract
-              if: steps.release-state.outputs.release-required == 'true' && env.RAN_RELEASE_PENDING == 'true'
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  IMMUTABLE_RELEASES_ENABLED: ${{ vars.RAN_IMMUTABLE_RELEASES_ENABLED }}
-              run: |
-                  set -euo pipefail
-                  if [[ "$IMMUTABLE_RELEASES_ENABLED" != true ]]; then
-                      echo '::error::Enable GitHub immutable releases and set RAN_IMMUTABLE_RELEASES_ENABLED=true. The verified release remains a draft.'
-                      exit 1
-                  fi
-                  latest=(--latest)
-                  [[ "$RAN_RELEASE_VERSION" == *-* ]] && latest=(--prerelease)
-                  gh release edit "$RAN_RELEASE_TAG" --draft=false "${latest[@]}"
-                  immutable=false
-                  for delay in 0 2 2 2 2; do
-                      sleep "$delay"
-                      if immutable="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RAN_RELEASE_TAG}" --jq '.immutable' 2>/dev/null)" \
-                          && [[ "$immutable" == true ]]; then break; fi
-                  done
-                  test "$immutable" = true
+          pr_number="$(jq -er '.number' <<< "$release_pr")"
+          base_sha="$(jq -er '.base.sha' <<< "$release_pr")"
+          head_sha="$(jq -er '.head.sha' <<< "$release_pr")"
+          head_ref="$(jq -er '.head.ref' <<< "$release_pr")"
+          if [[ "$action_output" == true ]]; then
+            test "$pr_number" = "$action_pr_number"
+            test "$head_sha" = "$action_head_sha"
+          fi
+          if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$base_sha"
+          fi
+          git fetch --no-tags origin "refs/pull/${pr_number}/head"
+          test "$(git rev-parse FETCH_HEAD)" = "$head_sha"
+          bash scripts/validate-release-candidate.sh "$base_sha" "$head_sha"
 
-            - name: Read back the immutable release and reconcile its exact PR
-              if: steps.release-state.outputs.release-required == 'true'
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  set -euo pipefail
-                  release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RAN_RELEASE_TAG}")"
-                  jq -e \
-                      --arg tag "$RAN_RELEASE_TAG" \
-                      --arg commit "$RAN_RELEASE_COMMIT" \
-                      '.tag_name == $tag and .draft == false and .immutable == true and .target_commitish == $commit' \
-                      <<< "$release_json" >/dev/null
-                  tag_ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RAN_RELEASE_TAG}")"
-                  jq -e \
-                      --arg commit "$RAN_RELEASE_COMMIT" \
-                      '.object.type == "commit" and .object.sha == $commit' \
-                      <<< "$tag_ref" >/dev/null
+          marker_prefix='<!-- ran-booster-release-candidate:'
+          expected_marker="${marker_prefix} ${head_sha} -->"
+          comments="$(gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments?per_page=100")"
 
-                  labels="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}" --jq '[.labels[].name]')"
-                  if ! jq -e 'index("autorelease: tagged") != null' <<< "$labels" >/dev/null; then
-                      jq -nc '{labels: ["autorelease: tagged"]}' \
-                          | gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}/labels" --input - >/dev/null
-                  fi
-                  if jq -e 'index("autorelease: pending") != null' <<< "$labels" >/dev/null; then
-                      gh api --method DELETE "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}/labels/autorelease%3A%20pending" >/dev/null
-                  fi
-                  labels="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}" --jq '[.labels[].name]')"
-                  jq -e 'index("autorelease: tagged") != null and index("autorelease: pending") == null' <<< "$labels" >/dev/null
+          commit_identity=null
+          if [[ "$action_output" == false ]]; then
+            # shellcheck disable=SC2016
+            commit_identity="$(gh api graphql \
+              -F owner="$owner" \
+              -F name="$repository_name" \
+              -F number="$pr_number" \
+              -f query='
+                query($owner: String!, $name: String!, $number: Int!) {
+                  repository(owner: $owner, name: $name) {
+                    pullRequest(number: $number) {
+                      commits(last: 1) {
+                        nodes {
+                          commit {
+                            oid
+                            parents(first: 2) { nodes { oid } }
+                            signature {
+                              isValid
+                              state
+                              signer { login }
+                            }
+                            author {
+                              email
+                              user { login }
+                            }
+                            committer { email }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }')"
+          fi
+
+          flat_comments="$(jq -cer 'add' <<< "$comments")"
+          marker_transition="$(jq -nc \
+            --argjson comments "$flat_comments" \
+            --argjson identity "$commit_identity" \
+            '{comments: $comments, identity: $identity}' \
+            | bash scripts/reconcile-release-candidate-marker.sh \
+                "$action_output" "$base_sha" "$head_sha")"
+          marker_operation="$(jq -er '.operation' <<< "$marker_transition")"
+          marker_body="$(jq -er '.marker' <<< "$marker_transition")"
+          case "$marker_operation" in
+            post)
+              gh api --method POST \
+                "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments" \
+                -f "body=${marker_body}" >/dev/null
+              ;;
+            patch)
+              marker_id="$(jq -er '.comment_id' <<< "$marker_transition")"
+              gh api --method PATCH \
+                "repos/${GITHUB_REPOSITORY}/issues/comments/${marker_id}" \
+                -f "body=${marker_body}" >/dev/null
+              ;;
+            none) ;;
+            *)
+              echo '::error::Release candidate marker transition is invalid.'
+              exit 1
+              ;;
+          esac
+
+          comments="$(gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments?per_page=100")"
+          jq -e \
+            --arg bot 'github-actions[bot]' \
+            --arg marker "$expected_marker" \
+            --arg prefix "$marker_prefix" \
+            'add
+            | [.[] | select(
+                .user.login == $bot
+                and (.body | type) == "string"
+                and (.body | startswith($prefix))
+              )]
+            | length == 1 and .[0].body == $marker' \
+            <<< "$comments" >/dev/null || {
+              echo '::error::Expected exactly one current bot-authored release candidate marker.'
+              exit 1
+            }
+
+          workflow_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/quality.yml" --jq '.id')"
+          runs="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs?head_sha=${head_sha}&per_page=100")"
+          if bash scripts/has-trusted-release-candidate-run.sh \
+            "$workflow_id" "$head_ref" "$head_sha" "$GITHUB_REPOSITORY" \
+            <<< "$runs"; then
+            echo "Exact release candidate ${head_sha} already has active or successful trusted Quality evidence."
+            exit 0
+          fi
+
+          gh workflow run quality.yml --ref "$head_ref" \
+            -f "release_pr=${pr_number}" \
+            -f "release_sha=${head_sha}"
+
+      - name: Download exact archive admitted by main Quality
+        if: steps.release-state.outputs.release-required == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ran-booster-runtime-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Verify release identity and exact artifact provenance
+        if: steps.release-state.outputs.release-required == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RAN_QUALITY_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RAN_QUALITY_RUN_ID: ${{ github.event.workflow_run.id }}
+          RAN_QUALITY_WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata='build/ran-booster-ci-runtime.json'
+          archive="build/ran-booster-${RAN_RELEASE_VERSION}.zip"
+          checksum="${archive}.sha256"
+          test -f "$metadata"
+          test -f "$archive"
+          test -f "$checksum"
+          evidence_mode="$(jq -er '.mode' "$metadata")"
+          archive_sha256="$(jq -er '.sha256' "$metadata")"
+          main_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/heads/main"
+          candidate_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/heads/release-please--branches--main--components--ran-booster"
+
+          jq -e \
+            --arg base_commit "$RAN_RELEASE_BASE_COMMIT" \
+            --arg base_ref main \
+            --arg candidate_workflow_ref "$candidate_workflow_ref" \
+            --arg head_commit "$RAN_RELEASE_HEAD_COMMIT" \
+            --arg head_ref 'release-please--branches--main--components--ran-booster' \
+            --arg main_commit "$RAN_RELEASE_COMMIT" \
+            --arg main_tree "$RAN_RELEASE_TREE" \
+            --arg main_workflow_ref "$main_workflow_ref" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg version "$RAN_RELEASE_VERSION" \
+            --argjson current_run_attempt "$RAN_QUALITY_RUN_ATTEMPT" \
+            --argjson current_run_id "$RAN_QUALITY_RUN_ID" \
+            --argjson pr_number "$RAN_RELEASE_PR_NUMBER" \
+            --argjson workflow_id "$RAN_QUALITY_WORKFLOW_ID" \
+            '.schema == "ran-booster-ci-runtime"
+              and .schema_version == 3
+              and .source_tree == $main_tree
+              and .version == $version
+              and (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+              and .run.workflow_id == $workflow_id
+              and (.run.workflow_sha | type == "string" and test("^[0-9a-f]{40}$"))
+              and .pull_request.number == $pr_number
+              and .pull_request.base_ref == $base_ref
+              and .pull_request.base_sha == $base_commit
+              and .pull_request.head_ref == $head_ref
+              and .pull_request.head_repository == $repository
+              and .pull_request.head_sha == $head_commit
+              and .pull_request.tested_tree == $main_tree
+              and (
+                (
+                  .mode == "admitted"
+                  and .lane == "release-candidate"
+                  and .source_commit == $head_commit
+                  and .quality_commit == $head_commit
+                  and .pull_request.tested_commit == $head_commit
+                  and .run.event == "workflow_dispatch"
+                  and .run.workflow_ref == $candidate_workflow_ref
+                  and .run.workflow_sha == $head_commit
+                  and .admission.main_commit == $main_commit
+                  and .admission.main_tree == $main_tree
+                  and .admission.main_run_id == $current_run_id
+                  and .admission.main_run_attempt == $current_run_attempt
+                  and .admission.original_run_id == .run.id
+                  and .admission.original_run_attempt == .run.attempt
+                )
+                or
+                (
+                  .mode == "built"
+                  and .lane == "full"
+                  and .source_commit == $main_commit
+                  and .quality_commit == $main_commit
+                  and .pull_request.tested_commit == $main_commit
+                  and .run.id == $current_run_id
+                  and .run.attempt == $current_run_attempt
+                  and .run.event == "push"
+                  and .run.workflow_ref == $main_workflow_ref
+                  and .run.workflow_sha == $main_commit
+                  and (has("admission") | not)
+                )
+              )' \
+            "$metadata" >/dev/null
+
+          workflow_id="$RAN_QUALITY_WORKFLOW_ID"
+          candidate_runs="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs?head_sha=${RAN_RELEASE_HEAD_COMMIT}&status=completed&per_page=100")"
+          if [[ "$evidence_mode" == admitted ]]; then
+            candidate_run_id="$(jq -er '.run.id' "$metadata")"
+            candidate_run_attempt="$(jq -er '.run.attempt' "$metadata")"
+          else
+            candidate_run="$(jq -cer \
+              --arg bot 'github-actions[bot]' \
+              --arg branch 'release-please--branches--main--components--ran-booster' \
+              --arg head "$RAN_RELEASE_HEAD_COMMIT" \
+              --arg repository "$GITHUB_REPOSITORY" \
+              --argjson workflow_id "$workflow_id" \
+              '[.workflow_runs[] | select(
+                .workflow_id == $workflow_id
+                and .path == ".github/workflows/quality.yml"
+                and .event == "workflow_dispatch"
+                and .status == "completed"
+                and .conclusion == "success"
+                and .actor.login == $bot
+                and .triggering_actor.login == $bot
+                and .head_branch == $branch
+                and .head_sha == $head
+                and .head_repository.full_name == $repository
+                and .repository.full_name == $repository
+              )]
+              | sort_by(.run_attempt, .id)
+              | if length > 0 then last else error("No exact successful bot candidate run exists.") end' \
+              <<< "$candidate_runs")"
+            candidate_run_id="$(jq -er '.id' <<< "$candidate_run")"
+            candidate_run_attempt="$(jq -er '.run_attempt' <<< "$candidate_run")"
+          fi
+
+          candidate_attempt="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_run_id}/attempts/${candidate_run_attempt}")"
+          jq -e \
+            --arg bot 'github-actions[bot]' \
+            --arg head "$RAN_RELEASE_HEAD_COMMIT" \
+            --argjson attempt "$candidate_run_attempt" \
+            --argjson run_id "$candidate_run_id" \
+            --argjson workflow_id "$workflow_id" \
+            '.id == $run_id
+              and .run_attempt == $attempt
+              and .workflow_id == $workflow_id
+              and .path == ".github/workflows/quality.yml"
+              and .event == "workflow_dispatch"
+              and .conclusion == "success"
+              and .actor.login == $bot
+              and .triggering_actor.login == $bot
+              and .head_sha == $head' \
+            <<< "$candidate_attempt" >/dev/null
+
+          candidate_workflow_sha="$(jq -er '.head_sha' <<< "$candidate_attempt")"
+          candidate_workflow_hash="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/contents/.github/workflows/quality.yml?ref=${candidate_workflow_sha}" \
+            --jq '.content' | base64 --decode | git hash-object --stdin)"
+          test "$candidate_workflow_hash" = "$(git show "${RAN_RELEASE_COMMIT}:.github/workflows/quality.yml" | git hash-object --stdin)"
+
+          printf '%s  %s\n' "$archive_sha256" "$archive" | sha256sum --check --strict
+          test "$(< "$checksum")" = "$(printf '%s  %s' "$archive_sha256" "$(basename "$archive")")"
+          unzip -tqq "$archive"
+          unzip -p "$archive" ran-booster/ran-booster-release.json \
+            | jq -e \
+                --arg commit "$RAN_RELEASE_HEAD_COMMIT" \
+                --arg version "$RAN_RELEASE_VERSION" \
+                '.schema == "ran-booster-core-release"
+                  and .schema_version == 1
+                  and .commit == $commit
+                  and .version == $version' >/dev/null
+
+      - name: Create or reuse draft and attach verified assets
+        if: steps.release-state.outputs.release-required == 'true' && env.RAN_RELEASE_PENDING == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RAN_RELEASE_TAG}" >/dev/null 2>&1; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f "ref=refs/tags/${RAN_RELEASE_TAG}" \
+              -f "sha=${RAN_RELEASE_COMMIT}" >/dev/null
+          fi
+          bash scripts/verify-release-tag-target.sh \
+            "$GITHUB_REPOSITORY" "$RAN_RELEASE_TAG" "$RAN_RELEASE_COMMIT"
+          if [[ "$RAN_RELEASE_STATE" == absent ]]; then
+            prerelease=()
+            [[ "$RAN_RELEASE_VERSION" == *-* ]] && prerelease=(--prerelease)
+            gh release create "$RAN_RELEASE_TAG" --draft --target "$RAN_RELEASE_COMMIT" --title "$RAN_RELEASE_TAG" --generate-notes "${prerelease[@]}" --repo "$GITHUB_REPOSITORY"
+          fi
+          bash scripts/verify-release-tag-target.sh \
+            "$GITHUB_REPOSITORY" "$RAN_RELEASE_TAG" "$RAN_RELEASE_COMMIT"
+          gh release upload "$RAN_RELEASE_TAG" \
+            "build/ran-booster-${RAN_RELEASE_VERSION}.zip" \
+            "build/ran-booster-${RAN_RELEASE_VERSION}.zip.sha256" \
+            --clobber \
+            --repo "$GITHUB_REPOSITORY"
+          remote="$(mktemp -d)"
+          trap 'rm -rf "$remote"' EXIT
+          archive_name="ran-booster-${RAN_RELEASE_VERSION}.zip"
+          checksum_name="${archive_name}.sha256"
+          gh release download "$RAN_RELEASE_TAG" \
+            --dir "$remote" \
+            --pattern "$archive_name" \
+            --repo "$GITHUB_REPOSITORY"
+          gh release download "$RAN_RELEASE_TAG" \
+            --dir "$remote" \
+            --pattern "$checksum_name" \
+            --repo "$GITHUB_REPOSITORY"
+          draft_release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RAN_RELEASE_TAG}")"
+          bash scripts/verify-immutable-release-assets.sh \
+            "build/${archive_name}" "build/${checksum_name}" "$remote" \
+            <<< "$draft_release_json"
+
+      - name: Publish only under immutable-release contract
+        if: steps.release-state.outputs.release-required == 'true' && env.RAN_RELEASE_PENDING == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMMUTABLE_RELEASES_ENABLED: ${{ vars.RAN_IMMUTABLE_RELEASES_ENABLED }}
+        run: |
+          set -euo pipefail
+          bash scripts/verify-release-tag-target.sh \
+            "$GITHUB_REPOSITORY" "$RAN_RELEASE_TAG" "$RAN_RELEASE_COMMIT"
+          if [[ "$IMMUTABLE_RELEASES_ENABLED" != true ]]; then
+            echo '::error::Enable GitHub immutable releases and set RAN_IMMUTABLE_RELEASES_ENABLED=true. The verified release remains a draft.'
+            exit 1
+          fi
+          latest=(--latest)
+          [[ "$RAN_RELEASE_VERSION" == *-* ]] && latest=(--prerelease)
+          gh release edit "$RAN_RELEASE_TAG" --draft=false "${latest[@]}" --repo "$GITHUB_REPOSITORY"
+          immutable=false
+          for delay in 0 2 2 2 2; do
+            sleep "$delay"
+            if immutable="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RAN_RELEASE_TAG}" --jq '.immutable' 2>/dev/null)" \
+              && [[ "$immutable" == true ]]; then break; fi
+          done
+          test "$immutable" = true
+
+      - name: Read back immutable release and reconcile exact PR
+        if: steps.release-state.outputs.release-required == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RAN_RELEASE_TAG}")"
+          jq -e \
+            --arg tag "$RAN_RELEASE_TAG" \
+            --arg commit "$RAN_RELEASE_COMMIT" \
+            '.tag_name == $tag and .draft == false and .immutable == true and .target_commitish == $commit' \
+            <<< "$release_json" >/dev/null
+          bash scripts/verify-release-tag-target.sh \
+            "$GITHUB_REPOSITORY" "$RAN_RELEASE_TAG" "$RAN_RELEASE_COMMIT"
+
+          archive_name="ran-booster-${RAN_RELEASE_VERSION}.zip"
+          checksum_name="${archive_name}.sha256"
+          immutable_assets="$(mktemp -d)"
+          trap 'rm -rf "$immutable_assets"' EXIT
+          gh release download "$RAN_RELEASE_TAG" \
+            --dir "$immutable_assets" \
+            --pattern "$archive_name" \
+            --repo "$GITHUB_REPOSITORY"
+          gh release download "$RAN_RELEASE_TAG" \
+            --dir "$immutable_assets" \
+            --pattern "$checksum_name" \
+            --repo "$GITHUB_REPOSITORY"
+          bash scripts/verify-immutable-release-assets.sh \
+            "build/${archive_name}" "build/${checksum_name}" "$immutable_assets" \
+            <<< "$release_json"
+
+          labels="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}" --jq '[.labels[].name]')"
+          if ! jq -e 'index("autorelease: tagged") != null' <<< "$labels" >/dev/null; then
+            jq -nc '{labels: ["autorelease: tagged"]}' \
+              | gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}/labels" --input - >/dev/null
+          fi
+          if jq -e 'index("autorelease: pending") != null' <<< "$labels" >/dev/null; then
+            gh api --method DELETE "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}/labels/autorelease%3A%20pending" >/dev/null
+          fi
+          labels="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${RAN_RELEASE_PR_NUMBER}" --jq '[.labels[].name]')"
+          jq -e 'index("autorelease: tagged") != null and index("autorelease: pending") == null' <<< "$labels" >/dev/null

@@ -46,16 +46,22 @@
             "@test:characterization",
             "@test:github-module",
             "@test:unit",
-            "@test:github-release-updater-bootstrap"
+            "@test:github-release-updater-bootstrap",
+            "@test:release-candidate-contract"
         ],
         "lint:php": "phpcs --standard=.phpcs.xml --report=summary",
         "lint:php:fix": "phpcbf --standard=.phpcs.xml --report=summary",
-        "test:release-uploader": "bash tests/upload-release-assets.sh",
+        "test:release-candidate-contract": "bash tests/release-candidate-contract.sh",
+        "test:release-candidate-marker": "bash tests/reconcile-release-candidate-marker.sh",
+        "test:release-state-contracts": "bash tests/release-state-contracts.sh",
+        "test:quality-fallback-contract": "bash tests/quality-fallback-contract.sh",
         "build:release": "bash scripts/build-release.sh",
         "verify:release": "bash scripts/verify-release.sh",
         "check": [
             "@test",
-            "@test:release-uploader",
+            "@test:release-candidate-marker",
+            "@test:release-state-contracts",
+            "@test:quality-fallback-contract",
             "@lint:php"
         ]
     },

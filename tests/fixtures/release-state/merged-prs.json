@@ -1,0 +1,28 @@
+[
+  [
+    {
+      "number": 43,
+      "merged_at": "2026-08-17T12:00:00Z",
+      "base": {"ref": "main", "sha": "1111111111111111111111111111111111111111"},
+      "head": {
+        "ref": "release-please--branches--main--components--ran-booster",
+        "sha": "2222222222222222222222222222222222222222",
+        "repo": {"full_name": "RocketsAreNostalgic/ran-booster"}
+      },
+      "merge_commit_sha": "3333333333333333333333333333333333333333",
+      "user": {"login": "github-actions[bot]"}
+    },
+    {
+      "number": 42,
+      "merged_at": "2026-08-16T12:00:00Z",
+      "base": {"ref": "main", "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "head": {
+        "ref": "feature",
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "repo": {"full_name": "RocketsAreNostalgic/ran-booster"}
+      },
+      "merge_commit_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "user": {"login": "maintainer"}
+    }
+  ]
+]

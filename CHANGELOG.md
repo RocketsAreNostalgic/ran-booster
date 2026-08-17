@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0-beta.19](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.18...v1.0.0-beta.19) (2026-08-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **provider:** require exact capability facets
+
+### Features
+
+* **provider:** require exact capability facets ([5c10d23](https://github.com/RocketsAreNostalgic/ran-booster/commit/5c10d2356aba227b79f52c03e3ad32e5ac6cce2c))
+
+
+### Bug Fixes
+
+* **release:** fence stale native update offers ([b818457](https://github.com/RocketsAreNostalgic/ran-booster/commit/b818457da3301447408c94c3ba0248d227b7d4d0))
+* **release:** sequence provider targets before updater selection ([89a9dc3](https://github.com/RocketsAreNostalgic/ran-booster/commit/89a9dc30a9ee94b7f8085b12e33ddfac8626b35c))
+
 ## [1.0.0-beta.18](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.17...v1.0.0-beta.18) (2026-08-15)
 
 

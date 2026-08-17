@@ -204,12 +204,14 @@ $prospective->install(
 );
 ```
 
-`supportedProviderCodes()` returns a bounded list for `plugin` or `theme` using
-request-local configuration only. It performs no repository resolution,
-credential access, remote request, discovery or mutation. Callers must keep a
-prospective source unavailable when the selected provider is absent from that
-list. Core repeats the same check before every prospective operation and returns
-`unsupported_provider` before resolving the repository or invoking preflight.
+`supportedProviderCodes()` returns the bounded complete-product provider list
+for `plugin` or `theme` using request-local configuration only. It performs no
+repository resolution, credential access, remote request, discovery or
+mutation. Callers must keep the prospective source unavailable when the
+selected provider is absent from that list. Candidate listing independently
+requires the exact listing facet; discovery, inspection and installation repeat
+the complete-product check. A failed check returns `unsupported_provider`
+before resolving the repository or invoking preflight.
 
 `$channel` must be exactly `stable` or `prerelease`; Core rejects any other
 value before resolving credentials or invoking the updater. The channel is

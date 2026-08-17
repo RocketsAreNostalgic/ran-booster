@@ -85,17 +85,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return array();
 		}
 
-		$supported = array();
-		foreach ( $this->providers->orderedMetadata() as $metadata ) {
-			try {
-				$this->providers->requireCapability( $metadata->code, RepositoryReleaseCandidateListing::class );
-				$supported[] = $metadata->code->value;
-			} catch ( Throwable ) {
-				continue;
-			}
+		try {
+			$this->providers->requireCapability( 'gh', RepositoryReleaseCandidateListing::class );
+		} catch ( Throwable ) {
+			return array();
 		}
 
-		return $supported;
+		return array( 'gh' );
 	}
 
 	public function listCandidates(
@@ -130,11 +126,20 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 			$candidates = array();
 			foreach ( $result->candidates as $candidate ) {
-				if ( 1 !== preg_match( '/\A[1-9][0-9]{0,18}\z/D', $candidate->providerReleaseId ) ) {
+				if ( 'stable' === $channel && $candidate->prerelease ) {
+					throw new InvalidArgumentException( 'The release candidate conflicts with the requested channel.' );
+				}
+				$releaseId = filter_var(
+					$candidate->providerReleaseId,
+					FILTER_VALIDATE_INT,
+					array( 'options' => array( 'min_range' => 1 ) )
+				);
+				if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/D', $candidate->providerReleaseId )
+					|| false === $releaseId ) {
 					throw new InvalidArgumentException( 'The release candidate identity is incompatible.' );
 				}
 				$candidates[] = array(
-					'release_id'           => (int) $candidate->providerReleaseId,
+					'release_id'           => $releaseId,
 					'tag'                  => $candidate->tag,
 					'version'              => $candidate->version,
 					'prerelease'           => $candidate->prerelease,
@@ -169,7 +174,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			|| ! $this->authorized( 'discover', $type, $nonce ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		if ( ! $this->supportsRequestedProvider( $type, $repositoryRequest ) ) {
+		if ( ! $this->supportsCompleteProspectiveReleaseProvider( $type, $repositoryRequest ) ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 
@@ -204,7 +209,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			|| ! $this->validExactRelease( $releaseId, $tag ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		if ( ! $this->supportsRequestedProvider( $type, $repositoryRequest ) ) {
+		if ( ! $this->supportsCompleteProspectiveReleaseProvider( $type, $repositoryRequest ) ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 
@@ -243,7 +248,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			|| ! $this->validFingerprint( $expectedFingerprint ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		if ( ! $this->supportsRequestedProvider( $type, $repositoryRequest ) ) {
+		if ( ! $this->supportsCompleteProspectiveReleaseProvider( $type, $repositoryRequest ) ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 
@@ -527,9 +532,11 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	/** @param array<string, mixed> $repositoryRequest */
-	private function supportsRequestedProvider( string $type, array $repositoryRequest ): bool {
-		return in_array( $type, array( 'plugin', 'theme' ), true )
-			&& null !== $this->releaseCandidateListing( $repositoryRequest );
+	private function supportsCompleteProspectiveReleaseProvider( string $type, array $repositoryRequest ): bool {
+		$provider = $repositoryRequest['provider'] ?? null;
+
+		return is_string( $provider )
+			&& in_array( $provider, $this->supportedProviderCodes( $type ), true );
 	}
 
 	/** @param array<string, mixed> $repositoryRequest */

@@ -311,8 +311,19 @@ bounded candidate values; an empty list means that no eligible release exists,
 while an exception means listing was unavailable. The provider owns its remote
 calls, credential use and response normalization. The facet downloads no
 archive and grants no inspection, acquisition, installation or mutation
-authority, so it does not by itself make the complete release product
-available.
+authority. Publication time and expected ZIP names remain in the typed value
+only because the unchanged standalone facade still validates them; they grant no
+artifact authority. The bounded list wrapper enforces the result limit, typed
+members and unique provider identities at the capability boundary. The facet
+does not by itself make the complete release product available. Until those
+remaining operations have their own provider facets,
+Core's complete-product projection continues to advertise only the bundled
+GitHub implementation. A provider implementing candidate listing alone remains
+available to an authorized listing consumer but receives no complete-product UI
+or later-operation authority. The temporary standalone-add-on facade can project
+only positive integer release identities; opaque provider identities remain
+valid contract values but require the later hard cut before that facade can
+consume them.
 
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
@@ -429,12 +440,17 @@ or **Bitbucket Workspace**—but may not introduce additional logical scopes.
 
 Core's separately versioned prospective-release facade resolves
 `RepositoryReleaseCandidateListing` before repository resolution and maps its
-typed values to the current add-on response. `supportedProviderCodes()` exposes
-only registered providers implementing that exact facet, without resolving a
-repository, reading credentials or making a remote request. Registering a
-provider does not imply published-release support. Core rejects a prospective
-operation with `unsupported_provider` before repository resolution when the
-selected provider omits the facet.
+typed values to the current add-on response. Candidate listing can therefore be
+implemented independently without granting authority over inspection,
+acquisition or installation. `supportedProviderCodes()` remains the
+complete-product projection used by the unchanged add-on and currently exposes
+only the bundled GitHub provider when it implements the listing facet. It does
+not resolve a repository, read credentials or make a remote request.
+Registering a provider, or implementing listing alone, does not imply complete
+published-release support. Core rejects listing with `unsupported_provider`
+when the selected provider omits the listing facet, and rejects later
+prospective operations when the provider is absent from the complete-product
+projection; both checks happen before repository resolution.
 
 The physically separate conformance plugin in
 `tests/fixtures/ran-booster-fixture-provider/` registers a novel provider ID,

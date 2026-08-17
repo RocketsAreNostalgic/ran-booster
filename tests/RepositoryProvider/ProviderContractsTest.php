@@ -40,19 +40,20 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function testReleaseCandidateValuesAreBoundedAndTyped(): void {
-		$candidate = new RepositoryReleaseCandidate(
+		$longAssetName = str_repeat( 'a', 216 ) . '.zip';
+		$candidate     = new RepositoryReleaseCandidate(
 			'42',
 			'v1.2.3',
 			'1.2.3',
 			false,
 			'2026-08-17T12:00:00Z',
-			array( 'example-1.2.3.zip' )
+			array( 'example-1.2.3+build.zip', $longAssetName )
 		);
-		$list      = new RepositoryReleaseCandidateList( array( $candidate ) );
+		$list          = new RepositoryReleaseCandidateList( array( $candidate ) );
 
 		self::assertSame( array( $candidate ), $list->candidates );
 		self::assertSame( '42', $candidate->providerReleaseId );
-		self::assertSame( array( 'example-1.2.3.zip' ), $candidate->expectedAssetNames );
+		self::assertSame( array( 'example-1.2.3+build.zip', $longAssetName ), $candidate->expectedAssetNames );
 	}
 
 	public function testReleaseCandidateListRejectsUnboundedLists(): void {
@@ -80,7 +81,19 @@ final class ProviderContractsTest extends TestCase {
 		);
 
 		$this->expectException( \InvalidArgumentException::class );
-		new RepositoryReleaseCandidateList( array( $candidate, $candidate ) );
+		new RepositoryReleaseCandidateList(
+			array(
+				$candidate,
+				new RepositoryReleaseCandidate(
+					'42',
+					'v1.2.4',
+					'1.2.4',
+					false,
+					'2026-08-18T12:00:00Z',
+					array( 'example-1.2.4.zip' )
+				),
+			)
+		);
 	}
 
 	public function testReleaseCandidateRejectsUnboundedProviderValues(): void {
@@ -91,6 +104,18 @@ final class ProviderContractsTest extends TestCase {
 			'1.2.3',
 			false,
 			'2026-08-17T12:00:00Z',
+			array( 'example-1.2.3.zip' )
+		);
+	}
+
+	public function testReleaseCandidateRejectsInvalidUtcPublicationTime(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseCandidate(
+			'42',
+			'v1.2.3',
+			'1.2.3',
+			false,
+			'2026-99-99T99:99:99Z',
 			array( 'example-1.2.3.zip' )
 		);
 	}

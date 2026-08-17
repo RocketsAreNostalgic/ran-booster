@@ -184,9 +184,10 @@ work is in neither record.
   nonce-checked WordPress handlers, while Core's facade independently
   reauthorizes and performs mutations. When the selected updater runtime
   supplies updater prospective API 4, Core publishes its independent
-  Prospective Release API 5. Its local `supportedProviderCodes()` projection lets callers
-  keep unsupported providers out of the prospective workflow before any
-  repository check. Callers explicitly choose the bounded `stable` or
+  Prospective Release API 5. Its local `supportedProviderCodes()`
+  complete-product projection lets callers keep unsupported providers out of
+  the prospective workflow before any repository check. Callers explicitly
+  choose the bounded `stable` or
   `prerelease` channel for discovery, inspection and installation; discovery
   returns bounded metadata without downloading a ZIP. Inspection downloads,
   validates and discards the exact ZIP; install performs a second,

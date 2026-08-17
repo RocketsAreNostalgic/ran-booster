@@ -22,6 +22,7 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use RAN\Storage\PluginRepository;
@@ -95,6 +96,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$this->providers->requireCapability( 'gh', RepositoryReleaseInspector::class );
 			$this->providers->requireCapability( 'gh', RepositoryReleaseAcquirer::class );
 			$this->providers->requireCapability( 'gh', RepositoryReleaseMetadata::class );
+			$this->providers->requireCapability( 'gh', RepositoryReleaseNativeTargets::class );
 		} catch ( Throwable ) {
 			return array();
 		}

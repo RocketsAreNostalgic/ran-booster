@@ -28,6 +28,7 @@ use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
@@ -158,6 +159,7 @@ final class VendorConformanceTest extends TestCase {
 				RepositoryReleaseCandidateListing::class,
 				RepositoryReleaseInspector::class,
 				RepositoryReleaseMetadata::class,
+				RepositoryReleaseNativeTargets::class,
 			) as $capability
 		) {
 			self::assertTrue( is_a( $capability, ProviderCapability::class, true ) );

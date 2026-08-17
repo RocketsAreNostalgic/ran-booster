@@ -125,77 +125,6 @@ final class GitHubReleaseUpdaterBootstrapTest extends TestCase {
 		);
 	}
 
-	public function testRegistersManagedThemeWithLazyCredentialsAndNativePolicy(): void {
-		$calls      = array();
-		$facade     = new GitHubReleaseUpdaterFacadeSpy();
-		$credential = static fn (): string => 'request-scoped-token';
-		$factory    = static function ( mixed ...$options ) use ( &$calls, $facade ): object {
-			$calls[] = $options;
-
-			return $facade;
-		};
-
-		$result = GitHubReleaseUpdaterBootstrap::registerManaged(
-			'theme',
-			'/wordpress/wp-content/themes/locally-renamed/style.css',
-			'RocketsAreNostalgic/example-theme',
-			'123456789',
-			'example-theme',
-			'locally-renamed',
-			$credential,
-			'prerelease',
-			'automatic',
-			$factory
-		);
-
-		self::assertSame( $facade, $result );
-		self::assertSame( 1, $facade->registrations );
-		self::assertSame( 'theme', $calls[0]['targetType'] );
-		self::assertSame( 'locally-renamed', $calls[0]['stylesheet'] );
-		self::assertSame( $credential, $calls[0]['accessToken'] );
-		self::assertSame( 'prerelease', $calls[0]['channel'] );
-		self::assertSame( 'automatic', $calls[0]['autoUpdatePolicy'] );
-		self::assertSame( 'example-theme', $calls[0]['pluginSlug'] );
-		self::assertSame( '123456789', $calls[0]['providerRepositoryId'] );
-		self::assertArrayNotHasKey( 'nativeUpdateObserver', $calls[0] );
-	}
-
-	public function testRejectsAnUnknownManagedPackageType(): void {
-		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'target type is incompatible' );
-
-		GitHubReleaseUpdaterBootstrap::registerManaged(
-			'archive',
-			'/wordpress/example.php',
-			'owner/example',
-			'123456789',
-			'example',
-			'example',
-			null,
-			'stable',
-			'manual',
-			static fn ( mixed ...$options ): object => new GitHubReleaseUpdaterFacadeSpy()
-		);
-	}
-
-	public function testRejectsAnUnknownManagedReleaseChannel(): void {
-		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'target channel is incompatible' );
-
-		GitHubReleaseUpdaterBootstrap::registerManaged(
-			'plugin',
-			'/wordpress/example.php',
-			'owner/example',
-			'123456789',
-			'example',
-			'example/example.php',
-			null,
-			'preview',
-			'manual',
-			static fn ( mixed ...$options ): object => new GitHubReleaseUpdaterFacadeSpy()
-		);
-	}
-
 	public function testReportsProspectiveApiForTheSelectedRuntime(): void {
 		$facade              = new GitHubReleaseUpdaterFacadeSpy();
 		$facade->diagnostics = array(
@@ -247,7 +176,12 @@ final class GitHubReleaseUpdaterFacadeSpy {
 
 	public int $registrations = 0;
 	/** @var array<string, mixed> */
-	public array $diagnostics = array();
+	public array $diagnostics = array(
+		'registered'       => true,
+		'selection_fixed'  => true,
+		'selected_version' => 'test-runtime',
+		'state'            => 'idle',
+	);
 
 	public function register(): void {
 		++$this->registrations;
@@ -255,5 +189,9 @@ final class GitHubReleaseUpdaterFacadeSpy {
 
 	public function diagnostics(): array {
 		return $this->diagnostics;
+	}
+
+	public function refresh(): bool {
+		return true;
 	}
 }

@@ -6,8 +6,9 @@ namespace Tests\WordPress;
 
 final class RuntimeUpdaterFacade {
 
-	private bool $registered = false;
-	private int $refreshes   = 0;
+	private bool $registered      = false;
+	private bool $diagnosticsFail = false;
+	private int $refreshes        = 0;
 
 	/** @param array<string, mixed> $target @param array<string, mixed> $diagnostics */
 	public function __construct(
@@ -28,8 +29,28 @@ final class RuntimeUpdaterFacade {
 		return $this->refreshes;
 	}
 
+	/** @param array<string, mixed> $diagnostics */
+	public function replaceDiagnostics( array $diagnostics ): void {
+		$this->diagnostics = $diagnostics;
+	}
+
+	public function failDiagnostics(): void {
+		$this->diagnosticsFail = true;
+	}
+
 	/** @return array<string, mixed> */
 	public function diagnostics(): array {
-		return array( 'registered' => $this->registered ) + $this->diagnostics + $this->target;
+		if ( $this->diagnosticsFail ) {
+			throw new \RuntimeException( 'diagnostics failed' );
+		}
+
+		return array( 'registered' => $this->registered )
+			+ $this->diagnostics
+			+ array(
+				'selection_fixed'  => true,
+				'selected_version' => 'test-runtime',
+				'state'            => 'idle',
+			)
+			+ $this->target;
 	}
 }

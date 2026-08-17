@@ -34,7 +34,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 			array( 'plugins_loaded', 'network_admin_notices' ),
 			array_column( $actions, 'hook' )
 		);
-		self::assertSame( PHP_INT_MIN, $actions[0]['priority'] );
+		self::assertSame( PHP_INT_MAX - 1, $actions[0]['priority'] );
 		self::assertInstanceOf( UnsupportedMultisiteBootstrap::class, $actions[1]['callback'][0] );
 		self::assertSame( 'renderNotice', $actions[1]['callback'][1] );
 			self::assertSame(

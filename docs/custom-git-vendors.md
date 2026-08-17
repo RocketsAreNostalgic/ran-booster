@@ -34,7 +34,7 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+      || 10 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
@@ -63,7 +63,8 @@ provider therefore trusts it with credentials saved under its code;
 registration order is not publisher authentication, and Core cannot control the
 provider's private code after authorized disclosure.
 
-Provider API 9 supplies no logger, service container or generic resolver. An
+Provider API 10 supplies no logger, service container or generic service
+resolver. An
 unexpected caught diagnostic failure may be attached only to a bounded
 request-local `ProviderDiagnosticResult` for Core to log; it is omitted from
 serialization and administrator copy.
@@ -146,7 +147,7 @@ branch, credential selection, and package slug.
 a host, and must not contain user info or fragments. Providers must not place
 reusable secrets in archive URLs.
 
-Provider API 9 supplies `GitReferenceSyntax::isValidNamedReference()` for the
+Provider API 10 supplies `GitReferenceSyntax::isValidNamedReference()` for the
 generic bounded branch/ref syntax check and `AuthenticatedPreparedArchive` for
 the one-request archive authentication, redirect scrubbing, head verification
 and cleanup lifecycle. A vendor may impose stricter syntax or origin rules, but
@@ -291,5 +292,5 @@ For a deeper discussion of the provider contract itself, see the
 [provider extension contract](provider-extension-contract.md).
 
 The bundled GitHub module uses this same ordinary-vendor contract and remains
-owned and shipped by Core. Provider API 9 does not authorize extracting it into
+owned and shipped by Core. Provider API 10 does not authorize extracting it into
 a separate package or release stream; extraction remains NO-GO.

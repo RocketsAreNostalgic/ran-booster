@@ -10,7 +10,9 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Secrets\SecretsFile;
+use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use Throwable;
 
@@ -108,8 +110,26 @@ final class ManagedReleaseTargetRegistrar {
 			&& 1 === ( $upgrader->update_count ?? null )
 			&& 1 === ( $upgrader->update_current ?? null );
 		$target           = $this->nativeTarget( $hookExtra, $bulk );
-		if ( null === $target || null === $this->facade( $target['type'], $target['identifier'] ) ) {
+		if ( null === $target ) {
 			return $reply;
+		}
+		$key = self::key( $target['type'], $target['identifier'] );
+		if ( $reply instanceof \WP_Error ) {
+			unset( $this->nativeUpdates[ $key ] );
+
+			return $reply;
+		}
+		try {
+			$authority = $this->nativeAuthority( $target['type'], $target['identifier'] );
+		} catch ( PluginNotFound | ThemeNotFound ) {
+			return $reply;
+		} catch ( Throwable ) {
+			return $this->nativeUpdateError( 'authority_changed' );
+		}
+		if ( null === $authority
+			|| ! $this->nativeTargetIsActive( $target['type'], $target['identifier'] )
+			|| ( $this->registeredAuthorities[ $key ] ?? null ) !== $authority ) {
+			return $this->nativeUpdateError( 'authority_changed' );
 		}
 		try {
 			PackageMutationGuard::assertPackageMutationAllowed();
@@ -118,12 +138,6 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		if ( $bulk && ! $singleTargetBulk ) {
 			return $this->nativeUpdateError( 'unsupported_context' );
-		}
-		$key = self::key( $target['type'], $target['identifier'] );
-		if ( $reply instanceof \WP_Error ) {
-			unset( $this->nativeUpdates[ $key ] );
-
-			return $reply;
 		}
 		$automatic = isset( $upgrader->skin )
 			&& is_object( $upgrader->skin )
@@ -141,15 +155,6 @@ final class ManagedReleaseTargetRegistrar {
 			if ( null === $outerLock ) {
 				return $this->nativeUpdateError( 'unsupported_context' );
 			}
-		}
-		try {
-			$authority = $this->nativeAuthority( $target['type'], $target['identifier'] );
-		} catch ( Throwable ) {
-			$authority = null;
-		}
-		if ( null === $authority
-			|| ( $this->registeredAuthorities[ $key ] ?? null ) !== $authority ) {
-			return $this->nativeUpdateError( 'authority_changed' );
 		}
 		$this->nativeUpdates[ $key ] = array(
 			'authority' => $authority,
@@ -181,9 +186,15 @@ final class ManagedReleaseTargetRegistrar {
 			return $reply;
 		}
 		if ( null === $pending ) {
-			return null === $this->facade( $target['type'], $target['identifier'] )
-				? $reply
-				: $this->nativeUpdateError( 'authority_changed' );
+			try {
+				$this->nativeAuthority( $target['type'], $target['identifier'] );
+			} catch ( PluginNotFound | ThemeNotFound ) {
+				return $reply;
+			} catch ( Throwable ) {
+				return $this->nativeUpdateError( 'authority_changed' );
+			}
+
+			return $this->nativeUpdateError( 'authority_changed' );
 		}
 		try {
 			PackageMutationGuard::assertPackageMutationAllowed();
@@ -198,7 +209,9 @@ final class ManagedReleaseTargetRegistrar {
 				$lockToken = $lock->acquire();
 			}
 			$current = $this->nativeAuthority( $target['type'], $target['identifier'] );
-			if ( null === $current || $pending['authority'] !== $current ) {
+			if ( null === $current
+				|| ! $this->nativeTargetIsActive( $target['type'], $target['identifier'] )
+				|| $pending['authority'] !== $current ) {
 				throw new \RuntimeException( 'The managed release authority changed.' );
 			}
 			if ( null !== $lockToken ) {
@@ -407,6 +420,20 @@ final class ManagedReleaseTargetRegistrar {
 		}
 
 		return $this->authority( $package, $configuration );
+	}
+
+	private function nativeTargetIsActive( string $type, string $identifier ): bool {
+		$diagnostics = $this->diagnostics( $type, $identifier );
+		$state       = $diagnostics['state'] ?? null;
+		$version     = $diagnostics['selected_version'] ?? null;
+
+		return true === ( $diagnostics['registered'] ?? null )
+			&& true === ( $diagnostics['selection_fixed'] ?? null )
+			&& is_string( $version )
+			&& '' !== $version
+			&& is_string( $state )
+			&& '' !== $state
+			&& 'inactive' !== $state;
 	}
 
 	/** @return array<string, int|string> */

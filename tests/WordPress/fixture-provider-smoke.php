@@ -3,8 +3,8 @@
 // Executed by WP-CLI inside a disposable WordPress installation.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'Provider API 9 is unavailable.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 10 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'Provider API 10 is unavailable.' );
 }
 
 if ( defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) ) {

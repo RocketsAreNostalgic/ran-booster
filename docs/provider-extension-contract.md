@@ -1,6 +1,6 @@
 # Provider extension contract
 
-RAN Booster Provider API 9 accepts trusted repository providers through its late
+RAN Booster Provider API 10 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading:
 
@@ -9,7 +9,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 10 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
@@ -25,14 +25,14 @@ add_action(
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 9.
+registration action can run. The callback must check for exact Provider API 10.
 `Requires Plugins: ran-booster` only tells WordPress about the package
 dependency; it does not replace this exact runtime marker check or make a
 mismatched provider contract safe.
-Provider API 9 publishes no logging facade, generic resolver, Core container,
-credential writer, sidecar path or database/deployment repository. Providers
-report bounded diagnostics and operation results. Core owns logging at its call
-boundaries and never supplies a logger to provider code.
+Provider API 10 publishes no logging facade, generic service resolver, Core
+container, credential writer, sidecar path or database/deployment repository.
+Providers report bounded diagnostics and operation results. Core owns logging
+at its call boundaries and never supplies a logger to provider code.
 Booster fires the action once on `plugins_loaded` at priority 100, after plugin
 files have loaded and before the dashboard, dispatcher, repository picker or
 webhook controller is resolved. It then seals the registry. This works whether
@@ -215,7 +215,7 @@ archive into its private preflight file; WordPress receives only that verified
 local file. Providers remain responsible for any stricter origin, path and
 signed query policy required by their service.
 
-Provider API 9 owns two shared helpers for ordinary vendor implementations:
+Provider API 10 owns two shared helpers for ordinary vendor implementations:
 
 - `GitReferenceSyntax::isValidNamedReference()` applies Core's bounded generic
   branch/ref syntax check without assuming a particular hosting vendor.
@@ -279,6 +279,17 @@ separate optional capabilities. In particular, a provider may omit
 `WebhookNormalizer`; manual deployment remains available and Push-to-Deploy
 fails with the normal unsupported-capability result. A provider that omits
 webhooks must also publish no webhook scopes in its admin metadata.
+
+The registered provider object is the provider's open set of optional
+capabilities. Each capability is a purpose-specific interface extending
+`ProviderCapability`, and Core resolves it by its exact interface name. The
+bare marker, the base `RepositoryProvider` interface, concrete classes and
+non-marker interfaces are not capability contracts. A provider-owned marker
+interface can use the same resolver without a Core branch, but its presence
+does not create Core UI, routes or authority. Core does not enumerate
+capabilities, negotiate versions, or accept string descriptors; a breaking
+change to a published capability interface requires a new Provider API
+generation.
 
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
@@ -416,6 +427,6 @@ runtime release archive and requires no provider-name branches in Booster,
 GitHub or Bitbucket code.
 
 GitHub remains bundled and owned by Core under this same public boundary.
-Provider API 9 proves ordinary-vendor independence; it does not authorize a
+Provider API 10 proves ordinary-vendor independence; it does not authorize a
 separate GitHub package, repository, dependency or release stream. Extraction
 remains NO-GO unless separately approved after isolation evidence is complete.

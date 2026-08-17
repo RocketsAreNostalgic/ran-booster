@@ -54,8 +54,8 @@ committed_entries=(
 	'views'
 )
 package_root='vendor/ran/wp-github-release-updater'
-updater_version='v2.0.0-beta.5'
-updater_commit='933eebd7cd00a9529477030e617bbdd893aab131'
+updater_version='v2.0.0-beta.6'
+updater_commit='1e64357a2954e4512bfdb11d3ad9cf4515d3c1a0'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
@@ -118,7 +118,7 @@ done
 
 bootstrap_source=$(git show "$commit:ran-booster.php")
 for required_api_marker in \
-	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );" \
+	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );" \
 	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );" \
 	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );" \
 	"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );"; do

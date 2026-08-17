@@ -45,7 +45,7 @@ RAN Booster supports custom git vendors through the
 `ran_booster_register_providers` action. Use it to register a new provider,
 define its metadata and capability contracts, and wire in diagnostics,
 credential policy, repository browsing, and webhook handling as needed.
-Provider plugins must require exact Provider API 9. Core publishes no add-on
+Provider plugins must require exact Provider API 10. Core publishes no add-on
 logging facade; providers return bounded diagnostics and operation results.
 An unexpected provider failure may travel only as request-local diagnostic
 evidence for Core to log at its troubleshooting boundary; it is never included
@@ -63,7 +63,7 @@ evidence reader, each permanently bound to its own provider code; neither
 accepts a provider argument. These supported-contract limits do not claim
 confidentiality from hostile PHP running in the same WordPress process.
 
-GitHub remains a bundled, Core-owned provider module. Provider API 9 makes that
+GitHub remains a bundled, Core-owned provider module. Provider API 10 makes that
 module obey the same ordinary vendor boundary as external providers; it does
 not authorize extracting GitHub into another package or release stream.
 

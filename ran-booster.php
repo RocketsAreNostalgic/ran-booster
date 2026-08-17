@@ -23,9 +23,9 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
-} elseif ( 9 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Provider API 9 conflicts with an existing API version marker.' );
+	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+} elseif ( 10 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new LogicException( 'RAN Booster Provider API 10 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
@@ -102,36 +102,7 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 }
 ( new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy ) )->register();
 
-$ran_booster_updater_prospective_api_version = null;
-add_action(
-	'plugins_loaded',
-	static function () use ( &$ran_booster_updater_prospective_api_version ): void {
-		$updater                                     = $GLOBALS['ran_booster_release_updater'] ?? null;
-		$ran_booster_updater_prospective_api_version = is_object( $updater )
-			? GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $updater )
-			: null;
-		if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-			=== $ran_booster_updater_prospective_api_version
-			&& defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' ) ) {
-			if ( ProspectiveReleaseFacade::API_VERSION
-				!== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
-				\RAN\Logging\BoosterLogger::log(
-					'prospective release API marker conflict',
-					array( 'step' => 'prospective_release_api_negotiation' )
-				);
-			}
-		} elseif ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-			=== $ran_booster_updater_prospective_api_version ) {
-			define(
-				'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION',
-				ProspectiveReleaseFacade::API_VERSION
-			);
-		}
-	},
-	PHP_INT_MIN + 1
-);
-
-( static function () use ( $ran_booster_self_update_policy, &$ran_booster_updater_prospective_api_version ): void {
+( static function () use ( $ran_booster_self_update_policy ): void {
 	$ran_booster_container            = new CoreContainer();
 	$ran_booster_runtime              = new Booster( $ran_booster_container );
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
@@ -151,30 +122,31 @@ add_action(
 		)
 	);
 
-	// Release targets must join the package broker before its earliest
-	// plugins_loaded callback fixes the request-local runtime selection.
-	try {
-		$ran_booster_container->make( ManagedReleaseTargetRegistrar::class )->register();
-	} catch ( Throwable $exception ) {
-		\RAN\Logging\BoosterLogger::logException(
-			'managed release target registration unavailable',
-			$exception,
-			array( 'step' => 'managed_release_target_registration' )
-		);
-	}
-
 	register_activation_hook( __FILE__, array( $ran_booster_runtime, 'activate' ) );
 	register_deactivation_hook( __FILE__, array( $ran_booster_runtime, 'deactivate' ) );
 
 	add_action(
 		'plugins_loaded',
-		static function () use ( $ran_booster_container, $ran_booster_runtime, &$ran_booster_updater_prospective_api_version ): void {
+		static function () use ( $ran_booster_container, $ran_booster_runtime ): void {
 			// All plugins have now had an opportunity to attach their provider
 			// registration callback. No provider consumer is resolved before this
 			// extension seam closes and the registry is sealed.
 			$providerRegistry = $ran_booster_container->make( ProviderRegistry::class );
 			do_action( 'ran_booster_register_providers', $providerRegistry );
 			$providerRegistry->seal();
+
+			// Release targets join the package broker after every provider is
+			// available and before the request-local updater selects its runtime.
+			try {
+				$ran_booster_container->make( ManagedReleaseTargetRegistrar::class )->register();
+			} catch ( Throwable $exception ) {
+				\RAN\Logging\BoosterLogger::logException(
+					'managed release target registration unavailable',
+					$exception,
+					array( 'step' => 'managed_release_target_registration' )
+				);
+			}
+
 			$releaseTracking  = $ran_booster_container->make( ReleaseTrackingFacade::class );
 			$portability      = $ran_booster_container->make( PortabilityFacade::class );
 			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
@@ -236,31 +208,61 @@ add_action(
 				);
 			}
 
-			if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-				=== $ran_booster_updater_prospective_api_version
-				&& defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' )
-				&& ProspectiveReleaseFacade::API_VERSION
-				=== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
-				try {
-					$prospectiveRelease = $ran_booster_container->make( ProspectiveReleaseFacade::class );
-					do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease );
-				} catch ( Throwable $failure ) {
-					\RAN\Logging\BoosterLogger::logException(
-						'add-on service listener failed',
-						$failure,
-						array(
-							'source' => 'admin',
-							'step'   => 'add_on_service_ready',
-							'event'  => 'ran_booster_prospective_release_ready',
-						)
-					);
-				}
-			}
-
 			$ran_booster_container->bind( Dashboard::class, $ran_booster_container->make( Dashboard::class ) );
 			$ran_booster_runtime->init();
 		},
 		100
+	);
+
+	add_action(
+		'plugins_loaded',
+		static function () use ( $ran_booster_container ): void {
+			$updater                         = $GLOBALS['ran_booster_release_updater'] ?? null;
+			$updater_prospective_api_version = is_object( $updater )
+				? GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $updater )
+				: null;
+			if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
+				=== $updater_prospective_api_version
+				&& defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' ) ) {
+				if ( ProspectiveReleaseFacade::API_VERSION
+					!== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
+					\RAN\Logging\BoosterLogger::log(
+						'prospective release API marker conflict',
+						array( 'step' => 'prospective_release_api_negotiation' )
+					);
+				}
+			} elseif ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
+				=== $updater_prospective_api_version ) {
+				define(
+					'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION',
+					ProspectiveReleaseFacade::API_VERSION
+				);
+			}
+
+			if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
+				!== $updater_prospective_api_version
+				|| ! defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' )
+				|| ProspectiveReleaseFacade::API_VERSION
+				!== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
+				return;
+			}
+
+			try {
+				$prospectiveRelease = $ran_booster_container->make( ProspectiveReleaseFacade::class );
+				do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease );
+			} catch ( Throwable $failure ) {
+				\RAN\Logging\BoosterLogger::logException(
+					'add-on service listener failed',
+					$failure,
+					array(
+						'source' => 'admin',
+						'step'   => 'add_on_service_ready',
+						'event'  => 'ran_booster_prospective_release_ready',
+					)
+				);
+			}
+		},
+		PHP_INT_MAX
 	);
 
 	$ran_booster_update_request_filter = new WordPressOrgUpdateRequestFilter(

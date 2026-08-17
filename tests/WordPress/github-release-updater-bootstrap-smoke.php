@@ -95,7 +95,7 @@ $actions = $GLOBALS['ran_booster_updater_bootstrap_actions'];
 
 $assert( 1 === count( $actions ), 'The package must register exactly one deferred selection callback.' );
 $assert( 'plugins_loaded' === $actions[0]['hook'], 'The package must defer selection to plugins_loaded.' );
-$assert( PHP_INT_MIN === $actions[0]['priority'], 'The package must select at the earliest plugins_loaded priority.' );
+$assert( PHP_INT_MAX - 1 === $actions[0]['priority'], 'The package must select after provider-ready targets.' );
 $assert( 0 === $actions[0]['accepted_args'], 'The package callback must not accept action arguments.' );
 $assert( is_callable( $actions[0]['callback'] ), 'The deferred package callback must be callable.' );
 

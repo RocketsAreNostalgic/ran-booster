@@ -171,7 +171,7 @@ final class ExtensionsPageTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testMismatchedRequiredApiMarksTheCardIncompatible(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 8 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
@@ -204,7 +204,7 @@ final class ExtensionsPageTest extends TestCase {
 	}
 
 	private function defineCompatibleApis(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );

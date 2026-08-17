@@ -1,969 +1,1107 @@
 name: Quality
 
 on:
-    workflow_dispatch:
-    pull_request:
-    push:
-        branches:
-            - main
-
-permissions:
-    contents: read
+  workflow_dispatch:
+    inputs:
+      release_pr:
+        description: Exact Release Please pull-request number; reserved for the trusted release workflow.
+        required: false
+        type: string
+      release_sha:
+        description: Exact Release Please head SHA returned by the trusted release action.
+        required: false
+        type: string
+  pull_request:
+  push:
+    branches:
+      - main
 
 concurrency:
-    group: quality-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
-    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: quality-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 jobs:
-    runtime-archive:
-        name: Runtime archive
-        runs-on: blacksmith-2vcpu-ubuntu-2404
-        timeout-minutes: 10
-        permissions:
-            actions: read
-            contents: read
-            pull-requests: read
-        outputs:
-            admitted: ${{ steps.finalize.outputs.admitted }}
-            artifact-name: ${{ steps.archive.outputs.artifact-name }}
-            archive-sha256: ${{ steps.finalize.outputs.archive-sha256 }}
-            lane: ${{ steps.finalize.outputs.lane }}
-            source-commit: ${{ steps.finalize.outputs.source-commit }}
-            version: ${{ steps.finalize.outputs.version }}
-            wordpress-matrix: ${{ steps.finalize.outputs.wordpress-matrix }}
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-              with:
-                  fetch-depth: 0
-                  persist-credentials: false
+  runtime-archive:
+    name: Runtime archive
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    outputs:
+      admitted: ${{ steps.finalize.outputs.admitted }}
+      artifact-name: ${{ steps.finalize.outputs.artifact-name }}
+      archive-sha256: ${{ steps.finalize.outputs.archive-sha256 }}
+      lane: ${{ steps.finalize.outputs.lane }}
+      pr-base-sha: ${{ steps.finalize.outputs.pr-base-sha }}
+      pr-head-sha: ${{ steps.finalize.outputs.pr-head-sha }}
+      pr-number: ${{ steps.finalize.outputs.pr-number }}
+      source-commit: ${{ steps.finalize.outputs.source-commit }}
+      version: ${{ steps.finalize.outputs.version }}
+      wordpress-matrix: ${{ steps.finalize.outputs.wordpress-matrix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-            - name: Classify the lifecycle and locate reusable PR evidence
-              id: lifecycle
-              shell: bash
+      - name: Classify lifecycle and locate exact reusable evidence
+        id: lifecycle
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RAN_DISPATCH_RELEASE_PR: ${{ inputs.release_pr }}
+          RAN_DISPATCH_RELEASE_SHA: ${{ inputs.release_sha }}
+          RAN_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          RAN_PR_BASE: ${{ github.event.pull_request.base.ref }}
+          RAN_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RAN_PR_HEAD: ${{ github.event.pull_request.head.ref }}
+          RAN_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RAN_PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          RAN_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          release_branch='release-please--branches--main--components--ran-booster'
+          lane=full
+          source_commit="$GITHUB_SHA"
+          pr_number=0
+          pr_base_ref=''
+          pr_base_sha=''
+          pr_head_ref=''
+          pr_head_repository=''
+          pr_head_sha=''
+          tested_commit="$GITHUB_SHA"
+          tested_tree="$(git rev-parse "${GITHUB_SHA}^{tree}")"
+          reuse_requested=false
+          admitted_run_id=0
+          admitted_run_attempt=0
+          workflow_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/quality.yml")"
+          admitted_workflow_id="$(jq -er '.id' <<< "$workflow_json")"
+
+          fetch_pull_request_commits() {
+            if ! git cat-file -e "${pr_base_sha}^{commit}" 2>/dev/null; then
+              git fetch --no-tags origin "$pr_base_sha"
+            fi
+            git fetch --no-tags origin "refs/pull/${pr_number}/head"
+            test "$(git rev-parse FETCH_HEAD)" = "$pr_head_sha"
+          }
+
+          load_dispatch_candidate() {
+            local pr_json
+
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
+            [[ "$RAN_DISPATCH_RELEASE_PR" =~ ^[1-9][0-9]*$ ]]
+            [[ "$RAN_DISPATCH_RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+            [[ "$GITHUB_ACTOR" == 'github-actions[bot]' && "$GITHUB_TRIGGERING_ACTOR" == 'github-actions[bot]' ]] \
+              || { echo '::error::Only the trusted Release Please workflow may dispatch a candidate run.'; exit 1; }
+
+            pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${RAN_DISPATCH_RELEASE_PR}")"
+            jq -e \
+              --arg base main \
+              --arg bot 'github-actions[bot]' \
+              --arg head "$release_branch" \
+              --arg repository "$GITHUB_REPOSITORY" \
+              '.state == "open"
+                and .merged_at == null
+                and .base.ref == $base
+                and .head.ref == $head
+                and .head.repo.full_name == $repository
+                and .user.login == $bot' \
+              <<< "$pr_json" >/dev/null
+
+            pr_number="$(jq -er '.number' <<< "$pr_json")"
+            pr_base_ref="$(jq -er '.base.ref' <<< "$pr_json")"
+            pr_base_sha="$(jq -er '.base.sha' <<< "$pr_json")"
+            pr_head_ref="$(jq -er '.head.ref' <<< "$pr_json")"
+            pr_head_repository="$(jq -er '.head.repo.full_name' <<< "$pr_json")"
+            pr_head_sha="$(jq -er '.head.sha' <<< "$pr_json")"
+            test "$RAN_DISPATCH_RELEASE_SHA" = "$pr_head_sha"
+            test "$GITHUB_SHA" = "$pr_head_sha"
+            fetch_pull_request_commits
+            bash scripts/validate-release-candidate.sh "$pr_base_sha" "$pr_head_sha"
+            lane=release-candidate
+            source_commit="$pr_head_sha"
+            tested_commit="$pr_head_sha"
+            tested_tree="$(git rev-parse "${pr_head_sha}^{tree}")"
+          }
+
+          dispatched_candidate=false
+          if [[ -n "$RAN_DISPATCH_RELEASE_PR" || -n "$RAN_DISPATCH_RELEASE_SHA" ]]; then
+            [[ -n "$RAN_DISPATCH_RELEASE_PR" && -n "$RAN_DISPATCH_RELEASE_SHA" ]] \
+              || { echo '::error::Candidate dispatch requires both the exact pull request and head SHA.'; exit 1; }
+            load_dispatch_candidate
+            dispatched_candidate=true
+          fi
+
+          if [[ "$dispatched_candidate" != true && "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            pr_number="$RAN_PR_NUMBER"
+            pr_base_ref="$RAN_PR_BASE"
+            pr_base_sha="$RAN_PR_BASE_SHA"
+            pr_head_ref="$RAN_PR_HEAD"
+            pr_head_repository="$RAN_PR_HEAD_REPOSITORY"
+            pr_head_sha="$RAN_PR_HEAD_SHA"
+
+            if [[ "$GITHUB_ACTOR" == 'github-actions[bot]' \
+              && "$RAN_PR_AUTHOR" == 'github-actions[bot]' \
+              && "$RAN_PR_BASE" == main \
+              && "$RAN_PR_HEAD" == "$release_branch" \
+              && "$RAN_PR_HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]; then
+              bash scripts/validate-release-candidate.sh "$pr_base_sha" "$pr_head_sha"
+              test "$(git rev-parse "${pr_head_sha}^{tree}")" = "$tested_tree"
+              lane=release-candidate
+              source_commit="$pr_head_sha"
+            fi
+          fi
+
+          attempt_main_admission() {
+            local pr_json files_json main_tree head_tree expected_event runs_json run_json attempt_json trust_path
+
+            [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main ]] || return 1
+            main_tree="$(git rev-parse "${GITHUB_SHA}^{tree}")" || return 1
+            pr_json="$(
+              gh api --paginate --slurp \
+                -H 'Accept: application/vnd.github+json' \
+                "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=main&per_page=100" \
+              | jq -cer \
+                --arg base main \
+                --arg merge "$GITHUB_SHA" \
+                --arg repository "$GITHUB_REPOSITORY" \
+                'add
+                | [.[] | select(
+                    .merged_at != null
+                    and .base.ref == $base
+                    and .head.repo.full_name == $repository
+                    and .merge_commit_sha == $merge
+                )]
+                | if length == 1 then .[0] else error("Expected exactly one merged pull request for the main commit.") end'
+            )" || return 1
+
+            pr_number="$(jq -er '.number' <<< "$pr_json")" || return 1
+            pr_base_ref="$(jq -er '.base.ref' <<< "$pr_json")" || return 1
+            pr_base_sha="$(jq -er '.base.sha' <<< "$pr_json")" || return 1
+            pr_head_ref="$(jq -er '.head.ref' <<< "$pr_json")" || return 1
+            pr_head_repository="$(jq -er '.head.repo.full_name' <<< "$pr_json")" || return 1
+            pr_head_sha="$(jq -er '.head.sha' <<< "$pr_json")" || return 1
+            expected_event=pull_request
+            lane=full
+
+            if jq -e \
+              --arg bot 'github-actions[bot]' \
+              --arg head "$release_branch" \
+              --arg repository "$GITHUB_REPOSITORY" \
+              '.user.login == $bot and .head.ref == $head and .head.repo.full_name == $repository' \
+              <<< "$pr_json" >/dev/null; then
+              lane=release-candidate
+              expected_event=workflow_dispatch
+              head_tree="$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${pr_head_sha}" --jq '.tree.sha')" || return 1
+              [[ "$head_tree" == "$main_tree" ]] || return 1
+              source_commit="$pr_head_sha"
+            fi
+
+            files_json="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}/files?per_page=100")" || return 1
+            for trust_path in \
+              composer.json \
+              composer.lock \
+              package.json \
+              pnpm-lock.yaml \
+              .github/workflows/quality.yml \
+              .github/workflows/release-please.yml \
+              scripts/build-release.sh \
+              scripts/verify-release.sh \
+              scripts/validate-release-candidate.sh \
+              scripts/select-merged-release-pr.sh \
+              scripts/reconcile-release-candidate-marker.sh \
+              scripts/verify-release-tag-target.sh \
+              scripts/has-trusted-release-candidate-run.sh \
+              scripts/verify-immutable-release-assets.sh; do
+              jq -e --arg path "$trust_path" 'add | all(.[]; .filename != $path)' <<< "$files_json" >/dev/null || return 1
+            done
+
+            runs_json="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/${admitted_workflow_id}/runs?head_sha=${pr_head_sha}&status=completed&per_page=100")" || return 1
+            run_json="$(jq -cer \
+              --arg bot 'github-actions[bot]' \
+              --arg event "$expected_event" \
+              --arg head_ref "$pr_head_ref" \
+              --arg head_repository "$pr_head_repository" \
+              --arg head_sha "$pr_head_sha" \
+              --arg lane "$lane" \
+              --argjson workflow_id "$admitted_workflow_id" \
+              '[.workflow_runs[] | select(
+                  .workflow_id == $workflow_id
+                  and .path == ".github/workflows/quality.yml"
+                  and .event == $event
+                  and .conclusion == "success"
+                  and .head_branch == $head_ref
+                  and .head_repository.full_name == $head_repository
+                  and .head_sha == $head_sha
+                  and ($lane != "release-candidate" or (.actor.login == $bot and .triggering_actor.login == $bot))
+              )]
+              | sort_by(.run_attempt, .id)
+              | if length > 0 then last else error("No successful exact Quality run is reusable.") end' \
+              <<< "$runs_json")" || return 1
+            admitted_run_id="$(jq -er '.id' <<< "$run_json")" || return 1
+            admitted_run_attempt="$(jq -er '.run_attempt' <<< "$run_json")" || return 1
+            attempt_json="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${admitted_run_id}/attempts/${admitted_run_attempt}")" || return 1
+            jq -e \
+              --arg bot 'github-actions[bot]' \
+              --arg event "$expected_event" \
+              --arg head_sha "$pr_head_sha" \
+              --arg lane "$lane" \
+              --argjson attempt "$admitted_run_attempt" \
+              --argjson run_id "$admitted_run_id" \
+              --argjson workflow_id "$admitted_workflow_id" \
+              '.id == $run_id
+                and .run_attempt == $attempt
+                and .workflow_id == $workflow_id
+                and .path == ".github/workflows/quality.yml"
+                and .event == $event
+                and .conclusion == "success"
+                and .head_sha == $head_sha
+                and ($lane != "release-candidate" or (.actor.login == $bot and .triggering_actor.login == $bot))' \
+              <<< "$attempt_json" >/dev/null || return 1
+
+            reuse_requested=true
+          }
+
+          recover_release_fallback_identity() {
+            local pr_pages pr_json main_tree head_tree
+
+            [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main ]] || return 1
+            pr_json=''
+            for _ in 1 2 3; do
+              if pr_pages="$(gh api --paginate --slurp \
+                -H 'Accept: application/vnd.github+json' \
+                "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=main&per_page=100")" \
+                && pr_json="$(bash scripts/select-merged-release-pr.sh \
+                  "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$release_branch" <<< "$pr_pages")"; then
+                break
+              fi
+              pr_json=''
+            done
+            [[ -n "$pr_json" ]] || return 1
+
+            pr_number="$(jq -er '.number' <<< "$pr_json")" || return 1
+            pr_base_ref="$(jq -er '.base.ref' <<< "$pr_json")" || return 1
+            pr_base_sha="$(jq -er '.base.sha' <<< "$pr_json")" || return 1
+            pr_head_ref="$(jq -er '.head.ref' <<< "$pr_json")" || return 1
+            pr_head_repository="$(jq -er '.head.repo.full_name' <<< "$pr_json")" || return 1
+            pr_head_sha="$(jq -er '.head.sha' <<< "$pr_json")" || return 1
+            fetch_pull_request_commits || return 1
+            bash scripts/validate-release-candidate.sh "$pr_base_sha" "$pr_head_sha" || return 1
+            main_tree="$(git rev-parse "${GITHUB_SHA}^{tree}")" || return 1
+            head_tree="$(git rev-parse "${pr_head_sha}^{tree}")" || return 1
+            [[ "$head_tree" == "$main_tree" ]] || return 1
+
+            lane=full
+            source_commit="$GITHUB_SHA"
+            tested_commit="$GITHUB_SHA"
+            tested_tree="$main_tree"
+          }
+
+          if attempt_main_admission; then
+            echo "Found reusable Quality evidence from run ${admitted_run_id}, attempt ${admitted_run_attempt}."
+          elif [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            echo '::notice::Exact prior PR evidence was unavailable; running the full fallback lane.'
+            lane=full
+            source_commit="$GITHUB_SHA"
+            if recover_release_fallback_identity; then
+              echo "Preserved Release Please pull request ${pr_number} and head ${pr_head_sha} for the full fallback artifact."
+            elif parent_commit="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null)" \
+              && ! git diff --quiet "$parent_commit" "$GITHUB_SHA" -- .release-please-manifest.json; then
+              echo '::error::Release Please identity could not be recovered for a main commit that changes the release manifest.'
+              exit 1
+            fi
+          fi
+
+          {
+            printf 'admitted-artifact-name=ran-booster-runtime-%s-%s\n' "$admitted_run_id" "$admitted_run_attempt"
+            printf 'admitted-run-attempt=%s\n' "$admitted_run_attempt"
+            printf 'admitted-run-id=%s\n' "$admitted_run_id"
+            printf 'admitted-workflow-id=%s\n' "$admitted_workflow_id"
+            printf 'lane=%s\n' "$lane"
+            printf 'pr-base-ref=%s\n' "$pr_base_ref"
+            printf 'pr-base-sha=%s\n' "$pr_base_sha"
+            printf 'pr-head-ref=%s\n' "$pr_head_ref"
+            printf 'pr-head-repository=%s\n' "$pr_head_repository"
+            printf 'pr-head-sha=%s\n' "$pr_head_sha"
+            printf 'pr-number=%s\n' "$pr_number"
+            printf 'reuse-requested=%s\n' "$reuse_requested"
+            printf 'source-commit=%s\n' "$source_commit"
+            printf 'tested-commit=%s\n' "$tested_commit"
+            printf 'tested-tree=%s\n' "$tested_tree"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download exact prior PR artifact
+        id: prior-artifact
+        if: ${{ steps.lifecycle.outputs.reuse-requested == 'true' }}
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ steps.lifecycle.outputs.admitted-artifact-name }}
+          path: build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.lifecycle.outputs.admitted-run-id }}
+
+      - name: Admit exact prior PR artifact
+        id: admission
+        if: ${{ steps.lifecycle.outputs.reuse-requested == 'true' && steps.prior-artifact.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RAN_ADMITTED_RUN_ATTEMPT: ${{ steps.lifecycle.outputs.admitted-run-attempt }}
+          RAN_ADMITTED_RUN_ID: ${{ steps.lifecycle.outputs.admitted-run-id }}
+          RAN_ADMITTED_WORKFLOW_ID: ${{ steps.lifecycle.outputs.admitted-workflow-id }}
+          RAN_LANE: ${{ steps.lifecycle.outputs.lane }}
+          RAN_PR_BASE_REF: ${{ steps.lifecycle.outputs.pr-base-ref }}
+          RAN_PR_BASE_SHA: ${{ steps.lifecycle.outputs.pr-base-sha }}
+          RAN_PR_HEAD_REF: ${{ steps.lifecycle.outputs.pr-head-ref }}
+          RAN_PR_HEAD_REPOSITORY: ${{ steps.lifecycle.outputs.pr-head-repository }}
+          RAN_PR_HEAD_SHA: ${{ steps.lifecycle.outputs.pr-head-sha }}
+          RAN_PR_NUMBER: ${{ steps.lifecycle.outputs.pr-number }}
+        run: |
+          set -euo pipefail
+          metadata='build/ran-booster-ci-runtime.json'
+          test -f "$metadata"
+          main_tree="$(git rev-parse "${GITHUB_SHA}^{tree}")"
+          expected_event=pull_request
+          expected_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/pull/${RAN_PR_NUMBER}/merge"
+          if [[ "$RAN_LANE" == release-candidate ]]; then
+            expected_event=workflow_dispatch
+            expected_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/heads/${RAN_PR_HEAD_REF}"
+            head_tree="$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${RAN_PR_HEAD_SHA}" --jq '.tree.sha')"
+            test "$head_tree" = "$main_tree"
+          fi
+
+          jq -e \
+            --arg base_ref "$RAN_PR_BASE_REF" \
+            --arg base_sha "$RAN_PR_BASE_SHA" \
+            --arg event "$expected_event" \
+            --arg head_ref "$RAN_PR_HEAD_REF" \
+            --arg head_repository "$RAN_PR_HEAD_REPOSITORY" \
+            --arg head_sha "$RAN_PR_HEAD_SHA" \
+            --arg lane "$RAN_LANE" \
+            --arg main_tree "$main_tree" \
+            --arg workflow_ref "$expected_workflow_ref" \
+            --argjson pr_number "$RAN_PR_NUMBER" \
+            --argjson run_attempt "$RAN_ADMITTED_RUN_ATTEMPT" \
+            --argjson run_id "$RAN_ADMITTED_RUN_ID" \
+            --argjson workflow_id "$RAN_ADMITTED_WORKFLOW_ID" \
+            'keys == ["lane", "mode", "pull_request", "quality_commit", "run", "schema", "schema_version", "sha256", "source_commit", "source_tree", "version"]
+              and .schema == "ran-booster-ci-runtime"
+              and .schema_version == 3
+              and .mode == "built"
+              and .lane == $lane
+              and .source_tree == $main_tree
+              and .pull_request.tested_tree == $main_tree
+              and (.version | type == "string")
+              and (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
+              and .run.id == $run_id
+              and .run.attempt == $run_attempt
+              and .run.event == $event
+              and .run.workflow_id == $workflow_id
+              and .run.workflow_ref == $workflow_ref
+              and (.run.workflow_sha | type == "string" and test("^[0-9a-f]{40}$"))
+              and .pull_request.number == $pr_number
+              and .pull_request.base_ref == $base_ref
+              and .pull_request.base_sha == $base_sha
+              and .pull_request.head_ref == $head_ref
+              and .pull_request.head_repository == $head_repository
+              and .pull_request.head_sha == $head_sha
+              and (
+                ($lane == "release-candidate"
+                  and .source_commit == $head_sha
+                  and .quality_commit == $head_sha
+                  and .pull_request.tested_commit == $head_sha)
+                or ($lane == "full"
+                  and .source_commit == .quality_commit
+                  and .pull_request.tested_commit == .quality_commit)
+              )' \
+            "$metadata" >/dev/null
+
+          workflow_sha="$(jq -er '.run.workflow_sha' "$metadata")"
+          workflow_hash="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/contents/.github/workflows/quality.yml?ref=${workflow_sha}" \
+            --jq '.content' | base64 --decode | git hash-object --stdin)"
+          test "$workflow_hash" = "$(git show "${GITHUB_SHA}:.github/workflows/quality.yml" | git hash-object --stdin)"
+
+          version="$(jq -er '.version' "$metadata")"
+          archive="build/ran-booster-${version}.zip"
+          checksum="${archive}.sha256"
+          archive_sha256="$(jq -er '.sha256' "$metadata")"
+          test -f "$archive"
+          test -f "$checksum"
+          printf '%s  %s\n' "$archive_sha256" "$archive" | sha256sum --check --strict
+          test "$(< "$checksum")" = "$(printf '%s  %s' "$archive_sha256" "$(basename "$archive")")"
+          unzip -tqq "$archive"
+          test "$(unzip -p "$archive" ran-booster/ran-booster.php \
+            | sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p')" = "$version"
+
+          jq \
+            --arg main_commit "$GITHUB_SHA" \
+            --arg main_tree "$main_tree" \
+            --argjson main_run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --argjson main_run_id "$GITHUB_RUN_ID" \
+            --argjson original_run_attempt "$RAN_ADMITTED_RUN_ATTEMPT" \
+            --argjson original_run_id "$RAN_ADMITTED_RUN_ID" \
+            '.mode = "admitted"
+              | .admission = {
+                  main_commit: $main_commit,
+                  main_tree: $main_tree,
+                  main_run_id: $main_run_id,
+                  main_run_attempt: $main_run_attempt,
+                  original_run_id: $original_run_id,
+                  original_run_attempt: $original_run_attempt
+                }' \
+            "$metadata" > build/ran-booster-ci-runtime.admitted.json
+          mv build/ran-booster-ci-runtime.admitted.json "$metadata"
+
+      - name: Set up PHP for fresh archive
+        if: ${{ steps.lifecycle.outputs.reuse-requested != 'true' || steps.prior-artifact.outcome != 'success' || steps.admission.outcome != 'success' }}
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.2"
+          coverage: none
+          extensions: zip
+          tools: composer:v2
+
+      - name: Build and verify fresh runtime archive
+        id: fresh-archive
+        if: ${{ steps.lifecycle.outputs.reuse-requested != 'true' || steps.prior-artifact.outcome != 'success' || steps.admission.outcome != 'success' }}
+        shell: bash
+        env:
+          RAN_LANE: ${{ steps.lifecycle.outputs.lane }}
+          RAN_PR_BASE_REF: ${{ steps.lifecycle.outputs.pr-base-ref }}
+          RAN_PR_BASE_SHA: ${{ steps.lifecycle.outputs.pr-base-sha }}
+          RAN_PR_HEAD_REF: ${{ steps.lifecycle.outputs.pr-head-ref }}
+          RAN_PR_HEAD_REPOSITORY: ${{ steps.lifecycle.outputs.pr-head-repository }}
+          RAN_PR_HEAD_SHA: ${{ steps.lifecycle.outputs.pr-head-sha }}
+          RAN_PR_NUMBER: ${{ steps.lifecycle.outputs.pr-number }}
+          RAN_SOURCE_COMMIT: ${{ steps.lifecycle.outputs.source-commit }}
+          RAN_TESTED_COMMIT: ${{ steps.lifecycle.outputs.tested-commit }}
+          RAN_TESTED_TREE: ${{ steps.lifecycle.outputs.tested-tree }}
+          RAN_WORKFLOW_ID: ${{ steps.lifecycle.outputs.admitted-workflow-id }}
+        run: |
+          set -euo pipefail
+          lane="$RAN_LANE"
+          source_commit="$RAN_SOURCE_COMMIT"
+          tested_commit="$RAN_TESTED_COMMIT"
+          tested_tree="$RAN_TESTED_TREE"
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            lane=full
+            source_commit="$GITHUB_SHA"
+            tested_commit="$GITHUB_SHA"
+            tested_tree="$(git rev-parse "${GITHUB_SHA}^{tree}")"
+          fi
+
+          version="$(git show "${source_commit}:ran-booster.php" \
+            | sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          bash scripts/build-release.sh "$source_commit" "$version"
+
+          archive="build/ran-booster-${version}.zip"
+          checksum="${archive}.sha256"
+          test -f "$checksum"
+          archive_sha256="$(sha256sum "$archive" | awk '{ print $1 }')"
+          test "$(< "$checksum")" = "$(printf '%s  %s' "$archive_sha256" "$(basename "$archive")")"
+          if unzip -Z1 "$archive" | grep -Fq 'ran-booster-fixture-provider'; then
+            echo 'The runtime archive contains the test-only fixture provider.' >&2
+            exit 1
+          fi
+          source_tree="$(git rev-parse "${source_commit}^{tree}")"
+          if [[ "$lane" == release-candidate ]]; then
+            test "$source_tree" = "$tested_tree"
+          fi
+
+          jq -n \
+            --arg base_ref "$RAN_PR_BASE_REF" \
+            --arg base_sha "$RAN_PR_BASE_SHA" \
+            --arg head_ref "$RAN_PR_HEAD_REF" \
+            --arg head_repository "$RAN_PR_HEAD_REPOSITORY" \
+            --arg head_sha "$RAN_PR_HEAD_SHA" \
+            --arg lane "$lane" \
+            --arg quality_commit "$GITHUB_SHA" \
+            --arg sha256 "$archive_sha256" \
+            --arg source_commit "$source_commit" \
+            --arg source_tree "$source_tree" \
+            --arg tested_commit "$tested_commit" \
+            --arg tested_tree "$tested_tree" \
+            --arg version "$version" \
+            --arg workflow_ref "$GITHUB_WORKFLOW_REF" \
+            --arg workflow_sha "$GITHUB_WORKFLOW_SHA" \
+            --argjson pr_number "$RAN_PR_NUMBER" \
+            --argjson run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --argjson run_id "$GITHUB_RUN_ID" \
+            --argjson workflow_id "$RAN_WORKFLOW_ID" \
+            '{
+              schema: "ran-booster-ci-runtime",
+              schema_version: 3,
+              mode: "built",
+              lane: $lane,
+              quality_commit: $quality_commit,
+              source_commit: $source_commit,
+              source_tree: $source_tree,
+              version: $version,
+              sha256: $sha256,
+              run: {
+                id: $run_id,
+                attempt: $run_attempt,
+                event: env.GITHUB_EVENT_NAME,
+                workflow_id: $workflow_id,
+                workflow_ref: $workflow_ref,
+                workflow_sha: $workflow_sha
+              },
+              pull_request: {
+                number: $pr_number,
+                base_ref: $base_ref,
+                base_sha: $base_sha,
+                head_ref: $head_ref,
+                head_repository: $head_repository,
+                head_sha: $head_sha,
+                tested_commit: $tested_commit,
+                tested_tree: $tested_tree
+              }
+            }' > build/ran-booster-ci-runtime.json
+
+      - name: Finalize runtime evidence
+        id: finalize
+        shell: bash
+        env:
+          RAN_ADMISSION_OUTCOME: ${{ steps.admission.outcome }}
+        run: |
+          set -euo pipefail
+          metadata='build/ran-booster-ci-runtime.json'
+          test -f "$metadata"
+          admitted=false
+          [[ "$RAN_ADMISSION_OUTCOME" == success ]] && admitted=true
+          version="$(jq -er '.version' "$metadata")"
+          archive="build/ran-booster-${version}.zip"
+          checksum="${archive}.sha256"
+          archive_sha256="$(jq -er '.sha256' "$metadata")"
+          test -f "$archive"
+          test -f "$checksum"
+          printf '%s  %s\n' "$archive_sha256" "$archive" | sha256sum --check --strict
+          {
+            printf 'admitted=%s\n' "$admitted"
+            printf 'artifact-name=ran-booster-runtime-%s-%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
+            printf 'archive-sha256=%s\n' "$archive_sha256"
+            printf 'lane=%s\n' "$(jq -er '.lane' "$metadata")"
+            printf 'pr-base-sha=%s\n' "$(jq -er '.pull_request.base_sha' "$metadata")"
+            printf 'pr-head-sha=%s\n' "$(jq -er '.pull_request.head_sha' "$metadata")"
+            printf 'pr-number=%s\n' "$(jq -er '.pull_request.number' "$metadata")"
+            printf 'source-commit=%s\n' "$(jq -er '.source_commit' "$metadata")"
+            printf 'version=%s\n' "$version"
+            wordpress_matrix='{"include":[{"wordpress":"7.0","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"compatibility","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":true},{"wordpress":"7.0.3","database":"MariaDB 10.11","database_image":"mariadb:10.11","suite":"critical","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.0 floor","database_image":"mysql:8.0","suite":"floor","plugin_check":false}]}'
+            printf 'wordpress-matrix=%s\n' "$wordpress_matrix"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified runtime evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.finalize.outputs.artifact-name }}
+          path: |
+            build/ran-booster-${{ steps.finalize.outputs.version }}.zip
+            build/ran-booster-${{ steps.finalize.outputs.version }}.zip.sha256
+            build/ran-booster-ci-runtime.json
+          if-no-files-found: error
+          retention-days: 30
+
+  quality:
+      name: Quality
+      needs: runtime-archive
+      if: ${{ needs.runtime-archive.outputs.admitted != 'true' && needs.runtime-archive.outputs.lane == 'full' }}
+      runs-on: blacksmith-2vcpu-ubuntu-2404
+      timeout-minutes: 10
+      steps:
+          - name: Check out repository
+            uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+            with:
+                fetch-depth: 0
+                persist-credentials: false
+
+          - name: Prepare private test temporary directory
+            shell: bash
+            run: |
+                set -euo pipefail
+                test_tmp="${HOME}/.ran-booster-tests"
+                install -d -m 0700 "${test_tmp}"
+                printf 'TMPDIR=%s\n' "${test_tmp}" >> "${GITHUB_ENV}"
+
+          - name: Set up pnpm
+            uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+            with:
+                version: 11.7.0
+
+          - name: Set up Node.js
+            uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+            with:
+                node-version-file: package.json
+                cache: pnpm
+
+          - name: Set up PHP
+            uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+            with:
+                php-version: '8.2'
+                coverage: none
+                tools: composer:v2
+
+          - name: Validate Composer configuration
+            run: composer validate --strict --no-check-publish --no-check-all
+
+          - name: Install Composer dependencies
+            run: composer install --no-interaction --prefer-dist --no-progress
+
+          - name: Install Node.js dependencies
+            run: pnpm install --frozen-lockfile
+
+          - name: Run the complete PHP quality contract
+            run: composer check
+
+          - name: Run asset quality checks
+            run: pnpm check
+
+          - name: Lint all PHP files
+            run: find . -path './vendor' -prune -o -path './node_modules' -prune -o -path './.ran-booster-workbench' -prune -o -type f -name '*.php' -exec php -l {} \;
+
+  wordpress-release-candidate:
+      name: Release candidate install readback
+      needs: runtime-archive
+      if: ${{ needs.runtime-archive.outputs.admitted != 'true' && needs.runtime-archive.outputs.lane == 'release-candidate' }}
+      runs-on: blacksmith-2vcpu-ubuntu-2404
+      timeout-minutes: 10
+      services:
+          mysql:
+              image: mysql:8.4
               env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  RAN_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-                  RAN_PR_BASE: ${{ github.event.pull_request.base.ref }}
-                  RAN_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-                  RAN_PR_HEAD: ${{ github.event.pull_request.head.ref }}
-                  RAN_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-                  RAN_PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-                  RAN_PR_NUMBER: ${{ github.event.pull_request.number }}
-              run: |
-                  set -euo pipefail
+                  MYSQL_DATABASE: wordpress_test
+                  MYSQL_ROOT_PASSWORD: root
+              ports:
+                  - 3306:3306
+              options: >-
+                  --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root"
+                  --health-interval=10s
+                  --health-timeout=5s
+                  --health-retries=10
+      steps:
+          - name: Check out repository
+            uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+            with:
+                fetch-depth: 0
+                persist-credentials: false
 
-                  lane=full
-                  reuse_requested=false
-                  source_commit="$GITHUB_SHA"
-                  pr_number=''
-                  pr_base_ref=''
-                  pr_base_sha=''
-                  pr_head_ref=''
-                  pr_head_repository=''
-                  pr_head_sha=''
-                  admitted_run_id=''
-                  admitted_run_attempt=''
-                  admitted_workflow_id=''
+          - name: Set up PHP and WP-CLI
+            uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+            with:
+                php-version: '8.2'
+                coverage: none
+                extensions: mysqli, zip
+                tools: composer:v2, wp-cli
 
-                  if [[ "$GITHUB_EVENT_NAME" == pull_request \
-                      && "$GITHUB_ACTOR" == 'github-actions[bot]' \
-                      && "$RAN_PR_AUTHOR" == 'github-actions[bot]' \
-                      && "$RAN_PR_BASE" == main \
-                      && "$RAN_PR_HEAD" == 'release-please--branches--main--components--ran-booster' \
-                      && "$RAN_PR_HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]; then
-                      bash scripts/validate-release-candidate.sh "$RAN_PR_BASE_SHA" "$RAN_PR_HEAD_SHA"
-                      lane=release-candidate
-                      source_commit="$RAN_PR_HEAD_SHA"
-                  fi
+          - name: Download the verified release-candidate archive
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+                name: ${{ needs.runtime-archive.outputs.artifact-name }}
+                path: build
 
-                  if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
-                      pr_number="$RAN_PR_NUMBER"
-                      pr_base_ref="$RAN_PR_BASE"
-                      pr_base_sha="$RAN_PR_BASE_SHA"
-                      pr_head_ref="$RAN_PR_HEAD"
-                      pr_head_repository="$RAN_PR_HEAD_REPOSITORY"
-                      pr_head_sha="$RAN_PR_HEAD_SHA"
-                  fi
+          - name: Verify the release-candidate archive identity
+            shell: bash
+            env:
+                RAN_PR_BASE_SHA: ${{ needs.runtime-archive.outputs.pr-base-sha }}
+                RAN_PR_HEAD_SHA: ${{ needs.runtime-archive.outputs.pr-head-sha }}
+                RAN_PR_NUMBER: ${{ needs.runtime-archive.outputs.pr-number }}
+            run: |
+                set -euo pipefail
+                metadata='build/ran-booster-ci-runtime.json'
+                archive='build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip'
+                source_tree=$(git rev-parse "${RAN_PR_HEAD_SHA}^{tree}")
+                tested_tree=$(git rev-parse "${GITHUB_SHA}^{tree}")
+                test -f "$metadata"
+                test -f "$archive"
+                jq -e \
+                    --arg base_sha "$RAN_PR_BASE_SHA" \
+                    --arg quality_commit "$GITHUB_SHA" \
+                    --arg sha256 '${{ needs.runtime-archive.outputs.archive-sha256 }}' \
+                    --arg source_commit "$RAN_PR_HEAD_SHA" \
+                    --arg source_tree "$source_tree" \
+                    --arg tested_tree "$tested_tree" \
+                    --arg version '${{ needs.runtime-archive.outputs.version }}' \
+                    --argjson pr_number "$RAN_PR_NUMBER" \
+                    --argjson run_attempt "$GITHUB_RUN_ATTEMPT" \
+                    --argjson run_id "$GITHUB_RUN_ID" \
+                    '.schema == "ran-booster-ci-runtime"
+                      and .schema_version == 3
+                      and .mode == "built"
+                      and .lane == "release-candidate"
+                      and .quality_commit == $quality_commit
+                      and .source_commit == $source_commit
+                      and .source_tree == $source_tree
+                      and .version == $version
+                      and .sha256 == $sha256
+                      and .run.id == $run_id
+                      and .run.attempt == $run_attempt
+                      and .run.event == "workflow_dispatch"
+                      and .pull_request.number == $pr_number
+                      and .pull_request.base_sha == $base_sha
+                      and .pull_request.head_sha == $source_commit
+                      and .pull_request.tested_commit == $quality_commit
+                      and .pull_request.tested_tree == $tested_tree' \
+                    "$metadata" >/dev/null
+                printf '%s  %s\n' '${{ needs.runtime-archive.outputs.archive-sha256 }}' "$archive" \
+                    | sha256sum --check --strict
+                unzip -tqq "$archive"
 
-                  attempt_main_admission() {
-                      local parent_line parent_count merge_tree head_tree pr_json workflow_json runs_json run_json attempt_json trust_path
+          - name: Install WordPress 7.0.3
+            run: |
+                test "$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" = '8.2'
+                wp core download --path=build/wordpress --version=7.0.3
+                test "$(wp core version --path=build/wordpress)" = '7.0.3'
+                wp config create --path=build/wordpress --dbname=wordpress_test --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306
+                wp core install --path=build/wordpress --url=http://localhost --title='RAN Booster CI' --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
 
-                      [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main ]] || return 1
-                      parent_line=$(git rev-list --parents -n 1 "$GITHUB_SHA") || return 1
-                      parent_count=$(( $(wc -w <<< "$parent_line") - 1 ))
-                      [[ "$parent_count" == 2 ]] || return 1
+          - name: Install and activate release-candidate archive
+            run: |
+                wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip" --path=build/wordpress --activate
+                wp plugin is-active ran-booster --path=build/wordpress
 
-                      pr_base_sha=$(git rev-parse "${GITHUB_SHA}^1") || return 1
-                      pr_head_sha=$(git rev-parse "${GITHUB_SHA}^2") || return 1
-                      merge_tree=$(git rev-parse "${GITHUB_SHA}^{tree}") || return 1
-                      head_tree=$(git rev-parse "${pr_head_sha}^{tree}") || return 1
+          - name: Read back release-candidate version, marker, and vendor
+            shell: bash
+            run: |
+                set -euo pipefail
+                archive="$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"
+                plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
+                expected_root="$RUNNER_TEMP/ran-booster-installed-readback"
 
-                      pr_json=$(
-                          gh api \
-                              --paginate \
-                              --slurp \
-                              -H 'Accept: application/vnd.github+json' \
-                              "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=main&per_page=100" \
-                          | jq -cer \
-                              --arg base main \
-                              --arg base_sha "$pr_base_sha" \
-                              --arg head "$pr_head_sha" \
-                              --arg merge "$GITHUB_SHA" \
-                              --arg repository "$GITHUB_REPOSITORY" \
-                              'add
-                              | [.[] | select(
-                                  .merged_at != null
-                                  and .base.ref == $base
-                                  and .base.sha == $base_sha
-                                  and .head.sha == $head
-                                  and .head.repo.full_name == $repository
-                                  and .merge_commit_sha == $merge
-                              )]
-                              | if length == 1 then .[0] else error("Expected exactly one merged pull request for the main commit.") end'
-                      ) || return 1
+                test "$(wp plugin get ran-booster --field=version --path=build/wordpress)" = '${{ needs.runtime-archive.outputs.version }}'
+                jq -e \
+                    --arg version '${{ needs.runtime-archive.outputs.version }}' \
+                    --arg commit '${{ needs.runtime-archive.outputs.source-commit }}' \
+                    '.schema == "ran-booster-core-release"
+                      and .schema_version == 1
+                      and .version == $version
+                      and .commit == $commit' \
+                    "$plugin_root/ran-booster-release.json" >/dev/null
 
-                      pr_number=$(jq -er '.number' <<< "$pr_json") || return 1
-                      pr_base_ref=$(jq -er '.base.ref' <<< "$pr_json") || return 1
-                      pr_head_ref=$(jq -er '.head.ref' <<< "$pr_json") || return 1
-                      pr_head_repository=$(jq -er '.head.repo.full_name' <<< "$pr_json") || return 1
-                      if jq -e \
-                          --arg bot 'github-actions[bot]' \
-                          --arg head 'release-please--branches--main--components--ran-booster' \
-                          --arg repository "$GITHUB_REPOSITORY" \
-                          '.user.login == $bot
-                            and .head.ref == $head
-                            and .head.repo.full_name == $repository' \
-                          <<< "$pr_json" >/dev/null; then
-                          lane=release-candidate
-                          [[ "$merge_tree" == "$head_tree" ]] || return 1
-                          source_commit="$pr_head_sha"
-                      fi
-                      for trust_path in \
-                          .github/workflows/quality.yml \
-                          .github/workflows/release-please.yml \
-                          scripts/build-release.sh \
-                          scripts/verify-release.sh \
-                          scripts/validate-release-candidate.sh; do
-                          git diff --quiet "$pr_base_sha" "$pr_head_sha" -- "$trust_path" || return 1
-                      done
+                mkdir -p "$expected_root"
+                unzip -q "$archive" -d "$expected_root"
+                diff -qr \
+                    "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
+                    "$plugin_root/vendor/ran/wp-github-release-updater"
 
-                      workflow_json=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/quality.yml") || return 1
-                      admitted_workflow_id=$(jq -er '.id' <<< "$workflow_json") || return 1
-                      runs_json=$(
-                          gh api \
-                              "repos/${GITHUB_REPOSITORY}/actions/workflows/${admitted_workflow_id}/runs?event=pull_request&head_sha=${pr_head_sha}&status=completed&per_page=100"
-                      ) || return 1
-                      run_json=$(
-                          jq -cer \
-                              --arg head_ref "$pr_head_ref" \
-                              --arg head_repository "$pr_head_repository" \
-                              --arg head_sha "$pr_head_sha" \
-                              --argjson workflow_id "$admitted_workflow_id" \
-                              '[.workflow_runs[] | select(
-                                  .workflow_id == $workflow_id
-                                  and .path == ".github/workflows/quality.yml"
-                                  and .event == "pull_request"
-                                  and .conclusion == "success"
-                                  and .head_branch == $head_ref
-                                  and .head_repository.full_name == $head_repository
-                                  and .head_sha == $head_sha
-                              )]
-                              | sort_by(.run_attempt, .id)
-                              | if length > 0 then last else error("No successful exact Quality pull-request run is reusable.") end' \
-                              <<< "$runs_json"
-                      ) || return 1
-                      admitted_run_id=$(jq -er '.id' <<< "$run_json") || return 1
-                      admitted_run_attempt=$(jq -er '.run_attempt' <<< "$run_json") || return 1
-                      attempt_json=$(
-                          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${admitted_run_id}/attempts/${admitted_run_attempt}"
-                      ) || return 1
-                      jq -e \
-                          --arg bot 'github-actions[bot]' \
-                          --arg head_sha "$pr_head_sha" \
-                          --arg lane "$lane" \
-                          --argjson attempt "$admitted_run_attempt" \
-                          --argjson run_id "$admitted_run_id" \
-                          --argjson workflow_id "$admitted_workflow_id" \
-                          '.id == $run_id
-                            and .run_attempt == $attempt
-                            and .workflow_id == $workflow_id
-                            and .event == "pull_request"
-                            and .conclusion == "success"
-                            and .head_sha == $head_sha
-                            and ($lane != "release-candidate" or .actor.login == $bot)' \
-                          <<< "$attempt_json" >/dev/null || return 1
+  wordpress:
+      name: WordPress ${{ matrix.wordpress }} / ${{ matrix.database }} / PHP 8.2
+      needs:
+          - runtime-archive
+          - quality
+      if: >-
+          ${{
+              always()
+              && needs.runtime-archive.result == 'success'
+              && needs.runtime-archive.outputs.admitted != 'true'
+              && needs.runtime-archive.outputs.lane == 'full'
+              && needs.quality.result == 'success'
+          }}
+      runs-on: blacksmith-2vcpu-ubuntu-2404
+      timeout-minutes: 10
+      strategy:
+          fail-fast: false
+          matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}
+      services:
+          mysql:
+              image: ${{ matrix.database_image }}
+              env:
+                  MYSQL_DATABASE: wordpress_test
+                  MYSQL_ROOT_PASSWORD: root
+              ports:
+                  - 3306:3306
+              options: >-
+                  --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root"
+                  --health-interval=10s
+                  --health-timeout=5s
+                  --health-retries=10
+      steps:
+          - name: Check out repository
+            uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+            with:
+                fetch-depth: 0
+                persist-credentials: false
 
-                      reuse_requested=true
+          - name: Set up PHP and WP-CLI
+            uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+            with:
+                php-version: '8.2'
+                coverage: none
+                extensions: mysqli, zip
+                tools: composer:v2, wp-cli
+
+          - name: Download the verified runtime archive
+            uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+            with:
+                name: ${{ needs.runtime-archive.outputs.artifact-name }}
+                path: build
+
+          - name: Verify the shared runtime archive identity
+            shell: bash
+            run: |
+                set -euo pipefail
+                metadata='build/ran-booster-ci-runtime.json'
+                archive='build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip'
+                test -f "$metadata"
+                test -f "$archive"
+                source_tree=$(git rev-parse '${{ needs.runtime-archive.outputs.source-commit }}^{tree}')
+                jq -e \
+                    --arg quality_commit "$GITHUB_SHA" \
+                    --arg source_commit '${{ needs.runtime-archive.outputs.source-commit }}' \
+                    --arg source_tree "$source_tree" \
+                    --arg version '${{ needs.runtime-archive.outputs.version }}' \
+                    --arg sha256 '${{ needs.runtime-archive.outputs.archive-sha256 }}' \
+                    '.schema == "ran-booster-ci-runtime"
+                      and .schema_version == 3
+                      and .mode == "built"
+                      and .lane == "full"
+                      and .quality_commit == $quality_commit
+                      and .source_commit == $source_commit
+                      and .source_tree == $source_tree
+                      and .version == $version
+                      and .sha256 == $sha256
+                      and .run.id == (env.GITHUB_RUN_ID | tonumber)
+                      and .run.attempt == (env.GITHUB_RUN_ATTEMPT | tonumber)
+                      and .run.event == env.GITHUB_EVENT_NAME' \
+                    "$metadata" >/dev/null
+                printf '%s  %s\n' '${{ needs.runtime-archive.outputs.archive-sha256 }}' "$archive" \
+                    | sha256sum --check --strict
+                unzip -tqq "$archive"
+
+          - name: Install WordPress ${{ matrix.wordpress }}
+            run: |
+                test "$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" = '8.2'
+                wp core download --path=build/wordpress --version=${{ matrix.wordpress }}
+                test "$(wp core version --path=build/wordpress)" = '${{ matrix.wordpress }}'
+                wp config create --path=build/wordpress --dbname=wordpress_test --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306
+                wp core install --path=build/wordpress --url=http://localhost --title='RAN Booster CI' --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
+
+          - name: Install and activate runtime archive
+            run: |
+                wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip" --path=build/wordpress --activate
+                wp plugin is-active ran-booster --path=build/wordpress
+
+          - name: Read back the installed release identity
+            shell: bash
+            run: |
+                set -euo pipefail
+
+                archive="$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"
+                plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
+                expected_root="$RUNNER_TEMP/ran-booster-installed-readback"
+
+                test "$(wp plugin get ran-booster --field=version --path=build/wordpress)" = '${{ needs.runtime-archive.outputs.version }}'
+                jq -e \
+                    --arg version '${{ needs.runtime-archive.outputs.version }}' \
+                    --arg commit '${{ needs.runtime-archive.outputs.source-commit }}' \
+                    '.schema == "ran-booster-core-release"
+                      and .schema_version == 1
+                      and .version == $version
+                      and .commit == $commit' \
+                    "$plugin_root/ran-booster-release.json" >/dev/null
+
+                mkdir -p "$expected_root"
+                unzip -q "$archive" -d "$expected_root"
+                diff -qr \
+                    "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
+                    "$plugin_root/vendor/ran/wp-github-release-updater"
+
+          - name: Read back the installed GitHub provider contract
+            run: wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress
+
+          - name: Prove global Core container isolation
+            run: |
+                wp eval '
+                  if ( function_exists( "ran_booster" ) || array_key_exists( "ran_booster_instance", $GLOBALS ) ) {
+                    throw new RuntimeException( "The removed global Core container acquisition path is available." );
                   }
+                  if ( method_exists( RAN\Booster::class, "getInstance" ) || method_exists( RAN\Booster::class, "setInstance" ) || method_exists( RAN\Booster::class, "make" ) || method_exists( RAN\Booster::class, "bind" ) ) {
+                    throw new RuntimeException( "The removed Core singleton acquisition path is available." );
+                  }
+                  if ( method_exists( RAN\Secrets\SecretsFile::class, "credentialMaterials" ) ) {
+                    throw new RuntimeException( "The removed bulk credential enumerator is available." );
+                  }
+                  WP_CLI::success( "No global Core container or bulk credential enumerator is published." );
+                ' --path=build/wordpress
 
-                  if attempt_main_admission; then
-                      echo "Found reusable Quality evidence from run ${admitted_run_id}, attempt ${admitted_run_attempt}."
-                  elif [[ "$GITHUB_EVENT_NAME" == push ]]; then
-                      echo '::notice::Exact prior PR evidence was unavailable; running the full fallback lane.'
-                      lane=full
-                  fi
-
-                  {
-                      printf 'admitted-artifact-name=ran-booster-runtime-%s-%s\n' "$admitted_run_id" "$admitted_run_attempt"
-                      printf 'admitted-run-attempt=%s\n' "$admitted_run_attempt"
-                      printf 'admitted-run-id=%s\n' "$admitted_run_id"
-                      printf 'admitted-workflow-id=%s\n' "$admitted_workflow_id"
-                      printf 'lane=%s\n' "$lane"
-                      printf 'pr-base-ref=%s\n' "$pr_base_ref"
-                      printf 'pr-base-sha=%s\n' "$pr_base_sha"
-                      printf 'pr-head-ref=%s\n' "$pr_head_ref"
-                      printf 'pr-head-repository=%s\n' "$pr_head_repository"
-                      printf 'pr-head-sha=%s\n' "$pr_head_sha"
-                      printf 'pr-number=%s\n' "$pr_number"
-                      printf 'reuse-requested=%s\n' "$reuse_requested"
-                      printf 'source-commit=%s\n' "$source_commit"
-                  } >> "$GITHUB_OUTPUT"
-
-            - name: Download the exact prior PR artifact
-              id: prior-artifact
-              if: ${{ steps.lifecycle.outputs.reuse-requested == 'true' }}
-              continue-on-error: true
-              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-              with:
-                  name: ${{ steps.lifecycle.outputs.admitted-artifact-name }}
-                  path: build
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
-                  repository: ${{ github.repository }}
-                  run-id: ${{ steps.lifecycle.outputs.admitted-run-id }}
-
-            - name: Admit the exact prior PR artifact
-              id: admission
-              if: ${{ steps.lifecycle.outputs.reuse-requested == 'true' && steps.prior-artifact.outcome == 'success' }}
-              continue-on-error: true
-              shell: bash
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  RAN_ADMITTED_RUN_ATTEMPT: ${{ steps.lifecycle.outputs.admitted-run-attempt }}
-                  RAN_ADMITTED_RUN_ID: ${{ steps.lifecycle.outputs.admitted-run-id }}
-                  RAN_ADMITTED_WORKFLOW_ID: ${{ steps.lifecycle.outputs.admitted-workflow-id }}
-                  RAN_LANE: ${{ steps.lifecycle.outputs.lane }}
-                  RAN_PR_BASE_REF: ${{ steps.lifecycle.outputs.pr-base-ref }}
-                  RAN_PR_BASE_SHA: ${{ steps.lifecycle.outputs.pr-base-sha }}
-                  RAN_PR_HEAD_REF: ${{ steps.lifecycle.outputs.pr-head-ref }}
-                  RAN_PR_HEAD_REPOSITORY: ${{ steps.lifecycle.outputs.pr-head-repository }}
-                  RAN_PR_HEAD_SHA: ${{ steps.lifecycle.outputs.pr-head-sha }}
-                  RAN_PR_NUMBER: ${{ steps.lifecycle.outputs.pr-number }}
-              run: |
-                  set -euo pipefail
-                  metadata='build/ran-booster-ci-runtime.json'
-                  test -f "$metadata"
-                  merge_tree=$(git rev-parse "${GITHUB_SHA}^{tree}")
-                  head_tree=$(git rev-parse "${RAN_PR_HEAD_SHA}^{tree}")
-                  if [[ "$RAN_LANE" == release-candidate ]]; then
-                      test "$head_tree" = "$merge_tree"
-                  fi
-
-                  jq -e \
-                      --arg base_ref "$RAN_PR_BASE_REF" \
-                      --arg base_sha "$RAN_PR_BASE_SHA" \
-                      --arg head_ref "$RAN_PR_HEAD_REF" \
-                      --arg head_repository "$RAN_PR_HEAD_REPOSITORY" \
-                      --arg head_sha "$RAN_PR_HEAD_SHA" \
-                      --arg lane "$RAN_LANE" \
-                      --arg merge_tree "$merge_tree" \
-                      --arg workflow_ref "${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/pull/${RAN_PR_NUMBER}/merge" \
-                      --argjson pr_number "$RAN_PR_NUMBER" \
-                      --argjson run_attempt "$RAN_ADMITTED_RUN_ATTEMPT" \
-                      --argjson run_id "$RAN_ADMITTED_RUN_ID" \
-                      --argjson workflow_id "$RAN_ADMITTED_WORKFLOW_ID" \
-                      'keys == ["lane", "mode", "pull_request", "quality_commit", "run", "schema", "schema_version", "sha256", "source_commit", "source_tree", "version"]
-                        and .schema == "ran-booster-ci-runtime"
-                        and .schema_version == 2
-                        and .mode == "built"
-                        and .lane == $lane
-                        and (
-                          ($lane == "release-candidate" and .source_commit == $head_sha)
-                          or ($lane == "full" and .source_commit == .quality_commit)
-                        )
-                        and .source_tree == $merge_tree
-                        and (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"))
-                        and (.sha256 | type == "string" and test("^[0-9a-f]{64}$"))
-                        and (.run | keys == ["attempt", "event", "id", "workflow_id", "workflow_ref", "workflow_sha"])
-                        and .run.id == $run_id
-                        and .run.attempt == $run_attempt
-                        and .run.event == "pull_request"
-                        and .run.workflow_id == $workflow_id
-                        and .run.workflow_ref == $workflow_ref
-                        and (.run.workflow_sha | type == "string" and test("^[0-9a-f]{40}$"))
-                        and (.pull_request | keys == ["base_ref", "base_sha", "head_ref", "head_repository", "head_sha", "number", "tested_commit", "tested_tree"])
-                        and .pull_request.number == $pr_number
-                        and .pull_request.base_ref == $base_ref
-                        and .pull_request.base_sha == $base_sha
-                        and .pull_request.head_ref == $head_ref
-                        and .pull_request.head_repository == $head_repository
-                        and .pull_request.head_sha == $head_sha
-                        and .pull_request.tested_commit == .quality_commit
-                        and .pull_request.tested_tree == $merge_tree' \
-                      "$metadata" >/dev/null
-
-                  workflow_sha=$(jq -er '.run.workflow_sha' "$metadata")
-                  workflow_file_hash=$(
-                      gh api \
-                          -H 'Accept: application/vnd.github+json' \
-                          "repos/${GITHUB_REPOSITORY}/contents/.github/workflows/quality.yml?ref=${workflow_sha}" \
-                          --jq '.content' \
-                      | base64 --decode \
-                      | git hash-object --stdin
-                  )
-                  test \
-                      "$workflow_file_hash" = \
-                      "$(git show "${RAN_PR_BASE_SHA}:.github/workflows/quality.yml" | git hash-object --stdin)"
-
-                  version=$(jq -er '.version' "$metadata")
-                  admitted_source_commit=$(jq -er '.source_commit' "$metadata")
-                  archive="build/ran-booster-${version}.zip"
-                  archive_sha256=$(jq -er '.sha256' "$metadata")
-                  test -f "$archive"
-                  printf '%s  %s\n' "$archive_sha256" "$archive" | sha256sum --check --strict
-                  unzip -tqq "$archive"
-                  unzip -p "$archive" ran-booster/ran-booster-release.json \
-                      | jq -e \
-                          --arg commit "$admitted_source_commit" \
-                          --arg version "$version" \
-                          '.schema == "ran-booster-core-release"
-                            and .schema_version == 1
-                            and .commit == $commit
-                            and .version == $version' >/dev/null
-
-                  jq \
-                      --arg merge_commit "$GITHUB_SHA" \
-                      --arg merge_tree "$merge_tree" \
-                      --argjson original_run_attempt "$RAN_ADMITTED_RUN_ATTEMPT" \
-                      --argjson original_run_id "$RAN_ADMITTED_RUN_ID" \
-                      '.mode = "admitted"
-                        | .admission = {
-                            merge_commit: $merge_commit,
-                            merge_tree: $merge_tree,
-                            original_run_id: $original_run_id,
-                            original_run_attempt: $original_run_attempt
-                        }' \
-                      "$metadata" > build/ran-booster-ci-runtime.admitted.json
-                  mv build/ran-booster-ci-runtime.admitted.json "$metadata"
-
-            - name: Set up PHP for a fresh archive
-              if: ${{ steps.lifecycle.outputs.reuse-requested != 'true' || steps.prior-artifact.outcome != 'success' || steps.admission.outcome != 'success' }}
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-              with:
-                  php-version: '8.2'
-                  coverage: none
-                  extensions: zip
-                  tools: composer:v2
-
-            - name: Build and verify a fresh runtime archive
-              id: fresh-archive
-              if: ${{ steps.lifecycle.outputs.reuse-requested != 'true' || steps.prior-artifact.outcome != 'success' || steps.admission.outcome != 'success' }}
-              shell: bash
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  RAN_LANE: ${{ steps.lifecycle.outputs.lane }}
-                  RAN_PR_BASE_REF: ${{ steps.lifecycle.outputs.pr-base-ref }}
-                  RAN_PR_BASE_SHA: ${{ steps.lifecycle.outputs.pr-base-sha }}
-                  RAN_PR_HEAD_REF: ${{ steps.lifecycle.outputs.pr-head-ref }}
-                  RAN_PR_HEAD_REPOSITORY: ${{ steps.lifecycle.outputs.pr-head-repository }}
-                  RAN_PR_HEAD_SHA: ${{ steps.lifecycle.outputs.pr-head-sha }}
-                  RAN_PR_NUMBER: ${{ steps.lifecycle.outputs.pr-number }}
-                  RAN_SOURCE_COMMIT: ${{ steps.lifecycle.outputs.source-commit }}
-              run: |
-                  set -euo pipefail
-                  source_commit="$RAN_SOURCE_COMMIT"
-                  evidence_lane="$RAN_LANE"
-                  [[ "$GITHUB_EVENT_NAME" == push ]] && evidence_lane=full
-                  version="$(git show "${source_commit}:ran-booster.php" \
-                      | sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p')"
-                  test -n "$version"
-                  bash scripts/build-release.sh "$source_commit" "$version"
-
-                  archive="build/ran-booster-${version}.zip"
-                  if unzip -Z1 "$archive" | grep -Fq 'ran-booster-fixture-provider'; then
-                      echo 'The runtime archive contains the test-only fixture provider.' >&2
-                      exit 1
-                  fi
-                  archive_sha256="$(sha256sum "$archive" | awk '{ print $1 }')"
-                  source_tree=$(git rev-parse "${source_commit}^{tree}")
-                  tested_tree=$(git rev-parse "${GITHUB_SHA}^{tree}")
-                  current_run=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}")
-                  workflow_id=$(jq -er '.workflow_id' <<< "$current_run")
-
-                  pr_number=null
-                  [[ -n "$RAN_PR_NUMBER" ]] && pr_number="$RAN_PR_NUMBER"
-
-                  jq -n \
-                      --arg base_ref "$RAN_PR_BASE_REF" \
-                      --arg base_sha "$RAN_PR_BASE_SHA" \
-                      --arg event "$GITHUB_EVENT_NAME" \
-                      --arg head_ref "$RAN_PR_HEAD_REF" \
-                      --arg head_repository "$RAN_PR_HEAD_REPOSITORY" \
-                      --arg head_sha "$RAN_PR_HEAD_SHA" \
-                      --arg lane "$evidence_lane" \
-                      --arg quality_commit "$GITHUB_SHA" \
-                      --arg source_commit "$source_commit" \
-                      --arg source_tree "$source_tree" \
-                      --arg tested_tree "$tested_tree" \
-                      --arg version "$version" \
-                      --arg sha256 "$archive_sha256" \
-                      --arg workflow_ref "$GITHUB_WORKFLOW_REF" \
-                      --arg workflow_sha "$GITHUB_WORKFLOW_SHA" \
-                      --argjson pr_number "$pr_number" \
-                      --argjson run_attempt "$GITHUB_RUN_ATTEMPT" \
-                      --argjson run_id "$GITHUB_RUN_ID" \
-                      --argjson workflow_id "$workflow_id" \
-                      '{
-                        schema: "ran-booster-ci-runtime",
-                        schema_version: 2,
-                        mode: "built",
-                        lane: $lane,
-                        quality_commit: $quality_commit,
-                        source_commit: $source_commit,
-                        source_tree: $source_tree,
-                        version: $version,
-                        sha256: $sha256,
-                        run: {
-                          id: $run_id,
-                          attempt: $run_attempt,
-                          event: $event,
-                          workflow_id: $workflow_id,
-                          workflow_ref: $workflow_ref,
-                          workflow_sha: $workflow_sha
-                        },
-                        pull_request: {
-                          number: $pr_number,
-                          base_ref: (if $pr_number == null then null else $base_ref end),
-                          base_sha: (if $pr_number == null then null else $base_sha end),
-                          head_ref: (if $pr_number == null then null else $head_ref end),
-                          head_repository: (if $pr_number == null then null else $head_repository end),
-                          head_sha: (if $pr_number == null then null else $head_sha end),
-                          tested_commit: (if $pr_number == null then null else $quality_commit end),
-                          tested_tree: (if $pr_number == null then null else $tested_tree end)
-                        }
-                      }' > build/ran-booster-ci-runtime.json
-
-            - name: Finalize the current runtime evidence
-              id: finalize
-              shell: bash
-              run: |
-                  set -euo pipefail
-                  metadata='build/ran-booster-ci-runtime.json'
-                  test -f "$metadata"
-                  mode=$(jq -er '.mode' "$metadata")
-                  lane=$(jq -er '.lane' "$metadata")
-                  admitted=false
-                  [[ "$mode" == admitted ]] && admitted=true
-                  wordpress_matrix='{"include":[{"wordpress":"7.0","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"compatibility","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":true},{"wordpress":"7.0.3","database":"MariaDB 10.11","database_image":"mariadb:10.11","suite":"critical","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.0 floor","database_image":"mysql:8.0","suite":"floor","plugin_check":false}]}'
-                  {
-                      printf 'admitted=%s\n' "$admitted"
-                      printf 'archive-sha256=%s\n' "$(jq -er '.sha256' "$metadata")"
-                      printf 'lane=%s\n' "$lane"
-                      printf 'source-commit=%s\n' "$(jq -er '.source_commit' "$metadata")"
-                      printf 'version=%s\n' "$(jq -er '.version' "$metadata")"
-                      printf 'wordpress-matrix=%s\n' "$wordpress_matrix"
-                  } >> "$GITHUB_OUTPUT"
-
-            - name: Name the current run artifact
-              id: archive
-              run: printf 'artifact-name=ran-booster-runtime-%s-%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
-
-            - name: Upload the verified runtime archive
-              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-              with:
-                  name: ${{ steps.archive.outputs.artifact-name }}
-                  path: |
-                      build/ran-booster-${{ steps.finalize.outputs.version }}.zip
-                      build/ran-booster-ci-runtime.json
-                  if-no-files-found: error
-                  retention-days: 30
-
-    quality:
-        name: Quality
-        needs: runtime-archive
-        if: ${{ needs.runtime-archive.outputs.admitted != 'true' && needs.runtime-archive.outputs.lane == 'full' }}
-        runs-on: blacksmith-2vcpu-ubuntu-2404
-        timeout-minutes: 10
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-              with:
-                  fetch-depth: 0
-                  persist-credentials: false
-
-            - name: Prepare private test temporary directory
-              shell: bash
-              run: |
-                  set -euo pipefail
-                  test_tmp="${HOME}/.ran-booster-tests"
-                  install -d -m 0700 "${test_tmp}"
-                  printf 'TMPDIR=%s\n' "${test_tmp}" >> "${GITHUB_ENV}"
-
-            - name: Set up pnpm
-              uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
-              with:
-                  version: 11.7.0
-
-            - name: Set up Node.js
-              uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-              with:
-                  node-version-file: package.json
-                  cache: pnpm
-
-            - name: Set up PHP
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-              with:
-                  php-version: '8.2'
-                  coverage: none
-                  tools: composer:v2
-
-            - name: Validate Composer configuration
-              run: composer validate --strict --no-check-publish --no-check-all
-
-            - name: Install Composer dependencies
-              run: composer install --no-interaction --prefer-dist --no-progress
-
-            - name: Install Node.js dependencies
-              run: pnpm install --frozen-lockfile
-
-            - name: Run the complete PHP quality contract
-              run: composer check
-
-            - name: Run asset quality checks
-              run: pnpm check
-
-            - name: Lint all PHP files
-              run: find . -path './vendor' -prune -o -path './node_modules' -prune -o -path './.ran-booster-workbench' -prune -o -type f -name '*.php' -exec php -l {} \;
-
-    wordpress-release-candidate:
-        name: Release candidate install readback
-        needs: runtime-archive
-        if: ${{ needs.runtime-archive.outputs.admitted != 'true' && needs.runtime-archive.outputs.lane == 'release-candidate' }}
-        runs-on: blacksmith-2vcpu-ubuntu-2404
-        timeout-minutes: 10
-        services:
-            mysql:
-                image: mysql:8.4
-                env:
-                    MYSQL_DATABASE: wordpress_test
-                    MYSQL_ROOT_PASSWORD: root
-                ports:
-                    - 3306:3306
-                options: >-
-                    --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root"
-                    --health-interval=10s
-                    --health-timeout=5s
-                    --health-retries=10
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-              with:
-                  fetch-depth: 0
-                  persist-credentials: false
-
-            - name: Set up PHP and WP-CLI
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-              with:
-                  php-version: '8.2'
-                  coverage: none
-                  extensions: mysqli, zip
-                  tools: composer:v2, wp-cli
-
-            - name: Download the verified release-candidate archive
-              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-              with:
-                  name: ${{ needs.runtime-archive.outputs.artifact-name }}
-                  path: build
-
-            - name: Verify the release-candidate archive identity
-              shell: bash
-              env:
-                  RAN_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-                  RAN_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-                  RAN_PR_NUMBER: ${{ github.event.pull_request.number }}
-              run: |
-                  set -euo pipefail
-                  metadata='build/ran-booster-ci-runtime.json'
-                  archive='build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip'
-                  source_tree=$(git rev-parse "${RAN_PR_HEAD_SHA}^{tree}")
-                  tested_tree=$(git rev-parse "${GITHUB_SHA}^{tree}")
-                  test -f "$metadata"
-                  test -f "$archive"
-                  jq -e \
-                      --arg base_sha "$RAN_PR_BASE_SHA" \
-                      --arg quality_commit "$GITHUB_SHA" \
-                      --arg sha256 '${{ needs.runtime-archive.outputs.archive-sha256 }}' \
-                      --arg source_commit "$RAN_PR_HEAD_SHA" \
-                      --arg source_tree "$source_tree" \
-                      --arg tested_tree "$tested_tree" \
-                      --arg version '${{ needs.runtime-archive.outputs.version }}' \
-                      --argjson pr_number "$RAN_PR_NUMBER" \
-                      --argjson run_attempt "$GITHUB_RUN_ATTEMPT" \
-                      --argjson run_id "$GITHUB_RUN_ID" \
-                      '.schema == "ran-booster-ci-runtime"
-                        and .schema_version == 2
-                        and .mode == "built"
-                        and .lane == "release-candidate"
-                        and .quality_commit == $quality_commit
-                        and .source_commit == $source_commit
-                        and .source_tree == $source_tree
-                        and .version == $version
-                        and .sha256 == $sha256
-                        and .run.id == $run_id
-                        and .run.attempt == $run_attempt
-                        and .run.event == "pull_request"
-                        and .pull_request.number == $pr_number
-                        and .pull_request.base_sha == $base_sha
-                        and .pull_request.head_sha == $source_commit
-                        and .pull_request.tested_commit == $quality_commit
-                        and .pull_request.tested_tree == $tested_tree' \
-                      "$metadata" >/dev/null
-                  printf '%s  %s\n' '${{ needs.runtime-archive.outputs.archive-sha256 }}' "$archive" \
-                      | sha256sum --check --strict
-                  unzip -tqq "$archive"
-
-            - name: Install WordPress 7.0.3
-              run: |
-                  test "$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" = '8.2'
-                  wp core download --path=build/wordpress --version=7.0.3
-                  test "$(wp core version --path=build/wordpress)" = '7.0.3'
-                  wp config create --path=build/wordpress --dbname=wordpress_test --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306
-                  wp core install --path=build/wordpress --url=http://localhost --title='RAN Booster CI' --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
-
-            - name: Install and activate release-candidate archive
-              run: |
-                  wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip" --path=build/wordpress --activate
-                  wp plugin is-active ran-booster --path=build/wordpress
-
-            - name: Read back release-candidate version, marker, and vendor
-              shell: bash
-              run: |
-                  set -euo pipefail
-                  archive="$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"
-                  plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
-                  expected_root="$RUNNER_TEMP/ran-booster-installed-readback"
-
-                  test "$(wp plugin get ran-booster --field=version --path=build/wordpress)" = '${{ needs.runtime-archive.outputs.version }}'
-                  jq -e \
-                      --arg version '${{ needs.runtime-archive.outputs.version }}' \
-                      --arg commit '${{ needs.runtime-archive.outputs.source-commit }}' \
-                      '.schema == "ran-booster-core-release"
-                        and .schema_version == 1
-                        and .version == $version
-                        and .commit == $commit' \
-                      "$plugin_root/ran-booster-release.json" >/dev/null
-
-                  mkdir -p "$expected_root"
-                  unzip -q "$archive" -d "$expected_root"
-                  diff -qr \
-                      "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
-                      "$plugin_root/vendor/ran/wp-github-release-updater"
-
-    wordpress:
-        name: WordPress ${{ matrix.wordpress }} / ${{ matrix.database }} / PHP 8.2
-        needs:
-            - runtime-archive
-            - quality
-        if: >-
-            ${{
-                always()
-                && needs.runtime-archive.result == 'success'
-                && needs.runtime-archive.outputs.admitted != 'true'
-                && needs.runtime-archive.outputs.lane == 'full'
-                && needs.quality.result == 'success'
-            }}
-        runs-on: blacksmith-2vcpu-ubuntu-2404
-        timeout-minutes: 10
-        strategy:
-            fail-fast: false
-            matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}
-        services:
-            mysql:
-                image: ${{ matrix.database_image }}
-                env:
-                    MYSQL_DATABASE: wordpress_test
-                    MYSQL_ROOT_PASSWORD: root
-                ports:
-                    - 3306:3306
-                options: >-
-                    --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root"
-                    --health-interval=10s
-                    --health-timeout=5s
-                    --health-retries=10
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-              with:
-                  fetch-depth: 0
-                  persist-credentials: false
-
-            - name: Set up PHP and WP-CLI
-              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-              with:
-                  php-version: '8.2'
-                  coverage: none
-                  extensions: mysqli, zip
-                  tools: composer:v2, wp-cli
-
-            - name: Download the verified runtime archive
-              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-              with:
-                  name: ${{ needs.runtime-archive.outputs.artifact-name }}
-                  path: build
-
-            - name: Verify the shared runtime archive identity
-              shell: bash
-              run: |
-                  set -euo pipefail
-                  metadata='build/ran-booster-ci-runtime.json'
-                  archive='build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip'
-                  test -f "$metadata"
-                  test -f "$archive"
-                  source_tree=$(git rev-parse '${{ needs.runtime-archive.outputs.source-commit }}^{tree}')
-                  jq -e \
-                      --arg quality_commit "$GITHUB_SHA" \
-                      --arg source_commit '${{ needs.runtime-archive.outputs.source-commit }}' \
-                      --arg source_tree "$source_tree" \
-                      --arg version '${{ needs.runtime-archive.outputs.version }}' \
-                      --arg sha256 '${{ needs.runtime-archive.outputs.archive-sha256 }}' \
-                      '.schema == "ran-booster-ci-runtime"
-                        and .schema_version == 2
-                        and .mode == "built"
-                        and .lane == "full"
-                        and .quality_commit == $quality_commit
-                        and .source_commit == $source_commit
-                        and .source_tree == $source_tree
-                        and .version == $version
-                        and .sha256 == $sha256
-                        and .run.id == (env.GITHUB_RUN_ID | tonumber)
-                        and .run.attempt == (env.GITHUB_RUN_ATTEMPT | tonumber)
-                        and .run.event == env.GITHUB_EVENT_NAME' \
-                      "$metadata" >/dev/null
-                  printf '%s  %s\n' '${{ needs.runtime-archive.outputs.archive-sha256 }}' "$archive" \
-                      | sha256sum --check --strict
-                  unzip -tqq "$archive"
-
-            - name: Install WordPress ${{ matrix.wordpress }}
-              run: |
-                  test "$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" = '8.2'
-                  wp core download --path=build/wordpress --version=${{ matrix.wordpress }}
-                  test "$(wp core version --path=build/wordpress)" = '${{ matrix.wordpress }}'
-                  wp config create --path=build/wordpress --dbname=wordpress_test --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306
-                  wp core install --path=build/wordpress --url=http://localhost --title='RAN Booster CI' --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
-
-            - name: Install and activate runtime archive
-              run: |
-                  wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip" --path=build/wordpress --activate
-                  wp plugin is-active ran-booster --path=build/wordpress
-
-            - name: Read back the installed release identity
-              shell: bash
-              run: |
-                  set -euo pipefail
-
-                  archive="$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"
-                  plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
-                  expected_root="$RUNNER_TEMP/ran-booster-installed-readback"
-
-                  test "$(wp plugin get ran-booster --field=version --path=build/wordpress)" = '${{ needs.runtime-archive.outputs.version }}'
-                  jq -e \
-                      --arg version '${{ needs.runtime-archive.outputs.version }}' \
-                      --arg commit '${{ needs.runtime-archive.outputs.source-commit }}' \
-                      '.schema == "ran-booster-core-release"
-                        and .schema_version == 1
-                        and .version == $version
-                        and .commit == $commit' \
-                      "$plugin_root/ran-booster-release.json" >/dev/null
-
-                  mkdir -p "$expected_root"
-                  unzip -q "$archive" -d "$expected_root"
-                  diff -qr \
-                      "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
-                      "$plugin_root/vendor/ran/wp-github-release-updater"
-
-            - name: Read back the installed GitHub provider contract
-              run: wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress
-
-            - name: Prove global Core container isolation
-              run: |
-                  wp eval '
-                    if ( function_exists( "ran_booster" ) || array_key_exists( "ran_booster_instance", $GLOBALS ) ) {
-                      throw new RuntimeException( "The removed global Core container acquisition path is available." );
+          - name: Prove shared updater registration
+            shell: bash
+            run: |
+                wp eval '
+                  $updater = $GLOBALS["ran_booster_release_updater"] ?? null;
+                  if ( ! is_object( $updater ) || ! is_callable( array( $updater, "diagnostics" ) ) ) {
+                    throw new RuntimeException( "The shared updater facade is unavailable." );
+                  }
+                  $diagnostics = $updater->diagnostics();
+                  $expected = array(
+                    "registered" => true,
+                    "selection_fixed" => true,
+                    "selected_version" => "2.0.0-beta.6",
+                    "repository" => "RocketsAreNostalgic/ran-booster",
+                    "channel" => "prerelease",
+                    "type" => "plugin",
+                    "package" => "ran-booster/ran-booster.php",
+                    "authentication_configured" => false,
+                    "private_support" => true,
+                  );
+                  foreach ( $expected as $key => $value ) {
+                    if ( ( $diagnostics[$key] ?? null ) !== $value ) {
+                      throw new RuntimeException( "Unexpected shared updater diagnostic: " . $key );
                     }
-                    if ( method_exists( RAN\Booster::class, "getInstance" ) || method_exists( RAN\Booster::class, "setInstance" ) || method_exists( RAN\Booster::class, "make" ) || method_exists( RAN\Booster::class, "bind" ) ) {
-                      throw new RuntimeException( "The removed Core singleton acquisition path is available." );
-                    }
-                    if ( method_exists( RAN\Secrets\SecretsFile::class, "credentialMaterials" ) ) {
-                      throw new RuntimeException( "The removed bulk credential enumerator is available." );
-                    }
-                    WP_CLI::success( "No global Core container or bulk credential enumerator is published." );
-                  ' --path=build/wordpress
+                  }
+                  WP_CLI::success( "Shared updater diagnostics passed without a remote check." );
+                ' --path=build/wordpress
 
-            - name: Prove shared updater registration
-              shell: bash
-              run: |
-                  wp eval '
-                    $updater = $GLOBALS["ran_booster_release_updater"] ?? null;
-                    if ( ! is_object( $updater ) || ! is_callable( array( $updater, "diagnostics" ) ) ) {
-                      throw new RuntimeException( "The shared updater facade is unavailable." );
-                    }
-                    $diagnostics = $updater->diagnostics();
-                    $expected = array(
-                      "registered" => true,
-                      "selection_fixed" => true,
-                      "selected_version" => "2.0.0-beta.6",
-                      "repository" => "RocketsAreNostalgic/ran-booster",
-                      "channel" => "prerelease",
-                      "type" => "plugin",
-                      "package" => "ran-booster/ran-booster.php",
-                      "authentication_configured" => false,
-                      "private_support" => true,
-                    );
-                    foreach ( $expected as $key => $value ) {
-                      if ( ( $diagnostics[$key] ?? null ) !== $value ) {
-                        throw new RuntimeException( "Unexpected shared updater diagnostic: " . $key );
-                      }
-                    }
-                    WP_CLI::success( "Shared updater diagnostics passed without a remote check." );
-                  ' --path=build/wordpress
+          - name: Prove database activation and storage
+            env:
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: composer test:database-storage-smoke
 
-            - name: Prove database activation and storage
-              env:
-                  RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
-              run: composer test:database-storage-smoke
+          - name: Prove normal managed-theme registration
+            if: ${{ matrix.database == 'MySQL 8.4' }}
+            env:
+                RAN_BOOSTER_MANAGED_THEME_REGISTRATION_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                bash tests/WordPress/managed-theme-registration-smoke.sh
 
-            - name: Prove normal managed-theme registration
-              if: ${{ matrix.database == 'MySQL 8.4' }}
-              env:
-                  RAN_BOOSTER_MANAGED_THEME_REGISTRATION_TEST_DISPOSABLE: '1'
-                  RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
-              run: |
-                  printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
-                  bash tests/WordPress/managed-theme-registration-smoke.sh
+          - name: Prove WordPress core package execution
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_CORE_UPDATER_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                composer test:core-updater-proof
+                composer test:core-package-executor
 
-            - name: Prove WordPress core package execution
-              if: ${{ matrix.suite == 'critical' }}
-              env:
-                  RAN_BOOSTER_CORE_UPDATER_TEST_DISPOSABLE: '1'
-                  RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
-              run: |
-                  printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
-                  composer test:core-updater-proof
-                  composer test:core-package-executor
+          - name: Prove native updater-lock election
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_LOCK_RACE_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: composer test:native-lock-race
 
-            - name: Prove native updater-lock election
-              if: ${{ matrix.suite == 'critical' }}
-              env:
-                  RAN_BOOSTER_LOCK_RACE_TEST_DISPOSABLE: '1'
-                  RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
-              run: composer test:native-lock-race
+          - name: Prove a killed worker retains post-mutation protection
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: composer test:worker-hard-stop
 
-            - name: Prove a killed worker retains post-mutation protection
-              if: ${{ matrix.suite == 'critical' }}
-              env:
-                  RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
-              run: composer test:worker-hard-stop
+          - name: Prove concurrent webhook intake is idempotent
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: composer test:delivery-intake-race
 
-            - name: Prove concurrent webhook intake is idempotent
-              if: ${{ matrix.suite == 'critical' }}
-              env:
-                  RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
-              run: composer test:delivery-intake-race
+          - name: Exercise external provider activation orders
+            if: ${{ matrix.suite == 'critical' }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                wordpress="$GITHUB_WORKSPACE/build/wordpress"
+                fixture_source="$GITHUB_WORKSPACE/tests/fixtures/ran-booster-fixture-provider"
+                fixture_before="$wordpress/wp-content/plugins/00-ran-booster-fixture-provider"
+                fixture_after="$wordpress/wp-content/plugins/zz-ran-booster-fixture-provider"
+                smoke="$GITHUB_WORKSPACE/tests/WordPress/fixture-provider-smoke.php"
 
-            - name: Exercise external provider activation orders
-              if: ${{ matrix.suite == 'critical' }}
-              shell: bash
-              run: |
-                  set -euo pipefail
-                  wordpress="$GITHUB_WORKSPACE/build/wordpress"
-                  fixture_source="$GITHUB_WORKSPACE/tests/fixtures/ran-booster-fixture-provider"
-                  fixture_before="$wordpress/wp-content/plugins/00-ran-booster-fixture-provider"
-                  fixture_after="$wordpress/wp-content/plugins/zz-ran-booster-fixture-provider"
-                  smoke="$GITHUB_WORKSPACE/tests/WordPress/fixture-provider-smoke.php"
+                cp -R "$fixture_source" "$fixture_before"
+                cp -R "$fixture_source" "$fixture_after"
 
-                  cp -R "$fixture_source" "$fixture_before"
-                  cp -R "$fixture_source" "$fixture_after"
+                wp plugin deactivate ran-booster --path="$wordpress"
+                wp plugin activate 00-ran-booster-fixture-provider --path="$wordpress"
+                wp plugin activate ran-booster --path="$wordpress"
+                # The PHP expression is intentionally passed literally to WP-CLI.
+                # shellcheck disable=SC2016
+                wp eval '$active = array_flip( get_option( "active_plugins", array() ) ); if ( ! isset( $active["00-ran-booster-fixture-provider/ran-booster-fixture-provider.php"], $active["ran-booster/ran-booster.php"] ) || $active["00-ran-booster-fixture-provider/ran-booster-fixture-provider.php"] >= $active["ran-booster/ran-booster.php"] ) { throw new RuntimeException( "The fixture did not load before Booster." ); }' --path="$wordpress"
+                wp eval-file "$smoke" --path="$wordpress"
 
-                  wp plugin deactivate ran-booster --path="$wordpress"
-                  wp plugin activate 00-ran-booster-fixture-provider --path="$wordpress"
-                  wp plugin activate ran-booster --path="$wordpress"
-                  # The PHP expression is intentionally passed literally to WP-CLI.
-                  # shellcheck disable=SC2016
-                  wp eval '$active = array_flip( get_option( "active_plugins", array() ) ); if ( ! isset( $active["00-ran-booster-fixture-provider/ran-booster-fixture-provider.php"], $active["ran-booster/ran-booster.php"] ) || $active["00-ran-booster-fixture-provider/ran-booster-fixture-provider.php"] >= $active["ran-booster/ran-booster.php"] ) { throw new RuntimeException( "The fixture did not load before Booster." ); }' --path="$wordpress"
-                  wp eval-file "$smoke" --path="$wordpress"
+                wp plugin deactivate 00-ran-booster-fixture-provider ran-booster --path="$wordpress"
+                wp plugin activate ran-booster --path="$wordpress"
+                wp plugin activate zz-ran-booster-fixture-provider --path="$wordpress"
+                # The PHP expression is intentionally passed literally to WP-CLI.
+                # shellcheck disable=SC2016
+                wp eval '$active = array_flip( get_option( "active_plugins", array() ) ); if ( ! isset( $active["zz-ran-booster-fixture-provider/ran-booster-fixture-provider.php"], $active["ran-booster/ran-booster.php"] ) || $active["zz-ran-booster-fixture-provider/ran-booster-fixture-provider.php"] <= $active["ran-booster/ran-booster.php"] ) { throw new RuntimeException( "The fixture did not load after Booster." ); }' --path="$wordpress"
+                wp eval-file "$smoke" --path="$wordpress"
 
-                  wp plugin deactivate 00-ran-booster-fixture-provider ran-booster --path="$wordpress"
-                  wp plugin activate ran-booster --path="$wordpress"
-                  wp plugin activate zz-ran-booster-fixture-provider --path="$wordpress"
-                  # The PHP expression is intentionally passed literally to WP-CLI.
-                  # shellcheck disable=SC2016
-                  wp eval '$active = array_flip( get_option( "active_plugins", array() ) ); if ( ! isset( $active["zz-ran-booster-fixture-provider/ran-booster-fixture-provider.php"], $active["ran-booster/ran-booster.php"] ) || $active["zz-ran-booster-fixture-provider/ran-booster-fixture-provider.php"] <= $active["ran-booster/ran-booster.php"] ) { throw new RuntimeException( "The fixture did not load after Booster." ); }' --path="$wordpress"
-                  wp eval-file "$smoke" --path="$wordpress"
+          - name: Install Plugin Check 2.0.0
+            if: ${{ matrix.plugin_check }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                wp plugin install plugin-check \
+                    --version=2.0.0 \
+                    --path=build/wordpress \
+                    --activate
 
-            - name: Install Plugin Check 2.0.0
-              if: ${{ matrix.plugin_check }}
-              shell: bash
-              run: |
-                  set -euo pipefail
-                  wp plugin install plugin-check \
-                      --version=2.0.0 \
-                      --path=build/wordpress \
-                      --activate
+                test "$(wp plugin get plugin-check --field=version --path=build/wordpress)" = '2.0.0'
+                wp plugin is-active plugin-check --path=build/wordpress
+                wp plugin is-active ran-booster --path=build/wordpress
 
-                  test "$(wp plugin get plugin-check --field=version --path=build/wordpress)" = '2.0.0'
-                  wp plugin is-active plugin-check --path=build/wordpress
-                  wp plugin is-active ran-booster --path=build/wordpress
+          - name: Run Plugin Check
+            if: ${{ matrix.plugin_check }}
+            shell: bash
+            run: |
+                set -euo pipefail
 
-            - name: Run Plugin Check
-              if: ${{ matrix.plugin_check }}
-              shell: bash
-              run: |
-                  set -euo pipefail
+                wordpress="$GITHUB_WORKSPACE/build/wordpress"
+                plugin_check_cli="$wordpress/wp-content/plugins/plugin-check/cli.php"
+                report="$RUNNER_TEMP/plugin-check-results-wp-${{ matrix.wordpress }}.json"
 
-                  wordpress="$GITHUB_WORKSPACE/build/wordpress"
-                  plugin_check_cli="$wordpress/wp-content/plugins/plugin-check/cli.php"
-                  report="$RUNNER_TEMP/plugin-check-results-wp-${{ matrix.wordpress }}.json"
+                test -f "$plugin_check_cli"
 
-                  test -f "$plugin_check_cli"
+                set +e
+                wp \
+                    --path="$wordpress" \
+                    --require="$plugin_check_cli" \
+                    --quiet \
+                    plugin check ran-booster \
+                    --categories=general,security,performance,accessibility \
+                    --format=strict-json \
+                    --fields=file,line,column,type,code,message,docs \
+                    > "$report"
+                command_status=$?
+                set -e
 
-                  set +e
-                  wp \
-                      --path="$wordpress" \
-                      --require="$plugin_check_cli" \
-                      --quiet \
-                      plugin check ran-booster \
-                      --categories=general,security,performance,accessibility \
-                      --format=strict-json \
-                      --fields=file,line,column,type,code,message,docs \
-                      > "$report"
-                  command_status=$?
-                  set -e
+                if (( command_status != 0 )); then
+                    cat "$report"
+                    exit "$command_status"
+                fi
 
-                  if (( command_status != 0 )); then
-                      cat "$report"
-                      exit "$command_status"
-                  fi
+                if [[ ! -s "$report" ]]; then
+                    printf '[]\n' > "$report"
+                fi
 
-                  if [[ ! -s "$report" ]]; then
-                      printf '[]\n' > "$report"
-                  fi
+                jq -e 'type == "array"' "$report" > /dev/null
+                cat "$report"
 
-                  jq -e 'type == "array"' "$report" > /dev/null
-                  cat "$report"
+                errors="$(jq '[.[] | select(.type == "ERROR")] | length' "$report")"
+                warnings="$(jq '[.[] | select(.type == "WARNING")] | length' "$report")"
 
-                  errors="$(jq '[.[] | select(.type == "ERROR")] | length' "$report")"
-                  warnings="$(jq '[.[] | select(.type == "WARNING")] | length' "$report")"
+                echo "Plugin Check reported ${errors} error(s) and ${warnings} warning(s)."
 
-                  echo "Plugin Check reported ${errors} error(s) and ${warnings} warning(s)."
+                if (( errors > 0 )); then
+                    exit 1
+                fi
 
-                  if (( errors > 0 )); then
-                      exit 1
-                  fi
-
-            - name: Upload Plugin Check results
-              if: ${{ always() && matrix.plugin_check }}
-              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-              with:
-                  name: plugin-check-results-wp-${{ matrix.wordpress }}-${{ matrix.database }}
-                  path: ${{ runner.temp }}/plugin-check-results-wp-${{ matrix.wordpress }}.json
-                  if-no-files-found: ignore
+          - name: Upload Plugin Check results
+            if: ${{ always() && matrix.plugin_check }}
+            uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+            with:
+                name: plugin-check-results-wp-${{ matrix.wordpress }}-${{ matrix.database }}
+                path: ${{ runner.temp }}/plugin-check-results-wp-${{ matrix.wordpress }}.json
+                if-no-files-found: ignore

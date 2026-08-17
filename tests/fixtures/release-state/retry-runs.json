@@ -1,0 +1,88 @@
+{
+  "workflow_runs": [
+    {
+      "id": 1,
+      "workflow_id": 42,
+      "path": ".github/workflows/quality.yml",
+      "event": "workflow_dispatch",
+      "head_branch": "release-please--branches--main--components--ran-booster",
+      "head_sha": "dddddddddddddddddddddddddddddddddddddddd",
+      "head_repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "actor": {"login": "github-actions[bot]"},
+      "triggering_actor": {"login": "github-actions[bot]"},
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 2,
+      "workflow_id": 42,
+      "path": ".github/workflows/quality.yml",
+      "event": "workflow_dispatch",
+      "head_branch": "release-please--branches--main--components--ran-booster",
+      "head_sha": "dddddddddddddddddddddddddddddddddddddddd",
+      "head_repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "actor": {"login": "github-actions[bot]"},
+      "triggering_actor": {"login": "github-actions[bot]"},
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 3,
+      "workflow_id": 42,
+      "path": ".github/workflows/quality.yml",
+      "event": "workflow_dispatch",
+      "head_branch": "release-please--branches--main--components--ran-booster",
+      "head_sha": "dddddddddddddddddddddddddddddddddddddddd",
+      "head_repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "actor": {"login": "github-actions[bot]"},
+      "triggering_actor": {"login": "github-actions[bot]"},
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 4,
+      "workflow_id": 42,
+      "path": ".github/workflows/quality.yml",
+      "event": "workflow_dispatch",
+      "head_branch": "release-please--branches--main--components--ran-booster",
+      "head_sha": "dddddddddddddddddddddddddddddddddddddddd",
+      "head_repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "actor": {"login": "github-actions[bot]"},
+      "triggering_actor": {"login": "github-actions[bot]"},
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 5,
+      "workflow_id": 42,
+      "path": ".github/workflows/quality.yml",
+      "event": "workflow_dispatch",
+      "head_branch": "release-please--branches--main--components--ran-booster",
+      "head_sha": "dddddddddddddddddddddddddddddddddddddddd",
+      "head_repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "actor": {"login": "github-actions[bot]"},
+      "triggering_actor": {"login": "maintainer"},
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 6,
+      "workflow_id": 42,
+      "path": ".github/workflows/quality.yml",
+      "event": "workflow_dispatch",
+      "head_branch": "release-please--branches--main--components--ran-booster",
+      "head_sha": "dddddddddddddddddddddddddddddddddddddddd",
+      "head_repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "repository": {"full_name": "RocketsAreNostalgic/ran-booster"},
+      "actor": {"login": "maintainer"},
+      "triggering_actor": {"login": "github-actions[bot]"},
+      "status": "queued",
+      "conclusion": null
+    }
+  ]
+}

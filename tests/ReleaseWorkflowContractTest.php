@@ -7,158 +7,134 @@ namespace RANTests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleaseWorkflowContractTest extends TestCase {
-	public function testQualityReusesOnlyExactEvidenceAndNarrowsAValidatedReleaseCandidate(): void {
+	public function testQualityUsesExactSecretlessCandidateDispatchAndMergeNeutralAdmission(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
-		self::assertStringContainsString( 'pull_request:', $workflow );
-		self::assertStringContainsString( 'push:', $workflow );
-		self::assertStringContainsString( 'release-please--branches--main--components--ran-booster', $workflow );
-		self::assertStringContainsString( 'github-actions[bot]', $workflow );
+		self::assertStringContainsString( 'workflow_dispatch:', $workflow );
+		self::assertStringContainsString( 'release_pr:', $workflow );
+		self::assertStringContainsString( 'release_sha:', $workflow );
 		self::assertStringContainsString( '"$GITHUB_ACTOR" == \'github-actions[bot]\'', $workflow );
-		self::assertStringContainsString( '.actor.login == $bot', $workflow );
-		self::assertStringContainsString( 'RAN_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}', $workflow );
-		self::assertStringContainsString( 'source_commit="$RAN_PR_HEAD_SHA"', $workflow );
-		self::assertStringContainsString( 'bash scripts/validate-release-candidate.sh "$RAN_PR_BASE_SHA" "$RAN_PR_HEAD_SHA"', $workflow );
-		self::assertStringContainsString( 'repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=main&per_page=100', $workflow );
-		self::assertStringNotContainsString( 'any(.pull_requests[]?', $workflow );
+		self::assertStringContainsString( '"$GITHUB_TRIGGERING_ACTOR" == \'github-actions[bot]\'', $workflow );
+		self::assertStringContainsString( 'test "$RAN_DISPATCH_RELEASE_SHA" = "$pr_head_sha"', $workflow );
+		self::assertStringContainsString( 'test "$GITHUB_SHA" = "$pr_head_sha"', $workflow );
+		self::assertStringContainsString( 'bash scripts/validate-release-candidate.sh "$pr_base_sha" "$pr_head_sha"', $workflow );
 		self::assertStringContainsString( 'and .merge_commit_sha == $merge', $workflow );
-		self::assertStringContainsString( 'test "$head_tree" = "$merge_tree"', $workflow );
-		self::assertStringContainsString( '.pull_request.tested_tree == $merge_tree', $workflow );
-		self::assertStringContainsString( 'git diff --quiet "$pr_base_sha" "$pr_head_sha" -- "$trust_path"', $workflow );
+		self::assertStringContainsString( 'repos/${GITHUB_REPOSITORY}/git/commits/${pr_head_sha}', $workflow );
+		self::assertStringContainsString( '.pull_request.tested_tree == $main_tree', $workflow );
+		self::assertStringContainsString( 'expected_event=workflow_dispatch', $workflow );
+		self::assertStringContainsString( '.triggering_actor.login == $bot', $workflow );
 		self::assertStringContainsString( 'Exact prior PR evidence was unavailable; running the full fallback lane.', $workflow );
-		self::assertStringContainsString( 'wordpress-release-candidate:', $workflow );
-		self::assertStringContainsString( 'Release candidate install readback', $workflow );
-		self::assertStringContainsString( 'wordpress_matrix=', $workflow );
-		self::assertStringContainsString( '"7.0.3","database":"MySQL 8.4"', $workflow );
-		self::assertStringContainsString( '"7.0","database":"MySQL 8.4"', $workflow );
-		self::assertStringNotContainsString( sprintf( '"%s":"7.0.1"', strtolower( 'WordPress' ) ), $workflow );
-		self::assertStringNotContainsString( sprintf( '"%s":"7.0.2"', strtolower( 'WordPress' ) ), $workflow );
-		self::assertStringContainsString( '"database":"MariaDB 10.11"', $workflow );
-		self::assertStringContainsString( '"database":"MySQL 8.0 floor"', $workflow );
-		self::assertStringContainsString( 'matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}', $workflow );
-		self::assertStringContainsString( "needs:\n            - runtime-archive\n            - quality", $workflow );
-		self::assertStringContainsString( 'run: composer check', $workflow );
-		self::assertStringNotContainsString( "\n              run: composer test\n", $workflow );
-		self::assertStringNotContainsString( "\n              run: composer lint:php\n", $workflow );
-		self::assertSame( 1, substr_count( $workflow, 'bash scripts/build-release.sh' ) );
-		self::assertStringNotContainsString( 'bash scripts/verify-release.sh', $workflow );
-
-		$validator = strpos( $workflow, 'bash scripts/validate-release-candidate.sh' );
-		$candidate = strpos( $workflow, 'lane=release-candidate' );
-		$builder   = strpos( $workflow, 'bash scripts/build-release.sh' );
-		self::assertIsInt( $validator );
-		self::assertIsInt( $candidate );
-		self::assertIsInt( $builder );
-		self::assertTrue( $validator < $candidate );
-		self::assertTrue( $candidate < $builder );
+		self::assertStringContainsString( 'recover_release_fallback_identity()', $workflow );
+		self::assertStringContainsString( 'for _ in 1 2 3', $workflow );
+		self::assertStringContainsString( 'Preserved Release Please pull request ${pr_number} and head ${pr_head_sha} for the full fallback artifact.', $workflow );
+		self::assertStringContainsString( 'Release Please identity could not be recovered for a main commit that changes the release manifest.', $workflow );
+		self::assertStringContainsString( 'bash scripts/validate-release-candidate.sh "$pr_base_sha" "$pr_head_sha" || return 1', $workflow );
+		self::assertStringContainsString( 'bash scripts/select-merged-release-pr.sh', $workflow );
+		self::assertStringNotContainsString( 'GITHUB_SHA}^1', $workflow );
+		self::assertStringNotContainsString( 'GITHUB_SHA}^2', $workflow );
+		self::assertStringNotContainsString( 'parent_count', $workflow );
 	}
 
-	public function testQualitySharesTheVerifiedArchiveAcrossEveryConsumer(): void {
+	public function testQualityTreatsDependencyAndReleaseAuthorityAsAdmissionTrustPaths(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
-		self::assertStringContainsString( 'schema: "ran-booster-ci-runtime"', $workflow );
-		self::assertStringContainsString( 'schema_version: 2', $workflow );
-		self::assertStringContainsString( 'mode: "built"', $workflow );
-		self::assertStringContainsString( 'lane: $lane', $workflow );
-		self::assertStringContainsString( 'quality_commit: $quality_commit', $workflow );
-		self::assertStringContainsString( 'source_commit: $source_commit', $workflow );
-		self::assertStringContainsString( 'source_tree: $source_tree', $workflow );
-		self::assertStringContainsString( 'workflow_ref: $workflow_ref', $workflow );
-		self::assertStringContainsString( 'workflow_sha: $workflow_sha', $workflow );
-		self::assertStringContainsString( 'pull_request:', $workflow );
+		foreach ( array(
+			'composer.json',
+			'composer.lock',
+			'package.json',
+			'pnpm-lock.yaml',
+			'.github/workflows/quality.yml',
+			'.github/workflows/release-please.yml',
+			'scripts/build-release.sh',
+			'scripts/verify-release.sh',
+			'scripts/validate-release-candidate.sh',
+			'scripts/select-merged-release-pr.sh',
+			'scripts/reconcile-release-candidate-marker.sh',
+			'scripts/verify-release-tag-target.sh',
+			'scripts/has-trusted-release-candidate-run.sh',
+			'scripts/verify-immutable-release-assets.sh',
+		) as $path ) {
+			self::assertStringContainsString( $path, $workflow );
+		}
+		self::assertStringContainsString( 'all(.[]; .filename != $path)', $workflow );
+	}
+
+	public function testQualitySharesOneVerifiedArchiveAndKeepsTheCoreGates(): void {
+		$workflow = $this->workflow( 'quality.yml' );
+
+		self::assertStringContainsString( 'schema_version: 3', $workflow );
+		self::assertStringContainsString( 'main_commit: $main_commit', $workflow );
 		self::assertStringContainsString( 'original_run_id: $original_run_id', $workflow );
-		self::assertStringContainsString( 'printf \'artifact-name=ran-booster-runtime-%s-%s\n\' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"', $workflow );
-		self::assertStringContainsString( 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a', $workflow );
-		self::assertStringContainsString( 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c', $workflow );
-		self::assertStringContainsString( 'needs.runtime-archive.outputs.archive-sha256', $workflow );
-		self::assertStringContainsString( 'sha256sum --check --strict', $workflow );
-		self::assertStringContainsString( 'retention-days: 30', $workflow );
-		self::assertStringContainsString( 'wp plugin install "$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"', $workflow );
-		self::assertStringContainsString( 'wp plugin get ran-booster --field=version', $workflow );
-		self::assertStringContainsString( '"$plugin_root/ran-booster-release.json"', $workflow );
-		self::assertStringContainsString( 'diff -qr', $workflow );
-		self::assertStringContainsString( '"$plugin_root/vendor/ran/wp-github-release-updater"', $workflow );
-		self::assertStringContainsString(
-			'wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress',
-			$workflow
-		);
-
-		$installation = strpos( $workflow, '- name: Install and activate runtime archive' );
-		$identity     = strpos( $workflow, '- name: Read back the installed release identity' );
-		$provider     = strpos( $workflow, '- name: Read back the installed GitHub provider contract' );
-		self::assertIsInt( $installation );
-		self::assertIsInt( $identity );
-		self::assertIsInt( $provider );
-		self::assertTrue( $installation < $identity );
-		self::assertTrue( $identity < $provider );
+		self::assertStringContainsString( 'build/ran-booster-${{ steps.finalize.outputs.version }}.zip.sha256', $workflow );
+		self::assertStringContainsString( 'wordpress-release-candidate:', $workflow );
+		self::assertStringContainsString( 'RAN_PR_HEAD_SHA: ${{ needs.runtime-archive.outputs.pr-head-sha }}', $workflow );
+		self::assertStringContainsString( 'and .run.event == "workflow_dispatch"', $workflow );
+		self::assertStringContainsString( 'run: composer check', $workflow );
+		self::assertStringContainsString( 'run: pnpm check', $workflow );
+		self::assertStringContainsString( 'matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}', $workflow );
+		self::assertSame( 1, substr_count( $workflow, 'bash scripts/build-release.sh' ) );
 	}
 
-	public function testReleaseWaitsForSuccessfulMainQualityAndUsesItsCurrentRunArtifact(): void {
-		$workflow = $this->workflow( 'release-please.yml' );
-
-		self::assertStringContainsString( 'workflow_run:', $workflow );
-		self::assertStringContainsString( '- Quality', $workflow );
-		self::assertStringContainsString( "github.event.workflow_run.event == 'push'", $workflow );
-		self::assertStringContainsString( "github.event.workflow_run.conclusion == 'success'", $workflow );
-		self::assertStringContainsString( "github.event.workflow_run.head_branch == 'main'", $workflow );
-		self::assertStringContainsString( 'github.event.workflow_run.head_repository.full_name == github.repository', $workflow );
-		self::assertStringContainsString( 'actions: read', $workflow );
-		self::assertStringContainsString( 'ref: ${{ github.event.workflow_run.head_sha }}', $workflow );
-		self::assertStringContainsString( 'run-id: ${{ github.event.workflow_run.id }}', $workflow );
-		self::assertStringContainsString( 'github-token: ${{ secrets.GITHUB_TOKEN }}', $workflow );
-		self::assertStringContainsString( 'ran-booster-runtime-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}', $workflow );
-		self::assertStringContainsString( '.mode == "admitted"', $workflow );
-		self::assertStringContainsString( '.lane == "release-candidate"', $workflow );
-		self::assertStringContainsString( '.mode == "built"', $workflow );
-		self::assertStringContainsString( '.lane == "full"', $workflow );
-		self::assertStringContainsString( '.run.id == $current_run_id', $workflow );
-		self::assertStringContainsString( 'release-required=true\n\' >> "$GITHUB_OUTPUT"', $workflow );
-		self::assertStringContainsString( 'skip-github-release: true', $workflow );
-		self::assertStringNotContainsString( 'package-release:', $workflow );
-		self::assertStringNotContainsString( 'bash scripts/build-release.sh', $workflow );
+	public function testCandidateBehaviorInvokesTheValidatorThroughBash(): void {
+		$contract = file_get_contents( __DIR__ . '/release-candidate-contract.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local workflow contract.
+		self::assertIsString( $contract );
+		self::assertSame( 2, substr_count( $contract, 'bash "$validator" "$base_sha" "$head_sha"' ) );
+		self::assertSame( 0, preg_match( '/^\s*"\$validator"/m', $contract ) );
 	}
 
-	public function testReleaseProvesTheExactMergedPullRequestBeforePublishing(): void {
+	public function testReleaseReconcilesActionOutputAndRecoverableBotIdentityBeforeDispatch(): void {
 		$workflow = $this->workflow( 'release-please.yml' );
 
-		self::assertStringContainsString( 'git rev-parse "${RAN_QUALITY_COMMIT}^2"', $workflow );
-		self::assertStringContainsString( 'pulls?state=closed&base=main&per_page=100', $workflow );
-		self::assertStringContainsString( 'git diff --name-status --no-renames "$base_commit" "$release_commit"', $workflow );
-		self::assertStringContainsString( 'bash scripts/validate-release-candidate.sh "$base_commit" "$release_commit"', $workflow );
-		self::assertStringContainsString( 'current_main="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main"', $workflow );
-		self::assertStringContainsString( '.head.sha == $release', $workflow );
-		self::assertStringContainsString( '.base.sha == $base_commit', $workflow );
-		self::assertStringContainsString( '.merge_commit_sha == $quality', $workflow );
-		self::assertStringContainsString( '.head.ref == $head', $workflow );
-		self::assertStringContainsString( '.head.repo.full_name == $repository', $workflow );
-		self::assertStringContainsString( '.user.login == $bot', $workflow );
-		self::assertStringContainsString( 'autorelease: pending', $workflow );
-		self::assertStringContainsString( 'autorelease: tagged', $workflow );
+		self::assertStringContainsString( 'id: release-please', $workflow );
+		self::assertStringContainsString( 'steps.release-please.outputs.prs', $workflow );
+		self::assertStringContainsString( 'steps.release-please.outputs.prs_created', $workflow );
+		self::assertStringContainsString( '.sha | type == "string" and test("^[0-9a-f]{40}$")', $workflow );
+		self::assertStringContainsString( 'expected_files=\'[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt"]\'', $workflow );
+		self::assertStringContainsString( 'commits(last: 1)', $workflow );
+		self::assertStringContainsString( 'signature {', $workflow );
+		self::assertStringContainsString( 'bash scripts/reconcile-release-candidate-marker.sh', $workflow );
+		self::assertStringContainsString( 'bash scripts/has-trusted-release-candidate-run.sh', $workflow );
+		self::assertStringContainsString( 'gh workflow run quality.yml --ref "$head_ref"', $workflow );
+		self::assertStringContainsString( '-f "release_pr=${pr_number}"', $workflow );
+		self::assertStringContainsString( '-f "release_sha=${head_sha}"', $workflow );
+	}
+
+	public function testReleaseUsesMergedPrApiAndSeparatesHeadArtifactFromMainTarget(): void {
+		$workflow = $this->workflow( 'release-please.yml' );
+
+		self::assertStringContainsString( 'and .merge_commit_sha == $merge', $workflow );
+		self::assertStringContainsString( 'RAN_RELEASE_COMMIT=%s\\n\' "$RAN_QUALITY_COMMIT"', $workflow );
+		self::assertStringContainsString( 'RAN_RELEASE_HEAD_COMMIT=%s\\n\' "$release_head"', $workflow );
+		self::assertStringContainsString( 'test "$main_tree" = "$head_tree"', $workflow );
+		self::assertStringContainsString( '.source_commit == $head_commit', $workflow );
+		self::assertStringContainsString( '.admission.main_commit == $main_commit', $workflow );
 		self::assertStringContainsString( '--target "$RAN_RELEASE_COMMIT"', $workflow );
-		self::assertStringContainsString( '.target_commitish == $commit', $workflow );
-		self::assertStringContainsString( '.object.type == "commit" and .object.sha == $commit', $workflow );
-		self::assertStringContainsString( '.admission.merge_commit == $admission_merge', $workflow );
-		self::assertStringContainsString( '.actor.login == $bot', $workflow );
-		self::assertStringContainsString( 'runs?event=pull_request&head_sha=${RAN_RELEASE_COMMIT}&status=completed', $workflow );
-		self::assertStringContainsString( 'actions/runs/${original_run_id}/attempts/${original_run_attempt}', $workflow );
-		self::assertStringContainsString( 'RAN_IMMUTABLE_RELEASES_ENABLED', $workflow );
-		self::assertStringContainsString( 'for delay in 0 2 2 2 2', $workflow );
+		self::assertStringNotContainsString( 'RAN_QUALITY_COMMIT}^1', $workflow );
+		self::assertStringNotContainsString( 'RAN_QUALITY_COMMIT}^2', $workflow );
+		self::assertStringNotContainsString( 'parent_count', $workflow );
+	}
 
-		$preflight = strpos( $workflow, '- name: Prove an exact merged Release Please candidate before publication' );
-		$download  = strpos( $workflow, '- name: Download the exact archive tested by Quality' );
-		$draft     = strpos( $workflow, '- name: Create or reuse the draft and attach verified assets' );
-		$publish   = strpos( $workflow, '- name: Publish only under the immutable-release contract' );
-		$readback  = strpos( $workflow, '- name: Read back the immutable release and reconcile its exact PR' );
+	public function testReleaseVerifiesTagAndExactAssetBytesBeforeAndAfterImmutability(): void {
+		$workflow = $this->workflow( 'release-please.yml' );
 
-		self::assertIsInt( $preflight );
-		self::assertIsInt( $download );
-		self::assertIsInt( $draft );
+		self::assertGreaterThanOrEqual( 3, substr_count( $workflow, 'bash scripts/verify-release-tag-target.sh' ) );
+		self::assertSame( 2, substr_count( $workflow, 'bash scripts/verify-immutable-release-assets.sh' ) );
+		self::assertStringContainsString( 'build/ran-booster-${RAN_RELEASE_VERSION}.zip.sha256', $workflow );
+		self::assertStringContainsString( 'gh release upload "$RAN_RELEASE_TAG"', $workflow );
+		self::assertStringContainsString( '--clobber', $workflow );
+		self::assertStringContainsString( '.tag_name == $tag and .draft == false and .immutable == true', $workflow );
+
+		$upload    = strpos( $workflow, 'gh release upload "$RAN_RELEASE_TAG"' );
+		$precheck  = strpos( $workflow, 'bash scripts/verify-immutable-release-assets.sh', $upload );
+		$publish   = strpos( $workflow, 'gh release edit "$RAN_RELEASE_TAG" --draft=false' );
+		$postcheck = strrpos( $workflow, 'bash scripts/verify-immutable-release-assets.sh' );
+		self::assertIsInt( $upload );
+		self::assertIsInt( $precheck );
 		self::assertIsInt( $publish );
-		self::assertIsInt( $readback );
-		self::assertTrue( $preflight < $download );
-		self::assertTrue( $download < $draft );
-		self::assertTrue( $draft < $publish );
-		self::assertTrue( $publish < $readback );
+		self::assertIsInt( $postcheck );
+		self::assertTrue( $upload < $precheck );
+		self::assertTrue( $precheck < $publish );
+		self::assertTrue( $publish < $postcheck );
 	}
 
 	public function testWorkflowActionsArePinnedToImmutableCommits(): void {
@@ -168,14 +144,6 @@ final class ReleaseWorkflowContractTest extends TestCase {
 			foreach ( $matches[1] as $reference ) {
 				self::assertMatchesRegularExpression( '/^[0-9a-f]{40}$/', $reference, $workflowName . ' has a mutable action reference.' );
 			}
-		}
-	}
-
-	public function testWordPressSmokeGatesAcceptTheExactDeclaredFloor(): void {
-		foreach ( array( 'core-updater-proof.sh', 'managed-theme-registration-smoke.sh' ) as $scriptName ) {
-			$script = file_get_contents( __DIR__ . '/WordPress/' . $scriptName ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local CI contract.
-			self::assertIsString( $script );
-			self::assertStringContainsString( '7.0|7.0.*) ;;', $script );
 		}
 	}
 

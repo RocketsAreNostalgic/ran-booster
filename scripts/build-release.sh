@@ -338,4 +338,7 @@ bash "$script_dir/verify-release.sh" "$tmp_archive" "$expected_version" "$commit
 
 mv -f "$tmp_archive" "$build_dir/$archive_name"
 
+archive_sha256=$(sha256sum "$build_dir/$archive_name" | awk '{ print $1 }')
+printf '%s  %s\n' "$archive_sha256" "$archive_name" > "$build_dir/${archive_name}.sha256"
+
 printf 'Built %s\n' "$build_dir/$archive_name"

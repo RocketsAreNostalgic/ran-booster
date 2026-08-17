@@ -1,135 +1,161 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 validator="$repo_root/scripts/validate-release-candidate.sh"
-test_root=$(mktemp -d "${TMPDIR:-/tmp}/ran-booster-release-candidate.XXXXXX")
+work_root=$(mktemp -d "${TMPDIR:-/tmp}/ran-bitbucket-release-candidate-test.XXXXXX")
+trap 'rm -rf "$work_root"' EXIT
 
-cleanup() {
-	case "$test_root" in
-		"${TMPDIR:-/tmp}"/ran-booster-release-candidate.*) rm -rf -- "$test_root" ;;
-	esac
-}
-trap cleanup EXIT HUP INT TERM
-
-write_plugin() {
-	local version=$1
-	local description=${2:-'Repository deployment management.'}
-	printf '%s\n' \
-		'<?php' \
-		'/**' \
-		' * Plugin Name: RAN Booster' \
-		" * Description: ${description}" \
-		' * x-release-please-start-version' \
-		" * Version: ${version}" \
-		' * x-release-please-end' \
-		' */' \
-		'' \
-		"define( 'RAN_BOOSTER_TEST_VERSION', 1 );" \
-		> ran-booster.php
+fail() {
+	printf 'release candidate validator test: %s\n' "$*" >&2
+	exit 1
 }
 
-write_readme() {
-	local version=$1
-	printf '%s\n' \
-		'=== RAN Booster ===' \
-		'<!-- x-release-please-start-version -->' \
-		"Stable tag: ${version}" \
-		'<!-- x-release-please-end -->' \
-		'' \
-		'Repository deployment management.' \
-		> readme.txt
+seed="$work_root/seed"
+mkdir -p "$seed"
+git -C "$seed" init --quiet
+git -C "$seed" config user.name 'Validator Test'
+git -C "$seed" config user.email 'validator@example.invalid'
+
+printf '{".":"1.2.3"}\n' > "$seed/.release-please-manifest.json"
+cat > "$seed/CHANGELOG.md" <<'EOF'
+# Changelog
+
+## [1.2.3](https://example.invalid/compare/v1.2.2...v1.2.3) (2026-01-01)
+
+Accepted history.
+EOF
+cat > "$seed/ran-booster.php" <<'EOF'
+<?php
+/**
+ * Plugin Name: Validator Fixture
+ * Version: 1.2.3
+ */
+EOF
+cat > "$seed/readme.txt" <<'EOF'
+=== Validator Fixture ===
+Stable tag: 1.2.3
+
+Accepted readme.
+EOF
+git -C "$seed" add .
+git -C "$seed" commit --quiet -m 'chore: seed release fixture'
+
+prepare_valid() {
+	local name=$1
+	case_dir="$work_root/$name"
+	git clone --quiet "$seed" "$case_dir"
+	git -C "$case_dir" config user.name 'Validator Test'
+	git -C "$case_dir" config user.email 'validator@example.invalid'
+	printf '{".":"1.2.4"}\n' > "$case_dir/.release-please-manifest.json"
+	sed -i.bak -E 's/Version: 1\.2\.3/Version: 1.2.4/' "$case_dir/ran-booster.php"
+	rm -f "$case_dir/ran-booster.php.bak"
+	sed -i.bak -E 's/Stable tag: 1\.2\.3/Stable tag: 1.2.4/' "$case_dir/readme.txt"
+	rm -f "$case_dir/readme.txt.bak"
+	{
+		printf '# Changelog\n\n'
+		printf '## [1.2.4](https://example.invalid/compare/v1.2.3...v1.2.4) (2026-01-02)\n\n'
+		printf 'Generated release.\n\n'
+		git -C "$case_dir" show HEAD:CHANGELOG.md | sed -n '3,$p'
+	} > "$case_dir/CHANGELOG.md"
+	git -C "$case_dir" add .
+	git -C "$case_dir" commit --quiet -m 'chore(main): release 1.2.4'
+	base_sha=$(git -C "$case_dir" rev-parse HEAD^)
+	head_sha=$(git -C "$case_dir" rev-parse HEAD)
 }
 
-write_manifest() {
-	printf '{\n  ".": "%s"\n}\n' "$1" > .release-please-manifest.json
+amend_case() {
+	git -C "$case_dir" add -A
+	git -C "$case_dir" commit --quiet --amend --no-edit
+	head_sha=$(git -C "$case_dir" rev-parse HEAD)
 }
 
-write_changelog() {
-	local version=$1
-	local preserve_base=${2:-true}
-	printf '# Changelog\n\n## [%s](https://example.test/compare/v1.0.0...v%s)\n\n* Release entry.\n' \
-		"$version" "$version" > CHANGELOG.md
-	if [[ "$preserve_base" == true ]]; then
-		printf '\n## [1.0.0](https://example.test/releases/v1.0.0)\n\n* Accepted history.\n' >> CHANGELOG.md
+replace_in_case() {
+	local expression=$1
+	local path=$2
+	sed -i.bak -E "$expression" "$case_dir/$path"
+	rm -f "$case_dir/${path}.bak"
+}
+
+expect_valid() {
+	local name=$1
+	(
+		cd "$case_dir"
+		bash "$validator" "$base_sha" "$head_sha"
+	) >/dev/null || fail "$name should pass"
+}
+
+expect_invalid() {
+	local name=$1
+	if (
+		cd "$case_dir"
+		bash "$validator" "$base_sha" "$head_sha"
+	) >/dev/null 2>&1; then
+		fail "$name should fail"
 	fi
 }
 
-commit_candidate() {
-	git add .release-please-manifest.json CHANGELOG.md ran-booster.php readme.txt
-	git commit -q -m 'chore(main): release candidate'
-}
+prepare_valid valid
+expect_valid valid
 
-expect_failure() {
-	if "$validator" "$@" >/dev/null 2>&1; then
-		printf 'Expected candidate validation to fail: %s -> %s\n' "$1" "$2" >&2
-		exit 1
-	fi
-}
+prepare_valid multi-commit
+git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unexpected second commit'
+head_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_invalid multi-commit
 
-cd "$test_root"
-git init -q
-git config user.name 'RAN Booster Tests'
-git config user.email 'tests@example.test'
+prepare_valid extra-file
+printf 'unexpected\n' > "$case_dir/unexpected.txt"
+amend_case
+expect_invalid extra-file
 
-write_plugin '1.0.0'
-write_readme '1.0.0'
-write_manifest '1.0.0'
-printf '%s\n' \
-	'# Changelog' \
-	'' \
-	'## [1.0.0](https://example.test/releases/v1.0.0)' \
-	'' \
-	'* Accepted history.' \
-	> CHANGELOG.md
-git add .
-git commit -q -m 'chore(main): release 1.0.0'
-base_commit=$(git rev-parse HEAD)
+prepare_valid renamed-file
+git -C "$case_dir" mv readme.txt README.txt
+amend_case
+expect_invalid renamed-file
 
-write_plugin '1.0.1'
-write_readme '1.0.1'
-write_manifest '1.0.1'
-write_changelog '1.0.1'
-commit_candidate
-good_commit=$(git rev-parse HEAD)
-"$validator" "$base_commit" "$good_commit" >/dev/null
+prepare_valid manifest-mismatch
+printf '{".":"1.2.5"}\n' > "$case_dir/.release-please-manifest.json"
+amend_case
+expect_invalid manifest-mismatch
 
-git checkout -q -B stacked-candidate "$good_commit"
-git commit -q --allow-empty -m 'unexpected stacked release commit'
-expect_failure "$base_commit" HEAD
+prepare_valid header-mismatch
+replace_in_case 's/Version: 1\.2\.4/Version: 1.2.5/' ran-booster.php
+amend_case
+expect_invalid header-mismatch
 
-git checkout -q -B extra-path "$base_commit"
-write_plugin '1.0.1'
-write_readme '1.0.1'
-write_manifest '1.0.1'
-write_changelog '1.0.1'
-printf 'unexpected\n' > unexpected.txt
-git add .
-git commit -q -m 'test extra path'
-expect_failure "$base_commit" HEAD
+prepare_valid stable-tag-mismatch
+replace_in_case 's/Stable tag: 1\.2\.4/Stable tag: 1.2.5/' readme.txt
+amend_case
+expect_invalid stable-tag-mismatch
 
-git checkout -q -B changed-bootstrap "$base_commit"
-write_plugin '1.0.1' 'Changed runtime description.'
-write_readme '1.0.1'
-write_manifest '1.0.1'
-write_changelog '1.0.1'
-commit_candidate
-expect_failure "$base_commit" HEAD
+prepare_valid plugin-non-version-edit
+printf '\n// Unexpected bootstrap edit.\n' >> "$case_dir/ran-booster.php"
+amend_case
+expect_invalid plugin-non-version-edit
 
-git checkout -q -B deleted-history "$base_commit"
-write_plugin '1.0.1'
-write_readme '1.0.1'
-write_manifest '1.0.1'
-write_changelog '1.0.1' false
-commit_candidate
-expect_failure "$base_commit" HEAD
+prepare_valid readme-non-version-edit
+printf '\nUnexpected readme edit.\n' >> "$case_dir/readme.txt"
+amend_case
+expect_invalid readme-non-version-edit
 
-git checkout -q -B mismatched-version "$base_commit"
-write_plugin '1.0.2'
-write_readme '1.0.1'
-write_manifest '1.0.1'
-write_changelog '1.0.1'
-commit_candidate
-expect_failure "$base_commit" HEAD
+prepare_valid changelog-deletion
+replace_in_case '/Accepted history\./d' CHANGELOG.md
+amend_case
+expect_invalid changelog-deletion
 
-printf 'Release candidate contract tests passed.\n'
+prepare_valid changelog-rewrite
+replace_in_case 's/Accepted history\./Rewritten history./' CHANGELOG.md
+amend_case
+expect_invalid changelog-rewrite
+
+prepare_valid missing-heading
+replace_in_case 's/^## \[1\.2\.4\].*/Release 1.2.4/' CHANGELOG.md
+amend_case
+expect_invalid missing-heading
+
+prepare_valid wrong-heading
+replace_in_case 's/1\.2\.4/1.2.5/g' CHANGELOG.md
+amend_case
+expect_invalid wrong-heading
+
+printf 'Release candidate validator behavior passed (1 valid, 12 invalid cases).\n'

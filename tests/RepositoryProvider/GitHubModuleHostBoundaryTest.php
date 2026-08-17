@@ -20,6 +20,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/RepositoryProvider/GitHubArchiveHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubCredentialPolicyHostIntegrationTest.php',
 		'tests/RepositoryProvider/Support/ShippedSecretPolicyCatalog.php',
+		'tests/Runtime/ReleaseManagementCutoverBootstrapTest.php',
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/github-provider-installed-readback.php',

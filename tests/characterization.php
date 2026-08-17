@@ -63,7 +63,7 @@ $source = file_get_contents( dirname( __DIR__ ) . '/ran-booster.php' );
 $assert( is_string( $source ) && ! str_contains( $source, 'WorkerCliCommand' ), 'Bootstrap must not expose a second executor.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'ActionHandlerProvider' ), 'Bootstrap must not restore the inherited action bus.' );
 $assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_PROVIDER_API_VERSION', 10" ), 'Provider API 10 must remain explicit.' );
-$assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_ADDON_API_VERSION', 15" ), 'Add-on API 15 must remain explicit.' );
+$assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_ADDON_API_VERSION', 16" ), 'Add-on API 16 must remain explicit.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION' ), 'The removed Webhook Cleanup marker must stay absent.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_LOGGING_API_VERSION' ), 'The removed Logging API marker must stay absent.' );
 $updaterRegistration = is_string( $source ) ? strpos( $source, 'GitHubReleaseUpdaterBootstrap::register' ) : false;

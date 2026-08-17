@@ -19,7 +19,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 	public function testPluginLoadedBeforeCoreRegistersAndRendersOneTab(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 
 		$registry = $this->register();
 		$tab      = $registry->get( 'fixture-tab' );
@@ -36,7 +36,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterCoreUsesTheSameTabContract(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		$this->loadFixturePlugin();
 
 		$registry = $this->register();
@@ -52,7 +52,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_register_admin_tabs', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 		$this->loadFixturePlugin();
 		$this->runHook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_register_admin_tabs', $GLOBALS['ran_booster_external_fixture_addon_actions'] );

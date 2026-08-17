@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.0-beta.21](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.20...v1.0.0-beta.21) (2026-08-17)
+
+
+### Features
+
+* **provider:** add release candidate listing capability ([38c4620](https://github.com/RocketsAreNostalgic/ran-booster/commit/38c4620bfc868b98d45a48b23bbefc2bdc533884))
+* **provider:** add release candidate listing capability ([d84a7a7](https://github.com/RocketsAreNostalgic/ran-booster/commit/d84a7a756e37b16a42ad4ac2ebeeb49e3e3469e5))
+
+
+### Bug Fixes
+
+* **provider:** contain partial release capabilities ([d94d0be](https://github.com/RocketsAreNostalgic/ran-booster/commit/d94d0be65b22a7cbe41c452bdf221c8e0fd33f08))
+
 ## [1.0.0-beta.20](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.19...v1.0.0-beta.20) (2026-08-17)
 
 

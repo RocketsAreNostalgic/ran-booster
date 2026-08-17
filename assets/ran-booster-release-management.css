@@ -1,0 +1,98 @@
+.ran-booster-admin .ran-booster-release-pane {
+	box-sizing: border-box;
+	position: relative;
+	min-block-size: 15rem;
+	padding-block: var(--ran-booster-space-16) var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-release-pane [hidden] {
+	display: none !important;
+}
+
+.ran-booster-admin .ran-booster-release-candidates {
+	margin: var(--ran-booster-space-16) 0 var(--ran-booster-space-18);
+	padding: 0;
+	border: 0;
+}
+
+.ran-booster-admin .ran-booster-release-candidates legend {
+	display: block;
+	padding-block-start: var(--ran-booster-space-12);
+	margin-block-end: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-release-status {
+	box-sizing: border-box;
+	min-block-size: 4.5rem;
+	margin-block: var(--ran-booster-space-12) var(--ran-booster-space-10);
+	border-block: 1px solid var(--ran-booster-border-subtle);
+}
+
+.ran-booster-admin .ran-booster-release-status h4,
+.ran-booster-admin .ran-booster-release-status p {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-release-status p {
+	margin-block-start: var(--ran-booster-space-5);
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin
+	.ran-booster-release-status
+	[data-ran-booster-release-switch-branch] {
+	margin-inline-start: var(--ran-booster-space-3);
+}
+
+.ran-booster-admin
+	.ran-booster-release-status
+	[data-ran-booster-release-retry] {
+	margin-block-start: var(--ran-booster-space-10);
+}
+
+.ran-booster-admin .ran-booster-release-candidate {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: var(--ran-booster-space-10);
+	align-items: center;
+	min-block-size: 36px;
+	padding: var(--ran-booster-space-1) var(--ran-booster-space-8);
+	border-block-end: 1px solid var(--ran-booster-border-subtle);
+}
+
+.ran-booster-admin .ran-booster-release-candidate input[type="radio"] {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-release-candidate:has(input:checked) {
+	background: var(--ran-booster-surface-info);
+}
+
+.ran-booster-admin .ran-booster-release-preflight {
+	margin-block-start: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-checking {
+	border-color: var(--ran-booster-link-strong);
+	background: var(--ran-booster-surface-info);
+	cursor: progress;
+	opacity: 1;
+}
+
+.ran-booster-admin
+	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-available {
+	opacity: 1;
+}
+
+.ran-booster-admin
+	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-available
+	.ran-booster-source-choice__meta {
+	color: var(--ran-booster-status-ok);
+}
+
+.ran-booster-admin
+	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-unavailable
+	.ran-booster-source-choice__meta {
+	color: var(--ran-booster-status-warning);
+}

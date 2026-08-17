@@ -149,8 +149,7 @@ work is in neither record.
 - **Extensions** — the Core-owned Extensions page lists the remaining first-party
   beta extensions using local WordPress plugin state and release-bundled
   artwork. Free downloads remain disabled until their public repositories and
-  releases are ready for people; Sponsor install controls remain disabled
-  and link separately to access information.
+  releases are ready for people.
 - **GitHub** — public repositories need no credential. Private repositories use
   named personal access token profiles: narrowly scoped fine-grained tokens for
   known resource owners, or a classic token when one credential must span several
@@ -180,17 +179,13 @@ work is in neither record.
   setup remains available without it. Each assisted operation rechecks the
   stable repository identity with the same saved or request-only credential and
   takes a target-keyed, non-persistent database lock before remote work.
-- **Release Deployments add-on** — contributes release status and actions to
-  Core's managed Plugins and Themes tables and appends package-specific
-  settings through the same bounded WordPress-native composition contract.
-  Core renders the shared rows and controls; the add-on owns capability- and
-  nonce-checked WordPress handlers, while Core's facade independently
-  reauthorizes and performs mutations. When the selected updater runtime
-  supplies updater prospective API 4, Core publishes its independent
-  Prospective Release API 6. Its local `supportedProviderCodes()`
-  complete-product projection lets callers keep unsupported providers out of
-  the prospective workflow before any repository check. Callers explicitly
-  choose the bounded `stable` or
+- **Provider release management** — Core places release status, source choices,
+  package actions and prospective installation controls for providers that
+  implement the complete release capability set. The bundled GitHub provider
+  owns GitHub discovery, credentials, exact release inspection, acquisition,
+  native-target behavior and workflow assistance; Core owns authorization,
+  source revision, locks, WordPress mutation and installed-state readback.
+  Administrators explicitly choose the bounded `stable` or
   `prerelease` channel for discovery, inspection and installation; discovery
   returns bounded metadata without downloading a ZIP. Inspection downloads,
   validates and discards the exact ZIP; install performs a second,
@@ -200,10 +195,9 @@ work is in neither record.
   inactive, remain inactive, pass installed identity checks and then be adopted
   by Booster. `installed_but_unmanaged` is an umbrella partial outcome: inspect
   installed version and activation before linking or retrying; uncertain-state
-  and cleanup failures remain distinct. A missing capability hides only the
-  prospective first-install choice; existing managed-release controls remain
-  usable. The add-on has no separate Booster screen, although the public add-on
-  tab API remains available to other add-ons.
+  and cleanup failures remain distinct. Missing or partial release capabilities
+  expose no affected control and grant no repository, credential, download,
+  update or mutation authority.
 - **Common package automation and repair** — package settings use one
   **Automation** control for both sources: Disabled prevents Booster-managed
   replacement, Manual requires an explicit action, and Automatic permits the
@@ -279,8 +273,7 @@ work is in neither record.
   offered an update. Booster follows prereleases only while its
   installed version is a prerelease, never enables auto-update, and leaves
   scheduling, notices and replacement to WordPress Core. This updates Booster
-  itself; it is separate from the managed Release Deployments workflow for
-  managed packages.
+  itself; managed packages use the separate provider-attached release path.
 - Booster has no durable operational log. Bounded deployment outcomes live in
   Deployment activity and explicit checks live in Troubleshooting. The Logging
   panel can temporarily retain up to 400 sanitized Booster events for one hour

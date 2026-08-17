@@ -26,7 +26,7 @@ final class AdminPackageSourceChoiceNormalizerTest extends TestCase {
 				'release_asset' => array(
 					'heading'           => 'Published releases',
 					'description'       => 'Install verified releases.',
-					'meta'              => 'Release Deployments',
+					'meta'              => 'Included with Booster',
 					'url'               => '',
 					'disabled'          => true,
 					'hydrated'          => true,

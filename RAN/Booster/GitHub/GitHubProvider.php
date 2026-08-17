@@ -33,6 +33,9 @@ use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
+use RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected;
+use RAN\RepositoryProvider\RepositoryReleaseArtifact;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -51,12 +54,13 @@ use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector {
+final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
 
 	private const RELEASE_PREFLIGHT_CLASS       = 'RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\ReleaseCandidatePreflight';
 	private const RELEASE_PREFLIGHT_API_VERSION = 4;
+	private const RELEASE_FINGERPRINT_CLASS     = 'RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\ReleaseFingerprint';
 
 	private ProviderMetadata $metadata;
 
@@ -476,6 +480,136 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 		}
 	}
 
+	public function acquireRelease(
+		string $packageType,
+		RepositoryReference $repository,
+		string $providerReleaseId,
+		string $tag,
+		string $expectedFingerprint,
+		string $channel
+	): RepositoryReleaseArtifact {
+		$releaseId = filter_var(
+			$providerReleaseId,
+			FILTER_VALIDATE_INT,
+			array( 'options' => array( 'min_range' => 1 ) )
+		);
+		if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/D', $providerReleaseId )
+			|| false === $releaseId
+			|| 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,100}\z/D', $tag )
+			|| 1 !== preg_match( '/\Av1:[a-f0-9]{64}\z/D', $expectedFingerprint ) ) {
+			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
+		}
+
+		$preflightClass   = self::RELEASE_PREFLIGHT_CLASS;
+		$fingerprintClass = self::RELEASE_FINGERPRINT_CLASS;
+		$repositoryId     = $repository->providerRepositoryId;
+		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true )
+			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
+			|| null === $repositoryId
+			|| 1 !== preg_match( '/\A[1-9][0-9]{0,18}\z/D', $repositoryId )
+			|| ! class_exists( $preflightClass )
+			|| ! defined( $preflightClass . '::PROSPECTIVE_API_VERSION' )
+			|| self::RELEASE_PREFLIGHT_API_VERSION !== constant( $preflightClass . '::PROSPECTIVE_API_VERSION' )
+			|| ! method_exists( $preflightClass, 'fromProspectiveTarget' )
+			|| ! class_exists( $fingerprintClass )
+			|| ! method_exists( $fingerprintClass, 'fromString' ) ) {
+			throw new RuntimeException( 'GitHub release acquisition is unavailable.', 503 );
+		}
+
+		$preflight = $preflightClass::fromProspectiveTarget(
+			array(
+				'repository'           => $repository->locator,
+				'providerRepositoryId' => $repositoryId,
+				'channel'              => $channel,
+				'accessToken'          => $this->releaseAccessToken( $repository ),
+				'packageType'          => $packageType,
+			)
+		);
+		if ( $preflight instanceof \WP_Error || ! is_callable( array( $preflight, 'acquireExact' ) ) ) {
+			throw new RuntimeException( 'GitHub release acquisition is unavailable.', 503 );
+		}
+
+		$fingerprint = $fingerprintClass::fromString( $expectedFingerprint );
+		if ( $fingerprint instanceof \WP_Error ) {
+			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
+		}
+		$validated = $preflight->acquireExact( $releaseId, $tag, $fingerprint );
+		if ( $validated instanceof \WP_Error ) {
+			$this->rejectReleaseAcquisition( $validated );
+		}
+
+		try {
+			if ( ! is_object( $validated )
+				|| ! is_callable( array( $validated, 'inspection' ) )
+				|| ! is_callable( array( $validated, 'discard' ) )
+				|| ! is_callable( array( $validated, 'handoffToCore' ) ) ) {
+				throw new RuntimeException();
+			}
+			$inspection = $validated->inspection();
+			if ( ! is_object( $inspection )
+				|| ! is_callable( array( $inspection, 'releaseId' ) )
+				|| ! is_callable( array( $inspection, 'tag' ) )
+				|| ! is_callable( array( $inspection, 'version' ) )
+				|| ! is_callable( array( $inspection, 'commit' ) )
+				|| ! is_callable( array( $inspection, 'packageType' ) )
+				|| ! is_callable( array( $inspection, 'packageRoot' ) )
+				|| ! is_callable( array( $inspection, 'mainFile' ) )
+				|| ! is_callable( array( $inspection, 'fingerprint' ) ) ) {
+				throw new RuntimeException();
+			}
+			$inspectedFingerprint = $inspection->fingerprint();
+			if ( ! is_object( $inspectedFingerprint ) || ! is_callable( array( $inspectedFingerprint, 'value' ) ) ) {
+				throw new RuntimeException();
+			}
+
+			$inspectedReleaseId = $inspection->releaseId();
+			$inspectedTag       = $inspection->tag();
+			$version            = $inspection->version();
+			$commit             = $inspection->commit();
+			$inspectedType      = $inspection->packageType();
+			$packageRoot        = $inspection->packageRoot();
+			$mainFile           = $inspection->mainFile();
+			$fingerprintValue   = $inspectedFingerprint->value();
+			if ( ! is_int( $inspectedReleaseId )
+				|| $releaseId !== $inspectedReleaseId
+				|| ! is_string( $inspectedTag )
+				|| ! hash_equals( $tag, $inspectedTag )
+				|| ! is_string( $version )
+				|| ( 'stable' === $channel && str_contains( $version, '-' ) )
+				|| ! is_string( $commit )
+				|| 1 !== preg_match( '/\A[0-9a-f]{40}\z/D', $commit )
+				|| ! is_string( $inspectedType )
+				|| ! hash_equals( $packageType, $inspectedType )
+				|| ! is_string( $packageRoot )
+				|| ! is_string( $mainFile )
+				|| ! is_string( $fingerprintValue )
+				|| ! hash_equals( $expectedFingerprint, $fingerprintValue ) ) {
+				throw new RuntimeException();
+			}
+
+			return new GitHubReleaseArtifact(
+				$validated,
+				$version,
+				$commit,
+				$packageRoot,
+				$mainFile
+			);
+		} catch ( \Throwable ) {
+			$cleanupFailed = false;
+			if ( is_object( $validated ) && is_callable( array( $validated, 'discard' ) ) ) {
+				try {
+					$cleanupFailed = true !== $validated->discard();
+				} catch ( \Throwable ) {
+					$cleanupFailed = true;
+				}
+			}
+			if ( $cleanupFailed ) {
+				throw RepositoryReleaseAcquisitionRejected::cleanupFailed();
+			}
+			throw new RuntimeException( 'GitHub returned invalid release acquisition evidence.', 502 );
+		}
+	}
+
 	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
 		return $this->webhookClient->assessSetup( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
 	}
@@ -615,7 +749,25 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 			throw RepositoryReleaseInspectionRejected::noReleases();
 		}
 
-		if ( in_array(
+		if ( $this->isInvalidReleaseFailureCode( $code ) ) {
+			throw RepositoryReleaseInspectionRejected::invalidRelease();
+		}
+
+		throw new RuntimeException( 'GitHub could not inspect the selected release.', 502 );
+	}
+
+	private function rejectReleaseAcquisition( \WP_Error $failure ): never {
+		$code = $failure->get_error_code();
+		if ( 'github_updater_invalid_release_fingerprint' === $code
+			|| $this->isInvalidReleaseFailureCode( $code ) ) {
+			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
+		}
+
+		throw new RuntimeException( 'GitHub could not acquire the selected release.', 502 );
+	}
+
+	private function isInvalidReleaseFailureCode( string $code ): bool {
+		return in_array(
 			$code,
 			array(
 				'github_updater_ambiguous_release_asset',
@@ -655,10 +807,6 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 				'release_version_mismatch',
 			),
 			true
-		) ) {
-			throw RepositoryReleaseInspectionRejected::invalidRelease();
-		}
-
-		throw new RuntimeException( 'GitHub could not inspect the selected release.', 502 );
+		);
 	}
 }

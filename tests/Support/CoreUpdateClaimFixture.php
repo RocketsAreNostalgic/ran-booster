@@ -55,6 +55,21 @@ final class CoreUpdateClaimFixture {
 		return $this->path;
 	}
 
+	/** @return array{sha256: string, identity: array{dev: int, ino: int, mode: int, nlink: int, uid: int, gid: int, size: int, mtime: int, ctime: int}} */
+	public function assertUnchanged(): array {
+		$identity = self::fileIdentity( $this->path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test fixture models the updater's custody proof.
+		$digest = is_file( $this->path ) ? hash_file( 'sha256', $this->path ) : false;
+		if ( $identity !== $this->identity || ! is_string( $digest ) || ! hash_equals( $this->sha256, $digest ) ) {
+			throw new RuntimeException( 'The claimed artifact changed after custody transfer.' );
+		}
+
+		return array(
+			'sha256'   => $this->sha256,
+			'identity' => $this->identity,
+		);
+	}
+
 	public function acceptCoreUpdate(
 		string $targetType,
 		string $targetIdentifier,

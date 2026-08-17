@@ -22,6 +22,7 @@ use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
+use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
@@ -69,6 +70,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertInstanceOf( RepositoryWebhookSettingsLink::class, $provider );
 		self::assertInstanceOf( RepositoryWebhookFitness::class, $provider );
 		self::assertInstanceOf( RepositoryWebhookManagement::class, $provider );
+		self::assertInstanceOf( RepositoryReleaseAcquirer::class, $provider );
 		self::assertInstanceOf( RepositoryReleaseCandidateListing::class, $provider );
 		self::assertInstanceOf( RepositoryReleaseInspector::class, $provider );
 		self::assertInstanceOf( RepositoryReleaseMetadata::class, $provider );

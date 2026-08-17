@@ -19,6 +19,8 @@ final class PreparedArtifact {
 
 	private bool $transferred = false;
 
+	private ?ClaimedArtifact $releaseClaim = null;
+
 	public function __construct(
 		private readonly string $path,
 		private readonly string $resolvedRef,
@@ -46,6 +48,31 @@ final class PreparedArtifact {
 		}
 	}
 
+	/** Retain the updater's exact release claim as this artifact's cleanup owner. */
+	public static function fromReleaseClaim(
+		ClaimedArtifact $claim,
+		string $resolvedRef,
+		string $expectedVersion
+	): self {
+		$attestation = $claim->assertUnchanged();
+		$identity    = $attestation['identity'];
+
+		$prepared               = new self(
+			$claim->path(),
+			$resolvedRef,
+			$expectedVersion,
+			$attestation['sha256'],
+			$identity['dev'],
+			$identity['ino'],
+			$identity['size'],
+			$identity['mode'] & 0777,
+			$identity['nlink']
+		);
+		$prepared->releaseClaim = $claim;
+
+		return $prepared;
+	}
+
 	public function getPath(): string {
 		return $this->path;
 	}
@@ -66,6 +93,11 @@ final class PreparedArtifact {
 			throw new RuntimeException( 'The prepared deployment artifact has already been cleaned up.' );
 		}
 		$this->verified = false;
+		if ( null !== $this->releaseClaim ) {
+			$this->releaseClaim->assertUnchanged();
+			$this->verified = true;
+			return;
+		}
 
 		if ( ! $this->hasOriginalIdentity() ) {
 			BoosterLogger::log(
@@ -99,7 +131,10 @@ final class PreparedArtifact {
 	 * digest check already performed by the pre-download boundary.
 	 */
 	public function claimForNativeUpdate( string $type, string $identifier ): ClaimedArtifact {
-		if ( $this->cleaned || $this->transferred || ! $this->verified ) {
+		if ( null !== $this->releaseClaim
+			|| $this->cleaned
+			|| $this->transferred
+			|| ! $this->verified ) {
 			throw new RuntimeException( 'The prepared deployment artifact is unavailable.' );
 		}
 		if ( ! $this->hasOriginalIdentity() ) {
@@ -123,6 +158,14 @@ final class PreparedArtifact {
 	 */
 	public function cleanup(): void {
 		if ( $this->cleaned || $this->transferred ) {
+			return;
+		}
+		if ( null !== $this->releaseClaim ) {
+			if ( ! $this->releaseClaim->discard() ) {
+				throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
+			}
+			$this->releaseClaim = null;
+			$this->cleaned      = true;
 			return;
 		}
 

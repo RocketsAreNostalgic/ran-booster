@@ -8,9 +8,9 @@ namespace Tests\AddOn;
 	require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 	require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 	require_once __DIR__ . '/../Deployment/PackageMutationGuardWordPressFunctions.php';
+	require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 	require_once __DIR__ . '/../Portability/WpPusherCoexistenceWordPressFunctions.php';
 	require_once __DIR__ . '/../Support/ProspectiveReleaseFacadeWordPressFunctions.php';
-	require_once __DIR__ . '/../Support/ProspectiveReleaseArtifactWordPressFunctions.php';
 	require_once __DIR__ . '/../Support/ProspectiveReleaseUpdaterFixtures.php';
 
 	use PHPUnit\Framework\TestCase;
@@ -31,6 +31,9 @@ namespace Tests\AddOn;
 	use RAN\RepositoryProvider\RepositoryLookupRequest;
 	use RAN\RepositoryProvider\RepositoryProvider;
 	use RAN\RepositoryProvider\RepositoryReference;
+	use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
+	use RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected;
+	use RAN\RepositoryProvider\RepositoryReleaseArtifact;
 	use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 	use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 	use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -48,9 +51,7 @@ namespace Tests\AddOn;
 	use RAN\WordPress\CorePackageExecutor;
 	use RAN\WordPress\ManagedReleaseConfiguration;
 	use RAN\WordPress\ManagedReleasePreflight;
-	use RAN\WordPress\ProspectiveReleaseArtifact;
 	use RAN\WordPress\WordPressUpdaterLock;
-	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveAcquisitionFixture;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveCandidateFixture;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveDiscoveryFixture;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveInspectionFixture;
@@ -64,24 +65,27 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	private const FINGERPRINT = 'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-	private ?string $artifactPath                       = null;
-	private ?ProspectiveAcquisitionFixture $acquisition = null;
+	private ?string $artifactPath                              = null;
+	private ?ProspectiveRepositoryReleaseArtifact $acquisition = null;
 
 	protected function setUp(): void {
 		ReleaseCandidatePreflight::reset();
-		ProspectiveRepositoryProvider::$resolveCalls    = 0;
-		ProspectiveRepositoryProvider::$inspectionCalls = 0;
-		ProspectiveRepositoryProvider::$metadataCalls   = 0;
-		ProspectiveRepositoryProvider::$inspectionInput = array();
+		ProspectiveRepositoryProvider::$resolveCalls     = 0;
+		ProspectiveRepositoryProvider::$inspectionCalls  = 0;
+		ProspectiveRepositoryProvider::$acquisitionCalls = 0;
+		ProspectiveRepositoryProvider::$metadataCalls    = 0;
+		ProspectiveRepositoryProvider::$inspectionInput  = array();
+		ProspectiveRepositoryProvider::$acquisitionInput = array();
+		ProspectiveRepositoryProvider::$acquisition      = null;
 
 		$GLOBALS['ran_booster_prospective_options']              = array();
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
 		$GLOBALS['ran_booster_package_mutation_guard_contexts']  = array();
-		$GLOBALS['ran_booster_prospective_chmod_allowed']        = true;
 	}
 
 	protected function tearDown(): void {
+		ProspectiveRepositoryProvider::$acquisition = null;
 		if ( null !== $this->artifactPath && file_exists( $this->artifactPath ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only temporary artifact cleanup.
 			unlink( $this->artifactPath );
@@ -89,7 +93,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$this->artifactPath = null;
 		$this->acquisition  = null;
 		unset( $GLOBALS['ran_booster_prospective_options'] );
-		unset( $GLOBALS['ran_booster_prospective_chmod_allowed'] );
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 		ReleaseCandidatePreflight::reset();
 	}
@@ -218,6 +221,34 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, ReleaseCandidatePreflight::$listCalls );
 		self::assertSame( 0, ReleaseCandidatePreflight::$discoverCalls );
 		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
+		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
+		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, $plugins->adoptionCalls );
+	}
+
+	public function testProviderWithoutAcquisitionFailsInstallBeforeMutationOrRepositoryResolution(): void {
+		$provider = new ProspectiveProviderWithoutAcquisition();
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$facade   = $this->facade( $plugins, $executor, provider: $provider );
+		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
+
+		self::assertSame( array(), $facade->supportedProviderCodes( 'plugin' ) );
+		$result = $facade->install(
+			'plugin',
+			$this->repositoryRequest(),
+			42,
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'unsupported_provider', $result->code() );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
+		self::assertSame( array(), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
 		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
@@ -483,13 +514,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function testFailedExactValidationDoesNotExecuteOrPersistAnything(): void {
-		ReleaseCandidatePreflight::$acquired = new \WP_Error(
-			'github_updater_artifact_continuity_failed',
-			'The selected published release changed.'
-		);
-		$plugins                             = new ProspectivePluginRepository();
-		$executor                            = new ProspectiveExecutor();
-		$facade                              = $this->facade( $plugins, $executor );
+		ProspectiveRepositoryProvider::$acquisition = RepositoryReleaseAcquisitionRejected::invalidRelease();
+		$plugins                                    = new ProspectivePluginRepository();
+		$executor                                   = new ProspectiveExecutor();
+		$facade                                     = $this->facade( $plugins, $executor );
 
 		$result = $facade->install(
 			'plugin',
@@ -504,7 +532,56 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'release_invalid', $result->code() );
 		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( 1, ReleaseCandidatePreflight::$acquireCalls );
+		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisitionCalls );
+		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, $plugins->adoptionCalls );
+	}
+
+	public function testOperationalAcquisitionFailureReturnsUnableBeforeInstall(): void {
+		ProspectiveRepositoryProvider::$acquisition = new RuntimeException( 'provider-secret-message' );
+		$plugins                                    = new ProspectivePluginRepository();
+		$executor                                   = new ProspectiveExecutor();
+		$facade                                     = $this->facade( $plugins, $executor );
+
+		$result = $facade->install(
+			'plugin',
+			$this->repositoryRequest(),
+			42,
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'unable_to_check', $result->code() );
+		self::assertSame( array(), $result->data() );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisitionCalls );
+		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
+		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, $plugins->adoptionCalls );
+	}
+
+	public function testProviderAcquisitionCleanupFailureIsPreservedBeforeInstall(): void {
+		ProspectiveRepositoryProvider::$acquisition = RepositoryReleaseAcquisitionRejected::cleanupFailed();
+		$plugins                                    = new ProspectivePluginRepository();
+		$executor                                   = new ProspectiveExecutor();
+		$facade                                     = $this->facade( $plugins, $executor );
+
+		$result = $facade->install(
+			'plugin',
+			$this->repositoryRequest(),
+			42,
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'installation_cleanup_failed', $result->code() );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
@@ -551,7 +628,14 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'example', $plugins->adoptedConfiguration?->packageRoot() );
 		self::assertSame( 'example.php', $plugins->adoptedConfiguration?->metadataFile() );
 		self::assertSame( 'prerelease', $plugins->adoptedConfiguration?->channel() );
-		self::assertSame( 'prerelease', ReleaseCandidatePreflight::$target['channel'] );
+		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$acquisitionInput['package_type'] ?? null );
+		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$acquisitionInput['repository']?->locator );
+		self::assertSame( '123456789', ProspectiveRepositoryProvider::$acquisitionInput['repository']?->providerRepositoryId );
+		self::assertSame( '42', ProspectiveRepositoryProvider::$acquisitionInput['release_id'] ?? null );
+		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$acquisitionInput['tag'] ?? null );
+		self::assertSame( self::FINGERPRINT, ProspectiveRepositoryProvider::$acquisitionInput['fingerprint'] ?? null );
+		self::assertSame( 'prerelease', ProspectiveRepositoryProvider::$acquisitionInput['channel'] ?? null );
+		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 1, $this->acquisition?->handoffCalls );
 		self::assertSame( 0, $this->acquisition?->discardCalls );
 		self::assertSame( 1, $lock->acquireCalls );
@@ -755,18 +839,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_invalid', $result->code() );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
-	}
-
-	public function testClaimedArtifactConversionUsesUpdaterAttestationWithoutCoreChmod(): void {
-		$release = $this->claimedReleaseArtifact();
-		$GLOBALS['ran_booster_prospective_chmod_allowed'] = false;
-
-		$prepared = $release->handoffToCore();
-
-		self::assertInstanceOf( PreparedArtifact::class, $prepared );
-		self::assertSame( 1, $this->acquisition?->handoffCalls );
-		$prepared->cleanup();
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
 	}
 
 	public function testIdentityThatAppearsAfterLockAcquisitionStopsBeforeHandoff(): void {
@@ -1126,37 +1198,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	private function setReadyRelease(): void {
-		$inspection         = new ProspectiveInspectionFixture();
 		$this->artifactPath = tempnam( sys_get_temp_dir(), 'ran-booster-prospective-' );
 		if ( false === $this->artifactPath ) {
 			throw new RuntimeException( 'The test release artifact could not be created.' );
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test-only temporary artifact.
 		file_put_contents( $this->artifactPath, 'verified-release-archive' );
-		ReleaseCandidatePreflight::$inspection = $inspection;
-		$this->acquisition                     = new ProspectiveAcquisitionFixture(
+		$this->acquisition                          = new ProspectiveRepositoryReleaseArtifact(
 			$this->artifactPath,
-			$inspection
-		);
-		ReleaseCandidatePreflight::$acquired   = $this->acquisition;
-	}
-
-	private function claimedReleaseArtifact(): ProspectiveReleaseArtifact {
-		$this->setReadyRelease();
-		if ( null === $this->acquisition ) {
-			throw new RuntimeException( 'The test acquisition is unavailable.' );
-		}
-
-		return new ProspectiveReleaseArtifact(
-			$this->acquisition,
-			42,
-			'v1.2.3',
 			'1.2.3',
 			str_repeat( 'a', 40 ),
-			'https://github.com/owner/example/releases/tag/v1.2.3',
 			'example',
 			'example.php'
 		);
+		ProspectiveRepositoryProvider::$acquisition = $this->acquisition;
 	}
 
 	private function facade(
@@ -1198,14 +1253,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 }
 
-final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseMetadata {
+final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata {
+	private const EXPECTED_FINGERPRINT = 'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-	public static int $resolveCalls    = 0;
-	public static int $inspectionCalls = 0;
-	public static int $metadataCalls   = 0;
+	public static int $resolveCalls                                     = 0;
+	public static int $inspectionCalls                                  = 0;
+	public static int $acquisitionCalls                                 = 0;
+	public static int $metadataCalls                                    = 0;
+	public static RepositoryReleaseArtifact|Throwable|null $acquisition = null;
 
 	/** @var array{package_type?: string, repository?: RepositoryReference, release_id?: string, tag?: string, channel?: string} */
 	public static array $inspectionInput = array();
+
+	/** @var array{package_type?: string, repository?: RepositoryReference, release_id?: string, tag?: string, fingerprint?: string, channel?: string} */
+	public static array $acquisitionInput = array();
 
 	public function __construct(
 		private readonly string $code = 'gh',
@@ -1316,6 +1377,36 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		return $this->inspection ?? self::defaultInspection();
 	}
 
+	public function acquireRelease(
+		string $packageType,
+		RepositoryReference $repository,
+		string $providerReleaseId,
+		string $tag,
+		string $expectedFingerprint,
+		string $channel
+	): RepositoryReleaseArtifact {
+		++self::$acquisitionCalls;
+		self::$acquisitionInput = array(
+			'package_type' => $packageType,
+			'repository'   => $repository,
+			'release_id'   => $providerReleaseId,
+			'tag'          => $tag,
+			'fingerprint'  => $expectedFingerprint,
+			'channel'      => $channel,
+		);
+		if ( self::$acquisition instanceof Throwable ) {
+			throw self::$acquisition;
+		}
+		if ( self::EXPECTED_FINGERPRINT !== $expectedFingerprint ) {
+			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
+		}
+		if ( ! self::$acquisition instanceof RepositoryReleaseArtifact ) {
+			throw new RuntimeException( 'Release acquisition fixture is unavailable.' );
+		}
+
+		return self::$acquisition;
+	}
+
 	public function expectedUpdateUri( RepositoryReference $repository ): string {
 		++self::$metadataCalls;
 
@@ -1374,6 +1465,56 @@ final class ProspectiveListingOnlyProvider implements RepositoryProvider, Reposi
 		string $channel
 	): RepositoryReleaseCandidateList {
 		return $this->provider->listReleaseCandidates( $packageType, $repository, $channel );
+	}
+}
+
+final class ProspectiveProviderWithoutAcquisition implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseMetadata {
+	private ProspectiveRepositoryProvider $provider;
+
+	public function __construct() {
+		$this->provider = new ProspectiveRepositoryProvider();
+	}
+
+	public function getMetadata(): ProviderMetadata {
+		return $this->provider->getMetadata();
+	}
+
+	public function getProviderDiagnostics(): ProviderDiagnostics {
+		return $this->provider->getProviderDiagnostics();
+	}
+
+	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		return $this->provider->resolveRepository( $request );
+	}
+
+	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		return $this->provider->prepareArchive( $request );
+	}
+
+	public function listReleaseCandidates(
+		string $packageType,
+		RepositoryReference $repository,
+		string $channel
+	): RepositoryReleaseCandidateList {
+		return $this->provider->listReleaseCandidates( $packageType, $repository, $channel );
+	}
+
+	public function inspectRelease(
+		string $packageType,
+		RepositoryReference $repository,
+		string $providerReleaseId,
+		string $tag,
+		string $channel
+	): RepositoryReleaseInspection {
+		return $this->provider->inspectRelease( $packageType, $repository, $providerReleaseId, $tag, $channel );
+	}
+
+	public function expectedUpdateUri( RepositoryReference $repository ): string {
+		return $this->provider->expectedUpdateUri( $repository );
+	}
+
+	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+		return $this->provider->releaseDetailsUrl( $repository, $tag );
 	}
 }
 
@@ -1461,6 +1602,91 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 		unset( $request );
 
 		throw new RuntimeException( 'Branch archive preparation is outside this test.' );
+	}
+}
+
+final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArtifact {
+	public int $handoffCalls   = 0;
+	public int $discardCalls   = 0;
+	public bool $discardResult = true;
+	private bool $handedOff    = false;
+	private bool $discarded    = false;
+
+	public function __construct(
+		private string $path,
+		private string $releaseVersion,
+		private string $commit,
+		private string $root,
+		private string $metadataFile
+	) {
+	}
+
+	public function discard(): bool {
+		++$this->discardCalls;
+		if ( $this->handedOff || $this->discarded ) {
+			return true;
+		}
+		if ( ! $this->discardResult ) {
+			return false;
+		}
+		if ( file_exists( $this->path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only temporary artifact cleanup.
+			$this->discarded = unlink( $this->path );
+		} else {
+			$this->discarded = true;
+		}
+
+		return $this->discarded;
+	}
+
+	public function handoffToCore(): PreparedArtifact {
+		if ( $this->handedOff || $this->discarded ) {
+			throw new RuntimeException( 'The release artifact is unavailable.' );
+		}
+		++$this->handoffCalls;
+		$identity = PreparedArtifact::regularFileIdentity( $this->path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only immutable artifact evidence.
+		$digest = hash_file( 'sha256', $this->path );
+		if ( null === $identity || ! is_string( $digest ) ) {
+			throw new RuntimeException( 'The release artifact could not be prepared.' );
+		}
+		$this->handedOff = true;
+
+		return new PreparedArtifact(
+			$this->path,
+			$this->commit,
+			$this->releaseVersion,
+			$digest,
+			$identity['device'],
+			$identity['inode'],
+			$identity['size'],
+			$identity['permissions'],
+			$identity['links']
+		);
+	}
+
+	public function version(): string {
+		return $this->releaseVersion;
+	}
+
+	public function providerCommitId(): string {
+		return $this->commit;
+	}
+
+	public function packageRoot(): string {
+		return $this->root;
+	}
+
+	public function mainFile(): string {
+		return $this->metadataFile;
+	}
+
+	public function identifier( string $packageType ): string {
+		return match ( $packageType ) {
+			'plugin' => $this->root . '/' . $this->metadataFile,
+			'theme' => $this->root,
+			default => throw new RuntimeException( 'The package type is invalid.' ),
+		};
 	}
 }
 

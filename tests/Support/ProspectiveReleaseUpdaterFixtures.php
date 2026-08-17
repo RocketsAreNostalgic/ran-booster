@@ -262,6 +262,7 @@ final class ProspectiveAcquisitionFixture {
 	public int $discardCalls   = 0;
 	public int $handoffCalls   = 0;
 	public bool $discardResult = true;
+	public bool $discardThrows = false;
 	private bool $handedOff    = false;
 
 	public function __construct(
@@ -276,6 +277,9 @@ final class ProspectiveAcquisitionFixture {
 
 	public function discard(): bool {
 		++$this->discardCalls;
+		if ( $this->discardThrows ) {
+			throw new \RuntimeException( 'Test-only cleanup failure.' );
+		}
 		if ( ! $this->discardResult ) {
 			return false;
 		}
@@ -287,71 +291,23 @@ final class ProspectiveAcquisitionFixture {
 		return ! file_exists( $this->path );
 	}
 
-	public function handoffToCore(): ProspectiveClaimedArtifactFixture|\WP_Error {
+	public function handoffToCore(): \RAN\WPGitHubReleaseUpdater\V1\Artifact\ClaimedArtifact|\WP_Error {
 		++$this->handoffCalls;
 		if ( $this->handedOff ) {
 			return new \WP_Error( 'github_updater_artifact_already_claimed', 'The artifact was already claimed.' );
 		}
 		$this->handedOff = true;
-
-		return new ProspectiveClaimedArtifactFixture( $this->path );
-	}
-}
-
-final class ProspectiveClaimedArtifactFixture {
-
-	/** @var array{sha256: string, identity: array{dev: int, ino: int, mode: int, nlink: int, uid: int, gid: int, size: int, mtime: int, ctime: int}} */
-	private array $attestation;
-
-	public function __construct( private string $path ) {
-		$this->attestation = $this->snapshot();
-	}
-
-	public function path(): string {
-		return $this->path;
-	}
-
-	/** @return array{sha256: string, identity: array{dev: int, ino: int, mode: int, nlink: int, uid: int, gid: int, size: int, mtime: int, ctime: int}} */
-	public function assertUnchanged(): array {
-		if ( $this->attestation !== $this->snapshot() ) {
-			throw new \RuntimeException( 'The test artifact changed after it was claimed.' );
+		$digest          = is_file( $this->path ) ? hash_file( 'sha256', $this->path ) : false;
+		if ( ! is_string( $digest ) ) {
+			return new \WP_Error( 'github_updater_artifact_identity_changed', 'The artifact changed before handoff.' );
 		}
 
-		return $this->attestation;
-	}
-
-	public function discard(): bool {
-		try {
-			$this->assertUnchanged();
-		} catch ( \RuntimeException ) {
-			return false;
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only claimed artifact cleanup.
-		return ! file_exists( $this->path ) || unlink( $this->path );
-	}
-
-	/** @return array{sha256: string, identity: array{dev: int, ino: int, mode: int, nlink: int, uid: int, gid: int, size: int, mtime: int, ctime: int}} */
-	private function snapshot(): array {
-		$stat   = lstat( $this->path );
-		$digest = hash_file( 'sha256', $this->path );
-		if ( false === $stat || ! is_string( $digest ) ) {
-			throw new \RuntimeException( 'The test artifact is unavailable.' );
-		}
-
-		return array(
-			'sha256'   => $digest,
-			'identity' => array(
-				'dev'   => (int) $stat['dev'],
-				'ino'   => (int) $stat['ino'],
-				'mode'  => (int) $stat['mode'],
-				'nlink' => (int) $stat['nlink'],
-				'uid'   => (int) $stat['uid'],
-				'gid'   => (int) $stat['gid'],
-				'size'  => (int) $stat['size'],
-				'mtime' => (int) $stat['mtime'],
-				'ctime' => (int) $stat['ctime'],
-			),
+		return \RAN\WPGitHubReleaseUpdater\V1\Artifact\ClaimedArtifact::forCoreUpdate(
+			$this->path,
+			$digest,
+			'plugin',
+			'example/example.php',
+			'1.2.3'
 		);
 	}
 }

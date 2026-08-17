@@ -39,17 +39,6 @@ interface ProspectiveReleaseFacade {
 	 * @param array<string, mixed>  $repositoryRequest
 	 * @param 'stable'|'prerelease' $channel
 	 */
-	public function discover(
-		string $type,
-		array $repositoryRequest,
-		string $channel,
-		string $nonce
-	): ProspectiveReleaseResult;
-
-	/**
-	 * @param array<string, mixed>  $repositoryRequest
-	 * @param 'stable'|'prerelease' $channel
-	 */
 	public function inspect(
 		string $type,
 		array $repositoryRequest,

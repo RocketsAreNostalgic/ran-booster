@@ -37,7 +37,6 @@ use RAN\Webhook\WebhookController;
 use RAN\Webhook\WebhookProcessor;
 use RAN\WordPress\CorePackageExecutionFailure;
 use RAN\WordPress\CorePackageExecutor;
-use RAN\WordPress\ManagedReleasePreflight;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -95,10 +94,9 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		self::assertSame( 0, $coreCalls );
 	}
 
-	public function testProspectiveFacadeRejectsDiscoveryInspectionAndInstallationBeforeAuthorization(): void {
+	public function testProspectiveFacadeRejectsListingInspectionAndInstallationBeforeAuthorization(): void {
 		$facade  = new NativeProspectiveReleaseFacade(
 			$this->blank( PackageRepositoryRequestResolver::class ),
-			$this->blank( ManagedReleasePreflight::class ),
 			$this->blank( CorePackageExecutor::class ),
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
@@ -109,7 +107,6 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 		$results = array(
 			$facade->listCandidates( 'plugin', array(), 'stable', 'nonce' ),
-			$facade->discover( 'plugin', array(), 'stable', 'nonce' ),
 			$facade->inspect( 'plugin', array(), 1, 'v1.0.0', 'stable', 'nonce' ),
 			$facade->install( 'plugin', array(), 1, 'v1.0.0', str_repeat( 'a', 64 ), 'stable', 'nonce' ),
 		);

@@ -68,7 +68,6 @@ use RAN\Webhook\SignedWebhookVerifier;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
-use RAN\WordPress\ManagedReleasePreflight;
 use RAN\WordPress\WordPressUpdaterLock;
 
 final class BoosterServiceProvider {
@@ -404,10 +403,8 @@ final class BoosterServiceProvider {
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
-		$prospectivePreflight = new ManagedReleasePreflight( $secrets );
-		$prospectiveFacade    = new NativeProspectiveReleaseFacade(
+		$prospectiveFacade = new NativeProspectiveReleaseFacade(
 			$container->make( PackageRepositoryRequestResolver::class ),
-			$prospectivePreflight,
 			$container->make( CorePackageExecutor::class ),
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),

@@ -191,7 +191,6 @@ The facade accepts exactly:
 ```php
 $providerCodes = $prospective->supportedProviderCodes( $type );
 $prospective->listCandidates( $type, $repository, $channel, $nonce );
-$prospective->discover( $type, $repository, $channel, $nonce );
 $prospective->inspect( $type, $repository, $releaseId, $tag, $channel, $nonce );
 $prospective->install(
 	$type,
@@ -208,20 +207,21 @@ $prospective->install(
 for `plugin` or `theme` using request-local configuration only. It performs no
 repository resolution, credential access, remote request, discovery or
 mutation. Callers must keep the prospective source unavailable when the
-selected provider is absent from that list. Candidate listing independently
-requires the exact listing facet; discovery, inspection and installation repeat
-the complete-product check. A failed check returns `unsupported_provider`
-before resolving the repository or invoking preflight.
+selected provider is absent from that list. The complete-product list requires
+the exact listing, inspection, acquisition, metadata and native-target facets.
+Each operation also checks its purpose-specific facet before resolving the
+repository or invoking provider work and returns `unsupported_provider` when it
+is absent.
 
 `$channel` must be exactly `stable` or `prerelease`; Core rejects any other
 value before resolving credentials or invoking the updater. The channel is
-carried through discovery, exact inspection and exact acquisition, and a
+carried through candidate listing, exact inspection and exact acquisition, and a
 successful installation persists it for subsequent native WordPress update
 registration. `stable` accepts stable releases only. `prerelease` accepts
 prereleases and a later stable promotion. Stable remains the default for
 existing saved configuration.
 
-All four operations recheck `manage_options`, the applicable WordPress install
+All three operations recheck `manage_options`, the applicable WordPress install
 capability and the operation/type nonce derived from `nonceAction()`.
 Candidate listing returns at most eight display-safe summaries without
 downloading a ZIP. Inspection downloads, validates and discards the exact ZIP,

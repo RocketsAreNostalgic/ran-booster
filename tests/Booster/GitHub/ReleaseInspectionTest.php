@@ -112,6 +112,21 @@ final class ReleaseInspectionTest extends TestCase {
 		}
 	}
 
+	public function testPackageIncompatibilityRemainsASeparateFallbackReason(): void {
+		ReleaseCandidatePreflight::$inspection = new \WP_Error(
+			'github_updater_release_incompatible',
+			'upstream-secret-message'
+		);
+
+		try {
+			$this->inspectPublicRelease();
+			self::fail( 'An incompatible package must reject the inspection.' );
+		} catch ( RepositoryReleaseInspectionRejected $exception ) {
+			self::assertSame( RepositoryReleaseInspectionRejected::INCOMPATIBLE, $exception->reason );
+			self::assertStringNotContainsString( 'upstream-secret-message', $exception->getMessage() );
+		}
+	}
+
 	public function testInvalidGitHubReleaseIdentityRejectsBeforeUpdaterOrCredentialWork(): void {
 		$credentials = new RepositoryResolverSecretsStub(
 			array( 'private-release' => 'secret-token' )

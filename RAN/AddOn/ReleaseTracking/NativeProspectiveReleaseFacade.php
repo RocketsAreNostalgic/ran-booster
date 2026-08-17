@@ -254,7 +254,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure(
 				match ( $rejection->reason ) {
 					RepositoryReleaseInspectionRejected::NO_RELEASES => 'no_releases',
-					RepositoryReleaseInspectionRejected::INVALID_RELEASE => 'release_invalid',
+					RepositoryReleaseInspectionRejected::INVALID_RELEASE,
+					RepositoryReleaseInspectionRejected::INCOMPATIBLE => 'release_invalid',
 					default => 'unable_to_check',
 				}
 			);

@@ -45,10 +45,10 @@ There is one installer but three operational paths:
 | Responsibility              | Prospective release install              | Native release Update                       | Tracked branch                                        |
 | --------------------------- | ---------------------------------------- | ------------------------------------------- | ----------------------------------------------------- |
 | Administrator-facing intent | Release selection and install in Booster | WordPress UI or automatic updater           | Booster Core                                          |
-| Remote discovery and trust  | Shared release-updater preflight         | Shared GitHub release updater               | Registered repository provider plus Booster preflight |
+| Remote discovery and trust  | Registered repository provider           | Shared GitHub release updater               | Registered repository provider plus Booster preflight |
 | Durable deployment attempt  | No                                       | No                                          | Yes                                                   |
 | Queue and worker            | Synchronous protected request            | WordPress's native update system            | Booster attempt table and, for queued work, WP-Cron   |
-| Archive downloader          | Shared release-updater preflight         | Shared release updater                      | Booster archive preflight                             |
+| Archive downloader          | Registered repository provider           | Shared release updater                      | Booster archive preflight                             |
 | Filesystem installer        | WordPress Core                           | WordPress Core                              | WordPress Core                                        |
 | Mutation serialization      | Booster acquires `auto_updater.lock`     | Core reuses or acquires `auto_updater.lock` | Booster acquires `auto_updater.lock`                  |
 | Final verification          | Core install and adoption postconditions | Updater and Core completion observers       | Booster coordinator postconditions                    |
@@ -63,9 +63,9 @@ behaviour.
 | Owner                         | Authority                                                                                                                                                                                                                                     |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Release Deployments add-on    | Renders release state and actions and passes bounded intent to Core facades. It does not receive credentials, download archives, schedule updates, or mutate package files.                                                                   |
-| Booster Core                  | Owns package source and revision, deployment policy, credentials, facade authorization, prospective adoption, native-update authority snapshots and locking, branch admission/history, branch preflight, and final management postconditions. |
-| Shared GitHub release updater | Owns release discovery, channel selection, caching, stable repository-ID checks, exact release/ZIP/digest identity, package-header validation, archive custody, optional rejection-only assurance, and native WordPress update hooks.         |
-| Repository provider           | Resolves a branch or authenticated webhook revision and prepares its authenticated archive URL, credentials, stable repository ID, immutable ref, and expected-head verifier when required.                                                   |
+| Booster Core                  | Owns package source and revision, deployment policy, credential storage, facade authorization, prospective adoption, native-update authority snapshots and locking, branch admission/history, branch preflight composition, and final management postconditions. |
+| Shared GitHub release updater | Implements the bundled GitHub provider's release discovery and archive checks, owns native release caching and WordPress update hooks, and retains exact archive custody until the typed handoff.                                                           |
+| Repository provider           | Owns provider-bound credential reads, release candidate ordering, exact release inspection and acquisition, plus branch or webhook revision resolution and authenticated archive access.                                                                                  |
 | WordPress Core                | Triggers native checks and automatic updates, stores update transients, invokes the upgrader, extracts and replaces files, reports completion, and performs native restoration.                                                               |
 | Booster deployment worker     | Claims at most one queued branch attempt during a real WP-Cron run and invokes the same coordinator used by synchronous manual deployment.                                                                                                    |
 
@@ -149,11 +149,11 @@ These controls do not change managed plugin or theme release policies.
 
 | Trigger                    | Initiator                                                                                 | Immediate handoff                                                                                                          | Can download a ZIP?                           | Can change files? |
 | -------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------- |
-| **Use published releases** | Administrator in Release Deployments                                                      | Add-on handler → Core facade → forced updater preflight → atomic source transition                                         | Yes, for eligibility and identity validation  | No                |
+| **Use published releases** | Administrator in Release Deployments                                                      | Add-on handler → Core facade → provider listing and exact inspection → atomic source transition                            | Yes, for eligibility and identity validation  | No                |
 | Request bootstrap          | Booster                                                                                   | Registers each eligible managed target with the shared updater before `plugins_loaded` selects one bundled updater runtime | No                                            | No                |
 | Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | Yes, for candidate validation on a cache miss | No                |
 | **Check releases**         | Administrator in Release Deployments                                                      | Add-on handler → Core facade → updater cache clear → WordPress native update check                                         | Yes, for fresh candidate validation           | No                |
-| Prospective **Install**    | Administrator selecting an exact release                                                  | Core prospective facade → updater preflight → Core installer and adoption                                                  | Yes, one exact installation archive           | Yes               |
+| Prospective **Install**    | Administrator selecting an exact release                                                  | Core prospective facade → selected provider → Core installer and adoption                                                  | Yes, one exact installation archive           | Yes               |
 | Native **Update**          | Administrator on a WordPress update surface                                               | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
 | Native automatic update    | WordPress's own automatic-updater run, when its final policy decision permits the package | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
 | Status rendering           | Release Deployments                                                                       | Add-on gateway → Core facade → passive updater diagnostics                                                                 | No                                            | No                |
@@ -184,13 +184,16 @@ push. **Disabled** permits neither.
    published releases.
 2. The add-on validates capability, package identity, source revision, channel,
    and the Core-derived nonce, then calls the Core release-tracking facade.
-3. Core repeats authorization and confirms that the package is an eligible
-   branch-managed GitHub target with a stored stable provider repository ID and
-   no registration conflict.
-4. Core asks the shared updater's preflight to perform a forced release check.
-   It binds the live GitHub repository ID to the managed ID, discovers an exact
-   candidate, requires one GitHub Release ZIP and its SHA-256, downloads and
-   re-hashes that temporary ZIP, and validates plugin/theme package identity.
+3. Core repeats authorization and confirms that the package has the required
+   release metadata, listing and inspection facets, a stable provider
+   repository identity and no native-target registration conflict.
+4. Core asks the selected provider for at most eight candidates in provider
+   preference order and inspects no more than the first two. The provider
+   performs its remote identity, release and archive checks. Core falls through
+   only for package incompatibility; vanished, corrupt or contradictory
+   releases fail closed. Core accepts only exact
+   listing-to-inspection identity, tag, version, channel, package-root and main
+   file continuity, then derives the public release URL from the metadata facet.
 5. Only after that check succeeds does Core acquire the existing updater lock,
    atomically transition the stored package source from `branch` to
    `release_asset`, record its release configuration, increment the source
@@ -388,7 +391,7 @@ fail closed. Native Update does not create a Booster deployment attempt.
 ### 5. Prospective first installation
 
 1. An administrator selects and inspects an exact release. Core resolves the
-   repository and its stable provider repository ID; the updater preflight
+   repository and its stable provider repository ID; the selected provider
    binds that identity to the release fingerprint.
 2. Install repeats capability, nonce, channel, repository, release ID, tag, and
    fingerprint checks, then freshly acquires and verifies the exact release

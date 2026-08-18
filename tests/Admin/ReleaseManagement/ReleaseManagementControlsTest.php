@@ -141,26 +141,12 @@ final class ReleaseManagementControlsTest extends TestCase {
 		) as $retiredName ) {
 			self::assertStringNotContainsString( $retiredName, $source );
 		}
-	}
 
-	public function testSuccessorHasNoRuntimeCompositionOwnerInThisSlice(): void {
-		$root  = dirname( __DIR__, 3 );
-		$paths = array( $root . '/ran-booster.php' );
-		$files = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root . '/RAN' ) );
-		foreach ( $files as $file ) {
-			if ( $file->isFile()
-				&& 'php' === $file->getExtension()
-				&& ! str_contains( $file->getPathname(), '/RAN/Admin/ReleaseManagement/' ) ) {
-				$paths[] = $file->getPathname();
-			}
-		}
-
-		foreach ( $paths as $path ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local source-conformance read.
-			$source = file_get_contents( $path );
-			self::assertIsString( $source );
-			self::assertStringNotContainsString( 'ReleaseManagementControls', $source, $path );
-			self::assertStringNotContainsString( 'GitHubReleaseWorkflowControls', $source, $path );
-		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local fallback-view conformance read.
+		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/views/packages/source-choices.php' );
+		self::assertIsString( $fallback );
+		self::assertStringContainsString( 'Published releases', $fallback );
+		self::assertStringNotContainsString( 'Release Deployments add-on', $fallback );
+		self::assertStringNotContainsString( 'Subscriber feature', $fallback );
 	}
 }

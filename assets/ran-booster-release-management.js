@@ -525,11 +525,24 @@
 		for (const [name, value] of Object.entries(values)) {
 			form.elements.namedItem(name).value = String(value);
 		}
+		const branchAction = form.elements.namedItem('ran_booster[action]');
+		const branchActionWasDisabled = branchAction?.disabled === true;
+		const restoreBranchAction = () => {
+			if (branchAction && 'disabled' in branchAction) {
+				branchAction.disabled = branchActionWasDisabled;
+			}
+		};
+		if (branchAction && 'disabled' in branchAction) {
+			branchAction.disabled = true;
+		}
 		const createPostUrl = form.getAttribute('hx-post');
 		form.setAttribute('hx-post', config.adminPostUrl);
 		form.addEventListener(
 			'htmx:afterRequest',
-			() => form.setAttribute('hx-post', createPostUrl),
+			() => {
+				form.setAttribute('hx-post', createPostUrl);
+				restoreBranchAction();
+			},
 			{ once: true }
 		);
 		form.requestSubmit(install);

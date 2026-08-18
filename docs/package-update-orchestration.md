@@ -62,7 +62,7 @@ behaviour.
 
 | Owner                         | Authority                                                                                                                                                                                                                                     |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Release Deployments add-on    | Renders release state and actions and passes bounded intent to Core facades. It does not receive credentials, download archives, schedule updates, or mutate package files.                                                                   |
+| Booster release controls      | Render release state and actions and pass bounded intent to Core's internal coordinators. They do not receive credentials, download archives, schedule updates, or mutate package files.                                                      |
 | Booster Core                  | Owns package source and revision, deployment policy, facade authorization, prospective adoption, managed-package enumeration, native-update authority snapshots and locking, stale-offer suppression, branch admission/history, provider-composed branch preflight, and final management postconditions. |
 | Shared GitHub release updater | Implements the bundled GitHub provider's release discovery and archive checks, owns native release caching and its provider-owned WordPress target runtime, and retains exact archive custody until typed handoff. |
 | Repository provider           | Owns provider-bound credentials, release candidate ordering, exact release inspection and acquisition, optional native-target construction/status/refresh, plus branch or webhook revision resolution and authenticated archive access. |
@@ -124,7 +124,7 @@ and
 ## Booster Core is a separate native target
 
 Booster's self-update target is not a managed package and does not use branch
-deployment, Release Deployments, stored provider credentials, or deployment
+deployment, managed-package release controls, stored provider credentials, or deployment
 activity. Core always registers the target early enough to participate in
 shared-updater runtime arbitration. Whether that target also joins WordPress's
 native discovery and installer hooks is decided separately.
@@ -149,14 +149,14 @@ These controls do not change managed plugin or theme release policies.
 
 | Trigger                    | Initiator                                                                                 | Immediate handoff                                                                                                          | Can download a ZIP?                           | Can change files? |
 | -------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------- |
-| **Use published releases** | Administrator in Release Deployments                                                      | Add-on handler → Core facade → provider listing and exact inspection → atomic source transition                            | Yes, for eligibility and identity validation  | No                |
+| **Use published releases** | Administrator in Booster                                                                  | Core handler → internal coordinator → provider listing and exact inspection → atomic source transition                     | Yes, for eligibility and identity validation  | No                |
 | Request bootstrap          | Booster                                                                                   | Registers each eligible managed target with the shared updater before `plugins_loaded` selects one bundled updater runtime | No                                            | No                |
 | Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | Yes, for candidate validation on a cache miss | No                |
-| **Check releases**         | Administrator in Release Deployments                                                      | Add-on handler → Core facade → updater cache clear → WordPress native update check                                         | Yes, for fresh candidate validation           | No                |
+| **Check releases**         | Administrator in Booster                                                                  | Core handler → internal coordinator → updater cache clear → WordPress native update check                                  | Yes, for fresh candidate validation           | No                |
 | Prospective **Install**    | Administrator selecting an exact release                                                  | Core prospective facade → selected provider → Core installer and adoption                                                  | Yes, one exact installation archive           | Yes               |
 | Native **Update**          | Administrator on a WordPress update surface                                               | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
 | Native automatic update    | WordPress's own automatic-updater run, when its final policy decision permits the package | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
-| Status rendering           | Release Deployments                                                                       | Add-on gateway → Core facade → passive updater diagnostics                                                                 | No                                            | No                |
+| Status rendering           | Booster                                                                                   | Core controls → internal coordinator → passive updater diagnostics                                                         | No                                            | No                |
 
 There is no Booster release scheduler. **Automatic** makes the updater return an
 affirmative native auto-update decision. **Manual** does not force automatic
@@ -180,10 +180,11 @@ push. **Disabled** permits neither.
 
 ### 1. Enabling release tracking
 
-1. Release Deployments receives the protected administrator request to use
-   published releases.
-2. The add-on validates capability, package identity, source revision, channel,
-   and the Core-derived nonce, then calls the Core release-tracking facade.
+1. Booster's release controls receive the protected administrator request to
+   use published releases.
+2. The Core handler validates capability, package identity, source revision,
+   channel, and the purpose-specific nonce, then calls the internal
+   release-tracking coordinator.
 3. Core repeats authorization and confirms that the package has the required
    release metadata, listing and inspection facets, a stable provider
    repository identity and no native-target registration conflict.
@@ -215,7 +216,7 @@ sequenceDiagram
     participant U as Shared release updater
     participant W as WordPress Core
     participant G as GitHub Releases
-    participant A as Release Deployments
+    participant A as Booster release controls
 
     B->>U: Register eligible release target before plugins_loaded
     U->>U: Select one compatible bundled runtime
@@ -307,10 +308,10 @@ download.
 
 ### 3. Explicit Check releases
 
-1. Release Deployments receives a protected `admin-post` request.
-2. The add-on checks package type, identifier, source revision, capability, and
-   the Core-derived nonce.
-3. The add-on calls the Core `ReleaseTrackingFacade`.
+1. Booster's release controls receive a protected `admin-post` request.
+2. The Core handler checks package type, identifier, source revision,
+   capability, and the purpose-specific nonce.
+3. The handler calls the internal `ReleaseTrackingFacade`.
 4. Core repeats authorization and confirms that the package is still a
    registered published-release target at the expected source revision.
 5. Core asks the selected updater target to clear only its package cache and the
@@ -319,8 +320,7 @@ download.
 7. WordPress invokes the updater's native discovery filter. Discovery follows
    the normal sequence above and may download a temporary candidate-validation
    ZIP.
-8. Control returns through Core to the add-on, which redirects with a bounded
-   result.
+8. Control returns to the Core handler, which redirects with a bounded result.
 
 No deployment attempt is written. No upgrader runs. **Check releases**
 cannot install, update, downgrade, or reinstall a package.
@@ -688,7 +688,7 @@ durably written. Notification failure does not rerun deployment.
 When investigating a published release:
 
 1. Check the package source and source revision.
-2. Read Release Deployments status for the installed version, offered version,
+2. Read Booster's release status for the installed version, offered version,
    last check, next check, channel, and failure code.
 3. Use **Check releases** to force discovery without mutation.
 4. For Update failures, inspect the native WordPress update result and updater

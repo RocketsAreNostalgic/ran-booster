@@ -408,6 +408,7 @@ final class ReleaseManagementDisplay {
 			data-ran-booster-release-install-nonce="<?php echo esc_attr( $installNonce ?? '' ); ?>"
 			hidden
 		>
+			<input type="hidden" name="expected_type" value="<?php echo esc_attr( $type ); ?>">
 			<input type="hidden" name="ran_booster_release_install_nonce" value="<?php echo esc_attr( $installNonce ?? '' ); ?>">
 			<input type="hidden" name="release_id" value="">
 			<input type="hidden" name="release_tag" value="">

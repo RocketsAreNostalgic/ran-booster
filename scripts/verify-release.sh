@@ -119,7 +119,7 @@ done
 bootstrap_source=$(git show "$commit:ran-booster.php")
 for required_api_marker in \
 	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );" \
-	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );" \
+	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );" \
 	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );" \
 	"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );"; do
 	grep -Fq "$required_api_marker" <<< "$bootstrap_source" \
@@ -134,7 +134,10 @@ for removed_api_marker in \
 	RAN_BOOSTER_DOCUMENTATION_API_VERSION \
 	RAN_BOOSTER_PACKAGE_EXTENSION_API_VERSION \
 	RAN_BOOSTER_PROVIDER_ADMIN_EXTENSION_API_VERSION \
-	RAN_BOOSTER_SETTINGS_PAGE_API_VERSION; do
+	RAN_BOOSTER_SETTINGS_PAGE_API_VERSION \
+	RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION \
+	ran_booster_release_tracking_ready \
+	ran_booster_prospective_release_ready; do
 	if grep -Fq "$removed_api_marker" <<< "$bootstrap_source"; then
 		fail "release ref retains a removed or unimplemented API marker: $removed_api_marker"
 	fi

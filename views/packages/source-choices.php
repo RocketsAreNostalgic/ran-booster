@@ -24,9 +24,9 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 			'client_hydratable' => false,
 		),
 		'release_asset' => array(
-			'heading'           => __( 'Subscriber release deployments', 'ran-booster' ),
-			'description'       => __( 'Install verified published packages with the optional Release Deployments add-on.', 'ran-booster' ),
-			'meta'              => __( 'Subscriber feature', 'ran-booster' ),
+			'heading'           => __( 'Published releases', 'ran-booster' ),
+			'description'       => __( 'Install verified published packages when the repository provider supports release management.', 'ran-booster' ),
+			'meta'              => __( 'Included with Booster', 'ran-booster' ),
 			'url'               => '',
 			'disabled'          => true,
 			'hydrated'          => false,

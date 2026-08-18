@@ -77,11 +77,12 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 
 $ran_booster_version                    = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 $ran_booster_self_update_policy         = CoreSelfUpdatePolicy::detect( __FILE__, $ran_booster_version );
-$GLOBALS['ran_booster_release_updater'] = GitHubReleaseUpdaterBootstrap::register(
+$ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::register(
 	pluginFile: __FILE__,
 	pluginVersion: $ran_booster_version,
 	nativeDiscovery: $ran_booster_self_update_policy->allowsNativeDiscovery()
 );
+$GLOBALS['ran_booster_release_updater'] = $ran_booster_release_updater;
 GitHubReleaseUpdateNotice::register();
 
 $ran_booster_runtime_support = RuntimeSupport::current();
@@ -103,7 +104,7 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 }
 ( new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy ) )->register();
 
-( static function () use ( $ran_booster_self_update_policy ): void {
+( static function () use ( $ran_booster_release_updater, $ran_booster_self_update_policy ): void {
 	$ran_booster_container            = new CoreContainer();
 	$ran_booster_runtime              = new Booster( $ran_booster_container );
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
@@ -128,7 +129,7 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 
 	add_action(
 		'plugins_loaded',
-		static function () use ( $ran_booster_container, $ran_booster_runtime ): void {
+		static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater ): void {
 			// All plugins have now had an opportunity to attach their provider
 			// registration callback. No provider consumer is resolved before this
 			// extension seam closes and the registry is sealed.
@@ -150,8 +151,18 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 
 			$portability      = $ran_booster_container->make( PortabilityFacade::class );
 			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
-			$ran_booster_container->make( ReleaseManagementControls::class )->register();
-			$ran_booster_container->make( GitHubReleaseWorkflowControls::class )->register();
+			add_action(
+				'plugins_loaded',
+				static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {
+					if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
+						!== GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater ) ) {
+						return;
+					}
+					$ran_booster_container->make( ReleaseManagementControls::class )->register();
+					$ran_booster_container->make( GitHubReleaseWorkflowControls::class )->register();
+				},
+				PHP_INT_MAX
+			);
 			if ( GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
 				GitHubProvider::registerLegacyAssistedHooksAddOnNotice();
 			} else {

@@ -102,6 +102,12 @@ test('final install submits the shared Core create form', () => {
 		installRelease,
 		/form\.setAttribute\('hx-post', config\.adminPostUrl\)/
 	);
+	assert.match(
+		installRelease,
+		/form\.elements\.namedItem\('ran_booster\[action\]'\)/
+	);
+	assert.match(installRelease, /branchActionWasDisabled/);
+	assert.match(installRelease, /branchAction\.disabled = true/);
 	assert.match(installRelease, /form\.requestSubmit\(install\)/);
 	assert.doesNotMatch(installRelease, /document\.createElement\('form'\)/);
 	assert.doesNotMatch(installRelease, /\.submit\(\)/);

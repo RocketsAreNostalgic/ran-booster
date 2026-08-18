@@ -96,6 +96,26 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		self::assertSame( array( 'install', 'plugin', $prospective->calls[0][2], 42, 'v1.2.3-rc.1', $fingerprint, 'prerelease', $this->nonce( 'install', 'plugin' ) ), $prospective->calls[2] );
 	}
 
+	public function testProspectivePaneCarriesTypeAndInstallScriptSuppressesBranchDispatcher(): void {
+		$controls = ReleaseManagementFixture::controls();
+		ob_start();
+		$controls->renderAdvancedSourceSection(
+			'create',
+			'plugin',
+			'release_asset',
+			null,
+			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create'
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'name="expected_type" value="plugin"', $html );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local interaction conformance read.
+		$script = file_get_contents( dirname( __DIR__, 3 ) . '/assets/ran-booster-release-management.js' );
+		self::assertIsString( $script );
+		self::assertStringContainsString( "form.elements.namedItem('ran_booster[action]')", $script );
+		self::assertStringContainsString( 'branchAction.disabled = true', $script );
+	}
+
 	public function testInvalidAuthorityDoesNotTraverseCredentialBearingRepositoryFields(): void {
 		$prospective                               = new ProspectiveReleaseFacadeDouble();
 		$controls                                  = ReleaseManagementFixture::controls( prospective: $prospective );

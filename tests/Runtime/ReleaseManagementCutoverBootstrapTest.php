@@ -10,6 +10,29 @@ use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 
 final class ReleaseManagementCutoverBootstrapTest extends TestCase {
+	public function testReleaseUpdaterIsBoundBeforeEveryBootstrapCapture(): void {
+		$bootstrap = $this->source( 'ran-booster.php' );
+
+		$localBinding = strpos( $bootstrap, '$ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::register(' );
+		$globalMirror = strpos( $bootstrap, '$GLOBALS[\'ran_booster_release_updater\'] = $ran_booster_release_updater;' );
+		$outerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_release_updater, $ran_booster_self_update_policy ): void {' );
+		$innerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater ): void {' );
+		$lateCapture  = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {' );
+		$apiGate      = strpos( $bootstrap, 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )' );
+
+		self::assertIsInt( $localBinding );
+		self::assertIsInt( $globalMirror );
+		self::assertIsInt( $outerCapture );
+		self::assertIsInt( $innerCapture );
+		self::assertIsInt( $lateCapture );
+		self::assertIsInt( $apiGate );
+		self::assertLessThan( $globalMirror, $localBinding );
+		self::assertLessThan( $outerCapture, $globalMirror );
+		self::assertLessThan( $innerCapture, $outerCapture );
+		self::assertLessThan( $lateCapture, $innerCapture );
+		self::assertLessThan( $apiGate, $lateCapture );
+	}
+
 	public function testBundledSuccessorRegistersOnceAfterProviderSeal(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
@@ -36,6 +59,11 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertSame(
 			1,
 			preg_match_all( '/\$ran_booster_container->make\( GitHubReleaseWorkflowControls::class \)->register\(\);/', $bootstrap )
+		);
+		self::assertStringContainsString( 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )', $bootstrap );
+		self::assertMatchesRegularExpression(
+			'/GitHubReleaseWorkflowControls::class \)->register\(\);[\s\S]*?PHP_INT_MAX/',
+			$bootstrap
 		);
 	}
 

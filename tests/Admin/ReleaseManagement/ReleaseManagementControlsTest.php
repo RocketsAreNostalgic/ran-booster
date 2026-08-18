@@ -141,5 +141,12 @@ final class ReleaseManagementControlsTest extends TestCase {
 		) as $retiredName ) {
 			self::assertStringNotContainsString( $retiredName, $source );
 		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local fallback-view conformance read.
+		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/views/packages/source-choices.php' );
+		self::assertIsString( $fallback );
+		self::assertStringContainsString( 'Published releases', $fallback );
+		self::assertStringNotContainsString( 'Release Deployments add-on', $fallback );
+		self::assertStringNotContainsString( 'Subscriber feature', $fallback );
 	}
 }

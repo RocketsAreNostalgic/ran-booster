@@ -110,6 +110,29 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( 'delete_option', $bootstrap );
 	}
 
+	public function testInstalledReleaseCapabilityProofIsAutomatedAndDisposable(): void {
+		$composer = json_decode( $this->source( 'composer.json' ), true );
+		self::assertIsArray( $composer );
+		self::assertSame(
+			'bash tests/WordPress/release-capability-installed-smoke.sh',
+			$composer['scripts']['test:release-capability-installed'] ?? null
+		);
+
+		$workflow = $this->source( '.github/workflows/quality.yml' );
+		self::assertStringContainsString( 'Prove installed release capability lifecycle', $workflow );
+		self::assertStringContainsString( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE:', $workflow );
+		self::assertStringContainsString( 'composer test:release-capability-installed', $workflow );
+
+		$runner = $this->source( 'tests/WordPress/release-capability-installed-smoke.sh' );
+		foreach ( array( '.ran-booster-disposable-test-site', 'RAN_BOOSTER_WORDPRESS_PATH', 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL', 'plugin_target', 'theme_target' ) as $guard ) {
+			self::assertStringContainsString( $guard, $runner );
+		}
+
+		$proof = $this->source( 'tests/WordPress/release-capability-installed-smoke.php' );
+		self::assertStringContainsString( "RAN Booster disposable test site\\n", $proof );
+		self::assertSame( 2, substr_count( $proof, '->requireSuccess()' ) );
+	}
+
 	private function source( string $path ): string {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local source-conformance read.
 		$source = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );

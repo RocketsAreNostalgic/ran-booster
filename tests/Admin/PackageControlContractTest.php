@@ -28,7 +28,7 @@ final class PackageControlContractTest extends TestCase {
 	): void {
 		self::assertContains( $surface, array( 'create', 'edit', 'index' ) );
 		self::assertContains( $transport, array( 'mutation-post', 'readonly-htmx-get', 'native-get', 'native-link', 'local-action' ) );
-		self::assertContains( $authority, array( 'core', 'release-deployments', 'wordpress', 'provider' ) );
+		self::assertContains( $authority, array( 'core', 'wordpress', 'provider' ) );
 		self::assertNotSame( '', $success );
 		self::assertNotSame( '', $failure );
 		self::assertNotSame( '', $destination );
@@ -53,6 +53,10 @@ final class PackageControlContractTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $source );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $source );
 		self::assertStringContainsString( 'type="button"', $source );
+		self::assertStringContainsString( 'Published releases', $source );
+		self::assertStringContainsString( 'Provider capability required', $source );
+		self::assertStringNotContainsString( 'Subscriber', $source );
+		self::assertStringNotContainsString( 'Release Deployments', $source );
 		self::assertStringContainsString( 'method="get"', $readiness );
 		self::assertStringContainsString( 'hx-push-url=', $readiness );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $readiness );
@@ -85,7 +89,7 @@ final class PackageControlContractTest extends TestCase {
 			'unlink and delete'         => array( 'edit', 'mutation-post', 'core', 'signed package PRG', 'local package form', 'package index' ),
 			'saved source navigation'   => array( 'edit', 'readonly-htmx-get', 'core', 'selected pane', 'unchanged page', 'canonical source view' ),
 			'branch readiness'          => array( 'edit', 'readonly-htmx-get', 'core', 'transient toast', 'persistent readiness warning', 'canonical branch view' ),
-			'published release actions' => array( 'edit', 'mutation-post', 'release-deployments', 'add-on PRG', 'local source panel', 'canonical release view' ),
+			'published release actions' => array( 'edit', 'mutation-post', 'core', 'Core PRG', 'local source panel', 'canonical release view' ),
 			'repository provider links' => array( 'edit', 'native-link', 'provider', 'navigation', 'provider page', 'provider settings' ),
 			'activate or enable'        => array( 'edit', 'native-link', 'wordpress', 'WordPress action', 'WordPress page', 'saved package settings' ),
 			'filter and search'         => array( 'index', 'native-get', 'core', 'filtered list', 'package index', 'canonical filtered index' ),

@@ -989,6 +989,16 @@ jobs:
                 composer test:core-updater-proof
                 composer test:core-package-executor
 
+          - name: Prove installed release capability lifecycle
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL: 'http://localhost'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                composer test:release-capability-installed
+
           - name: Prove native updater-lock election
             if: ${{ matrix.suite == 'critical' }}
             env:

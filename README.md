@@ -1,6 +1,6 @@
 # RAN Booster
 
-An internal WordPress plugin for managing theme and plugin deployments from repository providers.
+A self-hosted WordPress plugin for managing theme and plugin deployments from repository providers.
 
 This repository began as a GPL fork. The inherited GPLv2 text and source
 provenance are retained in [license.txt](license.txt) and [NOTICE.md](NOTICE.md).
@@ -31,7 +31,7 @@ through a documented `ran_booster_register_providers` hook without modifying
 Booster itself (see [provider extension contract](docs/provider-extension-contract.md)).
 The [provider registration and coexistence characterization](docs/provider-registration-and-coexistence.md)
 records the current exact-code collision protections and their limits.
-Premium functionality contributes to existing Core screens through the
+Optional add-ons contribute to existing Core screens through the
 [WordPress-native administration composition
 contract](docs/admin-composition-contract.md). Add-ons whose workflow genuinely
 requires a separate dashboard surface may instead use the retained public
@@ -85,7 +85,7 @@ deployment constants remain available for explicitly configured credentials.
 - WordPress 7.0 or newer
 - PHP 8.2 or newer
 - PHP Sodium extension
-- Single-site WordPress; multisite is not supported in this Alpha
+- Single-site WordPress; multisite is not supported in this Beta
 - MySQL 8.0 or newer or MariaDB 10.11 or newer, with InnoDB available
 
 MySQL 8.0 is the tested compatibility floor; MySQL 8.4 LTS is the production
@@ -289,6 +289,19 @@ work is in neither record.
   same package replaces the old status; manual deployment failures remain in
   Deployment activity without generating background-failure email.
 
+## Install, update, and get help
+
+Install the `ran-booster-<version>.zip` attached to the intended immutable Beta
+release in this repository. GitHub's generated **Source code** archives are not
+installable plugin packages. After installation, Booster's bundled updater owns
+its WordPress-native update offers; Core does not depend on a vendor-hosted
+licence or package service.
+
+Use the repository issue tracker for ordinary support and non-sensitive defects.
+Follow [SECURITY.md](SECURITY.md) for confidential vulnerability reporting and
+[CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. The authoritative
+release procedure is [RELEASE.md](RELEASE.md).
+
 ## Feature comparison
 
 RAN Booster adds a stronger deployment-truth and recovery model on top of
@@ -490,5 +503,5 @@ locked shared-updater runtime, and the generated
 agent/Dex state, workflows, release tooling, Composer and Node metadata, caches,
 logs, archives, and secret sidecars are excluded. Plugin Check is limited to
 its general, security, performance, and accessibility categories because RAN
-Booster is deployed internally rather than submitted to the WordPress.org
-plugin repository.
+Booster is distributed from its canonical GitHub releases rather than the
+WordPress.org plugin repository.

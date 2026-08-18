@@ -194,6 +194,11 @@ final class ProviderContractsTest extends TestCase {
 				self::addToAssertionCount( 1 );
 			}
 		}
+
+		$values    = $valid;
+		$values[4] = str_repeat( 'a', 101 );
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseInspection( ...$values );
 	}
 
 	public function testReleaseInspectionRejectionHasOnlyTheTwoBoundedDomainReasons(): void {

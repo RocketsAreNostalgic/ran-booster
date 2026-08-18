@@ -97,6 +97,21 @@ final class ReleaseInspectionTest extends TestCase {
 		}
 	}
 
+	public function testNoEligibleReleaseMapsToThePurposeSpecificRejection(): void {
+		ReleaseCandidatePreflight::$inspection = new \WP_Error(
+			'github_updater_no_eligible_release',
+			'upstream-secret-message'
+		);
+
+		try {
+			$this->inspectPublicRelease();
+			self::fail( 'An unavailable exact release must reject the inspection.' );
+		} catch ( RepositoryReleaseInspectionRejected $exception ) {
+			self::assertSame( RepositoryReleaseInspectionRejected::NO_RELEASES, $exception->reason );
+			self::assertStringNotContainsString( 'upstream-secret-message', $exception->getMessage() );
+		}
+	}
+
 	public function testInvalidGitHubReleaseIdentityRejectsBeforeUpdaterOrCredentialWork(): void {
 		$credentials = new RepositoryResolverSecretsStub(
 			array( 'private-release' => 'secret-token' )
@@ -157,22 +172,29 @@ final class ReleaseInspectionTest extends TestCase {
 		self::assertSame( array( 'private-release' ), $credentials->lookups );
 	}
 
-	public function testMalformedPackageTypeOrStableVersionEvidenceFailsClosed(): void {
-		foreach (
-			array(
-				new ProspectiveInspectionFixture( '1.2.3', 'theme' ),
-				new ProspectiveInspectionFixture( '1.2.3-beta.1' ),
-			) as $inspection
-		) {
-			ReleaseCandidatePreflight::$inspection = $inspection;
+	public function testMalformedPackageTypeEvidenceFailsClosed(): void {
+		ReleaseCandidatePreflight::$inspection = new ProspectiveInspectionFixture( '1.2.3', 'theme' );
 
-			try {
-				$this->inspectPublicRelease();
-				self::fail( 'Contradictory inspection evidence must fail closed.' );
-			} catch ( RuntimeException $exception ) {
-				self::assertSame( 'GitHub returned invalid release inspection evidence.', $exception->getMessage() );
-			}
+		try {
+			$this->inspectPublicRelease();
+			self::fail( 'Contradictory inspection evidence must fail closed.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertSame( 'GitHub returned invalid release inspection evidence.', $exception->getMessage() );
 		}
+	}
+
+	public function testStableBuildMetadataWithAHyphenRemainsValid(): void {
+		ReleaseCandidatePreflight::$inspection = new ProspectiveInspectionFixture( '1.2.3+build-7' );
+
+		$inspection = $this->provider( new RepositoryResolverSecretsStub() )->inspectRelease(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'42',
+			'v1.2.3',
+			'stable'
+		);
+
+		self::assertSame( '1.2.3+build-7', $inspection->version );
 	}
 
 	public function testMismatchedInspectionIdentityFailsClosedWithRedactedEvidenceError(): void {

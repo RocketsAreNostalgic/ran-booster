@@ -451,7 +451,6 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 				|| ! is_string( $inspectedTag )
 				|| ! hash_equals( $tag, $inspectedTag )
 				|| ! is_string( $version )
-				|| ( 'stable' === $channel && str_contains( $version, '-' ) )
 				|| ! is_string( $commit )
 				|| 1 !== preg_match( '/\A[0-9a-f]{40}\z/D', $commit )
 				|| ! is_string( $inspectedType )
@@ -612,6 +611,10 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 
 	private function rejectReleaseInspection( \WP_Error $failure ): never {
 		$code = $failure->get_error_code();
+		if ( 'github_updater_no_eligible_release' === $code ) {
+			throw RepositoryReleaseInspectionRejected::noReleases();
+		}
+
 		if ( in_array(
 			$code,
 			array(

@@ -21,7 +21,7 @@ final readonly class RepositoryReleaseInspection {
 			|| ! $this->boundedOpaqueValue( $tag, 100 )
 			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._+-]{0,63}\z/D', $version )
 			|| ! $this->boundedOpaqueValue( $providerCommitId, 191 )
-			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $packageRoot )
+			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,99}\z/D', $packageRoot )
 			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $mainFile )
 			|| ! $this->boundedOpaqueValue( $fingerprint, 191 ) ) {
 			throw new InvalidArgumentException( 'The repository release inspection is invalid.' );

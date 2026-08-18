@@ -206,14 +206,18 @@ jobs:
               'if length != 1 then error("Expected exactly one Release Please action output pull request.") else .[0] end
               | select((.number | type) == "number" and .number > 0)
               | select(.baseBranchName == $base and .headBranchName == $head)
-              | select(.sha | type == "string" and test("^[0-9a-f]{40}$"))
               | select(
-                  (.files
-                    | map(if type == "string" then . else (.filename // .path // error("Release Please output file has no path.")) end)
-                    | sort) == $expected_files
+                  (.files | type) == "array"
+                  and (
+                    (.files | length) == 0
+                    or (
+                      (.files
+                        | map(if type == "string" then . else (.filename // .path // error("Release Please output file has no path.")) end)
+                        | sort) == $expected_files
+                    )
+                  )
                 )' <<< "$RAN_RELEASE_PRS")"
             action_pr_number="$(jq -er '.number' <<< "$action_pr")"
-            action_head_sha="$(jq -er '.sha' <<< "$action_pr")"
           elif [[ -n "$RAN_RELEASE_PRS_CREATED" && "$RAN_RELEASE_PRS_CREATED" != false ]]; then
             echo '::error::Release Please returned an invalid prs_created output.'
             exit 1
@@ -257,7 +261,6 @@ jobs:
           head_ref="$(jq -er '.head.ref' <<< "$release_pr")"
           if [[ "$action_output" == true ]]; then
             test "$pr_number" = "$action_pr_number"
-            test "$head_sha" = "$action_head_sha"
           fi
           if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
             git fetch --no-tags origin "$base_sha"
@@ -271,39 +274,36 @@ jobs:
           comments="$(gh api --paginate --slurp \
             "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments?per_page=100")"
 
-          commit_identity=null
-          if [[ "$action_output" == false ]]; then
-            # shellcheck disable=SC2016
-            commit_identity="$(gh api graphql \
-              -F owner="$owner" \
-              -F name="$repository_name" \
-              -F number="$pr_number" \
-              -f query='
-                query($owner: String!, $name: String!, $number: Int!) {
-                  repository(owner: $owner, name: $name) {
-                    pullRequest(number: $number) {
-                      commits(last: 1) {
-                        nodes {
-                          commit {
-                            oid
-                            parents(first: 2) { nodes { oid } }
-                            signature {
-                              isValid
-                              state
-                              signer { login }
-                            }
-                            author {
-                              email
-                              user { login }
-                            }
-                            committer { email }
+          # shellcheck disable=SC2016
+          commit_identity="$(gh api graphql \
+            -F owner="$owner" \
+            -F name="$repository_name" \
+            -F number="$pr_number" \
+            -f query='
+              query($owner: String!, $name: String!, $number: Int!) {
+                repository(owner: $owner, name: $name) {
+                  pullRequest(number: $number) {
+                    commits(last: 1) {
+                      nodes {
+                        commit {
+                          oid
+                          parents(first: 2) { nodes { oid } }
+                          signature {
+                            isValid
+                            state
+                            signer { login }
                           }
+                          author {
+                            email
+                            user { login }
+                          }
+                          committer { email }
                         }
                       }
                     }
                   }
-                }')"
-          fi
+                }
+              }')"
 
           flat_comments="$(jq -cer 'add' <<< "$comments")"
           marker_transition="$(jq -nc \

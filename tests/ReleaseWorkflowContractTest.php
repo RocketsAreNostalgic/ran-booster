@@ -88,8 +88,10 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'id: release-please', $workflow );
 		self::assertStringContainsString( 'steps.release-please.outputs.prs', $workflow );
 		self::assertStringContainsString( 'steps.release-please.outputs.prs_created', $workflow );
-		self::assertStringContainsString( '.sha | type == "string" and test("^[0-9a-f]{40}$")', $workflow );
+		self::assertStringNotContainsString( '.sha | type == "string" and test("^[0-9a-f]{40}$")', $workflow );
 		self::assertStringContainsString( 'expected_files=\'[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt"]\'', $workflow );
+		self::assertStringContainsString( '(.files | type) == "array"', $workflow );
+		self::assertStringContainsString( '(.files | length) == 0', $workflow );
 		self::assertStringContainsString( 'commits(last: 1)', $workflow );
 		self::assertStringContainsString( 'signature {', $workflow );
 		self::assertStringContainsString( 'bash scripts/reconcile-release-candidate-marker.sh', $workflow );

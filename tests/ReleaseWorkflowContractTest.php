@@ -35,6 +35,52 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringNotContainsString( 'parent_count', $workflow );
 	}
 
+	public function testQualitySkipsOnlyTheExactDirectReleasePleaseBotPullRequest(): void {
+		$workflow  = $this->workflow( 'quality.yml' );
+		$condition = <<<'YAML'
+  runtime-archive:
+    name: Runtime archive
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        github.actor != 'github-actions[bot]' ||
+        github.event.pull_request.user.login != 'github-actions[bot]' ||
+        github.event.pull_request.base.ref != 'main' ||
+        github.event.pull_request.head.ref != 'release-please--branches--main--components--ran-booster' ||
+        github.event.pull_request.head.repo.full_name != github.repository
+      }}
+YAML;
+
+		self::assertStringContainsString( $condition, $workflow );
+
+		$exactReleasePleasePullRequest = array(
+			'event_name'      => 'pull_request',
+			'actor'           => 'github-actions[bot]',
+			'author'          => 'github-actions[bot]',
+			'base'            => 'main',
+			'head'            => 'release-please--branches--main--components--ran-booster',
+			'head_repository' => 'RocketsAreNostalgic/ran-booster',
+			'repository'      => 'RocketsAreNostalgic/ran-booster',
+		);
+
+		self::assertFalse( $this->runtimeArchiveRuns( $exactReleasePleasePullRequest ) );
+
+		foreach ( array(
+			'main push'            => array( 'event_name' => 'push' ),
+			'trusted dispatch'     => array( 'event_name' => 'workflow_dispatch' ),
+			'ordinary actor'       => array( 'actor' => 'maintainer' ),
+			'ordinary author'      => array( 'author' => 'maintainer' ),
+			'non-main base'        => array( 'base' => 'next' ),
+			'ordinary head'        => array( 'head' => 'feature/release-notes' ),
+			'fork head repository' => array( 'head_repository' => 'contributor/ran-booster' ),
+		) as $name => $override ) {
+			self::assertTrue(
+				$this->runtimeArchiveRuns( array_replace( $exactReleasePleasePullRequest, $override ) ),
+				$name . ' must still run the runtime archive job.'
+			);
+		}
+	}
+
 	public function testQualityTreatsDependencyAndReleaseAuthorityAsAdmissionTrustPaths(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
@@ -154,5 +200,19 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertIsString( $workflow );
 
 		return $workflow;
+	}
+
+	/**
+	 * Evaluate the job condition against bounded workflow-event fixtures.
+	 *
+	 * @param array<string, string> $event Workflow-event fixture.
+	 */
+	private function runtimeArchiveRuns( array $event ): bool {
+		return 'pull_request' !== $event['event_name']
+			|| 'github-actions[bot]' !== $event['actor']
+			|| 'github-actions[bot]' !== $event['author']
+			|| 'main' !== $event['base']
+			|| 'release-please--branches--main--components--ran-booster' !== $event['head']
+			|| $event['head_repository'] !== $event['repository'];
 	}
 }

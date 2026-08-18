@@ -26,6 +26,15 @@ permissions:
 jobs:
   runtime-archive:
     name: Runtime archive
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        github.actor != 'github-actions[bot]' ||
+        github.event.pull_request.user.login != 'github-actions[bot]' ||
+        github.event.pull_request.base.ref != 'main' ||
+        github.event.pull_request.head.ref != 'release-please--branches--main--components--ran-booster' ||
+        github.event.pull_request.head.repo.full_name != github.repository
+      }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:

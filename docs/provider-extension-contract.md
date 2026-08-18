@@ -92,6 +92,10 @@ inside the selected fixed call. A request-only credential is a separate
 explicit sensitive parameter for both assessment and execution of that call and
 is never persisted or returned. Exactly one saved ID or request-only value is
 accepted. Only setup and reconfigure receive the Core-held signing secret.
+The fixed management placement also requires `WebhookNormalizer` on that same
+aggregate, proving that provider registration supplied the signing policy Core
+needs to create and retain webhook profiles. Operation facets without that
+policy receive no UI or route authority.
 
 Immediately before each management call, Core invokes the matching read-only
 assessment with the same credential source. The provider must remotely compare
@@ -103,7 +107,8 @@ not otherwise grant execution authority, and its one-call budget remains
 separate from the fixed management budget.
 
 Core places one fixed repository-row action and selected-repository panel only
-when both interfaces resolve to the same registered provider aggregate. The
+when both operation interfaces and `WebhookNormalizer` resolve to the same
+registered provider aggregate. The
 provider's bounded metadata supplies its code and label; the provider owns
 credential use, remote behavior and the bounded plain-text remediation returned
 by its operation result. Missing, partial or incompatible facets create no
@@ -119,7 +124,8 @@ readback or mutation; the URL is not a configurable transport seam.
 #### Management presentation
 
 Core owns one fixed administration form and operation route for providers whose
-single registered aggregate implements both webhook facets. Core derives only
+single registered aggregate implements both webhook operation facets and the
+signing-policy normalizer. Core derives only
 the bounded provider code and label from metadata; providers cannot supply
 fields, HTML, callbacks or route behavior. The fixed host owns authorization,
 credential-source choice, result bounds and the schema-3 recovery record, while

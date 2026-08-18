@@ -159,8 +159,9 @@ work is in neither record.
   validation records GitHub's token-expiration response header when GitHub
   supplies it.
 - **Provider webhook management** — Core places the same setup, check,
-  reconfigure and remove controls for any registered provider implementing both
-  exact webhook fitness and management facets on one aggregate. The bundled
+  reconfigure and remove controls for any registered provider implementing exact
+  webhook fitness, management and signing-policy normalization facets on one
+  aggregate. The bundled
   GitHub provider uses a fine-grained token with Webhooks: Read and write
   permission. An administrator can paste a request-only credential or select
   an eligible saved credential. Core resolves a saved credential only inside
@@ -186,7 +187,7 @@ work is in neither record.
   nonce-checked WordPress handlers, while Core's facade independently
   reauthorizes and performs mutations. When the selected updater runtime
   supplies updater prospective API 4, Core publishes its independent
-  Prospective Release API 5. Its local `supportedProviderCodes()`
+  Prospective Release API 6. Its local `supportedProviderCodes()`
   complete-product projection lets callers keep unsupported providers out of
   the prospective workflow before any repository check. Callers explicitly
   choose the bounded `stable` or

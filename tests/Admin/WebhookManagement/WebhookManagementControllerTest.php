@@ -514,6 +514,30 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'value="reconfigure"', $html );
 	}
 
+	public function testAmbiguousProviderRemediationSurvivesOnlyItsSignedRedirect(): void {
+		$remediation     = 'Inspect the provider audit trail before retrying this operation.';
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operationResult( 'ambiguous', 'fixture_reconfigure_uncertain', '77', remediation: $remediation );
+		$store           = new OperationStoreFixture();
+		$store->record   = $this->record( endpoint: 'https://hooks.example.test/previous' );
+		$controller      = $this->controller( gateway: $gateway, store: $store, adminInteraction: new CapturingAdminInteractionFacade() );
+
+		$redirect = $controller->handleAdminPost(
+			$this->request( array( 'repository_webhook_management_operation' => 'reconfigure' ) ),
+			'valid'
+		);
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local signed redirect.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
+		$html = $this->renderPanel( $gateway, $store );
+		self::assertStringContainsString( $remediation, $html );
+
+		$_GET['webhook_management_remediation'] = 'Tampered provider guidance.';
+		$html                                   = $this->renderPanel( $gateway, $store );
+		self::assertStringNotContainsString( 'Tampered provider guidance.', $html );
+		self::assertStringContainsString( 'could not confirm that the remote webhook operation succeeded', $html );
+	}
+
 	public function testAuthoritativeCheckMismatchPersistsDriftAndOffersReconfigure(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult(
@@ -732,7 +756,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	/** @param array<string, string>|null $configuration */
-	private function operationResult( string $state = 'succeeded', string $code = 'configured_pending_delivery', ?string $hookId = '77', bool $withProfile = true, ?array $configuration = null, string $providerCode = 'gh' ): RepositoryWebhookOperationResult {
+	private function operationResult( string $state = 'succeeded', string $code = 'configured_pending_delivery', ?string $hookId = '77', bool $withProfile = true, ?array $configuration = null, string $providerCode = 'gh', string $remediation = 'Review the bounded operation result.' ): RepositoryWebhookOperationResult {
 		$delivery = match ( $code ) {
 			'verified' => 'verified',
 			'absent', 'hook_absent' => 'absent',
@@ -751,7 +775,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				'active'       => 'matched',
 			),
 			$delivery,
-			'Review the bounded operation result.',
+			$remediation,
 			$withProfile ? new WebhookProfileMetadata( 'wh_0123456789abcdef01234567', $providerCode, 'repository', 'owner/repository', '1234', 1, 'created', 'file', false ) : null
 		);
 	}
@@ -778,7 +802,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$display    = $this->display( $gateway, $store );
 		$controller = $this->controller( $gateway, $store );
 		$context    = $controller->panelContext();
-		$model      = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $context['result'], $context['recovery'], true );
+		$model      = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $context['result'], $context['recovery'], true, $context['remediation'] );
 		self::assertIsArray( $model );
 		$formAttributes = '';
 		ob_start();
@@ -795,7 +819,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			$this->display( $gateway, $store ),
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( $providerCode, $providerLabel ) ) ),
 			static fn (): bool => true,
-			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && in_array(
+			static fn ( string $nonce, string $action ): bool => ( 'valid' === $nonce && in_array(
 				$action,
 				array(
 					'ran_booster_repository_webhook_setup_' . $providerCode . '_1234',
@@ -804,7 +828,9 @@ final class WebhookManagementControllerTest extends TestCase {
 					'ran_booster_repository_webhook_remove_' . $providerCode . '_1234',
 				),
 				true
-			)
+			) ) || ( str_starts_with( $action, 'ran_booster_repository_webhook_result_' )
+				&& hash_equals( hash_hmac( 'sha256', $action, 'test-result-nonce' ), $nonce ) ),
+			static fn ( string $action ): string => hash_hmac( 'sha256', $action, 'test-result-nonce' )
 		);
 		if ( null !== $adminInteraction ) {
 			$controller->useAdminInteractionFacade( $adminInteraction );

@@ -13,6 +13,7 @@ use Tests\Support\AbsentWebhookManagementCapabilityProvider;
 use Tests\Support\CompleteWebhookManagementCapabilityProvider;
 use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
 use Tests\Support\ManagementOnlyWebhookManagementCapabilityProvider;
+use Tests\Support\UnnormalizedWebhookManagementCapabilityProvider;
 use Tests\Support\WebhookManagementCapabilityProvider;
 
 require_once __DIR__ . '/RepositoryWebhookManagementControlsWordPressFunctions.php';
@@ -74,13 +75,14 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$providers = array(
 			new FitnessOnlyWebhookManagementCapabilityProvider( 'fitness-only', 'Fitness only' ),
 			new ManagementOnlyWebhookManagementCapabilityProvider( 'management-only', 'Management only' ),
+			new UnnormalizedWebhookManagementCapabilityProvider( 'no-policy', 'No signing policy' ),
 			new AbsentWebhookManagementCapabilityProvider( 'absent', 'Absent' ),
 		);
 		$controls  = $this->controls( ...$providers );
 		$controls->register();
 		$rows = array( 'repository' => array( 'actions' => array() ) );
 
-		foreach ( array( 'fitness-only', 'management-only', 'absent', 'missing', "bad\0code" ) as $providerCode ) {
+		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing', "bad\0code" ) as $providerCode ) {
 			self::assertFalse( $controls->supportsProvider( $providerCode ) );
 			self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, $providerCode, array(), 'https://example.test/' ) );
 			ob_start();
@@ -92,7 +94,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			self::assertSame( 0, $provider->providerOperationCalls );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_filters'] );
-		foreach ( array( 'fitness-only', 'management-only', 'absent', 'missing' ) as $providerCode ) {
+		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing' ) as $providerCode ) {
 			$_GET = array(
 				'page' => 'ran-booster',
 				'tab'  => $providerCode,

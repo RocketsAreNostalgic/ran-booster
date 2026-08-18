@@ -61,7 +61,7 @@ do_action(
 );
 
 // Delivered only when the selected updater runtime supplies the internal
-// prospective capability required by Core's public API 5.
+// prospective capability required by Core's public API 6.
 do_action(
 	'ran_booster_prospective_release_ready',
 	$prospectiveRelease
@@ -180,7 +180,7 @@ does not install, downgrade or alter package files. `ReleaseTrackingStatus`
 exposes the canonical `stable` or `prerelease` channel.
 
 Prospective installation is a separate optional contract. Core defines
-`RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` as `5` only when its selected
+`RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` as `6` only when its selected
 updater runtime publishes the complete internal API 4 capability required by
 Core, then delivers the facade through
 `ran_booster_prospective_release_ready`. The two version markers describe
@@ -304,7 +304,8 @@ state, and its local stylesheet is limited to the Extensions screen hook.
 Core owns and renders the provider repository table. Its internal webhook
 controls enrich rows and render the selected-repository panel only when the
 selected provider resolves both `RepositoryWebhookFitness` and
-`RepositoryWebhookManagement` to the same registered aggregate. Core validates
+`RepositoryWebhookManagement`, plus `WebhookNormalizer`, to the same registered
+aggregate. Core validates
 the resulting rows, preserves the fixed `core:webhook-management` action, and
 permits only bounded historical records from its own schema. There is no public
 row or panel composition hook, renderer callback or provider-supplied field

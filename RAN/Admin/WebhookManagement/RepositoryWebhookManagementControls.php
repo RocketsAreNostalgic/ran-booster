@@ -79,7 +79,7 @@ final class RepositoryWebhookManagementControls {
 		}
 
 		$context = $this->controller->panelContext();
-		$model   = $this->display->panel( $providerCode, $metadata->label, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ) );
+		$model   = $this->display->panel( $providerCode, $metadata->label, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
 		if ( null === $model ) {
 			return;
 		}

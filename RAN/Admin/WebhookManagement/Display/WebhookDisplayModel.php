@@ -93,7 +93,7 @@ final class WebhookDisplayModel {
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return array<string, mixed>|null
 	 */
-	public function panel( string $providerCode, string $providerLabel, string $repositoryId, string $returnUrl, ?string $resultCode, ?array $recovery, bool $canManage ): ?array {
+	public function panel( string $providerCode, string $providerLabel, string $repositoryId, string $returnUrl, ?string $resultCode, ?array $recovery, bool $canManage, ?string $remediation = null ): ?array {
 		if ( ! $canManage || '' === trim( $repositoryId ) ) {
 			return null;
 		}
@@ -110,7 +110,7 @@ final class WebhookDisplayModel {
 		$this->projectedStatuses = array();
 		$record                  = $this->records->find( $providerCode, $repositoryId );
 		$status                  = null === $record ? null : $this->projectedStatus( $record );
-			$operations          = null === $recovery ? $this->availableOperations( $target, $record, $status, $providerLabel ) : array();
+		$operations              = null === $recovery ? $this->availableOperations( $target, $record, $status, $providerLabel ) : array();
 		$operationModels         = array();
 		foreach ( $operations as $operation => $label ) {
 			$operationModels[] = array(
@@ -148,7 +148,7 @@ final class WebhookDisplayModel {
 			'interaction_request' => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
 			'result'              => null === $resultCode ? null : array(
 				'class'   => $this->isSuccessfulResult( $resultCode ) ? 'notice-success' : 'notice-error',
-				'message' => $this->notice( $resultCode, $recovery ),
+				'message' => $this->notice( $resultCode, $recovery, $remediation ),
 			),
 			'recovery_warning'    => $recoveryWarning,
 			'credential_choices'  => $this->credentialChoices( $providerCode ),
@@ -451,7 +451,6 @@ final class WebhookDisplayModel {
 		return match ( $status ) {
 			'not_configured' => __( 'No managed hook recorded', 'ran-booster' ),
 			'configured' => __( 'Configured at last check', 'ran-booster' ),
-			/* translators: %s: repository provider name. */
 			'profile_revision_stale' => __( 'Signing secret changed; webhook update required', 'ran-booster' ),
 			'local_profile_missing' => __( 'Secret needs attention', 'ran-booster' ),
 			/* translators: %s: webhook status description. */

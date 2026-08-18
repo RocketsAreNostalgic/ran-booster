@@ -13,6 +13,7 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
+use RAN\RepositoryProvider\WebhookNormalizer;
 
 /** @internal Owns the registered request boundary and response transport. */
 final class WebhookManagementController {
@@ -26,6 +27,9 @@ final class WebhookManagementController {
 	/** @var \Closure(string, string): bool */
 	private \Closure $verifyNonce;
 
+	/** @var \Closure(string): string */
+	private \Closure $createNonce;
+
 	private ?AdminInteractionFacade $adminInteraction = null;
 
 	public function __construct(
@@ -33,7 +37,8 @@ final class WebhookManagementController {
 		private readonly WebhookDisplayModel $display,
 		private readonly ProviderRegistry $providers,
 		?callable $canManage = null,
-		?callable $verifyNonce = null
+		?callable $verifyNonce = null,
+		?callable $createNonce = null
 	) {
 		$this->canManage   = null === $canManage
 			? static fn (): bool => current_user_can( 'manage_options' )
@@ -41,6 +46,9 @@ final class WebhookManagementController {
 		$this->verifyNonce = null === $verifyNonce
 			? static fn ( string $nonce, string $action ): bool => 1 === wp_verify_nonce( $nonce, $action )
 			: \Closure::fromCallable( $verifyNonce );
+		$this->createNonce = null === $createNonce
+			? static fn ( string $action ): string => wp_create_nonce( $action )
+			: \Closure::fromCallable( $createNonce );
 	}
 
 	public function useAdminInteractionFacade( AdminInteractionFacade $adminInteraction ): void {
@@ -95,9 +103,16 @@ final class WebhookManagementController {
 			$this->adminInteraction->respond( $outcome );
 		}
 
-		$recoveryQuery = null === $result['recovery']
+		$recoveryQuery    = null === $result['recovery']
 			? ''
 			: '&recovery_hook=' . rawurlencode( $result['recovery']['hook_id'] ) . '&recovery_profile=' . rawurlencode( $result['recovery']['profile_id'] );
+		$remediation      = false === $result['inline_safe'] ? $this->safeRemediation( $result['remediation'] ) : null;
+		$remediationQuery = null === $remediation
+			? ''
+			: '&webhook_management_remediation=' . rawurlencode( $remediation )
+				. '&_ran_booster_webhook_result_nonce=' . rawurlencode(
+					( $this->createNonce )( $this->resultNonceAction( $providerCode, $safeRepositoryId, $resultCode, $remediation ) )
+				);
 
 		$redirect = admin_url( 'admin.php?page=ran-booster' );
 		if ( $metadata instanceof ProviderMetadata ) {
@@ -109,6 +124,7 @@ final class WebhookManagementController {
 			. ( '' === $safeRepositoryId ? '' : '&repository=' . rawurlencode( $safeRepositoryId ) )
 			. '&webhook_management_result=' . rawurlencode( $resultCode )
 			. $recoveryQuery
+			. $remediationQuery
 			. '#ran-booster-repository-webhook-management-operation-heading';
 	}
 
@@ -129,7 +145,7 @@ final class WebhookManagementController {
 		return $this->capableProviderMetadata( $providerCode );
 	}
 
-	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null} */
+	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
 	public function panelContext(): array {
 		$query         = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
 		$code          = $this->stringValue( $query, 'webhook_management_result' );
@@ -139,14 +155,37 @@ final class WebhookManagementController {
 			: null;
 		$hookId        = $safeReference( $query['recovery_hook'] ?? null );
 		$profileId     = $safeReference( $query['recovery_profile'] ?? null );
+		$providerCode  = $this->stringValue( $query, 'tab' );
+		$repositoryId  = $this->stringValue( $query, 'repository' );
+		$remediation   = $this->safeRemediation( $query['webhook_management_remediation'] ?? null );
+		$resultNonce   = $this->stringValue( $query, '_ran_booster_webhook_result_nonce' );
+		if ( null === $remediation
+			|| '' === $code
+			|| ! ( $this->verifyNonce )( $resultNonce, $this->resultNonceAction( $providerCode, $repositoryId, $code, $remediation ) ) ) {
+			$remediation = null;
+		}
 
 		return array(
-			'result'   => '' === $code ? null : $this->safeCode( $code, 'request_completed' ),
-			'recovery' => null !== $hookId && null !== $profileId ? array(
+			'result'      => '' === $code ? null : $this->safeCode( $code, 'request_completed' ),
+			'recovery'    => null !== $hookId && null !== $profileId ? array(
 				'hook_id'    => $hookId,
 				'profile_id' => $profileId,
 			) : null,
+			'remediation' => $remediation,
 		);
+	}
+
+	private function resultNonceAction( string $providerCode, string $repositoryId, string $code, string $remediation ): string {
+		return 'ran_booster_repository_webhook_result_' . hash( 'sha256', implode( "\0", array( $providerCode, $repositoryId, $code, $remediation ) ) );
+	}
+
+	private function safeRemediation( mixed $remediation ): ?string {
+		return is_string( $remediation )
+			&& '' !== trim( $remediation )
+			&& strlen( $remediation ) <= 255
+			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $remediation )
+			? $remediation
+			: null;
 	}
 
 	private function interactionRequest( string $providerCode, string $repositoryId ): AdminInteractionRequest {
@@ -161,12 +200,13 @@ final class WebhookManagementController {
 		try {
 			$fitness    = $this->providers->requireCapability( $providerCode, RepositoryWebhookFitness::class );
 			$management = $this->providers->requireCapability( $providerCode, RepositoryWebhookManagement::class );
+			$normalizer = $this->providers->requireCapability( $providerCode, WebhookNormalizer::class );
 			$metadata   = $this->providers->metadata()[ $providerCode ] ?? null;
 		} catch ( \Throwable ) {
 			return null;
 		}
 
-		return $fitness === $management && $metadata instanceof ProviderMetadata
+		return $fitness === $management && $management === $normalizer && $metadata instanceof ProviderMetadata
 			&& hash_equals( $providerCode, $metadata->code->value )
 			? $metadata
 			: null;

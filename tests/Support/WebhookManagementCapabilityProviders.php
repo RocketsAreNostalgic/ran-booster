@@ -10,8 +10,10 @@ use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\PreparedArchive;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\RepositoryProvider\ProviderDiagnostics;
 use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderWebhookPolicy;
 use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
@@ -19,7 +21,11 @@ use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+use RAN\RepositoryProvider\WebhookEnvelope;
+use RAN\RepositoryProvider\WebhookNormalizer;
+use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
+use Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 abstract class WebhookManagementCapabilityProvider implements RepositoryProvider {
 	public int $providerOperationCalls = 0;
@@ -103,7 +109,29 @@ trait SuppliesWebhookManagement {
 	}
 }
 
-final class CompleteWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness, RepositoryWebhookManagement {
+final class CompleteWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness, RepositoryWebhookManagement, WebhookNormalizer {
+	use SuppliesWebhookFitness;
+	use SuppliesWebhookManagement;
+
+	public const OPERATION = RepositoryWebhookFitness::OPERATION;
+	public const VERSION   = RepositoryWebhookFitness::VERSION;
+
+	public function getWebhookPolicy(): ProviderWebhookPolicy {
+		return new InertWebhookPolicy( $this->getMetadata()->code );
+	}
+
+	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+		return new ProviderDiagnosticResult( ProviderDiagnosticResult::PASSED, 'fixture_webhook_ready', 'Fixture webhook policy is ready.', 'No fixture remediation is required.' );
+	}
+
+	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+		unset( $request );
+
+		return WebhookEnvelope::ignored();
+	}
+}
+
+final class UnnormalizedWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness, RepositoryWebhookManagement {
 	use SuppliesWebhookFitness;
 	use SuppliesWebhookManagement;
 

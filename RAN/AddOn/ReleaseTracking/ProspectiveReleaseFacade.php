@@ -9,7 +9,7 @@ namespace RAN\AddOn\ReleaseTracking;
  */
 interface ProspectiveReleaseFacade {
 
-	public const API_VERSION = 5;
+	public const API_VERSION = 6;
 
 	public function nonceAction( string $operation, string $type ): string;
 

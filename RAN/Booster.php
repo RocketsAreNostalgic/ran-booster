@@ -143,7 +143,7 @@ class Booster {
 		if ( $this->isMultisiteInstallation() ) {
 			wp_die(
 				esc_html__(
-					'RAN Booster encrypted credential storage is not available on multisite in this Alpha release. Use a single-site WordPress installation.',
+					'RAN Booster encrypted credential storage is not available on multisite in this Beta release. Use a single-site WordPress installation.',
 					'ran-booster'
 				)
 			);
@@ -292,8 +292,8 @@ class Booster {
 			array(
 				'id'            => 'ran-booster-wp-pusher-migrator',
 				'name'          => 'WP Pusher Migrator',
-				'description'   => 'Move existing WP Pusher-managed plugins into Booster without reinstalling them.',
-				'details'       => 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so activation remains an explicit decision.',
+				'description'   => 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.',
+				'details'       => 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision.',
 				'features'      => array(
 					'Review retained WP Pusher package records before migration.',
 					'Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter.',

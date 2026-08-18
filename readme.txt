@@ -13,7 +13,7 @@ Deploy WordPress themes and plugins directly from supported repository providers
 
 == Description ==
 
-RAN Booster is an internal repository deployment plugin for WordPress. GitHub
+RAN Booster is a self-hosted repository deployment plugin for WordPress. GitHub
 is the bundled provider for repository discovery, immutable installs and
 updates, and signed Push-to-Deploy. Compatible provider add-ons use the same
 public provider contract and retain their own credential and webhook guidance.
@@ -24,6 +24,13 @@ The Core-owned Extensions page lists the remaining first-party beta extensions u
 only local WordPress plugin state and release-bundled artwork. Free downloads
 remain unavailable until their public repositories and releases are ready for
 people. Core stores no sponsor or entitlement state.
+
+Install the plugin ZIP attached to the intended immutable Beta release in the
+canonical GitHub repository. GitHub's generated source archives are not
+installable plugin packages. After installation, Booster's bundled updater owns
+its WordPress-native update offers; no vendor licence or package service is
+required. Use the repository issue tracker for ordinary support and its
+security policy for confidential vulnerability reports.
 
 The plugin and theme installation screens include a native repository picker.
 For operational providers, it can search public repositories without a token or

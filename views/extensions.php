@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 			<?php
 			$detailsId          = 'ran-booster-extension-details-' . $extension['id'];
 			$detailsUrl         = '#TB_inline?width=772&height=600&inlineId=' . $detailsId;
-			$availabilityLabel  = 'Subscriber' === $extension['availability'] ? __( 'Sponsor', 'ran-booster' ) : $extension['availability'];
+			$availabilityLabel  = $extension['availability'];
 			$compatibilityLabel = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
 			$moreDetailsLabel   = sprintf(
 				/* translators: %s: Extension name. */
@@ -50,8 +50,6 @@ defined( 'ABSPATH' ) || exit;
 									<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $detailsUrl ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $moreDetailsLabel ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
 								<?php if ( 'Active' !== $extension['state'] && 'Not installed' !== $extension['state'] ) : ?>
 									<br><a href="<?php echo esc_url( $pluginsUrl ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a>
-								<?php elseif ( 'Not installed' === $extension['state'] && 'Subscriber' === $extension['availability'] ) : ?>
-									<br><a href="https://github.com/sponsors/RocketsAreNostalgic"><?php esc_html_e( 'Get access', 'ran-booster' ); ?></a>
 								<?php endif; ?>
 								</li>
 						</ul>
@@ -89,7 +87,7 @@ defined( 'ABSPATH' ) || exit;
 			<?php
 			$detailsId          = 'ran-booster-extension-details-' . $extension['id'];
 			$detailsTitleId     = $detailsId . '-title';
-			$availabilityLabel  = 'Subscriber' === $extension['availability'] ? __( 'Sponsor', 'ran-booster' ) : $extension['availability'];
+			$availabilityLabel  = $extension['availability'];
 			$compatibilityLabel = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
 			?>
 			<div id="<?php echo esc_attr( $detailsId ); ?>" class="hidden">
@@ -143,6 +141,6 @@ defined( 'ABSPATH' ) || exit;
 				</article>
 			</div>
 		<?php endforeach; ?>
-		<p class="description ran-booster-extensions__note"><?php esc_html_e( 'Free downloads will be enabled after their public beta releases are ready. Sponsor packages are delivered manually during beta.', 'ran-booster' ); ?></p>
+		<p class="description ran-booster-extensions__note"><?php esc_html_e( 'Free downloads will be enabled after their public repositories and immutable beta releases pass readiness review.', 'ran-booster' ); ?></p>
 	</div>
 </section>

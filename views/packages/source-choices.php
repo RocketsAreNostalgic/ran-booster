@@ -25,8 +25,8 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 		),
 		'release_asset' => array(
 			'heading'           => __( 'Published releases', 'ran-booster' ),
-			'description'       => __( 'Install verified published packages when the repository provider supports release management.', 'ran-booster' ),
-			'meta'              => __( 'Included with Booster', 'ran-booster' ),
+			'description'       => __( 'Install verified packages from a supported provider\'s published releases.', 'ran-booster' ),
+			'meta'              => __( 'Provider capability required', 'ran-booster' ),
 			'url'               => '',
 			'disabled'          => true,
 			'hydrated'          => false,

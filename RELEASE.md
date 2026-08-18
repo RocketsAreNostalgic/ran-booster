@@ -21,6 +21,22 @@ proposal using the reviewed authority. Rerunning the authority-changing commit
 does not bypass this separation, and version files or tags must not be edited by
 hand.
 
+## Release Please candidate fetch credentials
+
+The Release Please workflow checks out source with `persist-credentials: false`.
+When it must fetch an exact Release Please base or pull request head, that
+individual fetch receives the step-scoped GitHub token through an ephemeral Git
+credential helper. The helper is configured only for the command: it does not
+persist the token in the checkout, repository configuration, or runner-wide
+configuration. A missing token fails closed before candidate network work
+begins.
+
+Fetch authentication is transport only, not release identity. Before dispatch,
+the workflow still requires the exact live bot-owned pending pull request, its
+expected base and head commits, the bounded generated file set, and the signed
+bot commit identity. After merge, release reconciliation re-verifies the exact
+merged pull request and candidate identities before publication.
+
 Before merging a release proposal:
 
 1. run `composer check` and `pnpm check` from the exact candidate commit;

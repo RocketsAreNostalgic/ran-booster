@@ -440,7 +440,12 @@ final class ManagedReleaseTargetRegistrar {
 				? $this->plugins->allDeploymentPlugins()
 				: $this->themes->allDeploymentThemes();
 		} catch ( Throwable ) {
-			$transient->response = array();
+			$prefix = $type . "\0";
+			foreach ( array_keys( $this->registeredAuthorities ) as $key ) {
+				if ( str_starts_with( $key, $prefix ) ) {
+					unset( $transient->response[ substr( $key, strlen( $prefix ) ) ] );
+				}
+			}
 
 			return $transient;
 		}

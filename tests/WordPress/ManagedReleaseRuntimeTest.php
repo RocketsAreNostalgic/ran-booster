@@ -727,8 +727,63 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 
 		$filtered = $registrar->suppressUnauthorizedPluginOffers( $offers );
-		self::assertSame( array(), $filtered->response );
+		self::assertArrayHasKey( self::NATIVE_PLUGIN, $filtered->response );
+		self::assertArrayHasKey( 'unmanaged/other.php', $filtered->response );
 		self::assertArrayHasKey( self::NATIVE_PLUGIN, $filtered->no_update );
+	}
+
+	public function testRepositoryFailureSuppressesOnlyTargetsRegisteredByCoreThisRequest(): void {
+		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$reads   = 0;
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturnCallback(
+			static function () use ( &$reads, $package ): array {
+				if ( 0 < $reads++ ) {
+					throw new \RuntimeException( 'read failed' );
+				}
+
+				return array( self::NATIVE_PLUGIN => $package );
+			}
+		);
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			new RuntimeReleaseStore(
+				array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
+			),
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry()
+		);
+		$registrar->register();
+		$offers = (object) array(
+			'response' => array(
+				self::NATIVE_PLUGIN   => (object) array(),
+				'unmanaged/other.php' => (object) array(),
+			),
+		);
+
+		$filtered = $registrar->suppressUnauthorizedPluginOffers( $offers );
+
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $filtered->response );
+		self::assertArrayHasKey( 'unmanaged/other.php', $filtered->response );
+	}
+
+	public function testRuntimeReleaseProviderDefaultTargetAcceptsTheNamedContractArguments(): void {
+		$target = ( new RuntimeReleaseProvider() )->createNativeTarget(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'/tmp/example.php',
+			'example',
+			'example/example.php',
+			'stable',
+			'manual'
+		);
+
+		self::assertInstanceOf( RepositoryReleaseNativeTarget::class, $target );
+		self::assertTrue( $target->register() );
 	}
 
 	public function testNativeUpdateRechecksWpPusherConflictBeforeDownloadAndMutation(): void {
@@ -1231,7 +1286,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
-	public function testCompleteExternalReadFacetsRemainInertUntilNativeTargetOwnershipLands(): void {
+	public function testCompleteExternalProviderCanPreflightAfterNativeTargetOwnershipLands(): void {
 		$package = $this->package(
 			'plugin',
 			'example/example.php',
@@ -1253,9 +1308,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			new ManagedReleaseTargetRegistrar(
 				$plugins,
 				$themes,
-				$this->createStub( SecretsFile::class ),
 				$store,
-				$lock
+				$lock,
+				$this->releaseMetadataRegistry()
 			),
 			$lock,
 			$this->releaseMetadataRegistry(
@@ -1275,9 +1330,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
 
-		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result?->code() );
-		self::assertSame( 'provider_unavailable', $result?->reasonCode() );
-		self::assertSame( 0, $listCalls );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result?->code() );
+		self::assertSame( 'no_releases', $result?->reasonCode() );
+		self::assertSame( 1, $listCalls );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
 	}

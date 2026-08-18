@@ -49,7 +49,7 @@ final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryRele
 			)
 			: \Closure::fromCallable( $inspect );
 		$this->targetFactory = null === $targetFactory
-			? static fn (): RepositoryReleaseNativeTarget => new RuntimeUpdaterFacade()
+			? static fn ( mixed ...$options ): RepositoryReleaseNativeTarget => new RuntimeUpdaterFacade( $options )
 			: \Closure::fromCallable( $targetFactory );
 	}
 

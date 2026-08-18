@@ -649,13 +649,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		if ( null === $providerCode ) {
 			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'provider_unavailable' );
 		}
-		// Until the native-target facet lands, only the bundled provider can own
-		// both this read proof and the updater target created after enablement.
-		if ( 'gh' !== $providerCode ) {
-			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'provider_unavailable' );
-		}
 
 		try {
+			$this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );
 			$listing    = $this->providers->requireCapability( $providerCode, RepositoryReleaseCandidateListing::class );
 			$inspector  = $this->providers->requireCapability( $providerCode, RepositoryReleaseInspector::class );
 			$metadata   = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );

@@ -364,6 +364,27 @@ final class ReleaseManagementControls {
 		$this->redirectTo( $url );
 	}
 
+	private function redirectTo( string $url ): never {
+		$hxRequest = $_SERVER['HTTP_HX_REQUEST'] ?? null;
+		if ( is_string( $hxRequest ) && 'true' === strtolower( $hxRequest ) ) {
+			$location = wp_json_encode(
+				array(
+					'path'   => $url,
+					'target' => '#wpbody-content',
+					'select' => '#wpbody-content',
+					'swap'   => 'outerHTML show:none',
+				)
+			);
+			if ( is_string( $location ) ) {
+				header( 'HX-Location: ' . $location );
+				exit;
+			}
+		}
+
+		wp_safe_redirect( $url );
+		exit;
+	}
+
 	/**
 	 * Process one namespaced handler request and build its canonical PRG target.
 	 *

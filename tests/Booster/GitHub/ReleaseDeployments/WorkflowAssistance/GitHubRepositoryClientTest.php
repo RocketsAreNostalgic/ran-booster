@@ -188,6 +188,34 @@ final class GitHubRepositoryClientTest extends TestCase {
 		self::assertCount( 8, $transport->requests );
 	}
 
+	public function testSnapshotRetainsLargeRuntimeBlobMetadataWithoutDownloadingIt(): void {
+		$transport = new D23GitHubTransport(
+			array(
+				$this->response(
+					200,
+					array(
+						'truncated' => false,
+						'tree'      => array(
+							array(
+								'path' => 'build/application.js.map',
+								'type' => 'blob',
+								'mode' => '100644',
+								'sha'  => self::BLOB,
+								'size' => 1048576,
+							),
+						),
+					)
+				),
+			)
+		);
+		$result    = ( new GitHubRepositoryClient( $transport ) )->snapshot( self::REPOSITORY, '101', 'main', self::SHA );
+
+		self::assertSame( 'ok', $result['code'] );
+		self::assertSame( 1048576, $result['snapshot']->entries()['build/application.js.map']['size'] );
+		self::assertSame( array(), $result['snapshot']->documentPaths() );
+		self::assertCount( 1, $transport->requests );
+	}
+
 	public function testSnapshotRefusesMoreThanTheBoundedAdmissionDocumentSetBeforeBlobReads(): void {
 		$tree = array();
 		for ( $index = 0; $index < 257; ++$index ) {

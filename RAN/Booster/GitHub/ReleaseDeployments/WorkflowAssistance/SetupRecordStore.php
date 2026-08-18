@@ -56,6 +56,17 @@ final class SetupRecordStore {
 		$all = get_option( self::OPTION, array() );
 		return is_array( $all ) && array_key_exists( $repositoryId, $all );
 	}
+	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
+	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
+		$record = $this->find( $repositoryId );
+		if ( null === $record || $revision <= $record['source_revision']
+			|| ! hash_equals( $type, $record['package_type'] ) || ! hash_equals( $identifier, $record['package_identifier'] ) ) {
+			return null;
+		}
+
+		$record['source_revision'] = $revision;
+		return $this->save( $record ) ? $this->find( $repositoryId ) : null;
+	}
 	/** Schema 1 is display-only evidence and never mutation authority. @return array<string,int|string>|null */
 	public function legacyEvidence( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
 		$raw = $this->raw( $repositoryId );

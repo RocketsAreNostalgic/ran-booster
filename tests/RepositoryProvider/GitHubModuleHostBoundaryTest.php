@@ -50,7 +50,9 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		}
 
 		sort( $references );
-		self::assertSame( array_keys( $allowed ), $references );
+		$expected = array_keys( $allowed );
+		sort( $expected );
+		self::assertSame( $expected, $references );
 	}
 
 	public function testNeutralAdminWebhookManagementHasNoGitHubBranchOrGenericDispatcherSurface(): void {

@@ -137,9 +137,9 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertIsInt( $update );
 		self::assertIsInt( $verify );
 		self::assertIsInt( $secret );
-		self::assertLessThan( $secret, $manage );
-		self::assertLessThan( $secret, $update );
-		self::assertLessThan( $secret, $verify );
+		self::assertTrue( $manage < $secret );
+		self::assertTrue( $update < $secret );
+		self::assertTrue( $verify < $secret );
 		self::assertSame( array( array( 'preflight', 'plugin', 'example/example.php', 3, 'stable', 'core-preflight' ) ), $facade->calls );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 

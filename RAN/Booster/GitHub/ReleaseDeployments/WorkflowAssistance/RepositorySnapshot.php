@@ -41,13 +41,13 @@ final readonly class RepositorySnapshot {
 				|| ! in_array( $entry['mode'] ?? null, array( '100644', '100755', '040000' ), true )
 				|| ( 'tree' === ( $entry['type'] ?? null ) ) !== ( '040000' === ( $entry['mode'] ?? null ) )
 				|| 1 !== preg_match( '/\A[a-f0-9]{40}\z/D', (string) ( $entry['sha'] ?? '' ) )
-				|| ! is_int( $entry['size'] ?? null ) || $entry['size'] < 0 || $entry['size'] > self::MAX_DOCUMENT ) {
+				|| ! is_int( $entry['size'] ?? null ) || $entry['size'] < 0 ) {
 				throw new InvalidArgumentException( 'Repository snapshot contains an unsupported tree entry.' );
 			}
 		}
 
 		foreach ( $documents as $path => $document ) {
-			if ( ! isset( $entries[ $path ] ) || 'blob' !== $entries[ $path ]['type'] || ! is_string( $document )
+			if ( ! isset( $entries[ $path ] ) || 'blob' !== $entries[ $path ]['type'] || ! is_string( $document ) || strlen( $document ) > self::MAX_DOCUMENT
 				|| strlen( $document ) !== $entries[ $path ]['size'] || 1 !== preg_match( '//u', $document )
 				|| str_contains( $document, "\0" ) ) {
 				throw new InvalidArgumentException( 'Repository snapshot contains an invalid document.' );

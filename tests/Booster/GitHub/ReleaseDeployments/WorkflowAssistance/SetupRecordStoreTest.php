@@ -31,6 +31,19 @@ final class SetupRecordStoreTest extends TestCase {
 		self::assertFalse( $store->save( array_replace( $record, array( 'template_asset_name' => 'other.zip' ) ) ) );
 		self::assertFalse( $store->save( array_replace( $record, array( 'template_asset_size' => 2097153 ) ) ) );
 	}
+	public function testSourceRevisionRefreshIsMonotonicAndBoundToTheExactPackage(): void {
+		$store  = new SetupRecordStore();
+		$record = $this->record();
+		self::assertTrue( $store->save( $record ) );
+
+		$refreshed = $store->refreshSourceRevision( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 );
+		self::assertNotNull( $refreshed );
+		self::assertSame( 4, $refreshed['source_revision'] );
+		self::assertNull( $store->refreshSourceRevision( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertNull( $store->refreshSourceRevision( '123456789', 'theme', 'example-plugin/example-plugin.php', 5 ) );
+		self::assertNull( $store->refreshSourceRevision( '123456789', 'plugin', 'other/example.php', 5 ) );
+		self::assertSame( 4, $store->find( '123456789' )['source_revision'] );
+	}
 	public function testExistingUnknownRowsOccupyTheirKeyWithoutByteChanges(): void {
 		foreach ( array(
 			'legacy'    => array(

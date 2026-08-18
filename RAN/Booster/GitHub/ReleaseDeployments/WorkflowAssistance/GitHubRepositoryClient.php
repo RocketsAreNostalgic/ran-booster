@@ -87,7 +87,7 @@ final class GitHubRepositoryClient {
 				return $this->error( 'invalid_response' );
 			}
 			$size = $item['size'] ?? 0;
-			if ( ! is_int( $size ) || $size < 0 || $size > self::MAX_BODY ) {
+			if ( ! is_int( $size ) || $size < 0 ) {
 				return $this->error( 'invalid_response' );
 			}
 			$path             = $item['path'];

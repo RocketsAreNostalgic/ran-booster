@@ -75,9 +75,8 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	public function inspectUpdate( ReleaseTrackingStatus $status, string $token ): array {
-		$record = $this->records->find( $status->providerRepositoryId() );
-		if ( null === $record || ! hash_equals( $status->type(), $record['package_type'] ) || ! hash_equals( $status->identifier(), $record['package_identifier'] )
-			|| $status->sourceRevision() !== $record['source_revision'] ) {
+		$record = $this->currentRecord( $status );
+		if ( null === $record ) {
 			return $this->result( $status, 'invalid_request' );
 		}
 		$remote = $this->updateBundle( $status, $token );
@@ -99,9 +98,8 @@ final class WorkflowApplicationCoordinator {
 
 	public function setupUpdate( ReleaseTrackingStatus $status, string $key, string $confirmation, string $token ): array {
 		$preview = $this->preview( $key, $status );
-		$record  = $this->records->find( $status->providerRepositoryId() );
-		if ( null === $record || ! hash_equals( $status->type(), $record['package_type'] ) || ! hash_equals( $status->identifier(), $record['package_identifier'] )
-			|| $status->sourceRevision() !== $record['source_revision'] || null === $preview || 'template_update' !== $preview['kind']
+		$record  = $this->currentRecord( $status );
+		if ( null === $record || null === $preview || 'template_update' !== $preview['kind']
 			|| '' === $token || ! hash_equals( $preview['repository'], trim( $confirmation ) ) ) {
 			return $this->result( $status, 'invalid_request', false, $key );
 		}
@@ -116,9 +114,8 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	public function outcome( ReleaseTrackingStatus $status, string $token ): array {
-		$record = $this->records->find( $status->providerRepositoryId() );
-		if ( null === $record || ! hash_equals( $status->type(), $record['package_type'] ) || ! hash_equals( $status->identifier(), $record['package_identifier'] )
-			|| $status->sourceRevision() !== $record['source_revision'] ) {
+		$record = $this->currentRecord( $status );
+		if ( null === $record ) {
 			return $this->result( $status, 'invalid_request' );
 		}
 		$repo = $this->github->repository( $record['repository'], $token );
@@ -129,7 +126,7 @@ final class WorkflowApplicationCoordinator {
 		$pr = $pull['pull'];
 		if ( ! hash_equals( $record['repo_id'], $repo['repository_id'] ) || ! hash_equals( $record['default_branch'], $repo['default_branch'] )
 			|| ! hash_equals( $record['setup_branch'], $pr['head'] ) || ! hash_equals( $record['head_sha'], $pr['head_sha'] ) || ! hash_equals( $record['default_branch'], $pr['base'] )
-			|| ! hash_equals( $record['base_sha'], $pr['base_sha'] ) ) {
+			|| ( ! $pr['merged'] && ! hash_equals( $record['base_sha'], $pr['base_sha'] ) ) ) {
 			return $this->result( $status, 'target_changed' );
 		}
 		if ( 'open' === $pr['state'] ) {
@@ -144,6 +141,25 @@ final class WorkflowApplicationCoordinator {
 		$valid    = is_string( $receipt ) && hash_equals( $record['receipt_digest'], hash( 'sha256', $receipt ) )
 			&& $this->receiptMatchesRecord( $receipt, $record, $snapshot['snapshot'] );
 		return $this->result( $status, $valid ? 'pr_merged' : 'target_changed', $valid );
+	}
+
+	/** @return array<string,int|string>|null */
+	private function currentRecord( ReleaseTrackingStatus $status ): ?array {
+		$record = $this->records->find( $status->providerRepositoryId() );
+		if ( null === $record || ! hash_equals( $status->type(), $record['package_type'] )
+			|| ! hash_equals( $status->identifier(), $record['package_identifier'] ) ) {
+			return null;
+		}
+		if ( $status->sourceRevision() === $record['source_revision'] ) {
+			return $record;
+		}
+
+		return $this->records->refreshSourceRevision(
+			$status->providerRepositoryId(),
+			$status->type(),
+			$status->identifier(),
+			$status->sourceRevision()
+		);
 	}
 
 	/** Return only a strict, current-user, current-package schema 2 preview. */

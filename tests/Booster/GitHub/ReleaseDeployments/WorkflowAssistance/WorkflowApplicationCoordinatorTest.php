@@ -106,6 +106,26 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		self::assertSame( 2, $transport->writeCounts['pull'] );
 	}
 
+	public function testSetupRecordFollowsExactPackageAcrossMonotonicCoreSourceRevisions(): void {
+		$transport   = new D23ApplicationTransport();
+		$facade      = new D23ReleaseFacade();
+		$records     = new SetupRecordStore();
+		$coordinator = $this->coordinator( $facade, $transport, $records );
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		self::assertSame( 'workflow_setup_open', $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' )['code'] );
+		$transport->mergePull();
+
+		$published = $this->statusAtRevision( $status, 4 );
+		self::assertSame( 'workflow_pr_merged', $coordinator->outcome( $published, 'token' )['code'] );
+		self::assertSame( 4, $records->find( '101' )['source_revision'] );
+		self::assertSame( 'workflow_template_current', $coordinator->inspectUpdate( $published, 'token' )['code'] );
+
+		$older = $this->statusAtRevision( $status, 3 );
+		self::assertSame( 'workflow_invalid_request', $coordinator->outcome( $older, 'token' )['code'] );
+		self::assertSame( 4, $records->find( '101' )['source_revision'] );
+	}
+
 	public function testThemeBootstrapUsesTheThemeProfileAndCompleteAtomicBundle(): void {
 		$transport   = new D23ApplicationTransport( false, 'theme' );
 		$facade      = new D23ReleaseFacade();
@@ -402,5 +422,26 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 
 	private function coordinator( D23ReleaseFacade $facade, D23ApplicationTransport $transport, SetupRecordStore $records ): WorkflowApplicationCoordinator {
 		return new WorkflowApplicationCoordinator( $facade, new GitHubRepositoryClient( $transport ), new TemplatePackRepositoryClient( $transport ), new SourceReadyAssessor(), $records );
+	}
+
+	private function statusAtRevision( ReleaseTrackingStatus $status, int $revision ): ReleaseTrackingStatus {
+		return new ReleaseTrackingStatus(
+			$status->type(),
+			$status->identifier(),
+			'release_asset',
+			$revision,
+			$status->providerRepositoryId(),
+			$status->deploymentPolicy(),
+			$status->eligibility(),
+			$status->preflight(),
+			$status->packageRoot(),
+			$status->installedVersion(),
+			$status->latestVersion(),
+			$status->updateAvailable(),
+			$status->lastCheckedAt(),
+			$status->cooldownUntil(),
+			$status->failureCode(),
+			$status->channel()
+		);
 	}
 }

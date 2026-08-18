@@ -57,7 +57,7 @@ final class D23ApplicationTransport {
 	public function mergePull(): void {
 		$this->baseSha     = $this->branchHead;
 		$this->baseEntries = $this->headEntries;
-		$this->pullBaseSha = $this->pullBaseSha;
+		$this->pullBaseSha = $this->baseSha;
 		$this->pullState   = 'closed';
 		$this->mergedAt    = '2026-08-11T12:00:00Z';
 	}

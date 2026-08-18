@@ -2,18 +2,19 @@
 
 declare( strict_types = 1 );
 
-namespace RAN\Booster\GitHub\WebhookManagement;
+namespace RAN\Admin\WebhookManagement;
 
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
-use RAN\Booster\GitHub\WebhookManagement\Admin\WebhookManagementController;
-use RAN\Booster\GitHub\WebhookManagement\Display\WebhookDisplayModel;
-use RAN\Booster\GitHub\WebhookManagement\Installation\WordPressInstallationStore;
-use RAN\Booster\GitHub\WebhookManagement\Operation\WebhookOperationCoordinator;
+use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
+use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
+use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderRegistry;
 
-/** Registers the fixed, GitHub-owned webhook-management UI and request route. */
-final class GitHubWebhookManagement {
-	private const ADMIN_STYLE_HANDLE = 'ran-booster-github-webhook-management';
+/** @internal Core placement for providers offering the complete webhook-management capability. */
+final class RepositoryWebhookManagementControls {
+	private const ADMIN_STYLE_HANDLE = 'ran-booster-repository-webhook-management';
 
 	private readonly WebhookManagementController $controller;
 
@@ -23,6 +24,7 @@ final class GitHubWebhookManagement {
 	public function __construct(
 		WebhookAssistanceFacade $facade,
 		private readonly AdminInteractionFacade $adminInteraction,
+		ProviderRegistry $providers,
 		private readonly string $pluginPath,
 		private readonly string $pluginUrl
 	) {
@@ -30,39 +32,30 @@ final class GitHubWebhookManagement {
 		$this->display    = new WebhookDisplayModel( $facade, $store );
 		$this->controller = new WebhookManagementController(
 			new WebhookOperationCoordinator( $facade, $store ),
-			$this->display
+			$this->display,
+			$providers
 		);
 		$this->controller->useAdminInteractionFacade( $adminInteraction );
 	}
 
 	public function register(): void {
 		$this->enabled = true;
-		add_filter( 'ran_booster_documentation_sections_after_provider_gh', array( $this, 'filterDocumentationSections' ), 10, 3 );
+		foreach ( $this->controller->providerMetadataList() as $metadata ) {
+			$providerCode  = $metadata->code->value;
+			$providerLabel = $metadata->label;
+			add_filter(
+				'ran_booster_documentation_sections_after_provider_' . $providerCode,
+				fn ( array $sections ): array => $this->documentationSections( $sections, $providerCode, $providerLabel ),
+				10,
+				3
+			);
+		}
 		add_action( 'admin_post_' . WebhookManagementController::ADMIN_POST_ACTION, array( $this, 'handleAdminPost' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAdminAssets' ) );
 	}
 
-	public static function legacyAddOnIsActive(): bool {
-		$retirementBridge = defined( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' )
-			&& 1 === constant( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' );
-
-		return class_exists( 'RAN\AssistedHooks\Plugin', false ) && ! $retirementBridge;
-	}
-
-	public static function registerLegacyAddOnNotice(): void {
-		add_action(
-			'admin_notices',
-			static function (): void {
-				if ( ! current_user_can( 'activate_plugins' ) ) {
-					return;
-				}
-
-				printf(
-					'<div class="notice notice-warning"><p>%s</p></div>',
-					esc_html__( 'Bundled GitHub webhook management is inactive because a pre-retirement RAN Booster Assisted Hooks release is active. Deactivate that add-on to use the bundled feature.', 'ran-booster' )
-				);
-			}
-		);
+	public function supportsProvider( string $providerCode ): bool {
+		return $this->enabled && $this->controller->providerMetadata( $providerCode ) instanceof ProviderMetadata;
 	}
 
 	/**
@@ -71,20 +64,22 @@ final class GitHubWebhookManagement {
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
-		if ( ! $this->enabled ) {
+		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
+		if ( ! $metadata instanceof ProviderMetadata ) {
 			return $rows;
 		}
 
-		return $this->display->enrichRows( $rows, $providerCode, $repositoryProjections, $returnUrl );
+		return $this->display->enrichRows( $rows, $providerCode, $metadata->label, $metadata->repositoryUrlBase, $repositoryProjections, $returnUrl );
 	}
 
 	public function renderRepositoryPanel( string $providerCode, string $repositoryId, string $returnUrl ): void {
-		if ( ! $this->enabled ) {
+		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
+		if ( ! $metadata instanceof ProviderMetadata ) {
 			return;
 		}
 
 		$context = $this->controller->panelContext();
-		$model   = $this->display->panel( $providerCode, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ) );
+		$model   = $this->display->panel( $providerCode, $metadata->label, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
 		if ( null === $model ) {
 			return;
 		}
@@ -96,20 +91,26 @@ final class GitHubWebhookManagement {
 	}
 
 	/** @param list<array<string, mixed>> $sections @return list<array<string, mixed>> */
-	public function filterDocumentationSections( array $sections, string $documentationUrl, string $scope ): array {
-		unset( $documentationUrl, $scope );
+	public function documentationSections( array $sections, string $providerCode, string $providerLabel ): array {
+		if ( ! $this->enabled || null === $this->controller->providerMetadata( $providerCode ) ) {
+			return $sections;
+		}
+		/* translators: %s: repository provider name. */
+		$summary    = sprintf( __( '%s webhook management', 'ran-booster' ), $providerLabel );
 		$sections[] = array(
-			'id'      => 'ran-booster-github-webhook-management-guide',
-			'summary' => __( 'GitHub webhook management', 'ran-booster' ),
-			'content' => array( $this, 'renderDocumentationContent' ),
+			'id'      => 'ran-booster-repository-webhook-management-guide-' . $providerCode,
+			'summary' => $summary,
+			'content' => fn (): null => $this->renderDocumentationContent( $providerLabel ),
 		);
 
 		return $sections;
 	}
 
-	public function renderDocumentationContent(): void {
-		$sections = $this->display->documentation();
+	public function renderDocumentationContent( string $providerLabel ): null {
+		$sections = $this->display->documentation( $providerLabel );
 		require __DIR__ . '/views/documentation.php';
+
+		return null;
 	}
 
 	public function handleAdminPost(): void {
@@ -123,15 +124,16 @@ final class GitHubWebhookManagement {
 	}
 
 	public function enqueueAdminAssets( string $hookSuffix ): void {
-		$query = wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only asset routing.
+		$query        = wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only asset routing.
+		$providerCode = is_array( $query ) && is_string( $query['tab'] ?? null ) ? trim( $query['tab'] ) : '';
 		if ( 'toplevel_page_ran-booster' !== $hookSuffix
 			|| ! is_array( $query )
 			|| 'ran-booster' !== ( $query['page'] ?? '' )
-			|| 'gh' !== ( $query['tab'] ?? '' ) ) {
+			|| null === $this->controller->providerMetadata( $providerCode ) ) {
 			return;
 		}
 
-		$relativePath = 'assets/ran-booster-github-webhook-management.css';
+		$relativePath = 'assets/ran-booster-repository-webhook-management.css';
 		$stylePath    = $this->pluginPath . $relativePath;
 		$styleVersion = file_exists( $stylePath ) ? (string) filemtime( $stylePath ) : null;
 

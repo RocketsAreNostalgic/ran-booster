@@ -83,6 +83,29 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 		);
 	}
 
+	public static function legacyAssistedHooksAddOnIsActive(): bool {
+		$retirementBridge = defined( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' )
+			&& 1 === constant( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' );
+
+		return class_exists( 'RAN\AssistedHooks\Plugin', false ) && ! $retirementBridge;
+	}
+
+	public static function registerLegacyAssistedHooksAddOnNotice(): void {
+		add_action(
+			'admin_notices',
+			static function (): void {
+				if ( ! current_user_can( 'activate_plugins' ) ) {
+					return;
+				}
+
+				printf(
+					'<div class="notice notice-warning"><p>%s</p></div>',
+					esc_html__( 'Bundled GitHub webhook management is inactive because a pre-retirement RAN Booster Assisted Hooks release is active. Deactivate that add-on to use the bundled feature.', 'ran-booster' )
+				);
+			}
+		);
+	}
+
 	private function __construct( ProviderCredentialStore $credentials, RepositoryBrowser $browser, WebhookNormalizer $webhooks, RepositoryWebhookClient $webhookClient ) {
 		$this->credentials      = $credentials;
 		$this->browser          = $browser;

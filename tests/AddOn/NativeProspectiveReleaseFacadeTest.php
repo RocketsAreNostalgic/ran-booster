@@ -44,7 +44,6 @@ namespace Tests\AddOn;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
-	use RAN\Secrets\SecretsFile;
 	use RAN\Storage\PackageMutationResult;
 	use RAN\Storage\PackageStorageOperation;
 	use RAN\Storage\PluginRepository;
@@ -53,10 +52,8 @@ namespace Tests\AddOn;
 	use RAN\WordPress\CorePackageExecutionFailure;
 	use RAN\WordPress\CorePackageExecutor;
 	use RAN\WordPress\ManagedReleaseConfiguration;
-	use RAN\WordPress\ManagedReleasePreflight;
 	use RAN\WordPress\WordPressUpdaterLock;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveCandidateFixture;
-	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveDiscoveryFixture;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveInspectionFixture;
 	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseCandidatePreflight;
 	use RuntimeException;
@@ -116,6 +113,27 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
 
+	public function testSupportedProviderCodesDeriveFromEveryCompleteProviderInStableOrder(): void {
+		$facade = $this->facade(
+			new ProspectivePluginRepository(),
+			new ProspectiveExecutor(),
+			provider: array(
+				new ProspectiveRepositoryProvider( 'zeta' ),
+				new ProspectiveListingOnlyProvider( 'middle' ),
+				new ProspectiveRepositoryProvider( 'alpha' ),
+			)
+		);
+
+		self::assertSame( array( 'alpha', 'zeta' ), $facade->supportedProviderCodes( 'plugin' ) );
+	}
+
+	public function testRetiredDiscoverOperationHasNoNonceScope(): void {
+		$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
+
+		$this->expectException( \InvalidArgumentException::class );
+		$facade->nonceAction( 'discover', 'plugin' );
+	}
+
 	public function testUnsupportedProviderFailsBeforeRepositoryResolutionOrPreflight(): void {
 		$plugins    = new ProspectivePluginRepository();
 		$executor   = new ProspectiveExecutor();
@@ -126,7 +144,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		$results = array(
 			$facade->listCandidates( 'plugin', $repository, 'stable', 'valid-nonce' ),
-			$facade->discover( 'plugin', $repository, 'stable', 'valid-nonce' ),
 			$facade->inspect( 'plugin', $repository, 42, 'v1.2.3', 'stable', 'valid-nonce' ),
 			$facade->install(
 				'plugin',
@@ -203,7 +220,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_candidates_available', $listing->code() );
 
 		$results = array(
-			$facade->discover( 'plugin', $repository, 'stable', 'valid-nonce' ),
 			$facade->inspect( 'plugin', $repository, 42, 'v1.2.3', 'stable', 'valid-nonce' ),
 			$facade->install(
 				'plugin',
@@ -365,40 +381,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
 	}
 
-	public function testDiscoveryMapsOnlyPublishedReleaseEvidence(): void {
-		ReleaseCandidatePreflight::$discovery = new ProspectiveDiscoveryFixture( 42, 'v1.2.3', '1.2.3' );
-		$plugins                              = new ProspectivePluginRepository();
-		$executor                             = new ProspectiveExecutor();
-		$facade                               = $this->facade( $plugins, $executor );
-
-		$result = $facade->discover(
-			'plugin',
-			$this->repositoryRequest( 'feature/release' ),
-			'stable',
-			'valid-nonce'
-		);
-
-		self::assertTrue( $result->successful() );
-		self::assertSame( 'release_available', $result->code() );
-		self::assertSame(
-			array(
-				'release_id' => 42,
-				'tag'        => 'v1.2.3',
-				'version'    => '1.2.3',
-				'channel'    => 'stable',
-			),
-			$result->data()
-		);
-		self::assertSame( 1, ReleaseCandidatePreflight::$discoverCalls );
-		self::assertSame( 'stable', ReleaseCandidatePreflight::$target['channel'] );
-		self::assertSame( 'plugin', ReleaseCandidatePreflight::$target['packageType'] );
-		self::assertArrayNotHasKey( 'assetPrefix', ReleaseCandidatePreflight::$target );
-		self::assertArrayNotHasKey( 'manifestPublicKey', ReleaseCandidatePreflight::$target );
-		self::assertSame( '123456789', ReleaseCandidatePreflight::$target['providerRepositoryId'] );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
-	}
-
 	public function testCandidateListMapsBoundedDisplayDataWithoutInspectingOrInstalling(): void {
 		ReleaseCandidatePreflight::$candidates = array(
 			new ProspectiveCandidateFixture(
@@ -467,20 +449,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function testInvalidChannelFailsBeforeAnyProspectiveReleaseWork(): void {
-		ReleaseCandidatePreflight::$discovery = new ProspectiveDiscoveryFixture( 42, 'v1.2.3', '1.2.3' );
-		$facade                               = $this->facade(
+		$facade = $this->facade(
 			new ProspectivePluginRepository(),
 			new ProspectiveExecutor()
 		);
 
 		$results = array(
 			$facade->listCandidates(
-				'plugin',
-				$this->repositoryRequest(),
-				'preview',
-				'valid-nonce'
-			),
-			$facade->discover(
 				'plugin',
 				$this->repositoryRequest(),
 				'preview',
@@ -1223,17 +1198,17 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		ProspectiveExecutor $executor,
 		int $userId = 7,
 		?ProspectiveUpdaterLock $updaterLock = null,
-		?RepositoryProvider $provider = null
+		RepositoryProvider|iterable|null $provider = null
 	): NativeProspectiveReleaseFacade {
-		$provider          = $provider ?? new ProspectiveRepositoryProvider();
-		$registry          = new ProviderRegistry( array( $provider ) );
+		$providers         = null === $provider
+			? array( new ProspectiveRepositoryProvider() )
+			: ( $provider instanceof RepositoryProvider ? array( $provider ) : $provider );
+		$registry          = new ProviderRegistry( $providers );
 		$resolver          = new PackageRepositoryRequestResolver( $registry );
-		$secrets           = new SecretsFile( sys_get_temp_dir() . '/ran-booster-prospective-secrets.php', array() );
 		$executor->plugins = $plugins;
 
 		return new NativeProspectiveReleaseFacade(
 			$resolver,
-			new ManagedReleasePreflight( $secrets ),
 			$executor,
 			$plugins,
 			new ProspectiveThemeRepository(),

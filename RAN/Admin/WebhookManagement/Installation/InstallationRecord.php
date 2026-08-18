@@ -2,7 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace RAN\Booster\GitHub\WebhookManagement\Installation;
+namespace RAN\Admin\WebhookManagement\Installation;
 
 use InvalidArgumentException;
 
@@ -39,7 +39,7 @@ final readonly class InstallationRecord {
 			|| ! $this->validTimestamp( $createdAt )
 			|| ! $this->validTimestamp( $checkedAt )
 		) {
-			throw new InvalidArgumentException( 'Invalid GitHub webhook-management installation record.' );
+			throw new InvalidArgumentException( 'Invalid repository webhook-management installation record.' );
 		}
 	}
 
@@ -150,7 +150,7 @@ final readonly class InstallationRecord {
 			|| ! is_string( $record['created_at'] )
 			|| ! is_string( $record['checked_at'] )
 		) {
-			throw new InvalidArgumentException( 'Invalid persisted GitHub webhook-management installation record.' );
+			throw new InvalidArgumentException( 'Invalid persisted repository webhook-management installation record.' );
 		}
 
 		return new self( $record['provider_code'], $record['repository_id'], $record['repository'], $record['hook_id'], $record['webhook_profile_id'], $record['webhook_profile_scope'], $record['webhook_profile_revision'], $record['webhook_profile_disposition'], $record['endpoint'], $record['status'], $record['created_at'], $record['checked_at'] );

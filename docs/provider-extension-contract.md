@@ -92,6 +92,10 @@ inside the selected fixed call. A request-only credential is a separate
 explicit sensitive parameter for both assessment and execution of that call and
 is never persisted or returned. Exactly one saved ID or request-only value is
 accepted. Only setup and reconfigure receive the Core-held signing secret.
+The fixed management placement also requires `WebhookNormalizer` on that same
+aggregate, proving that provider registration supplied the signing policy Core
+needs to create and retain webhook profiles. Operation facets without that
+policy receive no UI or route authority.
 
 Immediately before each management call, Core invokes the matching read-only
 assessment with the same credential source. The provider must remotely compare
@@ -102,6 +106,16 @@ unavailable or stale evidence fails closed before remote mutation. Fitness does
 not otherwise grant execution authority, and its one-call budget remains
 separate from the fixed management budget.
 
+Core places one fixed repository-row action and selected-repository panel only
+when both operation interfaces and `WebhookNormalizer` resolve to the same
+registered provider aggregate. The
+provider's bounded metadata supplies its code and label; the provider owns
+credential use, remote behavior and the bounded plain-text remediation returned
+by its operation result. Missing, partial or incompatible facets create no
+action, panel, documentation, asset or mutation authority. This placement is
+not a capability enumerator, generic form schema, callback registry or provider
+HTML seam.
+
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
 prove that the exact remote hook is owned by the selected Core target before
@@ -109,12 +123,15 @@ readback or mutation; the URL is not a configurable transport seam.
 
 #### Management presentation
 
-The backend capability does not create an administration form or operation
-route. Bundled GitHub management is an explicit first-party adapter with fixed
-copy, credential fields, result interpretation, record schema and request
-handler. Core does not derive those decisions from provider metadata and does
-not publish a renderer registry, callable transport, generic dispatcher or raw
-credential handle for custom providers.
+Core owns one fixed administration form and operation route for providers whose
+single registered aggregate implements both webhook operation facets and the
+signing-policy normalizer. Core derives only
+the bounded provider code and label from metadata; providers cannot supply
+fields, HTML, callbacks or route behavior. The fixed host owns authorization,
+credential-source choice, result bounds and the schema-3 recovery record, while
+the provider facets own credential use, remote behavior and bounded plain-text
+remediation. Core publishes no renderer registry, callable transport, generic
+dispatcher or raw credential handle.
 
 `RepositoryWebhookFitnessResult` and `RepositoryWebhookOperationResult` admit
 only bounded, closed, non-secret evidence. Setup and reconfigure can establish

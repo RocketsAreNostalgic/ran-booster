@@ -30,7 +30,6 @@ use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\ManagedReleaseConfiguration;
-use RAN\WordPress\ManagedReleasePreflight;
 use RAN\WordPress\WordPressUpdaterLock;
 use Throwable;
 
@@ -55,7 +54,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	 */
 	public function __construct(
 		private PackageRepositoryRequestResolver $repositories,
-		private ManagedReleasePreflight $preflight,
 		private CorePackageExecutor $executor,
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
@@ -78,7 +76,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	public function nonceAction( string $operation, string $type ): string {
-		if ( ! in_array( $operation, array( 'list_candidates', 'discover', 'inspect', 'install' ), true )
+		if ( ! in_array( $operation, array( 'list_candidates', 'inspect', 'install' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
 			throw new InvalidArgumentException( 'The prospective release nonce scope is invalid.' );
 		}
@@ -91,17 +89,23 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return array();
 		}
 
-		try {
-			$this->providers->requireCapability( 'gh', RepositoryReleaseCandidateListing::class );
-			$this->providers->requireCapability( 'gh', RepositoryReleaseInspector::class );
-			$this->providers->requireCapability( 'gh', RepositoryReleaseAcquirer::class );
-			$this->providers->requireCapability( 'gh', RepositoryReleaseMetadata::class );
-			$this->providers->requireCapability( 'gh', RepositoryReleaseNativeTargets::class );
-		} catch ( Throwable ) {
-			return array();
+		$supported = array();
+		foreach ( $this->providers->orderedMetadata() as $metadata ) {
+			$provider = $metadata->code->value;
+			try {
+				$this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
+				$this->providers->requireCapability( $provider, RepositoryReleaseInspector::class );
+				$this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );
+				$this->providers->requireCapability( $provider, RepositoryReleaseMetadata::class );
+				$this->providers->requireCapability( $provider, RepositoryReleaseNativeTargets::class );
+			} catch ( Throwable ) {
+				continue;
+			}
+
+			$supported[] = $provider;
 		}
 
-		return array( 'gh' );
+		return $supported;
 	}
 
 	public function listCandidates(
@@ -165,38 +169,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					'channel'    => $channel,
 				)
 			);
-		} catch ( Throwable ) {
-			return ProspectiveReleaseResult::failure( 'unable_to_check' );
-		}
-	}
-
-	public function discover(
-		string $type,
-		array $repositoryRequest,
-		string $channel,
-		string $nonce
-	): ProspectiveReleaseResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
-			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
-		}
-
-		if ( ! $this->validChannel( $channel )
-			|| ! $this->authorized( 'discover', $type, $nonce ) ) {
-			return ProspectiveReleaseResult::failure( 'forbidden' );
-		}
-		if ( ! $this->supportsCompleteProspectiveReleaseProvider( $type, $repositoryRequest ) ) {
-			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
-		}
-
-		try {
-			$repository = $this->resolveRepository( $repositoryRequest );
-			$result     = $this->preflight->discoverProspective(
-				$type,
-				$repository,
-				$channel
-			);
-
-			return $this->preflightResult( $result, 'release_available' );
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
@@ -574,14 +546,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	/** @param array<string, mixed> $repositoryRequest */
-	private function supportsCompleteProspectiveReleaseProvider( string $type, array $repositoryRequest ): bool {
-		$provider = $repositoryRequest['provider'] ?? null;
-
-		return is_string( $provider )
-			&& in_array( $provider, $this->supportedProviderCodes( $type ), true );
-	}
-
-	/** @param array<string, mixed> $repositoryRequest */
 	private function releaseCandidateListing( array $repositoryRequest ): ?RepositoryReleaseCandidateListing {
 		$provider = $repositoryRequest['provider'] ?? null;
 		if ( ! is_string( $provider ) ) {
@@ -663,34 +627,5 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	private function validChannel( string $channel ): bool {
 		return in_array( $channel, array( 'stable', 'prerelease' ), true );
-	}
-
-	private function preflightResult(
-		array|\WP_Error $result,
-		string $successCode
-	): ProspectiveReleaseResult {
-		if ( ! $result instanceof \WP_Error ) {
-			return ProspectiveReleaseResult::success( $successCode, $result );
-		}
-
-		$code = $result->get_error_code();
-		if ( 'github_updater_no_eligible_release' === $code ) {
-			return ProspectiveReleaseResult::failure( 'no_releases' );
-		}
-		if ( in_array(
-			$code,
-			array(
-				'github_updater_prerelease_not_allowed',
-				'github_updater_invalid_preflight_target',
-				'github_updater_invalid_package_identity_target',
-				'github_updater_invalid_release_fingerprint',
-				'github_updater_artifact_continuity_failed',
-			),
-			true
-		) ) {
-			return ProspectiveReleaseResult::failure( 'release_invalid' );
-		}
-
-		return ProspectiveReleaseResult::failure( 'unable_to_check' );
 	}
 }

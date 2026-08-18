@@ -134,11 +134,11 @@ The bundled GitHub module uses the ordinary Provider API boundary, but Core
 always registers it as `gh`. There is no current preference to hide or disable
 it.
 
-Several first-party surfaces also still know explicitly about `gh`, including
-prospective release discovery, native release tracking, managed-release
-preflight, repository-row presentation, and bundled GitHub webhook management.
-Those features do not automatically become available to another GitHub
-provider code.
+Several first-party surfaces still know explicitly about `gh`, but repository
+webhook-management placement no longer does. Core places its fixed controls for
+any provider whose registered aggregate implements both exact webhook facets.
+This does not transfer `gh` credentials or package identity to another code;
+each provider remains isolated by its registered code.
 
 Skipping bundled registration would not be a safe replacement mechanism. The
 provider code is also the key for retained package identity and secret custody.
@@ -148,8 +148,8 @@ packages unavailable, reject its webhook deliveries, and impair operations
 that require its registered secret policy.
 
 The existing Assisted Hooks compatibility check is a narrow historical bridge:
-when its old standalone integration is detected, bundled GitHub webhook
-management presentation is suppressed and an administrator warning is shown.
+when its old standalone integration is detected, Core webhook-management
+presentation is suppressed and an administrator warning is shown.
 It is not a general provider-collision system.
 
 ## Failure behavior and operational caveats

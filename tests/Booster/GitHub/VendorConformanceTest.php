@@ -58,7 +58,7 @@ final class VendorConformanceTest extends TestCase {
 		self::assertTrue( $compositionMethod->isStatic() );
 		self::assertTrue( $providerReflection->getConstructor()?->isPrivate() );
 		self::assertSame(
-			array( 'create' ),
+			array( 'create', 'legacyAssistedHooksAddOnIsActive', 'registerLegacyAssistedHooksAddOnNotice' ),
 			array_values(
 				array_map(
 					static fn ( ReflectionMethod $method ): string => $method->getName(),

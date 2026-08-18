@@ -6,6 +6,7 @@ namespace RAN\AddOn\WebhookAssistance;
 
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\RepositoryLocator;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
@@ -287,7 +288,13 @@ final class WebhookAssistanceReadinessEvaluator {
 	}
 
 	private function safeRepository( string $repository ): bool {
-		return 1 === preg_match( '/^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,99})\/[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,99})$/', $repository );
+		try {
+			RepositoryLocator::requireValid( $repository );
+
+			return true;
+		} catch ( \InvalidArgumentException ) {
+			return false;
+		}
 	}
 
 	private function isStructurallyPublicHttps( string $callbackUrl ): bool {

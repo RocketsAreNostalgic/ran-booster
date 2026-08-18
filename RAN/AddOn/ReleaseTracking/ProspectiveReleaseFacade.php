@@ -9,7 +9,7 @@ namespace RAN\AddOn\ReleaseTracking;
  */
 interface ProspectiveReleaseFacade {
 
-	public const API_VERSION = 5;
+	public const API_VERSION = 6;
 
 	public function nonceAction( string $operation, string $type ): string;
 
@@ -29,17 +29,6 @@ interface ProspectiveReleaseFacade {
 	 * @param 'stable'|'prerelease' $channel
 	 */
 	public function listCandidates(
-		string $type,
-		array $repositoryRequest,
-		string $channel,
-		string $nonce
-	): ProspectiveReleaseResult;
-
-	/**
-	 * @param array<string, mixed>  $repositoryRequest
-	 * @param 'stable'|'prerelease' $channel
-	 */
-	public function discover(
 		string $type,
 		array $repositoryRequest,
 		string $channel,

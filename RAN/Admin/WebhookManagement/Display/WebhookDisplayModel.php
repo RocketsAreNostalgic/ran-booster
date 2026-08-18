@@ -2,20 +2,16 @@
 
 declare( strict_types = 1 );
 
-namespace RAN\Booster\GitHub\WebhookManagement\Display;
+namespace RAN\Admin\WebhookManagement\Display;
 
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionRequest;
-use RAN\Booster\GitHub\WebhookManagement\Installation\InstallationRecord;
-use RAN\Booster\GitHub\WebhookManagement\Installation\InstallationStore;
+use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
+use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 
 /** Builds complete display-safe models without rendering or request access. */
 final class WebhookDisplayModel {
-	private const PROVIDER_CODE = 'gh';
-
-	private const PROVIDER_LABEL = 'GitHub';
-
 	/** @var array<string, string> */
 	private array $projectedStatuses = array();
 
@@ -30,11 +26,7 @@ final class WebhookDisplayModel {
 	 * @param array<string, array<string, mixed>> $repositoryProjections
 	 * @return array<string, array<string, mixed>>
 	 */
-	public function enrichRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
-		if ( ! hash_equals( self::PROVIDER_CODE, $providerCode ) ) {
-			return $rows;
-		}
-
+	public function enrichRows( array $rows, string $providerCode, string $providerLabel, string $repositoryUrlBase, array $repositoryProjections, string $returnUrl ): array {
 		$this->projectedStatuses = array();
 		$readiness               = $this->readiness( $providerCode );
 		if ( null === $readiness ) {
@@ -43,7 +35,7 @@ final class WebhookDisplayModel {
 
 		$records           = array_filter(
 			$this->records->all(),
-			static fn ( InstallationRecord $record ): bool => hash_equals( self::PROVIDER_CODE, $record->providerCode() )
+			static fn ( InstallationRecord $record ): bool => hash_equals( $providerCode, $record->providerCode() )
 		);
 		$currentRecordKeys = array();
 
@@ -89,8 +81,8 @@ final class WebhookDisplayModel {
 
 		foreach ( $records as $recordKey => $record ) {
 			if ( ! isset( $currentRecordKeys[ $recordKey ] ) ) {
-				$syntheticKey          = 'ran-booster-github-webhook-management:historical:' . substr( hash( 'sha256', $recordKey ), 0, 16 );
-				$rows[ $syntheticKey ] = $this->retainedRecordRow( $syntheticKey, $record );
+				$syntheticKey          = 'ran-booster-repository-webhook-management:historical:' . substr( hash( 'sha256', $recordKey ), 0, 16 );
+				$rows[ $syntheticKey ] = $this->retainedRecordRow( $syntheticKey, $record, $providerLabel, $repositoryUrlBase );
 			}
 		}
 
@@ -101,8 +93,8 @@ final class WebhookDisplayModel {
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return array<string, mixed>|null
 	 */
-	public function panel( string $providerCode, string $repositoryId, string $returnUrl, ?string $resultCode, ?array $recovery, bool $canManage ): ?array {
-		if ( ! $canManage || ! hash_equals( self::PROVIDER_CODE, $providerCode ) || '' === trim( $repositoryId ) ) {
+	public function panel( string $providerCode, string $providerLabel, string $repositoryId, string $returnUrl, ?string $resultCode, ?array $recovery, bool $canManage, ?string $remediation = null ): ?array {
+		if ( ! $canManage || '' === trim( $repositoryId ) ) {
 			return null;
 		}
 
@@ -118,7 +110,7 @@ final class WebhookDisplayModel {
 		$this->projectedStatuses = array();
 		$record                  = $this->records->find( $providerCode, $repositoryId );
 		$status                  = null === $record ? null : $this->projectedStatus( $record );
-		$operations              = null === $recovery ? $this->availableOperations( $target, $record, $status ) : array();
+		$operations              = null === $recovery ? $this->availableOperations( $target, $record, $status, $providerLabel ) : array();
 		$operationModels         = array();
 		foreach ( $operations as $operation => $label ) {
 			$operationModels[] = array(
@@ -132,27 +124,33 @@ final class WebhookDisplayModel {
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'The recorded secret is no longer available. Update the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), self::PROVIDER_LABEL );
+			$help = sprintf( __( 'The recorded secret is no longer available. Update the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $providerLabel );
 		} elseif ( null !== $record && 'remote_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), self::PROVIDER_LABEL );
+			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $providerLabel );
+		}
+		$recoveryWarning = null;
+		if ( null !== $record && $record->requiresHookIdentification() ) {
+			/* translators: %s: repository provider name. */
+			$recoveryWarning = sprintf( __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $providerLabel );
+		} elseif ( null !== $recovery ) {
+			/* translators: %s: repository provider name. */
+			$recoveryWarning = sprintf( __( 'Repository webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $providerLabel );
 		}
 
 		return array(
 			'form_action'         => admin_url( 'admin-post.php' ),
-			'admin_action'        => 'ran_booster_github_webhook_management_operation',
+			'admin_action'        => 'ran_booster_repository_webhook_management_operation',
 			'provider_code'       => $providerCode,
-			'provider_label'      => self::PROVIDER_LABEL,
+			'provider_label'      => $providerLabel,
 			'repository_id'       => $repositoryId,
 			'repository'          => $target->repository(),
-			'interaction_request' => AdminInteractionRequest::providerRepositories( 'github-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'github-webhook-management-error' ),
+			'interaction_request' => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
 			'result'              => null === $resultCode ? null : array(
 				'class'   => $this->isSuccessfulResult( $resultCode ) ? 'notice-success' : 'notice-error',
-				'message' => $this->notice( $resultCode, $recovery ),
+				'message' => $this->notice( $resultCode, $recovery, $remediation ),
 			),
-			'recovery_warning'    => null !== $record && $record->requiresHookIdentification()
-				? __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its GitHub webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' )
-				: ( null !== $recovery ? __( 'GitHub webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect GitHub and Core manually before leaving or retrying.', 'ran-booster' ) : null ),
+			'recovery_warning'    => $recoveryWarning,
 			'credential_choices'  => $this->credentialChoices( $providerCode ),
 			'operations'          => $operationModels,
 			'action_help'         => $help,
@@ -160,86 +158,87 @@ final class WebhookDisplayModel {
 	}
 
 	/** @return list<array{heading:?string,body:string}> */
-	public function documentation(): array {
+	public function documentation( string $providerLabel ): array {
+		/* translators: %s: repository provider name. */
+		$intro = sprintf( __( 'Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $providerLabel );
+		/* translators: %s: repository provider name. */
+		$credentialHeading = sprintf( __( 'Saved profile or request-only %s access', 'ran-booster' ), $providerLabel );
+		/* translators: %s: repository provider name. */
+		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check.', 'ran-booster' ), $providerLabel );
+		/* translators: %s: repository provider name. */
+		$lifecycle = sprintf( __( 'Webhook management never enables Automatic deployment. Blueprint import, plugin deactivation and plugin deletion do not contact %s or remove remote hooks.', 'ran-booster' ), $providerLabel );
+		/* translators: %s: repository provider name. */
+		$cleanup = sprintf( __( 'Switching a package to Published releases does not remove the remote hook, its local recovery record or Core signing material. Remove the identified hook in %s first, then remove only unused local signing material in Core.', 'ran-booster' ), $providerLabel );
+
 		return array(
 			array(
 				'heading' => null,
-				'body'    => __( 'Booster can set up, check, reconfigure and remove one GitHub webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ),
+				'body'    => $intro,
 			),
 			array(
-				'heading' => __( 'Saved profile or request-only GitHub access', 'ran-booster' ),
-				'body'    => __( 'Select an eligible saved Booster profile or use a fresh fine-grained personal access token restricted to the selected repository with Webhooks: Read and write permission. For a saved profile, GitHub webhook management sends only its display-safe ID and Core resolves the PAT inside the fixed GitHub operation. A pasted PAT is submitted for this one operation. Neither value is persisted or logged by GitHub webhook management.', 'ran-booster' ),
+				'heading' => $credentialHeading,
+				'body'    => __( 'Select an eligible saved Booster credential or provide fresh request-only access for the selected repository. A saved credential is resolved inside the fixed provider operation; a pasted credential is submitted for this operation only. Neither value is persisted or logged by webhook management.', 'ran-booster' ),
 			),
 			array(
 				'heading' => __( 'Readiness and recorded status', 'ran-booster' ),
-				'body'    => __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting GitHub. Timestamped hook status is historical until an administrator runs Check. Check refreshes the identified remote configuration; signed delivery is established separately by correlating GitHub delivery history with the Provider request ID in Booster Activity. Reconfigure after callback, endpoint or signing-profile changes.', 'ran-booster' ),
+				'body'    => $readiness,
 			),
 			array(
 				'heading' => __( 'Deployment and lifecycle boundaries', 'ran-booster' ),
-				'body'    => __( 'GitHub webhook management never enables Automatic deployment. A push can affect only packages already set to Automatic for the matching repository and branch. Blueprint import, plugin deactivation and plugin deletion do not contact GitHub or remove remote hooks. Remove or inspect the identified GitHub hook before deleting local recovery records.', 'ran-booster' ),
-			),
-			array(
-				'heading' => null,
-				'body'    => __( 'Removal fails closed unless the recorded hook is positively identified and confirmed absent after deletion. Exact repository signing profiles created for the hook may be released; reused owner-shared and Core-created profiles remain in Core.', 'ran-booster' ),
+				'body'    => $lifecycle,
 			),
 			array(
 				'heading' => __( 'Cleanup after switching package source', 'ran-booster' ),
-				'body'    => __( 'Switching a package to Published releases does not remove an existing remote hook, GitHub webhook management record or Core signing-secret profile. The release-managed package ignores pushes, but another branch-managed package using the same repository may still need the hook. Keep the setup for a temporary source switch.', 'ran-booster' ),
-			),
-			array(
-				'heading' => null,
-				'body'    => __( 'For a long-term release source or a retired site or repository, first confirm that no branch-managed package still needs the hook. Retained-hook cleanup is manual: remove the identified hook in GitHub first, then remove only unused local signing material in Core.', 'ran-booster' ),
-			),
-			array(
-				'heading' => null,
-				'body'    => __( 'If GitHub webhook management is unavailable, remove the remote hook in GitHub first, then use Manage secrets in Booster to remove only unused local signing material. If ownership or remaining use is uncertain, leave the setup in place.', 'ran-booster' ),
+				'body'    => $cleanup,
 			),
 		);
 	}
 
-	public function notice( string $code, ?array $recovery = null ): string {
+	public function notice( string $code, ?array $recovery = null, ?string $remediation = null ): string {
 		if ( 'orphaned' === $code ) {
-			return sprintf( 'The remote hook may be active without a complete local record. Inspect it manually in %s before retrying.', self::PROVIDER_LABEL );
+			return 'The remote hook may be active without a complete local record. Inspect it manually at the provider before retrying.';
 		}
 		if ( in_array( $code, array( 'recovery_record_failed', 'record_conflict', 'record_update_failed' ), true ) ) {
 			return null === $recovery
 				? ( 'record_conflict' === $code
-					? 'A newer GitHub webhook management record won the persistence race. Nothing was overwritten; inspect the current GitHub and Core state before retrying.'
-					: 'Provider state may have changed, but GitHub webhook management could not save its non-secret recovery record. Inspect GitHub and Core before retrying.' )
-				: sprintf( 'Provider state may have changed, but the current GitHub webhook management record was not overwritten. Inspect GitHub hook reference %1$s and Core signing profile %2$s before retrying.', $recovery['hook_id'], $recovery['profile_id'] );
+						? 'A newer webhook-management record won the persistence race. Nothing was overwritten; inspect the current provider and Core state before retrying.'
+						: 'Provider state may have changed, but webhook management could not save its non-secret recovery record. Inspect the provider and Core before retrying.' )
+					: sprintf( 'Provider state may have changed, but the current webhook-management record was not overwritten. Inspect provider hook reference %1$s and Core signing profile %2$s before retrying.', $recovery['hook_id'], $recovery['profile_id'] );
 		}
 		if ( 'manual_recovery_required' === $code ) {
-			return 'Managed operations are disabled because the prior setup did not return a stable hook ID. Inspect GitHub and Core manually before retrying.';
+			return 'Managed operations are disabled because the prior setup did not return a stable hook ID. Inspect the provider and Core manually before retrying.';
 		}
 
 		return match ( $code ) {
-			'configured_pending_delivery' => 'GitHub webhook management configured the remote hook. Signed delivery verification is still pending.',
-			'verified' => 'GitHub webhook management confirmed the recorded remote configuration. Correlate provider delivery history with the Provider request ID in Booster Activity before treating signed delivery as established.',
-			'removed' => 'GitHub webhook management confirmed the remote hook is absent and cleared its local recovery record.',
+			'configured_pending_delivery' => 'Webhook management configured the remote hook. Signed delivery verification is still pending.',
+			'verified' => 'Webhook management confirmed the recorded remote configuration. Correlate provider delivery history with the Provider request ID in Booster Activity before treating signed delivery as established.',
+			'removed' => 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.',
 			'forbidden' => 'You are not permitted to manage this repository webhook. Nothing was changed.',
 			'invalid_request' => 'The webhook request was invalid or expired. Nothing was changed; reload this repository and try again.',
-			'invalid_token' => 'Select one saved credential or provide one request-only token, then try again.',
+			'invalid_token' => 'Select one saved credential or provide one request-only credential, then try again.',
 			'operation_unauthorized' => 'Core could not authorize this repository webhook operation. Nothing was changed.',
 			'repository_identity_unconfirmed' => 'Core could not confirm the selected repository identity. Nothing was changed.',
 			'operation_busy' => 'Another webhook operation is already in progress for this repository. Wait for it to finish, then check the recorded state.',
-			'operation_failed' => 'GitHub webhook management could not confirm the operation outcome. Inspect the provider and recorded status before retrying.',
+			'operation_failed' => 'Webhook management could not confirm the operation outcome. Inspect the provider and recorded status before retrying.',
 			'setup_failed' => 'The provider rejected the webhook setup request. No remote hook was established.',
-			'setup_compensated' => 'GitHub webhook management could not verify the new remote hook, so it removed it. No webhook was established; setup may be tried again.',
-			'setup_compensation_incomplete' => 'GitHub webhook management could not verify or safely remove the new remote hook. Inspect the provider and Core records before retrying.',
-			'setup_outcome_unknown' => 'GitHub webhook management could not confirm whether setup changed the remote hook. Inspect the provider and Core records before retrying.',
-			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete', 'matching_hooks_ambiguous' => 'GitHub webhook management could not establish the current remote hook state. Nothing should be treated as successful; inspect the provider before retrying.',
+			'setup_compensated' => 'Webhook management could not verify the new remote hook, so it removed it. No webhook was established; setup may be tried again.',
+			'setup_compensation_incomplete' => 'Webhook management could not verify or safely remove the new remote hook. Inspect the provider and Core records before retrying.',
+			'setup_outcome_unknown' => 'Webhook management could not confirm whether setup changed the remote hook. Inspect the provider and Core records before retrying.',
+			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete', 'matching_hooks_ambiguous' => 'Webhook management could not establish the current remote hook state. Nothing should be treated as successful; inspect the provider before retrying.',
 			'setup_response_invalid' => 'The provider response did not identify the new hook. Inspect the provider and Core records before retrying.',
-			'preconfiguration_read_unavailable', 'reconfigure_readback_unavailable', 'reconfigure_outcome_unknown' => 'GitHub webhook management could not confirm the remote hook state after the update request. Run Check or inspect the hook in GitHub before retrying an update.',
-			'reconfigure_failed' => 'The provider rejected the webhook update request. Run Check or inspect the hook in GitHub before retrying.',
-			'hook_ownership_unavailable' => 'GitHub webhook management could not confirm that the recorded hook belongs to this site. Run Check or inspect the hook in GitHub before retrying.',
-			'predelete_read_unavailable', 'remove_readback_unavailable', 'remove_outcome_unknown' => 'GitHub webhook management could not confirm whether the remote hook was removed. Run Check or inspect the hook in GitHub before retrying removal.',
-			'remove_failed' => 'The provider rejected the webhook removal request. Run Check or inspect the hook in GitHub before retrying.',
+			'preconfiguration_read_unavailable', 'reconfigure_readback_unavailable', 'reconfigure_outcome_unknown' => 'Webhook management could not confirm the remote hook state after the update request. Run Check or inspect the hook at the provider before retrying an update.',
+			'reconfigure_failed' => 'The provider rejected the webhook update request. Run Check or inspect the hook at the provider before retrying.',
+			'hook_ownership_unavailable' => 'Webhook management could not confirm that the recorded hook belongs to this site. Run Check or inspect the hook at the provider before retrying.',
+			'predelete_read_unavailable', 'remove_readback_unavailable', 'remove_outcome_unknown' => 'Webhook management could not confirm whether the remote hook was removed. Run Check or inspect the hook at the provider before retrying removal.',
+			'remove_failed' => 'The provider rejected the webhook removal request. Run Check or inspect the hook at the provider before retrying.',
 			'operation_lock_release_failed' => 'The webhook operation completed, but Core could not release its coordination lock. Wait for the current request to end, then run Check before retrying.',
 			'assessment_insufficient' => 'Core confirmed that the selected credential is insufficient for this repository webhook operation. Nothing was changed.',
 			'assessment_stale' => 'The credential fitness assessment is stale. Nothing was changed; assess again with current repository authority.',
 			'assessment_unsupported' => 'The bound provider does not support this fixed webhook operation. Nothing was changed.',
 			'assessment_unavailable' => 'Core could not establish safe credential fitness for this operation. Nothing was changed.',
-			default => 'GitHub webhook management could not confirm that the remote webhook operation succeeded. Review the recorded status before retrying.',
+			default => null !== $remediation && strlen( $remediation ) <= 255
+				? $remediation
+				: 'Webhook management could not confirm that the remote webhook operation succeeded. Review the recorded status before retrying.',
 		};
 	}
 
@@ -343,22 +342,19 @@ final class WebhookDisplayModel {
 	}
 
 	/** @return array<string, mixed> */
-	private function retainedRecordRow( string $key, InstallationRecord $record ): array {
+	private function retainedRecordRow( string $key, InstallationRecord $record, string $providerLabel, string $repositoryUrlBase ): array {
 		$actions       = array();
 		$parts         = explode( '/', $record->repository() );
 		$repositoryUrl = 2 === count( $parts ) && '' !== $parts[0] && '' !== $parts[1]
-			? 'https://github.com/' . rawurlencode( $parts[0] ) . '/' . rawurlencode( $parts[1] )
+			? rtrim( $repositoryUrlBase, '/' ) . '/' . rawurlencode( $parts[0] ) . '/' . rawurlencode( $parts[1] )
 			: null;
-		$hookUrl       = null !== $repositoryUrl && ctype_digit( $record->hookId() )
-			? $repositoryUrl . '/settings/hooks/' . rawurlencode( $record->hookId() )
-			: null;
-		if ( null !== $hookUrl ) {
-			$actions['ran-booster-github-webhook-management:inspect'] = array(
-				'key'           => 'ran-booster-github-webhook-management:inspect',
+		if ( null !== $repositoryUrl ) {
+			$actions['ran-booster-repository-webhook-management:inspect'] = array(
+				'key'           => 'ran-booster-repository-webhook-management:inspect',
 				/* translators: %s: repository provider name. */
-				'label'         => sprintf( __( 'Open recorded %s hook', 'ran-booster' ), self::PROVIDER_LABEL ),
+				'label'         => sprintf( __( 'Open %s repository', 'ran-booster' ), $providerLabel ),
 				'type'          => 'link',
-				'url'           => $hookUrl,
+				'url'           => $repositoryUrl,
 				'hidden'        => array(),
 				'disabled'      => false,
 				'external'      => true,
@@ -370,7 +366,7 @@ final class WebhookDisplayModel {
 		return array(
 			'key'             => $key,
 			'provider_code'   => $record->providerCode(),
-			'provider_label'  => self::PROVIDER_LABEL,
+			'provider_label'  => $providerLabel,
 			'repository_id'   => $record->repositoryId(),
 			'repository'      => $record->repository(),
 			'repository_url'  => $repositoryUrl ?? '',
@@ -416,10 +412,10 @@ final class WebhookDisplayModel {
 	}
 
 	/** @return array<string, string> */
-	private function availableOperations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status ): array {
+	private function availableOperations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, string $providerLabel ): array {
 		if ( null === $record ) {
 			/* translators: %s: repository provider name. */
-			return array( 'setup' => sprintf( __( 'Set up in %s', 'ran-booster' ), self::PROVIDER_LABEL ) );
+			return array( 'setup' => sprintf( __( 'Set up in %s', 'ran-booster' ), $providerLabel ) );
 		}
 		if ( $record->requiresHookIdentification() ) {
 			return array();
@@ -427,13 +423,13 @@ final class WebhookDisplayModel {
 		$operations = array();
 		if ( in_array( $status, array( 'profile_revision_stale', 'configuration_drift', 'local_profile_missing' ), true ) || ( 'needs_verification' !== $status && ! hash_equals( $record->endpoint(), $target->endpoint() ) ) ) {
 			/* translators: %s: repository provider name. */
-			$operations['reconfigure'] = sprintf( __( 'Update %s webhook', 'ran-booster' ), self::PROVIDER_LABEL );
+			$operations['reconfigure'] = sprintf( __( 'Update %s webhook', 'ran-booster' ), $providerLabel );
 		}
 		/* translators: %s: repository provider name. */
-		$operations['check'] = sprintf( __( 'Check %s', 'ran-booster' ), self::PROVIDER_LABEL );
+		$operations['check'] = sprintf( __( 'Check %s', 'ran-booster' ), $providerLabel );
 		if ( ! in_array( $status, array( 'local_profile_missing', 'remote_missing', 'removal_pending' ), true ) ) {
 			/* translators: %s: repository provider name. */
-			$operations['remove'] = sprintf( __( 'Remove from %s', 'ran-booster' ), self::PROVIDER_LABEL );
+			$operations['remove'] = sprintf( __( 'Remove from %s', 'ran-booster' ), $providerLabel );
 		}
 
 		return $operations;
@@ -442,21 +438,20 @@ final class WebhookDisplayModel {
 	private function panelUrl( string $returnUrl, string $repositoryId ): string {
 		$url = 1 === preg_match( '/[?&]repository=/', $returnUrl ) ? $returnUrl : $returnUrl . ( str_contains( $returnUrl, '?' ) ? '&' : '?' ) . 'repository=' . rawurlencode( $repositoryId );
 
-		return $url . '#ran-booster-github-webhook-management-operation-heading';
+		return $url . '#ran-booster-repository-webhook-management-operation-heading';
 	}
 
 	private function operationUrl( string $operation, string $providerCode, string $repositoryId ): string {
 		$action = 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $providerCode, $repositoryId ) );
 
-		return admin_url( 'admin-post.php?action=ran_booster_github_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
+		return admin_url( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
 	}
 
 	private function historicalStatusLabel( string $status ): string {
 		return match ( $status ) {
 			'not_configured' => __( 'No managed hook recorded', 'ran-booster' ),
 			'configured' => __( 'Configured at last check', 'ran-booster' ),
-			/* translators: %s: repository provider name. */
-			'profile_revision_stale' => sprintf( __( 'Signing secret changed; %s update required', 'ran-booster' ), self::PROVIDER_LABEL ),
+			'profile_revision_stale' => __( 'Signing secret changed; webhook update required', 'ran-booster' ),
 			'local_profile_missing' => __( 'Secret needs attention', 'ran-booster' ),
 			/* translators: %s: webhook status description. */
 			default => sprintf( __( 'Needs attention: %s at last check', 'ran-booster' ), 'configuration_drift' === $status ? __( 'Configuration drift', 'ran-booster' ) : ucwords( str_replace( '_', ' ', $status ) ) ),

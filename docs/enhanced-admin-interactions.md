@@ -39,10 +39,11 @@ are not intercepted. A raw form that needs a bounded partial refresh must use
 this API explicitly. Core does not scan selectors or infer mutation semantics
 from markup.
 
-Bundled GitHub webhook management uses the provider-repositories request target
-internally. That is first-party Core composition, not a public provider-row or
-operation-panel hook. External add-ons cannot replace the provider table or
-register a generic webhook-management panel.
+Core's repository webhook-management controls use the provider-repositories
+request target internally. That is fixed first-party composition for providers
+implementing both exact webhook facets on the same aggregate, not a public
+provider-row or operation-panel hook. External add-ons cannot replace the
+provider table or register a generic webhook-management panel.
 
 ## Eligible forms
 

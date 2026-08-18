@@ -22,7 +22,7 @@ use TypeError;
 final class GitHubReleaseUpdaterBootstrapTest extends TestCase {
 
 	public function testCoreAndUpdaterProspectiveApiGenerationsAreIndependent(): void {
-		self::assertSame( 5, ProspectiveReleaseFacade::API_VERSION );
+		self::assertSame( 6, ProspectiveReleaseFacade::API_VERSION );
 		self::assertSame( 4, GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION );
 	}
 

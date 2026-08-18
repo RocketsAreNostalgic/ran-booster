@@ -50,8 +50,9 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\GitHubReleaseUpdateNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
-use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
+use RAN\Booster\GitHub\GitHubProvider;
 use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
@@ -150,10 +151,10 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 			$releaseTracking  = $ran_booster_container->make( ReleaseTrackingFacade::class );
 			$portability      = $ran_booster_container->make( PortabilityFacade::class );
 			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
-			if ( GitHubWebhookManagement::legacyAddOnIsActive() ) {
-				GitHubWebhookManagement::registerLegacyAddOnNotice();
+			if ( GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
+				GitHubProvider::registerLegacyAssistedHooksAddOnNotice();
 			} else {
-				$ran_booster_container->make( GitHubWebhookManagement::class )->register();
+				$ran_booster_container->make( RepositoryWebhookManagementControls::class )->register();
 			}
 			$addOnRegistry = new AdminAddOnRegistry(
 				array(

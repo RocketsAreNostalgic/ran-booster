@@ -370,8 +370,8 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 								<p class="description"><?php esc_html_e( 'Managed repository status is temporarily unavailable.', 'ran-booster' ); ?></p>
 							<?php } ?>
 							<?php
-							if ( is_array( $selectedRepositoryRow ) && null !== $githubWebhookManagement ) {
-								$githubWebhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
+							if ( is_array( $selectedRepositoryRow ) && null !== $webhookManagement ) {
+								$webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
 							}
 							?>
 				</section>

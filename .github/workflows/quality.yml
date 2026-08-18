@@ -733,6 +733,7 @@ jobs:
                 test -f "$archive"
                 jq -e \
                     --arg base_sha "$RAN_PR_BASE_SHA" \
+                    --arg event "$GITHUB_EVENT_NAME" \
                     --arg quality_commit "$GITHUB_SHA" \
                     --arg sha256 '${{ needs.runtime-archive.outputs.archive-sha256 }}' \
                     --arg source_commit "$RAN_PR_HEAD_SHA" \
@@ -753,7 +754,7 @@ jobs:
                       and .sha256 == $sha256
                       and .run.id == $run_id
                       and .run.attempt == $run_attempt
-                      and .run.event == "workflow_dispatch"
+                      and .run.event == $event
                       and .pull_request.number == $pr_number
                       and .pull_request.base_sha == $base_sha
                       and .pull_request.head_sha == $source_commit

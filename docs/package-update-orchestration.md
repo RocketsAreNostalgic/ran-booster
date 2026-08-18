@@ -33,6 +33,12 @@ In particular, the register is the durable history for the removed exact
 release Reinstall path and its receipt/finalizer NO-GO; this guide does not
 present that retired operation as current behavior.
 
+The bundled controls keep fixed, purpose-specific request and result adapters.
+Core does not publish a generic availability, result-normalization or
+post/redirect/get protocol, and providers cannot dispatch arbitrary release
+operations or payloads through the controls. These adapters are internal
+implementation details rather than a new extension seam.
+
 Booster's own update target has a separate installation-provenance gate. See
 [Booster Core self-updates](core-self-updates.md) for the official-package
 marker, source-checkout protection, explicit override, runtime-only handoff,

@@ -745,12 +745,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	public function testInspectMapsOnlyClosedProviderRejections(): void {
 		$cases = array(
-			'no_releases'     => RepositoryReleaseInspectionRejected::noReleases(),
-			'release_invalid' => RepositoryReleaseInspectionRejected::invalidRelease(),
-			'unable_to_check' => new RuntimeException( 'provider-secret-message' ),
+			array( 'no_releases', RepositoryReleaseInspectionRejected::noReleases() ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::invalidRelease() ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::incompatible() ),
+			array( 'unable_to_check', new RuntimeException( 'provider-secret-message' ) ),
 		);
 
-		foreach ( $cases as $expectedCode => $failure ) {
+		foreach ( $cases as [ $expectedCode, $failure ] ) {
 			$provider = new ProspectiveRepositoryProvider( inspection: $failure );
 			$facade   = $this->facade(
 				new ProspectivePluginRepository(),

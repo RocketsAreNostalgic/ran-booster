@@ -65,10 +65,10 @@ final class ReleaseTrackingEligibilityTest extends TestCase {
 		$preflight = new ReleaseTrackingPreflight(
 			ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
 			'example',
-			reasonCode: 'github_updater_ambiguous_release_asset'
+			reasonCode: 'invalid_release'
 		);
 
-		self::assertSame( 'github_updater_ambiguous_release_asset', $preflight->reasonCode() );
+		self::assertSame( 'invalid_release', $preflight->reasonCode() );
 
 		$this->expectException( \InvalidArgumentException::class );
 		new ReleaseTrackingPreflight(
@@ -76,5 +76,30 @@ final class ReleaseTrackingEligibilityTest extends TestCase {
 			'example',
 			reasonCode: 'provider_secret_detail'
 		);
+	}
+
+	public function testPreflightRejectsUnsafeReleaseUrls(): void {
+		foreach (
+			array(
+				"https://example.com/releases/tag/v1.2.3\nsecret",
+				'https://example.com/releases/tag/v1.2.3 secret',
+				'https://user:password@example.com/releases/tag/v1.2.3',
+				'http://example.com/releases/tag/v1.2.3',
+				'https://example.com',
+				'https://invalid_host.example/releases/tag/v1.2.3',
+			) as $url
+		) {
+			try {
+				new ReleaseTrackingPreflight(
+					ReleaseTrackingPreflight::READY,
+					'example',
+					'1.2.3',
+					$url
+				);
+				self::fail( 'Unsafe provider release URLs must be rejected.' );
+			} catch ( \InvalidArgumentException ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
 	}
 }

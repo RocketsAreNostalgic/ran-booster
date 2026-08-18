@@ -9,6 +9,9 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
+use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\UnsupportedProviderCapability;
 use RAN\RepositoryProvider\UnknownProvider;
@@ -44,9 +47,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** @var \Closure(string): void */
 	private \Closure $invalidateNative;
 
-	/** @var \Closure(string, Package, string, string, bool, string): ReleaseTrackingPreflight */
-	private \Closure $releasePreflight;
-
 	/** @var \Closure(string, string): bool */
 	private \Closure $hasRegisteredTarget;
 	private WordPressUpdaterLock $updaterLock;
@@ -57,7 +57,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): void|null         $refreshNative
 	 * @param callable(): bool|null $metadataEligible
 	 * @param callable(string): void|null         $invalidateNative
-	 * @param callable(string, Package, string, string, bool, string): ReleaseTrackingPreflight|null $releasePreflight
 	 * @param callable(string, string): bool|null $hasRegisteredTarget
 	 */
 	public function __construct(
@@ -72,7 +71,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $refreshNative = null,
 		?callable $metadataEligible = null,
 		?callable $invalidateNative = null,
-		?callable $releasePreflight = null,
 		?callable $hasRegisteredTarget = null
 	) {
 		$this->updaterLock                   = $updaterLock;
@@ -101,13 +99,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				delete_site_transient( 'plugin' === $type ? 'update_plugins' : 'update_themes' );
 			}
 			: \Closure::fromCallable( $invalidateNative );
-		$this->releasePreflight              = null === $releasePreflight
-			? static fn ( string $type, Package $package, string $packageRoot, string $headerFile, bool $force = false, string $channel = 'stable' ): ReleaseTrackingPreflight => new ReleaseTrackingPreflight(
-				ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
-				$packageRoot
-			)
-			: \Closure::fromCallable( $releasePreflight );
-		$this->hasRegisteredTarget = null === $hasRegisteredTarget
+		$this->hasRegisteredTarget           = null === $hasRegisteredTarget
 			? static function ( string $type, string $identity ): bool {
 				$signal = 'ran_wp_github_release_updater_v1_has_registered_target';
 				if ( ! function_exists( $signal ) ) {
@@ -306,7 +298,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			if ( ! $preflight->ready() ) {
 				return ReleaseTrackingResult::failed(
-					'' !== $preflight->reasonCode() ? $preflight->reasonCode() : $preflight->code(),
+					$preflight->code(),
 					'Published release assets could not be validated.'
 				);
 			}
@@ -648,14 +640,110 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return null;
 		}
 
-		return ( $this->releasePreflight )(
+		return $this->providerPreflight(
 			$type,
 			$package,
 			$eligibility->packageRoot(),
 			$this->headerFile( $type, $identifier ),
-			true,
 			$channel
 		);
+	}
+
+	private function providerPreflight(
+		string $type,
+		Package $package,
+		string $packageRoot,
+		string $headerFile,
+		string $channel
+	): ReleaseTrackingPreflight {
+		$providerCode = $package->getProviderCode();
+		if ( null === $providerCode ) {
+			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'provider_unavailable' );
+		}
+		// Until the native-target facet lands, only the bundled provider can own
+		// both this read proof and the updater target created after enablement.
+		if ( 'gh' !== $providerCode ) {
+			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'provider_unavailable' );
+		}
+
+		try {
+			$listing    = $this->providers->requireCapability( $providerCode, RepositoryReleaseCandidateListing::class );
+			$inspector  = $this->providers->requireCapability( $providerCode, RepositoryReleaseInspector::class );
+			$metadata   = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );
+			$repository = $package->getRepository()->reference;
+			$candidates = $listing->listReleaseCandidates( $type, $repository, $channel )->candidates;
+			if ( array() === $candidates ) {
+				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'no_releases' );
+			}
+
+			$inspected = 0;
+			foreach ( $candidates as $candidate ) {
+				if ( 'stable' === $channel && $candidate->prerelease ) {
+					return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'invalid_release' );
+				}
+				++$inspected;
+
+				try {
+					$inspection = $inspector->inspectRelease(
+						$type,
+						$repository,
+						$candidate->providerReleaseId,
+						$candidate->tag,
+						$channel
+					);
+				} catch ( RepositoryReleaseInspectionRejected $failure ) {
+					if ( RepositoryReleaseInspectionRejected::INCOMPATIBLE === $failure->reason ) {
+						if ( 2 === $inspected ) {
+							return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'release_incompatible' );
+						}
+						continue;
+					}
+
+					return new ReleaseTrackingPreflight(
+						RepositoryReleaseInspectionRejected::NO_RELEASES === $failure->reason
+							? ReleaseTrackingPreflight::RELEASE_UNAVAILABLE
+							: ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
+						$packageRoot,
+						reasonCode: RepositoryReleaseInspectionRejected::NO_RELEASES === $failure->reason
+							? 'no_releases'
+							: 'invalid_release'
+					);
+				}
+
+				if ( ! hash_equals( $candidate->providerReleaseId, $inspection->providerReleaseId )
+					|| ! hash_equals( $candidate->tag, $inspection->tag )
+					|| ! hash_equals( $candidate->version, $inspection->version )
+					|| ! hash_equals( $packageRoot, $inspection->packageRoot )
+					|| ! hash_equals( $headerFile, $inspection->mainFile ) ) {
+					return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'release_identity_mismatch' );
+				}
+
+				$comparison   = version_compare( $inspection->version, $package->getVersion() );
+				$relationship = match ( true ) {
+					$comparison > 0 => 'newer',
+					$comparison < 0 => 'older',
+					default => 'same',
+				};
+				$releaseUrl = $metadata->releaseDetailsUrl( $repository, $inspection->tag );
+				if ( '' === $releaseUrl ) {
+					throw new InvalidArgumentException( 'The release details URL is unavailable.' );
+				}
+
+				return new ReleaseTrackingPreflight(
+					ReleaseTrackingPreflight::READY,
+					$packageRoot,
+					$inspection->version,
+					$releaseUrl,
+					$inspection->tag,
+					$inspection->version,
+					$relationship
+				);
+			}
+
+			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'release_incompatible' );
+		} catch ( Throwable ) {
+			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'provider_unavailable' );
+		}
 	}
 
 	private function configurationFor(
@@ -715,7 +803,31 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			'package_header_missing' => ReleaseTrackingPreflight::RELEASE_HEADER_MISSING,
 			'package_header_invalid' => ReleaseTrackingPreflight::RELEASE_HEADER_INVALID,
 			'package_archive_unreadable' => ReleaseTrackingPreflight::RELEASE_ARCHIVE_UNREADABLE,
+			'github_updater_release_incompatible' => ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
 			default => ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
+		};
+		$reasonCode = match ( $validation['code'] ) {
+			'release_identity_verified' => '',
+			'release_version_mismatch',
+			'package_header_missing',
+			'package_header_invalid',
+			'package_archive_unreadable',
+			'package_zip_extension_unavailable',
+			'package_archive_size_invalid',
+			'package_archive_too_large',
+			'package_archive_path_unsafe',
+			'package_archive_path_duplicate',
+			'package_archive_root_invalid',
+			'package_archive_entry_duplicate',
+			'package_archive_entry_limit',
+			'release_version_invalid',
+			'package_update_uri_missing',
+			'package_update_uri_invalid',
+			'package_compatibility_missing',
+			'package_compatibility_invalid',
+			'package_header_ambiguous' => $validation['code'],
+			'github_updater_release_incompatible' => 'release_incompatible',
+			default => 'invalid_release',
 		};
 
 		try {
@@ -729,7 +841,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				is_string( $diagnostics['version_relationship'] ?? null )
 					? $diagnostics['version_relationship']
 					: 'invalid',
-				ReleaseTrackingPreflight::READY === $code ? '' : $validation['code']
+				$reasonCode
 			);
 		} catch ( InvalidArgumentException ) {
 			return null;

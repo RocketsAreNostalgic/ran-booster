@@ -748,6 +748,10 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 			throw RepositoryReleaseInspectionRejected::noReleases();
 		}
 
+		if ( 'github_updater_release_incompatible' === $code ) {
+			throw RepositoryReleaseInspectionRejected::incompatible();
+		}
+
 		if ( $this->isInvalidReleaseFailureCode( $code ) ) {
 			throw RepositoryReleaseInspectionRejected::invalidRelease();
 		}

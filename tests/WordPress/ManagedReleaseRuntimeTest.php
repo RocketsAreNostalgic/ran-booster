@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;
@@ -26,6 +27,12 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseCandidate;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+use RAN\RepositoryProvider\RepositoryReleaseInspection;
+use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
+use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginNotFound;
@@ -695,10 +702,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$expectedAction = 'ran-booster-release-tracking-enable-plugin-example/example.php-1';
 
-		$preflightRoot    = null;
-		$preflightHeader  = null;
-		$preflightChannel = null;
-
 		$lock   = new RuntimeUpdaterLock();
 		$facade = new NativeReleaseTrackingFacade(
 			$plugins,
@@ -711,29 +714,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && $expectedAction === $action,
 			metadataEligible: static fn (): bool => true,
 			invalidateNative: static function (): void {
-			},
-			releasePreflight: static function (
-				string $type,
-				Package $preflightPackage,
-				string $packageRoot,
-				string $headerFile,
-				bool $force,
-				string $channel
-			) use (
-				&$preflightRoot,
-				&$preflightHeader,
-				&$preflightChannel
-			): \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight {
-				$preflightRoot    = $packageRoot;
-				$preflightHeader  = $headerFile;
-				$preflightChannel = $channel;
-				unset( $type, $preflightPackage, $force );
-
-				return new \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight(
-					\RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight::READY,
-					$packageRoot,
-					'2.0.0'
-				);
 			}
 		);
 
@@ -751,9 +731,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'example', $store->transitions[0]['configuration']->packageRoot() );
 		self::assertSame( 'example.php', $store->transitions[0]['configuration']->metadataFile() );
 		self::assertSame( 'prerelease', $store->transitions[0]['configuration']->channel() );
-		self::assertSame( 'example', $preflightRoot );
-		self::assertSame( 'example.php', $preflightHeader );
-		self::assertSame( 'prerelease', $preflightChannel );
 		self::assertSame( 1, $lock->acquires );
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 
@@ -792,9 +769,46 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
 		$store         = new RuntimeReleaseStore();
 		$lock          = new RuntimeUpdaterLock();
-		$preflights    = array();
+		$listings      = array();
+		$inspections   = array();
 		$invalidations = array();
 		$allowed       = true;
+		$providers     = $this->releaseMetadataRegistry(
+			list: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$listings ): RepositoryReleaseCandidateList {
+				$listings[] = compact( 'type', 'repository', 'channel' );
+				$ids        = 'plugin' === $type ? array( '101', '102' ) : array( '201' );
+
+				return new RepositoryReleaseCandidateList(
+					array_map(
+						static fn ( string $id ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate(
+							$id,
+							'v2.0.0',
+							'2.0.0',
+							false,
+							'2026-08-17T12:00:00Z',
+							array( 'example.zip' )
+						),
+						$ids
+					)
+				);
+			},
+			inspect: static function ( string $type, RepositoryReference $repository, string $releaseId, string $tag, string $channel ) use ( &$inspections ): RepositoryReleaseInspection {
+				$inspections[] = compact( 'type', 'repository', 'releaseId', 'tag', 'channel' );
+				if ( '101' === $releaseId ) {
+					throw RepositoryReleaseInspectionRejected::incompatible();
+				}
+
+				return new RepositoryReleaseInspection(
+					$releaseId,
+					$tag,
+					'2.0.0',
+					str_repeat( 'a', 40 ),
+					'plugin' === $type ? 'example' : 'example-theme',
+					'plugin' === $type ? 'example.php' : 'style.css',
+					'v1:' . str_repeat( 'b', 64 )
+				);
+			}
+		);
 		$facade        = new NativeReleaseTrackingFacade(
 			$plugins,
 			$themes,
@@ -807,7 +821,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				$lock
 			),
 			$lock,
-			$this->releaseMetadataRegistry(),
+			$providers,
 			static function () use ( &$allowed ): bool {
 				return $allowed;
 			},
@@ -815,23 +829,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			metadataEligible: static fn (): bool => true,
 			invalidateNative: static function ( string $type ) use ( &$invalidations ): void {
 				$invalidations[] = $type;
-			},
-			releasePreflight: static function (
-				string $type,
-				Package $package,
-				string $packageRoot,
-				string $headerFile,
-				bool $force,
-				string $channel
-			) use ( &$preflights ): \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight {
-				unset( $package );
-				$preflights[] = compact( 'type', 'packageRoot', 'headerFile', 'force', 'channel' );
-
-				return new \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight(
-					\RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight::READY,
-					$packageRoot,
-					'2.0.0'
-				);
 			}
 		);
 
@@ -848,27 +845,251 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$allowed = false;
 		self::assertNull( $facade->preflight( 'plugin', 'example/example.php', 1, 'prerelease', $pluginNonce ) );
 
-		self::assertSame(
-			array(
-				array(
-					'type'        => 'plugin',
-					'packageRoot' => 'example',
-					'headerFile'  => 'example.php',
-					'force'       => true,
-					'channel'     => 'prerelease',
-				),
-				array(
-					'type'        => 'theme',
-					'packageRoot' => 'example-theme',
-					'headerFile'  => 'style.css',
-					'force'       => true,
-					'channel'     => 'stable',
-				),
-			),
-			$preflights
-		);
+		self::assertSame( array( 'plugin', 'theme' ), array_column( $listings, 'type' ) );
+		self::assertSame( array( 'prerelease', 'stable' ), array_column( $listings, 'channel' ) );
+		self::assertSame( array( '101', '102', '201' ), array_column( $inspections, 'releaseId' ) );
+		self::assertSame( array( 'prerelease', 'prerelease', 'stable' ), array_column( $inspections, 'channel' ) );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( array(), $invalidations );
+		self::assertSame( 0, $lock->acquires );
+	}
+
+	public function testProviderPreflightFailsClosedAcrossIdentityChannelAndOperationalBoundaries(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes          = $this->createStub( ThemeRepository::class );
+		$store           = new RuntimeReleaseStore();
+		$lock            = new RuntimeUpdaterLock();
+		$mode            = 'release_id';
+		$inspectionCalls = 0;
+		$providers       = $this->releaseMetadataRegistry(
+			list: static function () use ( &$mode ): RepositoryReleaseCandidateList {
+				if ( 'operational' === $mode ) {
+					throw new \RuntimeException( 'token=must-not-escape' );
+				}
+				if ( 'none' === $mode ) {
+					return new RepositoryReleaseCandidateList( array() );
+				}
+				if ( 'incompatible_budget' === $mode ) {
+					return new RepositoryReleaseCandidateList(
+						array(
+							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', array( 'example.zip' ) ),
+							new RepositoryReleaseCandidate( '102', 'v2.5.0', '2.5.0', false, '2026-08-16T12:00:00Z', array( 'example.zip' ) ),
+							new RepositoryReleaseCandidate( '103', 'v2.0.0', '2.0.0', false, '2026-08-15T12:00:00Z', array( 'example.zip' ) ),
+						)
+					);
+				}
+
+				$prerelease = 'channel' === $mode;
+				$version    = 'hyphenated_stable' === $mode ? '2026-08' : ( $prerelease ? '2.0.0-beta' : '2.0.0' );
+				return new RepositoryReleaseCandidateList(
+					array(
+						new RepositoryReleaseCandidate(
+							'101',
+							$prerelease ? 'v2.0.0-beta' : ( 'hyphenated_stable' === $mode ? 'v2026-08' : 'v2.0.0' ),
+							$version,
+							$prerelease,
+							'2026-08-17T12:00:00Z',
+							array( 'example.zip' )
+						),
+					)
+				);
+			},
+			inspect: static function ( string $type, RepositoryReference $repository, string $releaseId, string $tag, string $channel ) use ( &$mode, &$inspectionCalls ): RepositoryReleaseInspection {
+				++$inspectionCalls;
+				unset( $type, $repository, $channel );
+				if ( 'incompatible_budget' === $mode ) {
+					throw RepositoryReleaseInspectionRejected::incompatible();
+				}
+
+				return new RepositoryReleaseInspection(
+					'release_id' === $mode ? '999' : $releaseId,
+					'tag' === $mode ? 'v2.0.1' : $tag,
+					'version' === $mode ? '2.0.1' : ( 'hyphenated_stable' === $mode ? '2026-08' : '2.0.0' ),
+					str_repeat( 'a', 40 ),
+					'package_root' === $mode ? 'other' : 'example',
+					'main_file' === $mode ? 'other.php' : 'example.php',
+					'v1:' . str_repeat( 'b', 64 )
+				);
+			}
+		);
+		$facade          = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar(
+				$plugins,
+				$themes,
+				$this->createStub( SecretsFile::class ),
+				$store,
+				$lock
+			),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+		$nonce           = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+
+		foreach ( array( 'release_id', 'tag', 'version', 'package_root', 'main_file' ) as $mode ) {
+			$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+			self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result?->code(), $mode );
+			self::assertSame( 'release_identity_mismatch', $result?->reasonCode(), $mode );
+		}
+
+		$mode   = 'channel';
+		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result?->code() );
+		self::assertSame( 'invalid_release', $result?->reasonCode() );
+
+		$mode   = 'none';
+		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result?->code() );
+		self::assertSame( 'no_releases', $result?->reasonCode() );
+
+		$mode   = 'operational';
+		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result?->code() );
+		self::assertSame( 'provider_unavailable', $result?->reasonCode() );
+		self::assertStringNotContainsString( 'token', $result?->reasonCode() ?? '' );
+
+		$mode   = 'hyphenated_stable';
+		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::READY, $result?->code() );
+		self::assertSame( '2026-08', $result?->latestVersion() );
+
+		$callsBeforeBudget = $inspectionCalls;
+		$mode              = 'incompatible_budget';
+		$result            = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result?->code() );
+		self::assertSame( 'release_incompatible', $result?->reasonCode() );
+		self::assertSame( 2, $inspectionCalls - $callsBeforeBudget );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( 0, $lock->acquires );
+	}
+
+	public function testProviderPreflightRequiresTheCompleteReadFacetSetBeforeRemoteWork(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			provider: 'partial',
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes   = $this->createStub( ThemeRepository::class );
+		$provider = new class() implements RepositoryProvider, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing {
+			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+			public int $listCalls = 0;
+
+			public function getMetadata(): ProviderMetadata {
+				return new ProviderMetadata( ProviderCode::parse( 'partial' ), 'Partial release fixture', 'https://partial.example/', 'Owner' );
+			}
+
+			public function expectedUpdateUri( RepositoryReference $repository ): string {
+				return 'https://partial.example/' . $repository->locator;
+			}
+
+			public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+				return $this->expectedUpdateUri( $repository ) . '/releases/' . rawurlencode( $tag );
+			}
+
+			public function listReleaseCandidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+				unset( $packageType, $repository, $channel );
+				++$this->listCalls;
+
+				return new RepositoryReleaseCandidateList( array() );
+			}
+		};
+		$store    = new RuntimeReleaseStore();
+		$lock     = new RuntimeUpdaterLock();
+		$facade   = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar(
+				$plugins,
+				$themes,
+				$this->createStub( SecretsFile::class ),
+				$store,
+				$lock
+			),
+			$lock,
+			new ProviderRegistry( array( $provider ) ),
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+		$nonce    = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+
+		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result?->code() );
+		self::assertSame( 'provider_unavailable', $result?->reasonCode() );
+		self::assertSame( 0, $provider->listCalls );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( 0, $lock->acquires );
+	}
+
+	public function testCompleteExternalReadFacetsRemainInertUntilNativeTargetOwnershipLands(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			provider: 'bb',
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$listCalls = 0;
+		$store     = new RuntimeReleaseStore();
+		$lock      = new RuntimeUpdaterLock();
+		$facade    = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar(
+				$plugins,
+				$themes,
+				$this->createStub( SecretsFile::class ),
+				$store,
+				$lock
+			),
+			$lock,
+			$this->releaseMetadataRegistry(
+				'bb',
+				'https://bitbucket.example/',
+				static function () use ( &$listCalls ): RepositoryReleaseCandidateList {
+					++$listCalls;
+
+					return new RepositoryReleaseCandidateList( array() );
+				}
+			),
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+		$nonce     = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+
+		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result?->code() );
+		self::assertSame( 'provider_unavailable', $result?->reasonCode() );
+		self::assertSame( 0, $listCalls );
+		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
 	}
 
@@ -904,9 +1125,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			static fn (): bool => true,
 			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && $expectedAction === $action,
 			metadataEligible: static fn (): bool => true,
-			releasePreflight: static function (): \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight {
-				self::fail( 'Self-managed targets must not run release preflight.' );
-			},
 			hasRegisteredTarget: static function ( string $type, string $identity ) use ( &$signals ): bool {
 				$signals[] = array( $type, $identity );
 
@@ -950,21 +1168,20 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			$registrar,
 			new RuntimeUpdaterLock(),
-			$this->releaseMetadataRegistry(),
+			$this->releaseMetadataRegistry(
+				inspect: static function (): RepositoryReleaseInspection {
+					throw RepositoryReleaseInspectionRejected::invalidRelease();
+				}
+			),
 			static fn (): bool => true,
 			static fn (): bool => true,
-			metadataEligible: static fn (): bool => true,
-			releasePreflight: static fn (): \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight => new \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight(
-				\RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-				'example',
-				reasonCode: 'github_updater_ambiguous_release_asset'
-			)
+			metadataEligible: static fn (): bool => true
 		);
 
 		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
 
 		self::assertFalse( $result->successful() );
-		self::assertSame( 'github_updater_ambiguous_release_asset', $result->code() );
+		self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code() );
 		self::assertCount( 0, $store->transitions );
 		self::assertSame( PackageSource::BRANCH, $package->getSource() );
 		self::assertSame( DeploymentPolicy::AUTOMATIC, $package->getDeploymentPolicy() );
@@ -1096,23 +1313,21 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$preflightCalls = 0;
 		$lock           = new RuntimeUpdaterLock();
+		$providers      = $this->releaseMetadataRegistry(
+			list: static function () use ( &$preflightCalls ): RepositoryReleaseCandidateList {
+				++$preflightCalls;
+
+				return new RepositoryReleaseCandidateList( array() );
+			}
+		);
 		$facade         = new NativeReleaseTrackingFacade(
 			$plugins,
 			$themes,
 			$store,
 			$registrar,
 			$lock,
-			$this->releaseMetadataRegistry(),
-			metadataEligible: static fn (): bool => true,
-			releasePreflight: static function () use ( &$preflightCalls ): \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight {
-				++$preflightCalls;
-
-				return new \RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight(
-					\RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight::READY,
-					'example',
-					'2.0.0'
-				);
-			}
+			$providers,
+			metadataEligible: static fn (): bool => true
 		);
 
 		$statuses = $facade->statuses(
@@ -1453,11 +1668,42 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 	}
 
-	private function releaseMetadataRegistry( string $code = 'gh', string $baseUrl = 'https://github.com/' ): ProviderRegistry {
-		$provider = new class( $code, $baseUrl ) implements RepositoryProvider, RepositoryReleaseMetadata {
+	/**
+	 * @param callable(string, RepositoryReference, string): RepositoryReleaseCandidateList|null $list
+	 * @param callable(string, RepositoryReference, string, string, string): RepositoryReleaseInspection|null $inspect
+	 */
+	private function releaseMetadataRegistry(
+		string $code = 'gh',
+		string $baseUrl = 'https://github.com/',
+		?callable $list = null,
+		?callable $inspect = null
+	): ProviderRegistry {
+		$provider = new class( $code, $baseUrl, $list, $inspect ) implements RepositoryProvider, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function __construct( private string $code, private string $baseUrl ) {
+			/** @var \Closure(string, RepositoryReference, string): RepositoryReleaseCandidateList */
+			private \Closure $list;
+
+			/** @var \Closure(string, RepositoryReference, string, string, string): RepositoryReleaseInspection */
+			private \Closure $inspect;
+
+			public function __construct( private string $code, private string $baseUrl, ?callable $list, ?callable $inspect ) {
+				$this->list    = null === $list
+					? static fn ( string $type, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList => new RepositoryReleaseCandidateList(
+						array( new RepositoryReleaseCandidate( '101', 'v2.0.0', '2.0.0', false, '2026-08-17T12:00:00Z', array( 'example.zip' ) ) )
+					)
+					: \Closure::fromCallable( $list );
+				$this->inspect = null === $inspect
+					? static fn ( string $type, RepositoryReference $repository, string $releaseId, string $tag, string $channel ): RepositoryReleaseInspection => new RepositoryReleaseInspection(
+						$releaseId,
+						$tag,
+						'2.0.0',
+						str_repeat( 'a', 40 ),
+						'plugin' === $type ? 'example' : 'example-theme',
+						'plugin' === $type ? 'example.php' : 'style.css',
+						'v1:' . str_repeat( 'b', 64 )
+					)
+					: \Closure::fromCallable( $inspect );
 			}
 
 			public function getMetadata(): ProviderMetadata {
@@ -1470,6 +1716,20 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 			public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
 				return '' === $tag ? '' : $this->expectedUpdateUri( $repository ) . '/releases/tag/' . rawurlencode( $tag );
+			}
+
+			public function listReleaseCandidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+				return ( $this->list )( $packageType, $repository, $channel );
+			}
+
+			public function inspectRelease(
+				string $packageType,
+				RepositoryReference $repository,
+				string $providerReleaseId,
+				string $tag,
+				string $channel
+			): RepositoryReleaseInspection {
+				return ( $this->inspect )( $packageType, $repository, $providerReleaseId, $tag, $channel );
 			}
 		};
 

@@ -7,14 +7,10 @@ namespace Tests\WordPress;
 require_once __DIR__ . '/../Support/WPError.php';
 require_once __DIR__ . '/../Support/ProspectiveReleaseUpdaterFixtures.php';
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
-use RAN\ManagedRepository;
-use RAN\Package;
 use RAN\Secrets\SecretsFile;
 use RAN\WordPress\ManagedReleasePreflight;
-use RAN\WPGitHubReleaseUpdater\V1\WordPress\ManagedCandidateValidationFixture;
+use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveDiscoveryFixture;
 use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseCandidatePreflight;
 
 final class ManagedReleasePreflightTest extends TestCase {
@@ -23,80 +19,38 @@ final class ManagedReleasePreflightTest extends TestCase {
 		ReleaseCandidatePreflight::reset();
 	}
 
-	#[DataProvider( 'updaterFailures' )]
-	public function testUpdaterFailuresRetainOnlyTheirBoundedCause(
-		string $updaterCode,
-		string $expectedCategory,
-		string $expectedReason
-	): void {
-		ReleaseCandidatePreflight::$check = new \WP_Error( $updaterCode, 'Sensitive provider detail.' );
+	public function testProspectiveDiscoveryRetainsItsBoundedLegacyShape(): void {
+		ReleaseCandidatePreflight::$discovery = new ProspectiveDiscoveryFixture( 101, 'v1.2.3', '1.2.3' );
 
-		$result = $this->preflight()( 'theme', $this->package(), 'example', 'style.css', true );
+		$result = $this->preflight()->discoverProspective(
+			'plugin',
+			$this->repository(),
+			'stable'
+		);
 
-		self::assertSame( $expectedCategory, $result->code() );
-		self::assertSame( $expectedReason, $result->reasonCode() );
+		self::assertSame(
+			array(
+				'release_id' => 101,
+				'tag'        => 'v1.2.3',
+				'version'    => '1.2.3',
+				'channel'    => 'stable',
+			),
+			$result
+		);
+		self::assertSame( 1, ReleaseCandidatePreflight::$discoverCalls );
+		self::assertSame( 'owner/example', ReleaseCandidatePreflight::$target['repository'] );
+		self::assertNull( ReleaseCandidatePreflight::$target['accessToken'] );
 	}
 
-	/** @return iterable<string, array{string, string, string}> */
-	public static function updaterFailures(): iterable {
-		yield 'missing or multiple ZIP assets' => array(
-			'github_updater_ambiguous_release_asset',
-			ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-			'github_updater_ambiguous_release_asset',
-		);
-		yield 'no eligible release' => array(
-			'github_updater_no_eligible_release',
-			ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
-			'github_updater_no_eligible_release',
-		);
-		yield 'credentials' => array(
-			'github_updater_github_authentication_failed',
-			ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
-			'github_updater_github_authentication_failed',
-		);
-		yield 'rate limit' => array(
-			'github_updater_rate_limited',
-			ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
-			'github_updater_rate_limited',
-		);
-		yield 'integrity' => array(
-			'github_updater_downloaded_digest_mismatch',
-			ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-			'github_updater_downloaded_digest_mismatch',
-		);
-		yield 'artifact runtime failure' => array(
-			'github_updater_release_artifact_unavailable',
-			ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
-			'github_updater_release_artifact_unavailable',
-		);
-		yield 'coordination detail is normalized' => array(
-			'github_updater_operation_fence_lost',
-			ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
-			'github_updater_operation_failed',
-		);
-		yield 'assurance detail is normalized' => array(
-			'github_updater_release_assurance_rejected',
-			ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-			'github_updater_release_assurance_failed',
-		);
-	}
+	public function testProspectiveDiscoveryRejectsNonGitHubTargetsBeforeRemoteWork(): void {
+		$repository             = $this->repository();
+		$repository['provider'] = 'bb';
 
-	public function testCandidateValidationRetainsItsExactSafeFailure(): void {
-		ReleaseCandidatePreflight::$check = new ManagedCandidateValidationFixture( 'package_update_uri_invalid' );
+		$result = $this->preflight()->discoverProspective( 'theme', $repository, 'stable' );
 
-		$result = $this->preflight()( 'theme', $this->package(), 'example', 'style.css', true );
-
-		self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code() );
-		self::assertSame( 'package_update_uri_invalid', $result->reasonCode() );
-	}
-
-	public function testUnknownUpdaterFailureRemainsSafeAndHonest(): void {
-		ReleaseCandidatePreflight::$check = new \WP_Error( 'provider_secret_detail', 'token=do-not-render' );
-
-		$result = $this->preflight()( 'theme', $this->package(), 'example', 'style.css', true );
-
-		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
-		self::assertSame( '', $result->reasonCode() );
+		self::assertInstanceOf( \WP_Error::class, $result );
+		self::assertSame( 'github_updater_release_preflight_unavailable', $result->get_error_code() );
+		self::assertSame( 0, ReleaseCandidatePreflight::$discoverCalls );
 	}
 
 	private function preflight(): ManagedReleasePreflight {
@@ -105,16 +59,14 @@ final class ManagedReleasePreflightTest extends TestCase {
 		);
 	}
 
-	private function package(): Package {
-		$package = $this->createMock( Package::class );
-		$package->method( 'getRepository' )->willReturn(
-			new ManagedRepository( 'gh', 'example/example', '101', 'main' )
+	/** @return array<string, string> */
+	private function repository(): array {
+		return array(
+			'provider'               => 'gh',
+			'repository'             => 'owner/example',
+			'provider_repository_id' => '101',
+			'credential_id'          => '',
+			'private'                => '0',
 		);
-		$package->method( 'getProviderRepositoryId' )->willReturn( '101' );
-		$package->method( 'getCredentialId' )->willReturn( '' );
-		$package->method( 'getPrivate' )->willReturn( false );
-		$package->method( 'getVersion' )->willReturn( '1.2.3' );
-
-		return $package;
 	}
 }

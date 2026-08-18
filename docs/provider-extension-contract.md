@@ -314,7 +314,12 @@ archive and grants no inspection, acquisition, installation or mutation
 authority. Publication time and expected ZIP names remain in the typed value
 only because the unchanged standalone facade still validates them; they grant no
 artifact authority. The bounded list wrapper enforces the result limit, typed
-members and unique provider identities at the capability boundary. The facet
+members and unique provider identities at the capability boundary. List order
+is the provider's bounded inspection preference. Core inspects at most the first
+two candidates in that order, continues only when the provider classifies the
+package as incompatible, and accepts only exact listing-to-inspection identity
+continuity. A vanished, corrupt or contradictory preferred release fails closed
+without falling through to an older release. The facet
 does not by itself make the complete release product available. Until those
 remaining operations have their own provider facets,
 Core's complete-product projection continues to advertise only the bundled
@@ -333,8 +338,10 @@ call, and returns one bounded `RepositoryReleaseInspection` containing only the
 provider release identity, tag, version, provider commit identity, package root,
 main file and opaque fingerprint. The value exposes no local path, URL,
 credential, archive or artifact handle. `RepositoryReleaseInspectionRejected`
-distinguishes `no_releases` from `invalid_release`; other exceptions mean the
-inspection operation was unavailable. The facet grants no installation,
+distinguishes `no_releases`, `invalid_release` and package `incompatible`;
+other exceptions mean the inspection operation was unavailable. Only
+`incompatible` permits Core to try the next provider-ordered candidate. The
+facet grants no installation,
 updater or mutation authority and does not by itself make the complete release
 product available.
 
@@ -480,6 +487,16 @@ published-release support. Core rejects listing with `unsupported_provider`
 when the selected provider omits the listing facet, and rejects later
 prospective operations when the provider is absent from the complete-product
 projection; both checks happen before repository resolution.
+
+For an already managed branch package, Core composes
+`RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector` and
+`RepositoryReleaseMetadata` for the protected preflight that precedes a source
+transition. The provider owns candidate ordering, remote calls, credentials and
+archive inspection. Core inspects at most two of the eight listed candidates,
+falls through only for package incompatibility, and checks exact release
+identity, tag, version, channel and installed package identity, computes the
+version relationship, then performs its own source-revision CAS. A missing or
+partial facet set is unavailable and cannot change package state.
 
 The physically separate conformance plugin in
 `tests/fixtures/ran-booster-fixture-provider/` registers a novel provider ID,

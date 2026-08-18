@@ -4,114 +4,14 @@ declare(strict_types=1);
 
 namespace RAN\WordPress;
 
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
-use RAN\Package;
 use RAN\Secrets\SecretsFile;
 
 /**
- * Runs the shared updater's bounded, read-only artifact verification before a
- * managed package is allowed to adopt published releases.
+ * Retains the legacy shared-updater discovery adapter for prospective releases.
  */
 final class ManagedReleasePreflight {
 
 	public function __construct( private SecretsFile $secrets ) {
-	}
-
-	public function __invoke(
-		string $type,
-		Package $package,
-		string $packageRoot,
-		string $headerFile,
-		bool $force = false,
-		string $channel = 'stable'
-	): ReleaseTrackingPreflight {
-		try {
-			$preflightClass = 'RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\ReleaseCandidatePreflight';
-			if ( ! class_exists( $preflightClass ) ) {
-				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'release_runtime_unavailable' );
-			}
-
-			$target    = array(
-				'repository'           => (string) $package->getRepository(),
-				'providerRepositoryId' => (string) $package->getProviderRepositoryId(),
-				'pluginSlug'           => $packageRoot,
-				'mainFile'             => $headerFile,
-				'channel'              => $channel,
-				'accessToken'          => $this->accessToken( $package ),
-				'packageType'          => $type,
-				'themeRoot'            => 'theme' === $type ? $packageRoot : null,
-			);
-			$candidate = $preflightClass::fromTarget( $target );
-			if ( $candidate instanceof \WP_Error ) {
-				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'github_updater_invalid_preflight_target' );
-			}
-			$candidate = $candidate->check( $force );
-			if ( $candidate instanceof \WP_Error ) {
-				[ $code, $reasonCode ] = $this->errorOutcome( $candidate->get_error_code() );
-				return new ReleaseTrackingPreflight(
-					$code,
-					$packageRoot,
-					reasonCode: $reasonCode
-				);
-			}
-
-			$code = match ( $candidate->code() ) {
-				'release_version_mismatch' => ReleaseTrackingPreflight::RELEASE_VERSION_MISMATCH,
-				'package_header_missing' => ReleaseTrackingPreflight::RELEASE_HEADER_MISSING,
-				'package_header_invalid' => ReleaseTrackingPreflight::RELEASE_HEADER_INVALID,
-				'package_archive_unreadable' => ReleaseTrackingPreflight::RELEASE_ARCHIVE_UNREADABLE,
-				'github_updater_release_incompatible' => ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
-				'release_identity_verified' => ReleaseTrackingPreflight::READY,
-				default => ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-			};
-			$reasonCode = ReleaseTrackingPreflight::READY === $code ? '' : $candidate->code();
-
-			return new ReleaseTrackingPreflight(
-				$code,
-				$packageRoot,
-				$candidate->releaseVersion(),
-				$this->releaseUrl( (string) $package->getRepository(), $candidate->releaseTag() ),
-				$candidate->releaseTag(),
-				$candidate->packageHeaderVersion() ?? '',
-				$candidate->relationshipTo( $package->getVersion() ),
-				$reasonCode
-			);
-		} catch ( \Throwable ) {
-			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot );
-		}
-	}
-
-	/** @return array{string, string} */
-	private function errorOutcome( string $errorCode ): array {
-		if ( str_starts_with( $errorCode, 'github_updater_operation_' ) ) {
-			return array( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, 'github_updater_operation_failed' );
-		}
-		if ( str_starts_with( $errorCode, 'github_updater_release_assurance_' ) ) {
-			return array( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, 'github_updater_release_assurance_failed' );
-		}
-
-		$category = match ( $errorCode ) {
-			'github_updater_no_eligible_release',
-			'github_updater_release_search_budget_exhausted',
-			'github_updater_release_incompatible' => ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
-			'github_updater_ambiguous_release_asset',
-			'github_updater_invalid_release_asset',
-			'github_updater_release_asset_too_large',
-			'github_updater_missing_asset_digest',
-			'github_updater_invalid_release',
-			'github_updater_release_is_draft',
-			'github_updater_invalid_release_tag',
-			'github_updater_prerelease_not_allowed',
-			'github_updater_invalid_release_url',
-			'github_updater_invalid_tag_commit',
-			'github_updater_artifact_continuity_failed',
-			'github_updater_repository_identity_changed',
-			'github_updater_downloaded_artifact_invalid',
-			'github_updater_downloaded_digest_mismatch' => ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-			default => ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE,
-		};
-
-		return array( $category, $errorCode );
 	}
 
 	/**
@@ -140,15 +40,6 @@ final class ManagedReleasePreflight {
 			'version'    => $discovery->version(),
 			'channel'    => $channel,
 		);
-	}
-
-	private function releaseUrl( string $repository, string $tag ): string {
-		if ( 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\z/D', $repository )
-			|| '' === $tag || strlen( $tag ) > 100 ) {
-			return '';
-		}
-
-		return 'https://github.com/' . $repository . '/releases/tag/' . rawurlencode( $tag );
 	}
 
 	/**
@@ -205,15 +96,6 @@ final class ManagedReleasePreflight {
 			&& 1 === preg_match( '/\A[1-9][0-9]{0,18}\z/D', $repository['provider_repository_id'] )
 			&& is_string( $repository['credential_id'] ?? null )
 			&& is_string( $repository['private'] ?? null );
-	}
-
-	private function accessToken( Package $package ): ?callable {
-		$credentialId = $package->getCredentialId();
-		if ( ! $package->getPrivate() && '' === $credentialId ) {
-			return null;
-		}
-
-		return $this->accessTokenForCredential( $credentialId, (bool) $package->getPrivate() );
 	}
 
 	private function accessTokenForCredential( string $credentialId, bool $private ): ?callable {

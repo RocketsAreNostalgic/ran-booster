@@ -400,8 +400,7 @@ final class BoosterServiceProvider {
 			$releaseStore,
 			$releaseRegistrar,
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class ),
-			releasePreflight: new ManagedReleasePreflight( $secrets ),
+			$container->make( ProviderRegistry::class )
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );

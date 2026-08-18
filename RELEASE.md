@@ -21,14 +21,15 @@ proposal using the reviewed authority. Rerunning the authority-changing commit
 does not bypass this separation, and version files or tags must not be edited by
 hand.
 
-## Candidate fetch credentials
+## Release Please candidate fetch credentials
 
-Release jobs check out source with `persist-credentials: false`. When a job must
-fetch an exact Release Please base or pull-request head, that individual fetch
-receives the step-scoped GitHub token through an ephemeral Git credential
-helper. The helper is configured only for the command: it does not persist the
-token in the checkout, repository configuration, or runner-wide configuration.
-A missing token fails closed before candidate network work begins.
+The Release Please workflow checks out source with `persist-credentials: false`.
+When it must fetch an exact Release Please base or pull request head, that
+individual fetch receives the step-scoped GitHub token through an ephemeral Git
+credential helper. The helper is configured only for the command: it does not
+persist the token in the checkout, repository configuration, or runner-wide
+configuration. A missing token fails closed before candidate network work
+begins.
 
 Fetch authentication is transport only, not release identity. Before dispatch,
 the workflow still requires the exact live bot-owned pending pull request, its

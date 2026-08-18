@@ -96,6 +96,17 @@ for id in 3 4 5 6; do
 done
 
 release_workflow="$repo_root/.github/workflows/release-please.yml"
+draft_step=$(sed -n \
+	'/      - name: Create or reuse draft and attach verified assets/,/      - name: Publish only under immutable-release contract/p' \
+	"$release_workflow")
+grep -F 'releases?per_page=100' <<< "$draft_step" >/dev/null
+grep -F 'releases/assets/${archive_asset_id}' <<< "$draft_step" >/dev/null
+grep -F 'releases/assets/${checksum_asset_id}' <<< "$draft_step" >/dev/null
+if grep -F 'releases/tags/${RAN_RELEASE_TAG}' <<< "$draft_step" >/dev/null \
+	|| grep -F 'gh release download "$RAN_RELEASE_TAG"' <<< "$draft_step" >/dev/null; then
+	printf 'draft readback relies on a tag endpoint that excludes draft releases\n' >&2
+	exit 1
+fi
 action_parser="$work_root/release-action-parser.sh"
 {
 	printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'

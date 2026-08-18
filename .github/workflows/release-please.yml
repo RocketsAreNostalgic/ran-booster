@@ -568,15 +568,26 @@ jobs:
           trap 'rm -rf "$remote"' EXIT
           archive_name="ran-booster-${RAN_RELEASE_VERSION}.zip"
           checksum_name="${archive_name}.sha256"
-          gh release download "$RAN_RELEASE_TAG" \
-            --dir "$remote" \
-            --pattern "$archive_name" \
-            --repo "$GITHUB_REPOSITORY"
-          gh release download "$RAN_RELEASE_TAG" \
-            --dir "$remote" \
-            --pattern "$checksum_name" \
-            --repo "$GITHUB_REPOSITORY"
-          draft_release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RAN_RELEASE_TAG}")"
+          release_pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+          draft_release_json="$(jq -cer \
+            --arg tag "$RAN_RELEASE_TAG" \
+            --arg commit "$RAN_RELEASE_COMMIT" \
+            'add
+            | [.[] | select(.tag_name == $tag and .target_commitish == $commit and .draft == true)]
+            | if length == 1 then .[0] else error("No unique exact draft release is available.") end' \
+            <<< "$release_pages")"
+          archive_asset_id="$(jq -er --arg name "$archive_name" \
+            '.assets | [.[] | select(.name == $name)]
+            | if length == 1 then .[0].id else error("No unique archive asset is available.") end' \
+            <<< "$draft_release_json")"
+          checksum_asset_id="$(jq -er --arg name "$checksum_name" \
+            '.assets | [.[] | select(.name == $name)]
+            | if length == 1 then .[0].id else error("No unique checksum asset is available.") end' \
+            <<< "$draft_release_json")"
+          gh api -H 'Accept: application/octet-stream' \
+            "repos/${GITHUB_REPOSITORY}/releases/assets/${archive_asset_id}" > "$remote/$archive_name"
+          gh api -H 'Accept: application/octet-stream' \
+            "repos/${GITHUB_REPOSITORY}/releases/assets/${checksum_asset_id}" > "$remote/$checksum_name"
           bash scripts/verify-immutable-release-assets.sh \
             "build/${archive_name}" "build/${checksum_name}" "$remote" \
             <<< "$draft_release_json"

@@ -1042,6 +1042,57 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
+	public function testCompleteExternalReadFacetsRemainInertUntilNativeTargetOwnershipLands(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			provider: 'bb',
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$listCalls = 0;
+		$store     = new RuntimeReleaseStore();
+		$lock      = new RuntimeUpdaterLock();
+		$facade    = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar(
+				$plugins,
+				$themes,
+				$this->createStub( SecretsFile::class ),
+				$store,
+				$lock
+			),
+			$lock,
+			$this->releaseMetadataRegistry(
+				'bb',
+				'https://bitbucket.example/',
+				static function () use ( &$listCalls ): RepositoryReleaseCandidateList {
+					++$listCalls;
+
+					return new RepositoryReleaseCandidateList( array() );
+				}
+			),
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+		$nonce     = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+
+		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result?->code() );
+		self::assertSame( 'provider_unavailable', $result?->reasonCode() );
+		self::assertSame( 0, $listCalls );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( 0, $lock->acquires );
+	}
+
 	public function testFacadeRefusesBranchPackageAlreadyRegisteredByTheRANUpdater(): void {
 		$package = $this->package(
 			'plugin',

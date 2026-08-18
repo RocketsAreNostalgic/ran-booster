@@ -142,47 +142,6 @@ final class ManagedReleasePreflight {
 		);
 	}
 
-	/**
-	 * Revalidate and acquire the exact archive selected by the administrator.
-	 *
-	 * @param array<string, mixed> $repository
-	 * @return ProspectiveReleaseArtifact|\WP_Error
-	 */
-	public function acquireProspective(
-		string $type,
-		array $repository,
-		int $releaseId,
-		string $tag,
-		string $expectedFingerprint,
-		string $channel
-	): ProspectiveReleaseArtifact|\WP_Error {
-		$candidate = $this->prospectiveCandidate( $type, $repository, $channel );
-		if ( $candidate instanceof \WP_Error ) {
-			return $candidate;
-		}
-		$fingerprintClass = 'RAN\\WPGitHubReleaseUpdater\\V1\\WordPress\\ReleaseFingerprint';
-		$fingerprint      = $fingerprintClass::fromString( $expectedFingerprint );
-		if ( $fingerprint instanceof \WP_Error ) {
-			return $fingerprint;
-		}
-		$validated = $candidate->acquireExact( $releaseId, $tag, $fingerprint );
-		if ( $validated instanceof \WP_Error ) {
-			return $validated;
-		}
-		$inspection = $validated->inspection();
-
-		return new ProspectiveReleaseArtifact(
-			$validated,
-			$inspection->releaseId(),
-			$inspection->tag(),
-			$inspection->version(),
-			$inspection->commit(),
-			$inspection->detailsUrl(),
-			$inspection->packageRoot(),
-			$inspection->mainFile()
-		);
-	}
-
 	private function releaseUrl( string $repository, string $tag ): string {
 		if ( 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\z/D', $repository )
 			|| '' === $tag || strlen( $tag ) > 100 ) {

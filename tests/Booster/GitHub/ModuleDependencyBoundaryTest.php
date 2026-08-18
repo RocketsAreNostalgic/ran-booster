@@ -10,7 +10,6 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 
 	private const FORBIDDEN_CORE_NAMESPACES = array(
 		'RAN\\Admin\\',
-		'RAN\\Deployment\\',
 		'RAN\\Internal\\',
 		'RAN\\Logging\\',
 		'RAN\\Secrets\\',
@@ -19,6 +18,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 	);
 
 	private const ALLOWED_CORE_IMPORTS = array(
+		'RAN\Deployment\PreparedArtifact',
 		'RAN\RepositoryProvider\Admin\CredentialFieldMetadata',
 		'RAN\RepositoryProvider\Admin\CredentialKindMetadata',
 		'RAN\RepositoryProvider\Admin\ProviderAdminMetadata',
@@ -56,6 +56,9 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\RepositoryLookupRequest',
 		'RAN\RepositoryProvider\RepositoryProvider',
 		'RAN\RepositoryProvider\RepositoryReference',
+		'RAN\RepositoryProvider\RepositoryReleaseAcquirer',
+		'RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected',
+		'RAN\RepositoryProvider\RepositoryReleaseArtifact',
 		'RAN\RepositoryProvider\RepositoryReleaseCandidate',
 		'RAN\RepositoryProvider\RepositoryReleaseCandidateList',
 		'RAN\RepositoryProvider\RepositoryReleaseCandidateListing',

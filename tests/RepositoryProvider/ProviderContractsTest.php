@@ -15,6 +15,9 @@ use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
+use RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected;
+use RAN\RepositoryProvider\RepositoryReleaseArtifact;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -139,6 +142,57 @@ final class ProviderContractsTest extends TestCase {
 		self::assertSame( 'string', (string) $parameters[2]->getType() );
 		self::assertSame( 'string', (string) $parameters[3]->getType() );
 		self::assertSame( 'string', (string) $parameters[4]->getType() );
+	}
+
+	public function testReleaseAcquisitionIsOneExactTypedCapability(): void {
+		self::assertTrue( is_subclass_of( RepositoryReleaseAcquirer::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertSame( array( 'acquireRelease' ), get_class_methods( RepositoryReleaseAcquirer::class ) );
+
+		$method     = new \ReflectionMethod( RepositoryReleaseAcquirer::class, 'acquireRelease' );
+		$parameters = $method->getParameters();
+		self::assertSame( RepositoryReleaseArtifact::class, (string) $method->getReturnType() );
+		self::assertSame(
+			array( 'packageType', 'repository', 'providerReleaseId', 'tag', 'expectedFingerprint', 'channel' ),
+			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $parameters )
+		);
+		self::assertSame( RepositoryReference::class, (string) $parameters[1]->getType() );
+		foreach ( array( 0, 2, 3, 4, 5 ) as $index ) {
+			self::assertSame( 'string', (string) $parameters[ $index ]->getType() );
+		}
+	}
+
+	public function testReleaseArtifactIsOneShotAndPathFree(): void {
+		self::assertTrue( interface_exists( RepositoryReleaseArtifact::class ) );
+		$methods = get_class_methods( RepositoryReleaseArtifact::class );
+		sort( $methods );
+		self::assertSame(
+			array( 'discard', 'handoffToCore', 'identifier', 'mainFile', 'packageRoot', 'version' ),
+			$methods
+		);
+		self::assertSame(
+			\RAN\Deployment\PreparedArtifact::class,
+			(string) ( new \ReflectionMethod( RepositoryReleaseArtifact::class, 'handoffToCore' ) )->getReturnType()
+		);
+	}
+
+	public function testReleaseAcquisitionRejectionIsBounded(): void {
+		$rejection = RepositoryReleaseAcquisitionRejected::invalidRelease();
+
+		self::assertSame( RepositoryReleaseAcquisitionRejected::INVALID_RELEASE, $rejection->reason );
+		self::assertSame(
+			RepositoryReleaseAcquisitionRejected::CLEANUP_FAILED,
+			RepositoryReleaseAcquisitionRejected::cleanupFailed()->reason
+		);
+		self::assertSame(
+			array(
+				'INVALID_RELEASE' => 'invalid_release',
+				'CLEANUP_FAILED'  => 'cleanup_failed',
+			),
+			( new \ReflectionClass( RepositoryReleaseAcquisitionRejected::class ) )->getConstants()
+		);
+		self::assertTrue(
+			( new \ReflectionClass( RepositoryReleaseAcquisitionRejected::class ) )->getConstructor()?->isPrivate()
+		);
 	}
 
 	public function testReleaseInspectionEvidenceIsBoundedTypedAndPathFree(): void {

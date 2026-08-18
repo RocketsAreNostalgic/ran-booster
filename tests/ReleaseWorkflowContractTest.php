@@ -80,7 +80,9 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'build/ran-booster-${{ steps.finalize.outputs.version }}.zip.sha256', $workflow );
 		self::assertStringContainsString( 'wordpress-release-candidate:', $workflow );
 		self::assertStringContainsString( 'RAN_PR_HEAD_SHA: ${{ needs.runtime-archive.outputs.pr-head-sha }}', $workflow );
-		self::assertStringContainsString( 'and .run.event == "workflow_dispatch"', $workflow );
+		self::assertStringContainsString( '--arg event "$GITHUB_EVENT_NAME"', $workflow );
+		self::assertSame( 2, substr_count( $workflow, 'and .run.event == $event' ) );
+		self::assertStringNotContainsString( 'and .run.event == "workflow_dispatch"', $workflow );
 		self::assertStringContainsString( 'run: composer check', $workflow );
 		self::assertStringContainsString( 'run: pnpm check', $workflow );
 		self::assertStringContainsString( 'matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}', $workflow );

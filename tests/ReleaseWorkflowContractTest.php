@@ -59,6 +59,18 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'all(.[]; .filename != $path)', $workflow );
 	}
 
+	public function testQualityFetchesCandidateCommitsWithEphemeralTokenCredentials(): void {
+		$workflow         = $this->workflow( 'quality.yml' );
+		$credentialHelper = 'credential.helper=!f() { printf "%s\\n" "username=x-access-token" "password=$GH_TOKEN"; }; f';
+
+		self::assertStringContainsString( 'persist-credentials: false', $workflow );
+		self::assertSame( 1, substr_count( $workflow, 'test -n "$GH_TOKEN"' ) );
+		self::assertSame( 1, substr_count( $workflow, $credentialHelper ) );
+		self::assertSame( 2, substr_count( $workflow, 'git "${git_auth[@]}" fetch --no-tags origin' ) );
+		self::assertStringNotContainsString( 'git fetch --no-tags origin', $workflow );
+		self::assertStringNotContainsString( 'password=${GH_TOKEN}', $workflow );
+	}
+
 	public function testQualitySharesOneVerifiedArchiveAndKeepsTheCoreGates(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 

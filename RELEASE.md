@@ -5,6 +5,22 @@ Release Please owns the Beta version proposal, changelog entry, plugin header,
 Commits determine the proposed release; do not edit generated version changes or
 create tags manually.
 
+## Changes to release authority
+
+The Quality and Release Please workflows treat their workflow definitions and
+release scripts as privileged release authority. When a merged pull request
+changes one of those files, Quality still verifies the merged commit, but
+Release Please intentionally makes no repository or release mutation. This
+prevents a newly changed workflow from immediately exercising its own release
+permissions.
+
+After an authority-changing pull request lands, merge a separate ordinary pull
+request that does not change the protected workflows or release scripts. Its
+successful main-branch Quality run may then open or update the Release Please
+proposal using the reviewed authority. Rerunning the authority-changing commit
+does not bypass this separation, and version files or tags must not be edited by
+hand.
+
 Before merging a release proposal:
 
 1. run `composer check` and `pnpm check` from the exact candidate commit;

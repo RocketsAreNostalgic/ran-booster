@@ -49,6 +49,10 @@ jobs:
         run: |
           set -euo pipefail
           release_branch='release-please--branches--main--components--ran-booster'
+          test -n "$GH_TOKEN"
+          # Git expands the token only inside its ephemeral credential helper.
+          # shellcheck disable=SC2016
+          git_auth=( -c 'credential.helper=!f() { printf "%s\n" "username=x-access-token" "password=$GH_TOKEN"; }; f' )
           test "$(git rev-parse HEAD)" = "$RAN_QUALITY_COMMIT"
           current_main="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
 
@@ -115,9 +119,9 @@ jobs:
           release_base="$(jq -er '.base.sha' <<< "$merged_pr")"
           release_head="$(jq -er '.head.sha' <<< "$merged_pr")"
           if ! git cat-file -e "${release_base}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$release_base"
+            git "${git_auth[@]}" fetch --no-tags origin "$release_base"
           fi
-          git fetch --no-tags origin "refs/pull/${release_pr_number}/head"
+          git "${git_auth[@]}" fetch --no-tags origin "refs/pull/${release_pr_number}/head"
           test "$(git rev-parse FETCH_HEAD)" = "$release_head"
           bash scripts/validate-release-candidate.sh "$release_base" "$release_head"
 
@@ -195,6 +199,10 @@ jobs:
         run: |
           set -euo pipefail
           release_branch='release-please--branches--main--components--ran-booster'
+          test -n "$GH_TOKEN"
+          # Git expands the token only inside its ephemeral credential helper.
+          # shellcheck disable=SC2016
+          git_auth=( -c 'credential.helper=!f() { printf "%s\n" "username=x-access-token" "password=$GH_TOKEN"; }; f' )
           expected_files='[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt"]'
           action_output=false
           if [[ "$RAN_RELEASE_PRS_CREATED" == true ]]; then
@@ -263,9 +271,9 @@ jobs:
             test "$pr_number" = "$action_pr_number"
           fi
           if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$base_sha"
+            git "${git_auth[@]}" fetch --no-tags origin "$base_sha"
           fi
-          git fetch --no-tags origin "refs/pull/${pr_number}/head"
+          git "${git_auth[@]}" fetch --no-tags origin "refs/pull/${pr_number}/head"
           test "$(git rev-parse FETCH_HEAD)" = "$head_sha"
           bash scripts/validate-release-candidate.sh "$base_sha" "$head_sha"
 

@@ -25,11 +25,58 @@ use RAN\RepositoryProvider\RepositoryReleaseInspection;
 use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 
 final class ProviderContractsTest extends TestCase {
+	public function testReleaseNativeTargetsAreOneExactTypedCapability(): void {
+		self::assertTrue( is_subclass_of( RepositoryReleaseNativeTargets::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertSame(
+			array( 'hasRegisteredNativeTarget', 'createNativeTarget' ),
+			get_class_methods( RepositoryReleaseNativeTargets::class )
+		);
+		$factory = new \ReflectionMethod( RepositoryReleaseNativeTargets::class, 'createNativeTarget' );
+		self::assertSame( RepositoryReleaseNativeTarget::class, (string) $factory->getReturnType() );
+		self::assertSame(
+			array( 'packageType', 'repository', 'metadataFile', 'packageRoot', 'installedIdentifier', 'channel', 'deploymentPolicy' ),
+			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $factory->getParameters() )
+		);
+		self::assertSame( RepositoryReference::class, (string) $factory->getParameters()[1]->getType() );
+		self::assertSame(
+			array( 'register', 'status', 'refresh' ),
+			get_class_methods( RepositoryReleaseNativeTarget::class )
+		);
+	}
+
+	public function testReleaseNativeTargetStatusIsBoundedAndContainsNoGenericPayload(): void {
+		$status = new RepositoryReleaseNativeTargetStatus(
+			true,
+			'2.0.0',
+			'newer',
+			1_700_000_000,
+			1_700_003_600,
+			'',
+			'release_identity_verified',
+			'v2.0.0',
+			'2.0.0',
+			'2.0.0'
+		);
+		self::assertTrue( $status->active );
+		self::assertSame(
+			array( 'active', 'offeredVersion', 'versionRelationship', 'lastCheck', 'nextCheck', 'failureCode', 'candidateCode', 'candidateReleaseTag', 'candidateReleaseVersion', 'candidatePackageHeaderVersion' ),
+			array_map(
+				static fn ( \ReflectionProperty $property ): string => $property->name,
+				( new \ReflectionClass( RepositoryReleaseNativeTargetStatus::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC )
+			)
+		);
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseNativeTargetStatus( false, str_repeat( '1', 65 ) );
+	}
+
 	public function testReleaseCandidateListingIsOneExactTypedCapability(): void {
 		self::assertTrue( is_subclass_of( RepositoryReleaseCandidateListing::class, \RAN\Provider\ProviderCapability::class ) );
 

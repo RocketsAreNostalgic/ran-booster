@@ -119,6 +119,10 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( '<h1', $output );
 		self::assertSame( 4, substr_count( $output, '>Free<' ) );
 		self::assertSame( 0, substr_count( $output, '>Sponsor<' ) );
+		self::assertStringNotContainsString( 'Subscriber', $output );
+		self::assertStringNotContainsString( 'Get access', $output );
+		self::assertStringNotContainsString( 'Sponsor packages', $output );
+		self::assertStringContainsString( 'immutable beta releases pass readiness review', $output );
 		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
 		self::assertSame( 2, substr_count( $output, '>Install<' ) );
 		self::assertStringNotContainsString( '>Sponsor install<', $output );
@@ -135,7 +139,8 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 2, substr_count( $output, '>About this extension<' ) );
 		self::assertStringContainsString( '#TB_inline?width=772', $output );
 		self::assertStringNotContainsString( 'ran-booster-assisted-hooks', $output );
-		self::assertStringContainsString( 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation.', $output );
+		self::assertStringContainsString( 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.', $output );
+		self::assertStringContainsString( 'enabling deployment remains an explicit decision', $output );
 		self::assertStringContainsString( '/assets/extensions/bitbucket-cloud.svg', $output );
 		self::assertStringNotContainsString( 'Release Deployments', $output );
 		self::assertStringNotContainsString( '/assets/extensions/release-deployments.svg', $output );

@@ -545,7 +545,7 @@ class SecretsStorageProvisioner {
 		if ( $this->isMultisiteInstallation() ) {
 			return SecretsStorageProvisioningResult::unsupported(
 				'multisite_unsupported',
-				'Encrypted file-backed secrets storage is not available on multisite in this Alpha release.'
+				'Encrypted file-backed secrets storage is not available on multisite in this Beta release.'
 			);
 		}
 		if ( ! $this->supportedPosixPlatform() ) {

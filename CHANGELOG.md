@@ -1,5 +1,48 @@
 # Changelog
 
+## [1.0.0-beta.22](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* activate bundled release administration
+* **provider:** remove obsolete release discovery
+
+### Features
+
+* activate bundled release administration ([48bdf97](https://github.com/RocketsAreNostalgic/ran-booster/commit/48bdf97426d03f1c32176129b1818b6edfcf9192))
+* **provider:** add exact release acquisition capability ([c02b8d0](https://github.com/RocketsAreNostalgic/ran-booster/commit/c02b8d089387292b290dca22e997d8ae8bcbac96))
+* **provider:** add exact release acquisition capability ([76a25da](https://github.com/RocketsAreNostalgic/ran-booster/commit/76a25da837648f29234bf6d809948092325ea153))
+* **provider:** add exact release inspection capability ([3f03df7](https://github.com/RocketsAreNostalgic/ran-booster/commit/3f03df7f2ab8f116e51543e2f4043edd8109bef7))
+* **provider:** add exact release inspection capability ([8f36461](https://github.com/RocketsAreNostalgic/ran-booster/commit/8f36461925af333e6e05a3997f1d9c9f697e2269))
+* **provider:** move native release targets behind providers ([3331117](https://github.com/RocketsAreNostalgic/ran-booster/commit/3331117dc529ec5a2732b6a52b0e80a20d10c075))
+* **provider:** move native release targets behind providers ([1f8ffb8](https://github.com/RocketsAreNostalgic/ran-booster/commit/1f8ffb82224a427777797968c4477cc33698f4ce))
+* **provider:** place webhook management by capability ([5bc23a1](https://github.com/RocketsAreNostalgic/ran-booster/commit/5bc23a1d811fb86247b0d0af14e043a09e58d0ab))
+* **provider:** remove obsolete release discovery ([1705852](https://github.com/RocketsAreNostalgic/ran-booster/commit/1705852b1de457ee67a1da9ab85978da31d4bdfe))
+* **provider:** route managed release preflight through providers ([1f2c3bc](https://github.com/RocketsAreNostalgic/ran-booster/commit/1f2c3bcdbaf4fefae277f81405e15574e2c327f6))
+* **provider:** route managed release preflight through providers ([53e5c21](https://github.com/RocketsAreNostalgic/ran-booster/commit/53e5c21c9e84aa40b7f586f64fd92c7c855dfabb))
+* **releases:** bundle release administration successor ([44f6b78](https://github.com/RocketsAreNostalgic/ran-booster/commit/44f6b781acba080363ad165a3704c9191781adf3))
+* **releases:** bundle release administration successor ([885a0da](https://github.com/RocketsAreNostalgic/ran-booster/commit/885a0da95b64661968aba89d09a7ebe052e2a60e))
+
+
+### Bug Fixes
+
+* **admin:** align public extension product copy ([57d00ec](https://github.com/RocketsAreNostalgic/ran-booster/commit/57d00ec58dab626dafa89279ebb3f758263a6736))
+* **admin:** align release lifecycle and public extension surfaces ([443e093](https://github.com/RocketsAreNostalgic/ran-booster/commit/443e093abed3548b7d3175c36d7c789b1c044d4c))
+* **ci:** authenticate candidate fetches ([#60](https://github.com/RocketsAreNostalgic/ran-booster/issues/60)) ([24fd6b7](https://github.com/RocketsAreNostalgic/ran-booster/commit/24fd6b756aa5cfe06d58eaa0cb90982f41f4a11b))
+* **ci:** verify candidate run events exactly ([#62](https://github.com/RocketsAreNostalgic/ran-booster/issues/62)) ([2821a76](https://github.com/RocketsAreNostalgic/ran-booster/commit/2821a76b9195c92851db09710af2be6e83185f9a))
+* **provider:** complete webhook management admission ([725d15c](https://github.com/RocketsAreNostalgic/ran-booster/commit/725d15ca4819d1e9b6dd22d227c5f5ef36e07683))
+* **provider:** fail closed on missing artifact cleanup ([236e4ac](https://github.com/RocketsAreNostalgic/ran-booster/commit/236e4ac1d72efdc44e425d36a96fb260384b348c))
+* **provider:** preserve release inspection semantics ([eb5c1bf](https://github.com/RocketsAreNostalgic/ran-booster/commit/eb5c1bff68b4808cead97a2ba9bec7abca6ca891))
+* **release:** authenticate candidate fetches ([cce26f9](https://github.com/RocketsAreNostalgic/ran-booster/commit/cce26f9e10e15e484e2548da452a9fe0be2dfcff))
+* **release:** authenticate candidate fetches ([a08a14a](https://github.com/RocketsAreNostalgic/ran-booster/commit/a08a14ada2e0bc60d3e15aedd8705fa417fe5bbb))
+* **release:** defer external native enablement ([2d4be8d](https://github.com/RocketsAreNostalgic/ran-booster/commit/2d4be8dc7144b74b577d704eea3bf94ab352c991))
+* **release:** preserve unrelated native update offers ([98f1b00](https://github.com/RocketsAreNostalgic/ran-booster/commit/98f1b007e33b5e35c617ba224ff55b22da32ac0f))
+* **release:** reconcile sparse action output ([16c48f2](https://github.com/RocketsAreNostalgic/ran-booster/commit/16c48f280381324025aa1a6806c1f7f69e974b9c))
+* **release:** reconcile sparse action output ([d31512f](https://github.com/RocketsAreNostalgic/ran-booster/commit/d31512f270975c83eda85faec618e4cd585cf43f))
+* **releases:** gate bundled administration ([357a64c](https://github.com/RocketsAreNostalgic/ran-booster/commit/357a64c373b63aca67c4c96d60acd5ad8f7dfb1c))
+* **releases:** preserve workflow continuity ([8b29069](https://github.com/RocketsAreNostalgic/ran-booster/commit/8b290693670dea7cf63f21a74a8944e68fa95700))
+
 ## [1.0.0-beta.21](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.20...v1.0.0-beta.21) (2026-08-17)
 
 

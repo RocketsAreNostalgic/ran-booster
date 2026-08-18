@@ -16,6 +16,9 @@ use RAN\Plugin;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
+use RAN\RepositoryProvider\RepositoryReleaseInspector;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use RAN\Storage\PluginRepository;
@@ -87,6 +90,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 		try {
 			$this->providers->requireCapability( 'gh', RepositoryReleaseCandidateListing::class );
+			$this->providers->requireCapability( 'gh', RepositoryReleaseInspector::class );
+			$this->providers->requireCapability( 'gh', RepositoryReleaseMetadata::class );
 		} catch ( Throwable ) {
 			return array();
 		}
@@ -209,21 +214,47 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			|| ! $this->validExactRelease( $releaseId, $tag ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		if ( ! $this->supportsCompleteProspectiveReleaseProvider( $type, $repositoryRequest ) ) {
+		$capabilities = $this->releaseInspectionCapabilities( $repositoryRequest );
+		if ( null === $capabilities ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 
 		try {
-			$repository = $this->resolveRepository( $repositoryRequest );
-			$result     = $this->preflight->inspectProspective(
+			$repository = $this->repositoryReference( $this->resolveRepository( $repositoryRequest ) );
+			$inspection = $capabilities['inspector']->inspectRelease(
 				$type,
 				$repository,
-				$releaseId,
+				(string) $releaseId,
 				$tag,
 				$channel
 			);
+			if ( (string) $releaseId !== $inspection->providerReleaseId
+				|| ! hash_equals( $tag, $inspection->tag ) ) {
+				throw RepositoryReleaseInspectionRejected::invalidRelease();
+			}
 
-			return $this->preflightResult( $result, 'release_ready' );
+			return ProspectiveReleaseResult::success(
+				'release_ready',
+				array(
+					'release_id'   => $releaseId,
+					'tag'          => $inspection->tag,
+					'version'      => $inspection->version,
+					'commit'       => $inspection->providerCommitId,
+					'details_url'  => $capabilities['metadata']->releaseDetailsUrl( $repository, $inspection->tag ),
+					'package_root' => $inspection->packageRoot,
+					'main_file'    => $inspection->mainFile,
+					'fingerprint'  => $inspection->fingerprint,
+					'channel'      => $channel,
+				)
+			);
+		} catch ( RepositoryReleaseInspectionRejected $rejection ) {
+			return ProspectiveReleaseResult::failure(
+				match ( $rejection->reason ) {
+					RepositoryReleaseInspectionRejected::NO_RELEASES => 'no_releases',
+					RepositoryReleaseInspectionRejected::INVALID_RELEASE => 'release_invalid',
+					default => 'unable_to_check',
+				}
+			);
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
@@ -553,6 +584,32 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 
 		return $capability instanceof RepositoryReleaseCandidateListing ? $capability : null;
+	}
+
+	/**
+	 * @param array<string, mixed> $repositoryRequest
+	 * @return array{inspector: RepositoryReleaseInspector, metadata: RepositoryReleaseMetadata}|null
+	 */
+	private function releaseInspectionCapabilities( array $repositoryRequest ): ?array {
+		$provider = $repositoryRequest['provider'] ?? null;
+		if ( ! is_string( $provider ) ) {
+			return null;
+		}
+
+		try {
+			$inspector = $this->providers->requireCapability( $provider, RepositoryReleaseInspector::class );
+			$metadata  = $this->providers->requireCapability( $provider, RepositoryReleaseMetadata::class );
+		} catch ( Throwable ) {
+			return null;
+		}
+
+		return $inspector instanceof RepositoryReleaseInspector
+			&& $metadata instanceof RepositoryReleaseMetadata
+			? array(
+				'inspector' => $inspector,
+				'metadata'  => $metadata,
+			)
+			: null;
 	}
 
 	/** @param array<string, mixed> $repository */

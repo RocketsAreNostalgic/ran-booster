@@ -18,6 +18,9 @@ use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+use RAN\RepositoryProvider\RepositoryReleaseInspection;
+use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
+use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
@@ -117,6 +120,96 @@ final class ProviderContractsTest extends TestCase {
 			false,
 			'2026-99-99T99:99:99Z',
 			array( 'example-1.2.3.zip' )
+		);
+	}
+
+	public function testReleaseInspectionIsOneExactTypedCapability(): void {
+		self::assertTrue( is_subclass_of( RepositoryReleaseInspector::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertSame( array( 'inspectRelease' ), get_class_methods( RepositoryReleaseInspector::class ) );
+
+		$method     = new \ReflectionMethod( RepositoryReleaseInspector::class, 'inspectRelease' );
+		$parameters = $method->getParameters();
+		self::assertSame( RepositoryReleaseInspection::class, (string) $method->getReturnType() );
+		self::assertSame(
+			array( 'packageType', 'repository', 'providerReleaseId', 'tag', 'channel' ),
+			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $parameters )
+		);
+		self::assertSame( 'string', (string) $parameters[0]->getType() );
+		self::assertSame( RepositoryReference::class, (string) $parameters[1]->getType() );
+		self::assertSame( 'string', (string) $parameters[2]->getType() );
+		self::assertSame( 'string', (string) $parameters[3]->getType() );
+		self::assertSame( 'string', (string) $parameters[4]->getType() );
+	}
+
+	public function testReleaseInspectionEvidenceIsBoundedTypedAndPathFree(): void {
+		$inspection = new RepositoryReleaseInspection(
+			'release:42',
+			'release/v1.2.3',
+			'1.2.3',
+			'commit:0123456789abcdef',
+			'example-plugin',
+			'example.php',
+			'provider:v2:0123456789abcdef'
+		);
+
+		self::assertSame( 'release:42', $inspection->providerReleaseId );
+		self::assertSame( 'commit:0123456789abcdef', $inspection->providerCommitId );
+		self::assertSame( 'provider:v2:0123456789abcdef', $inspection->fingerprint );
+		self::assertSame(
+			array( 'providerReleaseId', 'tag', 'version', 'providerCommitId', 'packageRoot', 'mainFile', 'fingerprint' ),
+			array_map(
+				static fn ( \ReflectionProperty $property ): string => $property->name,
+				( new \ReflectionClass( RepositoryReleaseInspection::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC )
+			)
+		);
+	}
+
+	public function testReleaseInspectionRejectsUnsafeOrUnboundedEvidence(): void {
+		$valid         = array(
+			'42',
+			'v1.2.3',
+			'1.2.3',
+			str_repeat( 'a', 40 ),
+			'example',
+			'example.php',
+			'v1:' . str_repeat( 'b', 64 ),
+		);
+		$invalidValues = array(
+			0 => '',
+			1 => "invalid\ntag",
+			2 => '-1.2.3',
+			3 => "commit\0identity",
+			4 => '../example',
+			5 => 'subdirectory/example.php',
+			6 => str_repeat( 'f', 192 ),
+		);
+
+		foreach ( $invalidValues as $index => $invalid ) {
+			$values           = $valid;
+			$values[ $index ] = $invalid;
+			try {
+				new RepositoryReleaseInspection( ...$values );
+				self::fail( 'Unsafe release inspection evidence must be rejected.' );
+			} catch ( \InvalidArgumentException ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+
+		$values    = $valid;
+		$values[4] = str_repeat( 'a', 101 );
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseInspection( ...$values );
+	}
+
+	public function testReleaseInspectionRejectionHasOnlyTheTwoBoundedDomainReasons(): void {
+		$noReleases = RepositoryReleaseInspectionRejected::noReleases();
+		$invalid    = RepositoryReleaseInspectionRejected::invalidRelease();
+
+		self::assertSame( RepositoryReleaseInspectionRejected::NO_RELEASES, $noReleases->reason );
+		self::assertSame( RepositoryReleaseInspectionRejected::INVALID_RELEASE, $invalid->reason );
+		self::assertSame( $noReleases->getMessage(), $invalid->getMessage() );
+		self::assertTrue(
+			( new \ReflectionClass( RepositoryReleaseInspectionRejected::class ) )->getConstructor()?->isPrivate()
 		);
 	}
 

@@ -325,6 +325,19 @@ only positive integer release identities; opaque provider identities remain
 valid contract values but require the later hard cut before that facade can
 consume them.
 
+`RepositoryReleaseInspector` is the independent remote facet for inspecting one
+exact provider release. It accepts the package type, resolved repository,
+opaque provider release identity, exact tag and `stable` or `prerelease`
+channel. The provider acquires, verifies and discards the archive within the
+call, and returns one bounded `RepositoryReleaseInspection` containing only the
+provider release identity, tag, version, provider commit identity, package root,
+main file and opaque fingerprint. The value exposes no local path, URL,
+credential, archive or artifact handle. `RepositoryReleaseInspectionRejected`
+distinguishes `no_releases` from `invalid_release`; other exceptions mean the
+inspection operation was unavailable. The facet grants no installation,
+updater or mutation authority and does not by itself make the complete release
+product available.
+
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
 settings screen. Core treats locators as opaque, validates the returned URL, and

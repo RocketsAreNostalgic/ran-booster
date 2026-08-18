@@ -143,31 +143,6 @@ final class ManagedReleasePreflight {
 	}
 
 	/**
-	 * Inspect and discard one exact release ZIP from the requested channel.
-	 *
-	 * @param array<string, mixed> $repository
-	 * @return array<string, bool|int|string>|\WP_Error
-	 */
-	public function inspectProspective(
-		string $type,
-		array $repository,
-		int $releaseId,
-		string $tag,
-		string $channel
-	): array|\WP_Error {
-		$candidate = $this->prospectiveCandidate( $type, $repository, $channel );
-		if ( $candidate instanceof \WP_Error ) {
-			return $candidate;
-		}
-		$inspection = $candidate->inspectExact( $releaseId, $tag );
-		if ( $inspection instanceof \WP_Error ) {
-			return $inspection;
-		}
-
-		return $this->prospectiveInspectionData( $inspection, $channel );
-	}
-
-	/**
 	 * Revalidate and acquire the exact archive selected by the administrator.
 	 *
 	 * @param array<string, mixed> $repository
@@ -271,27 +246,6 @@ final class ManagedReleasePreflight {
 			&& 1 === preg_match( '/\A[1-9][0-9]{0,18}\z/D', $repository['provider_repository_id'] )
 			&& is_string( $repository['credential_id'] ?? null )
 			&& is_string( $repository['private'] ?? null );
-	}
-
-	/**
-	 * @param object $inspection
-	 * @return array<string, bool|int|string>
-	 */
-	private function prospectiveInspectionData(
-		object $inspection,
-		string $channel
-	): array {
-		return array(
-			'release_id'   => $inspection->releaseId(),
-			'tag'          => $inspection->tag(),
-			'version'      => $inspection->version(),
-			'commit'       => $inspection->commit(),
-			'details_url'  => $inspection->detailsUrl(),
-			'package_root' => $inspection->packageRoot(),
-			'main_file'    => $inspection->mainFile(),
-			'fingerprint'  => $inspection->fingerprint()->value(),
-			'channel'      => $channel,
-		);
 	}
 
 	private function accessToken( Package $package ): ?callable {

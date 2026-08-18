@@ -297,7 +297,8 @@ final class ProspectiveAcquisitionFixture {
 			return new \WP_Error( 'github_updater_artifact_already_claimed', 'The artifact was already claimed.' );
 		}
 		$this->handedOff = true;
-		$digest          = is_file( $this->path ) ? hash_file( 'sha256', $this->path ) : false;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only temporary artifact identity.
+		$digest = is_file( $this->path ) ? hash_file( 'sha256', $this->path ) : false;
 		if ( ! is_string( $digest ) ) {
 			return new \WP_Error( 'github_updater_artifact_identity_changed', 'The artifact changed before handoff.' );
 		}

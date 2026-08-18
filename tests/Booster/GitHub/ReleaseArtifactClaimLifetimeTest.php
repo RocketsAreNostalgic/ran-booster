@@ -34,7 +34,8 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 			file_put_contents( $path, 'verified-release-archive' );
 			chmod( $path, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only custody fixture.
 			$identity = VerifiedArtifact::fileIdentity( $path );
-			$digest   = hash_file( 'sha256', $path );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only temporary artifact identity.
+			$digest = hash_file( 'sha256', $path );
 			self::assertIsArray( $identity );
 			self::assertIsString( $digest );
 			$claim    = new ClaimedArtifact(

@@ -575,7 +575,6 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 				|| ! is_string( $inspectedTag )
 				|| ! hash_equals( $tag, $inspectedTag )
 				|| ! is_string( $version )
-				|| ( 'stable' === $channel && str_contains( $version, '-' ) )
 				|| ! is_string( $commit )
 				|| 1 !== preg_match( '/\A[0-9a-f]{40}\z/D', $commit )
 				|| ! is_string( $inspectedType )
@@ -595,7 +594,7 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 				$mainFile
 			);
 		} catch ( \Throwable ) {
-			$cleanupFailed = false;
+			$cleanupFailed = ! is_object( $validated ) || ! is_callable( array( $validated, 'discard' ) );
 			if ( is_object( $validated ) && is_callable( array( $validated, 'discard' ) ) ) {
 				try {
 					$cleanupFailed = true !== $validated->discard();

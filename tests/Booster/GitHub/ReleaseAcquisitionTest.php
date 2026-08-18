@@ -153,6 +153,29 @@ final class ReleaseAcquisitionTest extends TestCase {
 		self::assertFileDoesNotExist( (string) $this->artifactPath );
 	}
 
+	public function testMalformedAcquisitionWithoutCleanupCapabilityReportsCleanupFailure(): void {
+		$inspection                          = new ProspectiveInspectionFixture();
+		ReleaseCandidatePreflight::$acquired = new class( $inspection ) {
+			public function __construct( private ProspectiveInspectionFixture $inspection ) {
+			}
+
+			public function inspection(): ProspectiveInspectionFixture {
+				return $this->inspection;
+			}
+
+			public function handoffToCore(): never {
+				throw new RuntimeException( 'This malformed fixture must never hand off.' );
+			}
+		};
+
+		try {
+			$this->acquirePublicRelease();
+			self::fail( 'Missing cleanup authority must fail closed.' );
+		} catch ( RepositoryReleaseAcquisitionRejected $exception ) {
+			self::assertSame( RepositoryReleaseAcquisitionRejected::CLEANUP_FAILED, $exception->reason );
+		}
+	}
+
 	#[DataProvider( 'malformedEvidenceCleanupFailureProvider' )]
 	public function testMalformedEvidenceCleanupFailureIsReported( bool $throws ): void {
 		$inspection                            = new ProspectiveInspectionFixture( '1.2.3', 'theme' );

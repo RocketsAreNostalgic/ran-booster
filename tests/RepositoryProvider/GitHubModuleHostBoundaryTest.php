@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	private const EXPLICIT_CORE_HOST_INTEGRATIONS = array(
+		'tests/Admin/ReleaseManagement/GitHub/GitHubReleaseWorkflowControlsTest.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',
 		'tests/Logging/GitHubDiagnosticsLoggingTest.php',
 		'tests/Portability/BlueprintRepositoryVerifierTest.php',
@@ -25,6 +26,11 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 	);
 
 	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {
+		$allowed    = array(
+			'RAN/Admin/ReleaseManagement/GitHub/GitHubReleaseWorkflowControls.php' => 'use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;',
+			'RAN/BoosterServiceProvider.php'     => 'use RAN\Booster\GitHub\GitHubProvider;',
+			'RAN/Uninstall/LocalDataRemover.php' => 'use RAN\Booster\GitHub\GitHubProvider;',
+		);
 		$references = array();
 		$root       = dirname( __DIR__, 2 ) . '/RAN';
 		$iterator   = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root ) );
@@ -38,19 +44,15 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			if ( str_contains( $source, 'RAN\Booster\GitHub\\' ) ) {
 				$relative     = str_replace( dirname( __DIR__, 2 ) . '/', '', $file->getPathname() );
 				$references[] = $relative;
-				self::assertContains( $relative, array( 'RAN/BoosterServiceProvider.php', 'RAN/Uninstall/LocalDataRemover.php' ) );
-				self::assertStringContainsString( 'use RAN\Booster\GitHub\GitHubProvider;', $source );
+				self::assertArrayHasKey( $relative, $allowed );
+				self::assertStringContainsString( $allowed[ $relative ], $source );
 			}
 		}
 
 		sort( $references );
-		self::assertSame(
-			array(
-				'RAN/BoosterServiceProvider.php',
-				'RAN/Uninstall/LocalDataRemover.php',
-			),
-			$references
-		);
+		$expected = array_keys( $allowed );
+		sort( $expected );
+		self::assertSame( $expected, $references );
 	}
 
 	public function testNeutralAdminWebhookManagementHasNoGitHubBranchOrGenericDispatcherSurface(): void {

@@ -280,7 +280,9 @@ merges, main Quality admits and re-uploads those exact verified bytes. The
 Release Please workflow then proves the merge and source identities, downloads
 that exact Quality artifact, creates or resumes a draft, attaches and
 byte-verifies the ZIP, and publishes only under the explicitly enabled
-immutable-release contract.
+immutable-release contract. While the release is a draft, readback selects its
+exact tag and merged commit from the release list and downloads the two named
+assets by ID; tag-based release readback begins only after publication.
 
 The completed native-ZIP set is updater `v1.6.0-beta.1`, Core
 `v0.1.0-alpha.29` and Release Deployments `v0.1.0-alpha.4`. Exact commits,

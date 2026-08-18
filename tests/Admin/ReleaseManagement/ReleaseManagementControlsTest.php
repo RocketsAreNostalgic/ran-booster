@@ -146,6 +146,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/views/packages/source-choices.php' );
 		self::assertIsString( $fallback );
 		self::assertStringContainsString( 'Published releases', $fallback );
+		self::assertStringContainsString( 'Provider capability required', $fallback );
 		self::assertStringNotContainsString( 'Release Deployments add-on', $fallback );
 		self::assertStringNotContainsString( 'Subscriber feature', $fallback );
 	}

@@ -8,13 +8,52 @@ use RAN\PackageSource;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 
-if ( ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' ) ) {
+if ( ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' )
+	|| '1' !== getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE' ) ) {
 	throw new RuntimeException( 'The installed release-capability smoke requires an administrator WP-CLI request.' );
 }
 
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+
+$expectedRoot    = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
+$expectedUrl     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL' );
+$archiveRoot     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' );
+$wordpressRoot   = realpath( ABSPATH );
+$contentRoot     = realpath( WP_CONTENT_DIR );
+$pluginRoot      = realpath( WP_PLUGIN_DIR );
+$themeRoot       = realpath( get_theme_root() );
+$fixturePlugin   = WP_PLUGIN_DIR . '/ran-booster-release-capability-provider/ran-booster-release-capability-provider.php';
+$disposableMark  = ABSPATH . '.ran-booster-disposable-test-site';
+$expectedTargets = array(
+	WP_PLUGIN_DIR . '/ran-booster-p2-fixture-plugin',
+	get_theme_root() . '/ran-booster-p2-fixture-theme',
+);
+if ( ! is_string( $expectedRoot ) || false === $wordpressRoot || $wordpressRoot !== realpath( $expectedRoot )
+	|| false === $contentRoot || $contentRoot !== $wordpressRoot . '/wp-content'
+	|| false === $pluginRoot || $pluginRoot !== $contentRoot . '/plugins'
+	|| false === $themeRoot || $themeRoot !== $contentRoot . '/themes'
+	|| 'http://localhost' !== $expectedUrl || $expectedUrl !== get_option( 'siteurl' )
+	|| is_link( $disposableMark ) || ! is_file( $disposableMark )
+	|| "RAN Booster disposable test site\n" !== file_get_contents( $disposableMark )
+	|| is_link( WP_PLUGIN_DIR . '/ran-booster' ) || ! is_file( WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' )
+	|| is_link( dirname( $fixturePlugin ) ) || ! is_file( $fixturePlugin ) || ! is_plugin_active( plugin_basename( $fixturePlugin ) )
+	|| ! is_string( $archiveRoot ) || false === realpath( $archiveRoot ) ) {
+	throw new RuntimeException( 'The installed release-capability smoke requires the exact disposable site and fixture.' );
+}
+foreach ( $expectedTargets as $target ) {
+	if ( is_link( $target ) || file_exists( $target ) ) {
+		throw new RuntimeException( 'A disposable release-capability target already exists.' );
+	}
+}
+foreach ( array( 'plugin', 'theme' ) as $archiveType ) {
+	$archive = get_option( 'ran_booster_p2_' . $archiveType . '_archive', '' );
+	if ( ! is_string( $archive ) || false === realpath( $archive ) || realpath( dirname( $archive ) ) !== realpath( $archiveRoot )
+		|| is_link( $archive ) || ! is_file( $archive ) || 'zip' !== pathinfo( $archive, PATHINFO_EXTENSION ) ) {
+		throw new RuntimeException( 'A disposable release-capability archive is outside the exact archive root.' );
+	}
+}
 
 $container = require __DIR__ . '/core-container-fixture.php';
 $facade    = $container->make( ProspectiveReleaseFacade::class );
@@ -100,13 +139,13 @@ try {
 	$cleanup = ! (bool) get_option( 'ran_booster_p2_keep_installed', false );
 	foreach ( $cleanup ? array_reverse( $installed, true ) : array() as $type => $identifier ) {
 		if ( 'plugin' === $type ) {
-			$plugins->unlink( $identifier );
+			$plugins->unlink( $identifier )->requireSuccess();
 			if ( is_plugin_active( $identifier ) ) {
 				deactivate_plugins( $identifier, true );
 			}
 			$result = delete_plugins( array( $identifier ) );
 		} else {
-			$themes->unlink( $identifier );
+			$themes->unlink( $identifier )->requireSuccess();
 			$result = delete_theme( $identifier );
 		}
 		if ( is_wp_error( $result ) || false === $result ) {

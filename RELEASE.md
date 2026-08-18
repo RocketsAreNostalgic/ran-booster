@@ -33,11 +33,13 @@ token fails closed before candidate network work begins.
 
 Fetch authentication is transport only, not release identity. Quality still
 validates the exact pull request and commit identities before it admits a
-candidate. Before dispatch, Release Please still requires the exact live
-bot-owned pending pull request, its expected base and head commits, the bounded
-generated file set, and the signed bot commit identity. After merge, release
-reconciliation re-verifies the exact merged pull request and candidate
-identities before publication.
+candidate. Candidate artifact readback also requires the recorded event to
+match the current Quality run, keeping trusted dispatch and direct pull request
+checks as distinct event identities. Before dispatch, Release Please still
+requires the exact live bot-owned pending pull request, its expected base and
+head commits, the bounded generated file set, and the signed bot commit
+identity. After merge, release reconciliation re-verifies the exact merged pull
+request and candidate identities before publication.
 
 Before merging a release proposal:
 

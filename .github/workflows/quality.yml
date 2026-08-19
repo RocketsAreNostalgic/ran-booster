@@ -671,7 +671,7 @@ jobs:
             run: pnpm check
 
           - name: Lint all PHP files
-            run: find . -path './vendor' -prune -o -path './node_modules' -prune -o -path './.ran-booster-workbench' -prune -o -type f -name '*.php' -exec php -l {} \;
+            run: find . -path './vendor' -prune -o -path './node_modules' -prune -o -path './ran-booster-workbench' -prune -o -type f -name '*.php' -exec php -l {} \;
 
   wordpress-release-candidate:
       name: Release candidate install readback

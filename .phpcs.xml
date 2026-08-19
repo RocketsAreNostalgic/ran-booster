@@ -8,7 +8,7 @@
 	<file>.</file>
 	<exclude-pattern>/vendor/</exclude-pattern>
 	<exclude-pattern>/node_modules/</exclude-pattern>
-	<exclude-pattern>/.ran-booster-workbench/</exclude-pattern>
+	<exclude-pattern>/ran-booster-workbench/</exclude-pattern>
 	<exclude-pattern>/.phpunit.cache/</exclude-pattern>
 	<exclude-pattern>/.phpcs-cache</exclude-pattern>
 	<exclude-pattern>/.plugin-check/</exclude-pattern>

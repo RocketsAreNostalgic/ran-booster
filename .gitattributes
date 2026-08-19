@@ -1,7 +1,7 @@
 /AGENTS.md           export-ignore
 /.agents             export-ignore
 /.dex                export-ignore
-/.ran-booster-workbench export-ignore
+/ran-booster-workbench export-ignore
 /.github             export-ignore
 /README.md           export-ignore
 /CHANGELOG.md        export-ignore

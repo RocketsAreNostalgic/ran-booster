@@ -4,6 +4,7 @@ boosterlog
 
 # Private planning, review and task state lives in the nested workbench.
 /.ran-booster-workbench/
+/ran-booster-workbench/
 /.dex/
 /.agents/plans/
 /.agents/decks/

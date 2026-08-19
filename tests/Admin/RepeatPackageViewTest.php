@@ -48,6 +48,7 @@ final class RepeatPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 		$form = $this->formById( $html, 'ran-booster-package-create-form' );
 
+		self::assertStringContainsString( 'data-ran-booster-native-submit', $form );
 		self::assertStringContainsString( 'data-ran-booster-package-create="1"', $html );
 		self::assertStringContainsString(
 			'data-ran-booster-explicit-provider="' . ( $explicitProvider ? '1' : '0' ) . '"',
@@ -121,6 +122,49 @@ final class RepeatPackageViewTest extends TestCase {
 			strpos( $html, 'Install ' . $packageView->getType() )
 		);
 		self::assertSame( 1, substr_count( $html, 'name="ran_booster[install_another]"' ) );
+	}
+
+	/** @return list<array{PackagePagePresenter, string, bool}> */
+	public static function managedPackageContextMatrix(): array {
+		return array(
+			array( PackagePagePresenter::plugin(), 'example/example.php', false ),
+			array( PackagePagePresenter::theme(), 'example-theme', true ),
+		);
+	}
+
+	#[DataProvider( 'managedPackageContextMatrix' )]
+	public function testSignedRepeatContextOffersManagementAndAnotherInstall(
+		PackagePagePresenter $packageView,
+		string $managedPackageIdentifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
+		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
+		$packageProviderSettings                         = $this->providerSettings( true );
+		$explicitProvider                                = true;
+		$openRepositoryPicker                            = true;
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+		$html = (string) ob_get_clean();
+		$form = $this->formById( $html, 'ran-booster-package-create-form' );
+
+		$baseUrl   = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
+		$manageUrl = $baseUrl
+			. '?page=' . $packageView->getPageSlug()
+			. '&amp;package=' . rawurlencode( $managedPackageIdentifier );
+
+		self::assertStringContainsString(
+			'<a class="button button-primary" href="' . $manageUrl . '">Manage ' . $packageView->getType() . '</a>',
+			$form
+		);
+		self::assertMatchesRegularExpression(
+			'/name="ran_booster\[install_another\]" value="1"\s*>Install another ' . $packageView->getType() . '<\/button>/',
+			$form
+		);
+		self::assertStringNotContainsString( '>Install and add another</button>', $form );
+		self::assertStringNotContainsString( '<button type="submit" class="button button-primary"', $form );
+		self::assertSame( 1, substr_count( $form, 'name="ran_booster[install_another]"' ) );
 	}
 
 	/** @return list<array{PackagePagePresenter, bool, bool}> */

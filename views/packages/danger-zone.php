@@ -16,7 +16,7 @@ $deleteDescription = 'plugin' === $packageView->getType()
 		<small><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop Booster managing this %s, with or without deleting it from WordPress.', 'ran-booster' ), $packageTypeLabel ) ); ?></small>
 	</summary>
 	<div class="ran-booster-settings-disclosure__body ran-booster-package-danger-zone__actions">
-		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation>
+		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit>
 			<?php wp_nonce_field( $packageView->getAction( 'unlink' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'unlink' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
@@ -31,7 +31,7 @@ $deleteDescription = 'plugin' === $packageView->getType()
 			</button>
 		</form>
 
-		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation>
+		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit>
 			<?php wp_nonce_field( $packageView->getAction( 'unlink-delete' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'unlink-delete' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">

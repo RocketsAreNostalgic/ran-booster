@@ -639,6 +639,10 @@ final class AdminAssetContractTest extends TestCase {
 			'/@media screen and \(max-width: 1100px\) \{\s+\.ran-booster-admin \.ran-booster-package-list-controls \{\s+align-items: stretch;\s+flex-direction: column;/',
 			$packageCss
 		);
+		self::assertMatchesRegularExpression(
+			'/@media screen and \(min-width: 783px\) and \(max-width: 1200px\) \{[\s\S]+\.ran-booster-package-table__actions-header \{\s+inline-size: 180px;[\s\S]+\.ran-booster-package-row__action-group \{\s+align-items: stretch;\s+flex-direction: column;[\s\S]+\.ran-booster-package-row__action-group > \*,[\s\S]+inline-size: 100%;/',
+			$packageCss
+		);
 		self::assertStringNotContainsString( '@media screen and (max-width: 1250px)', $packageCss );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-package-toolbar\\.tablenav\\.top \\.actions \\{\\s+display: flex;/',
@@ -771,6 +775,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-settings-disclosure ran-booster-package-danger-zone"', $dangerZone );
 		self::assertStringContainsString( 'data-ran-booster-package-disclosure', $dangerZone );
 		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-package-mutation' ) );
+		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-native-submit' ) );
 		self::assertSame( 0, substr_count( $dangerZone, 'hx-target="#wpbody-content"' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[expected_source_revision]"' ) );

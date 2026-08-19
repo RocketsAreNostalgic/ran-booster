@@ -561,7 +561,7 @@ class Dashboard {
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			return $this->databaseUnavailableCreate( $packageView, $packageView->getType() );
 		}
-		$this->packageAdmin->addSuccessNotice( $this, $packageView->getType() );
+		$success = $this->packageAdmin->addSuccessNotice( $this, $packageView->getType() );
 
 		return $this->render(
 			'packages/create',
@@ -569,7 +569,8 @@ class Dashboard {
 				$this->providerSettings->buildPackageForm( $this->requestedProvider() ),
 				$this->hasRequestedProvider(),
 				$this->requestedOpenPicker(),
-				$this->requestedPackageSourceView()
+				$this->requestedPackageSourceView(),
+				'install' === ( $success['operation'] ?? null ) ? $success['identifier'] : null
 			)
 		);
 	}
@@ -633,8 +634,9 @@ class Dashboard {
 		);
 	}
 
-	private function addPackageSuccessNotice( string $type ): void {
-		$this->packageAdmin->addSuccessNotice( $this, $type );
+	/** @return array{operation: string, identifier: string}|null */
+	private function addPackageSuccessNotice( string $type ): ?array {
+		return $this->packageAdmin->addSuccessNotice( $this, $type );
 	}
 
 	private function packageStorageFailureIndex( PackagePagePresenter $packageView, string $type, PackageStorageFailure $failure ): mixed {

@@ -95,7 +95,9 @@ $policyLabels = array(
 );
 
 ?><h2 class="wp-heading-inline ran-booster-package-heading">Managed <?php echo esc_html( $packageView->getPluralLabel() ); ?></h2>
-<a class="page-title-action" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+<?php if ( $packageListTotal > 0 ) { ?>
+	<a class="page-title-action" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+<?php } ?>
 
 <div class="ran-booster-package-intro">
 	<p class="description">
@@ -214,14 +216,18 @@ $policyLabels = array(
 	<tbody id="the-list">
 		<?php if ( count( $packages ) < 1 ) { ?>
 			<tr>
-				<td></td>
-				<td colspan="3">
-					<?php if ( $packageListTotal > 0 ) { ?>
+				<?php if ( $packageListTotal > 0 ) { ?>
+					<td></td>
+					<td colspan="3">
 						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No managed %s match the current filters.', 'ran-booster' ), strtolower( $packageView->getPluralLabel() ) ) ); ?>
-					<?php } else { ?>
-						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s managed by RAN Booster yet.', 'ran-booster' ), strtolower( $packageView->getPluralLabel() ) ) ); ?>
-					<?php } ?>
-				</td>
+					</td>
+				<?php } else { ?>
+					<td colspan="4" class="ran-booster-package-empty-state">
+						<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $packageView->getType() ) ); ?></h3>
+						<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $packageView->getPluralLabel() ) ) ); ?></p>
+						<a class="button button-primary" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+					</td>
+				<?php } ?>
 			</tr>
 		<?php } ?>
 		<?php $packageRowNumber = 0; ?>

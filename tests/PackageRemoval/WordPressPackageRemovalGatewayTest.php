@@ -7,10 +7,14 @@ namespace Tests\PackageRemoval;
 require_once __DIR__ . '/WordPressPackageRemovalGatewayWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\PackageRemoval\WordPressPackageRemovalGateway;
 use RuntimeException;
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState( false )]
 final class WordPressPackageRemovalGatewayTest extends TestCase {
 
 	protected function setUp(): void {

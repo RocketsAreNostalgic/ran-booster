@@ -494,8 +494,11 @@ hook.
 
 Each appended section supplies a stable `id`, plain-text `summary`, string or
 callable `content`, and optional Boolean `open`. Core owns the disclosure
-markup. Documentation content must not contain forms, nonces, AJAX or REST
-handlers, remote calls, asset enqueueing, settings or deployment operations.
+markup and includes every valid rendered section in the page's On this page
+index. IDs must be unique across the whole Documentation page; the first valid
+section owns an ID and a later contribution using it is not rendered.
+Documentation content must not contain forms, nonces, AJAX or REST handlers,
+remote calls, asset enqueueing, settings or deployment operations.
 
 Core validates every section, captures callable content, sanitizes it with
 `wp_kses_post()` and renders it only when non-empty. If a content callback

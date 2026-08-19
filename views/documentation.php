@@ -16,17 +16,17 @@ foreach ( $tabs as $documentationTab ) {
 	}
 }
 
-$adminUrl              = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
-$installPluginUrl      = $adminUrl . '?page=ran-booster-plugins-create';
-$installThemeUrl       = $adminUrl . '?page=ran-booster-themes-create';
-$managePluginsUrl      = $adminUrl . '?page=ran-booster-plugins';
-$manageThemesUrl       = $adminUrl . '?page=ran-booster-themes';
-$portabilityUrl        = $tabUrls['portability'] ?? $adminUrl . '?page=ran-booster-transporter';
-$troubleshootingUrl    = $tabUrls['troubleshooting'] ?? $adminUrl . '?page=ran-booster&tab=troubleshooting';
-$archiveLimitStatus    = ( new \RAN\Deployment\DeploymentArchivePreflight() )->configurationStatus();
-$compressedLimitMiB    = is_int( $archiveLimitStatus['compressed'] ) ? intdiv( $archiveLimitStatus['compressed'], 1048576 ) : null;
-$expandedLimitMiB      = is_int( $archiveLimitStatus['expanded'] ) ? intdiv( $archiveLimitStatus['expanded'], 1048576 ) : null;
-$archiveProviders      = array_values(
+$adminUrl                 = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+$installPluginUrl         = $adminUrl . '?page=ran-booster-plugins-create';
+$installThemeUrl          = $adminUrl . '?page=ran-booster-themes-create';
+$managePluginsUrl         = $adminUrl . '?page=ran-booster-plugins';
+$manageThemesUrl          = $adminUrl . '?page=ran-booster-themes';
+$portabilityUrl           = $tabUrls['portability'] ?? $adminUrl . '?page=ran-booster-transporter';
+$troubleshootingUrl       = $tabUrls['troubleshooting'] ?? $adminUrl . '?page=ran-booster&tab=troubleshooting';
+$archiveLimitStatus       = ( new \RAN\Deployment\DeploymentArchivePreflight() )->configurationStatus();
+$compressedLimitMiB       = is_int( $archiveLimitStatus['compressed'] ) ? intdiv( $archiveLimitStatus['compressed'], 1048576 ) : null;
+$expandedLimitMiB         = is_int( $archiveLimitStatus['expanded'] ) ? intdiv( $archiveLimitStatus['expanded'], 1048576 ) : null;
+$archiveProviders         = array_values(
 	array_filter(
 		array_map(
 			static fn ( mixed $provider ): string => is_array( $provider ) && is_string( $provider['label'] ?? null ) ? $provider['label'] : '',
@@ -34,12 +34,104 @@ $archiveProviders      = array_values(
 		)
 	)
 );
-$archiveProviderLabels = 0 === count( $archiveProviders )
+$archiveProviderLabels    = 0 === count( $archiveProviders )
 	? __( 'Repository providers', 'ran-booster' )
 	: ( 1 === count( $archiveProviders ) ? $archiveProviders[0] : implode( ' and ', $archiveProviders ) );
+$documentationIndex       = array();
+$documentationIds         = array();
+$reservedDocumentationIds = array_fill_keys(
+	array(
+		'ran-booster-quick-start',
+		'ran-booster-portability-guidance',
+		'ran-booster-wp-pusher-migration',
+		'ran-booster-file-protection',
+		'ran-booster-credential-storage',
+		'ran-booster-installing-and-managing-packages',
+		'ran-booster-push-to-deploy',
+		'ran-booster-about',
+	),
+	true
+);
+
+foreach ( $providerDocumentation as $providerGuide ) {
+	if ( isset( $providerGuide['code'] ) && is_string( $providerGuide['code'] ) && '' !== $providerGuide['code'] ) {
+		$reservedDocumentationIds[ 'ran-booster-documentation-provider-' . $providerGuide['code'] ] = true;
+	}
+}
+$addDocumentationItem = static function ( string $id, string $summary ) use ( &$documentationIndex, &$documentationIds ): bool {
+	if ( '' === $id || isset( $documentationIds[ $id ] ) ) {
+		return false;
+	}
+
+	$documentationIds[ $id ] = true;
+	$documentationIndex[]    = array(
+		'id'      => $id,
+		'summary' => $summary,
+	);
+
+	return true;
+};
+
+$addDocumentationItem( 'ran-booster-quick-start', __( 'Quick start', 'ran-booster' ) );
+$addDocumentationItem( 'ran-booster-portability-guidance', __( 'Move packages between sites', 'ran-booster' ) );
+$addDocumentationItem( 'ran-booster-wp-pusher-migration', __( 'Migrate from WP Pusher', 'ran-booster' ) );
+$addDocumentationItem( 'ran-booster-file-protection', __( 'Protect your files and know what actually moves', 'ran-booster' ) );
+$addDocumentationItem( 'ran-booster-credential-storage', __( 'Credential storage, retention and removal', 'ran-booster' ) );
+$preparedProviderDocumentation = array();
+
+foreach ( $providerDocumentation as $providerGuide ) {
+	$providerCode  = isset( $providerGuide['code'] ) && is_string( $providerGuide['code'] ) ? $providerGuide['code'] : '';
+	$providerLabel = isset( $providerGuide['label'] ) && is_string( $providerGuide['label'] ) ? $providerGuide['label'] : '';
+	$providerId    = 'ran-booster-documentation-provider-' . $providerCode;
+	/* translators: %s: Repository provider name. */
+	$providerTitle = sprintf( __( '%s credentials and access', 'ran-booster' ), $providerLabel );
+
+	if ( ! $addDocumentationItem( $providerId, $providerTitle ) ) {
+		continue;
+	}
+
+	$sections                        = $documentationHooks->prepareSections( 'ran_booster_documentation_sections_after_provider_' . $providerCode, $documentationUrl, $documentationScope, $providerCode );
+	$sections                        = array_values(
+		array_filter(
+			$sections,
+			static function ( array $section ) use ( $addDocumentationItem, $reservedDocumentationIds ): bool {
+				return ! isset( $reservedDocumentationIds[ $section['id'] ] ) && $addDocumentationItem( $section['id'], $section['summary'] );
+			}
+		)
+	);
+	$preparedProviderDocumentation[] = array(
+		'guide'    => $providerGuide,
+		'sections' => $sections,
+	);
+}
+
+$addDocumentationItem( 'ran-booster-installing-and-managing-packages', __( 'Installing and managing packages', 'ran-booster' ) );
+$addDocumentationItem( 'ran-booster-push-to-deploy', __( 'Push-to-Deploy', 'ran-booster' ) );
+$preparedGlobalSections = $documentationHooks->prepareSections( 'ran_booster_documentation_sections_before_about', $documentationUrl, $documentationScope );
+$preparedGlobalSections = array_values(
+	array_filter(
+		$preparedGlobalSections,
+		static function ( array $section ) use ( $addDocumentationItem, $reservedDocumentationIds ): bool {
+			return ! isset( $reservedDocumentationIds[ $section['id'] ] ) && $addDocumentationItem( $section['id'], $section['summary'] );
+		}
+	)
+);
+$addDocumentationItem( 'ran-booster-about', __( 'About RAN Booster', 'ran-booster' ) );
 
 ?>
-<section class="ran-booster-page-shell ran-booster-panel ran-booster-documentation" aria-labelledby="ran-booster-documentation-heading">
+<div class="ran-booster-documentation ran-booster-documentation__layout" data-ran-booster-documentation-layout>
+<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>
+	<nav aria-labelledby="ran-booster-documentation-index-heading">
+		<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading"><?php esc_html_e( 'On this page', 'ran-booster' ); ?></h2>
+		<ul class="ran-booster-documentation__index-list">
+			<?php foreach ( $documentationIndex as $documentationIndexItem ) { ?>
+				<li><a class="ran-booster-documentation__index-link" href="#<?php echo esc_attr( $documentationIndexItem['id'] ); ?>"><?php echo esc_html( $documentationIndexItem['summary'] ); ?></a></li>
+			<?php } ?>
+		</ul>
+		<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label"><?php esc_html_e( 'Search this page with', 'ran-booster' ); ?></span> <kbd>⌘F</kbd> <span><?php esc_html_e( 'or', 'ran-booster' ); ?></span> <kbd>Ctrl+F</kbd></p>
+	</nav>
+</aside>
+<section class="ran-booster-page-shell ran-booster-panel ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
 	<header class="ran-booster-page-shell__header ran-booster-documentation__header">
 		<p class="ran-booster-eyebrow">Guidance</p>
 		<h2 id="ran-booster-documentation-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></h2>
@@ -48,7 +140,7 @@ $archiveProviderLabels = 0 === count( $archiveProviders )
 
 	<div class="ran-booster-page-shell__body">
 		<div class="ran-booster-documentation__sections">
-		<details class="ran-booster-documentation__section ran-booster-panel" open>
+		<details id="ran-booster-quick-start" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section open>
 			<summary><?php esc_html_e( 'Quick start', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<p><strong><?php esc_html_e( 'Current limitation:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This plugin currently supports single-site WordPress installations only. Multisite and network activation are not yet supported.', 'ran-booster' ); ?></p>
@@ -84,7 +176,7 @@ $archiveProviderLabels = 0 === count( $archiveProviders )
 			</div>
 		</details>
 
-		<details id="ran-booster-portability-guidance" class="ran-booster-documentation__section ran-booster-panel">
+		<details id="ran-booster-portability-guidance" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'Move packages between sites', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<h3><?php esc_html_e( 'Move managed packages without copying a development checkout', 'ran-booster' ); ?></h3>
@@ -113,7 +205,7 @@ $archiveProviderLabels = 0 === count( $archiveProviders )
 			</div>
 		</details>
 
-		<details id="ran-booster-wp-pusher-migration" class="ran-booster-documentation__section ran-booster-panel">
+		<details id="ran-booster-wp-pusher-migration" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'Migrate from WP Pusher', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<h3><?php esc_html_e( 'Move retained WP Pusher packages into Booster', 'ran-booster' ); ?></h3>
@@ -139,7 +231,7 @@ $archiveProviderLabels = 0 === count( $archiveProviders )
 			</div>
 		</details>
 
-		<details class="ran-booster-documentation__section ran-booster-panel">
+		<details id="ran-booster-file-protection" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'Protect your files and know what actually moves', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<h3><?php esc_html_e( 'Deployment modes protect files you are editing', 'ran-booster' ); ?></h3>
@@ -165,7 +257,7 @@ $archiveProviderLabels = 0 === count( $archiveProviders )
 			</div>
 		</details>
 
-		<details id="ran-booster-credential-storage" class="ran-booster-documentation__section ran-booster-panel">
+		<details id="ran-booster-credential-storage" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'Credential storage, retention and removal', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<h3><?php esc_html_e( 'Where credentials are stored', 'ran-booster' ); ?></h3>
@@ -196,15 +288,16 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 		</details>
 
-		<?php foreach ( $providerDocumentation as $providerGuide ) { ?>
+		<?php foreach ( $preparedProviderDocumentation as $preparedProviderGuide ) { ?>
 			<?php
+			$providerGuide  = $preparedProviderGuide['guide'];
 			$providerCode   = isset( $providerGuide['code'] ) && is_string( $providerGuide['code'] ) ? $providerGuide['code'] : '';
 			$providerLabel  = isset( $providerGuide['label'] ) && is_string( $providerGuide['label'] ) ? $providerGuide['label'] : '';
 			$setupAvailable = ! empty( $providerGuide['setup_available'] );
 			$credentials    = isset( $providerGuide['credentials'] ) && is_array( $providerGuide['credentials'] ) ? $providerGuide['credentials'] : array();
 			$settingsUrl    = $tabUrls[ $providerCode ] ?? '';
 			?>
-			<details class="ran-booster-documentation__section ran-booster-panel" id="ran-booster-documentation-provider-<?php echo esc_attr( $providerCode ); ?>">
+			<details class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section id="ran-booster-documentation-provider-<?php echo esc_attr( $providerCode ); ?>">
 				<summary>
 					<?php
 					/* translators: %s: Repository provider name. */
@@ -243,10 +336,10 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 					<?php } ?>
 				</div>
 				</details>
-					<?php $documentationHooks->renderSections( 'ran_booster_documentation_sections_after_provider_' . $providerCode, $documentationUrl, $documentationScope, $providerCode ); ?>
+					<?php $documentationHooks->renderPreparedSections( $preparedProviderGuide['sections'] ); ?>
 				<?php } ?>
 
-		<details class="ran-booster-documentation__section ran-booster-panel">
+		<details id="ran-booster-installing-and-managing-packages" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'Installing and managing packages', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<p><?php esc_html_e( 'Choose a provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation.', 'ran-booster' ); ?></p>
@@ -287,7 +380,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 		</details>
 
-		<details id="ran-booster-push-to-deploy" class="ran-booster-documentation__section ran-booster-panel">
+		<details id="ran-booster-push-to-deploy" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'Push-to-Deploy', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<p><?php esc_html_e( 'Push-to-Deploy is optional and configured separately on every target site. Use the matching provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic.', 'ran-booster' ); ?></p>
@@ -333,9 +426,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 			</details>
 
-				<?php $documentationHooks->renderSections( 'ran_booster_documentation_sections_before_about', $documentationUrl, $documentationScope ); ?>
+				<?php $documentationHooks->renderPreparedSections( $preparedGlobalSections ); ?>
 
-			<details class="ran-booster-documentation__section ran-booster-panel">
+			<details id="ran-booster-about" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'About RAN Booster', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<h3><?php esc_html_e( 'Where this came from', 'ran-booster' ); ?></h3>
@@ -367,3 +460,4 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 		</div>
 	</div>
 </section>
+</div>

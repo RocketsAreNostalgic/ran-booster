@@ -1,5 +1,90 @@
 .ran-booster-admin .ran-booster-documentation {
-	max-inline-size: 1080px;
+	max-inline-size: 1400px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	:root {
+		scroll-behavior: smooth;
+	}
+}
+
+.ran-booster-admin .ran-booster-documentation__layout {
+	display: grid;
+	grid-template-areas: "main index";
+	grid-template-columns: minmax(0, 1fr) minmax(260px, 290px);
+	align-items: start;
+	margin-block: var(--ran-booster-space-16) var(--ran-booster-space-24);
+	gap: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin .ran-booster-documentation__main {
+	grid-area: main;
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-documentation__index {
+	position: sticky;
+	grid-area: index;
+	inset-block-start: 54px;
+	max-block-size: calc(100vh - 70px);
+	overflow: auto;
+}
+
+.ran-booster-admin .ran-booster-documentation__index nav {
+	padding: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-documentation__index-heading {
+	margin-block: 0 var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-documentation__index-list {
+	display: grid;
+	margin: 0;
+	padding: 0;
+	gap: var(--ran-booster-space-2);
+	list-style: none;
+}
+
+.ran-booster-admin .ran-booster-documentation__index-link {
+	display: block;
+	padding-block: var(--ran-booster-space-6);
+	padding-inline: var(--ran-booster-space-8);
+	border-radius: var(--ran-booster-radius-control);
+	color: var(--ran-booster-text);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	text-decoration: none;
+}
+
+.ran-booster-admin .ran-booster-documentation__index-link:hover,
+.ran-booster-admin
+	.ran-booster-documentation__index-link[aria-current="location"] {
+	color: var(--ran-booster-link-strong);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-documentation__index-link:focus-visible {
+	outline: 2px solid var(--ran-booster-color-blue-300);
+	outline-offset: 2px;
+}
+
+.ran-booster-admin .ran-booster-documentation__search-hint {
+	display: flex;
+	margin: var(--ran-booster-space-16) 0 0;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-4);
+}
+
+.ran-booster-admin .ran-booster-documentation__search-hint kbd {
+	padding-block: var(--ran-booster-space-2);
+	padding-inline: var(--ran-booster-space-4);
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-surface-subtle);
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
 .ran-booster-admin .ran-booster-documentation__sections {
@@ -9,6 +94,7 @@
 
 .ran-booster-admin .ran-booster-documentation__section {
 	margin: 0;
+	scroll-margin-block-start: 70px;
 }
 
 .ran-booster-admin .ran-booster-documentation__section summary {
@@ -115,7 +201,30 @@
 	overflow-wrap: anywhere;
 }
 
+@media screen and (max-width: 960px) {
+	.ran-booster-admin .ran-booster-documentation__layout {
+		grid-template-areas:
+			"index"
+			"main";
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.ran-booster-admin .ran-booster-documentation__index {
+		position: static;
+		max-block-size: none;
+		overflow: visible;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__index-list {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
 @media screen and (max-width: 600px) {
+	.ran-booster-admin .ran-booster-documentation__index-list {
+		grid-template-columns: 1fr;
+	}
+
 	.ran-booster-admin .ran-booster-documentation__section summary {
 		padding: var(--ran-booster-space-14);
 	}
@@ -132,5 +241,175 @@
 
 	.ran-booster-admin .ran-booster-documentation__provider-webhook dd + dt {
 		margin-block-start: var(--ran-booster-space-8);
+	}
+}
+
+@media print {
+	:root {
+		color-scheme: only light;
+	}
+
+	#wpadminbar,
+	#adminmenumain,
+	#wpfooter,
+	#screen-meta,
+	#screen-meta-links,
+	.wp-header-end,
+	.ran-admin-shell__actions,
+	.ran-admin-shell__navigation,
+	.ran-booster-admin > hr,
+	.ran-booster-documentation__search-hint,
+	[data-ran-booster-feedback-toast],
+	body.wp-admin .notice,
+	body.wp-admin .update-nag,
+	body.wp-admin [role="alert"] {
+		display: none !important;
+	}
+
+	#wpcontent {
+		margin-inline-start: 0;
+	}
+
+	.ran-booster-admin {
+		margin: 0;
+	}
+
+	.ran-booster-admin .ran-booster-footer {
+		display: block;
+		margin: 18pt 0 0;
+		padding: 8pt 0 0;
+		border-block-start: 1pt solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+		text-align: start;
+	}
+
+	.ran-booster-admin .ran-booster-footer p {
+		margin: 0;
+	}
+
+	.ran-booster-admin .ran-booster-footer a {
+		color: CanvasText;
+		text-decoration: underline;
+	}
+
+	.ran-admin-shell {
+		margin: 0 0 18pt;
+		border: 1pt solid CanvasText;
+		background: Canvas !important;
+		color: CanvasText !important;
+	}
+
+	.ran-admin-shell__background {
+		display: none;
+	}
+
+	.ran-admin-shell__logo {
+		filter: grayscale(1) brightness(0);
+	}
+
+	.ran-admin-shell__inner {
+		min-block-size: 0;
+		padding: 12pt 14pt;
+	}
+
+	.ran-admin-shell__title,
+	.ran-admin-shell__title a,
+	.ran-admin-shell__strapline,
+	.ran-admin-shell__version {
+		color: CanvasText !important;
+	}
+
+	.ran-admin-shell__version {
+		border-color: CanvasText;
+		background: Canvas;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__layout {
+		display: block;
+		grid-template-areas: none;
+		grid-template-columns: none;
+		margin: 0;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__main,
+	.ran-booster-admin .ran-booster-documentation__section,
+	.ran-booster-admin .ran-booster-documentation__content {
+		max-inline-size: none;
+		margin: 0;
+		border: 0;
+		box-shadow: none;
+		background: transparent;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__index {
+		display: block;
+		grid-area: auto;
+		position: static;
+		max-block-size: none;
+		margin: 0 0 14pt;
+		border: 0;
+		overflow: visible;
+		background: transparent;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__index nav {
+		padding: 0;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__index-list {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 2pt 12pt;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__index-link {
+		padding: 0;
+		color: CanvasText;
+		font-weight: 400;
+		text-decoration: underline;
+	}
+
+	.ran-booster-documentation__section {
+		break-inside: avoid-page;
+		page-break-inside: avoid;
+	}
+
+	.ran-booster-documentation__section > summary {
+		display: block;
+		padding: 12pt 0 5pt;
+		border-block-end: 1pt solid CanvasText;
+		color: CanvasText;
+		cursor: default;
+		list-style: none;
+		break-after: avoid-page;
+		page-break-after: avoid;
+	}
+
+	.ran-booster-documentation__section > summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.ran-booster-documentation__section:not([open]) > :not(summary) {
+		display: block;
+	}
+
+	.ran-booster-documentation__content {
+		padding: 8pt 0 14pt;
+	}
+
+	.ran-booster-documentation__content :is(h3, h4) {
+		break-after: avoid-page;
+		page-break-after: avoid;
+	}
+
+	.ran-booster-documentation__content a {
+		color: CanvasText;
+		text-decoration: underline;
+	}
+
+	.ran-booster-documentation__content code {
+		border: 1pt solid CanvasText;
+		background: transparent;
+		white-space: pre-wrap;
 	}
 }

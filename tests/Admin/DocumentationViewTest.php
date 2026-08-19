@@ -25,7 +25,8 @@ final class DocumentationViewTest extends TestCase {
 	public function testRendersTenNativeDisclosureSectionsWithOnlyQuickStartOpen(): void {
 		$html = $this->renderView( $this->providerDocumentation() );
 
-		self::assertStringContainsString( 'class="ran-booster-page-shell ran-booster-panel ran-booster-documentation"', $html );
+		self::assertStringContainsString( 'class="ran-booster-documentation ran-booster-documentation__layout"', $html );
+		self::assertStringContainsString( 'class="ran-booster-page-shell ran-booster-panel ran-booster-documentation__main"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__header ran-booster-documentation__header"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__body"', $html );
 		self::assertSame( 10, preg_match_all( '/<details\b/', $html ) );
@@ -106,6 +107,61 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'Project X guide', $html );
 		self::assertLessThan( strpos( $html, 'About RAN Booster' ), strpos( $html, 'Project X guide' ) );
 		self::assertLessThan( strpos( $html, 'Bitbucket credentials and access' ), strpos( $html, 'GitHub fixture guide' ) );
+	}
+
+	public function testRendersOneOrderedPageWideIndexForTopLevelDocumentationSections(): void {
+		$callableCalls = 0;
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] =
+			static function ( array $sections ) use ( &$callableCalls ): array {
+				$sections[] = array(
+					'id'      => 'addon-guide',
+					'summary' => 'Add-on <guide>',
+					'content' => static function () use ( &$callableCalls ): void {
+						++$callableCalls;
+						echo '<p>Add-on content.</p>';
+					},
+				);
+				$sections[] = array(
+					'id'      => 'addon-guide',
+					'summary' => 'Duplicate guide',
+					'content' => '<p>Ignored.</p>',
+				);
+				$sections[] = array(
+					'id'      => 'ran-booster-about',
+					'summary' => 'Conflicting guide',
+					'content' => '<p>Ignored.</p>',
+				);
+				$sections[] = array(
+					'id'      => 'ran-booster-documentation-provider-bb',
+					'summary' => 'Provider conflict',
+					'content' => '<p>Ignored.</p>',
+				);
+				$sections[] = array(
+					'id'      => 'empty-guide',
+					'summary' => 'Empty guide',
+					'content' => '',
+				);
+
+				return $sections;
+			};
+
+		$html = $this->renderView( $this->providerDocumentation() );
+
+		self::assertSame( 1, $callableCalls );
+		self::assertStringContainsString( '<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
+		self::assertStringContainsString( '<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h2>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label">Search this page with</span> <kbd>⌘F</kbd> <span>or</span> <kbd>Ctrl+F</kbd></p>', $html );
+		self::assertSame( 1, preg_match_all( '/href="#addon-guide"/', $html ) );
+		self::assertSame( 1, preg_match_all( '/id="addon-guide"/', $html ) );
+		self::assertStringContainsString( 'Add-on &lt;guide&gt;', $html );
+		self::assertStringNotContainsString( 'Duplicate guide', $html );
+		self::assertStringNotContainsString( 'Conflicting guide', $html );
+		self::assertStringNotContainsString( 'Provider conflict', $html );
+		self::assertStringNotContainsString( 'Empty guide', $html );
+		self::assertStringNotContainsString( 'href="#ran-booster-webhook-cleanup"', $html );
+		self::assertLessThan( strpos( $html, 'href="#addon-guide"' ), strpos( $html, 'href="#ran-booster-documentation-provider-gh"' ) );
+		self::assertLessThan( strpos( $html, 'href="#ran-booster-documentation-provider-bb"' ), strpos( $html, 'href="#addon-guide"' ) );
+		self::assertLessThan( strpos( $html, 'ran-booster-page-shell ran-booster-panel ran-booster-documentation' ), strpos( $html, 'data-ran-booster-documentation-index' ) );
 	}
 
 	public function testStatesTheCurrentSingleSiteSupportBoundaryWithoutBetaOrVersionJargon(): void {

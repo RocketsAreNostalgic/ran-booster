@@ -27,6 +27,7 @@ add_action(
 			array(
 				'Client.php',
 				'CredentialPolicy.php',
+				'WebhookPolicy.php',
 				'PreparedArchive.php',
 				'Diagnostics.php',
 				'Provider.php',

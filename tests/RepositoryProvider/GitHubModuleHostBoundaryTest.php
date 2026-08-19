@@ -56,16 +56,30 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		self::assertSame( $expected, $references );
 	}
 
-	public function testNeutralAdminWebhookManagementHasNoGitHubBranchOrGenericDispatcherSurface(): void {
-		$root     = dirname( __DIR__, 2 );
-		$paths    = array(
+	public function testNeutralReleaseAndWebhookOwnersHaveNoGitHubBranchOrGenericDispatcherSurface(): void {
+		$root  = dirname( __DIR__, 2 );
+		$paths = array(
 			$root . '/RAN/Dashboard.php',
 			$root . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php',
+			$root . '/RAN/WordPress/ManagedReleaseConfiguration.php',
+			$root . '/RAN/WordPress/ManagedReleaseStore.php',
+			$root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php',
 		);
-		$iterator = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root . '/RAN/Admin/WebhookManagement' ) );
-		foreach ( $iterator as $file ) {
-			if ( $file->isFile() && 'php' === $file->getExtension() ) {
-				$paths[] = $file->getPathname();
+		foreach (
+			array(
+				$root . '/RAN/AddOn/ReleaseTracking',
+				$root . '/RAN/Admin/ReleaseManagement',
+				$root . '/RAN/Admin/WebhookManagement',
+			) as $directory
+		) {
+			$iterator = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $directory ) );
+			foreach ( $iterator as $file ) {
+				if ( $file->isFile()
+					&& 'php' === $file->getExtension()
+					&& ! str_contains( $file->getPathname(), '/RAN/Admin/ReleaseManagement/GitHub/' )
+				) {
+					$paths[] = $file->getPathname();
+				}
 			}
 		}
 

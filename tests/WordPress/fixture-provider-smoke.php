@@ -31,7 +31,7 @@ if ( 0 !== $provider->getClient()->getRequestCount() ) {
 if ( ! $registry->isSealed()
 	|| ! $provider instanceof RANBoosterFixtureProvider\Provider
 	|| $provider instanceof RAN\RepositoryProvider\RepositoryBrowser
-	|| $provider instanceof RAN\RepositoryProvider\WebhookNormalizer
+	|| ! $provider instanceof RAN\RepositoryProvider\WebhookNormalizer
 ) {
 	throw new RuntimeException( 'The external fixture provider contract is not active.' );
 }
@@ -114,7 +114,7 @@ if ( in_array( $troubleshooting['partial_reason'] ?? null, array( 'provider_resu
 	throw new RuntimeException( 'The external fixture troubleshooting integration is invalid.' );
 }
 
-foreach ( array( RAN\RepositoryProvider\RepositoryBrowser::class, RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser::class, RAN\RepositoryProvider\RepositoryReleaseCandidateListing::class, RAN\RepositoryProvider\WebhookNormalizer::class ) as $capability ) {
+foreach ( array( RAN\RepositoryProvider\RepositoryBrowser::class, RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser::class, RAN\RepositoryProvider\RepositoryReleaseCandidateListing::class ) as $capability ) {
 	try {
 		$registry->requireCapability( 'fixture-provider', $capability );
 		throw new RuntimeException( 'The external fixture exposed an unsupported capability.' );

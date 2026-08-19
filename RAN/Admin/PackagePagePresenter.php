@@ -138,14 +138,16 @@ final class PackagePagePresenter {
 		array $packageProviderSettings,
 		bool $explicitProvider,
 		bool $openRepositoryPicker,
-		string $requestedSourceView
+		string $requestedSourceView,
+		?string $managedPackageIdentifier = null
 	): array {
 		return array(
-			'packageProviderSettings' => $packageProviderSettings,
-			'packageView'             => $this,
-			'explicitProvider'        => $explicitProvider,
-			'openRepositoryPicker'    => $openRepositoryPicker,
-			'packageSource'           => $this->sourceComposition( 'create', $requestedSourceView ),
+			'packageProviderSettings'  => $packageProviderSettings,
+			'packageView'              => $this,
+			'explicitProvider'         => $explicitProvider,
+			'openRepositoryPicker'     => $openRepositoryPicker,
+			'packageSource'            => $this->sourceComposition( 'create', $requestedSourceView ),
+			'managedPackageIdentifier' => $managedPackageIdentifier,
 		);
 	}
 

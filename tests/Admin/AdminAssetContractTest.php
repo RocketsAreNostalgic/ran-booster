@@ -767,6 +767,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-settings-disclosure ran-booster-package-danger-zone"', $dangerZone );
 		self::assertStringContainsString( 'data-ran-booster-package-disclosure', $dangerZone );
 		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-package-mutation' ) );
+		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-native-submit' ) );
 		self::assertSame( 0, substr_count( $dangerZone, 'hx-target="#wpbody-content"' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[expected_source_revision]"' ) );

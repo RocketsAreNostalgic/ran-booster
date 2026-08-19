@@ -519,11 +519,18 @@ final class PackageOperationServiceTest extends TestCase {
 		$query = $this->redirectQuery( $redirect );
 		$_GET  = $query;
 
-		$type = str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme';
-		$this->invokePackageSuccessNotice( $dashboard, $type );
+		$type    = str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme';
+		$success = $this->invokePackageSuccessNotice( $dashboard, $type );
 
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( $identifier, $query['ran_booster_package'] );
+		self::assertSame(
+			array(
+				'operation'  => 'install',
+				'identifier' => $identifier,
+			),
+			$success
+		);
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'success', $dashboard->messages[0]['type'] );
 		self::assertSame(
@@ -540,8 +547,9 @@ final class PackageOperationServiceTest extends TestCase {
 			'_ran_booster_notice_nonce' => 'forged',
 		);
 
-		$this->invokePackageSuccessNotice( $dashboard, 'plugin' );
+		$success = $this->invokePackageSuccessNotice( $dashboard, 'plugin' );
 
+		self::assertNull( $success );
 		self::assertSame( array(), $dashboard->messages );
 	}
 
@@ -828,6 +836,15 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'install', $query['ran_booster_result'] );
 		self::assertSame( 'gh', $query['provider'] );
 		self::assertSame( '1', $query['open_picker'] );
+
+		$_GET = $query;
+		self::assertSame(
+			array(
+				'operation'  => 'install',
+				'identifier' => 'example/example.php',
+			),
+			$this->invokePackageSuccessNotice( $repeat, 'plugin' )
+		);
 	}
 
 	public function testLinkingTheInstalledBoosterPluginIsRejectedBeforeStorage(): void {
@@ -899,9 +916,32 @@ final class PackageOperationServiceTest extends TestCase {
 		PackageOperation::fromInput( $action, $input );
 	}
 
-	public function testDashboardTurnsTheExplicitUnlinkResultIntoSignedPrg(): void {
-		$plugins   = new OperationPluginRepository( $this->plugin() );
-		$themes    = new OperationThemeRepository( new OperationTheme( 'example' ) );
+	/** @return array<string, array{string, string, string, string}> */
+	public static function removalRedirects(): array {
+		return array(
+			'unlink plugin' => array( 'unlink-plugin', 'ran-booster-plugins', 'unlink', 'example/example.php' ),
+			'delete plugin' => array( 'unlink-delete-plugin', 'ran-booster-plugins', 'unlink-and-delete', 'example/example.php' ),
+			'unlink theme'  => array( 'unlink-theme', 'ran-booster-themes', 'unlink', 'example' ),
+			'delete theme'  => array( 'unlink-delete-theme', 'ran-booster-themes', 'unlink-and-delete', 'example' ),
+		);
+	}
+
+	#[DataProvider( 'removalRedirects' )]
+	public function testDashboardReturnsEachRemovalToItsOwnershipIndex(
+		string $action,
+		string $page,
+		string $result,
+		string $identifier
+	): void {
+		$plugins = new OperationPluginRepository( $this->plugin() );
+		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		if ( str_starts_with( $action, 'unlink-delete-' ) ) {
+			if ( str_ends_with( $action, 'plugin' ) ) {
+				$plugins->installed = false;
+			} else {
+				$themes->installed = false;
+			}
+		}
 		$service   = $this->service( $plugins, $themes, new OperationCoordinator() );
 		$dashboard = new Dashboard(
 			new Database(),
@@ -915,12 +955,20 @@ final class PackageOperationServiceTest extends TestCase {
 			$service
 		);
 
-		$redirect = $dashboard->postPackageOperation( 'unlink-plugin', $this->input( 'unlink-plugin' ) );
+		$redirect = $dashboard->postPackageOperation( $action, $this->input( $action ) );
 		self::assertIsString( $redirect );
 		$query = $this->redirectQuery( $redirect );
-		self::assertSame( 'ran-booster-plugins', $query['page'] );
-		self::assertSame( 'unlink', $query['ran_booster_result'] );
-		self::assertSame( 'example/example.php', $query['ran_booster_package'] );
+		self::assertSame( $page, $query['page'] );
+		self::assertSame( $result, $query['ran_booster_result'] );
+		self::assertSame( $identifier, $query['ran_booster_package'] );
+		self::assertArrayNotHasKey( 'package', $query );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_notice_nonce'],
+				'ran-booster-package-success|' . ( str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme' ) . '|' . $result . '|' . $identifier
+			)
+		);
 		self::assertSame( array(), $dashboard->messages );
 	}
 
@@ -1014,9 +1062,13 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	private function invokePackageSuccessNotice( Dashboard $dashboard, string $type ): void {
+	/** @return array{operation: string, identifier: string}|null */
+	private function invokePackageSuccessNotice( Dashboard $dashboard, string $type ): ?array {
 		$method = new \ReflectionMethod( Dashboard::class, 'addPackageSuccessNotice' );
-		$method->invoke( $dashboard, $type );
+		$result = $method->invoke( $dashboard, $type );
+
+		/** @var array{operation: string, identifier: string}|null $result */
+		return $result;
 	}
 
 	/** @return array<string, string> */
@@ -1099,6 +1151,7 @@ final class OperationUpdaterLock extends WordPressUpdaterLock {
 final class OperationPluginRepository extends PluginRepository {
 	public ?Plugin $stored                                = null;
 	/** @var array<string, mixed> */ public array $edited = array();
+	public bool $installed                                = true;
 	public ?string $unlinked                              = null;
 	public ?string $requestedSlug                         = null;
 	public ?\Throwable $unlinkFailure                     = null;
@@ -1126,6 +1179,10 @@ final class OperationPluginRepository extends PluginRepository {
 		$this->package->setSubdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
+	public function disablePluginForRemoval( Plugin $plugin ): PackageMutationResult {
+		unset( $plugin );
+		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
+	}
 	public function unlink( $file ): PackageMutationResult {
 		if ( null !== $this->unlinkFailure ) {
 			throw $this->unlinkFailure;
@@ -1133,11 +1190,16 @@ final class OperationPluginRepository extends PluginRepository {
 		$this->unlinked = (string) $file;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
+	public function isInstalled( string $identifier ): bool {
+		unset( $identifier );
+		return $this->installed;
+	}
 }
 
 final class OperationThemeRepository extends ThemeRepository {
 	public ?Theme $stored                                 = null;
 	/** @var array<string, mixed> */ public array $edited = array();
+	public bool $installed                                = true;
 	public ?string $unlinked                              = null;
 	public ?string $requestedSlug                         = null;
 	public ?Theme $freshAfterMutation                     = null;
@@ -1164,9 +1226,17 @@ final class OperationThemeRepository extends ThemeRepository {
 		$this->package->setSubdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
+	public function disableThemeForRemoval( Theme $theme ): PackageMutationResult {
+		unset( $theme );
+		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
+	}
 	public function unlink( $stylesheet ): PackageMutationResult {
 		$this->unlinked = (string) $stylesheet;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
+	}
+	public function isInstalled( string $identifier ): bool {
+		unset( $identifier );
+		return $this->installed;
 	}
 }
 

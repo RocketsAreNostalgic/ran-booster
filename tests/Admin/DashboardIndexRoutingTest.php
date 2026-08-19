@@ -928,6 +928,44 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	#[DataProvider( 'packageTypeProvider' )]
+	public function testSignedInstallNoticeProjectsTheManagedPackageIntoTheCreateView( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$_GET       = array(
+			'ran_booster_result'        => 'install',
+			'ran_booster_package'       => $identifier,
+			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|install|' . $identifier ),
+		);
+		$dashboard  = $this->dashboard(
+			$this->throwingSecrets(),
+			database: new ReadyDashboardDatabase()
+		);
+
+		$result = 'plugin' === $type ? $dashboard->getPluginsCreate() : $dashboard->getThemesCreate();
+
+		self::assertSame( $identifier, $result['data']['managedPackageIdentifier'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( ucfirst( $type ) . ' was successfully installed.', $dashboard->messages[0]['message'] );
+	}
+
+	#[DataProvider( 'packageTypeProvider' )]
+	public function testForgedInstallNoticeDoesNotChangeTheCreateActions( string $type ): void {
+		$_GET      = array(
+			'ran_booster_result'        => 'install',
+			'ran_booster_package'       => 'forged-package',
+			'_ran_booster_notice_nonce' => 'forged',
+		);
+		$dashboard = $this->dashboard(
+			$this->throwingSecrets(),
+			database: new ReadyDashboardDatabase()
+		);
+
+		$result = 'plugin' === $type ? $dashboard->getPluginsCreate() : $dashboard->getThemesCreate();
+
+		self::assertNull( $result['data']['managedPackageIdentifier'] );
+		self::assertSame( array(), $dashboard->messages );
+	}
+
+	#[DataProvider( 'packageTypeProvider' )]
 	public function testMissingSelectedPackagesFallBackToTheMatchingIndex( string $type ): void {
 		$identifier = 'plugin' === $type ? 'missing/missing.php' : 'missing-theme';
 		$fallback   = $this->managedPackage(

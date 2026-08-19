@@ -28,27 +28,25 @@ marker_comments=$(jq -cer \
 		and (.body | type) == "string"
 		and (.body | startswith($prefix))
 	)]' <<< "$input")
-if [[ "$action_output" == false ]]; then
-	jq -e \
-		--arg base "$base_sha" \
-		--arg bot 'github-actions[bot]' \
-		--arg bot_email '41898282+github-actions[bot]@users.noreply.github.com' \
-		--arg committer_email 'noreply@github.com' \
-		--arg head "$head_sha" \
-		--arg signer web-flow \
-		'.identity.data.repository.pullRequest.commits.nodes
-		| length == 1
-		and .[0].commit.oid == $head
-		and (.[0].commit.parents.nodes | length == 1 and .[0].oid == $base)
-		and .[0].commit.signature.isValid == true
-		and .[0].commit.signature.state == "VALID"
-		and .[0].commit.signature.signer.login == $signer
-		and .[0].commit.author.user.login == $bot
-		and .[0].commit.author.email == $bot_email
-		and .[0].commit.committer.email == $committer_email' \
-		<<< "$input" >/dev/null \
-		|| fail 'non-action reconciliation requires the exact verified Release Please bot commit identity.'
-fi
+jq -e \
+	--arg base "$base_sha" \
+	--arg bot 'github-actions[bot]' \
+	--arg bot_email '41898282+github-actions[bot]@users.noreply.github.com' \
+	--arg committer_email 'noreply@github.com' \
+	--arg head "$head_sha" \
+	--arg signer web-flow \
+	'.identity.data.repository.pullRequest.commits.nodes
+	| length == 1
+	and .[0].commit.oid == $head
+	and (.[0].commit.parents.nodes | length == 1 and .[0].oid == $base)
+	and .[0].commit.signature.isValid == true
+	and .[0].commit.signature.state == "VALID"
+	and .[0].commit.signature.signer.login == $signer
+	and .[0].commit.author.user.login == $bot
+	and .[0].commit.author.email == $bot_email
+	and .[0].commit.committer.email == $committer_email' \
+	<<< "$input" >/dev/null \
+	|| fail 'release reconciliation requires the exact verified Release Please bot commit identity.'
 
 marker_count=$(jq -er 'length' <<< "$marker_comments")
 (( marker_count <= 1 )) || fail 'expected at most one bot-authored release candidate marker.'

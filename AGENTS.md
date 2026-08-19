@@ -23,10 +23,12 @@ directory and preserve unrelated work.
 - Never commit or print personal access tokens, Bitbucket tokens, webhook
   secrets, the site-owned secrets sidecar, logs, `vendor`, or `node_modules`.
 - Keep GitHub and Bitbucket behavior behind provider contracts.
-- Core owns the fixed GitHub webhook-management adapter under
-  `RAN\Booster\GitHub\WebhookManagement`. It reuses the existing
-  internal webhook operation and admin-interaction services and retains the schema-3
-  `ran_booster_assisted_hooks_installations` option without migration.
+- Core owns the fixed webhook-management control surface under
+  `RAN\Admin\WebhookManagement`. It resolves the selected provider's exact
+  webhook fitness and management facets, reuses the existing admin-interaction
+  services and retains the schema-3 `ran_booster_assisted_hooks_installations`
+  option without migration. Providers own webhook operations and bounded
+  remediation; they do not supply Core UI, routes or schemas.
   `RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION` and
   `RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION` are exact,
   request-local coexistence markers. An exact retirement bridge is inert; a

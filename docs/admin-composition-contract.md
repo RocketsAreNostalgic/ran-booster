@@ -34,56 +34,47 @@ attaching its callbacks:
 
 ```php
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-	|| 14 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+	|| 16 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 	return;
 }
 ```
 
-Add-on API 15 publishes only the named facade needed by each ready action. Core
-does not deliver an add-on logging facade, generic resolver or container.
+Add-on API 16 publishes only the named service documented for its surviving
+ready action. Core does not deliver an add-on logging facade, generic resolver
+or container.
 Provider API 10 remains a separate contract. Provider add-ons must continue to
 perform the exact checks described in the
 [Provider extension contract](provider-extension-contract.md).
 
-Core fires these service-ready actions once on `plugins_loaded` at priority
-100, after provider registration and before it resolves the dashboard and
-request dispatcher:
+Core fires the portability service-ready action once on `plugins_loaded` at
+priority 100, after provider registration and before it resolves the dashboard
+and request dispatcher:
 
 ```php
 do_action(
 	'ran_booster_portability_ready',
 	$portability
 );
-
-do_action(
-	'ran_booster_release_tracking_ready',
-	$releaseTracking
-);
-
-// Delivered only when the selected updater runtime supplies the internal
-// prospective capability required by Core's public API 5.
-do_action(
-	'ran_booster_prospective_release_ready',
-	$prospectiveRelease
-);
 ```
 
-The arguments are respectively a
-`\RAN\AddOn\Portability\PortabilityFacade` or
-`\RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade`. The optional third action
-supplies only its named
-`\RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade`.
+The argument is a `\RAN\AddOn\Portability\PortabilityFacade`. This is a
+request-local delivery point for one exact, already-public safe facade. It is
+not a view hook or service locator. An add-on must attach its listener during
+normal plugin loading, retain the supplied facade for the current request only,
+and perform no remote work in the ready callback. A late listener is not
+replayed. Core catches a failed ready listener and continues without exposing
+its exception to the administrator.
 
-These actions are request-local delivery points for exact, already-public safe
-facades. They are not view hooks or service locators. An add-on must attach its
-listener during normal plugin loading, retain only the supplied allowlisted
-facades for the current request and perform no remote work in the ready
-callback. A late listener is not replayed. Core catches a failed ready listener
-and continues without exposing its exception to the administrator.
+Release administration is bundled in Core. Add-on API 16 does not publish a
+release-tracking ready action, a prospective-release ready action, or a
+prospective-release version marker. Core's fixed release controls call its
+internal typed coordinators after resolving the selected provider's exact
+release facets. A plugin must not treat those internal coordinators as a public
+service-delivery API.
 
 Portability API 2 is an independently versioned adoption-only contract for a
 trusted source bridge. Its consumer checks exact Portability API 2, not Add-on
-API 14. The separate
+API 16. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.
 
@@ -103,12 +94,12 @@ Core remains source-agnostic and exception-contains each hook independently.
 These hooks are not a registry, dashboard tab or whole-view replacement, and
 they supply no Core service or data.
 
-Release-management add-ons must obtain each mutation's purpose-specific nonce
-action from `ReleaseTrackingFacade::nonceAction()`. The action is bound to the
-operation, package type, exact identifier and current source revision. The
-add-on creates the WordPress nonce, renders it only in its own form and verifies
-it in its own `admin_post_*` handler. It then passes that same nonce to the
-facade mutation. Core independently derives the action again and rechecks the
+Core's release-management controls obtain each mutation's purpose-specific
+nonce action from the internal `ReleaseTrackingFacade`. The action is bound to
+the operation, package type, exact identifier and current source revision. The
+controls create the WordPress nonce, render it only in the matching form and
+verify the protected `admin_post_*` request before passing the same nonce to the
+coordinator. Core independently derives the action again and rechecks the
 administrator capability and nonce before it considers package identity,
 eligibility or a source transition. Obtaining an action string or rendering a
 nonce authorizes nothing.
@@ -156,7 +147,7 @@ transition, cache invalidation or package mutation, and returns `null` when
 authorization or binding cannot be proved. A non-null bounded result reports
 the existing verifier outcome; it does not authorize later enablement.
 
-The canonical PHP contract is
+The internal typed contract is
 [`ReleaseTrackingFacade`](../RAN/AddOn/ReleaseTracking/ReleaseTrackingFacade.php),
 whose `preflight()` return type is `?ReleaseTrackingPreflight`, together with
 the immutable
@@ -179,19 +170,16 @@ revision, resets Automatic to Manual and invalidates native update state; it
 does not install, downgrade or alter package files. `ReleaseTrackingStatus`
 exposes the canonical `stable` or `prerelease` channel.
 
-Prospective installation is a separate optional contract. Core defines
-`RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION` as `5` only when its selected
-updater runtime publishes the complete internal API 4 capability required by
-Core, then delivers the facade through
-`ran_booster_prospective_release_ready`. The two version markers describe
-different boundaries and are deliberately independent.
+Prospective installation is an optional Core control. Core exposes it only when
+one registered provider aggregate supplies the complete release capability set
+required by the operation. It does not publish a prospective-release marker or
+deliver the internal facade to another plugin.
 
 The facade accepts exactly:
 
 ```php
 $providerCodes = $prospective->supportedProviderCodes( $type );
 $prospective->listCandidates( $type, $repository, $channel, $nonce );
-$prospective->discover( $type, $repository, $channel, $nonce );
 $prospective->inspect( $type, $repository, $releaseId, $tag, $channel, $nonce );
 $prospective->install(
 	$type,
@@ -207,21 +195,22 @@ $prospective->install(
 `supportedProviderCodes()` returns the bounded complete-product provider list
 for `plugin` or `theme` using request-local configuration only. It performs no
 repository resolution, credential access, remote request, discovery or
-mutation. Callers must keep the prospective source unavailable when the
-selected provider is absent from that list. Candidate listing independently
-requires the exact listing facet; discovery, inspection and installation repeat
-the complete-product check. A failed check returns `unsupported_provider`
-before resolving the repository or invoking preflight.
+mutation. Core keeps the prospective source unavailable when the selected
+provider is absent from that list. The complete-product list requires
+the exact listing, inspection, acquisition, metadata and native-target facets.
+Each operation also checks its purpose-specific facet before resolving the
+repository or invoking provider work and returns `unsupported_provider` when it
+is absent.
 
 `$channel` must be exactly `stable` or `prerelease`; Core rejects any other
 value before resolving credentials or invoking the updater. The channel is
-carried through discovery, exact inspection and exact acquisition, and a
+carried through candidate listing, exact inspection and exact acquisition, and a
 successful installation persists it for subsequent native WordPress update
 registration. `stable` accepts stable releases only. `prerelease` accepts
 prereleases and a later stable promotion. Stable remains the default for
 existing saved configuration.
 
-All four operations recheck `manage_options`, the applicable WordPress install
+All three operations recheck `manage_options`, the applicable WordPress install
 capability and the operation/type nonce derived from `nonceAction()`.
 Candidate listing returns at most eight display-safe summaries without
 downloading a ZIP. Inspection downloads, validates and discards the exact ZIP,
@@ -231,8 +220,8 @@ refuses an already installed, managed or active target, delegates mutation to
 WordPress Core, verifies that the new install remains inactive, and reports
 adoption separately. The facade never exposes
 credentials, signed URLs, internal descriptors, archive paths or provider
-responses. If the marker or ready action is absent, an add-on must hide only
-its prospective choice and retain existing managed-release behavior.
+responses. A partial provider capability set exposes no prospective choice and
+grants no repository, credential, remote, download, or mutation authority.
 
 ## Add-on dashboard tabs
 
@@ -274,10 +263,9 @@ does not expose the service container, repositories, credentials, secrets or
 arbitrary Core models. Core contains a renderer failure and keeps the remaining
 dashboard usable.
 
-Release Deployments contributes to existing package surfaces, while Bitbucket
-uses the provider-tab contract. Bundled GitHub webhook management is Core code,
-not an add-on composition consumer. This does not remove the public tab
-capability for other add-ons.
+Release management and repository webhook-management placement are Core code,
+not add-on composition consumers. Bitbucket uses the provider-tab contract.
+This does not remove the public tab capability for other add-ons.
 
 ## Fixed Extensions page
 
@@ -291,8 +279,7 @@ The page uses WordPress plugin-card presentation language without invoking the
 WordPress.org Plugins API or installer. It performs no remote request, mutation,
 entitlement check, update registration or add-on callback. Free acquisition is
 disabled until the corresponding repository and public release pass their
-human-readiness gate. Sponsor install controls are always disabled; the
-separate access-information link is descriptive, not an entitlement signal.
+human-readiness gate. The page stores no sponsorship or entitlement state.
 
 Installed and active state comes only from local WordPress plugin state. Exact
 runtime compatibility remains owned by each installed extension's fail-closed
@@ -301,15 +288,21 @@ state, and its local stylesheet is limited to the Extensions screen hook.
 
 ## Provider repository surface
 
-Core owns and renders the provider repository table. Bundled GitHub webhook
-management enriches GitHub rows and renders the selected-repository panel
-through a direct first-party call. Core validates the resulting rows, preserves
-the fixed `core:webhook-management` action, and permits only bounded historical
-records from its own schema. There is no public row or panel composition hook.
+Core owns and renders the provider repository table. Its internal webhook
+controls enrich rows and render the selected-repository panel only when the
+selected provider resolves both `RepositoryWebhookFitness` and
+`RepositoryWebhookManagement`, plus `WebhookNormalizer`, to the same registered
+aggregate. Core validates
+the resulting rows, preserves the fixed `core:webhook-management` action, and
+permits only bounded historical records from its own schema. There is no public
+row or panel composition hook, renderer callback or provider-supplied field
+schema.
 
-Other providers retain their provider-owned webhook settings link and manual
-setup guidance. A provider backend capability does not create a generic
-management form, credential schema, or operation route.
+Missing, partial or incompatible webhook facets create no action, panel,
+documentation section, asset or mutation authority. A complete non-GitHub
+provider receives the same fixed Core placement; its bounded metadata supplies
+the provider code and label, while its facet implementation owns remote calls,
+credentials and provider-specific remediation.
 
 ## Package screen anatomy
 

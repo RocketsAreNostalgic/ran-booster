@@ -1,6 +1,6 @@
 # RAN Booster
 
-An internal WordPress plugin for managing theme and plugin deployments from repository providers.
+A self-hosted WordPress plugin for managing theme and plugin deployments from repository providers.
 
 This repository began as a GPL fork. The inherited GPLv2 text and source
 provenance are retained in [license.txt](license.txt) and [NOTICE.md](NOTICE.md).
@@ -31,7 +31,7 @@ through a documented `ran_booster_register_providers` hook without modifying
 Booster itself (see [provider extension contract](docs/provider-extension-contract.md)).
 The [provider registration and coexistence characterization](docs/provider-registration-and-coexistence.md)
 records the current exact-code collision protections and their limits.
-Premium functionality contributes to existing Core screens through the
+Optional add-ons contribute to existing Core screens through the
 [WordPress-native administration composition
 contract](docs/admin-composition-contract.md). Add-ons whose workflow genuinely
 requires a separate dashboard surface may instead use the retained public
@@ -85,7 +85,7 @@ deployment constants remain available for explicitly configured credentials.
 - WordPress 7.0 or newer
 - PHP 8.2 or newer
 - PHP Sodium extension
-- Single-site WordPress; multisite is not supported in this Alpha
+- Single-site WordPress; multisite is not supported in this Beta
 - MySQL 8.0 or newer or MariaDB 10.11 or newer, with InnoDB available
 
 MySQL 8.0 is the tested compatibility floor; MySQL 8.4 LTS is the production
@@ -149,8 +149,7 @@ work is in neither record.
 - **Extensions** — the Core-owned Extensions page lists the remaining first-party
   beta extensions using local WordPress plugin state and release-bundled
   artwork. Free downloads remain disabled until their public repositories and
-  releases are ready for people; Sponsor install controls remain disabled
-  and link separately to access information.
+  releases are ready for people.
 - **GitHub** — public repositories need no credential. Private repositories use
   named personal access token profiles: narrowly scoped fine-grained tokens for
   known resource owners, or a classic token when one credential must span several
@@ -158,10 +157,13 @@ work is in neither record.
   the callback URL, event, repository context and manual setup links. Successful credential
   validation records GitHub's token-expiration response header when GitHub
   supplies it.
-- **GitHub webhook management** — Core sets up, checks, reconfigures and removes
-  GitHub repository webhooks using a fine-grained token with Webhooks: Read and
-  write permission. An administrator can paste a request-only token or select
-  an eligible saved GitHub credential. Core resolves a saved token only inside
+- **Provider webhook management** — Core places the same setup, check,
+  reconfigure and remove controls for any registered provider implementing exact
+  webhook fitness, management and signing-policy normalization facets on one
+  aggregate. The bundled
+  GitHub provider uses a fine-grained token with Webhooks: Read and write
+  permission. An administrator can paste a request-only credential or select
+  an eligible saved credential. Core resolves a saved credential only inside
   the fixed operation and never exposes the credential or signing secret to UI
   code. The GitHub repository table and selected-repository panel use the same
   provider-scoped, display-safe site and repository readiness result, including
@@ -172,22 +174,18 @@ work is in neither record.
   Core profile or creates an exact repository profile; explicit reconfiguration
   sends the current Core secret and callback settings to the identified remote hook.
   Replacing a secret remains a separate Core action. A saved local secret does
-  not prove that a remote hook exists, so the add-on labels remote state as
-  last observed. The add-on never enables Automatic deployment; manual webhook
+  not prove that a remote hook exists, so Core labels remote state as last
+  observed. Webhook management never enables Automatic deployment; manual webhook
   setup remains available without it. Each assisted operation rechecks the
   stable repository identity with the same saved or request-only credential and
   takes a target-keyed, non-persistent database lock before remote work.
-- **Release Deployments add-on** — contributes release status and actions to
-  Core's managed Plugins and Themes tables and appends package-specific
-  settings through the same bounded WordPress-native composition contract.
-  Core renders the shared rows and controls; the add-on owns capability- and
-  nonce-checked WordPress handlers, while Core's facade independently
-  reauthorizes and performs mutations. When the selected updater runtime
-  supplies updater prospective API 4, Core publishes its independent
-  Prospective Release API 5. Its local `supportedProviderCodes()`
-  complete-product projection lets callers keep unsupported providers out of
-  the prospective workflow before any repository check. Callers explicitly
-  choose the bounded `stable` or
+- **Provider release management** — Core places release status, source choices,
+  package actions and prospective installation controls for providers that
+  implement the complete release capability set. The bundled GitHub provider
+  owns GitHub discovery, credentials, exact release inspection, acquisition,
+  native-target behavior and workflow assistance; Core owns authorization,
+  source revision, locks, WordPress mutation and installed-state readback.
+  Administrators explicitly choose the bounded `stable` or
   `prerelease` channel for discovery, inspection and installation; discovery
   returns bounded metadata without downloading a ZIP. Inspection downloads,
   validates and discards the exact ZIP; install performs a second,
@@ -197,10 +195,9 @@ work is in neither record.
   inactive, remain inactive, pass installed identity checks and then be adopted
   by Booster. `installed_but_unmanaged` is an umbrella partial outcome: inspect
   installed version and activation before linking or retrying; uncertain-state
-  and cleanup failures remain distinct. A missing capability hides only the
-  prospective first-install choice; existing managed-release controls remain
-  usable. The add-on has no separate Booster screen, although the public add-on
-  tab API remains available to other add-ons.
+  and cleanup failures remain distinct. Missing or partial release capabilities
+  expose no affected control and grant no repository, credential, download,
+  update or mutation authority.
 - **Common package automation and repair** — package settings use one
   **Automation** control for both sources: Disabled prevents Booster-managed
   replacement, Manual requires an explicit action, and Automatic permits the
@@ -276,8 +273,7 @@ work is in neither record.
   offered an update. Booster follows prereleases only while its
   installed version is a prerelease, never enables auto-update, and leaves
   scheduling, notices and replacement to WordPress Core. This updates Booster
-  itself; it is separate from the managed Release Deployments workflow for
-  managed packages.
+  itself; managed packages use the separate provider-attached release path.
 - Booster has no durable operational log. Bounded deployment outcomes live in
   Deployment activity and explicit checks live in Troubleshooting. The Logging
   panel can temporarily retain up to 400 sanitized Booster events for one hour
@@ -292,6 +288,19 @@ work is in neither record.
   safe, actionable email when the attempt finishes. A newer attempt for the
   same package replaces the old status; manual deployment failures remain in
   Deployment activity without generating background-failure email.
+
+## Install, update, and get help
+
+Install the `ran-booster-<version>.zip` attached to the intended immutable Beta
+release in this repository. GitHub's generated **Source code** archives are not
+installable plugin packages. After installation, Booster's bundled updater owns
+its WordPress-native update offers; Core does not depend on a vendor-hosted
+licence or package service.
+
+Use the repository issue tracker for ordinary support and non-sensitive defects.
+Follow [SECURITY.md](SECURITY.md) for confidential vulnerability reporting and
+[CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. The authoritative
+release procedure is [RELEASE.md](RELEASE.md).
 
 ## Feature comparison
 
@@ -494,5 +503,5 @@ locked shared-updater runtime, and the generated
 agent/Dex state, workflows, release tooling, Composer and Node metadata, caches,
 logs, archives, and secret sidecars are excluded. Plugin Check is limited to
 its general, security, performance, and accessibility categories because RAN
-Booster is deployed internally rather than submitted to the WordPress.org
-plugin repository.
+Booster is distributed from its canonical GitHub releases rather than the
+WordPress.org plugin repository.

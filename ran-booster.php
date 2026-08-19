@@ -5,7 +5,7 @@
  * Plugin URI: https://github.com/RocketsAreNostalgic/ran-booster
  * Description: Repository deployment management for WordPress themes and plugins.
  * x-release-please-start-version
- * Version: 1.0.0-beta.21
+ * Version: 1.0.0-beta.22
  * x-release-please-end
  * Requires at least: 7.0
  * Requires PHP: 8.2
@@ -29,9 +29,9 @@ if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
-} elseif ( 15 !== RAN_BOOSTER_ADDON_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Add-on API 15 conflicts with an existing API version marker.' );
+	define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+} elseif ( 16 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+	throw new LogicException( 'RAN Booster Add-on API 16 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' ) ) {
@@ -44,14 +44,15 @@ require __DIR__ . '/autoload.php';
 
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\Portability\PortabilityFacade;
-use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\GitHubReleaseUpdateNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
+use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
+use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
-use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
+use RAN\Booster\GitHub\GitHubProvider;
 use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
@@ -76,11 +77,12 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 
 $ran_booster_version                    = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 $ran_booster_self_update_policy         = CoreSelfUpdatePolicy::detect( __FILE__, $ran_booster_version );
-$GLOBALS['ran_booster_release_updater'] = GitHubReleaseUpdaterBootstrap::register(
+$ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::register(
 	pluginFile: __FILE__,
 	pluginVersion: $ran_booster_version,
 	nativeDiscovery: $ran_booster_self_update_policy->allowsNativeDiscovery()
 );
+$GLOBALS['ran_booster_release_updater'] = $ran_booster_release_updater;
 GitHubReleaseUpdateNotice::register();
 
 $ran_booster_runtime_support = RuntimeSupport::current();
@@ -102,7 +104,7 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 }
 ( new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy ) )->register();
 
-( static function () use ( $ran_booster_self_update_policy ): void {
+( static function () use ( $ran_booster_release_updater, $ran_booster_self_update_policy ): void {
 	$ran_booster_container            = new CoreContainer();
 	$ran_booster_runtime              = new Booster( $ran_booster_container );
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
@@ -127,7 +129,7 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 
 	add_action(
 		'plugins_loaded',
-		static function () use ( $ran_booster_container, $ran_booster_runtime ): void {
+		static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater ): void {
 			// All plugins have now had an opportunity to attach their provider
 			// registration callback. No provider consumer is resolved before this
 			// extension seam closes and the registry is sealed.
@@ -147,18 +149,27 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 				);
 			}
 
-			$releaseTracking  = $ran_booster_container->make( ReleaseTrackingFacade::class );
 			$portability      = $ran_booster_container->make( PortabilityFacade::class );
 			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
-			if ( GitHubWebhookManagement::legacyAddOnIsActive() ) {
-				GitHubWebhookManagement::registerLegacyAddOnNotice();
+			add_action(
+				'plugins_loaded',
+				static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {
+					if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
+						!== GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater ) ) {
+						return;
+					}
+					$ran_booster_container->make( ReleaseManagementControls::class )->register();
+					$ran_booster_container->make( GitHubReleaseWorkflowControls::class )->register();
+				},
+				PHP_INT_MAX
+			);
+			if ( GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
+				GitHubProvider::registerLegacyAssistedHooksAddOnNotice();
 			} else {
-				$ran_booster_container->make( GitHubWebhookManagement::class )->register();
+				$ran_booster_container->make( RepositoryWebhookManagementControls::class )->register();
 			}
 			$addOnRegistry = new AdminAddOnRegistry(
-				array(
-					'release_tracking' => $releaseTracking,
-				),
+				array(),
 				RAN_BOOSTER_ADDON_API_VERSION,
 				RAN_BOOSTER_ADDON_API_VERSION
 			);
@@ -194,75 +205,10 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 				);
 			}
 
-			try {
-				do_action( 'ran_booster_release_tracking_ready', $releaseTracking );
-			} catch ( Throwable $failure ) {
-				\RAN\Logging\BoosterLogger::logException(
-					'add-on service listener failed',
-					$failure,
-					array(
-						'source' => 'admin',
-						'step'   => 'add_on_service_ready',
-						'event'  => 'ran_booster_release_tracking_ready',
-					)
-				);
-			}
-
 			$ran_booster_container->bind( Dashboard::class, $ran_booster_container->make( Dashboard::class ) );
 			$ran_booster_runtime->init();
 		},
 		100
-	);
-
-	add_action(
-		'plugins_loaded',
-		static function () use ( $ran_booster_container ): void {
-			$updater                         = $GLOBALS['ran_booster_release_updater'] ?? null;
-			$updater_prospective_api_version = is_object( $updater )
-				? GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $updater )
-				: null;
-			if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-				=== $updater_prospective_api_version
-				&& defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' ) ) {
-				if ( ProspectiveReleaseFacade::API_VERSION
-					!== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
-					\RAN\Logging\BoosterLogger::log(
-						'prospective release API marker conflict',
-						array( 'step' => 'prospective_release_api_negotiation' )
-					);
-				}
-			} elseif ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-				=== $updater_prospective_api_version ) {
-				define(
-					'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION',
-					ProspectiveReleaseFacade::API_VERSION
-				);
-			}
-
-			if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-				!== $updater_prospective_api_version
-				|| ! defined( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION' )
-				|| ProspectiveReleaseFacade::API_VERSION
-				!== RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION ) {
-				return;
-			}
-
-			try {
-				$prospectiveRelease = $ran_booster_container->make( ProspectiveReleaseFacade::class );
-				do_action( 'ran_booster_prospective_release_ready', $prospectiveRelease );
-			} catch ( Throwable $failure ) {
-				\RAN\Logging\BoosterLogger::logException(
-					'add-on service listener failed',
-					$failure,
-					array(
-						'source' => 'admin',
-						'step'   => 'add_on_service_ready',
-						'event'  => 'ran_booster_prospective_release_ready',
-					)
-				);
-			}
-		},
-		PHP_INT_MAX
 	);
 
 	$ran_booster_update_request_filter = new WordPressOrgUpdateRequestFilter(

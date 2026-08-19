@@ -186,6 +186,21 @@ them:
   stable or prerelease channel. The provider owns remote calls and credential
   use; the facet grants no download, inspection, installation or mutation
   authority.
+- `RAN\RepositoryProvider\RepositoryReleaseInspector` for inspecting one exact
+  release and returning bounded, path-free evidence. The provider owns archive
+  acquisition, verification and disposal; the facet grants no installation,
+  updater or mutation authority.
+- `RAN\RepositoryProvider\RepositoryReleaseAcquirer` for freshly reacquiring
+  one inspected release and returning a typed, single-use artifact. The
+  provider owns remote access, verification and custody until handoff; Core
+  alone installs, reads back and adopts the package.
+- `RAN\RepositoryProvider\RepositoryReleaseNativeTargets` to construct and
+  register provider-owned WordPress native update targets, detect an existing
+  provider target, normalize passive status and perform an explicit refresh.
+  Implement it together with `RepositoryReleaseMetadata` to make a provider
+  eligible for managed published-release tracking. Core retains installed
+  package enumeration, authority snapshots, mutation fences, locks and source
+  transitions.
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits a capability, Booster will keep the corresponding feature disabled rather
@@ -237,6 +252,15 @@ shape check.
 1. Add `RepositoryReleaseCandidateListing` only when the provider can return a
    bounded typed list and distinguish no eligible release from operational
    failure without exposing upstream payloads.
+1. Add `RepositoryReleaseInspector` only when the provider can acquire, verify
+   and discard one exact release archive and return its bounded typed evidence.
+   Use the two typed rejection reasons for no matching releases and invalid
+   release contents; expose no local path, URL, credential or artifact handle.
+1. Add `RepositoryReleaseAcquirer` only when the provider can freshly acquire
+   the inspected release, compare its opaque fingerprint and return a
+   single-use `RepositoryReleaseArtifact`. Do not return a path, URL, archive
+   bytes, provider result payload or reusable claim. Report a bounded cleanup
+   failure when provider-owned bytes cannot be discarded before handoff.
 1. Test registration from the main plugin file with the version guard in place.
 1. Verify the provider registers cleanly, seals cleanly, and surfaces the
    correct optional capabilities.

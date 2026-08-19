@@ -45,9 +45,19 @@ jq -e \
 	'.operation == "patch" and .comment_id == 91 and .marker == $marker' \
 	<<< "$transition" >/dev/null
 
+transition=$("$reconciler" true "$base_sha" "$new_head" <<< "$fixture")
+jq -e \
+	--arg marker "$new_marker" \
+	'.operation == "patch" and .comment_id == 91 and .marker == $marker' \
+	<<< "$transition" >/dev/null
+
 invalid_identity=$(jq '.identity.data.repository.pullRequest.commits.nodes[0].commit.signature.isValid = false' <<< "$fixture")
 if "$reconciler" false "$base_sha" "$new_head" <<< "$invalid_identity" >/dev/null 2>&1; then
 	printf 'stale marker accepted an invalid bot signature\n' >&2
+	exit 1
+fi
+if "$reconciler" true "$base_sha" "$new_head" <<< "$invalid_identity" >/dev/null 2>&1; then
+	printf 'action output accepted an invalid bot signature\n' >&2
 	exit 1
 fi
 

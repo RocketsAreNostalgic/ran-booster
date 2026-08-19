@@ -41,7 +41,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 3 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
 		self::assertStringContainsString( "RAN_BOOSTER_PROVIDER_API_VERSION', 10", $bootstrap );
-		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 15", $bootstrap );
+		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 16", $bootstrap );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION', $bootstrap );
 		self::assertStringNotContainsString( 'ran_booster_webhook_cleanup_ready', $bootstrap );
 		self::assertFalse( interface_exists( 'RAN\\AddOn\\WebhookAssistance\\WebhookCleanupFacade' ) );
@@ -97,6 +97,16 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertNull( $provider->credentialId );
 		self::assertSame( 'request-fitness-canary', $provider->requestCredential );
 		self::assertSame( array(), $secrets->profiles );
+	}
+
+	public function testProviderOpaqueNestedRepositoryLocatorRemainsEligible(): void {
+		$facade = $this->facade(
+			new FixedFacadeSecretsFile(),
+			new FixedWebhookProvider(),
+			repository: 'group/subgroup/package'
+		);
+
+		self::assertNotNull( $facade->target( 'gh', '101' ) );
 	}
 
 	public function testSetupExceptionAfterProviderInvocationRetainsRecoveryProfile(): void {
@@ -435,9 +445,9 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 1, $provider->calls );
 	}
 
-	private function facade( FixedFacadeSecretsFile $secrets, FixedWebhookProvider $provider, ?callable $acquireLock = null, ?callable $releaseLock = null ): AssistedWebhookFacade {
+	private function facade( FixedFacadeSecretsFile $secrets, FixedWebhookProvider $provider, ?callable $acquireLock = null, ?callable $releaseLock = null, string $repository = 'owner/example' ): AssistedWebhookFacade {
 		$registry = new ProviderRegistry( array( $provider ) );
-		$package  = new FixedFacadePackage( new ManagedRepository( 'gh', 'owner/example', '101', 'main' ) );
+		$package  = new FixedFacadePackage( new ManagedRepository( 'gh', $repository, '101', 'main' ) );
 
 		return new AssistedWebhookFacade(
 			new WebhookAssistanceReadinessEvaluator( new FixedPluginRepository( $package ), new FixedThemeRepository(), $secrets, new FixedDatabase(), static fn (): bool => true ),

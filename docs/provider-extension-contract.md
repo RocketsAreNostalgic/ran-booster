@@ -92,6 +92,10 @@ inside the selected fixed call. A request-only credential is a separate
 explicit sensitive parameter for both assessment and execution of that call and
 is never persisted or returned. Exactly one saved ID or request-only value is
 accepted. Only setup and reconfigure receive the Core-held signing secret.
+The fixed management placement also requires `WebhookNormalizer` on that same
+aggregate, proving that provider registration supplied the signing policy Core
+needs to create and retain webhook profiles. Operation facets without that
+policy receive no UI or route authority.
 
 Immediately before each management call, Core invokes the matching read-only
 assessment with the same credential source. The provider must remotely compare
@@ -102,6 +106,16 @@ unavailable or stale evidence fails closed before remote mutation. Fitness does
 not otherwise grant execution authority, and its one-call budget remains
 separate from the fixed management budget.
 
+Core places one fixed repository-row action and selected-repository panel only
+when both operation interfaces and `WebhookNormalizer` resolve to the same
+registered provider aggregate. The
+provider's bounded metadata supplies its code and label; the provider owns
+credential use, remote behavior and the bounded plain-text remediation returned
+by its operation result. Missing, partial or incompatible facets create no
+action, panel, documentation, asset or mutation authority. This placement is
+not a capability enumerator, generic form schema, callback registry or provider
+HTML seam.
+
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
 prove that the exact remote hook is owned by the selected Core target before
@@ -109,12 +123,15 @@ readback or mutation; the URL is not a configurable transport seam.
 
 #### Management presentation
 
-The backend capability does not create an administration form or operation
-route. Bundled GitHub management is an explicit first-party adapter with fixed
-copy, credential fields, result interpretation, record schema and request
-handler. Core does not derive those decisions from provider metadata and does
-not publish a renderer registry, callable transport, generic dispatcher or raw
-credential handle for custom providers.
+Core owns one fixed administration form and operation route for providers whose
+single registered aggregate implements both webhook operation facets and the
+signing-policy normalizer. Core derives only
+the bounded provider code and label from metadata; providers cannot supply
+fields, HTML, callbacks or route behavior. The fixed host owns authorization,
+credential-source choice, result bounds and the schema-3 recovery record, while
+the provider facets own credential use, remote behavior and bounded plain-text
+remediation. Core publishes no renderer registry, callable transport, generic
+dispatcher or raw credential handle.
 
 `RepositoryWebhookFitnessResult` and `RepositoryWebhookOperationResult` admit
 only bounded, closed, non-secret evidence. Setup and reconfigure can establish
@@ -314,7 +331,12 @@ archive and grants no inspection, acquisition, installation or mutation
 authority. Publication time and expected ZIP names remain in the typed value
 only because the unchanged standalone facade still validates them; they grant no
 artifact authority. The bounded list wrapper enforces the result limit, typed
-members and unique provider identities at the capability boundary. The facet
+members and unique provider identities at the capability boundary. List order
+is the provider's bounded inspection preference. Core inspects at most the first
+two candidates in that order, continues only when the provider classifies the
+package as incompatible, and accepts only exact listing-to-inspection identity
+continuity. A vanished, corrupt or contradictory preferred release fails closed
+without falling through to an older release. The facet
 does not by itself make the complete release product available. Until those
 remaining operations have their own provider facets,
 Core's complete-product projection continues to advertise only the bundled
@@ -324,6 +346,56 @@ or later-operation authority. The temporary standalone-add-on facade can project
 only positive integer release identities; opaque provider identities remain
 valid contract values but require the later hard cut before that facade can
 consume them.
+
+`RepositoryReleaseInspector` is the independent remote facet for inspecting one
+exact provider release. It accepts the package type, resolved repository,
+opaque provider release identity, exact tag and `stable` or `prerelease`
+channel. The provider acquires, verifies and discards the archive within the
+call, and returns one bounded `RepositoryReleaseInspection` containing only the
+provider release identity, tag, version, provider commit identity, package root,
+main file and opaque fingerprint. The value exposes no local path, URL,
+credential, archive or artifact handle. `RepositoryReleaseInspectionRejected`
+distinguishes `no_releases`, `invalid_release` and package `incompatible`;
+other exceptions mean the inspection operation was unavailable. Only
+`incompatible` permits Core to try the next provider-ordered candidate. The
+facet grants no installation,
+updater or mutation authority and does not by itself make the complete release
+product available.
+
+`RepositoryReleaseAcquirer` is the independent custody facet for freshly
+acquiring the exact release selected after inspection. It accepts the same
+resolved repository, package type, provider release identity, tag and channel,
+plus the opaque fingerprint returned by inspection. The provider must
+re-describe, re-download and revalidate the release before returning one
+`RepositoryReleaseArtifact`. That artifact exposes no URL, path, credential or
+archive bytes. It permits one typed handoff to Core and otherwise owns bounded
+discard. `RepositoryReleaseAcquisitionRejected::invalidRelease()` is the only
+release-domain rejection. If cleanup of provider-owned bytes fails before Core
+can take custody, the provider must instead throw the bounded
+`cleanup_failed` rejection; Core reports that failure without attempting an
+install. Other exceptions mean acquisition was unavailable.
+The facet grants no WordPress installation or adoption authority. Core retains
+the updater claim through `PreparedArtifact`, owns installation and installed
+readback, and discards the exact claim after use.
+
+`RepositoryReleaseNativeTargets` is the exact optional capability for joining
+WordPress's native plugin or theme update flow. Core supplies the resolved
+repository, Core-derived metadata path, installed identity, channel and
+deployment policy. The provider owns collision detection, lazy credential use,
+updater construction and registration, and projects only a typed
+`RepositoryReleaseNativeTarget`. Its `RepositoryReleaseNativeTargetStatus` is a
+bounded passive value: it contains normalized availability, offered-version,
+check-time, failure and candidate-validation fields, never the provider's raw
+updater object, diagnostics array or internal runtime state. Refresh returns an
+exact boolean. Missing capabilities, failed registration, invalid status and
+failed refresh all fail closed. Release tracking requires this capability and
+`RepositoryReleaseMetadata` on the same registered provider aggregate;
+metadata alone is not eligibility. Core retains package enumeration, metadata
+path derivation, authority snapshots, WordPress hook timing, locks, stale-offer
+suppression and package-source transitions. Native target implementations must
+perform credential use, remote acquisition and download only after Core's
+earliest `upgrader_pre_download` authority fence; the bundled GitHub updater
+runs its acquisition filter at `PHP_INT_MAX`.
 
 `RepositoryWebhookSettingsLink` is an independent display capability. It maps
 one provider-owned repository locator to that repository's stable HTTPS webhook
@@ -451,6 +523,16 @@ published-release support. Core rejects listing with `unsupported_provider`
 when the selected provider omits the listing facet, and rejects later
 prospective operations when the provider is absent from the complete-product
 projection; both checks happen before repository resolution.
+
+For an already managed branch package, Core composes
+`RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector` and
+`RepositoryReleaseMetadata` for the protected preflight that precedes a source
+transition. The provider owns candidate ordering, remote calls, credentials and
+archive inspection. Core inspects at most two of the eight listed candidates,
+falls through only for package incompatibility, and checks exact release
+identity, tag, version, channel and installed package identity, computes the
+version relationship, then performs its own source-revision CAS. A missing or
+partial facet set is unavailable and cannot change package state.
 
 The physically separate conformance plugin in
 `tests/fixtures/ran-booster-fixture-provider/` registers a novel provider ID,

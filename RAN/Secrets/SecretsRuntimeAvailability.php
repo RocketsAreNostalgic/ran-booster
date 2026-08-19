@@ -54,7 +54,7 @@ final readonly class SecretsRuntimeAvailability {
 	public function message(): string {
 		return match ( $this->code() ) {
 			'sodium_unavailable'    => 'Encrypted credential operations are unavailable because the PHP Sodium extension is missing.',
-			'multisite_unsupported' => 'Encrypted credential operations are unavailable because this Alpha supports single-site WordPress only.',
+			'multisite_unsupported' => 'Encrypted credential operations are unavailable because this Beta supports single-site WordPress only.',
 			default                 => 'Encrypted credential operations are available.',
 		};
 	}

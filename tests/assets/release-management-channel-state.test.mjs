@@ -1,0 +1,404 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import test from 'node:test';
+
+const source = fs.readFileSync(
+	new URL('../../assets/ran-booster-release-management.js', import.meta.url),
+	'utf8'
+);
+
+function declaration(name) {
+	const start = source.indexOf(`\tconst ${name} = `);
+	assert.notEqual(start, -1, `The ${name} declaration must exist.`);
+
+	let depth = 0;
+	let end = -1;
+	for (
+		let index = source.indexOf('{', start);
+		index < source.length;
+		index++
+	) {
+		if (source[index] === '{') {
+			depth += 1;
+		} else if (source[index] === '}') {
+			depth -= 1;
+			if (depth === 0) {
+				end = source.indexOf(';', index) + 1;
+				break;
+			}
+		}
+	}
+
+	assert.notEqual(end, -1, `The ${name} declaration must be complete.`);
+
+	return source.slice(start, end);
+}
+
+function deferred() {
+	let resolve;
+	const promise = new Promise((next) => {
+		resolve = next;
+	});
+
+	return { promise, resolve };
+}
+
+async function flush() {
+	await new Promise((resolve) => setImmediate(resolve));
+}
+
+test('client hydration normalizes the release source label', () => {
+	assert.match(
+		source,
+		/const choiceHeading = releaseChoice\.querySelector\(\s*'\[data-ran-booster-source-heading\]'\s*\);/
+	);
+	assert.match(
+		declaration('setChoiceState'),
+		/setText\(choiceHeading, 'Published releases'\);/
+	);
+});
+
+test('selected release track maps to the stored release channel', () => {
+	assert.match(
+		declaration('releaseChannel'),
+		/channelControl\?\.querySelector\(\s*'\[data-ran-booster-release-channel\]:checked'[\s\S]*\.value === 'prerelease'/
+	);
+	assert.match(
+		source,
+		/channelControl\?\.addEventListener\('change', scheduleDiscovery\)/
+	);
+});
+
+test('prospective client contains no managed release track dirty-state behavior', () => {
+	assert.doesNotMatch(source, /ran-booster-release-track-save/);
+	assert.doesNotMatch(source, /ranBoosterInitialReleaseChannel/);
+	assert.doesNotMatch(source, /htmx:afterSwap/);
+});
+
+test('loading state is carried by the stable release pane instead of a spinner', () => {
+	assert.doesNotMatch(source, /release-status-spinner/);
+	assert.match(
+		source,
+		/setup\.classList\.toggle\('is-checking', options\.checking === true\)/
+	);
+	assert.match(source, /setup\.setAttribute\(\s*'aria-busy',/);
+	assert.match(
+		source,
+		/status\?\.classList\.toggle\(\s*'screen-reader-text',\s*options\.screenReaderOnly === true/
+	);
+	assert.match(
+		declaration('setChoiceState'),
+		/ran-booster-enhanced-mutation__submitter--busy/
+	);
+	assert.match(declaration('setChoiceState'), /ran-booster-update-is-active/);
+});
+
+test('final install submits the shared Core create form', () => {
+	const installRelease = declaration('installRelease');
+
+	assert.match(installRelease, /event\.preventDefault\(\)/);
+	assert.match(installRelease, /form\.elements\.namedItem\(name\)/);
+	assert.match(
+		installRelease,
+		/form\.setAttribute\('hx-post', config\.adminPostUrl\)/
+	);
+	assert.match(
+		installRelease,
+		/form\.elements\.namedItem\('ran_booster\[action\]'\)/
+	);
+	assert.match(installRelease, /branchActionWasDisabled/);
+	assert.match(installRelease, /branchAction\.disabled = true/);
+	assert.match(installRelease, /form\.requestSubmit\(install\)/);
+	assert.doesNotMatch(installRelease, /document\.createElement\('form'\)/);
+	assert.doesNotMatch(installRelease, /\.submit\(\)/);
+});
+
+test('Core source events drive release discovery without duplicating tab state', () => {
+	assert.match(
+		declaration('chooseRelease'),
+		/releaseSelected = true;[\s\S]*listCandidates\(\);/
+	);
+	assert.match(
+		declaration('chooseBranch'),
+		/releaseSelected = false;[\s\S]*requestSequence \+= 1;/
+	);
+	assert.match(
+		source,
+		/form\.addEventListener\('ran-booster:package-source-changed'/
+	);
+	assert.doesNotMatch(
+		source,
+		/setHidden\(branchPane|setAttribute\('aria-selected'/
+	);
+});
+
+test('changing channel invalidates the exact candidate and ignores a stale candidate list', async () => {
+	const requests = [];
+	const requestChannels = [];
+	let channel = 'stable';
+	const presentedLists = [];
+	const install = { hidden: false };
+	const details = { hidden: false };
+	const candidates = { hidden: false };
+	const repository = { value: 'RocketsAreNostalgic/example-plugin' };
+	const form = {
+		querySelector() {
+			return repository;
+		},
+	};
+	const window = {
+		clearTimeout() {},
+		setTimeout(callback) {
+			callback();
+			return 1;
+		},
+	};
+	const request = () => {
+		const pending = deferred();
+		requests.push(pending);
+		requestChannels.push(channel);
+		return pending.promise;
+	};
+	const setHidden = (element, hidden) => {
+		element.hidden = hidden;
+	};
+	const showCandidates = (data) => presentedLists.push(data);
+
+	const createHarness = Function(
+		'form',
+		'window',
+		'request',
+		'install',
+		'details',
+		'setHidden',
+		'candidates',
+		'candidateList',
+		'releaseChannel',
+		'showCandidates',
+		'setChecking',
+		'showUnavailable',
+		'showIdle',
+		'updateAdvancedSummary',
+		'providerSupported',
+		'forceBranchForUnsupportedProvider',
+		`"use strict";
+		let requestSequence = 0;
+		let selectedRelease = {
+			id: 7,
+			tag: 'v1.0.0',
+			version: '1.0.0',
+			channel: 'stable',
+			fingerprint: 'v1:${'a'.repeat(64)}'
+		};
+		let releaseSelected = true;
+		let discoveryTimer = null;
+		${declaration('listCandidates')}
+		${declaration('scheduleDiscovery')}
+		return {
+			listCandidates,
+			scheduleDiscovery,
+			state: () => ({ requestSequence, selectedRelease })
+		};`
+	);
+	const harness = createHarness(
+		form,
+		window,
+		request,
+		install,
+		details,
+		setHidden,
+		candidates,
+		null,
+		() => channel,
+		showCandidates,
+		() => {},
+		() => {},
+		() => {},
+		() => {},
+		() => true,
+		() => {}
+	);
+
+	const staleCandidates = harness.listCandidates();
+	assert.deepEqual(requestChannels, ['stable']);
+
+	channel = 'prerelease';
+	harness.scheduleDiscovery();
+
+	assert.deepEqual(requestChannels, ['stable', 'prerelease']);
+	assert.equal(harness.state().selectedRelease, null);
+	assert.equal(install.hidden, true);
+	assert.equal(details.hidden, true);
+
+	requests[0].resolve({
+		successful: true,
+		code: 'release_candidates_available',
+		data: {
+			candidates: [{ release_id: 7, tag: 'v1.0.0', version: '1.0.0' }],
+		},
+	});
+	await staleCandidates;
+
+	assert.equal(harness.state().selectedRelease, null);
+	assert.deepEqual(presentedLists, []);
+
+	requests[1].resolve({
+		successful: true,
+		code: 'release_candidates_available',
+		data: {
+			candidates: [
+				{
+					release_id: 8,
+					tag: 'v1.1.0-alpha.1',
+					version: '1.1.0-alpha.1',
+					prerelease: true,
+				},
+			],
+		},
+	});
+	await flush();
+
+	assert.equal(harness.state().selectedRelease, null);
+	assert.equal(presentedLists.length, 1);
+	assert.equal(presentedLists[0].candidates[0].release_id, 8);
+});
+
+test('unsupported providers do not schedule discovery and supported providers recover', () => {
+	const repository = { value: 'workspace/package' };
+	const form = {
+		querySelector() {
+			return repository;
+		},
+	};
+	let supported = false;
+	let forcedBranch = 0;
+	let checks = 0;
+	let idle = 0;
+	let timers = 0;
+	const window = {
+		clearTimeout() {},
+		setTimeout() {
+			timers += 1;
+			return 1;
+		},
+	};
+	const createHarness = Function(
+		'form',
+		'window',
+		'install',
+		'details',
+		'setHidden',
+		'candidates',
+		'candidateList',
+		'updateAdvancedSummary',
+		'providerSupported',
+		'forceBranchForUnsupportedProvider',
+		'showWaitingForRepository',
+		'showIdle',
+		'setChecking',
+		'listCandidates',
+		`"use strict";
+		let requestSequence = 0;
+		let selectedRelease = { id: 7 };
+		let releaseSelected = false;
+		let discoveryTimer = null;
+		${declaration('scheduleDiscovery')}
+		return { scheduleDiscovery, state: () => ({ selectedRelease, releaseSelected }) };`
+	);
+	const harness = createHarness(
+		form,
+		window,
+		{ hidden: false },
+		{ hidden: false },
+		(element, hidden) => {
+			element.hidden = hidden;
+		},
+		{ hidden: false },
+		null,
+		() => {},
+		() => supported,
+		() => {
+			forcedBranch += 1;
+		},
+		() => {},
+		() => {
+			idle += 1;
+		},
+		() => {
+			checks += 1;
+		},
+		() => {}
+	);
+
+	harness.scheduleDiscovery();
+	assert.equal(forcedBranch, 1);
+	assert.equal(timers, 0);
+	assert.equal(checks, 0);
+	assert.equal(harness.state().selectedRelease, null);
+
+	supported = true;
+	harness.scheduleDiscovery();
+	assert.equal(idle, 1);
+	assert.equal(timers, 0);
+	assert.equal(checks, 0);
+});
+
+test('an unsupported provider forces an active release choice back to Branch', () => {
+	let focused = 0;
+	let clicked = 0;
+	let unsupported = 0;
+	const releaseChoice = {
+		getAttribute(name) {
+			return name === 'aria-pressed' ? 'true' : null;
+		},
+	};
+	const branchChoice = {
+		focus() {
+			focused += 1;
+		},
+		click() {
+			clicked += 1;
+		},
+	};
+	const createHarness = Function(
+		'releaseChoice',
+		'branchChoice',
+		'showUnsupportedProvider',
+		`"use strict";
+		let releaseSelected = true;
+		${declaration('forceBranchForUnsupportedProvider')}
+		return forceBranchForUnsupportedProvider;`
+	);
+	const forceBranch = createHarness(releaseChoice, branchChoice, () => {
+		unsupported += 1;
+	});
+
+	forceBranch();
+
+	assert.equal(unsupported, 1);
+	assert.equal(focused, 1);
+	assert.equal(clicked, 1);
+	assert.match(
+		declaration('showUnsupportedProvider'),
+		/selectedRelease = null;\s*releaseSelected = false;/
+	);
+	assert.match(
+		declaration('showUnsupportedProvider'),
+		/setHidden\(candidates, true\);[\s\S]*setHidden\(details, true\);[\s\S]*setHidden\(install, true\);/
+	);
+});
+
+test('unsupported server responses use the provider state without retrying', () => {
+	assert.match(
+		declaration('showUnavailable'),
+		/if \(code === 'unsupported_provider'\) \{\s*forceBranchForUnsupportedProvider\(\);\s*return;/
+	);
+	assert.doesNotMatch(
+		declaration('showUnsupportedProvider'),
+		/retry:\s*true/
+	);
+	assert.match(
+		declaration('listCandidates'),
+		/^\tconst listCandidates = async \(\) => \{\s*if \(!providerSupported\(\)\) \{\s*forceBranchForUnsupportedProvider\(\);\s*return;/
+	);
+});

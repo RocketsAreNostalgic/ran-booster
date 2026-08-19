@@ -59,6 +59,18 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'all(.[]; .filename != $path)', $workflow );
 	}
 
+	public function testQualityFetchesCandidateCommitsWithEphemeralTokenCredentials(): void {
+		$workflow         = $this->workflow( 'quality.yml' );
+		$credentialHelper = 'credential.helper=!f() { printf "%s\\n" "username=x-access-token" "password=$GH_TOKEN"; }; f';
+
+		self::assertStringContainsString( 'persist-credentials: false', $workflow );
+		self::assertSame( 1, substr_count( $workflow, 'test -n "$GH_TOKEN"' ) );
+		self::assertSame( 1, substr_count( $workflow, $credentialHelper ) );
+		self::assertSame( 2, substr_count( $workflow, 'git "${git_auth[@]}" fetch --no-tags origin' ) );
+		self::assertStringNotContainsString( 'git fetch --no-tags origin', $workflow );
+		self::assertStringNotContainsString( 'password=${GH_TOKEN}', $workflow );
+	}
+
 	public function testQualitySharesOneVerifiedArchiveAndKeepsTheCoreGates(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
@@ -68,7 +80,9 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'build/ran-booster-${{ steps.finalize.outputs.version }}.zip.sha256', $workflow );
 		self::assertStringContainsString( 'wordpress-release-candidate:', $workflow );
 		self::assertStringContainsString( 'RAN_PR_HEAD_SHA: ${{ needs.runtime-archive.outputs.pr-head-sha }}', $workflow );
-		self::assertStringContainsString( 'and .run.event == "workflow_dispatch"', $workflow );
+		self::assertStringContainsString( '--arg event "$GITHUB_EVENT_NAME"', $workflow );
+		self::assertSame( 2, substr_count( $workflow, 'and .run.event == $event' ) );
+		self::assertStringNotContainsString( 'and .run.event == "workflow_dispatch"', $workflow );
 		self::assertStringContainsString( 'run: composer check', $workflow );
 		self::assertStringContainsString( 'run: pnpm check', $workflow );
 		self::assertStringContainsString( 'matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}', $workflow );
@@ -88,8 +102,10 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'id: release-please', $workflow );
 		self::assertStringContainsString( 'steps.release-please.outputs.prs', $workflow );
 		self::assertStringContainsString( 'steps.release-please.outputs.prs_created', $workflow );
-		self::assertStringContainsString( '.sha | type == "string" and test("^[0-9a-f]{40}$")', $workflow );
+		self::assertStringNotContainsString( '.sha | type == "string" and test("^[0-9a-f]{40}$")', $workflow );
 		self::assertStringContainsString( 'expected_files=\'[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt"]\'', $workflow );
+		self::assertStringContainsString( '(.files | type) == "array"', $workflow );
+		self::assertStringContainsString( '(.files | length) == 0', $workflow );
 		self::assertStringContainsString( 'commits(last: 1)', $workflow );
 		self::assertStringContainsString( 'signature {', $workflow );
 		self::assertStringContainsString( 'bash scripts/reconcile-release-candidate-marker.sh', $workflow );
@@ -97,6 +113,18 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'gh workflow run quality.yml --ref "$head_ref"', $workflow );
 		self::assertStringContainsString( '-f "release_pr=${pr_number}"', $workflow );
 		self::assertStringContainsString( '-f "release_sha=${head_sha}"', $workflow );
+	}
+
+	public function testReleaseFetchesCandidatesWithEphemeralTokenCredentials(): void {
+		$workflow         = $this->workflow( 'release-please.yml' );
+		$credentialHelper = 'credential.helper=!f() { printf "%s\\n" "username=x-access-token" "password=$GH_TOKEN"; }; f';
+
+		self::assertStringContainsString( 'persist-credentials: false', $workflow );
+		self::assertSame( 2, substr_count( $workflow, 'test -n "$GH_TOKEN"' ) );
+		self::assertSame( 2, substr_count( $workflow, $credentialHelper ) );
+		self::assertSame( 4, substr_count( $workflow, 'git "${git_auth[@]}" fetch --no-tags origin' ) );
+		self::assertStringNotContainsString( 'git fetch --no-tags origin', $workflow );
+		self::assertStringNotContainsString( 'password=${GH_TOKEN}', $workflow );
 	}
 
 	public function testReleaseUsesMergedPrApiAndSeparatesHeadArtifactFromMainTarget(): void {

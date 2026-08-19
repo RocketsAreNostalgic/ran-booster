@@ -95,4 +95,73 @@ for id in 3 4 5 6; do
 	fi
 done
 
+release_workflow="$repo_root/.github/workflows/release-please.yml"
+draft_step=$(sed -n \
+	'/      - name: Create or reuse draft and attach verified assets/,/      - name: Publish only under immutable-release contract/p' \
+	"$release_workflow")
+grep -F 'releases?per_page=100' <<< "$draft_step" >/dev/null
+grep -F 'releases/assets/${archive_asset_id}' <<< "$draft_step" >/dev/null
+grep -F 'releases/assets/${checksum_asset_id}' <<< "$draft_step" >/dev/null
+if grep -F 'releases/tags/${RAN_RELEASE_TAG}' <<< "$draft_step" >/dev/null \
+	|| grep -F 'gh release download "$RAN_RELEASE_TAG"' <<< "$draft_step" >/dev/null; then
+	printf 'draft readback relies on a tag endpoint that excludes draft releases\n' >&2
+	exit 1
+fi
+action_parser="$work_root/release-action-parser.sh"
+{
+	printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'
+	printf '%s\n' "release_branch='release-please--branches--main--components--ran-booster'"
+	awk '
+		/^          expected_files=/ { capture = 1 }
+		capture {
+			end = ( $0 == "          fi" )
+			sub( /^          /, "" )
+			print
+			if ( end ) {
+				exit
+			}
+		}
+	' "$release_workflow"
+	printf '%s\n' 'test "$action_pr_number" = 54'
+} > "$action_parser"
+
+release_action_pr() {
+	jq -nc --argjson files "$1" '[{
+		number: 54,
+		baseBranchName: "main",
+		headBranchName: "release-please--branches--main--components--ran-booster",
+		files: $files
+	}]'
+}
+
+assert_action_payload_accepted() {
+	RAN_RELEASE_PRS_CREATED=true \
+		RAN_RELEASE_PRS="$1" \
+		bash "$action_parser"
+}
+
+assert_action_files_rejected() {
+	if assert_action_payload_accepted "$(release_action_pr "$1")" >/dev/null 2>&1; then
+		printf 'invalid Release Please action files were accepted: %s\n' "$1" >&2
+		exit 1
+	fi
+}
+
+assert_action_payload_accepted "$(release_action_pr '[]')"
+assert_action_payload_accepted "$(release_action_pr '[{"filename":"readme.txt"},"CHANGELOG.md",{"path":"ran-booster.php"},".release-please-manifest.json"]')"
+assert_action_files_rejected '["CHANGELOG.md"]'
+assert_action_files_rejected '[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt","arbitrary.txt"]'
+assert_action_files_rejected '[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt","readme.txt"]'
+assert_action_files_rejected '["arbitrary.txt"]'
+assert_action_files_rejected 'null'
+missing_files=$(jq -nc '[{
+	number: 54,
+	baseBranchName: "main",
+	headBranchName: "release-please--branches--main--components--ran-booster"
+}]')
+if assert_action_payload_accepted "$missing_files" >/dev/null 2>&1; then
+	printf 'Release Please action output without files was accepted\n' >&2
+	exit 1
+fi
+
 printf 'Release tag, immutable asset, and retry actor fixtures passed.\n'

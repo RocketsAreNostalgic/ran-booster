@@ -49,6 +49,10 @@ jobs:
         run: |
           set -euo pipefail
           release_branch='release-please--branches--main--components--ran-booster'
+          test -n "$GH_TOKEN"
+          # Git expands the token only inside its ephemeral credential helper.
+          # shellcheck disable=SC2016
+          git_auth=( -c 'credential.helper=!f() { printf "%s\n" "username=x-access-token" "password=$GH_TOKEN"; }; f' )
           test "$(git rev-parse HEAD)" = "$RAN_QUALITY_COMMIT"
           current_main="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
 
@@ -115,9 +119,9 @@ jobs:
           release_base="$(jq -er '.base.sha' <<< "$merged_pr")"
           release_head="$(jq -er '.head.sha' <<< "$merged_pr")"
           if ! git cat-file -e "${release_base}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$release_base"
+            git "${git_auth[@]}" fetch --no-tags origin "$release_base"
           fi
-          git fetch --no-tags origin "refs/pull/${release_pr_number}/head"
+          git "${git_auth[@]}" fetch --no-tags origin "refs/pull/${release_pr_number}/head"
           test "$(git rev-parse FETCH_HEAD)" = "$release_head"
           bash scripts/validate-release-candidate.sh "$release_base" "$release_head"
 
@@ -195,6 +199,10 @@ jobs:
         run: |
           set -euo pipefail
           release_branch='release-please--branches--main--components--ran-booster'
+          test -n "$GH_TOKEN"
+          # Git expands the token only inside its ephemeral credential helper.
+          # shellcheck disable=SC2016
+          git_auth=( -c 'credential.helper=!f() { printf "%s\n" "username=x-access-token" "password=$GH_TOKEN"; }; f' )
           expected_files='[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt"]'
           action_output=false
           if [[ "$RAN_RELEASE_PRS_CREATED" == true ]]; then
@@ -206,14 +214,18 @@ jobs:
               'if length != 1 then error("Expected exactly one Release Please action output pull request.") else .[0] end
               | select((.number | type) == "number" and .number > 0)
               | select(.baseBranchName == $base and .headBranchName == $head)
-              | select(.sha | type == "string" and test("^[0-9a-f]{40}$"))
               | select(
-                  (.files
-                    | map(if type == "string" then . else (.filename // .path // error("Release Please output file has no path.")) end)
-                    | sort) == $expected_files
+                  (.files | type) == "array"
+                  and (
+                    (.files | length) == 0
+                    or (
+                      (.files
+                        | map(if type == "string" then . else (.filename // .path // error("Release Please output file has no path.")) end)
+                        | sort) == $expected_files
+                    )
+                  )
                 )' <<< "$RAN_RELEASE_PRS")"
             action_pr_number="$(jq -er '.number' <<< "$action_pr")"
-            action_head_sha="$(jq -er '.sha' <<< "$action_pr")"
           elif [[ -n "$RAN_RELEASE_PRS_CREATED" && "$RAN_RELEASE_PRS_CREATED" != false ]]; then
             echo '::error::Release Please returned an invalid prs_created output.'
             exit 1
@@ -257,12 +269,11 @@ jobs:
           head_ref="$(jq -er '.head.ref' <<< "$release_pr")"
           if [[ "$action_output" == true ]]; then
             test "$pr_number" = "$action_pr_number"
-            test "$head_sha" = "$action_head_sha"
           fi
           if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$base_sha"
+            git "${git_auth[@]}" fetch --no-tags origin "$base_sha"
           fi
-          git fetch --no-tags origin "refs/pull/${pr_number}/head"
+          git "${git_auth[@]}" fetch --no-tags origin "refs/pull/${pr_number}/head"
           test "$(git rev-parse FETCH_HEAD)" = "$head_sha"
           bash scripts/validate-release-candidate.sh "$base_sha" "$head_sha"
 
@@ -271,39 +282,36 @@ jobs:
           comments="$(gh api --paginate --slurp \
             "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments?per_page=100")"
 
-          commit_identity=null
-          if [[ "$action_output" == false ]]; then
-            # shellcheck disable=SC2016
-            commit_identity="$(gh api graphql \
-              -F owner="$owner" \
-              -F name="$repository_name" \
-              -F number="$pr_number" \
-              -f query='
-                query($owner: String!, $name: String!, $number: Int!) {
-                  repository(owner: $owner, name: $name) {
-                    pullRequest(number: $number) {
-                      commits(last: 1) {
-                        nodes {
-                          commit {
-                            oid
-                            parents(first: 2) { nodes { oid } }
-                            signature {
-                              isValid
-                              state
-                              signer { login }
-                            }
-                            author {
-                              email
-                              user { login }
-                            }
-                            committer { email }
+          # shellcheck disable=SC2016
+          commit_identity="$(gh api graphql \
+            -F owner="$owner" \
+            -F name="$repository_name" \
+            -F number="$pr_number" \
+            -f query='
+              query($owner: String!, $name: String!, $number: Int!) {
+                repository(owner: $owner, name: $name) {
+                  pullRequest(number: $number) {
+                    commits(last: 1) {
+                      nodes {
+                        commit {
+                          oid
+                          parents(first: 2) { nodes { oid } }
+                          signature {
+                            isValid
+                            state
+                            signer { login }
                           }
+                          author {
+                            email
+                            user { login }
+                          }
+                          committer { email }
                         }
                       }
                     }
                   }
-                }')"
-          fi
+                }
+              }')"
 
           flat_comments="$(jq -cer 'add' <<< "$comments")"
           marker_transition="$(jq -nc \
@@ -560,15 +568,26 @@ jobs:
           trap 'rm -rf "$remote"' EXIT
           archive_name="ran-booster-${RAN_RELEASE_VERSION}.zip"
           checksum_name="${archive_name}.sha256"
-          gh release download "$RAN_RELEASE_TAG" \
-            --dir "$remote" \
-            --pattern "$archive_name" \
-            --repo "$GITHUB_REPOSITORY"
-          gh release download "$RAN_RELEASE_TAG" \
-            --dir "$remote" \
-            --pattern "$checksum_name" \
-            --repo "$GITHUB_REPOSITORY"
-          draft_release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RAN_RELEASE_TAG}")"
+          release_pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+          draft_release_json="$(jq -cer \
+            --arg tag "$RAN_RELEASE_TAG" \
+            --arg commit "$RAN_RELEASE_COMMIT" \
+            'add
+            | [.[] | select(.tag_name == $tag and .target_commitish == $commit and .draft == true)]
+            | if length == 1 then .[0] else error("No unique exact draft release is available.") end' \
+            <<< "$release_pages")"
+          archive_asset_id="$(jq -er --arg name "$archive_name" \
+            '.assets | [.[] | select(.name == $name)]
+            | if length == 1 then .[0].id else error("No unique archive asset is available.") end' \
+            <<< "$draft_release_json")"
+          checksum_asset_id="$(jq -er --arg name "$checksum_name" \
+            '.assets | [.[] | select(.name == $name)]
+            | if length == 1 then .[0].id else error("No unique checksum asset is available.") end' \
+            <<< "$draft_release_json")"
+          gh api -H 'Accept: application/octet-stream' \
+            "repos/${GITHUB_REPOSITORY}/releases/assets/${archive_asset_id}" > "$remote/$archive_name"
+          gh api -H 'Accept: application/octet-stream' \
+            "repos/${GITHUB_REPOSITORY}/releases/assets/${checksum_asset_id}" > "$remote/$checksum_name"
           bash scripts/verify-immutable-release-assets.sh \
             "build/${archive_name}" "build/${checksum_name}" "$remote" \
             <<< "$draft_release_json"

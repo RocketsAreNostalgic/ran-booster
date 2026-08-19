@@ -10,7 +10,6 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 
 	private const FORBIDDEN_CORE_NAMESPACES = array(
 		'RAN\\Admin\\',
-		'RAN\\Deployment\\',
 		'RAN\\Internal\\',
 		'RAN\\Logging\\',
 		'RAN\\Secrets\\',
@@ -19,6 +18,9 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 	);
 
 	private const ALLOWED_CORE_IMPORTS = array(
+		'RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade',
+		'RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus',
+		'RAN\Deployment\PreparedArtifact',
 		'RAN\RepositoryProvider\Admin\CredentialFieldMetadata',
 		'RAN\RepositoryProvider\Admin\CredentialKindMetadata',
 		'RAN\RepositoryProvider\Admin\ProviderAdminMetadata',
@@ -56,10 +58,19 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\RepositoryLookupRequest',
 		'RAN\RepositoryProvider\RepositoryProvider',
 		'RAN\RepositoryProvider\RepositoryReference',
+		'RAN\RepositoryProvider\RepositoryReleaseAcquirer',
+		'RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected',
+		'RAN\RepositoryProvider\RepositoryReleaseArtifact',
 		'RAN\RepositoryProvider\RepositoryReleaseCandidate',
 		'RAN\RepositoryProvider\RepositoryReleaseCandidateList',
 		'RAN\RepositoryProvider\RepositoryReleaseCandidateListing',
+		'RAN\RepositoryProvider\RepositoryReleaseInspection',
+		'RAN\RepositoryProvider\RepositoryReleaseInspectionRejected',
+		'RAN\RepositoryProvider\RepositoryReleaseInspector',
 		'RAN\RepositoryProvider\RepositoryReleaseMetadata',
+		'RAN\RepositoryProvider\RepositoryReleaseNativeTarget',
+		'RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus',
+		'RAN\RepositoryProvider\RepositoryReleaseNativeTargets',
 		'RAN\RepositoryProvider\RepositoryWebhookFitness',
 		'RAN\RepositoryProvider\RepositoryWebhookFitnessResult',
 		'RAN\RepositoryProvider\RepositoryWebhookManagement',
@@ -98,8 +109,12 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 
 	/** @return list<string> */
 	private function moduleFiles(): array {
-		$files = glob( dirname( __DIR__, 3 ) . '/RAN/Booster/GitHub/*.php' );
-		self::assertIsArray( $files );
+		$module        = dirname( __DIR__, 3 ) . '/RAN/Booster/GitHub';
+		$rootFiles     = glob( $module . '/*.php' );
+		$workflowFiles = glob( $module . '/ReleaseDeployments/WorkflowAssistance/*.php' );
+		self::assertIsArray( $rootFiles );
+		self::assertIsArray( $workflowFiles );
+		$files = array_merge( $rootFiles, $workflowFiles );
 		sort( $files );
 
 		return $files;

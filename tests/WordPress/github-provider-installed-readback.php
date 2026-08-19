@@ -53,8 +53,11 @@ foreach (
 		RAN\RepositoryProvider\RepositoryWebhookSettingsLink::class,
 		RAN\RepositoryProvider\RepositoryWebhookFitness::class,
 		RAN\RepositoryProvider\RepositoryWebhookManagement::class,
+		RAN\RepositoryProvider\RepositoryReleaseAcquirer::class,
 		RAN\RepositoryProvider\RepositoryReleaseCandidateListing::class,
+		RAN\RepositoryProvider\RepositoryReleaseInspector::class,
 		RAN\RepositoryProvider\RepositoryReleaseMetadata::class,
+		RAN\RepositoryProvider\RepositoryReleaseNativeTargets::class,
 	) as $capability
 ) {
 	if ( $provider !== $registry->requireCapability( 'gh', $capability ) ) {

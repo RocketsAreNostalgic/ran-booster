@@ -12,8 +12,8 @@ use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
-use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
-use RAN\Booster\GitHub\WebhookManagement\Installation\WordPressInstallationStore;
+use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
+use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\PrivateLocationCandidateResolver;
@@ -172,7 +172,7 @@ class LocalDataRemover {
 
 		$missing = new \stdClass();
 		$options = self::OPTION_NAMES;
-		if ( ! GitHubWebhookManagement::legacyAddOnIsActive() ) {
+		if ( ! GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
 			$options[] = WordPressInstallationStore::OPTION_NAME;
 		}
 		foreach ( array_values( array_unique( $options ) ) as $option ) {

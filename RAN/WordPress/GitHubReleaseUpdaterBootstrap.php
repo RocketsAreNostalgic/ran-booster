@@ -88,59 +88,6 @@ final class GitHubReleaseUpdaterBootstrap {
 		return is_int( $version ) ? $version : null;
 	}
 
-	/**
-	 * Register one release-managed Booster package before plugins_loaded.
-	 *
-	 * @param 'plugin'|'theme'     $type
-	 * @param string|callable|null $accessToken Lazy credentials are resolved only for GitHub requests.
-	 */
-	public static function registerManaged(
-		string $type,
-		string $metadataFile,
-		string $repository,
-		string $providerRepositoryId,
-		string $packageRoot,
-		string $installedIdentity,
-		string|callable|null $accessToken,
-		string $channel,
-		string $autoUpdatePolicy,
-		?callable $factory = null
-	): object {
-		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
-			throw new LogicException( 'RAN Booster release updater target type is incompatible.' );
-		}
-		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
-			throw new LogicException( 'RAN Booster release updater target channel is incompatible.' );
-		}
-
-		$factory = self::factory( $factory );
-		$options = array(
-			'pluginFile'           => $metadataFile,
-			'repository'           => $repository,
-			'providerRepositoryId' => $providerRepositoryId,
-			'pluginSlug'           => $packageRoot,
-			'channel'              => $channel,
-			'accessToken'          => $accessToken,
-			'autoUpdatePolicy'     => $autoUpdatePolicy,
-			'cacheDuration'        => 21_600,
-			'failureCacheDuration' => 900,
-			'targetType'           => $type,
-		);
-		if ( 'theme' === $type ) {
-			$options['stylesheet'] = $installedIdentity;
-		}
-		$updater = $factory( ...$options );
-		if ( ! is_object( $updater )
-			|| ! is_callable( array( $updater, 'register' ) )
-			|| ! is_callable( array( $updater, 'diagnostics' ) )
-		) {
-			throw new LogicException( 'RAN Booster managed release updater target is incompatible.' );
-		}
-		$updater->register();
-
-		return $updater;
-	}
-
 	private static function factory( ?callable $factory ): Closure {
 		if ( null !== $factory ) {
 			return Closure::fromCallable( $factory );

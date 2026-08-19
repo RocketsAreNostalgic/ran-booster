@@ -39,7 +39,7 @@ use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\Booster\GitHub\GitHubProvider;
-use RAN\Booster\GitHub\WebhookManagement\GitHubWebhookManagement;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -68,7 +68,6 @@ use RAN\Webhook\SignedWebhookVerifier;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
-use RAN\WordPress\ManagedReleasePreflight;
 use RAN\WordPress\WordPressUpdaterLock;
 
 final class BoosterServiceProvider {
@@ -244,10 +243,11 @@ final class BoosterServiceProvider {
 			)
 		);
 		$container->bind(
-			GitHubWebhookManagement::class,
-			static fn ( CoreContainer $container ): GitHubWebhookManagement => new GitHubWebhookManagement(
+			RepositoryWebhookManagementControls::class,
+			static fn ( CoreContainer $container ): RepositoryWebhookManagementControls => new RepositoryWebhookManagementControls(
 				$container->make( WebhookAssistanceFacade::class ),
 				$container->make( AdminInteractionFacade::class ),
+				$container->make( ProviderRegistry::class ),
 				(string) $runtime->boosterPath,
 				(string) $runtime->boosterUrl
 			)
@@ -389,9 +389,9 @@ final class BoosterServiceProvider {
 		$releaseRegistrar = new ManagedReleaseTargetRegistrar(
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
-			$secrets,
 			$releaseStore,
-			$container->make( WordPressUpdaterLock::class )
+			$container->make( WordPressUpdaterLock::class ),
+			$container->make( ProviderRegistry::class )
 		);
 		$container->bind( ManagedReleaseTargetRegistrar::class, $releaseRegistrar );
 		$releaseFacade = new NativeReleaseTrackingFacade(
@@ -400,15 +400,12 @@ final class BoosterServiceProvider {
 			$releaseStore,
 			$releaseRegistrar,
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class ),
-			releasePreflight: new ManagedReleasePreflight( $secrets ),
+			$container->make( ProviderRegistry::class )
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
-		$prospectivePreflight = new ManagedReleasePreflight( $secrets );
-		$prospectiveFacade    = new NativeProspectiveReleaseFacade(
+		$prospectiveFacade = new NativeProspectiveReleaseFacade(
 			$container->make( PackageRepositoryRequestResolver::class ),
-			$prospectivePreflight,
 			$container->make( CorePackageExecutor::class ),
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),

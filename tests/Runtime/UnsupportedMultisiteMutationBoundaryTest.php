@@ -37,7 +37,6 @@ use RAN\Webhook\WebhookController;
 use RAN\Webhook\WebhookProcessor;
 use RAN\WordPress\CorePackageExecutionFailure;
 use RAN\WordPress\CorePackageExecutor;
-use RAN\WordPress\ManagedReleasePreflight;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -61,15 +60,14 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		$registrar = new ManagedReleaseTargetRegistrar(
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
-			$this->blank( SecretsFile::class ),
 			$this->blank( ManagedReleaseStore::class ),
 			$this->blank( WordPressUpdaterLock::class ),
-			static fn (): never => throw new \RuntimeException( 'The updater factory must stay inert.' )
+			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class )
 		);
 
 		$registrar->register();
 
-		self::assertNull( $registrar->facade( 'plugin', 'example/example.php' ) );
+		self::assertNull( $registrar->target( 'plugin', 'example/example.php' ) );
 		self::assertSame( '', $registrar->failureCode( 'plugin', 'example/example.php' ) );
 	}
 
@@ -96,10 +94,9 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		self::assertSame( 0, $coreCalls );
 	}
 
-	public function testProspectiveFacadeRejectsDiscoveryInspectionAndInstallationBeforeAuthorization(): void {
+	public function testProspectiveFacadeRejectsListingInspectionAndInstallationBeforeAuthorization(): void {
 		$facade  = new NativeProspectiveReleaseFacade(
 			$this->blank( PackageRepositoryRequestResolver::class ),
-			$this->blank( ManagedReleasePreflight::class ),
 			$this->blank( CorePackageExecutor::class ),
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
@@ -110,7 +107,6 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 		$results = array(
 			$facade->listCandidates( 'plugin', array(), 'stable', 'nonce' ),
-			$facade->discover( 'plugin', array(), 'stable', 'nonce' ),
 			$facade->inspect( 'plugin', array(), 1, 'v1.0.0', 'stable', 'nonce' ),
 			$facade->install( 'plugin', array(), 1, 'v1.0.0', str_repeat( 'a', 64 ), 'stable', 'nonce' ),
 		);

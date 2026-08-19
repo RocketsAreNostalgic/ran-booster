@@ -99,45 +99,51 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRendersThreeOfflineCardsWithTruthfulUnavailableControls(): void {
+	public function testRendersTwoOfflineCardsWithTruthfulUnavailableControls(): void {
 		$this->defineCompatibleApis();
 
 		$output = $this->render();
 
 		self::assertStringContainsString( 'class="ran-booster-page-shell ran-booster-extensions plugin-install-php"', $output );
-		self::assertSame( 3, substr_count( $output, 'class="plugin-card plugin-card-' ) );
-		self::assertSame( 3, substr_count( $output, 'class="plugin-card-top"' ) );
-		self::assertSame( 3, substr_count( $output, 'class="name column-name"' ) );
-		self::assertSame( 3, substr_count( $output, 'class="desc column-description"' ) );
-		self::assertSame( 3, substr_count( $output, 'class="authors"' ) );
-		self::assertSame( 3, substr_count( $output, 'class="plugin-card-bottom"' ) );
-		self::assertSame( 3, substr_count( $output, 'class="vers column-rating ran-booster-extension-card__metadata"' ) );
-		self::assertSame( 3, substr_count( $output, 'class="column-compatibility"' ) );
+		self::assertSame( 2, substr_count( $output, 'class="plugin-card plugin-card-' ) );
+		self::assertSame( 2, substr_count( $output, 'class="plugin-card-top"' ) );
+		self::assertSame( 2, substr_count( $output, 'class="name column-name"' ) );
+		self::assertSame( 2, substr_count( $output, 'class="desc column-description"' ) );
+		self::assertSame( 2, substr_count( $output, 'class="authors"' ) );
+		self::assertSame( 2, substr_count( $output, 'class="plugin-card-bottom"' ) );
+		self::assertSame( 2, substr_count( $output, 'class="vers column-rating ran-booster-extension-card__metadata"' ) );
+		self::assertSame( 2, substr_count( $output, 'class="column-compatibility"' ) );
 		self::assertStringNotContainsString( 'ran-booster-extension-card__body', $output );
 		self::assertStringContainsString( 'class="ran-booster-page-heading__title">Extensions</h2>', $output );
 		self::assertStringContainsString( 'class="ran-booster-page-heading__description">Add focused capabilities', $output );
 		self::assertStringNotContainsString( '<h1', $output );
 		self::assertSame( 4, substr_count( $output, '>Free<' ) );
-		self::assertSame( 2, substr_count( $output, '>Sponsor<' ) );
-		self::assertSame( 6, substr_count( $output, '>Beta<' ) );
-		self::assertSame( 3, substr_count( $output, '>Install<' ) );
+		self::assertSame( 0, substr_count( $output, '>Sponsor<' ) );
+		self::assertStringNotContainsString( 'Subscriber', $output );
+		self::assertStringNotContainsString( 'Get access', $output );
+		self::assertStringNotContainsString( 'Sponsor packages', $output );
+		self::assertStringContainsString( 'immutable beta releases pass readiness review', $output );
+		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
+		self::assertSame( 2, substr_count( $output, '>Install<' ) );
 		self::assertStringNotContainsString( '>Sponsor install<', $output );
 		self::assertStringNotContainsString( '>Install unavailable<', $output );
-		self::assertSame( 3, substr_count( $output, ' disabled aria-disabled="true"' ) );
-		self::assertSame( 3, substr_count( $output, 'Compatible with your version of Booster' ) );
-		self::assertSame( 3, substr_count( $output, 'class="compatibility-compatible"' ) );
-		self::assertSame( 6, substr_count( $output, 'with your version of Booster' ) );
-		self::assertSame( 3, substr_count( $output, '>More Details</a>' ) );
-		self::assertSame( 3, substr_count( $output, '<ul class="plugin-action-buttons">' ) );
-		self::assertSame( 6, substr_count( $output, 'class="thickbox ran-booster-extension-details-link"' ) );
-		self::assertSame( 6, substr_count( $output, 'aria-label="More details about ' ) );
-		self::assertSame( 3, substr_count( $output, 'class="ran-booster-extension-details"' ) );
-		self::assertSame( 3, substr_count( $output, '>About this extension<' ) );
+		self::assertSame( 2, substr_count( $output, ' disabled aria-disabled="true"' ) );
+		self::assertSame( 2, substr_count( $output, 'Compatible with your version of Booster' ) );
+		self::assertSame( 2, substr_count( $output, 'class="compatibility-compatible"' ) );
+		self::assertSame( 4, substr_count( $output, 'with your version of Booster' ) );
+		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 2, substr_count( $output, '<ul class="plugin-action-buttons">' ) );
+		self::assertSame( 4, substr_count( $output, 'class="thickbox ran-booster-extension-details-link"' ) );
+		self::assertSame( 4, substr_count( $output, 'aria-label="More details about ' ) );
+		self::assertSame( 2, substr_count( $output, 'class="ran-booster-extension-details"' ) );
+		self::assertSame( 2, substr_count( $output, '>About this extension<' ) );
 		self::assertStringContainsString( '#TB_inline?width=772', $output );
 		self::assertStringNotContainsString( 'ran-booster-assisted-hooks', $output );
-		self::assertStringContainsString( 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation.', $output );
+		self::assertStringContainsString( 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.', $output );
+		self::assertStringContainsString( 'enabling deployment remains an explicit decision', $output );
 		self::assertStringContainsString( '/assets/extensions/bitbucket-cloud.svg', $output );
-		self::assertStringContainsString( '/assets/extensions/release-deployments.svg', $output );
+		self::assertStringNotContainsString( 'Release Deployments', $output );
+		self::assertStringNotContainsString( '/assets/extensions/release-deployments.svg', $output );
 		self::assertStringNotContainsString( 'placehold.co', $output );
 		self::assertStringNotContainsString( 'install-now', $output );
 		self::assertStringNotContainsString( 'plugin-information?', $output );
@@ -145,7 +151,6 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( '<form', $output );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_', $output );
 		self::assertLessThan( strpos( $output, 'WP Pusher Migrator' ), strpos( $output, 'Bitbucket Cloud' ) );
-		self::assertLessThan( strpos( $output, 'Release Deployments' ), strpos( $output, 'WP Pusher Migrator' ) );
 	}
 
 	#[RunInSeparateProcess]
@@ -161,18 +166,18 @@ final class ExtensionsPageTest extends TestCase {
 
 		$output = $this->render();
 
-		self::assertSame( 6, substr_count( $output, '>Active<' ) );
+		self::assertSame( 3, substr_count( $output, '>Active<' ) );
 		self::assertSame( 0, substr_count( $output, '>Inactive<' ) );
 		self::assertSame( 0, substr_count( $output, '>Installed, inactive<' ) );
 		self::assertSame( 0, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
-		self::assertSame( 3, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testMismatchedRequiredApiMarksTheCardIncompatible(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Name' => 'Bitbucket' );
@@ -205,7 +210,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	private function defineCompatibleApis(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
 	}

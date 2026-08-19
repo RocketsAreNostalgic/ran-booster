@@ -41,7 +41,7 @@ final class TroubleshootingViewTest extends TestCase {
 			$presenter->buildProfileListProjection( $data ),
 			( new ProviderRepositoryRowsNormalizer() )->projectPage( $data ),
 			array(
-				'githubWebhookManagement'         => null,
+				'webhookManagement'               => null,
 				'statusSummaryRenderer'           => new AdminStatusSummaryRenderer(),
 				'providerManagementTableRenderer' => new ProviderManagementTableRenderer(),
 				'repositoryTableRenderer'         => new RepositoryTableRenderer(),
@@ -739,7 +739,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<option value="owner">owner</option>', $html );
 		self::assertStringContainsString( '<option value="owner/example">owner/example</option>', $html );
 		self::assertStringNotContainsString( 'assisted_repository=repo-42', $html );
-		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhook</button>', $html );
+		self::assertStringNotContainsString( '>Manage webhook</button>', $html );
 		self::assertStringContainsString( 'Fixture webhooks', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'source_view=branch#ran-booster-branch-readiness', html_entity_decode( $html ) );
@@ -811,8 +811,8 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$withoutAddOnHtml = (string) ob_get_clean();
-		self::assertStringContainsString( 'Manage webhook', $withoutAddOnHtml );
-		self::assertStringContainsString( 'disabled aria-disabled="true"', $withoutAddOnHtml );
+		self::assertStringNotContainsString( 'Manage webhook', $withoutAddOnHtml );
+		self::assertStringNotContainsString( 'disabled aria-disabled="true"', $withoutAddOnHtml );
 		self::assertStringNotContainsString( 'assisted_repository=', $withoutAddOnHtml );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $withoutAddOnHtml );
 		self::assertStringContainsString( 'Fixture webhooks', $withoutAddOnHtml );
@@ -978,8 +978,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Owner secret', $html );
 		self::assertStringContainsString( 'Repository identity conflict', $html );
 		self::assertStringNotContainsString( 'Managed packages for this repository disagree about its provider identity.', $html );
-		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
-		self::assertStringContainsString( 'aria-describedby="ran-booster-provider-readiness-reason-0 ran-booster-provider-readiness-reason-0-site"', $html );
+		self::assertStringNotContainsString( '>Manage webhook</button>', $html );
+		self::assertStringNotContainsString( 'aria-describedby="ran-booster-provider-readiness-reason-0 ran-booster-provider-readiness-reason-0-site"', $html );
 		self::assertStringNotContainsString( 'assisted_repository=repo-42', $html );
 	}
 

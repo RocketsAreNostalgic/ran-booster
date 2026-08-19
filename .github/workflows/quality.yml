@@ -68,6 +68,10 @@ jobs:
           set -euo pipefail
 
           release_branch='release-please--branches--main--components--ran-booster'
+          test -n "$GH_TOKEN"
+          # Git expands the token only inside this ephemeral credential helper.
+          # shellcheck disable=SC2016
+          git_auth=( -c 'credential.helper=!f() { printf "%s\n" "username=x-access-token" "password=$GH_TOKEN"; }; f' )
           lane=full
           source_commit="$GITHUB_SHA"
           pr_number=0
@@ -86,9 +90,9 @@ jobs:
 
           fetch_pull_request_commits() {
             if ! git cat-file -e "${pr_base_sha}^{commit}" 2>/dev/null; then
-              git fetch --no-tags origin "$pr_base_sha"
+              git "${git_auth[@]}" fetch --no-tags origin "$pr_base_sha"
             fi
-            git fetch --no-tags origin "refs/pull/${pr_number}/head"
+            git "${git_auth[@]}" fetch --no-tags origin "refs/pull/${pr_number}/head"
             test "$(git rev-parse FETCH_HEAD)" = "$pr_head_sha"
           }
 
@@ -729,6 +733,7 @@ jobs:
                 test -f "$archive"
                 jq -e \
                     --arg base_sha "$RAN_PR_BASE_SHA" \
+                    --arg event "$GITHUB_EVENT_NAME" \
                     --arg quality_commit "$GITHUB_SHA" \
                     --arg sha256 '${{ needs.runtime-archive.outputs.archive-sha256 }}' \
                     --arg source_commit "$RAN_PR_HEAD_SHA" \
@@ -749,7 +754,7 @@ jobs:
                       and .sha256 == $sha256
                       and .run.id == $run_id
                       and .run.attempt == $run_attempt
-                      and .run.event == "workflow_dispatch"
+                      and .run.event == $event
                       and .pull_request.number == $pr_number
                       and .pull_request.base_sha == $base_sha
                       and .pull_request.head_sha == $source_commit
@@ -988,6 +993,16 @@ jobs:
                 printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
                 composer test:core-updater-proof
                 composer test:core-package-executor
+
+          - name: Prove installed release capability lifecycle
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL: 'http://localhost'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                composer test:release-capability-installed
 
           - name: Prove native updater-lock election
             if: ${{ matrix.suite == 'critical' }}

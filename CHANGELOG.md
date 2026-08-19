@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0-beta.23](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.22...v1.0.0-beta.23) (2026-08-19)
+
+
+### Features
+
+* **admin:** adopt shared admin shell ([#66](https://github.com/RocketsAreNostalgic/ran-booster/issues/66)) ([766325a](https://github.com/RocketsAreNostalgic/ran-booster/commit/766325a06f37e84d3fcddf125662c12948e0b50d))
+
+
+### Bug Fixes
+
+* **release:** read draft assets by id ([#64](https://github.com/RocketsAreNostalgic/ran-booster/issues/64)) ([ee90ad3](https://github.com/RocketsAreNostalgic/ran-booster/commit/ee90ad3d2498e208bff06c4e5bceed4ea166dfec))
+
 ## [1.0.0-beta.22](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2026-08-18)
 
 

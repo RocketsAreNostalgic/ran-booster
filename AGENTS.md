@@ -4,7 +4,7 @@ This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
 - Internal maintainers use the ignored nested private workbench at
-  `.ran-booster-workbench/` for Booster-family Dex state, plans and reviews.
+  `ran-booster-workbench/` for Booster-family Dex state, plans and reviews.
   Read its `AGENTS.md` and `.agents/skills/ran-booster-dex/SKILL.md` before
   non-trivial work. Public clones without the workbench must not recreate
   private planning or Dex state in this source repository.
@@ -92,6 +92,9 @@ directory and preserve unrelated work.
   Once dependencies are current, use the normal `pnpm check` and Husky gates
   rather than substituting partial commands.
 
-Run Dex commands from `.ran-booster-workbench/` and verify that `pnpm exec dex
+Run Dex commands from `ran-booster-workbench/` and verify that `pnpm exec dex
 dir` resolves to that repository's `.dex` directory before sequential ledger
-mutations. Never run `dex sync` without new authorization.
+mutations. From this Core root, `pnpm dex <command>` is the explicit forwarding
+entry point; the `workbench:*` scripts forward the workbench's other pnpm
+checks without merging its independent workspace or lockfile into Core. Never
+run `dex sync` without new authorization.

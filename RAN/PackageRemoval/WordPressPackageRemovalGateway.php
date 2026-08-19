@@ -53,7 +53,11 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 	public function deletePlugin( string $identifier ): bool {
 		$this->loadPluginFunctions();
 
-		return true === delete_plugins( array( $identifier ) );
+		try {
+			return true === delete_plugins( array( $identifier ) );
+		} finally {
+			wp_clean_plugins_cache( false );
+		}
 	}
 
 	public function themeDeletionBlocker( string $stylesheet ): ?string {

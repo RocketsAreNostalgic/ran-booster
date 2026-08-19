@@ -243,7 +243,8 @@ final class DocumentationViewTest extends TestCase {
 
 		self::assertStringContainsString( 'id="ran-booster-portability-guidance"', $html );
 		self::assertStringContainsString( 'Minimum credential permissions', $html );
-		self::assertStringContainsString( 'page=ran-booster&amp;tab=portability', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-transporter">Open Transporter</a>', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-transporter">Open migration tools</a>', $html );
 		self::assertStringContainsString( 'Move managed packages without copying a development checkout', $html );
 		self::assertStringContainsString( 'local uncommitted changes, and local-only', $html );
 		self::assertStringContainsString( '<code>node_modules</code>', $html );
@@ -360,7 +361,7 @@ final class DocumentationViewTest extends TestCase {
 			array(
 				'key'   => 'portability',
 				'label' => 'Transporter',
-				'url'   => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=portability',
+				'url'   => 'https://example.test/wp-admin/admin.php?page=ran-booster-transporter',
 			),
 			array(
 				'key'   => 'troubleshooting',

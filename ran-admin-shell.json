@@ -1,0 +1,6 @@
+{
+	"schema": 1,
+	"php": "views/generated/ran-admin-shell.php",
+	"css": "assets/ran-admin-shell.css",
+	"provenance": "views/generated/ran-admin-shell.provenance.json"
+}

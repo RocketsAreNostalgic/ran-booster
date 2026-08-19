@@ -60,8 +60,15 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		);
 		$tabs                    = array(
 			array(
+				'key'    => 'overview',
 				'label'  => 'Overview',
 				'url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster',
+				'active' => false,
+			),
+			array(
+				'key'    => 'portability',
+				'label'  => 'Transporter',
+				'url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=portability',
 				'active' => false,
 			),
 		);
@@ -70,7 +77,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
 
-		$mastheadPosition    = strpos( $html, 'Safe, portable and extensible repository deployment' );
+		$mastheadPosition    = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
 		$headingPosition     = strpos( $html, $heading );
 		$descriptionPosition = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
 		$resultPosition      = strpos( $html, 'Scoped package result.' );
@@ -96,5 +103,18 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-update-summary-message', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-package-success', $html );
 		self::assertStringNotContainsString( 'class="nav-tab-wrapper"', $html );
+		self::assertStringContainsString( 'class="ran-admin-shell__navigation"', $html );
+		self::assertStringContainsString( 'class="ran-admin-shell__logo"', $html );
+		self::assertStringContainsString( '>Overview</a>', $html );
+		self::assertStringContainsString( '>Plugins</a>', $html );
+		self::assertStringContainsString( '>Themes</a>', $html );
+		self::assertStringNotContainsString( '>Transporter</a>', $html );
+		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
+		self::assertStringContainsString(
+			'plugin' === $packageView->getType()
+				? 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins" aria-current="page">Plugins</a>'
+				: 'href="https://example.test/wp-admin/admin.php?page=ran-booster-themes" aria-current="page">Themes</a>',
+			$html
+		);
 	}
 }

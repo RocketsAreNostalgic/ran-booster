@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
+use RAN\WordPress\CoreSelfUpdatePolicy;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
@@ -27,9 +29,15 @@ final class AdminIndexViewTest extends TestCase {
 		$name                    = 'RAN Booster';
 		$view                    = 'index';
 		$developmentSafetyNotice = true;
-		$tab                     = 'documentation';
-		$tabView                 = 'documentation.php';
-		$tabs                    = array(
+
+		$coreSelfUpdateDevelopmentNotice = new CoreSelfUpdateDevelopmentNotice(
+			CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' ),
+			'toplevel_page_ran-booster'
+		);
+
+		$tab     = 'documentation';
+		$tabView = 'documentation.php';
+		$tabs    = array(
 			array(
 				'key'    => 'overview',
 				'label'  => 'Overview',
@@ -67,7 +75,6 @@ final class AdminIndexViewTest extends TestCase {
 				'active' => false,
 			),
 		);
-
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
@@ -81,34 +88,47 @@ final class AdminIndexViewTest extends TestCase {
 		);
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $html ) );
 		self::assertStringContainsString(
-			'<a class="ran-booster-brand__link" href="https://example.test/wp-admin/admin.php?page=ran-booster">',
+			'<a href="https://example.test/wp-admin/admin.php?page=ran-booster">',
 			$html
 		);
-		self::assertStringContainsString( 'RAN Booster</a></h1>', $html );
+		self::assertMatchesRegularExpression(
+			'/<h1 class="ran-admin-shell__title">\\s*<a href="https:\\/\\/example\\.test\\/wp-admin\\/admin\\.php\\?page=ran-booster">RAN Booster<\\/a>\\s*<\\/h1>/',
+			$html
+		);
+		self::assertStringContainsString( 'class="ran-admin-shell__logo"', $html );
+		self::assertStringContainsString( 'assets/ran-booster-mark.svg" width="56" height="56" alt="" aria-hidden="true"', $html );
 		self::assertSame( 1, substr_count( $html, '<hr class="wp-header-end">' ) );
-		self::assertStringContainsString( '<nav class="nav-tab-wrapper" aria-label="RAN Booster sections">', $html );
-		self::assertSame( 6, preg_match_all( '/class="nav-tab(?: nav-tab-active)?"/', $html ) );
+		self::assertStringContainsString( '<nav class="ran-admin-shell__navigation" aria-label="RAN Booster sections">', $html );
+		self::assertStringNotContainsString( 'nav-tab-wrapper', $html );
+		self::assertStringNotContainsString( 'class="nav-tab', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins">Plugins</a>', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-themes">Themes</a>', $html );
+		self::assertStringNotContainsString( '>Transporter</a>', $html );
 		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
 		self::assertStringNotContainsString( 'aria-current="false"', $html );
 		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
 		self::assertStringNotContainsString( 'Set up GitHub deployments', $html );
-		self::assertStringContainsString( 'Safe, portable and extensible repository deployment for WordPress — modern and independent.', $html );
+		self::assertStringContainsString( 'Deploy themes and plugins straight from your Git repos.', $html );
 		self::assertStringContainsString( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', $html );
 		self::assertStringNotContainsString( 'Start with a repository', $html );
 		self::assertStringContainsString( 'class="notice notice-warning inline is-dismissible"', $html );
 		self::assertStringContainsString( 'data-ran-booster-development-safety', $html );
 		self::assertStringContainsString( '<strong>Development safety:</strong>', $html );
 		self::assertStringContainsString( 'set Updates to Disabled', $html );
-		$straplinePosition = strpos( $html, 'Safe, portable and extensible repository deployment' );
-		$markerPosition    = strpos( $html, '<hr class="wp-header-end">' );
-		$noticePosition    = strpos( $html, '<strong>Development safety:</strong>' );
-		$tabsPosition      = strpos( $html, '<nav class="nav-tab-wrapper"' );
-		foreach ( array( $straplinePosition, $markerPosition, $noticePosition, $tabsPosition ) as $position ) {
+		$straplinePosition  = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
+		$navigationPosition = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
+		$coreNoticePosition = strpos( $html, 'data-ran-booster-core-development-notice' );
+		$wrapPosition       = strpos( $html, '<div class="wrap ran-booster-admin">' );
+		$markerPosition     = strpos( $html, '<hr class="wp-header-end">' );
+		$noticePosition     = strpos( $html, '<strong>Development safety:</strong>' );
+		foreach ( array( $straplinePosition, $navigationPosition, $coreNoticePosition, $wrapPosition, $markerPosition, $noticePosition ) as $position ) {
 			self::assertIsInt( $position );
 		}
-		self::assertTrue( $straplinePosition < $markerPosition );
-		self::assertTrue( $markerPosition < $noticePosition );
-		self::assertTrue( $noticePosition < $tabsPosition );
+		self::assertTrue( $straplinePosition < $navigationPosition );
+		self::assertTrue( $navigationPosition < $wrapPosition );
+		self::assertTrue( $wrapPosition < $markerPosition );
+		self::assertTrue( $markerPosition < $coreNoticePosition );
+		self::assertTrue( $coreNoticePosition < $noticePosition );
 		self::assertStringContainsString( 'Copyright © 2042', $html );
 		self::assertStringContainsString(
 			'<a href="https://example.test/header-author">Header Author</a>',

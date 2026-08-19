@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 	<header class="ran-booster-page-shell__header ran-booster-extensions__header">
 		<p class="ran-booster-eyebrow"><?php esc_html_e( 'Add-ons', 'ran-booster' ); ?></p>
 		<h2 id="ran-booster-extensions-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Extensions', 'ran-booster' ); ?></h2>
-		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Add focused capabilities to Booster. Every extension is currently in beta.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Add focused capabilities to Booster.', 'ran-booster' ); ?></p>
 	</header>
 	<div class="ran-booster-page-shell__body ran-booster-extensions__body">
 		<div id="the-list" class="plugin-group ran-booster-extensions__grid">
@@ -141,6 +141,5 @@ defined( 'ABSPATH' ) || exit;
 				</article>
 			</div>
 		<?php endforeach; ?>
-		<p class="description ran-booster-extensions__note"><?php esc_html_e( 'Free downloads will be enabled after their public repositories and immutable beta releases pass readiness review.', 'ran-booster' ); ?></p>
 	</div>
 </section>

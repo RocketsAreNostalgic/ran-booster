@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "eeaaab0f2352a9c22f661bc4a1c05eb9",
+    "content-hash": "648b0ccace7dfcca6135f061dcee66fb",
     "packages": [
         {
             "name": "ran/wp-github-release-updater",
@@ -1255,6 +1255,59 @@
             "time": "2026-07-06T14:52:39+00:00"
         },
         {
+            "name": "ran/admin-shell",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
+                "reference": "e7b3dfb9c66760b92d38024141e734b17d387b99"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/e7b3dfb9c66760b92d38024141e734b17d387b99",
+                "reference": "e7b3dfb9c66760b92d38024141e734b17d387b99",
+                "shasum": ""
+            },
+            "require": {
+                "composer-runtime-api": "^2.2",
+                "ext-hash": "*",
+                "ext-json": "*",
+                "php": ">=8.0"
+            },
+            "require-dev": {
+                "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
+                "phpcompatibility/php-compatibility": "^9.3",
+                "phpunit/phpunit": "^9.6",
+                "wp-coding-standards/wpcs": "^3.1"
+            },
+            "default-branch": true,
+            "bin": [
+                "bin/ran-admin-shell"
+            ],
+            "type": "library",
+            "scripts": {
+                "phpcs": [
+                    "phpcs -p"
+                ],
+                "test": [
+                    "phpunit --configuration phpunit.xml.dist"
+                ],
+                "check": [
+                    "@test",
+                    "@phpcs"
+                ]
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
+            "support": {
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/main",
+                "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
+            },
+            "time": "2026-08-17T17:59:59+00:00"
+        },
+        {
             "name": "sebastian/cli-parser",
             "version": "3.0.2",
             "source": {
@@ -2494,6 +2547,7 @@
         "phpcompatibility/php-compatibility": 20,
         "phpcompatibility/phpcompatibility-paragonie": 20,
         "phpcompatibility/phpcompatibility-wp": 20,
+        "ran/admin-shell": 20,
         "ran/wp-github-release-updater": 10
     },
     "prefer-stable": true,

@@ -102,9 +102,10 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 } elseif ( PortabilityFacade::API_VERSION !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
 	throw new LogicException( 'RAN Booster Portability API 2 conflicts with an existing API version marker.' );
 }
-( new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy ) )->register();
+$ran_booster_core_development_notice = new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy );
+$ran_booster_core_development_notice->register();
 
-( static function () use ( $ran_booster_release_updater, $ran_booster_self_update_policy ): void {
+( static function () use ( $ran_booster_core_development_notice, $ran_booster_release_updater, $ran_booster_self_update_policy ): void {
 	$ran_booster_container            = new CoreContainer();
 	$ran_booster_runtime              = new Booster( $ran_booster_container );
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
@@ -116,6 +117,7 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 		throw new LogicException( 'RAN Booster bundled GitHub webhook management conflicts with an existing feature marker.' );
 	}
 	$ran_booster_container->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
+	$ran_booster_container->bind( CoreSelfUpdateDevelopmentNotice::class, $ran_booster_core_development_notice );
 	$ran_booster_container->bind(
 		CoreSelfUpdateStatus::class,
 		new CoreSelfUpdateStatus(

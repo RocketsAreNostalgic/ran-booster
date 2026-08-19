@@ -47,20 +47,45 @@ final class ExtensionsPageTest extends TestCase {
 		);
 	}
 
-	public function testRegistersExtensionsAfterTheExistingFixedSubmenus(): void {
+	public function testRegistersTheOverviewAndTransporterRoutesBeforeExtensions(): void {
 		$booster = $this->booster();
 		$booster->adminMenu();
 
 		self::assertSame(
 			array(
+				'ran-booster',
 				'ran-booster-plugins-create',
 				'ran-booster-plugins',
 				'ran-booster-themes-create',
 				'ran-booster-themes',
+				'ran-booster-transporter',
 				'ran-booster-extensions',
 			),
 			array_column( $GLOBALS['ran_booster_extensions_page_submenus'], 'menu_slug' )
 		);
+		self::assertSame(
+			array(
+				'parent_slug' => 'ran-booster',
+				'page_title'  => 'RAN Booster',
+				'menu_title'  => 'Overview',
+				'capability'  => 'manage_options',
+				'menu_slug'   => 'ran-booster',
+			),
+			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][0], array( 'callback' => true ) )
+		);
+		self::assertSame( 'getIndex', $GLOBALS['ran_booster_extensions_page_submenus'][0]['callback'][1] );
+		self::assertNull( $GLOBALS['ran_booster_extensions_page_menus'][0]['callback'] );
+		self::assertSame(
+			array(
+				'parent_slug' => 'ran-booster',
+				'page_title'  => 'Transporter',
+				'menu_title'  => 'Transporter',
+				'capability'  => 'manage_options',
+				'menu_slug'   => 'ran-booster-transporter',
+			),
+			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][5], array( 'callback' => true ) )
+		);
+		self::assertSame( 'getTransporter', $GLOBALS['ran_booster_extensions_page_submenus'][5]['callback'][1] );
 		self::assertSame(
 			array(
 				'parent_slug' => 'ran-booster',
@@ -69,9 +94,9 @@ final class ExtensionsPageTest extends TestCase {
 				'capability'  => 'manage_options',
 				'menu_slug'   => 'ran-booster-extensions',
 			),
-			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][4], array( 'callback' => true ) )
+			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][6], array( 'callback' => true ) )
 		);
-		self::assertSame( array( $booster, 'renderExtensionsPage' ), $GLOBALS['ran_booster_extensions_page_submenus'][4]['callback'] );
+		self::assertSame( array( $booster, 'renderExtensionsPage' ), $GLOBALS['ran_booster_extensions_page_submenus'][6]['callback'] );
 	}
 
 	public function testDashboardRoutesExtensionsThroughTheSharedPageFrame(): void {
@@ -93,7 +118,7 @@ final class ExtensionsPageTest extends TestCase {
 
 		self::assertTrue( $dashboard->getExtensions( array( array( 'id' => 'example' ) ), '/plugins.php' ) );
 		self::assertSame( 'extensions', $dashboard->captured['view'] );
-		self::assertSame( array(), $dashboard->captured['data']['tabs'] );
+		self::assertArrayNotHasKey( 'tabs', $dashboard->captured['data'] );
 		self::assertSame( '/plugins.php', $dashboard->captured['data']['pluginsUrl'] );
 	}
 
@@ -122,7 +147,6 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'Subscriber', $output );
 		self::assertStringNotContainsString( 'Get access', $output );
 		self::assertStringNotContainsString( 'Sponsor packages', $output );
-		self::assertStringContainsString( 'immutable beta releases pass readiness review', $output );
 		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
 		self::assertSame( 2, substr_count( $output, '>Install<' ) );
 		self::assertStringNotContainsString( '>Sponsor install<', $output );
@@ -228,6 +252,7 @@ final class ExtensionsPageTest extends TestCase {
 			'RAN\\Dashboard',
 			new class() {
 				public function getIndex(): void {}
+				public function getTransporter(): void {}
 				public function getPluginsCreate(): void {}
 				public function getPlugins(): void {}
 				public function getThemesCreate(): void {}

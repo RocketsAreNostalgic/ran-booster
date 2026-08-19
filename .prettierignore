@@ -1,5 +1,6 @@
 assets/dist/
 assets/lib/
+assets/ran-admin-shell.css
 node_modules/
 vendor/
 CHANGELOG.md

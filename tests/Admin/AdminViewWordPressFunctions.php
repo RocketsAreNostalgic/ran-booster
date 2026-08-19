@@ -6,6 +6,10 @@ if ( ! defined( 'WPINC' ) ) {
 	define( 'WPINC', 'test' );
 }
 
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', '/tmp/ran-booster-tests/' );
+}
+
 if ( ! function_exists( 'esc_attr' ) ) {
 	function esc_attr( mixed $value ): string {
 		return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
@@ -96,6 +100,14 @@ if ( ! function_exists( 'esc_html_e' ) ) {
 if ( ! function_exists( 'esc_url' ) ) {
 	function esc_url( mixed $value ): string {
 		return esc_attr( $value );
+	}
+}
+
+if ( ! function_exists( 'plugins_url' ) ) {
+	function plugins_url( string $path = '', string $plugin = '' ): string {
+		unset( $plugin );
+
+		return 'https://example.test/wp-content/plugins/ran-booster/' . ltrim( $path, '/' );
 	}
 }
 

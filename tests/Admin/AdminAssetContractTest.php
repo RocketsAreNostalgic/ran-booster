@@ -13,8 +13,9 @@ final class AdminAssetContractTest extends TestCase {
 		$css = $this->asset( 'ran-booster.css' );
 
 		self::assertStringContainsString( '.wp-core-ui .ran-booster-admin .button-delete', $css );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-brand', $css );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-brand__link', $css );
+		self::assertStringContainsString( '#screen-meta-links', $css );
+		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-masthead', $css );
+		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-brand', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-credential-modal', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-secondary-nav', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-activity__details', $css );
@@ -561,9 +562,12 @@ final class AdminAssetContractTest extends TestCase {
 		$base       = $this->view( 'base.php' );
 		$view       = $this->view( 'packages/index.php' );
 
-		self::assertStringContainsString( "'extensions'     => ' ran-booster-admin--extensions'", $base );
-		self::assertStringContainsString( "'packages/index' => ' ran-booster-admin--package-index'", $base );
-		self::assertStringContainsString( "! str_starts_with( \$view, 'packages/' )", $base );
+		self::assertStringContainsString( "'extensions'      => ' ran-booster-admin--extensions'", $base );
+		self::assertStringContainsString( "'packages/index',", $base );
+		self::assertStringContainsString( "'packages/create',", $base );
+		self::assertStringContainsString( "'packages/edit'   => ' ran-booster-admin--packages'", $base );
+		self::assertStringNotContainsString( "! str_starts_with( \$view, 'packages/' )", $base );
+		self::assertStringContainsString( "'current' => ! empty( \$adminTab['active'] )", $base );
 		self::assertStringContainsString( 'ran-booster-package-table', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__name', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__repo', $view );
@@ -580,8 +584,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="displaying-num"', $view );
 		self::assertStringNotContainsString( 'ran-booster-package-row__facts', $view );
 		self::assertStringNotContainsString( 'style="width: 100%;"', $view );
-		self::assertStringContainsString( '.ran-booster-admin--package-index {', $packageCss );
-		self::assertStringContainsString( 'max-inline-size: none;', $packageCss );
+		self::assertStringContainsString( '.ran-booster-admin--packages {', $packageCss );
+		self::assertStringContainsString( 'max-inline-size: 1400px;', $packageCss );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-package-table {', $css );
 		self::assertStringContainsString( 'table-layout: fixed;', $css );
 		self::assertStringContainsString(

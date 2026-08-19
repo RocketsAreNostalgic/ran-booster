@@ -18,6 +18,7 @@ class Booster {
 
 	private const ADMIN_PAGE_HOOKS = array(
 		'toplevel_page_ran-booster',
+		'ran-booster_page_ran-booster-transporter',
 		'ran-booster_page_ran-booster-plugins-create',
 		'ran-booster_page_ran-booster-plugins',
 		'ran-booster_page_ran-booster-themes-create',
@@ -216,11 +217,13 @@ class Booster {
 	}
 
 	public function adminMenu() {
-		add_menu_page( $this->getName(), $this->getName(), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ), $this->getMenuIcon() );
+		add_menu_page( $this->getName(), $this->getName(), 'manage_options', 'ran-booster', null, $this->getMenuIcon() );
+		add_submenu_page( 'ran-booster', $this->getName(), 'Overview', 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ) );
 		add_submenu_page( 'ran-booster', 'Install Plugin', 'Install Plugin', 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
 		add_submenu_page( 'ran-booster', 'Managed Plugins', 'Plugins', 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
 		add_submenu_page( 'ran-booster', 'Install Theme', 'Install Theme', 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
 		add_submenu_page( 'ran-booster', 'Managed Themes', 'Themes', 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
+		add_submenu_page( 'ran-booster', 'Transporter', 'Transporter', 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'getTransporter' ) );
 		add_submenu_page( 'ran-booster', 'Extensions', 'Extensions', 'manage_options', 'ran-booster-extensions', array( $this, 'renderExtensionsPage' ) );
 	}
 
@@ -464,16 +467,19 @@ class Booster {
 		$repositoryPickerScriptVersion = file_exists( $repositoryPickerScriptPath ) ? filemtime( $repositoryPickerScriptPath ) : null;
 		$scriptDependencies            = array();
 		$requestedTab                  = null;
+		$isTransporterPage             = 'ran-booster_page_ran-booster-transporter' === $hook;
 		$shouldEnqueuePortability      = false;
-		$shouldEnqueueHtmx             = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
+		$shouldEnqueueHtmx             = $isTransporterPage || in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
 
-		if ( 'toplevel_page_ran-booster' === $hook ) {
+		if ( 'toplevel_page_ran-booster' === $hook || $isTransporterPage ) {
 			// Read-only allowlisted navigation state; no action is performed from this value.
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			if ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state.
-				$requestedTab = sanitize_key( wp_unslash( $_GET['tab'] ) );
+			// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only navigation state.
+			if ( $isTransporterPage ) {
+				$requestedTab = 'portability';
+			} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
+					$requestedTab = sanitize_key( wp_unslash( $_GET['tab'] ) );
 			}
+			// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 			if ( $this->isProviderAdminTab( $requestedTab ) || in_array( $requestedTab, array( 'portability', 'troubleshooting' ), true ) ) {
 				$shouldEnqueueHtmx = true;
@@ -495,7 +501,16 @@ class Booster {
 			$scriptDependencies[] = 'ran-booster-htmx';
 		}
 
-		$styleDependencies = array();
+		$styleDependencies   = array();
+		$adminShellStylePath = trailingslashit( $this->boosterPath ) . 'assets/ran-admin-shell.css';
+		wp_register_style(
+			'ran-booster-admin-shell',
+			trailingslashit( $this->boosterUrl ) . 'assets/ran-admin-shell.css',
+			array(),
+			file_exists( $adminShellStylePath ) ? filemtime( $adminShellStylePath ) : null
+		);
+		wp_enqueue_style( 'ran-booster-admin-shell' );
+		$styleDependencies[] = 'ran-booster-admin-shell';
 		foreach ( self::ADMIN_STYLE_COMPONENTS as $styleComponent ) {
 			$styleComponentPath = trailingslashit( $this->boosterPath ) . 'assets/ran-booster/' . $styleComponent;
 			$styleHandle        = '80-responsive.css' === $styleComponent
@@ -557,7 +572,7 @@ class Booster {
 			true
 		);
 
-		if ( 'toplevel_page_ran-booster' === $hook ) {
+		if ( 'toplevel_page_ran-booster' === $hook || $isTransporterPage ) {
 			$onboardingPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-onboarding.css';
 			$onboardingVersion = file_exists( $onboardingPath ) ? filemtime( $onboardingPath ) : null;
 			wp_register_style( 'ran-booster-onboarding', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-onboarding.css', array( 'ran-booster-styles' ), $onboardingVersion );

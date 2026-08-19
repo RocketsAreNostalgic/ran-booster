@@ -21,8 +21,8 @@ final class CoreSelfUpdateDevelopmentNotice {
 
 	public function register(): void {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueStyle' ) );
-		add_action( 'admin_notices', array( $this, 'render' ) );
-		add_action( 'network_admin_notices', array( $this, 'render' ) );
+		add_action( 'admin_notices', array( $this, 'renderGlobal' ) );
+		add_action( 'network_admin_notices', array( $this, 'renderGlobal' ) );
 	}
 
 	public function enqueueStyle(): void {
@@ -43,13 +43,35 @@ final class CoreSelfUpdateDevelopmentNotice {
 			&& 'source_checkout' === ( $diagnostics['reason'] ?? null );
 	}
 
+	/** Render on non-Booster admin screens through WordPress's notice region. */
+	public function renderGlobal(): void {
+		if ( BoosterNoticeScope::isBoosterScreen( $this->screenId ) ) {
+			return;
+		}
+
+		$this->render();
+	}
+
+	/** Render on Booster screens immediately after the shared admin shell. */
+	public function renderShellInline(): void {
+		if ( ! BoosterNoticeScope::isBoosterScreen( $this->screenId ) ) {
+			return;
+		}
+
+		$this->renderNotice( true );
+	}
+
 	public function render(): void {
+		$this->renderNotice( false );
+	}
+
+	private function renderNotice( bool $inline ): void {
 		if ( $this->rendered || ! $this->shouldRender() ) {
 			return;
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-info" data-ran-booster-core-development-notice>
+		<div class="notice notice-info<?php echo $inline ? ' inline' : ''; ?>" data-ran-booster-core-development-notice>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster development detected:', 'ran-booster' ); ?></strong>
 				<?php esc_html_e( 'Core updates are disabled to protect this source checkout.', 'ran-booster' ); ?>

@@ -21,28 +21,73 @@ $footerPluginAuthorUrl  = is_string( $footerPluginHeaders['author_uri'] ?? null 
 	: '';
 $footerPluginAuthorLink = esc_url( $footerPluginAuthorUrl );
 $adminPageModifier      = match ( $view ) {
-	'extensions'     => ' ran-booster-admin--extensions',
-	'packages/index' => ' ran-booster-admin--package-index',
-	default          => '',
+	'extensions'      => ' ran-booster-admin--extensions',
+	'packages/index',
+	'packages/create',
+	'packages/edit'   => ' ran-booster-admin--packages',
+	default           => '',
 };
+$ranAdminShellNavigation = array();
+$packageType             = isset( $packageView ) ? $packageView->getType() : '';
+$adminUrl                = is_multisite()
+	? network_admin_url( 'admin.php' )
+	: admin_url( 'admin.php' );
+$packageNavigation       = array(
+	array(
+		'label'   => __( 'Plugins', 'ran-booster' ),
+		'url'     => $adminUrl . '?page=ran-booster-plugins',
+		'current' => 'plugin' === $packageType,
+	),
+	array(
+		'label'   => __( 'Themes', 'ran-booster' ),
+		'url'     => $adminUrl . '?page=ran-booster-themes',
+		'current' => 'theme' === $packageType,
+	),
+);
+
+if ( isset( $tabs ) && is_array( $tabs ) ) {
+	foreach ( $tabs as $adminTab ) {
+		if ( 'portability' === ( $adminTab['key'] ?? null ) ) {
+			foreach ( $packageNavigation as $packageTab ) {
+				$ranAdminShellNavigation[] = $packageTab;
+			}
+			continue;
+		}
+
+		$ranAdminShellNavigation[] = array(
+			'label'   => $adminTab['label'] ?? '',
+			'url'     => $adminTab['url'] ?? '',
+			'current' => ! empty( $adminTab['active'] ),
+		);
+	}
+}
+
+$ran_admin_shell = array(
+	'name'             => __( 'RAN Booster', 'ran-booster' ),
+	'home_url'         => $adminUrl . '?page=ran-booster',
+	'strapline'        => __( 'Deploy themes and plugins straight from your Git repos.', 'ran-booster' ),
+	'logo'             => array(
+		'url'    => plugins_url( 'assets/ran-booster-mark.svg', dirname( __DIR__ ) . '/ran-booster.php' ),
+		'width'  => 56,
+		'height' => 56,
+	),
+	'navigation_label' => __( 'RAN Booster sections', 'ran-booster' ),
+	'navigation'       => $ranAdminShellNavigation,
+);
+
+require __DIR__ . '/generated/ran-admin-shell.php';
 
 ?><div class="wrap ran-booster-admin<?php echo esc_attr( $adminPageModifier ); ?>">
-	<header class="ran-booster-masthead">
-		<h1 class="ran-booster-brand"><a class="ran-booster-brand__link" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster' ) ); ?>"><span class="ran-booster-brand__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10,2 C11.5,2 13,5 13,8 L13,15 L7,15 L7,8 C7,5 8.5,2 10,2 Z M7,12 L4,17 L7,15 Z M13,12 L16,17 L13,15 Z M8,15 L10,18.5 L12,15 Z"></path></svg></span> <?php esc_html_e( 'RAN Booster', 'ran-booster' ); ?></a></h1>
-		<p><?php esc_html_e( 'Safe, portable and extensible repository deployment for WordPress — modern and independent.', 'ran-booster' ); ?></p>
-	</header>
 	<hr class="wp-header-end">
+	<?php
+	if ( isset( $coreSelfUpdateDevelopmentNotice ) ) {
+		$coreSelfUpdateDevelopmentNotice->renderShellInline();
+	}
+	?>
 	<?php if ( 'packages/index' !== $view ) { ?>
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>
 
-	<?php if ( ! str_starts_with( $view, 'packages/' ) && isset( $tabs ) && is_array( $tabs ) && array() !== $tabs ) { ?>
-		<nav class="nav-tab-wrapper" aria-label="<?php esc_attr_e( 'RAN Booster sections', 'ran-booster' ); ?>">
-			<?php foreach ( $tabs as $adminTab ) { ?>
-				<a href="<?php echo esc_url( $adminTab['url'] ); ?>" class="nav-tab<?php echo $adminTab['active'] ? ' nav-tab-active' : ''; ?>"<?php echo $adminTab['active'] ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $adminTab['label'] ); ?></a>
-			<?php } ?>
-		</nav>
-	<?php } ?>
 	<div id="ran-booster-package-mutation-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
 
 	<?php require __DIR__ . '/' . $view . '.php'; ?>

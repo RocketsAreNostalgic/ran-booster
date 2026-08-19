@@ -37,3 +37,11 @@ if ( ! function_exists( 'get_current_user_id' ) ) {
 		return (int) ( $GLOBALS['ran_booster_package_operation_user_id'] ?? 1 );
 	}
 }
+
+if ( ! function_exists( 'wp_is_file_mod_allowed' ) ) {
+	function wp_is_file_mod_allowed( string $context ): bool {
+		unset( $context );
+
+		return true;
+	}
+}

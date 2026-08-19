@@ -230,10 +230,11 @@ final class PackageAdminController {
 		return $this->manualFailure( $dashboard, $addContextMessage, null, $action );
 	}
 
-	public function addSuccessNotice( Dashboard $dashboard, string $type ): void {
+	/** @return array{operation: string, identifier: string}|null */
+	public function addSuccessNotice( Dashboard $dashboard, string $type ): ?array {
 		foreach ( array( 'ran_booster_result', 'ran_booster_package', '_ran_booster_notice_nonce' ) as $key ) {
 			if ( ! isset( $_GET[ $key ] ) || ! is_scalar( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
-				return;
+				return null;
 			}
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only signed feedback.
@@ -243,7 +244,7 @@ final class PackageAdminController {
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'unlink', 'unlink-and-delete' ), true )
 			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
-			return;
+			return null;
 		}
 		$completed = match ( $operation ) {
 			'install' => __( 'installed', 'ran-booster' ),
@@ -263,6 +264,8 @@ final class PackageAdminController {
 				),
 			)
 		);
+
+		return compact( 'operation', 'identifier' );
 	}
 
 	/** @param array<string, string> $listArguments */

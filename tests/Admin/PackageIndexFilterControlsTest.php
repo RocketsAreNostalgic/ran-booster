@@ -97,10 +97,12 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringContainsString( 'Install another ' . $type, $html );
 		self::assertStringNotContainsString( 'data-ran-booster-bulk-form', $html );
 		self::assertStringContainsString( 'No managed ' . $plural . ' match the current filters.', $html );
+		self::assertStringNotContainsString( 'ran-booster-package-empty-state', $html );
+		self::assertStringNotContainsString( 'Add your first ' . $type, $html );
 	}
 
 	#[DataProvider( 'packageTypes' )]
-	public function testRawEmptyInventoryKeepsItsInstallActionAndDistinctMessage(
+	public function testRawEmptyInventoryOffersProminentFirstPackageOnboarding(
 		PackagePagePresenter $packageView,
 		string $pageSlug,
 		string $type,
@@ -119,14 +121,20 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		);
 
 		self::assertStringNotContainsString( 'ran-booster-package-list-controls', $html );
+		self::assertStringNotContainsString( 'class="page-title-action"', $html );
 		self::assertStringContainsString(
-			'class="page-title-action" href="https://example.test/wp-admin/admin.php?page=' . $pageSlug . '-create"',
+			'<td colspan="4" class="ran-booster-package-empty-state">',
 			$html
 		);
-		self::assertStringContainsString( 'Install another ' . $type, $html );
+		self::assertStringContainsString( '<h3>Add your first ' . $type . '</h3>', $html );
+		self::assertStringContainsString( 'No ' . $plural . ' are managed by RAN Booster yet.', $html );
+		self::assertStringContainsString(
+			'class="button button-primary" href="https://example.test/wp-admin/admin.php?page=' . $pageSlug . '-create">Add your first ' . $type . '</a>',
+			$html
+		);
 		self::assertStringNotContainsString( 'ran-booster-package-toolbar', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-bulk-form', $html );
-		self::assertStringContainsString( 'No ' . $plural . ' managed by RAN Booster yet.', $html );
+		self::assertStringNotContainsString( 'Install another ' . $type, $html );
 		self::assertStringNotContainsString( 'match the current filters', $html );
 	}
 

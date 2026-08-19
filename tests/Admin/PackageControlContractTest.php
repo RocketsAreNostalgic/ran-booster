@@ -44,9 +44,11 @@ final class PackageControlContractTest extends TestCase {
 		$readiness = $this->view( 'branch-readiness.php' );
 
 		self::assertStringContainsString( 'ran_booster[install_another]', $create );
+		self::assertStringContainsString( 'data-ran-booster-native-submit', $create );
 		self::assertStringContainsString( 'data-ran-booster-package-mutation', $edit );
 		self::assertStringContainsString( 'data-ran-booster-package-mutation', $index );
 		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-package-mutation' ) );
+		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-native-submit' ) );
 		self::assertStringContainsString( 'data-ran-booster-package-mutation', $reinstall );
 		self::assertStringContainsString( 'hx-include="#ran-booster-package-edit-form"', $edit );
 		self::assertStringContainsString( 'hx-get=', $source );

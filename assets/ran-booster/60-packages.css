@@ -116,6 +116,19 @@
 	table-layout: fixed;
 }
 
+.ran-booster-admin .ran-booster-package-empty-state {
+	padding-block: var(--ran-booster-space-30);
+	text-align: center;
+}
+
+.ran-booster-admin .ran-booster-package-empty-state h3 {
+	margin-block: 0 var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-package-empty-state p {
+	margin-block: 0 var(--ran-booster-space-18);
+}
+
 .ran-booster-admin
 	.ran-booster-package-table
 	.ran-booster-package-table__package-header {

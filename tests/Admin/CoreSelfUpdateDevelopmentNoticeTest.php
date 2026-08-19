@@ -60,6 +60,26 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		);
 	}
 
+	public function testPluginsScreenUsesTheGlobalCallbackAndBoosterScreenUsesTheShellCallback(): void {
+		$policy = CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' );
+
+		$pluginsNotice = new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' );
+		ob_start();
+		$pluginsNotice->renderGlobal();
+		$pluginsNotice->renderShellInline();
+		$pluginsHtml = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $pluginsHtml, 'data-ran-booster-core-development-notice' ) );
+		self::assertStringContainsString( 'class="notice notice-info"', $pluginsHtml );
+
+		$boosterNotice = new CoreSelfUpdateDevelopmentNotice( $policy, 'toplevel_page_ran-booster' );
+		ob_start();
+		$boosterNotice->renderGlobal();
+		$boosterNotice->renderShellInline();
+		$boosterHtml = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $boosterHtml, 'data-ran-booster-core-development-notice' ) );
+		self::assertStringContainsString( 'class="notice notice-info inline"', $boosterHtml );
+	}
+
 	public function testUnverifiedNonSourceUnauthorizedAndUnrelatedScreensRenderNothing(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-development-notice-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.

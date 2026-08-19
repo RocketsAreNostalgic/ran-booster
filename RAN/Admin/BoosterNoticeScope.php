@@ -19,7 +19,19 @@ final readonly class BoosterNoticeScope {
 		}
 
 		return in_array( $screenId, array( 'plugins', 'plugins-network' ), true )
-			|| str_starts_with( $screenId, 'toplevel_page_ran-booster' )
+			|| self::isBoosterScreen( $screenId );
+	}
+
+	/** Whether the current screen belongs to Booster's admin page family. */
+	public static function isBoosterScreen( ?string $screenId = null ): bool {
+		if ( null === $screenId ) {
+			$screen   = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+			$screenId = is_object( $screen ) && isset( $screen->id ) && is_string( $screen->id )
+				? $screen->id
+				: '';
+		}
+
+		return str_starts_with( $screenId, 'toplevel_page_ran-booster' )
 			|| str_starts_with( $screenId, 'ran-booster_page_ran-booster' );
 	}
 }

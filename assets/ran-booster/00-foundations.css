@@ -133,3 +133,8 @@
 .ran-booster-admin {
 	max-inline-size: 1050px;
 }
+
+#screen-meta-links {
+	position: relative;
+	z-index: 2;
+}

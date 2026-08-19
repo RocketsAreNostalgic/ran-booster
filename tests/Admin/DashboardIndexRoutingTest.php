@@ -381,6 +381,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertFalse( $data['portabilityExportCredentialsUnavailable'] );
 	}
 
+	public function testNativeTransporterRouteForcesTheCanonicalTabWithoutMutatingTheRequest(): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Fixture verifies the route leaves the request intact.
+		$_GET = array( 'tab' => 'documentation' );
+
+		$data = $this->dashboard( $this->throwingSecrets() )->getTransporter()['data'];
+
+		self::assertSame( array( 'tab' => 'documentation' ), $_GET );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		self::assertSame( 'portability', $data['tab'] );
+		self::assertSame( 'portability.php', $data['tabView'] );
+		self::assertSame( array( false, false, false, true, false, false ), array_column( $data['tabs'], 'active' ) );
+	}
+
+	public function testEmptyWordPressActionArgumentLeavesCanonicalTabRoutingIntact(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixture models WordPress's empty action argument.
+		$_GET = array( 'tab' => 'documentation' );
+
+		$data = $this->dashboard( $this->throwingSecrets() )->getIndex( '' )['data'];
+
+		self::assertSame( 'documentation', $data['tab'] );
+		self::assertSame( 'documentation.php', $data['tabView'] );
+	}
+
 	public function testPortabilityGroupsOnlyDisplaySafeCredentialMetadataAndKeepsPackageOnlyFallback(): void {
 		$_GET['tab'] = 'portability';
 		$plugin      = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id', credentialId: 'shared-profile' );
@@ -1202,8 +1225,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'unavailable'
 			)
 		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->getPlugins();
 
@@ -1230,8 +1254,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'not_required'
 			)
 		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->getPlugins();
 
@@ -1256,8 +1281,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				)
 			)
 		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->getThemes();
 
@@ -1284,8 +1310,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				)
 			)
 		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->getPlugins();
 
@@ -1303,8 +1330,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 		$_GET['ran_booster_bulk_queued'] = '20';
 
 		$dashboard->getPlugins();
@@ -1318,8 +1346,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query and deliberately presents it to the other package type.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query and deliberately presents it to the other package type.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->getThemes();
 
@@ -1332,8 +1361,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test deliberately replaces the signed redirect marker.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test deliberately replaces the signed redirect marker.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 		$_GET['_ran_booster_bulk_notice_nonce'] = 'forged';
 
 		$dashboard->getPlugins();

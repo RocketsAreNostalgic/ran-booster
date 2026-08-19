@@ -129,18 +129,20 @@ class Dashboard {
 		$this->webhookManagement     = $webhookManagement;
 	}
 
-	public function getIndex() {
+	public function getIndex( ?string $forcedTab = null ) {
 		if ( null === $this->adminTabs ) {
 			throw new LogicException( 'Booster admin tabs are not configured.' );
 		}
 
 		$requestedTab = null;
-		// Read-only navigation state; no action is performed from this query value.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only allowlisted navigation state.
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only allowlisted navigation state.
+		if ( null !== $forcedTab && '' !== $forcedTab ) {
+			$requestedTab = $forcedTab;
+		} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
+			// Read-only navigation state; no action is performed from this query value.
 			$requestedTab = wp_unslash( $_GET['tab'] );
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$requestedAddOnKey = is_string( $requestedTab ) ? strtolower( trim( $requestedTab ) ) : '';
 		$selectedAddOn     = '' === $requestedAddOnKey || null === $this->adminAddOns
@@ -266,6 +268,11 @@ class Dashboard {
 		}
 
 		return $this->render( 'index', $data );
+	}
+
+	/** Render the native sidebar route through the canonical Transporter tab. */
+	public function getTransporter() {
+		return $this->getIndex( 'portability' );
 	}
 
 	/**
@@ -424,7 +431,6 @@ class Dashboard {
 			array(
 				'extensions' => $extensions,
 				'pluginsUrl' => $pluginsUrl,
-				'tabs'       => array(),
 			)
 		);
 	}

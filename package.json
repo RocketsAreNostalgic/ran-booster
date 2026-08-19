@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+        "dex": "pnpm --dir ran-booster-workbench dex",
+        "workbench:check": "pnpm --dir ran-booster-workbench check",
+        "workbench:extensions:check": "pnpm --dir ran-booster-workbench extensions:check",
+        "workbench:release-health:gate": "pnpm --dir ran-booster-workbench release-health:gate",
         "format": "prettier --write 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs'",
         "format:check": "prettier --check 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs'",
         "lint:js": "eslint 'assets/**/*.js' 'tests/assets/**/*.mjs'",
@@ -25,7 +29,6 @@
     "@wordpress/eslint-plugin": "^25.7.0",
     "@wordpress/prettier-config": "^4.51.0",
     "@wordpress/stylelint-config": "^24.0.0",
-    "@zeeg/dex": "0.16.0",
     "eslint": "^9.39.5",
     "htmx.org": "2.0.10",
     "husky": "^9.1.7",

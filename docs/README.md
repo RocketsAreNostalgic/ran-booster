@@ -17,4 +17,4 @@ sanitized Booster-specific evidence.
 
 Core architecture, release, portability, and security contracts remain in the
 named documents beside this index. Private planning state belongs in the
-ignored `.ran-booster-workbench/`, not in this public documentation tree.
+ignored `ran-booster-workbench/`, not in this public documentation tree.

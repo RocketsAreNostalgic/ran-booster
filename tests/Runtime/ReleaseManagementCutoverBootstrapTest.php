@@ -15,7 +15,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 
 		$localBinding = strpos( $bootstrap, '$ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::register(' );
 		$globalMirror = strpos( $bootstrap, '$GLOBALS[\'ran_booster_release_updater\'] = $ran_booster_release_updater;' );
-		$outerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_release_updater, $ran_booster_self_update_policy ): void {' );
+		$outerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_core_development_notice, $ran_booster_release_updater, $ran_booster_self_update_policy ): void {' );
 		$innerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater ): void {' );
 		$lateCapture  = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {' );
 		$apiGate      = strpos( $bootstrap, 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )' );

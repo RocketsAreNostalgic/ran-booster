@@ -7,6 +7,7 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabRegistry;
 use RAN\Admin\BulkPackageResult;
+use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\DevelopmentEnvironmentDetector;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\DeploymentAdminPresenter;
@@ -67,6 +68,7 @@ class Dashboard {
 	private ?AdminTabRegistry $adminTabs;
 	private ?AdminAddOnRegistry $adminAddOns;
 	private ?RepositoryWebhookManagementControls $webhookManagement;
+	private ?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
 	private PackageAdminController $packageAdmin;
@@ -90,6 +92,7 @@ class Dashboard {
 	 * @param DeploymentAttemptRepository|null $deploymentAttempts    Bounded operator history reads.
 	 * @param TemporaryDebugCapture|null        $debugCapture          Bounded Booster-only event capture.
 	 * @param AdminAddOnRegistry|null            $adminAddOns           Registered public add-on tabs.
+	 * @param CoreSelfUpdateDevelopmentNotice|null $coreSelfUpdateDevelopmentNotice Core-owned source-checkout notice.
 	 */
 	public function __construct(
 		Database $db,
@@ -105,7 +108,8 @@ class Dashboard {
 		?TemporaryDebugCapture $debugCapture = null,
 		?SecretsStorageProvisioner $secretsStorage = null,
 		?AdminAddOnRegistry $adminAddOns = null,
-		?RepositoryWebhookManagementControls $webhookManagement = null
+		?RepositoryWebhookManagementControls $webhookManagement = null,
+		?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice = null
 	) {
 		$this->db                    = $db;
 		$this->plugins               = $plugins;
@@ -127,6 +131,8 @@ class Dashboard {
 		$this->secretsStorage        = $secretsStorage;
 		$this->adminAddOns           = $adminAddOns;
 		$this->webhookManagement     = $webhookManagement;
+
+		$this->coreSelfUpdateDevelopmentNotice = $coreSelfUpdateDevelopmentNotice;
 	}
 
 	public function getIndex( ?string $forcedTab = null ) {
@@ -891,11 +897,14 @@ class Dashboard {
 		$tabs     = array();
 
 		foreach ( $this->adminTabs->all() as $tab ) {
+			$tabKey = $tab->getKey();
 			$tabs[] = array(
-				'key'      => $tab->getKey(),
+				'key'      => $tabKey,
 				'label'    => $tab->getLabel(),
-				'url'      => $adminUrl . '?page=ran-booster&tab=' . rawurlencode( $tab->getKey() ),
-				'active'   => $selectedKey === $tab->getKey(),
+				'url'      => 'portability' === $tabKey
+					? $adminUrl . '?page=ran-booster-transporter'
+					: $adminUrl . '?page=ran-booster&tab=' . rawurlencode( $tabKey ),
+				'active'   => $selectedKey === $tabKey,
 				'provider' => $tab->isProvider(),
 			);
 		}
@@ -923,6 +932,8 @@ class Dashboard {
 		$data['developmentSafetyNotice']        = $this->shouldShowDevelopmentSafetyNotice( $view, $data, $developmentEnvironmentDetected );
 		$data['messages']                       = $this->messages;
 		$data['name']                           = $this->booster->getName();
+
+		$data['coreSelfUpdateDevelopmentNotice'] = $this->coreSelfUpdateDevelopmentNotice;
 		if ( ! isset( $data['tabs'] ) ) {
 			$data['tabs'] = $this->tabNavigation( '' );
 		}

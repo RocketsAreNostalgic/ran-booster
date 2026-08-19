@@ -64,7 +64,7 @@ if ( isset( $tabs ) && is_array( $tabs ) ) {
 
 $ran_admin_shell = array(
 	'name'             => __( 'RAN Booster', 'ran-booster' ),
-	'home_url'         => admin_url( 'admin.php?page=ran-booster' ),
+	'home_url'         => $adminUrl . '?page=ran-booster',
 	'strapline'        => __( 'Deploy themes and plugins straight from your Git repos.', 'ran-booster' ),
 	'logo'             => array(
 		'url'    => plugins_url( 'assets/ran-booster-mark.svg', dirname( __DIR__ ) . '/ran-booster.php' ),
@@ -79,7 +79,11 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 
 ?><div class="wrap ran-booster-admin<?php echo esc_attr( $adminPageModifier ); ?>">
 	<hr class="wp-header-end">
-	<?php do_action( 'ran_booster_after_admin_shell' ); ?>
+	<?php
+	if ( isset( $coreSelfUpdateDevelopmentNotice ) ) {
+		$coreSelfUpdateDevelopmentNotice->renderShellInline();
+	}
+	?>
 	<?php if ( 'packages/index' !== $view ) { ?>
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>

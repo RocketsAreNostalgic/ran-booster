@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
+use RAN\WordPress\CoreSelfUpdatePolicy;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
@@ -15,7 +17,6 @@ final class AdminIndexViewTest extends TestCase {
 			$GLOBALS['ran_booster_admin_view_year'],
 			$GLOBALS['ran_booster_admin_view_plugin_headers']
 		);
-		unset( $GLOBALS['ran_booster_admin_view_actions']['ran_booster_after_admin_shell'] );
 	}
 
 	public function testStaticPageRendersScopedRootLabelledNavigationAndOnePageHeading(): void {
@@ -28,9 +29,15 @@ final class AdminIndexViewTest extends TestCase {
 		$name                    = 'RAN Booster';
 		$view                    = 'index';
 		$developmentSafetyNotice = true;
-		$tab                     = 'documentation';
-		$tabView                 = 'documentation.php';
-		$tabs                    = array(
+
+		$coreSelfUpdateDevelopmentNotice = new CoreSelfUpdateDevelopmentNotice(
+			CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' ),
+			'toplevel_page_ran-booster'
+		);
+
+		$tab     = 'documentation';
+		$tabView = 'documentation.php';
+		$tabs    = array(
 			array(
 				'key'    => 'overview',
 				'label'  => 'Overview',
@@ -68,12 +75,6 @@ final class AdminIndexViewTest extends TestCase {
 				'active' => false,
 			),
 		);
-		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_after_admin_shell'] = array(
-			static function (): void {
-				echo '<div data-ran-booster-core-development-notice></div>';
-			},
-		);
-
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();

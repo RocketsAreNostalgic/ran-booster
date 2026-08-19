@@ -515,6 +515,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'onboarding.php', $data['tabView'] );
 		self::assertArrayNotHasKey( 'selected_provider', $data );
 		self::assertSame( array( 'GitHub', 'Bitbucket' ), array_column( $data['onboarding']['provider_links'], 'label' ) );
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?page=ran-booster-transporter',
+			$data['onboarding']['portability_url']
+		);
 	}
 
 	public function testNavigationUsesTheCorrectSingleAndNetworkAdminBases(): void {

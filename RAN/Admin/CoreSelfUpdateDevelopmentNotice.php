@@ -23,7 +23,6 @@ final class CoreSelfUpdateDevelopmentNotice {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueStyle' ) );
 		add_action( 'admin_notices', array( $this, 'renderGlobal' ) );
 		add_action( 'network_admin_notices', array( $this, 'renderGlobal' ) );
-		add_action( 'ran_booster_after_admin_shell', array( $this, 'renderShellInline' ) );
 	}
 
 	public function enqueueStyle(): void {

@@ -233,6 +233,99 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		self::assertFalse( $outcome['successful'] );
 	}
 
+	#[DataProvider( 'callableCandidateResults' )]
+	public function testCallableCandidateContractClosesInvalidResults(
+		ProspectiveReleaseResult $result,
+		string $expectedCode
+	): void {
+		$calls    = 0;
+		$controls = ReleaseManagementFixture::controls(
+			readCandidates: static function ( string $type, array $repository, string $channel ) use ( &$calls, $result ): ProspectiveReleaseResult {
+				++$calls;
+				self::assertSame( 'plugin', $type );
+				self::assertSame( 'gh', $repository['provider'] );
+				self::assertSame( 'stable', $channel );
+
+				return $result;
+			}
+		);
+
+		$outcome = $controls->processProspectiveRequest( 'list_candidates', $this->request( 'list_candidates' ) );
+
+		self::assertSame( 1, $calls );
+		self::assertFalse( $outcome['successful'] );
+		self::assertSame( $expectedCode, $outcome['code'] );
+		self::assertSame( array(), $outcome['data'] );
+	}
+
+	/** @return iterable<string, array{ProspectiveReleaseResult,string}> */
+	public static function callableCandidateResults(): iterable {
+		yield 'runtime unsupported' => array(
+			ProspectiveReleaseResult::failure( 'runtime_unsupported' ),
+			'runtime_unsupported',
+		);
+		yield 'successful channel mismatch' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'prerelease',
+					'candidates' => array( self::candidate() ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'more than eight candidates' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array_fill( 0, 9, self::candidate() ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'more than eight assets' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( expectedAssetNames: array_fill( 0, 9, 'package.zip' ) ) ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'invalid release identifier' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( releaseId: 0 ) ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'oversized version' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( version: str_repeat( 'v', 65 ) ) ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'oversized asset name' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( expectedAssetNames: array( str_repeat( 'a', 192 ) ) ) ),
+				)
+			),
+			'operation_failed',
+		);
+	}
+
 	#[DataProvider( 'installTypes' )]
 	public function testFingerprintBoundInstallHasPluginThemeParity( string $type, string $identifier ): void {
 		$fingerprint                     = 'v1:' . str_repeat( 'c', 64 );
@@ -321,5 +414,21 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 
 	private function nonce( string $operation, string $type ): string {
 		return 'nonce-for-prospective-release-' . $operation . '-' . $type;
+	}
+
+	/** @return array{release_id:int,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>} */
+	private static function candidate(
+		int $releaseId = 42,
+		string $version = '1.2.3',
+		array $expectedAssetNames = array( 'package.zip' )
+	): array {
+		return array(
+			'release_id'           => $releaseId,
+			'tag'                  => 'v1.2.3',
+			'version'              => $version,
+			'prerelease'           => false,
+			'published_at'         => '2026-07-28T09:00:00Z',
+			'expected_asset_names' => $expectedAssetNames,
+		);
 	}
 }

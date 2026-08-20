@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
+use RAN\AddOn\ReleaseTracking\ProspectiveReleaseCandidateReader;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use Throwable;
@@ -27,12 +28,13 @@ final class ReleaseManagementControls {
 
 	public function __construct(
 		ReleaseTrackingFacade $releases,
-		ProspectiveReleaseFacade $prospective
+		ProspectiveReleaseFacade $prospective,
+		ProspectiveReleaseCandidateReader $candidateReader
 	) {
 		$this->display               = new ReleaseManagementDisplay();
 		$this->releases              = $releases;
 		$this->tracking              = new ReleaseTrackingOperations( $releases );
-		$this->prospectiveOperations = new ProspectiveReleaseOperations( $prospective );
+		$this->prospectiveOperations = new ProspectiveReleaseOperations( $prospective, $candidateReader );
 	}
 
 	public function register(): void {
@@ -488,7 +490,7 @@ final class ReleaseManagementControls {
 		$channel     = array_key_exists( 'release_channel', $request ) ? $this->releaseChannelFrom( $request ) : 'stable';
 
 		return $this->requestBoundary(
-			fn (): array => $this->prospectiveOperations->execute( $operation, $type, $repository, $releaseId, $tag, $fingerprint, $channel, $nonce ),
+			fn (): array => 'list_candidates' === $operation ? $this->prospectiveOperations->listCandidates( $type, $repository, $channel ) : $this->prospectiveOperations->execute( $operation, $type, $repository, $releaseId, $tag, $fingerprint, $channel, $nonce ),
 			$this->prospectiveOutcome( $type, 'service_unavailable' )
 		);
 	}

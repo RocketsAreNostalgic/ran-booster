@@ -37,6 +37,7 @@ use Throwable;
  * Core-owned prospective release validation, installation and adoption.
  */
 final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
+	private readonly ProspectiveReleaseCandidateReader $candidateReader;
 
 	/** @var \Closure(string): bool */
 	private \Closure $canManage;
@@ -59,10 +60,12 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private ThemeRepository $themes,
 		private WordPressUpdaterLock $updaterLock,
 		private ProviderRegistry $providers,
+		?ProspectiveReleaseCandidateReader $candidateReader = null,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
 		?callable $currentUserId = null
 	) {
+		$this->candidateReader = $candidateReader ?? new ProspectiveReleaseCandidateReader( $repositories, $providers );
 		$this->canManage     = null === $canManage
 			? static fn ( string $type ): bool => current_user_can( 'manage_options' )
 				&& current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' )
@@ -114,61 +117,12 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		string $channel,
 		string $nonce
 	): ProspectiveReleaseResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
-			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
-		}
-
 		if ( ! $this->validChannel( $channel )
 			|| ! $this->authorized( 'list_candidates', $type, $nonce ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		$listing = $this->releaseCandidateListing( $repositoryRequest );
-		if ( null === $listing ) {
-			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
-		}
-
 		try {
-			$repository = $this->resolveRepository( $repositoryRequest );
-			$result     = $listing->listReleaseCandidates(
-				$type,
-				$this->repositoryReference( $repository ),
-				$channel
-			);
-			if ( array() === $result->candidates ) {
-				return ProspectiveReleaseResult::failure( 'no_releases' );
-			}
-
-			$candidates = array();
-			foreach ( $result->candidates as $candidate ) {
-				if ( 'stable' === $channel && $candidate->prerelease ) {
-					throw new InvalidArgumentException( 'The release candidate conflicts with the requested channel.' );
-				}
-				$releaseId = filter_var(
-					$candidate->providerReleaseId,
-					FILTER_VALIDATE_INT,
-					array( 'options' => array( 'min_range' => 1 ) )
-				);
-				if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/D', $candidate->providerReleaseId )
-					|| false === $releaseId ) {
-					throw new InvalidArgumentException( 'The release candidate identity is incompatible.' );
-				}
-				$candidates[] = array(
-					'release_id'           => $releaseId,
-					'tag'                  => $candidate->tag,
-					'version'              => $candidate->version,
-					'prerelease'           => $candidate->prerelease,
-					'published_at'         => $candidate->publishedAt,
-					'expected_asset_names' => $candidate->expectedAssetNames,
-				);
-			}
-
-			return ProspectiveReleaseResult::success(
-				'release_candidates_available',
-				array(
-					'candidates' => $candidates,
-					'channel'    => $channel,
-				)
-			);
+			return $this->candidateReader->read( $type, $repositoryRequest, $channel );
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Admin\ReleaseManagement\Support;
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
+use RAN\AddOn\ReleaseTracking\ProspectiveReleaseCandidateReader;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RuntimeException;
 
@@ -57,5 +58,24 @@ final class ProspectiveReleaseFacadeDouble implements ProspectiveReleaseFacade {
 
 	private function result( string $operation ): ProspectiveReleaseResult {
 		return $this->results[ $operation ] ?? ProspectiveReleaseResult::failure( 'operation_failed' );
+	}
+}
+
+final class ProspectiveReleaseCandidateReaderDouble extends ProspectiveReleaseCandidateReader {
+	public function __construct( private ?ProspectiveReleaseFacadeDouble $facade = null ) {
+	}
+
+	public ?ProspectiveReleaseResult $result = null;
+	public bool $throw = false;
+	/** @var list<array<mixed>> */
+	public array $calls = array();
+
+	public function read( string $type, array $repositoryRequest, string $channel ): ProspectiveReleaseResult {
+		$this->calls[] = array( $type, $repositoryRequest, $channel );
+		if ( $this->throw ) {
+			throw new RuntimeException( 'reader-failure' );
+		}
+
+		return $this->result ?? $this->facade?->listCandidates( $type, $repositoryRequest, $channel, '' ) ?? ProspectiveReleaseResult::failure( 'no_releases' );
 	}
 }

@@ -8,6 +8,7 @@ use RAN\AddOn\Portability\NativePortabilityFacade;
 use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
+use RAN\AddOn\ReleaseTracking\ProspectiveReleaseCandidateReader;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
@@ -406,14 +407,20 @@ final class BoosterServiceProvider {
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
+		$candidateReader = new ProspectiveReleaseCandidateReader(
+			$container->make( PackageRepositoryRequestResolver::class ),
+			$container->make( ProviderRegistry::class )
+		);
 		$prospectiveFacade = new NativeProspectiveReleaseFacade(
 			$container->make( PackageRepositoryRequestResolver::class ),
 			$container->make( CorePackageExecutor::class ),
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class )
+			$container->make( ProviderRegistry::class ),
+			$candidateReader
 		);
+		$container->bind( ProspectiveReleaseCandidateReader::class, $candidateReader );
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
 		$container->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );
 	}

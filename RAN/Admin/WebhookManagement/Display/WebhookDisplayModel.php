@@ -89,6 +89,20 @@ final class WebhookDisplayModel {
 		return $rows;
 	}
 
+	/** @param array<string,array<string,mixed>> $rows @param array<string,array<string,mixed>> $repositoryProjections @return array<string,array<string,mixed>> */
+	public function enrichHistoricalRows( array $rows, string $providerCode, array $repositoryProjections ): array {
+		foreach ( $repositoryProjections as $rowKey => $projection ) {
+			$repositoryId = $this->projectionRepositoryId( $rowKey, $projection );
+			$record = null === $repositoryId ? null : $this->records->find( $providerCode, $repositoryId );
+			if ( null !== $record && isset( $rows[ $rowKey ] ) ) {
+				$existing = is_array( $rows[ $rowKey ]['details'] ?? null ) ? $rows[ $rowKey ]['details'] : array();
+				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historyDetails( $record->status(), $record ) );
+			}
+		}
+
+		return $rows;
+	}
+
 	/**
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return array<string, mixed>|null
@@ -399,6 +413,11 @@ final class WebhookDisplayModel {
 				'label' => __( 'Recorded hook status', 'ran-booster' ),
 				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $history['recorded_status'],
 				'tone'  => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+			),
+			array(
+				'label' => __( 'Observation', 'ran-booster' ),
+				'value' => null === $history ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
+				'tone'  => 'neutral',
 			),
 		);
 

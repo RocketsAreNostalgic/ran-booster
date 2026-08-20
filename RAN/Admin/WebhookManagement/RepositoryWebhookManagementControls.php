@@ -81,7 +81,7 @@ final class RepositoryWebhookManagementControls {
 	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
 		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
 		if ( ! $metadata instanceof ProviderMetadata ) {
-			return $rows;
+			return $this->display->enrichHistoricalRows( $rows, $providerCode, $repositoryProjections );
 		}
 
 		return $this->display->enrichRows( $rows, $providerCode, $metadata->label, $metadata->repositoryUrlBase, $repositoryProjections, $returnUrl );

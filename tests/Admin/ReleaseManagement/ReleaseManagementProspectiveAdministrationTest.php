@@ -200,6 +200,39 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		self::assertSame( array(), $outcome['data'] );
 	}
 
+	public function testListReaderCallableRunsOnceAndRejectsThrownOrUnknownResults(): void {
+		$prospective = new ProspectiveReleaseFacadeDouble();
+		$calls       = 0;
+		$controls    = ReleaseManagementFixture::controls(
+			prospective: $prospective,
+			readCandidates: static function ( string $type, array $repository, string $channel ) use ( &$calls ): ProspectiveReleaseResult {
+				++$calls;
+				self::assertSame( 'plugin', $type );
+				self::assertSame( 'gh', $repository['provider'] );
+				self::assertSame( 'stable', $channel );
+
+				return ProspectiveReleaseResult::failure( 'unexpected_reader_code' );
+			}
+		);
+
+		$outcome = $controls->processProspectiveRequest( 'list_candidates', $this->request( 'list_candidates' ) );
+
+		self::assertSame( 1, $calls );
+		self::assertSame( 'operation_failed', $outcome['code'] );
+		self::assertSame( array(), $prospective->calls );
+
+		$controls = ReleaseManagementFixture::controls(
+			readCandidates: static function ( string $type, array $repository, string $channel ): ProspectiveReleaseResult {
+				unset( $type, $repository, $channel );
+				throw new RuntimeException( 'reader-failure' );
+			}
+		);
+		$outcome  = $controls->processProspectiveRequest( 'list_candidates', $this->request( 'list_candidates' ) );
+
+		self::assertSame( 'unable_to_check', $outcome['code'] );
+		self::assertFalse( $outcome['successful'] );
+	}
+
 	#[DataProvider( 'installTypes' )]
 	public function testFingerprintBoundInstallHasPluginThemeParity( string $type, string $identifier ): void {
 		$fingerprint                     = 'v1:' . str_repeat( 'c', 64 );

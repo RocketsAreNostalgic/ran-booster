@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
-use RAN\AddOn\ReleaseTracking\ProspectiveReleaseCandidateReader;
 use Throwable;
 
 /** @internal Owns untrusted prospective values, result projection and exact facade calls. */
 final class ProspectiveReleaseOperations {
-	public function __construct( private readonly ProspectiveReleaseFacade $prospective, private readonly ProspectiveReleaseCandidateReader $candidateReader ) {
+	/** @var \Closure(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult */
+	private readonly \Closure $readCandidates;
+
+	/** @param callable(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $readCandidates */
+	public function __construct( private readonly ProspectiveReleaseFacade $prospective, callable $readCandidates ) {
+		$this->readCandidates = \Closure::fromCallable( $readCandidates );
 	}
 
 	public function nonceAction( string $operation, string $type ): string {
@@ -24,17 +28,23 @@ final class ProspectiveReleaseOperations {
 
 	/** @param array<string, mixed> $repository @return array{type:string,identifier:string,code:string,successful:bool,data:array<mixed>} */
 	public function listCandidates( string $type, array $repository, string $channel ): array {
-		$outcome = static fn ( string $code, bool $successful, array $data = array() ): array => array( 'type' => in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : 'plugin', 'identifier' => '', 'code' => $code, 'successful' => $successful, 'data' => $data );
+		$outcome    = static fn ( string $code, bool $successful, array $data = array() ): array => array(
+			'type'       => in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : 'plugin',
+			'identifier' => '',
+			'code'       => $code,
+			'successful' => $successful,
+			'data'       => $data,
+		);
 		$repository = $this->normalizeProspectiveRepository( $repository );
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || null === $repository || ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
 			return $outcome( 'invalid_request', false );
 		}
 		try {
-			$result = $this->candidateReader->read( $type, $repository, $channel );
+			$result = ( $this->readCandidates )( $type, $repository, $channel );
 		} catch ( Throwable ) {
 			return $outcome( 'unable_to_check', false );
 		}
-		$data = $this->normalizeCandidateListData( $result->data() );
+		$data  = $this->normalizeCandidateListData( $result->data() );
 		$codes = array( 'runtime_unsupported', 'unsupported_provider', 'no_releases', 'unable_to_check' );
 		if ( ! $result->successful() && in_array( $result->code(), $codes, true ) ) {
 			return $outcome( $result->code(), false );

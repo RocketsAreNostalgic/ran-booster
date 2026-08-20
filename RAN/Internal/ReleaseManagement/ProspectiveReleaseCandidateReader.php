@@ -2,20 +2,21 @@
 
 declare(strict_types=1);
 
-namespace RAN\AddOn\ReleaseTracking;
+namespace RAN\Internal\ReleaseManagement;
 
 use InvalidArgumentException;
+use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RAN\Admin\PackageRepositoryRequestResolver;
+use RAN\Deployment\DeploymentPolicy;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
-use RAN\Deployment\DeploymentPolicy;
-use RAN\RepositoryProvider\RepositoryReference;
 use Throwable;
 
-/** @internal Shared Core implementation for one prospective candidate read. */
-class ProspectiveReleaseCandidateReader {
+/** @internal Stateless Core reader for one prospective candidate request. */
+final class ProspectiveReleaseCandidateReader {
 	public function __construct(
 		private readonly PackageRepositoryRequestResolver $repositories,
 		private readonly ProviderRegistry $providers
@@ -42,19 +43,22 @@ class ProspectiveReleaseCandidateReader {
 		if ( ! $listing instanceof RepositoryReleaseCandidateListing ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
-		$repositoryRequest['deployment_policy'] = DeploymentPolicy::MANUAL->value;
-		$repositoryRequest['subdirectory']      = '';
-		$repository = $this->repositories->resolve( $repositoryRequest );
-		$reference  = new RepositoryReference(
-			(string) ( $repository['repository'] ?? '' ),
-			is_string( $repository['provider_repository_id'] ?? null ) && '' !== $repository['provider_repository_id'] ? $repository['provider_repository_id'] : null,
-			'1' === ( $repository['private'] ?? null ),
-			is_string( $repository['credential_id'] ?? null ) && '' !== $repository['credential_id'] ? $repository['credential_id'] : null
-		);
-			$result = $listing->listReleaseCandidates( $type, $reference, $channel );
+
+		try {
+			$repositoryRequest['deployment_policy'] = DeploymentPolicy::MANUAL->value;
+			$repositoryRequest['subdirectory']      = '';
+			$repository                             = $this->repositories->resolve( $repositoryRequest );
+			$reference                              = new RepositoryReference(
+				(string) ( $repository['repository'] ?? '' ),
+				is_string( $repository['provider_repository_id'] ?? null ) && '' !== $repository['provider_repository_id'] ? $repository['provider_repository_id'] : null,
+				'1' === ( $repository['private'] ?? null ),
+				is_string( $repository['credential_id'] ?? null ) && '' !== $repository['credential_id'] ? $repository['credential_id'] : null
+			);
+			$result                                 = $listing->listReleaseCandidates( $type, $reference, $channel );
 			if ( array() === $result->candidates ) {
 				return ProspectiveReleaseResult::failure( 'no_releases' );
 			}
+
 			$candidates = array();
 			foreach ( $result->candidates as $candidate ) {
 				if ( 'stable' === $channel && $candidate->prerelease ) {
@@ -64,8 +68,25 @@ class ProspectiveReleaseCandidateReader {
 				if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/D', $candidate->providerReleaseId ) || false === $releaseId ) {
 					throw new InvalidArgumentException( 'The release candidate identity is incompatible.' );
 				}
-				$candidates[] = array( 'release_id' => $releaseId, 'tag' => $candidate->tag, 'version' => $candidate->version, 'prerelease' => $candidate->prerelease, 'published_at' => $candidate->publishedAt, 'expected_asset_names' => $candidate->expectedAssetNames );
+				$candidates[] = array(
+					'release_id'           => $releaseId,
+					'tag'                  => $candidate->tag,
+					'version'              => $candidate->version,
+					'prerelease'           => $candidate->prerelease,
+					'published_at'         => $candidate->publishedAt,
+					'expected_asset_names' => $candidate->expectedAssetNames,
+				);
 			}
-		return ProspectiveReleaseResult::success( 'release_candidates_available', array( 'candidates' => $candidates, 'channel' => $channel ) );
+
+			return ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'candidates' => $candidates,
+					'channel'    => $channel,
+				)
+			);
+		} catch ( Throwable ) {
+			return ProspectiveReleaseResult::failure( 'unable_to_check' );
+		}
 	}
 }

@@ -524,6 +524,22 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
 
+	public function testInternalCandidateReaderClosesResolverAndListingFailures(): void {
+		$failures = array(
+			'resolver' => new ProspectiveRepositoryProvider( resolveFailure: new RuntimeException( 'resolver-failure' ) ),
+			'listing'  => new ProspectiveRepositoryProvider( candidateList: new RuntimeException( 'listing-failure' ) ),
+		);
+
+		foreach ( $failures as $name => $provider ) {
+			$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+			$result = $facade->listCandidates( 'plugin', $this->repositoryRequest(), 'stable', 'valid-nonce' );
+
+			self::assertFalse( $result->successful(), $name );
+			self::assertSame( 'unable_to_check', $result->code(), $name );
+			self::assertSame( array(), $result->data(), $name );
+		}
+	}
+
 	public function testInvalidChannelFailsBeforeAnyProspectiveReleaseWork(): void {
 		$facade = $this->facade(
 			new ProspectivePluginRepository(),
@@ -1325,8 +1341,9 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 
 	public function __construct(
 		private readonly string $code = 'gh',
-		private readonly ?RepositoryReleaseCandidateList $candidateList = null,
-		private readonly RepositoryReleaseInspection|Throwable|null $inspection = null
+		private readonly RepositoryReleaseCandidateList|Throwable|null $candidateList = null,
+		private readonly RepositoryReleaseInspection|Throwable|null $inspection = null,
+		private readonly ?Throwable $resolveFailure = null
 	) {
 	}
 
@@ -1383,6 +1400,9 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 
 	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		++self::$resolveCalls;
+		if ( null !== $this->resolveFailure ) {
+			throw $this->resolveFailure;
+		}
 
 		return new RepositoryDescriptor(
 			ProviderCode::parse( $this->code ),
@@ -1406,6 +1426,9 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		RepositoryReference $repository,
 		string $channel
 	): RepositoryReleaseCandidateList {
+		if ( $this->candidateList instanceof Throwable ) {
+			throw $this->candidateList;
+		}
 		if ( null !== $this->candidateList ) {
 			return $this->candidateList;
 		}

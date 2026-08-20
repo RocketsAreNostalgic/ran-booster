@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
-use RAN\AddOn\ReleaseTracking\ProspectiveReleaseCandidateReader;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use Throwable;
@@ -29,12 +28,12 @@ final class ReleaseManagementControls {
 	public function __construct(
 		ReleaseTrackingFacade $releases,
 		ProspectiveReleaseFacade $prospective,
-		ProspectiveReleaseCandidateReader $candidateReader
+		callable $readCandidates
 	) {
 		$this->display               = new ReleaseManagementDisplay();
 		$this->releases              = $releases;
 		$this->tracking              = new ReleaseTrackingOperations( $releases );
-		$this->prospectiveOperations = new ProspectiveReleaseOperations( $prospective, $candidateReader );
+		$this->prospectiveOperations = new ProspectiveReleaseOperations( $prospective, $readCandidates );
 	}
 
 	public function register(): void {

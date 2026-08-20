@@ -25,6 +25,7 @@ use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
+use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
@@ -62,18 +63,17 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private ProviderRegistry $providers,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
-		?callable $currentUserId = null,
-		?ProspectiveReleaseCandidateReader $candidateReader = null
+		?callable $currentUserId = null
 	) {
-		$this->candidateReader = $candidateReader ?? new ProspectiveReleaseCandidateReader( $repositories, $providers );
-		$this->canManage     = null === $canManage
+		$this->candidateReader = new ProspectiveReleaseCandidateReader( $repositories, $providers );
+		$this->canManage       = null === $canManage
 			? static fn ( string $type ): bool => current_user_can( 'manage_options' )
 				&& current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' )
 			: \Closure::fromCallable( $canManage );
-		$this->verifyNonce   = null === $verifyNonce
+		$this->verifyNonce     = null === $verifyNonce
 			? static fn ( string $nonce, string $action ): bool => false !== wp_verify_nonce( $nonce, $action )
 			: \Closure::fromCallable( $verifyNonce );
-		$this->currentUserId = null === $currentUserId
+		$this->currentUserId   = null === $currentUserId
 			? static fn (): int => get_current_user_id()
 			: \Closure::fromCallable( $currentUserId );
 	}

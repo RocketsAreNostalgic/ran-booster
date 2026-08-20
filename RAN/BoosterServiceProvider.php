@@ -8,7 +8,6 @@ use RAN\AddOn\Portability\NativePortabilityFacade;
 use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
-use RAN\AddOn\ReleaseTracking\ProspectiveReleaseCandidateReader;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\WebhookAssistance\AssistedWebhookFacade;
@@ -43,6 +42,8 @@ use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Internal\CoreContainer;
+use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
+use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
@@ -407,24 +408,29 @@ final class BoosterServiceProvider {
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
-		$candidateReader = new ProspectiveReleaseCandidateReader(
-			$container->make( PackageRepositoryRequestResolver::class ),
-			$container->make( ProviderRegistry::class )
-		);
 		$prospectiveFacade = new NativeProspectiveReleaseFacade(
 			$container->make( PackageRepositoryRequestResolver::class ),
 			$container->make( CorePackageExecutor::class ),
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class ),
-			null,
-			null,
-			null,
-			$candidateReader
+			$container->make( ProviderRegistry::class )
 		);
-		$container->bind( ProspectiveReleaseCandidateReader::class, $candidateReader );
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
 		$container->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );
+		$container->bind(
+			ReleaseManagementControls::class,
+			static fn ( CoreContainer $container ): ReleaseManagementControls => new ReleaseManagementControls(
+				$container->make( ReleaseTrackingFacade::class ),
+				$container->make( ProspectiveReleaseFacade::class ),
+				array(
+					new ProspectiveReleaseCandidateReader(
+						$container->make( PackageRepositoryRequestResolver::class ),
+						$container->make( ProviderRegistry::class )
+					),
+					'read',
+				)
+			)
+		);
 	}
 }

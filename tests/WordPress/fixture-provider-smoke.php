@@ -43,7 +43,7 @@ if ( 'fixture-provider' !== $package_form['default_provider']
 	|| ! is_array( $package_provider )
 	|| empty( $package_provider['deploy'] )
 	|| ! empty( $package_provider['browse'] )
-	|| ! empty( $package_provider['webhooks'] )
+	|| empty( $package_provider['webhooks'] )
 ) {
 	throw new RuntimeException( 'The external fixture package form contract is invalid.' );
 }

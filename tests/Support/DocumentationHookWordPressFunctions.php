@@ -34,7 +34,13 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_kses_allowed_html' ) ) {
 		unset( $context );
 
 		return array(
-			'*' => array(
+			'h3'     => array(
+				'id' => true,
+			),
+			'p'      => array(
+				'id' => true,
+			),
+			'strong' => array(
 				'id' => true,
 			),
 		);
@@ -46,9 +52,20 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_kses' ) ) {
 	function wp_kses( string $content, array $allowedHtml ): string {
 		$content = wp_kses_post( $content );
 
-		if ( ! isset( $allowedHtml['*']['id'] ) ) {
-			$content = (string) preg_replace( "/\\s+id\\s*=\\s*(?:\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)/i", '', $content );
-		}
+		$content = (string) preg_replace_callback(
+			'/<(h3|p|strong)\\b([^>]*)>/i',
+			static function ( array $matches ) use ( $allowedHtml ): string {
+				$tag        = strtolower( $matches[1] );
+				$attributes = $matches[2];
+
+				if ( ! isset( $allowedHtml[ $tag ]['id'] ) ) {
+					$attributes = (string) preg_replace( "/\\s+id\\s*=\\s*(?:\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)/i", '', $attributes );
+				}
+
+				return '<' . $tag . $attributes . '>';
+			},
+			$content
+		);
 
 		return $content;
 	}

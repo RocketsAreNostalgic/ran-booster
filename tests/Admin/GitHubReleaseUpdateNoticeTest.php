@@ -21,7 +21,31 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 					'package'    => 'ran-booster/ran-booster.php',
 					'repository' => 'RocketsAreNostalgic/ran-booster',
 					'code'       => 'github_updater_github_http_error',
-				)
+				),
+				'ran-booster/ran-booster.php'
+			)
+		);
+	}
+
+	public function testSuppressesOnlyTheActualRenamedCorePackage(): void {
+		$notice  = array(
+			'message'     => 'Raw diagnostic.',
+			'remediation' => 'Raw remediation.',
+		);
+		$context = array(
+			'type'       => 'plugin',
+			'package'    => 'renamed-booster/ran-booster.php',
+			'repository' => 'RocketsAreNostalgic/ran-booster',
+		);
+
+		self::assertNull( GitHubReleaseUpdateNotice::filter( $notice, $context, 'renamed-booster/ran-booster.php' ) );
+		self::assertSame( $notice, GitHubReleaseUpdateNotice::filter( $notice, $context, 'ran-booster/ran-booster.php' ) );
+		self::assertSame(
+			$notice,
+			GitHubReleaseUpdateNotice::filter(
+				$notice,
+				array_merge( $context, array( 'package' => 'renamed-booster/another.php' ) ),
+				'renamed-booster/ran-booster.php'
 			)
 		);
 	}
@@ -40,7 +64,8 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 					'type'       => 'plugin',
 					'package'    => 'ran-booster/other-package.php',
 					'repository' => 'RocketsAreNostalgic/ran-booster',
-				)
+				),
+				'ran-booster/ran-booster.php'
 			)
 		);
 		self::assertSame(
@@ -51,7 +76,8 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 					'type'       => 'theme',
 					'package'    => 'ran-booster/ran-booster.php',
 					'repository' => 'RocketsAreNostalgic/ran-booster',
-				)
+				),
+				'ran-booster/ran-booster.php'
 			)
 		);
 		self::assertSame(
@@ -62,7 +88,8 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 					'type'       => 'plugin',
 					'package'    => 'ran-booster/ran-booster.php',
 					'repository' => 'RocketsAreNostalgic/example-plugin',
-				)
+				),
+				'ran-booster/ran-booster.php'
 			)
 		);
 		self::assertSame(
@@ -73,9 +100,10 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 					'type'       => 'theme',
 					'package'    => 'ran-booster/ran-booster.php',
 					'repository' => 'RocketsAreNostalgic/ran-booster',
-				)
+				),
+				'ran-booster/ran-booster.php'
 			)
 		);
-		self::assertSame( $notice, GitHubReleaseUpdateNotice::filter( $notice, array() ) );
+		self::assertSame( $notice, GitHubReleaseUpdateNotice::filter( $notice, array(), 'ran-booster/ran-booster.php' ) );
 	}
 }

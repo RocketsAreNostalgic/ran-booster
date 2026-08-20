@@ -83,7 +83,7 @@ $ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::registe
 	nativeDiscovery: $ran_booster_self_update_policy->allowsNativeDiscovery()
 );
 $GLOBALS['ran_booster_release_updater'] = $ran_booster_release_updater;
-GitHubReleaseUpdateNotice::register();
+GitHubReleaseUpdateNotice::register( plugin_basename( __FILE__ ) );
 
 $ran_booster_runtime_support = RuntimeSupport::current();
 if ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) ) {

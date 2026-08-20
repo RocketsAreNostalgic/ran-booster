@@ -400,6 +400,7 @@ jobs:
           test -f "$archive"
           test -f "$checksum"
           evidence_mode="$(jq -er '.mode' "$metadata")"
+          source_commit="$(jq -er '.source_commit' "$metadata")"
           archive_sha256="$(jq -er '.sha256' "$metadata")"
           main_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/heads/main"
           candidate_workflow_ref="${GITHUB_REPOSITORY}/.github/workflows/quality.yml@refs/heads/release-please--branches--main--components--ran-booster"
@@ -531,7 +532,7 @@ jobs:
           unzip -tqq "$archive"
           unzip -p "$archive" ran-booster/ran-booster-release.json \
             | jq -e \
-                --arg commit "$RAN_RELEASE_HEAD_COMMIT" \
+                --arg commit "$source_commit" \
                 --arg version "$RAN_RELEASE_VERSION" \
                 '.schema == "ran-booster-core-release"
                   and .schema_version == 1

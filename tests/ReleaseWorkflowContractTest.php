@@ -142,6 +142,16 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringNotContainsString( 'parent_count', $workflow );
 	}
 
+	public function testReleaseVerifiesEmbeddedMarkerAgainstMetadataSourceCommit(): void {
+		$workflow    = $this->workflow( 'release-please.yml' );
+		$markerCheck = strstr( $workflow, 'unzip -p "$archive" ran-booster/ran-booster-release.json' );
+
+		self::assertStringContainsString( 'source_commit="$(jq -er \'.source_commit\' "$metadata")"', $workflow );
+		self::assertIsString( $markerCheck );
+		self::assertStringContainsString( '--arg commit "$source_commit"', $markerCheck );
+		self::assertStringNotContainsString( '--arg commit "$RAN_RELEASE_HEAD_COMMIT"', $markerCheck );
+	}
+
 	public function testReleaseVerifiesTagAndExactAssetBytesBeforeAndAfterImmutability(): void {
 		$workflow = $this->workflow( 'release-please.yml' );
 

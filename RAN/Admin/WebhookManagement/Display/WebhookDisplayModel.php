@@ -96,7 +96,7 @@ final class WebhookDisplayModel {
 			$record = null === $repositoryId ? null : $this->records->find( $providerCode, $repositoryId );
 			if ( null !== $record && isset( $rows[ $rowKey ] ) ) {
 				$existing = is_array( $rows[ $rowKey ]['details'] ?? null ) ? $rows[ $rowKey ]['details'] : array();
-				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historyDetails( $record->status(), $record ) );
+				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historicalDetails( $record ) );
 			}
 		}
 
@@ -411,8 +411,8 @@ final class WebhookDisplayModel {
 		$details = array(
 			array(
 				'label' => __( 'Recorded hook status', 'ran-booster' ),
-				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : WebhookHistoryView::statusLabel( $history['recorded_status'] ),
-				'tone'  => null === $history ? 'warning' : WebhookHistoryView::statusTone( $history['recorded_status'] ),
+				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
+				'tone'  => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
 			),
 			array(
 				'label' => __( 'Observation', 'ran-booster' ),
@@ -424,8 +424,8 @@ final class WebhookDisplayModel {
 		if ( null !== $history && $statusCode !== $history['recorded_status'] ) {
 			$details[] = array(
 				'label' => __( 'Current local warning', 'ran-booster' ),
-				'value' => WebhookHistoryView::statusLabel( $statusCode ),
-				'tone'  => WebhookHistoryView::statusTone( $statusCode ),
+				'value' => $this->historicalStatusLabel( $statusCode ),
+				'tone'  => $this->historicalStatusTone( $statusCode ),
 			);
 		}
 
@@ -440,6 +440,17 @@ final class WebhookDisplayModel {
 				'datetime' => null === $history ? '' : $history['checked_at'],
 			),
 		) );
+	}
+
+	/** @return list<array<string, string>> */
+	private function historicalDetails( InstallationRecord $record ): array {
+		$history = WebhookHistory::fromRecord( $record )->toArray();
+
+		return array(
+			array( 'label' => __( 'Recorded hook status', 'ran-booster' ), 'value' => $this->historicalStatusLabel( $history['recorded_status'] ), 'tone' => $this->historicalStatusTone( $history['recorded_status'] ) ),
+			array( 'label' => __( 'Observation', 'ran-booster' ), 'value' => __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ), 'tone' => 'neutral' ),
+			array( 'label' => __( 'Last checked', 'ran-booster' ), 'value' => $history['checked_at'], 'datetime' => $history['checked_at'] ),
+		);
 	}
 
 	/** @return array<string, string> */
@@ -476,6 +487,17 @@ final class WebhookDisplayModel {
 		$action = 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $providerCode, $repositoryId ) );
 
 		return admin_url( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
+	}
+
+	private function historicalStatusLabel( string $status ): string {
+		return match ( $status ) {
+			'not_configured' => __( 'No managed hook recorded', 'ran-booster' ), 'configured' => __( 'Configured at last check', 'ran-booster' ), 'profile_revision_stale' => __( 'Signing secret changed; webhook update required', 'ran-booster' ), 'local_profile_missing' => __( 'Secret needs attention', 'ran-booster' ),
+			default => sprintf( __( 'Needs attention: %s at last check', 'ran-booster' ), 'configuration_drift' === $status ? __( 'Configuration drift', 'ran-booster' ) : ucwords( str_replace( '_', ' ', $status ) ) ),
+		};
+	}
+
+	private function historicalStatusTone( string $status ): string {
+		return match ( $status ) { 'configured' => 'ok', 'not_configured' => 'warning', 'orphaned', 'removal_pending' => 'error', default => 'warning' };
 	}
 
 	private function recordedProfileLabel( string $status, InstallationRecord $record ): string {

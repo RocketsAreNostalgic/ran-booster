@@ -9,7 +9,6 @@ use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use RAN\Admin\WebhookManagement\Display\WebhookHistory;
-use RAN\Admin\WebhookManagement\Display\WebhookHistoryView;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
 use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
 use RAN\RepositoryProvider\ProviderMetadata;
@@ -67,7 +66,11 @@ final class RepositoryWebhookManagementControls {
 			return;
 		}
 		$view = $history->toArray();
-		echo '<section class="ran-booster-package-webhook-history"><h3>' . esc_html__( 'Remote webhook history', 'ran-booster' ) . '</h3><p>' . esc_html( WebhookHistoryView::statusLabel( $view['recorded_status'] ) ) . '</p><p>' . esc_html__( 'Last checked by RAN Booster', 'ran-booster' ) . ': ' . esc_html( $view['checked_at'] ) . '</p><p>' . esc_html__( 'This is a historical record, not live readiness or a signed delivery.', 'ran-booster' ) . '</p></section>';
+		echo '<section class="ran-booster-package-webhook-history"><h3>' . esc_html__( 'Remote webhook history', 'ran-booster' ) . '</h3><p>' . esc_html( $this->historicalStatusLabel( $view['recorded_status'] ) ) . '</p><p>' . esc_html__( 'Last checked by RAN Booster', 'ran-booster' ) . ': ' . esc_html( $view['checked_at'] ) . '</p><p>' . esc_html__( 'This is a historical record, not live readiness or a signed delivery.', 'ran-booster' ) . '</p></section>';
+	}
+
+	private function historicalStatusLabel( string $status ): string {
+		return match ( $status ) { 'configured' => __( 'Configured at last check', 'ran-booster' ), 'profile_revision_stale' => __( 'Signing secret changed; webhook update required', 'ran-booster' ), 'local_profile_missing' => __( 'Secret needs attention', 'ran-booster' ), default => sprintf( __( 'Needs attention: %s at last check', 'ran-booster' ), 'configuration_drift' === $status ? __( 'Configuration drift', 'ran-booster' ) : ucwords( str_replace( '_', ' ', $status ) ) ) };
 	}
 
 	public function supportsProvider( string $providerCode ): bool {

@@ -15,7 +15,6 @@ use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
 use RAN\Admin\Interaction\AdminInteractionRequest;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
-use RAN\Admin\WebhookManagement\Display\WebhookHistoryView;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
@@ -142,11 +141,27 @@ final class WebhookManagementControllerTest extends TestCase {
 			'https://site.example/'
 		);
 
-		self::assertSame( 'Configured at last check', WebhookHistoryView::statusLabel( 'configured' ) );
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][4]['value'] );
 		self::assertSame( 'Current local warning', $result['1234']['details'][2]['label'] );
 		self::assertSame( 'Secret needs attention', $result['1234']['details'][2]['value'] );
+	}
+
+	public function testUnavailableManagementHistoryOmitsProfileAndCurrentWarningDetails(): void {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::never() )->method( 'profile' );
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record( 'needs_verification' );
+		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
+			array( '1234' => array( 'details' => array(), 'actions' => array() ) ),
+			'gh',
+			array( '1234' => $this->repositoryProjection() )
+		);
+
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
+		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
+		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][2]['value'] );
+		self::assertSame( array(), $result['1234']['actions'] );
 	}
 
 	public function testPanelRendersSavedIdentityAndRequestOnlyInputWithoutFetchingSecrets(): void {

@@ -55,7 +55,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 		self::assertNull( $noticeFilter['callback']( $notice, $context ) );
 		self::assertSame(
 			$notice,
-			$noticeFilter['callback']( $notice, array_merge( $context, array( 'package' => 'ran-booster/ran-booster.php' ) ) )
+			$noticeFilter['callback']( $notice, array_merge( $context, array( 'package' => 'different-install/ran-booster.php' ) ) )
 		);
 		self::assertSame( array(), $GLOBALS['ran_booster_fired_actions'] );
 

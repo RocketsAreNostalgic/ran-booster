@@ -10,7 +10,11 @@ use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+use RAN\RepositoryProvider\RepositoryReleaseInspector;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use Throwable;
@@ -35,14 +39,11 @@ final class ProspectiveReleaseCandidateReader {
 		if ( ! is_string( $provider ) ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
-		try {
-			$listing = $this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
-		} catch ( Throwable ) {
+		$capabilities = $this->releaseCapabilities( $provider );
+		if ( null === $capabilities ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
-		if ( ! $listing instanceof RepositoryReleaseCandidateListing ) {
-			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
-		}
+		$listing = $capabilities['listing'];
 
 		try {
 			$repositoryRequest['deployment_policy'] = DeploymentPolicy::MANUAL->value;
@@ -88,5 +89,37 @@ final class ProspectiveReleaseCandidateReader {
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
+	}
+
+	public function supportsProviderCode( string $provider ): bool {
+		return null !== $this->releaseCapabilities( $provider );
+	}
+
+	/**
+	 * Resolve the complete prospective-release provider tuple before accepting
+	 * any provider for candidate work.
+	 *
+	 * @return array{listing: RepositoryReleaseCandidateListing}|null
+	 */
+	private function releaseCapabilities( string $provider ): ?array {
+		try {
+			$listing       = $this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
+			$inspector     = $this->providers->requireCapability( $provider, RepositoryReleaseInspector::class );
+			$acquirer      = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );
+			$metadata      = $this->providers->requireCapability( $provider, RepositoryReleaseMetadata::class );
+			$nativeTargets = $this->providers->requireCapability( $provider, RepositoryReleaseNativeTargets::class );
+		} catch ( Throwable ) {
+			return null;
+		}
+
+		if ( ! $listing instanceof RepositoryReleaseCandidateListing
+			|| ! $inspector instanceof RepositoryReleaseInspector
+			|| ! $acquirer instanceof RepositoryReleaseAcquirer
+			|| ! $metadata instanceof RepositoryReleaseMetadata
+			|| ! $nativeTargets instanceof RepositoryReleaseNativeTargets ) {
+			return null;
+		}
+
+		return array( 'listing' => $listing );
 	}
 }

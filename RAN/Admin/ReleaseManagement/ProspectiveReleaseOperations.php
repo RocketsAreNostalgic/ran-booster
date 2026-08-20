@@ -66,8 +66,7 @@ final class ProspectiveReleaseOperations {
 		string $channel,
 		string $nonce
 	): array {
-		$repository = $this->normalizeProspectiveRepository( $untrustedRepository );
-		$outcome    = static fn ( string $code, bool $successful, array $data = array() ): array => array(
+		$outcome = static fn ( string $code, bool $successful, array $data = array() ): array => array(
 			'type'       => in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : 'plugin',
 			'identifier' => is_string( $data['identifier'] ?? null ) ? $data['identifier'] : '',
 			'code'       => $code,
@@ -75,24 +74,26 @@ final class ProspectiveReleaseOperations {
 			'data'       => $data,
 		);
 
-		if ( ! in_array( $operation, array( 'list_candidates', 'inspect', 'install' ), true )
-			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
+		if ( ! in_array( $operation, array( 'inspect', 'install' ), true ) ) {
+			return $outcome( 'invalid_request', false );
+		}
+
+		$repository = $this->normalizeProspectiveRepository( $untrustedRepository );
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| null === $repository
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
-			|| ( 'list_candidates' !== $operation && ( $releaseId < 1 || ! $this->validReleaseTag( $tag ) ) )
+			|| $releaseId < 1
+			|| ! $this->validReleaseTag( $tag )
 			|| ( 'install' === $operation && ! $this->validFingerprint( $fingerprint ) ) ) {
 			return $outcome( 'invalid_request', false );
 		}
 
 		$result = match ( $operation ) {
-			'list_candidates' => $this->prospective->listCandidates( $type, $repository, $channel, $nonce ),
 			'inspect' => $this->prospective->inspect( $type, $repository, $releaseId, $tag, $channel, $nonce ),
 			'install' => $this->prospective->install( $type, $repository, $releaseId, $tag, $fingerprint, $channel, $nonce ),
 		};
 		$code       = $result->code();
-		$data       = 'list_candidates' === $operation
-			? $this->normalizeCandidateListData( $result->data() )
-			: $this->normalizeProspectiveData( $result->data() );
+		$data       = $this->normalizeProspectiveData( $result->data() );
 		$successful = $result->successful();
 		if ( ! $this->validProspectiveResult( $operation, $code, $successful, $data )
 			|| ( isset( $data['channel'] ) && ! hash_equals( $channel, (string) $data['channel'] ) )
@@ -274,13 +275,6 @@ final class ProspectiveReleaseOperations {
 			}
 
 			return true;
-		}
-		if ( 'list_candidates' === $operation ) {
-			return 'release_candidates_available' === $code
-				&& isset( $data['candidates'] )
-				&& is_array( $data['candidates'] )
-				&& count( $data['candidates'] ) > 0
-				&& count( $data['candidates'] ) <= 8;
 		}
 		if ( 'inspect' === $operation ) {
 			return 'release_ready' === $code

@@ -95,13 +95,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		$supported = array();
 		foreach ( $this->providers->orderedMetadata() as $metadata ) {
 			$provider = $metadata->code->value;
-			try {
-				$this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
-				$this->providers->requireCapability( $provider, RepositoryReleaseInspector::class );
-				$this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );
-				$this->providers->requireCapability( $provider, RepositoryReleaseMetadata::class );
-				$this->providers->requireCapability( $provider, RepositoryReleaseNativeTargets::class );
-			} catch ( Throwable ) {
+			if ( ! $this->candidateReader->supportsProviderCode( $provider ) ) {
 				continue;
 			}
 

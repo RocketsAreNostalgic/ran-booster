@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
+use RAN\Admin\ReleaseManagement\ProspectiveReleaseOperations;
 use RuntimeException;
 use Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
 use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
@@ -20,6 +21,39 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 	#[Before]
 	public function resetWordPress(): void {
 		ReleaseManagementFixture::resetWordPress();
+	}
+
+	public function testLegacyCandidateExecuteRejectsBeforeFacadeOrReaderWork(): void {
+		$prospective = new ProspectiveReleaseFacadeDouble();
+		$readerCalls = 0;
+		$operations  = new ProspectiveReleaseOperations(
+			$prospective,
+			static function ( string $type, array $repository, string $channel ) use ( &$readerCalls ): ProspectiveReleaseResult {
+				unset( $type, $repository, $channel );
+				++$readerCalls;
+
+				return ProspectiveReleaseResult::failure( 'operation_failed' );
+			}
+		);
+
+		$outcome = $operations->execute(
+			'list_candidates',
+			'plugin',
+			array(
+				'provider'   => 'acme',
+				'repository' => 'workspace/example',
+			),
+			0,
+			'',
+			'',
+			'stable',
+			''
+		);
+
+		self::assertSame( 'invalid_request', $outcome['code'] );
+		self::assertFalse( $outcome['successful'] );
+		self::assertSame( array(), $prospective->calls );
+		self::assertSame( 0, $readerCalls );
 	}
 
 	public function testListInspectAndFingerprintBoundInstallForwardExactNeutralEvidence(): void {

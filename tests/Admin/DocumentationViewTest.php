@@ -137,6 +137,26 @@ final class DocumentationViewTest extends TestCase {
 					'content' => '<p>Ignored.</p>',
 				);
 				$sections[] = array(
+					'id'      => 'ran-booster-documentation-heading',
+					'summary' => 'Documentation heading conflict',
+					'content' => '<p>Ignored.</p>',
+				);
+				$sections[] = array(
+					'id'      => 'ran-booster-documentation-index-heading',
+					'summary' => 'Index heading conflict',
+					'content' => '<p>Ignored.</p>',
+				);
+				$sections[] = array(
+					'id'      => 'ran-booster-webhook-cleanup',
+					'summary' => 'Webhook cleanup conflict',
+					'content' => '<p>Ignored.</p>',
+				);
+				$sections[] = array(
+					'id'      => 'ran-booster-documentation-webhook-gh',
+					'summary' => 'Provider webhook conflict',
+					'content' => '<p>Ignored.</p>',
+				);
+				$sections[] = array(
 					'id'      => 'empty-guide',
 					'summary' => 'Empty guide',
 					'content' => '',
@@ -157,8 +177,15 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Duplicate guide', $html );
 		self::assertStringNotContainsString( 'Conflicting guide', $html );
 		self::assertStringNotContainsString( 'Provider conflict', $html );
-		self::assertStringNotContainsString( 'Empty guide', $html );
+		self::assertStringNotContainsString( 'Documentation heading conflict', $html );
+		self::assertStringNotContainsString( 'Index heading conflict', $html );
+		self::assertStringNotContainsString( 'Webhook cleanup conflict', $html );
+		self::assertStringNotContainsString( 'Provider webhook conflict', $html );
+		self::assertStringNotContainsString( 'href="#ran-booster-documentation-heading"', $html );
+		self::assertStringNotContainsString( 'href="#ran-booster-documentation-index-heading"', $html );
 		self::assertStringNotContainsString( 'href="#ran-booster-webhook-cleanup"', $html );
+		self::assertStringNotContainsString( 'href="#ran-booster-documentation-webhook-gh"', $html );
+		self::assertStringNotContainsString( 'Empty guide', $html );
 		self::assertLessThan( strpos( $html, 'href="#addon-guide"' ), strpos( $html, 'href="#ran-booster-documentation-provider-gh"' ) );
 		self::assertLessThan( strpos( $html, 'href="#ran-booster-documentation-provider-bb"' ), strpos( $html, 'href="#addon-guide"' ) );
 		self::assertLessThan( strpos( $html, 'ran-booster-page-shell ran-booster-panel ran-booster-documentation' ), strpos( $html, 'data-ran-booster-documentation-index' ) );

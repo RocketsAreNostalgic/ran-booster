@@ -41,6 +41,8 @@ $documentationIndex       = array();
 $documentationIds         = array();
 $reservedDocumentationIds = array_fill_keys(
 	array(
+		'ran-booster-documentation-heading',
+		'ran-booster-documentation-index-heading',
 		'ran-booster-quick-start',
 		'ran-booster-portability-guidance',
 		'ran-booster-wp-pusher-migration',
@@ -48,6 +50,7 @@ $reservedDocumentationIds = array_fill_keys(
 		'ran-booster-credential-storage',
 		'ran-booster-installing-and-managing-packages',
 		'ran-booster-push-to-deploy',
+		'ran-booster-webhook-cleanup',
 		'ran-booster-about',
 	),
 	true
@@ -56,6 +59,7 @@ $reservedDocumentationIds = array_fill_keys(
 foreach ( $providerDocumentation as $providerGuide ) {
 	if ( isset( $providerGuide['code'] ) && is_string( $providerGuide['code'] ) && '' !== $providerGuide['code'] ) {
 		$reservedDocumentationIds[ 'ran-booster-documentation-provider-' . $providerGuide['code'] ] = true;
+		$reservedDocumentationIds[ 'ran-booster-documentation-webhook-' . $providerGuide['code'] ]  = true;
 	}
 }
 $addDocumentationItem = static function ( string $id, string $summary ) use ( &$documentationIndex, &$documentationIds ): bool {

@@ -169,6 +169,39 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array(), $result['1234']['actions'] );
 	}
 
+	public function testUnavailableManagementAddsLocalHistoryToReleaseRowsWithoutProviderWork(): void {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::never() )->method( 'readiness' );
+		$facade->expects( self::never() )->method( 'target' );
+		$facade->expects( self::never() )->method( 'credentialChoices' );
+		$facade->expects( self::never() )->method( 'profile' );
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record( 'needs_verification' );
+		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
+			array(
+				'1234' => array(
+					'source_key'    => 'release_asset',
+					'repository_id' => '1234',
+					'details'       => array(
+						array(
+							'label' => 'Core detail',
+							'value' => 'kept',
+						),
+					),
+					'actions'       => array(),
+				),
+			),
+			'gh',
+			array()
+		);
+
+		self::assertSame( 'kept', $result['1234']['details'][0]['value'] );
+		self::assertSame( array( 'Core detail', 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
+		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][1]['value'] );
+		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][3]['value'] );
+		self::assertSame( array(), $result['1234']['actions'] );
+	}
+
 	public function testPanelRendersSavedIdentityAndRequestOnlyInputWithoutFetchingSecrets(): void {
 		$gateway = $this->gateway();
 		$html    = $this->renderPanel( gateway: $gateway );

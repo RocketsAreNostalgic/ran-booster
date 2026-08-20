@@ -99,6 +99,17 @@ final class WebhookDisplayModel {
 				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historicalDetails( $record ) );
 			}
 		}
+		foreach ( $rows as $rowKey => $row ) {
+			if ( isset( $repositoryProjections[ $rowKey ] ) || 'release_asset' !== ( $row['source_key'] ?? null ) ) {
+				continue;
+			}
+			$repositoryId = is_string( $row['repository_id'] ?? null ) ? trim( $row['repository_id'] ) : '';
+			$record       = '' === $repositoryId ? null : $this->records->find( $providerCode, $repositoryId );
+			if ( null !== $record ) {
+				$existing                   = is_array( $row['details'] ?? null ) ? $row['details'] : array();
+				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historicalDetails( $record ) );
+			}
+		}
 
 		return $rows;
 	}

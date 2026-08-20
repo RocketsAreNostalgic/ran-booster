@@ -10,10 +10,14 @@ namespace RAN\Admin;
 final class GitHubReleaseUpdateNotice {
 
 	private const REPOSITORY = 'RocketsAreNostalgic/ran-booster';
-	private const PACKAGE    = 'ran-booster/ran-booster.php';
 
-	public static function register(): void {
-		add_filter( 'ran_wp_github_release_updater_notice', array( self::class, 'filter' ), 10, 2 );
+	public static function register( string $package ): void {
+		add_filter(
+			'ran_wp_github_release_updater_notice',
+			static fn ( array $notice, array $context ): ?array => self::filter( $notice, $context, $package ),
+			10,
+			2
+		);
 	}
 
 	/**
@@ -21,9 +25,9 @@ final class GitHubReleaseUpdateNotice {
 	 * @param array<string, mixed> $context
 	 * @return array<string, mixed>|null
 	 */
-	public static function filter( array $notice, array $context ): ?array {
+	public static function filter( array $notice, array $context, string $package ): ?array {
 		if ( 'plugin' !== ( $context['type'] ?? null )
-			|| self::PACKAGE !== ( $context['package'] ?? null )
+			|| $package !== ( $context['package'] ?? null )
 			|| self::REPOSITORY !== ( $context['repository'] ?? null ) ) {
 			return $notice;
 		}

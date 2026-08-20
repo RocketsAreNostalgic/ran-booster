@@ -113,6 +113,44 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
 	}
 
+	public function testPartialProviderKeepsReleaseRowHistoryLocalAndInert(): void {
+		$provider = new FitnessOnlyWebhookManagementCapabilityProvider( 'fitness-only', 'Fitness only' );
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'fitness-only:1234' => array(
+				'schema_version'              => 3,
+				'provider_code'               => 'fitness-only',
+				'repository_id'               => '1234',
+				'repository'                  => 'owner/example',
+				'hook_id'                     => '77',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://hooks.example.test/webhook',
+				'status'                      => 'needs_verification',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$controls = $this->controls( $provider );
+		$controls->register();
+		$rows = array(
+			'1234' => array(
+				'source_key'    => 'release_asset',
+				'repository_id' => '1234',
+				'details'       => array(),
+				'actions'       => array(),
+			),
+		);
+
+		$result = $controls->enrichRepositoryRows( $rows, 'fitness-only', array(), 'https://example.test/' );
+
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
+		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
+		self::assertSame( array(), $result['1234']['actions'] );
+		self::assertSame( 0, $provider->providerOperationCalls );
+	}
+
 	public function testPackageHistoryUsesTheSharedPlainLanguageStatusAndHistoricalQualifier(): void {
 		$package = $this->createMock( Package::class );
 		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );

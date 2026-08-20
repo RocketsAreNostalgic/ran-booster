@@ -37,20 +37,26 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 		self::assertSame( PHP_INT_MAX - 1, $actions[0]['priority'] );
 		self::assertInstanceOf( UnsupportedMultisiteBootstrap::class, $actions[1]['callback'][0] );
 		self::assertSame( 'renderNotice', $actions[1]['callback'][1] );
-			self::assertSame(
-				array(
-					array(
-						'hook'         => 'ran_wp_github_release_updater_notice',
-						'callback'     => array(
-							'RAN\Admin\GitHubReleaseUpdateNotice',
-							'filter',
-						),
-						'priority'     => 10,
-						'acceptedArgs' => 2,
-					),
-				),
-				$GLOBALS['ran_booster_bootstrap_filters']
-			);
+		self::assertCount( 1, $GLOBALS['ran_booster_bootstrap_filters'] );
+		$noticeFilter = $GLOBALS['ran_booster_bootstrap_filters'][0];
+		self::assertSame( 'ran_wp_github_release_updater_notice', $noticeFilter['hook'] );
+		self::assertSame( 10, $noticeFilter['priority'] );
+		self::assertSame( 2, $noticeFilter['acceptedArgs'] );
+		self::assertIsCallable( $noticeFilter['callback'] );
+		$notice  = array(
+			'message'     => 'Raw diagnostic.',
+			'remediation' => 'Raw remediation.',
+		);
+		$context = array(
+			'type'       => 'plugin',
+			'package'    => plugin_basename( $pluginFile ),
+			'repository' => 'RocketsAreNostalgic/ran-booster',
+		);
+		self::assertNull( $noticeFilter['callback']( $notice, $context ) );
+		self::assertSame(
+			$notice,
+			$noticeFilter['callback']( $notice, array_merge( $context, array( 'package' => 'ran-booster/ran-booster.php' ) ) )
+		);
 		self::assertSame( array(), $GLOBALS['ran_booster_fired_actions'] );
 
 		// Complete the request-local updater arbitration. Only Booster's isolated,

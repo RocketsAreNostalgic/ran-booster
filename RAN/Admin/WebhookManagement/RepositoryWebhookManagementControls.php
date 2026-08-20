@@ -6,7 +6,9 @@ namespace RAN\Admin\WebhookManagement;
 
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
+use RAN\Admin\WebhookManagement\Display\WebhookHistory;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
 use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
 use RAN\RepositoryProvider\ProviderMetadata;
@@ -19,17 +21,20 @@ final class RepositoryWebhookManagementControls {
 	private readonly WebhookManagementController $controller;
 
 	private readonly WebhookDisplayModel $display;
+	private readonly WebhookHistory $history;
 	private bool $enabled = false;
 
 	public function __construct(
 		WebhookAssistanceFacade $facade,
 		private readonly AdminInteractionFacade $adminInteraction,
+		ManagedPackageWebhookAuthorityResolver $authorities,
 		ProviderRegistry $providers,
 		private readonly string $pluginPath,
 		private readonly string $pluginUrl
 	) {
 		$store            = new WordPressInstallationStore();
 		$this->display    = new WebhookDisplayModel( $facade, $store );
+		$this->history    = new WebhookHistory( $authorities, $store );
 		$this->controller = new WebhookManagementController(
 			new WebhookOperationCoordinator( $facade, $store ),
 			$this->display,
@@ -52,6 +57,16 @@ final class RepositoryWebhookManagementControls {
 		}
 		add_action( 'admin_post_' . WebhookManagementController::ADMIN_POST_ACTION, array( $this, 'handleAdminPost' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAdminAssets' ) );
+		add_action( 'ran_booster_admin_package_settings_sections', array( $this, 'renderPackageHistory' ), 10, 2 );
+	}
+
+	public function renderPackageHistory( \RAN\Admin\AdminPackageProjection $package, string $returnUrl ): void {
+		$history = $this->history->forPackage( $package->type(), $package->identifier() );
+		if ( null === $history ) {
+			return;
+		}
+		$view = $history->toArray();
+		echo '<section class="ran-booster-package-webhook-history"><h3>' . esc_html__( 'Remote webhook history', 'ran-booster' ) . '</h3><p>' . esc_html( $view['recorded_status'] ) . '</p><p>' . esc_html__( 'Last checked by RAN Booster', 'ran-booster' ) . ': ' . esc_html( $view['checked_at'] ) . '</p><p>' . esc_html__( 'This is a historical record, not live readiness or a signed delivery.', 'ran-booster' ) . '</p></section>';
 	}
 
 	public function supportsProvider( string $providerCode ): bool {

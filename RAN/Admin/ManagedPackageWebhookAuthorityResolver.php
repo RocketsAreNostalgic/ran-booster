@@ -80,4 +80,26 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 
 		throw new CredentialRequestException( 'Choose an account owner from the managed repositories before creating an owner-scoped webhook secret.' );
 	}
+
+	/** @return array{provider_code:string,repository_id:string}|null */
+	public function forPackage( string $type, string $identifier ): ?array {
+		try {
+			$package = 'plugin' === $type
+				? $this->plugins->boosterPluginFromFile( $identifier )
+				: ( 'theme' === $type ? $this->themes->boosterThemeFromStylesheet( $identifier ) : null );
+		} catch ( \Throwable ) {
+			return null;
+		}
+
+		if ( ! $package instanceof Package || PackageSource::BRANCH !== $package->getSource() ) {
+			return null;
+		}
+		$providerCode = $package->getProviderCode();
+		$repositoryId = $package->getProviderRepositoryId();
+		if ( ! is_string( $providerCode ) || ! is_string( $repositoryId ) || '' === trim( $providerCode ) || '' === trim( $repositoryId ) ) {
+			return null;
+		}
+
+		return array( 'provider_code' => $providerCode, 'repository_id' => $repositoryId );
+	}
 }

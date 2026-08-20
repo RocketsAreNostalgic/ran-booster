@@ -393,7 +393,16 @@ final class WebhookDisplayModel {
 
 	/** @return list<array<string, string>> */
 	private function historyDetails( string $statusCode, ?InstallationRecord $record ): array {
-		return array(
+		$history = null === $record ? null : WebhookHistory::fromRecord( $record )->toArray();
+		$details = array(
+			array(
+				'label' => __( 'Recorded hook status', 'ran-booster' ),
+				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $history['recorded_status'],
+				'tone'  => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+			),
+		);
+
+		return array_merge( $details, array(
 			array(
 				'label' => __( 'Managed hook status', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $statusCode ),
@@ -405,10 +414,10 @@ final class WebhookDisplayModel {
 			),
 			array(
 				'label'    => __( 'Last checked', 'ran-booster' ),
-				'value'    => null === $record ? __( 'Never', 'ran-booster' ) : $record->checkedAt(),
-				'datetime' => null === $record ? '' : $record->checkedAt(),
+				'value'    => null === $history ? __( 'Never', 'ran-booster' ) : $history['checked_at'],
+				'datetime' => null === $history ? '' : $history['checked_at'],
 			),
-		);
+		) );
 	}
 
 	/** @return array<string, string> */

@@ -7,8 +7,11 @@ namespace Tests\Admin\WebhookManagement;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\ThemeRepository;
 use Tests\Support\AbsentWebhookManagementCapabilityProvider;
 use Tests\Support\CompleteWebhookManagementCapabilityProvider;
 use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
@@ -39,7 +42,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_filters'] )
 		);
 		self::assertSame(
-			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts' ),
+			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts', 'ran_booster_admin_package_settings_sections' ),
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_actions'] )
 		);
 		foreach ( array_merge( $GLOBALS['ran_booster_repository_webhook_management_actions'], $GLOBALS['ran_booster_repository_webhook_management_filters'] ) as $registrations ) {
@@ -114,6 +117,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		return new RepositoryWebhookManagementControls(
 			$facade,
 			$this->createMock( AdminInteractionFacade::class ),
+			new ManagedPackageWebhookAuthorityResolver( $this->createMock( PluginRepository::class ), $this->createMock( ThemeRepository::class ) ),
 			new ProviderRegistry( $providers ),
 			dirname( __DIR__, 3 ) . '/',
 			'https://example.test/wp-content/plugins/ran-booster/'

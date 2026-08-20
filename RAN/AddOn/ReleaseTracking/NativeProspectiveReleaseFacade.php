@@ -117,6 +117,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		string $channel,
 		string $nonce
 	): ProspectiveReleaseResult {
+		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
+		}
 		if ( ! $this->validChannel( $channel )
 			|| ! $this->authorized( 'list_candidates', $type, $nonce ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );

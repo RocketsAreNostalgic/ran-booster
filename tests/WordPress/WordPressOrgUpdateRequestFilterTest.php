@@ -98,19 +98,22 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 	#[DataProvider( 'nonExactUpdateEndpoints' )]
 	public function testLeavesNonExactWordPressOrgUpdateUrlsUnchanged( string $method, string $url ): void {
 		$args = 'plugins' === $method
-			? array( 'body' => array( 'plugins' => '{"plugins":{"managed/plugin.php":{}},"active":["managed/plugin.php"]}' ) )
+			? array( 'body' => array( 'plugins' => '{"plugins":{"managed/plugin.php":{},"ran-booster/ran-booster.php":{}},"active":["managed/plugin.php","ran-booster/ran-booster.php"]}' ) )
 			: array( 'body' => array( 'themes' => '{"themes":{"managed-theme":{}},"active":"managed-theme"}' ) );
 
-		self::assertSame( $args, $this->filter()->{$method}( $args, $url ) );
+		self::assertSame( $args, $this->filterWithManagedRecords()->{$method}( $args, $url ) );
 	}
 
 	public static function nonExactUpdateEndpoints(): array {
 		return array(
 			'endpoint prefix' => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/extra' ),
 			'user info'       => array( 'plugins', 'https://user@api.wordpress.org/plugins/update-check/1.1/' ),
+			'user and pass'   => array( 'plugins', 'https://user:pass@api.wordpress.org/plugins/update-check/1.1/' ),
 			'explicit port'   => array( 'plugins', 'https://api.wordpress.org:443/plugins/update-check/1.1/' ),
 			'query'           => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/?request=1' ),
+			'empty query'     => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/?' ),
 			'fragment'        => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/#request' ),
+			'empty fragment'  => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/#' ),
 			'suffix host'     => array( 'plugins', 'https://api.wordpress.org.example/plugins/update-check/1.1/' ),
 			'lookalike host'  => array( 'plugins', 'https://api.wordpress.org.evil/plugins/update-check/1.1/' ),
 			'other version'   => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.2/' ),
@@ -166,5 +169,16 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 			$this->createStub( ThemeRepository::class ),
 			'ran-booster/ran-booster.php'
 		);
+	}
+
+	private function filterWithManagedRecords(): WordPressOrgUpdateRequestFilter {
+		$database = $this->createStub( Database::class );
+		$database->method( 'isSupported' )->willReturn( true );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allBoosterPlugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allBoosterThemes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
+
+		return new WordPressOrgUpdateRequestFilter( $database, $plugins, $themes, 'ran-booster/ran-booster.php' );
 	}
 }

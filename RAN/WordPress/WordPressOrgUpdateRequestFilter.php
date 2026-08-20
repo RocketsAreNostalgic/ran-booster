@@ -95,7 +95,11 @@ final class WordPressOrgUpdateRequestFilter {
 		$parts = wp_parse_url( $url );
 		if ( false === $parts
 			|| ! isset( $parts['scheme'], $parts['host'], $parts['path'] )
-			|| isset( $parts['user'], $parts['pass'], $parts['port'], $parts['query'], $parts['fragment'] ) ) {
+			|| isset( $parts['user'] )
+			|| isset( $parts['pass'] )
+			|| isset( $parts['port'] )
+			|| isset( $parts['query'] )
+			|| isset( $parts['fragment'] ) ) {
 			return false;
 		}
 

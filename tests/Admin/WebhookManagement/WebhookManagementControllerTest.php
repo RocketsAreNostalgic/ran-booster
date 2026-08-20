@@ -153,7 +153,12 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record( 'needs_verification' );
 		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
-			array( '1234' => array( 'details' => array(), 'actions' => array() ) ),
+			array(
+				'1234' => array(
+					'details' => array(),
+					'actions' => array(),
+				),
+			),
 			'gh',
 			array( '1234' => $this->repositoryProjection() )
 		);

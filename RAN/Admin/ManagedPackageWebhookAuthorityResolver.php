@@ -100,6 +100,9 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 			return null;
 		}
 
-		return array( 'provider_code' => $providerCode, 'repository_id' => $repositoryId );
+		return array(
+			'provider_code' => $providerCode,
+			'repository_id' => $repositoryId,
+		);
 	}
 }

@@ -16,6 +16,13 @@ final readonly class WebhookHistoryView {
 
 	/** @return array{provider_code:string,repository_id:string,recorded_status:string,checked_at:string,current_local_condition:null,historical_not_live:true} */
 	public function toArray(): array {
-		return array( 'provider_code' => $this->providerCode, 'repository_id' => $this->repositoryId, 'recorded_status' => $this->recordedStatus, 'checked_at' => $this->checkedAt, 'current_local_condition' => null, 'historical_not_live' => true );
+		return array(
+			'provider_code'           => $this->providerCode,
+			'repository_id'           => $this->repositoryId,
+			'recorded_status'         => $this->recordedStatus,
+			'checked_at'              => $this->checkedAt,
+			'current_local_condition' => null,
+			'historical_not_live'     => true,
+		);
 	}
 }

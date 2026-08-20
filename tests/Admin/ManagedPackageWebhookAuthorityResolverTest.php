@@ -118,17 +118,19 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 	}
 
 	public function testExactPluginAndThemeHistoryReadsUseOnlyTheirExactRepositoryLookups(): void {
-		$plugin = AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' );
-		$theme  = AuthorityPackage::make( 'example-theme', 'owner/theme', 'gh', 'repository-43' );
+		$plugin  = AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' );
+		$theme   = AuthorityPackage::make( 'example-theme', 'owner/theme', 'gh', 'repository-43' );
 		$history = new WebhookHistory(
 			new ManagedPackageWebhookAuthorityResolver(
 				new ExactAuthorityPluginRepository( array( 'plugin/example.php' => $plugin ) ),
 				new ExactAuthorityThemeRepository( array( 'example-theme' => $theme ) )
 			),
-			new AuthorityInstallationStore( array(
-				'repository-42' => $this->record( 'repository-42' ),
-				'repository-43' => $this->record( 'repository-43' ),
-			) )
+			new AuthorityInstallationStore(
+				array(
+					'repository-42' => $this->record( 'repository-42' ),
+					'repository-43' => $this->record( 'repository-43' ),
+				)
+			)
 		);
 
 		self::assertSame(

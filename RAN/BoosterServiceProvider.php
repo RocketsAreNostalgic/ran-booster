@@ -244,7 +244,7 @@ final class BoosterServiceProvider {
 			)
 		);
 		$container->bind(
-		RepositoryWebhookManagementControls::class,
+			RepositoryWebhookManagementControls::class,
 			static fn ( CoreContainer $container ): RepositoryWebhookManagementControls => new RepositoryWebhookManagementControls(
 				$container->make( WebhookAssistanceFacade::class ),
 				$container->make( AdminInteractionFacade::class ),

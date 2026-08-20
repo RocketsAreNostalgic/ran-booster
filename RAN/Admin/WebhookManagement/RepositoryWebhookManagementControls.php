@@ -70,7 +70,16 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	private function historicalStatusLabel( string $status ): string {
-		return match ( $status ) { 'configured' => __( 'Configured at last check', 'ran-booster' ), 'profile_revision_stale' => __( 'Signing secret changed; webhook update required', 'ran-booster' ), 'local_profile_missing' => __( 'Secret needs attention', 'ran-booster' ), default => sprintf( __( 'Needs attention: %s at last check', 'ran-booster' ), 'configuration_drift' === $status ? __( 'Configuration drift', 'ran-booster' ) : ucwords( str_replace( '_', ' ', $status ) ) ) };
+		return match ( $status ) {
+			'configured'             => __( 'Configured at last check', 'ran-booster' ),
+			'profile_revision_stale' => __( 'Signing secret changed; webhook update required', 'ran-booster' ),
+			'local_profile_missing'  => __( 'Secret needs attention', 'ran-booster' ),
+			default                  => sprintf(
+				/* translators: %s: webhook status label. */
+				__( 'Needs attention: %s at last check', 'ran-booster' ),
+				'configuration_drift' === $status ? __( 'Configuration drift', 'ran-booster' ) : ucwords( str_replace( '_', ' ', $status ) )
+			),
+		};
 	}
 
 	public function supportsProvider( string $providerCode ): bool {

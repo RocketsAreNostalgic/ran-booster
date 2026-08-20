@@ -64,6 +64,34 @@ final class DocumentationHookRendererTest extends TestCase {
 		self::assertStringNotContainsString( '<script>', $html );
 	}
 
+	public function testStripsNestedIdsFromSanitizedAddOnContent(): void {
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] =
+			static function ( array $sections ): array {
+				$sections[] = array(
+					'id'      => 'safe-guide',
+					'summary' => 'Safe guide',
+					'content' => '<h3 id="core-heading">Guide</h3><p id=unquoted-id>Safe <strong id=\'quoted-id\'>content</strong><script>unsafe()</script></p>',
+				);
+
+				return $sections;
+			};
+
+		ob_start();
+		( new DocumentationHookRenderer() )->renderSections(
+			'ran_booster_documentation_sections_before_about',
+			'https://example.test/documentation',
+			'site'
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<details id="safe-guide"', $html );
+		self::assertStringContainsString( '<h3>Guide</h3><p>Safe <strong>content</strong></p>', $html );
+		self::assertStringNotContainsString( 'core-heading', $html );
+		self::assertStringNotContainsString( 'unquoted-id', $html );
+		self::assertStringNotContainsString( 'quoted-id', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+	}
+
 	public function testPreparesOnlyRenderableSectionsAndResolvesCallableContentOnce(): void {
 		$filterCalls   = 0;
 		$callableCalls = 0;

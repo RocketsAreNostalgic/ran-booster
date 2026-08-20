@@ -123,11 +123,29 @@ final class DocumentationHookRenderer {
 			return null;
 		}
 
+		$content = wp_kses( $content, $this->documentationContentAllowedHtml() );
+
+		if ( '' === trim( $content ) ) {
+			return null;
+		}
+
 		return array(
 			'id'      => $id,
 			'summary' => $summary,
 			'content' => $content,
 			'open'    => $open,
 		);
+	}
+
+	/** @return array<string, array<string, true>> */
+	private function documentationContentAllowedHtml(): array {
+		$allowedHtml = wp_kses_allowed_html( 'post' );
+
+		foreach ( $allowedHtml as &$attributes ) {
+			unset( $attributes['id'] );
+		}
+		unset( $attributes );
+
+		return $allowedHtml;
 	}
 }

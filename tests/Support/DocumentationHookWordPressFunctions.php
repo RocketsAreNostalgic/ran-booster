@@ -28,6 +28,32 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_kses_post' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\wp_kses_allowed_html' ) ) {
+	/** @return array<string, array<string, true>> */
+	function wp_kses_allowed_html( string $context ): array {
+		unset( $context );
+
+		return array(
+			'*' => array(
+				'id' => true,
+			),
+		);
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_kses' ) ) {
+	/** @param array<string, array<string, true>> $allowedHtml */
+	function wp_kses( string $content, array $allowedHtml ): string {
+		$content = wp_kses_post( $content );
+
+		if ( ! isset( $allowedHtml['*']['id'] ) ) {
+			$content = (string) preg_replace( "/\\s+id\\s*=\\s*(?:\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)/i", '', $content );
+		}
+
+		return $content;
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\esc_html_e' ) ) {
 	function esc_html_e( string $text, string $domain = 'default' ): void {
 		unset( $domain );
@@ -39,6 +65,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\esc_html_e' ) ) {
 if ( ! function_exists( __NAMESPACE__ . '\\esc_html' ) ) {
 	function esc_html( string $text ): string {
 		return htmlspecialchars( $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\esc_html__' ) ) {
+	function esc_html__( string $text, string $domain = 'default' ): string {
+		unset( $domain );
+
+		return esc_html( $text );
 	}
 }
 

@@ -404,7 +404,7 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$presented = null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode )
+		$presented = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
 		$rows      = $this->normalize( $rows, $presented, $providerCode );

@@ -10,6 +10,7 @@ namespace RAN\Admin;
 final class GitHubReleaseUpdateNotice {
 
 	private const REPOSITORY = 'RocketsAreNostalgic/ran-booster';
+	private const PACKAGE    = 'ran-booster/ran-booster.php';
 
 	public static function register(): void {
 		add_filter( 'ran_wp_github_release_updater_notice', array( self::class, 'filter' ), 10, 2 );
@@ -22,6 +23,7 @@ final class GitHubReleaseUpdateNotice {
 	 */
 	public static function filter( array $notice, array $context ): ?array {
 		if ( 'plugin' !== ( $context['type'] ?? null )
+			|| self::PACKAGE !== ( $context['package'] ?? null )
 			|| self::REPOSITORY !== ( $context['repository'] ?? null ) ) {
 			return $notice;
 		}

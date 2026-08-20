@@ -28,10 +28,9 @@ final class WordPressOrgUpdateRequestFilter {
 	}
 
 	private function filter( mixed $args, mixed $url, string $type ): mixed {
-		$key      = $type . 's';
-		$endpoint = "https://api.wordpress.org/{$key}/update-check";
+		$key = $type . 's';
 		if ( ! is_string( $url )
-			|| ! str_starts_with( $url, $endpoint )
+			|| ! $this->isUpdateEndpoint( $url, $key )
 			|| ! is_array( $args )
 			|| ! is_array( $args['body'] ?? null )
 			|| ! is_string( $args['body'][ $key ] ?? null ) ) {
@@ -61,12 +60,18 @@ final class WordPressOrgUpdateRequestFilter {
 
 		if ( 'plugin' === $type ) {
 			$managed[] = $this->boosterPlugin;
+			$removed   = false;
 			foreach ( $managed as $package ) {
+				$removed = $removed || isset( $payload['plugins'][ $package ] );
 				unset( $payload['plugins'][ $package ] );
 				$active = array_search( $package, $payload['active'], true );
 				if ( false !== $active ) {
 					unset( $payload['active'][ $active ] );
+					$removed = true;
 				}
+			}
+			if ( $removed ) {
+				$payload['active'] = array_values( $payload['active'] );
 			}
 		} else {
 			foreach ( $managed as $package ) {
@@ -84,5 +89,22 @@ final class WordPressOrgUpdateRequestFilter {
 		$args['body'][ $key ] = $encoded;
 
 		return $args;
+	}
+
+	private function isUpdateEndpoint( string $url, string $key ): bool {
+		$parts = wp_parse_url( $url );
+		if ( false === $parts
+			|| ! isset( $parts['scheme'], $parts['host'], $parts['path'] )
+			|| isset( $parts['user'] )
+			|| isset( $parts['pass'] )
+			|| isset( $parts['port'] )
+			|| isset( $parts['query'] )
+			|| isset( $parts['fragment'] ) ) {
+			return false;
+		}
+
+		return in_array( strtolower( $parts['scheme'] ), array( 'http', 'https' ), true )
+			&& 'api.wordpress.org' === strtolower( $parts['host'] )
+			&& "/{$key}/update-check/1.1/" === $parts['path'];
 	}
 }

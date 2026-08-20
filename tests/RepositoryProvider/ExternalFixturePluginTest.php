@@ -31,8 +31,10 @@ use RAN\RepositoryProvider\RepositoryReference;
 	use RAN\RepositoryProvider\RepositoryWebhookFitness;
 	use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 	use RAN\RepositoryProvider\RepositoryWebhookManagement;
+	use RAN\RepositoryProvider\SignedWebhookVerification;
 	use RAN\RepositoryProvider\UnsupportedProviderCapability;
 	use RAN\RepositoryProvider\WebhookNormalizer;
+	use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
 use Tests\Secrets\SecretsFileTestFactory;
 use RAN\Storage\CredentialUsageReader;
@@ -185,7 +187,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertFalse( $settings['provider']['capabilities']['browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['credentialed_public_browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['provider_default_public_lookup_profile'] );
-			self::assertFalse( $settings['provider']['capabilities']['webhooks'] );
+			self::assertTrue( $settings['provider']['capabilities']['webhooks'] );
 			$packageForm     = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->buildPackageForm( 'fixture-provider' );
 			$packageProvider = array_column( $packageForm['providers'], null, 'code' )['fixture-provider'];
 			self::assertSame( 'fixture-provider', $packageForm['default_provider'] );
@@ -193,7 +195,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertFalse( $packageProvider['browse'] );
 			self::assertFalse( $packageProvider['credentialed_public_browse'] );
 			self::assertFalse( $packageProvider['provider_default_public_lookup_profile'] );
-			self::assertFalse( $packageProvider['webhooks'] );
+			self::assertTrue( $packageProvider['webhooks'] );
 
 			$beforeDiagnostics = $provider->getClient()->getRequestCount();
 			$now               = 100.0;
@@ -254,7 +256,65 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertStringNotContainsString( 'fixture_not-a-real-secret', json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
 			self::assertStringNotContainsString( str_repeat( 's', 32 ), json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
 
-			foreach ( array( RepositoryBrowser::class, CredentialedPublicRepositoryBrowser::class, RepositoryReleaseCandidateListing::class, WebhookNormalizer::class ) as $capability ) {
+			$normalizer = $registry->requireCapability( 'fixture-provider', WebhookNormalizer::class );
+			self::assertSame( $provider, $normalizer );
+			self::assertSame( array( 'x-fixture-event', 'x-fixture-signature' ), $normalizer->getWebhookPolicy()->getRetainedHeaders() );
+			$beforeNormalization = $provider->getClient()->getRequestCount();
+			$request             = new WebhookRequest(
+				ProviderCode::parse( 'fixture-provider' ),
+				'',
+				array( 'x-fixture-event' => 'ping' ),
+				$normalizer->getWebhookPolicy()->getRetainedHeaders()
+			);
+			try {
+				$normalizer->normalizeWebhook( $request );
+				self::fail( 'Fixture normalization must require verified provider evidence.' );
+			} catch ( \RAN\RepositoryProvider\WebhookRejected $failure ) {
+				self::assertSame( 401, $failure->getStatusCode() );
+			}
+			$verified = $request->withVerification(
+				new SignedWebhookVerification(
+					ProviderCode::parse( 'fixture-provider' ),
+					array(
+						array(
+							'id'           => 'fixture-webhook',
+							'scope'        => 'repository',
+							'target'       => $resolved['repository'],
+							'authority_id' => $resolved['provider_repository_id'],
+						),
+					),
+				)
+			);
+			self::assertTrue( $normalizer->normalizeWebhook( $verified )->isProbe() );
+			$otherProviderRequest = new WebhookRequest(
+				ProviderCode::parse( 'gh' ),
+				'',
+				array( 'x-fixture-event' => 'ping' ),
+				$normalizer->getWebhookPolicy()->getRetainedHeaders()
+			);
+			try {
+				$normalizer->normalizeWebhook(
+					$otherProviderRequest->withVerification(
+						new SignedWebhookVerification(
+							ProviderCode::parse( 'gh' ),
+							array(
+								array(
+									'id'           => 'other',
+									'scope'        => 'repository',
+									'target'       => 'group/subgroup/package',
+									'authority_id' => 'other',
+								),
+							),
+						)
+					)
+				);
+				self::fail( 'Fixture normalization must reject a differently verified provider.' );
+			} catch ( \RAN\RepositoryProvider\WebhookRejected $failure ) {
+				self::assertSame( 400, $failure->getStatusCode() );
+			}
+			self::assertSame( $beforeNormalization, $provider->getClient()->getRequestCount(), 'Normalization must not contact the provider client.' );
+
+			foreach ( array( RepositoryBrowser::class, CredentialedPublicRepositoryBrowser::class, RepositoryReleaseCandidateListing::class ) as $capability ) {
 				try {
 					$registry->requireCapability( 'fixture-provider', $capability );
 					self::fail( 'The fixture must not expose unsupported optional capabilities.' );

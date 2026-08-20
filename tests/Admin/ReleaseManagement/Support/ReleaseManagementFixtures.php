@@ -12,11 +12,14 @@ use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 final class ReleaseManagementFixture {
 	public static function controls(
 		?ReleaseTrackingFacadeDouble $tracking = null,
-		?ProspectiveReleaseFacadeDouble $prospective = null
+		?ProspectiveReleaseFacadeDouble $prospective = null,
+		?callable $readCandidates = null
 	): ReleaseManagementControls {
+		$prospective ??= new ProspectiveReleaseFacadeDouble();
 		return new ReleaseManagementControls(
 			$tracking ?? new ReleaseTrackingFacadeDouble( self::status() ),
-			$prospective ?? new ProspectiveReleaseFacadeDouble()
+			$prospective,
+			$readCandidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->listCandidates( $type, $repository, $channel, '' )
 		);
 	}
 

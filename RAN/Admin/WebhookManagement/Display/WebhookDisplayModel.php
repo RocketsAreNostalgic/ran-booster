@@ -89,6 +89,20 @@ final class WebhookDisplayModel {
 		return $rows;
 	}
 
+	/** @param array<string,array<string,mixed>> $rows @param array<string,array<string,mixed>> $repositoryProjections @return array<string,array<string,mixed>> */
+	public function enrichHistoricalRows( array $rows, string $providerCode, array $repositoryProjections ): array {
+		foreach ( $repositoryProjections as $rowKey => $projection ) {
+			$repositoryId = $this->projectionRepositoryId( $rowKey, $projection );
+			$record       = null === $repositoryId ? null : $this->records->find( $providerCode, $repositoryId );
+			if ( null !== $record && isset( $rows[ $rowKey ] ) ) {
+				$existing                   = is_array( $rows[ $rowKey ]['details'] ?? null ) ? $rows[ $rowKey ]['details'] : array();
+				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historicalDetails( $record ) );
+			}
+		}
+
+		return $rows;
+	}
+
 	/**
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return array<string, mixed>|null
@@ -393,20 +407,63 @@ final class WebhookDisplayModel {
 
 	/** @return list<array<string, string>> */
 	private function historyDetails( string $statusCode, ?InstallationRecord $record ): array {
-		return array(
+		$history = null === $record ? null : WebhookHistory::fromRecord( $record )->toArray();
+		$details = array(
 			array(
-				'label' => __( 'Managed hook status', 'ran-booster' ),
-				'value' => $this->historicalStatusLabel( $statusCode ),
-				'tone'  => $this->historicalStatusTone( $statusCode ),
+				'label' => __( 'Recorded hook status', 'ran-booster' ),
+				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
+				'tone'  => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
 			),
 			array(
-				'label' => __( 'Recorded hook profile', 'ran-booster' ),
-				'value' => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->recordedProfileLabel( $statusCode, $record ),
+				'label' => __( 'Observation', 'ran-booster' ),
+				'value' => null === $history ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
+				'tone'  => 'neutral',
+			),
+		);
+
+		if ( null !== $history && $statusCode !== $history['recorded_status'] ) {
+			$details[] = array(
+				'label' => __( 'Current local warning', 'ran-booster' ),
+				'value' => $this->historicalStatusLabel( $statusCode ),
+				'tone'  => $this->historicalStatusTone( $statusCode ),
+			);
+		}
+
+		return array_merge(
+			$details,
+			array(
+				array(
+					'label' => __( 'Recorded hook profile', 'ran-booster' ),
+					'value' => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->recordedProfileLabel( $statusCode, $record ),
+				),
+				array(
+					'label'    => __( 'Last checked', 'ran-booster' ),
+					'value'    => null === $history ? __( 'Never', 'ran-booster' ) : $history['checked_at'],
+					'datetime' => null === $history ? '' : $history['checked_at'],
+				),
+			)
+		);
+	}
+
+	/** @return list<array<string, string>> */
+	private function historicalDetails( InstallationRecord $record ): array {
+		$history = WebhookHistory::fromRecord( $record )->toArray();
+
+		return array(
+			array(
+				'label' => __( 'Recorded hook status', 'ran-booster' ),
+				'value' => $this->historicalStatusLabel( $history['recorded_status'] ),
+				'tone'  => $this->historicalStatusTone( $history['recorded_status'] ),
+			),
+			array(
+				'label' => __( 'Observation', 'ran-booster' ),
+				'value' => __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
+				'tone'  => 'neutral',
 			),
 			array(
 				'label'    => __( 'Last checked', 'ran-booster' ),
-				'value'    => null === $record ? __( 'Never', 'ran-booster' ) : $record->checkedAt(),
-				'datetime' => null === $record ? '' : $record->checkedAt(),
+				'value'    => $history['checked_at'],
+				'datetime' => $history['checked_at'],
 			),
 		);
 	}
@@ -449,13 +506,21 @@ final class WebhookDisplayModel {
 
 	private function historicalStatusLabel( string $status ): string {
 		return match ( $status ) {
-			'not_configured' => __( 'No managed hook recorded', 'ran-booster' ),
-			'configured' => __( 'Configured at last check', 'ran-booster' ),
-			'profile_revision_stale' => __( 'Signing secret changed; webhook update required', 'ran-booster' ),
-			'local_profile_missing' => __( 'Secret needs attention', 'ran-booster' ),
-			/* translators: %s: webhook status description. */
-			default => sprintf( __( 'Needs attention: %s at last check', 'ran-booster' ), 'configuration_drift' === $status ? __( 'Configuration drift', 'ran-booster' ) : ucwords( str_replace( '_', ' ', $status ) ) ),
+			'not_configured'          => __( 'No managed hook recorded', 'ran-booster' ),
+			'configured'              => __( 'Configured at last check', 'ran-booster' ),
+			'profile_revision_stale'  => __( 'Signing secret changed; webhook update required', 'ran-booster' ),
+			'local_profile_missing'   => __( 'Secret needs attention', 'ran-booster' ),
+			default                   => sprintf(
+				/* translators: %s: webhook status label. */
+				__( 'Needs attention: %s at last check', 'ran-booster' ),
+				'configuration_drift' === $status ? __( 'Configuration drift', 'ran-booster' ) : ucwords( str_replace( '_', ' ', $status ) )
+			),
 		};
+	}
+
+	private function historicalStatusTone( string $status ): string {
+		return match ( $status ) {
+			'configured' => 'ok', 'not_configured' => 'warning', 'orphaned', 'removal_pending' => 'error', default => 'warning' };
 	}
 
 	private function recordedProfileLabel( string $status, InstallationRecord $record ): string {
@@ -467,11 +532,6 @@ final class WebhookDisplayModel {
 
 		/* translators: 1: signing secret scope, 2: signing secret source. */
 		return sprintf( __( '%1$s; %2$s', 'ran-booster' ), $scope, $source );
-	}
-
-	private function historicalStatusTone( string $status ): string {
-		return match ( $status ) {
-			'configured' => 'ok', 'not_configured' => 'warning', 'orphaned', 'removal_pending' => 'error', default => 'warning' };
 	}
 
 	private function projectedStatus( InstallationRecord $record, bool $retainedSource = false ): string {

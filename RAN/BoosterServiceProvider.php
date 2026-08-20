@@ -40,7 +40,10 @@ use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Internal\CoreContainer;
+use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
+use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
@@ -247,6 +250,7 @@ final class BoosterServiceProvider {
 			static fn ( CoreContainer $container ): RepositoryWebhookManagementControls => new RepositoryWebhookManagementControls(
 				$container->make( WebhookAssistanceFacade::class ),
 				$container->make( AdminInteractionFacade::class ),
+				new ManagedPackageWebhookAuthorityResolver( $container->make( PluginRepository::class ), $container->make( ThemeRepository::class ) ),
 				$container->make( ProviderRegistry::class ),
 				(string) $runtime->boosterPath,
 				(string) $runtime->boosterUrl
@@ -414,5 +418,19 @@ final class BoosterServiceProvider {
 		);
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
 		$container->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );
+		$container->bind(
+			ReleaseManagementControls::class,
+			static fn ( CoreContainer $container ): ReleaseManagementControls => new ReleaseManagementControls(
+				$container->make( ReleaseTrackingFacade::class ),
+				$container->make( ProspectiveReleaseFacade::class ),
+				array(
+					new ProspectiveReleaseCandidateReader(
+						$container->make( PackageRepositoryRequestResolver::class ),
+						$container->make( ProviderRegistry::class )
+					),
+					'read',
+				)
+			)
+		);
 	}
 }

@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
+use Throwable;
 
 /** @internal Owns untrusted prospective values, result projection and exact facade calls. */
 final class ProspectiveReleaseOperations {
-	public function __construct( private readonly ProspectiveReleaseFacade $prospective ) {
+	/** @var \Closure(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult */
+	private readonly \Closure $readCandidates;
+
+	/** @param callable(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $readCandidates */
+	public function __construct( private readonly ProspectiveReleaseFacade $prospective, callable $readCandidates ) {
+		$this->readCandidates = \Closure::fromCallable( $readCandidates );
 	}
 
 	public function nonceAction( string $operation, string $type ): string {
@@ -18,6 +24,35 @@ final class ProspectiveReleaseOperations {
 	/** @return list<string> */
 	public function supportedProviderCodes( string $type ): array {
 		return $this->prospective->supportedProviderCodes( $type );
+	}
+
+	/** @param array<string, mixed> $repository @return array{type:string,identifier:string,code:string,successful:bool,data:array<mixed>} */
+	public function listCandidates( string $type, array $repository, string $channel ): array {
+		$outcome    = static fn ( string $code, bool $successful, array $data = array() ): array => array(
+			'type'       => in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : 'plugin',
+			'identifier' => '',
+			'code'       => $code,
+			'successful' => $successful,
+			'data'       => $data,
+		);
+		$repository = $this->normalizeProspectiveRepository( $repository );
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || null === $repository || ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
+			return $outcome( 'invalid_request', false );
+		}
+		try {
+			$result = ( $this->readCandidates )( $type, $repository, $channel );
+		} catch ( Throwable ) {
+			return $outcome( 'unable_to_check', false );
+		}
+		$data  = $this->normalizeCandidateListData( $result->data() );
+		$codes = array( 'runtime_unsupported', 'unsupported_provider', 'no_releases', 'unable_to_check' );
+		if ( ! $result->successful() && in_array( $result->code(), $codes, true ) ) {
+			return $outcome( $result->code(), false );
+		}
+		if ( $result->successful() && 'release_candidates_available' === $result->code() && isset( $data['candidates'] ) && count( $data['candidates'] ) > 0 && count( $data['candidates'] ) <= 8 && ( ! isset( $data['channel'] ) || hash_equals( $channel, (string) $data['channel'] ) ) ) {
+			return $outcome( 'release_candidates_available', true, $data );
+		}
+		return $outcome( 'operation_failed', false );
 	}
 
 	/** @param array<string, mixed> $untrustedRepository */
@@ -31,8 +66,7 @@ final class ProspectiveReleaseOperations {
 		string $channel,
 		string $nonce
 	): array {
-		$repository = $this->normalizeProspectiveRepository( $untrustedRepository );
-		$outcome    = static fn ( string $code, bool $successful, array $data = array() ): array => array(
+		$outcome = static fn ( string $code, bool $successful, array $data = array() ): array => array(
 			'type'       => in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : 'plugin',
 			'identifier' => is_string( $data['identifier'] ?? null ) ? $data['identifier'] : '',
 			'code'       => $code,
@@ -40,24 +74,26 @@ final class ProspectiveReleaseOperations {
 			'data'       => $data,
 		);
 
-		if ( ! in_array( $operation, array( 'list_candidates', 'inspect', 'install' ), true )
-			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
+		if ( ! in_array( $operation, array( 'inspect', 'install' ), true ) ) {
+			return $outcome( 'invalid_request', false );
+		}
+
+		$repository = $this->normalizeProspectiveRepository( $untrustedRepository );
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| null === $repository
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
-			|| ( 'list_candidates' !== $operation && ( $releaseId < 1 || ! $this->validReleaseTag( $tag ) ) )
+			|| $releaseId < 1
+			|| ! $this->validReleaseTag( $tag )
 			|| ( 'install' === $operation && ! $this->validFingerprint( $fingerprint ) ) ) {
 			return $outcome( 'invalid_request', false );
 		}
 
 		$result = match ( $operation ) {
-			'list_candidates' => $this->prospective->listCandidates( $type, $repository, $channel, $nonce ),
 			'inspect' => $this->prospective->inspect( $type, $repository, $releaseId, $tag, $channel, $nonce ),
 			'install' => $this->prospective->install( $type, $repository, $releaseId, $tag, $fingerprint, $channel, $nonce ),
 		};
 		$code       = $result->code();
-		$data       = 'list_candidates' === $operation
-			? $this->normalizeCandidateListData( $result->data() )
-			: $this->normalizeProspectiveData( $result->data() );
+		$data       = $this->normalizeProspectiveData( $result->data() );
 		$successful = $result->successful();
 		if ( ! $this->validProspectiveResult( $operation, $code, $successful, $data )
 			|| ( isset( $data['channel'] ) && ! hash_equals( $channel, (string) $data['channel'] ) )
@@ -239,13 +275,6 @@ final class ProspectiveReleaseOperations {
 			}
 
 			return true;
-		}
-		if ( 'list_candidates' === $operation ) {
-			return 'release_candidates_available' === $code
-				&& isset( $data['candidates'] )
-				&& is_array( $data['candidates'] )
-				&& count( $data['candidates'] ) > 0
-				&& count( $data['candidates'] ) <= 8;
 		}
 		if ( 'inspect' === $operation ) {
 			return 'release_ready' === $code

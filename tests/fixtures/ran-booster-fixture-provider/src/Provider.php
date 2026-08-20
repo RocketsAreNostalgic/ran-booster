@@ -17,7 +17,9 @@ use RAN\RepositoryProvider\ProviderCredentialPolicy;
 use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderDiagnostics;
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderWebhookPolicy;
 use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
@@ -26,15 +28,20 @@ use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 use RAN\RepositoryProvider\StaleDeployment;
+use RAN\RepositoryProvider\WebhookEnvelope;
+use RAN\RepositoryProvider\WebhookNormalizer;
+use RAN\RepositoryProvider\WebhookRejected;
+use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class Provider implements RepositoryProvider, ProviderCredentialPolicySupplier, CredentialValidator, RepositoryWebhookFitness, RepositoryWebhookManagement {
+final readonly class Provider implements RepositoryProvider, ProviderCredentialPolicySupplier, CredentialValidator, WebhookNormalizer, RepositoryWebhookFitness, RepositoryWebhookManagement {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
 
 	private ProviderCode $code;
 	private Client $client;
 	private CredentialPolicy $credentialPolicy;
+	private WebhookPolicy $webhookPolicy;
 	private Diagnostics $diagnostics;
 
 	public function __construct(
@@ -44,6 +51,7 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		$this->code             = ProviderCode::parse( 'fixture-provider' );
 		$this->client           = new Client();
 		$this->credentialPolicy = new CredentialPolicy();
+		$this->webhookPolicy    = new WebhookPolicy();
 		$this->diagnostics      = new Diagnostics( $this->client, $credentials );
 	}
 
@@ -80,6 +88,31 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return $this->client->validateCredential( $this->credentials->credentialMaterial( $credentialId ) )
 			? CredentialValidationResult::valid()
 			: CredentialValidationResult::invalid();
+	}
+
+	public function getWebhookPolicy(): ProviderWebhookPolicy {
+		return $this->webhookPolicy;
+	}
+
+	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+		return new ProviderDiagnosticResult(
+			ProviderDiagnosticResult::NOT_CONFIGURED,
+			'fixture-provider.webhook.not_configured',
+			'Fixture webhook readiness is not configured.',
+			'Configure a fixture webhook before sending a fixture delivery.'
+		);
+	}
+
+	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+		if ( ! $request->getProvider()->equals( $this->code ) ) {
+			throw new WebhookRejected( 400, 'Webhook provider does not match fixture provider.' );
+		}
+
+		$request->requireVerification();
+
+		return 'ping' === $request->getHeader( 'x-fixture-event' )
+			? WebhookEnvelope::probe()
+			: WebhookEnvelope::ignored();
 	}
 
 	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {

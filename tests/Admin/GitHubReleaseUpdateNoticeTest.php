@@ -18,6 +18,7 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 				),
 				array(
 					'type'       => 'plugin',
+					'package'    => 'ran-booster/ran-booster.php',
 					'repository' => 'RocketsAreNostalgic/ran-booster',
 					'code'       => 'github_updater_github_http_error',
 				)
@@ -25,7 +26,7 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 		);
 	}
 
-	public function testLeavesManagedPackageAndThemeNoticesUntouched(): void {
+	public function testLeavesEveryNonExactCoreTupleUntouched(): void {
 		$notice = array(
 			'message'     => 'Managed package failed.',
 			'remediation' => 'Review the package.',
@@ -37,6 +38,29 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 				$notice,
 				array(
 					'type'       => 'plugin',
+					'package'    => 'ran-booster/other-package.php',
+					'repository' => 'RocketsAreNostalgic/ran-booster',
+				)
+			)
+		);
+		self::assertSame(
+			$notice,
+			GitHubReleaseUpdateNotice::filter(
+				$notice,
+				array(
+					'type'       => 'theme',
+					'package'    => 'ran-booster/ran-booster.php',
+					'repository' => 'RocketsAreNostalgic/ran-booster',
+				)
+			)
+		);
+		self::assertSame(
+			$notice,
+			GitHubReleaseUpdateNotice::filter(
+				$notice,
+				array(
+					'type'       => 'plugin',
+					'package'    => 'ran-booster/ran-booster.php',
 					'repository' => 'RocketsAreNostalgic/example-plugin',
 				)
 			)
@@ -47,9 +71,11 @@ final class GitHubReleaseUpdateNoticeTest extends TestCase {
 				$notice,
 				array(
 					'type'       => 'theme',
+					'package'    => 'ran-booster/ran-booster.php',
 					'repository' => 'RocketsAreNostalgic/ran-booster',
 				)
 			)
 		);
+		self::assertSame( $notice, GitHubReleaseUpdateNotice::filter( $notice, array() ) );
 	}
 }

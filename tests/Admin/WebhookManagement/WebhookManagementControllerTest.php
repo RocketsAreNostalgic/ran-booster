@@ -120,6 +120,55 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( $rows, $this->display( $gateway )->enrichRows( $rows, 'gh', 'GitHub', 'https://github.com/', array( '1234' => $this->repositoryProjection() ), 'https://site.example/' ) );
 	}
 
+	public function testBrowserOnlyProfileWarningDoesNotReplaceTheRecordedHistoricalObservation(): void {
+		$gateway                = $this->gateway();
+		$gateway->profileAbsent = true;
+		$store                  = new OperationStoreFixture();
+		$store->record          = $this->record( 'needs_verification' );
+		$rows                   = array(
+			'1234' => array(
+				'details' => array(),
+				'actions' => array(),
+			),
+		);
+
+		$result = $this->display( $gateway, $store )->enrichRows(
+			$rows,
+			'gh',
+			'GitHub',
+			'https://github.com/',
+			array( '1234' => $this->repositoryProjection() ),
+			'https://site.example/'
+		);
+
+		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
+		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][4]['value'] );
+		self::assertSame( 'Current local warning', $result['1234']['details'][2]['label'] );
+		self::assertSame( 'Secret needs attention', $result['1234']['details'][2]['value'] );
+	}
+
+	public function testUnavailableManagementHistoryOmitsProfileAndCurrentWarningDetails(): void {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::never() )->method( 'profile' );
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record( 'needs_verification' );
+		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
+			array(
+				'1234' => array(
+					'details' => array(),
+					'actions' => array(),
+				),
+			),
+			'gh',
+			array( '1234' => $this->repositoryProjection() )
+		);
+
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
+		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
+		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][2]['value'] );
+		self::assertSame( array(), $result['1234']['actions'] );
+	}
+
 	public function testPanelRendersSavedIdentityAndRequestOnlyInputWithoutFetchingSecrets(): void {
 		$gateway = $this->gateway();
 		$html    = $this->renderPanel( gateway: $gateway );
@@ -912,6 +961,7 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	public array $mutationCalls = array();
 	public RepositoryWebhookFitnessResult $fitness;
 	public bool $throwOnReadiness = false;
+	public bool $profileAbsent    = false;
 
 	public function __construct(
 		private readonly AssistanceReadiness $readinessResult,
@@ -946,6 +996,10 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	}
 
 	public function profile( string $providerCode, string $repositoryId, string $profileId ): ?WebhookProfileMetadata {
+		if ( $this->profileAbsent ) {
+			return null;
+		}
+
 		return hash_equals( $this->targetResult->providerCode(), $providerCode )
 			&& hash_equals( $this->targetResult->repositoryId(), $repositoryId )
 			&& 'wh_0123456789abcdef01234567' === $profileId

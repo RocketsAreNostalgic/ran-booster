@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
+use RAN\Admin\ReleaseManagement\ProspectiveReleaseOperations;
 use RuntimeException;
 use Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
 use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
@@ -20,6 +21,39 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 	#[Before]
 	public function resetWordPress(): void {
 		ReleaseManagementFixture::resetWordPress();
+	}
+
+	public function testLegacyCandidateExecuteRejectsBeforeFacadeOrReaderWork(): void {
+		$prospective = new ProspectiveReleaseFacadeDouble();
+		$readerCalls = 0;
+		$operations  = new ProspectiveReleaseOperations(
+			$prospective,
+			static function ( string $type, array $repository, string $channel ) use ( &$readerCalls ): ProspectiveReleaseResult {
+				unset( $type, $repository, $channel );
+				++$readerCalls;
+
+				return ProspectiveReleaseResult::failure( 'operation_failed' );
+			}
+		);
+
+		$outcome = $operations->execute(
+			'list_candidates',
+			'plugin',
+			array(
+				'provider'   => 'acme',
+				'repository' => 'workspace/example',
+			),
+			0,
+			'',
+			'',
+			'stable',
+			''
+		);
+
+		self::assertSame( 'invalid_request', $outcome['code'] );
+		self::assertFalse( $outcome['successful'] );
+		self::assertSame( array(), $prospective->calls );
+		self::assertSame( 0, $readerCalls );
 	}
 
 	public function testListInspectAndFingerprintBoundInstallForwardExactNeutralEvidence(): void {
@@ -200,6 +234,132 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		self::assertSame( array(), $outcome['data'] );
 	}
 
+	public function testListReaderCallableRunsOnceAndRejectsThrownOrUnknownResults(): void {
+		$prospective = new ProspectiveReleaseFacadeDouble();
+		$calls       = 0;
+		$controls    = ReleaseManagementFixture::controls(
+			prospective: $prospective,
+			readCandidates: static function ( string $type, array $repository, string $channel ) use ( &$calls ): ProspectiveReleaseResult {
+				++$calls;
+				self::assertSame( 'plugin', $type );
+				self::assertSame( 'gh', $repository['provider'] );
+				self::assertSame( 'stable', $channel );
+
+				return ProspectiveReleaseResult::failure( 'unexpected_reader_code' );
+			}
+		);
+
+		$outcome = $controls->processProspectiveRequest( 'list_candidates', $this->request( 'list_candidates' ) );
+
+		self::assertSame( 1, $calls );
+		self::assertSame( 'operation_failed', $outcome['code'] );
+		self::assertSame( array(), $prospective->calls );
+
+		$controls = ReleaseManagementFixture::controls(
+			readCandidates: static function ( string $type, array $repository, string $channel ): ProspectiveReleaseResult {
+				unset( $type, $repository, $channel );
+				throw new RuntimeException( 'reader-failure' );
+			}
+		);
+		$outcome  = $controls->processProspectiveRequest( 'list_candidates', $this->request( 'list_candidates' ) );
+
+		self::assertSame( 'unable_to_check', $outcome['code'] );
+		self::assertFalse( $outcome['successful'] );
+	}
+
+	#[DataProvider( 'callableCandidateResults' )]
+	public function testCallableCandidateContractClosesInvalidResults(
+		ProspectiveReleaseResult $result,
+		string $expectedCode
+	): void {
+		$calls    = 0;
+		$controls = ReleaseManagementFixture::controls(
+			readCandidates: static function ( string $type, array $repository, string $channel ) use ( &$calls, $result ): ProspectiveReleaseResult {
+				++$calls;
+				self::assertSame( 'plugin', $type );
+				self::assertSame( 'gh', $repository['provider'] );
+				self::assertSame( 'stable', $channel );
+
+				return $result;
+			}
+		);
+
+		$outcome = $controls->processProspectiveRequest( 'list_candidates', $this->request( 'list_candidates' ) );
+
+		self::assertSame( 1, $calls );
+		self::assertFalse( $outcome['successful'] );
+		self::assertSame( $expectedCode, $outcome['code'] );
+		self::assertSame( array(), $outcome['data'] );
+	}
+
+	/** @return iterable<string, array{ProspectiveReleaseResult,string}> */
+	public static function callableCandidateResults(): iterable {
+		yield 'runtime unsupported' => array(
+			ProspectiveReleaseResult::failure( 'runtime_unsupported' ),
+			'runtime_unsupported',
+		);
+		yield 'successful channel mismatch' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'prerelease',
+					'candidates' => array( self::candidate() ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'more than eight candidates' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array_fill( 0, 9, self::candidate() ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'more than eight assets' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( expectedAssetNames: array_fill( 0, 9, 'package.zip' ) ) ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'invalid release identifier' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( releaseId: 0 ) ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'oversized version' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( version: str_repeat( 'v', 65 ) ) ),
+				)
+			),
+			'operation_failed',
+		);
+		yield 'oversized asset name' => array(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'channel'    => 'stable',
+					'candidates' => array( self::candidate( expectedAssetNames: array( str_repeat( 'a', 192 ) ) ) ),
+				)
+			),
+			'operation_failed',
+		);
+	}
+
 	#[DataProvider( 'installTypes' )]
 	public function testFingerprintBoundInstallHasPluginThemeParity( string $type, string $identifier ): void {
 		$fingerprint                     = 'v1:' . str_repeat( 'c', 64 );
@@ -288,5 +448,21 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 
 	private function nonce( string $operation, string $type ): string {
 		return 'nonce-for-prospective-release-' . $operation . '-' . $type;
+	}
+
+	/** @return array{release_id:int,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>} */
+	private static function candidate(
+		int $releaseId = 42,
+		string $version = '1.2.3',
+		array $expectedAssetNames = array( 'package.zip' )
+	): array {
+		return array(
+			'release_id'           => $releaseId,
+			'tag'                  => 'v1.2.3',
+			'version'              => $version,
+			'prerelease'           => false,
+			'published_at'         => '2026-07-28T09:00:00Z',
+			'expected_asset_names' => $expectedAssetNames,
+		);
 	}
 }

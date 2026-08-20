@@ -91,9 +91,11 @@ final class WebhookDisplayModel {
 
 	/** @param array<string,array<string,mixed>> $rows @param array<string,array<string,mixed>> $repositoryProjections @return array<string,array<string,mixed>> */
 	public function enrichHistoricalRows( array $rows, string $providerCode, array $repositoryProjections ): array {
+		$records = $this->records->all();
+
 		foreach ( $repositoryProjections as $rowKey => $projection ) {
 			$repositoryId = $this->projectionRepositoryId( $rowKey, $projection );
-			$record       = null === $repositoryId ? null : $this->records->find( $providerCode, $repositoryId );
+			$record       = null === $repositoryId ? null : ( $records[ InstallationRecord::key( $providerCode, $repositoryId ) ] ?? null );
 			if ( null !== $record && isset( $rows[ $rowKey ] ) ) {
 				$existing                   = is_array( $rows[ $rowKey ]['details'] ?? null ) ? $rows[ $rowKey ]['details'] : array();
 				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historicalDetails( $record ) );
@@ -103,8 +105,8 @@ final class WebhookDisplayModel {
 			if ( isset( $repositoryProjections[ $rowKey ] ) || 'release_asset' !== ( $row['source_key'] ?? null ) ) {
 				continue;
 			}
-			$repositoryId = is_string( $row['repository_id'] ?? null ) ? trim( $row['repository_id'] ) : '';
-			$record       = '' === $repositoryId ? null : $this->records->find( $providerCode, $repositoryId );
+			$repositoryId = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+			$record       = '' === trim( $repositoryId ) ? null : ( $records[ InstallationRecord::key( $providerCode, $repositoryId ) ] ?? null );
 			if ( null !== $record ) {
 				$existing                   = is_array( $row['details'] ?? null ) ? $row['details'] : array();
 				$rows[ $rowKey ]['details'] = array_merge( $existing, $this->historicalDetails( $record ) );

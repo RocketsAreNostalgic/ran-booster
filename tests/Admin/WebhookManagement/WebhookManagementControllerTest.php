@@ -202,6 +202,77 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array(), $result['1234']['actions'] );
 	}
 
+	public function testUnavailableManagementRowsUseOneCachedLookupForProjectionAndReleaseRowsAndPreserveWhitespaceRepositoryId(): void {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::never() )->method( 'readiness' );
+		$facade->expects( self::never() )->method( 'target' );
+		$facade->expects( self::never() )->method( 'credentialChoices' );
+		$facade->expects( self::never() )->method( 'profile' );
+		$projectionRecord = new InstallationRecord(
+			'gh',
+			'projection-id',
+			'owner/repository',
+			'77',
+			'wh_0123456789abcdef01234567',
+			'repository',
+			1,
+			'created',
+			'https://hooks.example.test/webhook',
+			'configured',
+			'2026-07-23T16:00:00Z',
+			'2026-07-23T17:00:00Z'
+		);
+		$releaseRecord    = new InstallationRecord(
+			'gh',
+			' spaced-release-id ',
+			'owner/repository',
+			'78',
+			'wh_89abcdef0123456789abcdef',
+			'owner',
+			1,
+			'reused',
+			'https://hooks.example.test/webhook',
+			'needs_verification',
+			'2026-07-23T16:00:00Z',
+			'2026-07-23T17:00:00Z'
+		);
+		$store            = new OperationStoreFixture();
+		$store->records   = array(
+			$projectionRecord->storageKey() => $projectionRecord,
+			$releaseRecord->storageKey()    => $releaseRecord,
+		);
+		$result           = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
+			array(
+				'projection-row' => array(
+					'details' => array(),
+					'actions' => array(),
+				),
+				'release-row'    => array(
+					'source_key'    => 'release_asset',
+					'repository_id' => ' spaced-release-id ',
+					'details'       => array(),
+					'actions'       => array(),
+				),
+			),
+			'gh',
+			array(
+				'projection-row' => array(
+					'provider_code' => 'gh',
+					'repository_id' => 'projection-id',
+				),
+			)
+		);
+
+		self::assertSame( 1, $store->allAttempts );
+		self::assertSame( 0, $store->findAttempts );
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['projection-row']['details'], 'label' ) );
+		self::assertSame( 'Configured at last check', $result['projection-row']['details'][0]['value'] );
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['release-row']['details'], 'label' ) );
+		self::assertSame( 'Needs attention: Needs Verification at last check', $result['release-row']['details'][0]['value'] );
+		self::assertSame( array(), $result['projection-row']['actions'] );
+		self::assertSame( array(), $result['release-row']['actions'] );
+	}
+
 	public function testPanelRendersSavedIdentityAndRequestOnlyInputWithoutFetchingSecrets(): void {
 		$gateway = $this->gateway();
 		$html    = $this->renderPanel( gateway: $gateway );
@@ -924,16 +995,33 @@ final class WebhookManagementControllerTest extends TestCase {
 
 final class OperationStoreFixture implements InstallationStore {
 	public ?InstallationRecord $record = null;
-	public int $saveAttempts           = 0;
-	public int $saveFailuresRemaining  = 0;
+	public int $allAttempts            = 0;
+	public int $findAttempts           = 0;
+	/** @var array<string, InstallationRecord> */
+	public array $records             = array();
+	public int $saveAttempts          = 0;
+	public int $saveFailuresRemaining = 0;
 	/** @var (\Closure(self): void)|null */
 	public ?\Closure $beforeConditionalWrite = null;
 
 	public function all(): array {
-		return null === $this->record ? array() : array( $this->record->storageKey() => $this->record );
+		++$this->allAttempts;
+		$records = $this->records;
+		if ( null !== $this->record ) {
+			$records[ $this->record->storageKey() ] = $this->record;
+		}
+
+		return $records;
 	}
 
 	public function find( string $providerCode, string $repositoryId ): ?InstallationRecord {
+		++$this->findAttempts;
+		$key = InstallationRecord::key( $providerCode, $repositoryId );
+
+		if ( isset( $this->records[ $key ] ) ) {
+			return $this->records[ $key ];
+		}
+
 		return null !== $this->record && hash_equals( $providerCode, $this->record->providerCode() ) && hash_equals( $repositoryId, $this->record->repositoryId() )
 			? $this->record
 			: null;

@@ -60,10 +60,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private ThemeRepository $themes,
 		private WordPressUpdaterLock $updaterLock,
 		private ProviderRegistry $providers,
-		?ProspectiveReleaseCandidateReader $candidateReader = null,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
-		?callable $currentUserId = null
+		?callable $currentUserId = null,
+		?ProspectiveReleaseCandidateReader $candidateReader = null
 	) {
 		$this->candidateReader = $candidateReader ?? new ProspectiveReleaseCandidateReader( $repositories, $providers );
 		$this->canManage     = null === $canManage

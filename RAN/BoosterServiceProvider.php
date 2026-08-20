@@ -418,6 +418,9 @@ final class BoosterServiceProvider {
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
+			null,
+			null,
+			null,
 			$candidateReader
 		);
 		$container->bind( ProspectiveReleaseCandidateReader::class, $candidateReader );

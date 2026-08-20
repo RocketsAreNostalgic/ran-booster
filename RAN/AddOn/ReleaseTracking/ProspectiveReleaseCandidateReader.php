@@ -12,6 +12,7 @@ use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\RepositoryProvider\RepositoryReference;
+use Throwable;
 
 /** @internal Shared Core implementation for one prospective candidate read. */
 class ProspectiveReleaseCandidateReader {
@@ -33,7 +34,11 @@ class ProspectiveReleaseCandidateReader {
 		if ( ! is_string( $provider ) ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
-		$listing = $this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
+		try {
+			$listing = $this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
+		} catch ( Throwable ) {
+			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
+		}
 		if ( ! $listing instanceof RepositoryReleaseCandidateListing ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}

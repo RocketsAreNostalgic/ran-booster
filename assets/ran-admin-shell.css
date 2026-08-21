@@ -9,6 +9,12 @@
 	position: relative;
 }
 
+#wpbody-content > .notice + .ran-admin-shell,
+#wpbody-content > div.updated + .ran-admin-shell,
+#wpbody-content > div.error + .ran-admin-shell {
+	margin-block-start: 20px;
+}
+
 .ran-admin-shell *,
 .ran-admin-shell *::before,
 .ran-admin-shell *::after {

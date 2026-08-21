@@ -20,6 +20,17 @@ directory and preserve unrelated work.
   request text.
 - Use bounded subagents for independent, inspectable work when that speeds up
   delivery without obscuring ownership.
+- Every pull request requires independent agent review after opening, against
+  its exact base and head SHAs. Prior source review, accepted commits,
+  integration preflight and green CI do not substitute for reviewing the actual
+  pull request tuple. Resolve or explicitly disposition every finding first.
+- Merging is always an owner decision. Implementation, integration, branch
+  push, pull-request creation, checks and release preparation do not authorize
+  an agent to merge. Present the exact pull request, base and head SHAs, merge
+  method, checks and unresolved risks, then merge only after the owner explicitly
+  authorizes that specific pull request. This includes Release Please pull
+  requests even when repository permissions or branch rules allow a direct
+  merge.
 - Never commit or print personal access tokens, Bitbucket tokens, webhook
   secrets, the site-owned secrets sidecar, logs, `vendor`, or `node_modules`.
 - Keep GitHub and Bitbucket behavior behind provider contracts.

@@ -20,10 +20,10 @@ public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
 
-The Core-owned Extensions page lists the remaining first-party beta extensions using
-only local WordPress plugin state and release-bundled artwork. Free downloads
-remain unavailable until their public repositories and releases are ready for
-people. Core stores no sponsor or entitlement state.
+The Core-owned Extensions page lists first-party beta extensions using only
+local WordPress plugin state and release-bundled artwork. Free extensions are
+distributed through their own public repositories and releases. Core stores no
+sponsor or entitlement state.
 
 Install the plugin ZIP attached to the intended immutable Beta release in the
 canonical GitHub repository. GitHub's generated source archives are not

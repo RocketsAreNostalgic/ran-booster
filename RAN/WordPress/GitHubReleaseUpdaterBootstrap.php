@@ -35,7 +35,7 @@ final class GitHubReleaseUpdaterBootstrap {
 		$updater = $factory(
 			pluginFile: $pluginFile,
 			repository: 'RocketsAreNostalgic/ran-booster',
-			providerRepositoryId: '565105478',
+			providerRepositoryId: '1319710173',
 			pluginSlug: 'ran-booster',
 			channel: str_contains( $pluginVersion, '-' ) ? 'prerelease' : 'stable',
 			accessToken: null,

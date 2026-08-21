@@ -57,7 +57,7 @@ final class GitHubReleaseUpdaterBootstrapTest extends TestCase {
 				array(
 					'pluginFile'           => $pluginFile,
 					'repository'           => 'RocketsAreNostalgic/ran-booster',
-					'providerRepositoryId' => '565105478',
+					'providerRepositoryId' => '1319710173',
 					'pluginSlug'           => 'ran-booster',
 					'channel'              => $expectedChannel,
 					'accessToken'          => null,

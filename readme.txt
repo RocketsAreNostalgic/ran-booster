@@ -4,7 +4,7 @@ Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.2
 <!-- x-release-please-start-version -->
-Stable tag: 1.0.0-beta.23
+Stable tag: 1.0.0-beta.24
 <!-- x-release-please-end -->
 License: GPL-2.0-only
 License URI: https://www.gnu.org/licenses/gpl-2.0.html

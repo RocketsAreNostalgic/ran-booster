@@ -5,7 +5,7 @@
  * Plugin URI: https://github.com/RocketsAreNostalgic/ran-booster
  * Description: Repository deployment management for WordPress themes and plugins.
  * x-release-please-start-version
- * Version: 1.0.0-beta.23
+ * Version: 1.0.0-beta.24
  * x-release-please-end
  * Requires at least: 7.0
  * Requires PHP: 8.2

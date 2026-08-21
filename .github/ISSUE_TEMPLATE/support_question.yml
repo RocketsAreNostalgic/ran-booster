@@ -1,0 +1,54 @@
+name: Support question
+description: Ask for ordinary, non-sensitive support with bounded context.
+title: '[Support]: '
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Use this form for ordinary support questions. Report reproducible defects with the Bug report form.
+              Never include vulnerability details here. Use the private route in
+              [SECURITY.md](https://github.com/RocketsAreNostalgic/ran-booster/blob/main/SECURITY.md)
+              for sensitive reporting.
+    - type: input
+      id: booster_version
+      attributes:
+          label: RAN Booster version
+          description: Use the version shown on the Plugins screen or plugin header.
+          placeholder: 1.0.0-beta.26
+      validations:
+          required: true
+    - type: input
+      id: wordpress_version
+      attributes:
+          label: WordPress version
+          placeholder: 7.0.3
+      validations:
+          required: true
+    - type: input
+      id: php_version
+      attributes:
+          label: PHP version
+          placeholder: 8.2.x
+      validations:
+          required: true
+    - type: textarea
+      id: question
+      attributes:
+          label: Question
+          description: Ask your support question with clear, minimal context.
+      validations:
+          required: true
+    - type: textarea
+      id: evidence
+      attributes:
+          label: Evidence and context
+          description: If useful, include small reproduction steps, a screenshot, or a short sanitized log excerpt.
+    - type: checkboxes
+      id: acknowledgements
+      attributes:
+          label: Required acknowledgements
+          options:
+              - label: I have removed credentials, secrets, signed URLs, private repository IDs, customer data, full production logs, private source, private workbench material, and Dex identifiers.
+                required: true
+              - label: This request does not include a security vulnerability.
+                required: true

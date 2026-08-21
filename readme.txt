@@ -29,8 +29,11 @@ Install the plugin ZIP attached to the intended immutable Beta release in the
 canonical GitHub repository. GitHub's generated source archives are not
 installable plugin packages. After installation, Booster's bundled updater owns
 its WordPress-native update offers; no vendor licence or package service is
-required. Use the repository issue tracker for ordinary support and its
-security policy for confidential vulnerability reports.
+required. Use the repository's
+[support policy](https://github.com/RocketsAreNostalgic/ran-booster/blob/main/SUPPORT.md)
+for ordinary support and its
+[security policy](https://github.com/RocketsAreNostalgic/ran-booster/blob/main/SECURITY.md)
+for confidential vulnerability reports.
 
 The plugin and theme installation screens include a native repository picker.
 For operational providers, it can search public repositories without a token or

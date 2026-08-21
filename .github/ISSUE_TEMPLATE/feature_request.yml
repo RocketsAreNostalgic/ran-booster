@@ -6,6 +6,7 @@ body:
       attributes:
           value: |
               Feature requests help shape future work, but submitting one does not create a roadmap, delivery, or support commitment. Do not include private source, credentials, customer data, or other sensitive material.
+              Security vulnerabilities are never reported here. Use the private route in SECURITY.md for sensitive reporting.
     - type: textarea
       id: problem
       attributes:
@@ -31,4 +32,6 @@ body:
           label: Safety check
           options:
               - label: I have removed credentials, private source, customer data, signed URLs, full logs, private workbench material, and Dex identifiers.
+                required: true
+              - label: This request does not disclose a security vulnerability.
                 required: true

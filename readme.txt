@@ -20,10 +20,10 @@ public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
 
-The Core-owned Extensions page lists the remaining first-party beta extensions using
-only local WordPress plugin state and release-bundled artwork. Free downloads
-remain unavailable until their public repositories and releases are ready for
-people. Core stores no sponsor or entitlement state.
+The Core-owned Extensions page lists first-party beta extensions using only
+local WordPress plugin state and release-bundled artwork. Free extensions are
+distributed through their own public repositories and releases. Core stores no
+sponsor or entitlement state.
 
 Install the plugin ZIP attached to the intended immutable Beta release in the
 canonical GitHub repository. GitHub's generated source archives are not
@@ -70,19 +70,21 @@ Each provider tab shows the callback URL, required event, repository context,
 and manual setup links beside the saved local secrets. Every repository still
 needs its own remote webhook; a saved local secret alone is not a ready hook.
 Bundled GitHub webhook management can set up, check, reconfigure and remove
-GitHub repository webhooks with a fine-grained token granting
-Webhooks: Read and write permission. It reuses an applicable Core profile or
-creates an exact repository profile. Reconfigure sends the current Core secret
-and callback settings to the identified remote hook; it does not replace the
-secret. The token is used only for the submitted operation and is never saved.
+GitHub repository webhooks. It can reuse an applicable saved Core credential or
+accept a request-only fine-grained token granting Webhooks: Read and write
+permission. Reconfigure sends the current Core secret and callback settings to
+the identified remote hook; it does not replace the secret. A request-only
+token is used only for the submitted operation and is never saved; saved
+profiles remain under the site's credential custody and are referenced by ID.
 Webhook management never enables Automatic deployment; deployment policy
 remains a separate administrator decision.
 
 Webhook signatures authorize deployment after WordPress accepts a request;
 they do not protect the host, PHP workers, or WordPress bootstrap from traffic.
 Use public HTTPS with certificate verification, the provider's JSON delivery
-option, one unique generated secret per repository, and only the required push
-event. Do not cache, challenge, redirect, or transform either the `/wp-json/`
+option, an appropriately scoped generated secret under the owner-or-repository
+policy above, and only the required push event. Do not cache, challenge,
+redirect, or transform either the `/wp-json/`
 callback or its `?rest_route=` form. Provider delivery history is authoritative
 for timeouts and response status. GitHub does not automatically redeliver failed
 deliveries. Enable Bitbucket Request History in advance and use its request UUID

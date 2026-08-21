@@ -289,7 +289,8 @@ Providers receive no logging facade and must not attach upstream messages,
 headers, responses or credentials to the safe display fields.
 
 The request permits at most five remote calls and has a monotonic deadline of
-ten seconds. Provider code calls `claimRemoteCall()` immediately before each
+ten seconds, and Troubleshooting renders at most eight diagnostic rows per
+provider. Provider code calls `claimRemoteCall()` immediately before each
 request and passes the returned remaining timeout to its production client.
 Raw responses, headers, exceptions and credentials must not be returned.
 Supplying the diagnostics object during registration must be a local,

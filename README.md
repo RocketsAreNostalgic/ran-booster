@@ -2,13 +2,11 @@
 
 Deploy WordPress plugins and themes directly from Git repositories you control.
 
-GitHub works out of the box, with support for public and private repositories.
-There is no paid tier separating the two. A private Beta Bitbucket add-on is
-also under active development but is not yet publicly available.
+GitHub works out of the box, with support for public and private repositories. An alpha Bitbucket extension is also available.
 
 RAN Booster does not require a RAN-operated licensing service, OAuth relay, or
 deployment proxy: your WordPress site connects directly to the Git provider
-you configure.
+you configure.[^direct-connection]
 
 ## From repository to WordPress
 
@@ -122,10 +120,72 @@ verification, deployment recovery, history retention, and repository archive
 limits. The [Core self-update guide](docs/core-self-updates.md) covers updates
 to Booster itself, which are separate from the plugins and themes it manages.
 
+### Durability & recovery
+
+Deployment truthfulness is a design priority. Every branch-source deployment
+records one durable attempt row with an explicit state
+(`queued` → `running` → `succeeded` / `failed` / `needs_attention`), bound to a
+provider-issued repository identity and an immutable commit. Booster validates
+the archive's exact bytes, identity, and paths before WordPress touches the
+filesystem, verifies the result afterward, and rejects stale events before
+they can roll back newer code; an exact replay creates no additional attempt.
+
+What administrators should watch for:
+
+- An ambiguous outcome is flagged `needs_attention`, never reported as
+  success. Review those rows in Deployment activity; every attempt carries a
+  stable support reference.
+- An interrupted deployment is never silently taken over. A qualified operator
+  resolves it through a single protected reconciliation action after
+  confirming the process has stopped.
+- Troubleshooting provides bounded, on-demand diagnostics; nothing persists
+  raw webhook bodies, headers, or credentials.
+
+The [package update orchestration guide](docs/package-update-orchestration.md)
+maps every trigger and handoff, and the
+[deployment execution guide](docs/deployment-execution.md) covers the runtime
+model and day-to-day webhook operations.
+
+### Deployment history retention
+
+By default, Booster retains at most 200 deployment-attempt rows. When admitting
+new work it prunes only the oldest successful, failed, or operator-resolved
+needs-attention rows. Queued, running, and unresolved needs-attention rows are
+never pruned; if those rows exhaust capacity, new work fails safely until an
+operator resolves it. A site that needs more history may raise the ceiling with
+a canonical integer from 200 through 100000:
+
+```php
+define( 'RAN_BOOSTER_MAX_ATTEMPT_ROWS', 500 );
+```
+
+An invalid or lower value falls back to 200 and is reported by Troubleshooting.
+Deployment activity remains cursor-paginated with at most 100 rows per request.
+
+### Repository archive limits
+
+Provider deployments download a ZIP of the whole repository; selecting a
+package subdirectory does not reduce that download. The target site defaults to
+50 MiB compressed and 200 MiB expanded. A legitimate larger repository can use
+one target-local, site-wide override in `wp-config.php`:
+
+```php
+define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );
+```
+
+The compressed value must be an integer from 1 MiB through 512 MiB. Booster
+derives the expanded limit at four times that value and retains its other ZIP,
+identity, path and free-space checks. The same policy covers every registered
+provider's branch-source manual installs and updates, webhook updates, and
+Transporter Blueprint installs. Prospective release installation instead uses
+the shared updater's separate archive custody and bounds and creates no
+deployment attempt. Keep committed development-only files out of the deployed
+ref rather than treating a higher limit as a substitute for repository hygiene.
+
 ### Provider add-ons
 
 Compatible provider add-ons can support additional Git services without
-modifying Booster Core. The private Beta Bitbucket add-on currently uses manual
+modifying Booster Core. The alpha Bitbucket add-on currently uses manual
 webhook setup rather than Core's guided GitHub webhook management. Third-party
 provider add-ons may have their own service dependencies and policies.
 
@@ -170,3 +230,5 @@ The project is distributed under GPL-2.0-only, the conservative interpretation
 of the upstream package's `GPLv2` declaration. Source provenance is recorded in
 [NOTICE.md](NOTICE.md) and [license.txt](license.txt); released changes are in
 [CHANGELOG.md](CHANGELOG.md).
+
+[^direct-connection]: This direct-connection claim covers Booster Core and RAN first-party provider integrations. Your or your provider's hosting, proxy, CDN, and network services may still be in the path. Third-party extensions may have their own dependencies and policies.

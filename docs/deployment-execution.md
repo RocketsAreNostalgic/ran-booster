@@ -234,6 +234,33 @@ Bitbucket delivery history remains authoritative for status and timing. Probes,
 ignored events, and zero-target deliveries may create no attempt; absence from
 Activity is therefore inconclusive.
 
+## Webhook operations for administrators
+
+GitHub does not automatically redeliver failed deliveries. For Bitbucket,
+enable Request History before you need it and treat its request UUID only as a
+cross-reference; do not assume it remains stable across automatic attempts.
+
+HMAC protects deployment authority after WordPress accepts the request; it does
+not protect the network, web server, PHP workers, or WordPress bootstrap from
+traffic. Keep both WordPress REST callback forms uncached and untransformed.
+Optional host or trusted-edge limits and current provider IP ranges are defense
+in depth and never replace HMAC.
+
+Switching a package from Branch to Published releases does not remove an
+existing provider webhook or local signing-secret setup. The release-managed
+package ignores pushes, but another branch-managed package using the same
+repository may still need that hook. Retaining it is useful for a temporary
+source switch.
+
+For a long-term release source, site or repository retirement, or a callback or
+credential change, review the retained setup. First confirm that no
+branch-managed package still needs it. Remove the remote provider webhook
+before deleting an unused local secret, and preserve owner-shared secrets or
+other profiles that still serve branch packages. GitHub webhook management can
+remove an identified hook through its verified Remove workflow. For other
+providers, remove the hook in the provider UI, then use the provider screen's
+**Manage secrets** action to remove only an unused local secret.
+
 ## Request-wide bootstrap characterization
 
 Every supported single-site request loads the same Core bootstrap before

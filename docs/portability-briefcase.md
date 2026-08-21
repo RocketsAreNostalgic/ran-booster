@@ -228,6 +228,31 @@ The code also rejects unsafe repository locators, control characters, duplicate
 package identities, duplicate encrypted credential payloads, and mismatched
 package-to-credential associations.
 
+## Operator procedures
+
+Complete database copies within the supported MySQL/MariaDB and InnoDB envelope
+are best effort. Before a database move:
+
+1. Export a current Blueprint containing every managed package.
+2. Explicitly select any eligible file-stored credentials that the target
+   needs; they are copied only inside the password-protected archive.
+3. Preview the ZIP successfully and retain it off-site.
+4. Keep the normal database and filesystem backup.
+
+A Blueprint is the supported reconstruction route when raw Booster tables
+cannot be trusted, but its target must still meet the database requirements.
+It does not carry deployment-attempt or delivery-replay history, webhook
+secrets or provider-side hooks, constants, locks or worker state, or the source
+deployment policy. Every installed or adopted package starts with deployment
+**Disabled**. Cross-engine table migration is not a Booster feature.
+
+Database schemas 8 and 9 existed only in untagged development checkouts and
+will not be migrated. Before updating such a checkout, keep a database backup
+and export a current Blueprint. If the development version reports an
+unsupported old schema, do not change only the schema-version option: restore
+the matching checkout long enough to export, then uninstall it and install a
+supported release before applying the Blueprint.
+
 ## Developer methodology
 
 When extending Transporter code, treat the Blueprint classes as data contracts,

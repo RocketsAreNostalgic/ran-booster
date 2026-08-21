@@ -169,151 +169,32 @@ Released changes are recorded in the Release Please-owned
 summarized in the active Release Please proposal when one is open; dirty local
 work is in neither record.
 
-## Current status
+## Product overview
 
-- **Extensions** — the Core-owned Extensions page lists the remaining first-party
-  beta extensions using local WordPress plugin state and release-bundled
-  artwork. Install controls remain disabled; entries are informational until
-  their public repositories and releases are available.
-- **GitHub** — public repositories need no credential. Private repositories use
-  named personal access token profiles: narrowly scoped fine-grained tokens for
-  known resource owners, or a classic token when one credential must span several
-  organizations. The GitHub tab co-locates Push-to-Deploy secret creation with
-  the callback URL, event, repository context and manual setup links. Successful credential
-  validation records GitHub's token-expiration response header when GitHub
-  supplies it.
-- **Provider webhook management** — Core places the same setup, check,
-  reconfigure and remove controls for any registered provider implementing exact
-  webhook fitness, management and signing-policy normalization facets on one
-  aggregate. The bundled
-  GitHub provider uses a fine-grained token with Webhooks: Read and write
-  permission. An administrator can paste a request-only credential or select
-  an eligible saved credential. Core resolves a saved credential only inside
-  the fixed operation and never exposes the credential or signing secret to UI
-  code. The GitHub repository table and selected-repository panel use the same
-  provider-scoped, display-safe site and repository readiness result, including
-  public HTTPS, repository identity and local signing-secret coverage. GitHub
-  signing secrets are either bound to a canonical GitHub organization or user
-  and shared by its repositories, or bound to one stable GitHub repository ID.
-  Exact repository scope takes precedence. Assisted setup reuses an applicable
-  Core profile or creates an exact repository profile; explicit reconfiguration
-  sends the current Core secret and callback settings to the identified remote hook.
-  Replacing a secret remains a separate Core action. A saved local secret does
-  not prove that a remote hook exists, so Core labels remote state as last
-  observed. Webhook management never enables Automatic deployment; manual webhook
-  setup remains available without it. Each assisted operation rechecks the
-  stable repository identity with the same saved or request-only credential and
-  takes a target-keyed, non-persistent database lock before remote work.
-- **Provider release management** — Core places release status, source choices,
-  package actions and prospective installation controls for providers that
-  implement the complete release capability set. The bundled GitHub provider
-  owns GitHub discovery, credentials, exact release inspection, acquisition,
-  native-target behavior and workflow assistance; Core owns authorization,
-  source revision, locks, WordPress mutation and installed-state readback.
-  Administrators explicitly choose the bounded `stable` or
-  `prerelease` channel for discovery, inspection and installation; discovery
-  returns bounded metadata without downloading a ZIP. Inspection downloads,
-  validates and discards the exact ZIP; install performs a second,
-  fingerprint-bound acquisition and verifies archive bounds, GitHub and local
-  SHA-256, headers, Update URI and package identity before WordPress Core
-  installs. The target must be absent and
-  inactive, remain inactive, pass installed identity checks and then be adopted
-  by Booster. `installed_but_unmanaged` is an umbrella partial outcome: inspect
-  installed version and activation before linking or retrying; uncertain-state
-  and cleanup failures remain distinct. Missing or partial release capabilities
-  expose no affected control and grant no repository, credential, download,
-  update or mutation authority.
-- **Common package automation and repair** — package settings use one
-  **Automation** control for both sources: Disabled prevents Booster-managed
-  replacement, Manual requires an explicit action, and Automatic permits the
-  source's normal automatic path. Branch **Reinstall** deliberately replaces
-  the saved branch copy, including local changes, after confirmation; it is not
-  newer-release discovery. Published-release packages instead use WordPress's
-  native **Update** path for eligible newer releases. Exact installed-release
-  Reinstall is intentionally unavailable because a safe durable post-mutation
-  recovery contract was not justified; see the
+- **Providers and credentials** — GitHub is bundled, and compatible provider
+  add-ons can bring their own repository, credential, webhook, and documentation
+  experience. Public repositories need no credential; saved credentials remain
+  site-controlled and encrypted outside the WordPress database. The Beta
+  Extensions page previews first-party add-ons that are not yet available.
+- **Branch and release deployment** — Managed plugins and themes can follow a
+  repository branch or published releases. Booster validates the selected source
+  and package identity before WordPress Core replaces files; see the
   [package update orchestration guide](docs/package-update-orchestration.md).
-- **Confirmed package removal** — the settings-page **Danger zone** separates
-  **Unlink** (stop Booster management while preserving files and WordPress
-  activation) from **Unlink and delete**. The latter is separately confirmed,
-  source-revision fenced and lock-protected; plugins are deactivated and use
-  WordPress's uninstall/delete path, while active themes, parent themes,
-  dependencies, unsafe paths and in-flight package work are refused.
-- **Provider add-ons** — compatible provider add-ons appear beside GitHub and
-  retain their own credential, webhook and documentation guidance.
-- Credentials come from deployment constants or the encrypted JSON file selected
-  on Booster's protected Overview. Prefer an absolute private directory through
-  `RAN_BOOSTER_ENCRYPTED_SECRETS_DIR`; the operator creates that owner-only
-  `0700` directory and Booster manages `secrets.json` and its lock within it.
-  The older `RAN_BOOSTER_ENCRYPTED_SECRETS_FILE` exact-file constant remains a
-  transitional fallback. Both constants must evaluate to absolute paths. To
-  express a location relative to `wp-config.php`, anchor it in that file with
-  PHP's `__DIR__` and normalize it without `..`, for example
-  `define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );`.
-  The legacy exact-file equivalent is
-  `define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', dirname( __DIR__ ) . '/private/ran-booster/secrets.json' );`.
-  Raw relative strings are rejected because web, cron, and CLI processes may
-  use different working directories. No secret plaintext is stored there or in the
-  WordPress database. Conventional single-site POSIX installations can use
-  automatic setup. File-backed profiles are structurally validated for display; their
-  current provider validity is checked only when the selected credential or
-  bounded webhook candidates are used.
-- When the protected Overview reports a storage error, it keeps the manual
-  override instructions visible. Replace an existing exact-file definition
-  with `RAN_BOOSTER_ENCRYPTED_SECRETS_DIR` in `wp-config.php`, or set the
-  directory constant from a non-empty environment variable there before
-  WordPress loads plugins. Booster does not read an environment variable by
-  itself. Automatic
-  paths are based on the private parent of the detected WordPress boundary;
-  that is usually operator-accessible on conventional
-  `/home/account/public_html` hosting, but container deployment roots such as
-  `/var/www/<deployment-id>` may require an explicit durable private path.
-- A credentials restore requires the matching encrypted sidecar and
-  `ran_booster_secrets_key_v1` database option from the same backup. Neither
-  half is useful alone.
-- Credential profiles accept an optional non-secret expiry date. A provider-reported
-  expiry takes precedence after validation; providers without equivalent metadata use the manual date. Administrators
-  receive a dismissible WordPress-admin notice at 30 days, an urgent notice at
-  seven days, and an expired notice at the deadline. Unknown never means
-  non-expiring, and Booster does not poll, email, generate, rotate, or refresh
-  credentials automatically.
-- Administrators can additionally enable **Credential Self Destruct** for a
-  saved credential and choose a local removal date. Core withholds it once the
-  earlier of that date or a trusted provider-reported expiry has passed, then
-  removes the encrypted record on the next Booster admin request. This local
-  retention setting is independent of the advisory expiry reminder.
-- The PHP namespace is `RAN`, isolated from the upstream plugin.
-- Managed Plugins and Managed Themes support WordPress-style bulk selection.
-  Policy changes are atomic across the selection. Branch-only bulk
-  **Reinstall** admits each safe package to Booster's existing queue, reports
-  ineligible packages by reason, and deploys one package per worker run with an
-  individual activity record. There is no cross-package rollback or durable
-  batch record.
-- Eligible public GitHub Releases can provide manual WordPress-native Booster
-  updates through the shared RAN WordPress GitHub Release Updater Composer
-  package. Its request-local broker safely arbitrates multiple bundled copies,
-  while repository, tag, commit, exact asset, size, SHA-256 and embedded WordPress
-  package-header bindings constrain an eligible update. A verified archive must
-  identify the same release version as its GitHub tag before WordPress is
-  offered an update. Booster follows prereleases only while its
-  installed version is a prerelease, never enables auto-update, and leaves
-  scheduling, notices and replacement to WordPress Core. This updates Booster
-  itself; managed packages use the separate provider-attached release path. An
-  unavailable release target or repository-identity mismatch produces no offer.
-- Booster has no durable operational log. Bounded deployment outcomes live in
-  Deployment activity and explicit checks live in Troubleshooting. The Logging
-  panel can temporarily retain up to 400 sanitized Booster events for one hour
-  without enabling `WP_DEBUG_LOG`; it is kept for no more than 24 hours after
-  capture ends. It omits PHP, WordPress, theme, and other-plugin messages. If
-  `WP_DEBUG_LOG` is already enabled, Booster also writes the same structured
-  `[ran-booster]` events to WordPress logging without credential secrets, PAT
-  values, or signed download URLs.
-- A failed webhook deployment is surfaced outside Booster as a dismissible
-  administrator notice. Affected managed plugins also receive a WordPress-style
-  error row on the Plugins screen, and the site administrator receives one
-  safe, actionable email when the attempt finishes. A newer attempt for the
-  same package replaces the old status; manual deployment failures remain in
-  Deployment activity without generating background-failure email.
+- **Explicit package control** — Each package uses a Disabled, Manual, or
+  Automatic policy. Operators can reinstall eligible branch packages, use
+  WordPress-native updates for newer releases, and choose between preserving or
+  deleting package files when ending Booster management.
+- **Push-to-Deploy webhooks** — Signed provider webhooks can be configured
+  manually or, where supported, with provider assistance. Webhook setup never
+  enables Automatic deployment by itself.
+- **Migration and operations** — Password-protected Blueprints move selected
+  package configuration without a development checkout. Deployment activity,
+  Troubleshooting, and temporary sanitized logging provide bounded local
+  evidence when work succeeds, fails, or needs attention.
+- **Booster Core updates** — Eligible public GitHub Releases can offer manual,
+  WordPress-native updates for Booster itself. Core updates remain separate from
+  managed-package release tracking and never enable automatic updates; see the
+  [Core self-update guide](docs/core-self-updates.md).
 
 ## Feature comparison
 

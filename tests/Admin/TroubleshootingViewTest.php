@@ -123,6 +123,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<strong>Core updates</strong>', $html );
+		self::assertStringContainsString( 'ran-booster-troubleshooting__core-updates', $html );
 		self::assertStringContainsString(
 			'Core updates are off for this source installation. Booster will not check for or replace itself.',
 			$html

@@ -2,6 +2,10 @@
 	max-inline-size: 1200px;
 }
 
+.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {
+	background: var(--ran-booster-surface-info);
+}
+
 .ran-booster-admin .ran-booster-secondary-nav {
 	display: flex;
 	margin-block: var(--ran-booster-space-18) var(--ran-booster-space-20);

@@ -141,7 +141,7 @@ $repositoryPlaceholder = array() === $locatorExamples
 				__( 'Marker commit', 'ran-booster' )    => $coreSelfUpdate['marker_commit'] ?? null,
 			);
 			?>
-			<div class="notice <?php echo esc_attr( $selfUpdateTone ); ?> inline">
+			<div class="notice <?php echo esc_attr( $selfUpdateTone ); ?> inline ran-booster-troubleshooting__core-updates">
 				<p><strong><?php esc_html_e( 'Core updates', 'ran-booster' ); ?></strong></p>
 				<p><?php echo esc_html( $selfUpdateMessage ); ?></p>
 				<details>

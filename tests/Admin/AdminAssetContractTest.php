@@ -157,6 +157,16 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-deployment-state {', $activity );
 	}
 
+	public function testCalloutTonesUseSemanticBackgrounds(): void {
+		$onboarding      = $this->asset( 'ran-booster-onboarding.css' );
+		$troubleshooting = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+
+		self::assertStringContainsString( '.ran-booster-portability__credential-decision-state--unavailable {', $onboarding );
+		self::assertStringContainsString( 'background: var(--ran-booster-status-warning-background);', $onboarding );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {', $troubleshooting );
+		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
+	}
+
 	public function testAdminPrimitivesOwnSharedEyebrowPanelAndActionRowContracts(): void {
 		$primitives  = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$provider    = $this->view( 'provider.php' );

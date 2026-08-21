@@ -1,0 +1,14 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+	level: 1
+	treatPhpDocTypesAsCertain: false
+	paths:
+		- autoload.php
+		- index.php
+		- ran-booster.php
+		- uninstall.php
+		- RAN
+	scanDirectories:
+		- vendor/ran/wp-github-release-updater/src

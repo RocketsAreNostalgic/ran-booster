@@ -6,6 +6,7 @@ namespace RAN;
 
 use RAN\Deployment\DeploymentPolicy;
 
+/** @phpstan-consistent-constructor */
 abstract class AbstractPackage implements Package {
 
 	protected $repository;
@@ -128,6 +129,8 @@ abstract class AbstractPackage implements Package {
 		if ( isset( $this->$name ) ) {
 			return $this->$name;
 		}
+
+		return null;
 	}
 
 	public function __toString(): string {

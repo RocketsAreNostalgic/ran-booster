@@ -52,7 +52,7 @@ final class RepositoryWebhookManagementControls {
 				'ran_booster_documentation_sections_after_provider_' . $providerCode,
 				fn ( array $sections ): array => $this->documentationSections( $sections, $providerCode, $providerLabel ),
 				10,
-				3
+				1
 			);
 		}
 		add_action( 'admin_post_' . WebhookManagementController::ADMIN_POST_ACTION, array( $this, 'handleAdminPost' ) );

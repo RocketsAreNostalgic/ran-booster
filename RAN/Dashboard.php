@@ -71,7 +71,7 @@ class Dashboard {
 	private ?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
-	private PackageAdminController $packageAdmin;
+	private ?PackageAdminController $packageAdmin = null;
 	private DeploymentAdminPresenter $deploymentAdmin;
 	private PackagePagePresenter $pluginPages;
 	private PackagePagePresenter $themePages;
@@ -621,7 +621,7 @@ class Dashboard {
 
 	/** @param array<string, mixed> $request */
 	public function postPackageOperation( string $action, array $request ): bool|string {
-		$packageAdmin = isset( $this->packageAdmin ) ? $this->packageAdmin : new PackageAdminController();
+		$packageAdmin = $this->packageAdmin ?? new PackageAdminController();
 
 		return $packageAdmin->perform(
 			$this,

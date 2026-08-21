@@ -39,6 +39,7 @@
         "test:characterization": "@php tests/characterization.php",
         "test:github-module": "phpunit --configuration phpunit.github-module.xml",
         "test:unit": "phpunit --configuration phpunit.xml",
+        "analyze": "phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=2G",
         "test:delivery-intake-race": "bash tests/WordPress/delivery-intake-race.sh",
         "test:worker-hard-stop": "bash tests/WordPress/worker-hard-stop.sh",
         "test:native-lock-race": "bash tests/WordPress/native-updater-lock-race.sh",
@@ -70,7 +71,8 @@
             "@test:release-state-contracts",
             "@test:quality-fallback-contract",
             "@admin-shell:check",
-            "@lint:php"
+            "@lint:php",
+            "@analyze"
         ]
     },
     "require-dev": {
@@ -82,7 +84,9 @@
         "phpcsstandards/phpcsutils": "^1.2.2",
         "phpcompatibility/phpcompatibility-wp": "^3.0@dev",
         "phpcompatibility/php-compatibility": "^10.0@dev",
-        "phpcompatibility/phpcompatibility-paragonie": "^2.0@dev"
+        "phpcompatibility/phpcompatibility-paragonie": "^2.0@dev",
+        "phpstan/phpstan": "^2.1",
+        "szepeviktor/phpstan-wordpress": "^2.0"
     },
     "config": {
         "platform": {

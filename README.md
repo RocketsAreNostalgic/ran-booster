@@ -8,6 +8,30 @@ RAN Booster has no licensing, updater, cloud OAuth, or repository-picker depende
 on the original vendor. GitHub is bundled and optional provider add-ons use
 the same public contracts.
 
+## Beta, installation, and support
+
+RAN Booster is in Beta. Only the latest Beta release receives security fixes.
+Download `ran-booster-<version>.zip` and its `.sha256` file from the
+[Releases page](https://github.com/RocketsAreNostalgic/ran-booster/releases),
+then verify the checksum before installing the ZIP through WordPress. GitHub's
+generated **Source code** archives are not installable plugin packages.
+
+Version `1.0.0-beta.24` cannot discover its corrective successor through the
+bundled updater because its recorded GitHub repository identity is incorrect.
+Install the first later release whose notes explicitly say it repairs the
+Beta 24 repository identity, using that release's attached ZIP and `.sha256`
+file. Later releases may offer WordPress-native updates under the default
+`auto` policy only when the installed release marker, repository, tag, commit,
+asset, checksum, and package identity all agree. The explicit `enabled`
+development override bypasses source-checkout and installed-marker admission
+only; see the [Core self-update guide](docs/core-self-updates.md).
+
+Use the [issue tracker](https://github.com/RocketsAreNostalgic/ran-booster/issues)
+for ordinary support and non-sensitive defects. Follow
+[SECURITY.md](SECURITY.md) for confidential vulnerability reporting and
+[CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. The authoritative
+release procedure is [RELEASE.md](RELEASE.md).
+
 ## Project history
 
 RAN Booster began as a GPL fork of WP Pusher 3.0.13, a deployment plugin created
@@ -41,9 +65,9 @@ Add-on-owned mutations on eligible Core surfaces can use the
 for Core-managed HTMX refreshes, busy states, persistent errors and transient
 success feedback without shipping their own UI updater.
 
-## Custom git vendors
+## Custom Git providers
 
-RAN Booster supports custom git vendors through the
+RAN Booster supports custom Git providers through the
 `ran_booster_register_providers` action. Use it to register a new provider,
 define its metadata and capability contracts, and wire in diagnostics,
 credential policy, repository browsing, and webhook handling as needed.
@@ -69,7 +93,7 @@ GitHub remains a bundled, Core-owned provider module. Provider API 10 makes that
 module obey the same ordinary vendor boundary as external providers; it does
 not authorize extracting GitHub into another package or release stream.
 
-Start with the [custom git vendor setup guide](docs/custom-git-vendors.md).
+Start with the [custom Git provider setup guide](docs/custom-git-vendors.md).
 Before choosing a provider code, also read the current
 [registration and coexistence behavior](docs/provider-registration-and-coexistence.md).
 
@@ -85,6 +109,7 @@ deployment constants remain available for explicitly configured credentials.
 - WordPress 7.0 or newer
 - PHP 8.2 or newer
 - PHP Sodium extension
+- PHP Zip extension
 - Single-site WordPress; multisite is not supported in this Beta
 - MySQL 8.0 or newer or MariaDB 10.11 or newer, with InnoDB available
 
@@ -148,12 +173,12 @@ work is in neither record.
 
 - **Extensions** — the Core-owned Extensions page lists the remaining first-party
   beta extensions using local WordPress plugin state and release-bundled
-  artwork. Free downloads remain disabled until their public repositories and
-  releases are ready for people.
+  artwork. Install controls remain disabled; entries are informational until
+  their public repositories and releases are available.
 - **GitHub** — public repositories need no credential. Private repositories use
   named personal access token profiles: narrowly scoped fine-grained tokens for
   known resource owners, or a classic token when one credential must span several
-  organisations. The GitHub tab co-locates Push-to-Deploy secret creation with
+  organizations. The GitHub tab co-locates Push-to-Deploy secret creation with
   the callback URL, event, repository context and manual setup links. Successful credential
   validation records GitHub's token-expiration response header when GitHub
   supplies it.
@@ -264,16 +289,17 @@ work is in neither record.
   ineligible packages by reason, and deploys one package per worker run with an
   individual activity record. There is no cross-package rollback or durable
   batch record.
-- Public GitHub Releases provide manual WordPress-native Booster updates through
-  the shared RAN WordPress GitHub Release Updater Composer package. Its
-  request-local broker safely arbitrates multiple bundled copies, while
-  repository, tag, commit, exact asset, size, SHA-256 and embedded WordPress
+- Eligible public GitHub Releases can provide manual WordPress-native Booster
+  updates through the shared RAN WordPress GitHub Release Updater Composer
+  package. Its request-local broker safely arbitrates multiple bundled copies,
+  while repository, tag, commit, exact asset, size, SHA-256 and embedded WordPress
   package-header bindings constrain an eligible update. A verified archive must
   identify the same release version as its GitHub tag before WordPress is
   offered an update. Booster follows prereleases only while its
   installed version is a prerelease, never enables auto-update, and leaves
   scheduling, notices and replacement to WordPress Core. This updates Booster
-  itself; managed packages use the separate provider-attached release path.
+  itself; managed packages use the separate provider-attached release path. An
+  unavailable release target or repository-identity mismatch produces no offer.
 - Booster has no durable operational log. Bounded deployment outcomes live in
   Deployment activity and explicit checks live in Troubleshooting. The Logging
   panel can temporarily retain up to 400 sanitized Booster events for one hour
@@ -288,19 +314,6 @@ work is in neither record.
   safe, actionable email when the attempt finishes. A newer attempt for the
   same package replaces the old status; manual deployment failures remain in
   Deployment activity without generating background-failure email.
-
-## Install, update, and get help
-
-Install the `ran-booster-<version>.zip` attached to the intended immutable Beta
-release in this repository. GitHub's generated **Source code** archives are not
-installable plugin packages. After installation, Booster's bundled updater owns
-its WordPress-native update offers; Core does not depend on a vendor-hosted
-licence or package service.
-
-Use the repository issue tracker for ordinary support and non-sensitive defects.
-Follow [SECURITY.md](SECURITY.md) for confidential vulnerability reporting and
-[CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change. The authoritative
-release procedure is [RELEASE.md](RELEASE.md).
 
 ## Feature comparison
 
@@ -333,7 +346,7 @@ current product.
 
 | Feature            | WP Pusher 3.0.13 | RAN Booster                                                                   |
 | ------------------ | ---------------- | ----------------------------------------------------------------------------- |
-| Push-to-Deploy     | Vendor-mediated  | Signed, site-local webhooks; configured manually per target                   |
+| Push-to-Deploy     | Vendor-mediated  | Signed, site-local webhooks; manual or provider-assisted setup                |
 | Diagnostics        | —                | On-demand, per-provider checks in Troubleshooting; nothing is persisted       |
 | Deployment history | —                | Bounded Deployment activity with a stable support reference for every attempt |
 
@@ -351,7 +364,7 @@ cross-reference; do not assume it remains stable across automatic attempts.
 HMAC protects deployment authority after WordPress accepts the request; it does
 not protect the network, web server, PHP workers, or WordPress bootstrap from
 traffic. Keep both WordPress REST callback forms uncached and untransformed.
-Optional host or trusted-edge limits and current provider IP ranges are defence
+Optional host or trusted-edge limits and current provider IP ranges are defense
 in depth and never replace HMAC.
 
 Switching a package from Branch to Published releases does not remove an
@@ -374,7 +387,7 @@ providers, remove the hook in the provider UI, then use the provider screen's
 | Feature            | WP Pusher 3.0.13    | RAN Booster                                                                  |
 | ------------------ | ------------------- | ---------------------------------------------------------------------------- |
 | Site migration     | Copy files manually | Password-protected blueprint ZIP; no development checkout required           |
-| Provider extension | —                   | Documented, fixture-tested registration hook for adding custom git providers |
+| Provider extension | —                   | Documented, fixture-tested registration hook for adding custom Git providers |
 
 ## Durability and recovery
 
@@ -419,10 +432,12 @@ messaging, and release verification.
 ## Deactivation and uninstall
 
 Deactivation, updates and reinstalling over Booster preserve its managed
-packages, deployment history and encrypted credentials. Deleting Booster
-through WordPress permanently removes all verified Booster-owned local data,
-including both custom tables, the encrypted credentials file and key, scheduled
-work, notices and temporary capture files.
+packages, deployment history and encrypted credentials. On a successful
+WordPress **Delete**, Booster permanently removes all verified Booster-owned
+local data, including all Booster-owned tables, the encrypted credentials file
+and key, scheduled work, notices and temporary capture files. Cleanup fails
+closed: if Booster cannot verify or remove its owned data, WordPress retains the
+plugin files and reports the failure.
 
 Before deleting Booster, export a password-protected Blueprint with the
 selected packages and explicitly selected eligible file-stored repository
@@ -496,15 +511,12 @@ bash scripts/verify-release.sh "build/ran-booster-${version}.zip" "$version" HEA
 
 The builder fixes its timezone to UTC so the same commit produces identical ZIP bytes across hosts.
 
-The release contract is one `ran-booster/` root containing only the runtime PHP,
-`RAN/`, `assets/`, `views/`, `readme.txt`, `license.txt`, `NOTICE.md`, the
-locked shared-updater runtime, and the generated
-`ran-booster-release.json` provenance marker. Development documentation, tests,
-agent/Dex state, workflows, release tooling, Composer and Node metadata, caches,
-logs, archives, and secret sidecars are excluded. Plugin Check is limited to
-its general, security, performance, and accessibility categories because RAN
-Booster is distributed from its canonical GitHub releases rather than the
-WordPress.org plugin repository.
-
-Version `1.0.0-beta.23` is intentionally unpublished because its release PR was
-squash-merged; the normal-merge release train resumes at `1.0.0-beta.24`.
+The release contract is one `ran-booster/` root containing only the files and
+directories declared in [release-files.txt](release-files.txt), including the
+plugin entry points, runtime PHP, `RAN/`, `assets/`, `views/`, the locked shared
+updater, and the generated `ran-booster-release.json` provenance marker.
+Development documentation, tests, agent/Dex state, workflows, release tooling,
+Composer and Node metadata, caches, logs, archives, and secret sidecars are
+excluded. Plugin Check is limited to its general, security, performance, and
+accessibility categories because RAN Booster is distributed from its canonical
+GitHub releases rather than the WordPress.org plugin repository.

@@ -505,3 +505,6 @@ logs, archives, and secret sidecars are excluded. Plugin Check is limited to
 its general, security, performance, and accessibility categories because RAN
 Booster is distributed from its canonical GitHub releases rather than the
 WordPress.org plugin repository.
+
+Version `1.0.0-beta.23` is intentionally unpublished because its release PR was
+squash-merged; the normal-merge release train resumes at `1.0.0-beta.24`.

@@ -18,8 +18,10 @@ you configure.[^direct-connection]
    Manual, or Automatic. Installing a package never silently opts it into
    unattended deployment.
 4. **Let WordPress do the replacement.** Booster checks the repository and
-   downloaded package before handing the change to WordPress, then checks the
-   result and records what happened.
+   downloaded package before handing the change to WordPress. Branch
+   deployments are then checked and recorded in Booster Activity;
+   published-release operations use WordPress's native or a synchronous result
+   path.
 
 ### Branches, webhooks, and Push-to-Deploy
 
@@ -27,8 +29,9 @@ For branch deployments, an administrator can replace the installed package
 manually or enable **Push-to-Deploy**. When Push-to-Deploy is enabled, a push to
 the selected branch can queue the matching package for deployment. Booster
 accepts the webhook only when it carries a valid signature for the secret
-configured on the site. If the provider retries it, Booster recognizes the
-retry instead of deploying the same push twice.
+configured on the site. An exact replay with the same provider delivery ID and
+body digest reuses the existing admission instead of deploying the same push
+twice; a provider retry with a new delivery ID is a new delivery.
 
 #### Guided GitHub webhook setup
 

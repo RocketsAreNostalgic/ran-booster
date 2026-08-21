@@ -289,10 +289,13 @@ Providers receive no logging facade and must not attach upstream messages,
 headers, responses or credentials to the safe display fields.
 
 The request permits at most five remote calls and has a monotonic deadline of
-ten seconds, and Troubleshooting renders at most eight diagnostic rows per
-provider. Provider code calls `claimRemoteCall()` immediately before each
-request and passes the returned remaining timeout to its production client.
-Raw responses, headers, exceptions and credentials must not be returned.
+ten seconds. Troubleshooting renders at most eight diagnostic rows in total:
+five Core-local rows and at most three rows from the selected provider,
+including optional webhook readiness. If a provider returns more than the
+remaining slots, Core truncates the results and marks the report
+`result_limit_exhausted`. Provider code calls `claimRemoteCall()` immediately
+before each request and passes the returned remaining timeout to its production
+client. Raw responses, headers, exceptions and credentials must not be returned.
 Supplying the diagnostics object during registration must be a local,
 non-network operation; remote work starts only from `diagnose()`.
 

@@ -1,0 +1,34 @@
+name: Feature request
+description: Describe a problem or outcome that RAN Booster could address.
+title: '[Feature]: '
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Feature requests help shape future work, but submitting one does not create a roadmap, delivery, or support commitment. Do not include private source, credentials, customer data, or other sensitive material.
+    - type: textarea
+      id: problem
+      attributes:
+          label: Problem
+          description: What is difficult today, and who encounters it?
+      validations:
+          required: true
+    - type: textarea
+      id: outcome
+      attributes:
+          label: Desired outcome
+          description: Describe the result you need without prescribing an implementation unless the constraint matters.
+      validations:
+          required: true
+    - type: textarea
+      id: current_approach
+      attributes:
+          label: Current approach
+          description: Optional. Explain how you handle the problem now and where that approach falls short.
+    - type: checkboxes
+      id: safety
+      attributes:
+          label: Safety check
+          options:
+              - label: I have removed credentials, private source, customer data, signed URLs, full logs, private workbench material, and Dex identifiers.
+                required: true

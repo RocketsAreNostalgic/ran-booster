@@ -61,10 +61,12 @@ and release deployments differ.
 - MySQL 8.0 or newer, or MariaDB 10.11 or newer, with InnoDB available
 - Single-site WordPress; multisite is not supported in this Beta
 
-Booster stops before making changes when a fresh installation does not meet
-these requirements. If an active site later falls outside them, the site stays
-bootable but Booster pauses affected management and deployment operations until
-the requirement is restored.
+Fresh activation explicitly checks Sodium and rejects multisite before Booster
+writes its own state. WordPress and PHP compatibility are also declared in the
+plugin metadata, while Zip is required for archive workflows. If an active site
+later falls outside an operational requirement, the site stays bootable but
+Booster pauses affected management and deployment operations until the
+requirement is restored.
 
 Use the [issue tracker](https://github.com/RocketsAreNostalgic/ran-booster/issues)
 for ordinary support and non-sensitive defects. Follow

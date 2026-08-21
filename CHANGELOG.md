@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-beta.26](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.25...v1.0.0-beta.26) (2026-08-21)
+
+
+### Bug Fixes
+
+* **admin:** separate update notices from shell ([b66879e](https://github.com/RocketsAreNostalgic/ran-booster/commit/b66879ed4ca3ed07849462ac639fce8bd285e275))
+* **admin:** separate update notices from shell ([4595234](https://github.com/RocketsAreNostalgic/ran-booster/commit/45952348b8279b17390335ea089372424871538b))
+
 ## [1.0.0-beta.25](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.24...v1.0.0-beta.25) (2026-08-21)
 
 

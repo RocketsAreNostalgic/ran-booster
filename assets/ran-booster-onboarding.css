@@ -1057,6 +1057,7 @@
 .ran-booster-admin
 	.ran-booster-portability__credential-decision-state--unavailable {
 	border-inline-start-color: var(--ran-booster-status-warning-border);
+	background: var(--ran-booster-status-warning-background);
 }
 
 .ran-booster-admin .ran-booster-portability__credential-footer {

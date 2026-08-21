@@ -157,6 +157,16 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-deployment-state {', $activity );
 	}
 
+	public function testCalloutTonesUseSemanticBackgrounds(): void {
+		$onboarding      = $this->asset( 'ran-booster-onboarding.css' );
+		$troubleshooting = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+
+		self::assertStringContainsString( '.ran-booster-portability__credential-decision-state--unavailable {', $onboarding );
+		self::assertStringContainsString( 'background: var(--ran-booster-status-warning-background);', $onboarding );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {', $troubleshooting );
+		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
+	}
+
 	public function testAdminPrimitivesOwnSharedEyebrowPanelAndActionRowContracts(): void {
 		$primitives  = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$provider    = $this->view( 'provider.php' );
@@ -265,12 +275,45 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'var(--ran-booster-shadow-surface)', $primitives );
 		self::assertStringContainsString( 'border-inline-start:', $onboarding );
 		self::assertStringContainsString( 'margin-inline-start:', $documentation );
+		self::assertStringContainsString( '@media (prefers-reduced-motion: no-preference)', $documentation );
+		self::assertStringContainsString( 'scroll-behavior: smooth;', $documentation );
 		self::assertStringContainsString( '@media screen and (max-width: 600px)', $onboarding );
 		self::assertStringContainsString( '@media screen and (max-width: 600px)', $documentation );
 		self::assertStringContainsString( '@media screen and (max-width: 782px)', $onboarding );
 		self::assertStringContainsString( 'class="ran-booster-footer"', $base );
 		self::assertStringContainsString( "__( 'Copyright © %s', 'ran-booster' )", $base );
 		self::assertStringNotContainsString( 'style="text-align: center;', $base );
+	}
+
+	public function testDocumentationPrintContractPreservesGuidanceAndRemovesAdminChrome(): void {
+		$documentation = $this->asset( 'ran-booster-documentation.css' );
+		$view          = $this->view( 'documentation.php' );
+
+		self::assertStringContainsString( '@media print {', $documentation );
+		self::assertStringContainsString( '#wpadminbar,', $documentation );
+		self::assertStringContainsString( 'body.wp-admin .notice,', $documentation );
+		self::assertStringContainsString( '.ran-admin-shell__navigation,', $documentation );
+		self::assertStringNotContainsString( "\t.ran-booster-footer,\n", $documentation );
+		self::assertStringContainsString( '[data-ran-booster-feedback-toast],', $documentation );
+		self::assertMatchesRegularExpression(
+			'/@media print \{[\s\S]+\.ran-booster-admin \.ran-booster-footer \{\s+display: block;\s+margin: 18pt 0 0;\s+padding: 8pt 0 0;\s+border-block-start: 1pt solid CanvasText;/',
+			$documentation
+		);
+		self::assertMatchesRegularExpression(
+			'/@media print \{[\s\S]+\.ran-booster-admin \.ran-booster-documentation__index \{\s+display: block;\s+grid-area: auto;\s+position: static;/',
+			$documentation
+		);
+		self::assertStringContainsString( 'color-scheme: only light;', $documentation );
+		self::assertStringContainsString( 'background: Canvas !important;', $documentation );
+		self::assertMatchesRegularExpression(
+			'/@media print \{[\s\S]+\.ran-booster-admin \.ran-booster-documentation__layout \{\s+display: block;\s+grid-template-areas: none;\s+grid-template-columns: none;/',
+			$documentation
+		);
+		self::assertStringContainsString( '.ran-booster-documentation__section:not([open]) > :not(summary)', $documentation );
+		self::assertStringContainsString( '::-webkit-details-marker', $documentation );
+		self::assertStringContainsString( 'break-inside: avoid-page;', $documentation );
+		self::assertStringContainsString( 'ran-booster-documentation__section', $view );
+		self::assertStringContainsString( 'ran-booster-documentation__content', $view );
 	}
 
 	public function testPickerAndCredentialDialogsRetainKeyboardFocusAndBodyLockContracts(): void {

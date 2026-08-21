@@ -23,19 +23,55 @@ final class DocumentationHookRenderer {
 		string $scope,
 		?string $providerCode = null
 	): void {
+		$this->renderPreparedSections( $this->prepareSections( $filterHook, $documentationUrl, $scope, $providerCode ) );
+	}
+
+	/**
+	 * Resolve structured add-on documentation sections once, before output.
+	 *
+	 * @param non-empty-string $filterHook
+	 * @return list<array{id: string, summary: string, content: string, open: bool}>
+	 */
+	public function prepareSections(
+		string $filterHook,
+		string $documentationUrl,
+		string $scope,
+		?string $providerCode = null
+	): array {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Filter is a validated Core-owned documentation extension point.
 		$sections = apply_filters( $filterHook, array(), $documentationUrl, $scope );
+		$prepared = array();
 
 		if ( is_array( $sections ) ) {
 			foreach ( $sections as $section ) {
-				$this->renderSection( $section, $providerCode );
+				$normalized = $this->normalizeSection( $section, $providerCode );
+				if ( null !== $normalized ) {
+					$prepared[] = $normalized;
+				}
 			}
+		}
+
+		return $prepared;
+	}
+
+	/**
+	 * @param list<array{id: string, summary: string, content: string, open: bool}> $sections
+	 */
+	public function renderPreparedSections( array $sections ): void {
+		foreach ( $sections as $section ) {
+			?>
+			<details id="<?php echo esc_attr( $section['id'] ); ?>" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section<?php echo $section['open'] ? ' open' : ''; ?>>
+				<summary><?php echo esc_html( $section['summary'] ); ?></summary>
+				<div class="ran-booster-documentation__content"><?php echo wp_kses_post( $section['content'] ); ?></div>
+			</details>
+			<?php
 		}
 	}
 
-	private function renderSection( mixed $section, ?string $providerCode ): void {
+	/** @return array{id: string, summary: string, content: string, open: bool}|null */
+	private function normalizeSection( mixed $section, ?string $providerCode ): ?array {
 		if ( ! is_array( $section ) ) {
-			return;
+			return null;
 		}
 
 		$id      = $section['id'] ?? null;
@@ -50,7 +86,7 @@ final class DocumentationHookRenderer {
 			|| '' === trim( $summary )
 			|| ( ! is_string( $content ) && ! is_callable( $content ) )
 		) {
-			return;
+			return null;
 		}
 
 		$bufferLevel = ob_get_level();
@@ -75,30 +111,41 @@ final class DocumentationHookRenderer {
 					'provider' => $providerCode ?? '',
 				)
 			);
-			$this->renderUnavailableGuide();
-
-			return;
+			return array(
+				'id'      => $id,
+				'summary' => $summary,
+				'content' => '<p>' . esc_html__( 'An add-on guide is temporarily unavailable. Check plugin compatibility and the error log.', 'ran-booster' ) . '</p>',
+				'open'    => $open,
+			);
 		}
 
 		if ( ! is_string( $content ) || '' === trim( $content ) ) {
-			return;
+			return null;
 		}
-		?>
-		<details id="<?php echo esc_attr( $id ); ?>" class="ran-booster-documentation__section ran-booster-panel"<?php echo $open ? ' open' : ''; ?>>
-			<summary><?php echo esc_html( $summary ); ?></summary>
-			<div class="ran-booster-documentation__content"><?php echo wp_kses_post( $content ); ?></div>
-		</details>
-		<?php
+
+		$content = wp_kses( $content, $this->documentationContentAllowedHtml() );
+
+		if ( '' === trim( $content ) ) {
+			return null;
+		}
+
+		return array(
+			'id'      => $id,
+			'summary' => $summary,
+			'content' => $content,
+			'open'    => $open,
+		);
 	}
 
-	private function renderUnavailableGuide(): void {
-		?>
-		<details class="ran-booster-documentation__section ran-booster-panel">
-			<summary><?php esc_html_e( 'Add-on guide unavailable', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
-				<p><?php esc_html_e( 'An add-on guide is temporarily unavailable. Check plugin compatibility and the error log.', 'ran-booster' ); ?></p>
-			</div>
-		</details>
-		<?php
+	/** @return array<string, array<string, true>> */
+	private function documentationContentAllowedHtml(): array {
+		$allowedHtml = wp_kses_allowed_html( 'post' );
+
+		foreach ( $allowedHtml as &$attributes ) {
+			unset( $attributes['id'] );
+		}
+		unset( $attributes );
+
+		return $allowedHtml;
 	}
 }

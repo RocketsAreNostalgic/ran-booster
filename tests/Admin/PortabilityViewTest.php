@@ -198,6 +198,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
 		self::assertStringContainsString( 'The provider permissions for this credential have not been assessed.', $html );
 		self::assertStringContainsString( '<strong>Unavailable for transfer</strong>', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-decision-state--unavailable', $html );
 		self::assertStringContainsString( 'Booster will automatically remove this saved credential on 2026-08-31', $html );
 		self::assertStringContainsString( 'This credential is supplied by site configuration', $html );
 		self::assertStringContainsString( 'Unused repository token', $html );

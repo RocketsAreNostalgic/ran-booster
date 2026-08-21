@@ -139,14 +139,46 @@
 	}
 
 	function initDocumentationDeepLinks() {
-		if (!document.querySelector('.ran-booster-documentation')) {
+		const root = document.querySelector('.ran-booster-documentation');
+		if (!root) {
 			return;
 		}
+		if (root.dataset.ranBoosterDocumentationDeepLinksBound === 'true') {
+			return;
+		}
+		const sections = Array.from(
+			root.querySelectorAll('.ran-booster-documentation__section[id]')
+		);
+		if (!sections.length) {
+			return;
+		}
+		const links = Array.from(
+			root.querySelectorAll(
+				'.ran-booster-documentation__index a[href^="#"]'
+			)
+		);
+		root.dataset.ranBoosterDocumentationDeepLinksBound = 'true';
 
-		openDetailsForHash(document, window.location.hash);
+		function activateHash(hash, useFirstSection) {
+			const section = openDetailsForHash(root, hash);
+			if (section) {
+				setDocumentationActiveLink(root, links, section);
+			} else if (useFirstSection) {
+				setDocumentationActiveLink(root, links, sections[0]);
+			}
+		}
+
+		activateHash(window.location.hash, true);
 		window.addEventListener('hashchange', function () {
-			openDetailsForHash(document, window.location.hash);
+			activateHash(window.location.hash, false);
 		});
+		links.forEach(function (link) {
+			link.addEventListener('click', function () {
+				activateHash(link.getAttribute('href') || '', false);
+			});
+		});
+		initDocumentationSectionObserver(root, links, sections);
+		initDocumentationPrintDetails(root);
 	}
 
 	function initTroubleshootingCredentialChoices() {
@@ -231,6 +263,17 @@
 	}
 
 	function openDetailsForHash(root, hash) {
+		const section = getDocumentationSectionForHash(root, hash);
+		if (!section) {
+			return null;
+		}
+
+		section.open = true;
+
+		return section;
+	}
+
+	function getDocumentationSectionForHash(root, hash) {
 		if (
 			typeof hash !== 'string' ||
 			hash.length < 2 ||
@@ -251,18 +294,119 @@
 			return false;
 		}
 
-		const target = root.getElementById(id);
-		const details =
-			target && typeof target.closest === 'function'
-				? target.closest('.ran-booster-documentation details')
-				: null;
-
-		if (!details) {
-			return false;
+		const documentRoot = root.ownerDocument || root;
+		const target = documentRoot.getElementById(id);
+		if (!target || typeof target.closest !== 'function') {
+			return null;
 		}
 
-		details.open = true;
+		const section = target.closest('.ran-booster-documentation__section');
+		if (
+			!section ||
+			(typeof root.contains === 'function' && !root.contains(section))
+		) {
+			return null;
+		}
 
-		return true;
+		return section;
+	}
+
+	function setDocumentationActiveLink(root, links, section) {
+		links.forEach(function (link) {
+			const isCurrent =
+				getDocumentationSectionForHash(
+					root,
+					link.getAttribute('href') || ''
+				) === section;
+			if (isCurrent) {
+				link.setAttribute('aria-current', 'location');
+			} else {
+				link.removeAttribute('aria-current');
+			}
+		});
+	}
+
+	function initDocumentationSectionObserver(root, links, sections) {
+		if (typeof window.IntersectionObserver !== 'function') {
+			return;
+		}
+
+		const intersecting = new Map();
+		const observer = new window.IntersectionObserver(
+			function (entries) {
+				entries.forEach(function (entry) {
+					intersecting.set(entry.target, entry);
+				});
+				const activeEntries = sections
+					.map(function (section, index) {
+						return {
+							entry: intersecting.get(section),
+							index,
+							section,
+						};
+					})
+					.filter(function (candidate) {
+						return candidate.entry?.isIntersecting;
+					})
+					.sort(function (first, second) {
+						const firstDistance = Math.abs(
+							first.entry.boundingClientRect.top - 70
+						);
+						const secondDistance = Math.abs(
+							second.entry.boundingClientRect.top - 70
+						);
+						return (
+							firstDistance - secondDistance ||
+							first.index - second.index
+						);
+					});
+
+				if (activeEntries.length) {
+					setDocumentationActiveLink(
+						root,
+						links,
+						activeEntries[0].section
+					);
+				}
+			},
+			{ rootMargin: '-70px 0px -65% 0px', threshold: 0 }
+		);
+
+		sections.forEach(function (section) {
+			observer.observe(section);
+		});
+	}
+
+	function initDocumentationPrintDetails(root) {
+		const details = Array.from(root.querySelectorAll('details'));
+		if (!details.length) {
+			return;
+		}
+
+		let openStates = null;
+		window.addEventListener('beforeprint', function () {
+			if (openStates) {
+				return;
+			}
+
+			openStates = new Map(
+				details.map(function (detail) {
+					return [detail, detail.open];
+				})
+			);
+			details.forEach(function (detail) {
+				detail.open = true;
+			});
+		});
+		window.addEventListener('afterprint', function () {
+			if (!openStates) {
+				return;
+			}
+
+			openStates.forEach(function (wasOpen, detail) {
+				detail.open = wasOpen;
+			});
+			openStates = null;
+		});
 	}
 })();

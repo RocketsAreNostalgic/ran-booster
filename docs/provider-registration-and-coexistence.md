@@ -196,18 +196,15 @@ It cannot yet say:
 > may operate for that endpoint, or reserved vendor and RAN namespaces are
 > enforced.
 
-Those missing guarantees are the subject of the private Priority 2 hardening
-plan. The owner-approved direction gives one community implementation
-precedence over a first-party RAN implementation for the same canonical service
-endpoint. “First-party” includes both providers bundled in Core, such as
-GitHub `gh`, and official optional RAN add-ons admitted through the same narrow
-RAN-suite claim path, such as Bitbucket `bb`; names and `ran-*` codes alone do
-not confer that status. It keeps provider API credentials and historical
-attempts implementation-specific, but moves public webhook ingress and signing
-custody to the canonical service endpoint rather than a provider code. Every
-compatible implementation for that endpoint must use the same Core callback,
-and only the sole operational provider may handle the verified request.
-Existing branch-managed packages may then move to that provider through an
-explicit same-row handover; Core does not copy provider credentials, adopt
-arbitrary plugin routes or secrets, or include release-managed packages in that
-transition.
+The earlier full service-ownership design for those guarantees is superseded.
+No distinct-code pair has demonstrated overlapping operational authority at one
+concrete target, and a shared repository URL base is only an overlap signal. It
+does not by itself justify disabling providers that operate on different
+packages or repositories.
+
+No automatic precedence, displacement, shared webhook ingress or signing
+migration, provider election or package handover is approved. Reconsideration
+requires a concrete same-target overlap plus separate owner authority. A
+product-wide rule permitting only one provider implementation for a repository
+service would be an explicit product restriction, not a correctness property
+inferred from current metadata.

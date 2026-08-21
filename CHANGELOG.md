@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.0-beta.25](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.24...v1.0.0-beta.25) (2026-08-21)
+
+
+### Features
+
+* **admin:** add documentation contents index ([#72](https://github.com/RocketsAreNostalgic/ran-booster/issues/72)) ([494f854](https://github.com/RocketsAreNostalgic/ran-booster/commit/494f854ce77aa87d220c4f2cfe6fe18d369101aa))
+
+
+### Bug Fixes
+
+* **updater:** correct Booster repository identity ([f5712be](https://github.com/RocketsAreNostalgic/ran-booster/commit/f5712befc1bc70a429156b501ee0daa20081aeb4))
+* **updater:** correct Booster repository identity ([ccc0535](https://github.com/RocketsAreNostalgic/ran-booster/commit/ccc0535883ade7b00f65a2c7f2e51b38d423e3a6))
+
 ## [1.0.0-beta.24](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.23...v1.0.0-beta.24) (2026-08-21)
 
 

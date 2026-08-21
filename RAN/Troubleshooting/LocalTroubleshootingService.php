@@ -538,7 +538,7 @@ class LocalTroubleshootingService {
 			return wp_is_file_mod_allowed( 'ran_booster_diagnostics' );
 		}
 
-		return ! ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS );
+		return ! ( defined( 'DISALLOW_FILE_MODS' ) && constant( 'DISALLOW_FILE_MODS' ) );
 	}
 
 	protected function filesystemMethod(): ?string {

@@ -67,7 +67,7 @@ final class PackageMutationGuard {
 	public static function assertFilesystemMutationAllowed(): void {
 		self::assertPackageMutationAllowed();
 
-		if ( ( defined( 'DISALLOW_FILE_MODS' ) && \DISALLOW_FILE_MODS )
+		if ( ( defined( 'DISALLOW_FILE_MODS' ) && constant( 'DISALLOW_FILE_MODS' ) )
 			|| ! wp_is_file_mod_allowed( 'ran-booster' ) ) {
 			BoosterLogger::log(
 				'mutation guard blocked deployment',

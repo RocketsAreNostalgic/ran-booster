@@ -506,7 +506,7 @@ class SecretsStorageProvisioner {
 		if ( ! $this->supportedPosixPlatform() ) {
 			return false;
 		}
-		if ( defined( 'FS_METHOD' ) && 'direct' !== FS_METHOD ) {
+		if ( defined( 'FS_METHOD' ) && 'direct' !== constant( 'FS_METHOD' ) ) {
 			return false;
 		}
 

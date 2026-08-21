@@ -68,6 +68,9 @@ class Dispatcher {
 		?DeploymentAttemptRepository $deploymentAttempts = null,
 		?ProviderProfileAdminController $providerProfileInteraction = null
 	) {
+		// Retained for positional container and test compatibility; their owners are injected below.
+		unset( $packageRepositories, $bulkPackageActions );
+
 		$this->dashboard        = $dashboard;
 		$this->packageAdmin     = $packageAdmin;
 		$this->debugCapture     = $debugCapture;

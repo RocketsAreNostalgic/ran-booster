@@ -125,7 +125,7 @@ final class RepositoryPickerController {
 				400
 			);
 		} catch ( UnsupportedProviderCapability ) {
-			$message = isset( $mode ) && 'public' === $mode && $publicLookupRequested
+			$message = 'public' === $mode && $publicLookupRequested
 				? 'The selected repository provider does not support authenticated public repository browsing.'
 				: 'The selected repository provider does not support repository browsing.';
 

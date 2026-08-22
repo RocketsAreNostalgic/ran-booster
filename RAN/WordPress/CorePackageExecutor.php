@@ -144,9 +144,13 @@ class CorePackageExecutor {
 		$sourceFilter    = $this->sourceSelectionFilter( $inputs['slug'], $inputs['subdirectory'], $type, 'update', $inputs['identifier'] );
 		$vcsFilter       = $this->vcsFilter( $type, $inputs['identifier'] );
 		$handoffFilter   = $this->coreReinstallHandoffFilter( $type, $inputs['identifier'], $artifact );
+		$coreAutoUpdate  = has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
 		$cronFilter      = static fn (): bool => true;
 		$completions     = array();
 		$complete        = $this->completionCollector( $completions );
+		if ( false !== $coreAutoUpdate && ! remove_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update', $coreAutoUpdate ) ) {
+			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_UNCERTAIN );
+		}
 
 		add_filter( $transientHook, $transientFilter, 10, 1 );
 		add_filter( 'upgrader_pre_download', $preDownload, 10, 4 );
@@ -170,6 +174,9 @@ class CorePackageExecutor {
 			remove_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10 );
 			remove_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX );
 			remove_action( 'upgrader_process_complete', $complete, 100 );
+			if ( false !== $coreAutoUpdate ) {
+				add_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update', $coreAutoUpdate );
+			}
 		}
 	}
 

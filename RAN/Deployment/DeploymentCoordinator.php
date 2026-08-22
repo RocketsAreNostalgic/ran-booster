@@ -644,7 +644,36 @@ class DeploymentCoordinator {
 			? $this->plugins->adopt( $package )
 			: $this->themes->adopt( $package );
 
-		return $result->isSuccessful();
+		if ( $result->isSuccessful() ) {
+			return true;
+		}
+
+		return 'ran_booster_storage_adoption_conflict' === $result->getDiagnosticId()
+			&& $this->existingManagementMatchesInstalledTarget( $attempt, $package );
+	}
+
+	private function existingManagementMatchesInstalledTarget( DeploymentAttempt $attempt, Package $installed ): bool {
+		$identifier = $installed->getIdentifier();
+		if ( ! is_string( $identifier ) || '' === $identifier ) {
+			return false;
+		}
+
+		try {
+			$data     = $attempt->safeData();
+			$request  = $attempt->getRequest();
+			$existing = $this->packageFromIdentifier( (string) $data['package_type'], $identifier );
+
+			return hash_equals( $identifier, (string) $existing->getIdentifier() )
+				&& PackageSource::BRANCH === $existing->getSource()
+				&& $existing->getProviderCode() === $data['provider']
+				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
+				&& hash_equals( (string) $existing->getRepository(), $request->repository )
+				&& hash_equals( (string) $existing->getBranch(), $request->configuredBranch )
+				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
+				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug );
+		} catch ( Throwable ) {
+			return false;
+		}
 	}
 
 	/** @param array{version: string, active: bool} $baselineState */

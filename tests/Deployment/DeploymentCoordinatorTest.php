@@ -307,6 +307,49 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertSame( 1, $this->plugins->stores );
 	}
 
+	public function testInstallTreatsAnExactExistingManagementConflictAsVerifiedSuccess(): void {
+		$slug                        = 'ran-booster-reconcile-fixture';
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main', true, 'existing-credential' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$this->plugins->byIdentifier->setSource( PackageSource::BRANCH, 9 );
+		$this->plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$this->preflight->artifact     = $this->artifact( '2.0.0' );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'succeeded', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $result['outcome_code'] );
+		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
+		self::assertSame( 1, $this->plugins->stores );
+	}
+
+	public function testInstallKeepsAMismatchedExistingManagementConflictAsPersistenceUncertain(): void {
+		$slug                        = 'ran-booster-reconcile-mismatch-fixture';
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/other', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::MANUAL );
+		$this->plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$this->preflight->artifact     = $this->artifact( '2.0.0' );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_PERSISTENCE_UNCERTAIN, $result['outcome_code'] );
+		self::assertSame( DeploymentState::NEEDS_ATTENTION->value, $this->database->rows[0]['state'] );
+		self::assertSame( 1, $this->plugins->stores );
+	}
+
 	public function testManualThemeInstallRunsTheFullSynchronousCoordinatorPath(): void {
 		$GLOBALS['ran_booster_worker_doing_cron'] = false;
 		$slug                                     = 'ran-booster-install-fixture-theme';
@@ -930,6 +973,7 @@ final class CoordinatorPluginRepository extends PluginRepository {
 	public ?Package $byIdentifier                   = null;
 	public ?Package $installed                      = null;
 	public ?PackageStorageFailure $readFailure      = null;
+	public ?PackageMutationResult $adoptionResult   = null;
 	public int $stores                              = 0;
 	public function __construct() {}
 	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
@@ -946,7 +990,7 @@ final class CoordinatorPluginRepository extends PluginRepository {
 		return PackageMutationResult::changed( PackageStorageOperation::INSERT ); }
 	public function adopt( Plugin $plugin ): PackageMutationResult {
 		++$this->stores;
-		return PackageMutationResult::changed( PackageStorageOperation::INSERT ); }
+		return $this->adoptionResult ?? PackageMutationResult::changed( PackageStorageOperation::INSERT ); }
 }
 
 final class CoordinatorThemeRepository extends ThemeRepository {

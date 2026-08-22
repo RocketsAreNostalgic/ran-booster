@@ -24,7 +24,7 @@ proposals may link here, but this register must remain self-contained.
   complexity at the recorded scale. “NO-GO” means the approach fails a current
   correctness, compatibility, security, or maintainability boundary.
 - Treat production lines and concept count as separate, restricted budgets.
-  Tests and documentation deletion do not offset production growth, and
+  Deleting tests and documentation does not offset production growth, and
   deletion in one repository does not justify an abstraction in another.
 - A positive Core delta or new Core service, DTO, registry, facade, public seam
   or persistent field requires the owner's approval before implementation,

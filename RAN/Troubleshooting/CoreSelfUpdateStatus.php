@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Troubleshooting;
 
 use RAN\WordPress\CoreSelfUpdatePolicy;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 use Throwable;
 
@@ -15,7 +16,7 @@ final class CoreSelfUpdateStatus {
 
 	public function __construct(
 		private readonly CoreSelfUpdatePolicy $policy,
-		private readonly ?object $updater
+		private readonly ?RepositoryReleaseNativeTarget $target
 	) {
 	}
 
@@ -24,7 +25,7 @@ final class CoreSelfUpdateStatus {
 	 */
 	public function diagnostics(): array {
 		$status             = $this->policy->diagnostics();
-		$updaterDiagnostics = $this->updaterDiagnostics();
+		$updaterDiagnostics = $this->targetDiagnostics();
 
 		return array_merge(
 			$status,
@@ -40,32 +41,13 @@ final class CoreSelfUpdateStatus {
 	}
 
 	/** @return array<string, mixed> */
-	private function updaterDiagnostics(): array {
-		if ( null !== $this->updater && is_callable( array( $this->updater, 'status' ) ) ) {
-			try {
-				$status = $this->updater->status();
-			} catch ( Throwable ) {
-				return array(
-					'state' => 'inactive',
-					'code'  => 'diagnostics_unavailable',
-				);
-			}
-			if ( $status instanceof RepositoryReleaseNativeTargetStatus ) {
-				return array(
-					'state'           => $status->active ? 'active' : 'inactive',
-					'code'            => $status->failureCode,
-					'offered_version' => $status->offeredVersion,
-					'last_check'      => $status->lastCheck,
-					'next_check'      => $status->nextCheck,
-				);
-			}
-		}
-		if ( null === $this->updater || ! is_callable( array( $this->updater, 'diagnostics' ) ) ) {
+	private function targetDiagnostics(): array {
+		if ( null === $this->target ) {
 			return array();
 		}
 
 		try {
-			$diagnostics = $this->updater->diagnostics();
+			$status = $this->target->status();
 		} catch ( Throwable ) {
 			return array(
 				'state' => 'inactive',
@@ -73,7 +55,13 @@ final class CoreSelfUpdateStatus {
 			);
 		}
 
-		return is_array( $diagnostics ) ? $diagnostics : array();
+		return array(
+			'state'           => $status->active ? 'active' : 'inactive',
+			'code'            => $status->failureCode,
+			'offered_version' => $status->offeredVersion,
+			'last_check'      => $status->lastCheck,
+			'next_check'      => $status->nextCheck,
+		);
 	}
 
 	private function safeKey( mixed $value ): ?string {

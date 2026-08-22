@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\WordPress;
 
-require_once __DIR__ . '/../Support/CoreUpdateClaimFixture.php';
+require_once dirname( __DIR__, 2 ) . '/../ran-wp-release-updater/src/Archive/TemporaryArtifact.php';
 
 use Closure;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\PreparedArtifact;
+use RAN\WPReleaseUpdater\V1\Archive\TemporaryArtifact;
 use RAN\WordPress\CorePackageExecutor;
 use ReflectionMethod;
-use Tests\Support\CoreUpdateClaimFixture;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- Tests deliberately own private temporary files.
 
@@ -19,10 +19,6 @@ final class CorePackageExecutorTest extends TestCase {
 
 	/** @var list<string> */
 	private array $paths = array();
-
-	protected function setUp(): void {
-		CoreUpdateClaimFixture::reset();
-	}
 
 	protected function tearDown(): void {
 		foreach ( $this->paths as $path ) {
@@ -46,13 +42,47 @@ final class CorePackageExecutorTest extends TestCase {
 			'example/example.php'
 		);
 
-		self::assertInstanceOf( CoreUpdateClaimFixture::class, $claim );
+		self::assertInstanceOf( TemporaryArtifact::class, $claim );
 		self::assertSame(
 			'1.2.3',
 			$claim->acceptCoreUpdate( 'plugin', 'example/example.php', 'update', $path )
 		);
 		$artifact->cleanup();
 		self::assertFileExists( $path );
+		self::assertTrue( $claim->discard() );
+	}
+
+	public function testThemeScopeAndPathReturnOneTypedClaim(): void {
+		$artifact = $this->artifact();
+		$callback = $this->handoffCallback( $artifact, 'theme', 'example' );
+		$path     = $artifact->getPath();
+		$extra    = array(
+			'theme'  => 'example',
+			'type'   => 'theme',
+			'action' => 'update',
+		);
+
+		$claim = $callback( null, $path, $path, $extra, 'theme', 'example' );
+
+		self::assertInstanceOf( TemporaryArtifact::class, $claim );
+		self::assertSame( '1.2.3', $claim->acceptCoreUpdate( 'theme', 'example', 'update', $path ) );
+		self::assertTrue( $claim->discard() );
+	}
+
+	public function testTypedClaimCanBeConsumedOnlyOnce(): void {
+		$artifact = $this->artifact();
+		$callback = $this->handoffCallback( $artifact );
+		$path     = $artifact->getPath();
+		$claim    = $callback( null, $path, $path, $this->extra(), 'plugin', 'example/example.php' );
+
+		self::assertInstanceOf( TemporaryArtifact::class, $claim );
+		self::assertSame( '1.2.3', $claim->acceptCoreUpdate( 'plugin', 'example/example.php', 'update', $path ) );
+		try {
+			$claim->acceptCoreUpdate( 'plugin', 'example/example.php', 'update', $path );
+			self::fail( 'The Core handoff capability was consumed twice.' );
+		} catch ( \RuntimeException ) {
+			self::assertTrue( true );
+		}
 		self::assertTrue( $claim->discard() );
 	}
 
@@ -93,6 +123,19 @@ final class CorePackageExecutorTest extends TestCase {
 		self::assertFileDoesNotExist( $path );
 	}
 
+	public function testEarlierArbitraryReplyRemainsUnchanged(): void {
+		$artifact = $this->artifact();
+		$callback = $this->handoffCallback( $artifact );
+		$path     = $artifact->getPath();
+
+		self::assertSame(
+			'already-admitted',
+			$callback( 'already-admitted', $path, $path, $this->extra(), 'plugin', 'example/example.php' )
+		);
+		$artifact->cleanup();
+		self::assertFileDoesNotExist( $path );
+	}
+
 	public function testEarlierTypedClaimSurvivesASecondCoreCallback(): void {
 		$firstArtifact  = $this->artifact();
 		$secondArtifact = $this->artifact( 'second immutable Core artifact' );
@@ -125,14 +168,18 @@ final class CorePackageExecutorTest extends TestCase {
 		self::assertTrue( $claim->discard() );
 	}
 
-	private function handoffCallback( PreparedArtifact $artifact ): Closure {
+	private function handoffCallback(
+		PreparedArtifact $artifact,
+		string $type = 'plugin',
+		string $identifier = 'example/example.php'
+	): Closure {
 		$artifact->assertUnchanged();
-		$method = new ReflectionMethod( CorePackageExecutor::class, 'coreReinstallHandoffFilter' );
+		$method = new ReflectionMethod( CorePackageExecutor::class, 'coreArtifactHandoffFilter' );
 
 		return $method->invoke(
 			new CorePackageExecutor(),
-			'plugin',
-			'example/example.php',
+			$type,
+			$identifier,
 			$artifact
 		);
 	}

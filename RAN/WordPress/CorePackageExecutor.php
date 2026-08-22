@@ -20,7 +20,7 @@ use WP_Error;
  */
 class CorePackageExecutor {
 
-	private const CORE_REINSTALL_HANDOFF_FILTER = 'ran_wp_github_release_updater_v1_core_reinstall_handoff';
+	private const CORE_ARTIFACT_HANDOFF_FILTER = 'ran_wp_release_updater_v1_core_artifact_handoff';
 
 	/** @var Closure(string, string, string, object|null): mixed|null */
 	private ?Closure $coreOperation;
@@ -143,7 +143,7 @@ class CorePackageExecutor {
 		$preDownload     = $this->preDownloadFilter( $type, 'update', $artifact, $inputs['identifier'] );
 		$sourceFilter    = $this->sourceSelectionFilter( $inputs['slug'], $inputs['subdirectory'], $type, 'update', $inputs['identifier'] );
 		$vcsFilter       = $this->vcsFilter( $type, $inputs['identifier'] );
-		$handoffFilter   = $this->coreReinstallHandoffFilter( $type, $inputs['identifier'], $artifact );
+		$handoffFilter   = $this->coreArtifactHandoffFilter( $type, $inputs['identifier'], $artifact );
 		$cronFilter      = static fn (): bool => true;
 		$completions     = array();
 		$complete        = $this->completionCollector( $completions );
@@ -152,7 +152,7 @@ class CorePackageExecutor {
 		add_filter( 'upgrader_pre_download', $preDownload, 10, 4 );
 		add_filter( 'upgrader_source_selection', $sourceFilter, 10, 4 );
 		add_filter( 'automatic_updates_is_vcs_checkout', $vcsFilter, 10, 2 );
-		add_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10, 6 );
+		add_filter( self::CORE_ARTIFACT_HANDOFF_FILTER, $handoffFilter, 10, 6 );
 		add_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX, 1 );
 		add_action( 'upgrader_process_complete', $complete, 100, 2 );
 
@@ -167,7 +167,7 @@ class CorePackageExecutor {
 			remove_filter( 'upgrader_pre_download', $preDownload, 10 );
 			remove_filter( 'upgrader_source_selection', $sourceFilter, 10 );
 			remove_filter( 'automatic_updates_is_vcs_checkout', $vcsFilter, 10 );
-			remove_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10 );
+			remove_filter( self::CORE_ARTIFACT_HANDOFF_FILTER, $handoffFilter, 10 );
 			remove_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX );
 			remove_action( 'upgrader_process_complete', $complete, 100 );
 		}
@@ -264,12 +264,12 @@ class CorePackageExecutor {
 	}
 
 	/**
-	 * Admit only this immutable branch artifact through the selected updater's
-	 * retained V1 handoff. Every other earlier download reply remains fail-closed.
+	 * Admit only this immutable Core artifact through the selected updater's
+	 * neutral handoff. Every other earlier download reply remains fail-closed.
 	 *
 	 * @return Closure(mixed, mixed, mixed, mixed, mixed, mixed): mixed
 	 */
-	private function coreReinstallHandoffFilter( string $type, string $identifier, PreparedArtifact $artifact ): Closure {
+	private function coreArtifactHandoffFilter( string $type, string $identifier, PreparedArtifact $artifact ): Closure {
 		return static function (
 			mixed $admitted,
 			mixed $reply,

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use RAN\Logging\BoosterLogger;
-use RAN\WPGitHubReleaseUpdater\V1\Artifact\ClaimedArtifact;
+use RAN\WPReleaseUpdater\V1\Archive\TemporaryArtifact;
 use RuntimeException;
 
 /**
@@ -96,10 +96,9 @@ final class PreparedArtifact {
 	}
 
 	/**
-	 * Transfer cleanup ownership to the shared updater without repeating the
-	 * digest check already performed by the pre-download boundary.
+	 * Transfer cleanup ownership to the shared updater.
 	 */
-	public function claimForNativeUpdate( string $type, string $identifier ): ClaimedArtifact {
+	public function claimForNativeUpdate( string $type, string $identifier ): TemporaryArtifact {
 		if ( $this->cleaned
 			|| $this->transferred
 			|| ! $this->verified ) {
@@ -109,7 +108,7 @@ final class PreparedArtifact {
 			throw new RuntimeException( 'The prepared deployment artifact changed before handoff.' );
 		}
 
-		$claim             = ClaimedArtifact::forCoreUpdate(
+		$claim             = TemporaryArtifact::forCoreUpdate(
 			$this->path,
 			$this->digest,
 			$type,

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tests\WordPress;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\WordPress\ReleaseUpdaterBootstrap;
 
 #[CoversClass( ReleaseUpdaterBootstrap::class )]
 final class ReleaseUpdaterBootstrapTest extends TestCase {
 
+	#[RunInSeparateProcess]
 	public function testRegistersCandidateBeforeAndActivatesRuntimeAfterPluginsLoaded(): void {
 		global $wp_version;
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated runtime-selection fixture.

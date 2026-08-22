@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-beta.27](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.26...v1.0.0-beta.27) (2026-08-22)
+
+
+### Bug Fixes
+
+* **admin:** report existing managed packages as success ([8d4bdd6](https://github.com/RocketsAreNostalgic/ran-booster/commit/8d4bdd6cdb40d0c534c80db118089fc9b5501aed))
+* **admin:** report existing managed packages as success ([1d30871](https://github.com/RocketsAreNostalgic/ran-booster/commit/1d30871e87ce616db9a2651e803c292f9ba7d782))
+
 ## [1.0.0-beta.26](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.25...v1.0.0-beta.26) (2026-08-21)
 
 

@@ -172,6 +172,7 @@ final class RepeatPackageViewTest extends TestCase {
 		return array(
 			array( PackagePagePresenter::plugin(), true, false ),
 			array( PackagePagePresenter::theme(), false, false ),
+			array( PackagePagePresenter::plugin(), false, true ),
 			array( PackagePagePresenter::plugin(), false, false ),
 			array( PackagePagePresenter::theme(), true, true ),
 		);
@@ -205,6 +206,17 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'class="ran-booster-package-settings__intro"', $html );
 		self::assertStringNotContainsString( 'WordPress disabled', $html );
 		self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Branch · main</p>', $html );
+		$saveActions = $this->actionGroupByClass( $html, 'ran-booster-package-settings__save-actions' );
+		self::assertStringContainsString( $installAnotherLink, $saveActions );
+		self::assertStringContainsString( $backLink, $saveActions );
+		$savePosition           = strpos( $saveActions, 'data-ran-booster-package-settings-save' );
+		$installAnotherPosition = strpos( $saveActions, $installAnotherLink );
+		$backPosition           = strpos( $saveActions, $backLink );
+		self::assertIsInt( $savePosition );
+		self::assertIsInt( $installAnotherPosition );
+		self::assertIsInt( $backPosition );
+		self::assertLessThan( $installAnotherPosition, $savePosition );
+		self::assertLessThan( $backPosition, $installAnotherPosition );
 		if ( ! $providerAvailable ) {
 			self::assertStringContainsString( '<strong>Provider unavailable.</strong>', $html );
 			self::assertMatchesRegularExpression(
@@ -242,23 +254,6 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertTrue( $actionsPosition < $reinstallPosition );
 			self::assertTrue( $reinstallPosition < $operationEnd );
 			self::assertTrue( $operationEnd < $saveActionsPosition );
-			$saveActions = $this->actionGroupByClass( $html, 'ran-booster-package-settings__save-actions' );
-			self::assertStringContainsString( $installAnotherLink, $saveActions );
-			self::assertStringContainsString( $backLink, $saveActions );
-			$savePosition           = strpos( $saveActions, 'data-ran-booster-package-settings-save' );
-			$installAnotherPosition = strpos( $saveActions, $installAnotherLink );
-			$backPosition           = strpos( $saveActions, $backLink );
-			self::assertIsInt( $savePosition );
-			self::assertIsInt( $installAnotherPosition );
-			self::assertIsInt( $backPosition );
-			self::assertLessThan(
-				$installAnotherPosition,
-				$savePosition
-			);
-			self::assertLessThan(
-				$backPosition,
-				$installAnotherPosition
-			);
 			self::assertStringContainsString(
 				'Save ' . $packageView->getType() . ' settings',
 				$html,

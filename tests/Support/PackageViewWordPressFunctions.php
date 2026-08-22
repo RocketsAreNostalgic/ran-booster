@@ -54,6 +54,12 @@ if ( ! function_exists( 'esc_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_kses_post' ) ) {
+	function wp_kses_post( mixed $value ): string {
+		return (string) $value;
+	}
+}
+
 if ( ! function_exists( 'wp_make_link_relative' ) ) {
 	function wp_make_link_relative( string $link ): string {
 		return (string) preg_replace( '|^(https?:)?//[^/]+(/?.*)|i', '$2', $link );

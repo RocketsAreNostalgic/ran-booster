@@ -28,6 +28,7 @@ $branchValue                      = isset( $submittedPackage['branch'] ) && is_s
 $subdirectoryValue                = isset( $submittedPackage['subdirectory'] ) && is_scalar( $submittedPackage['subdirectory'] )
 	? sanitize_text_field( wp_unslash( (string) $submittedPackage['subdirectory'] ) )
 	: (string) $package->getSubdirectory();
+$savedSubdirectoryValue           = (string) $package->getSubdirectory();
 $submittedDeploymentPolicy        = isset( $submittedPackage['deployment_policy'] ) && is_scalar( $submittedPackage['deployment_policy'] )
 	? \RAN\Deployment\DeploymentPolicy::tryFrom( sanitize_key( wp_unslash( (string) $submittedPackage['deployment_policy'] ) ) )
 	: null;
@@ -95,25 +96,30 @@ $packageExtensionPanels   = isset( $packageExtensionPanels ) && is_array( $packa
 $packageBranchReadiness   = isset( $packageBranchReadiness ) && is_array( $packageBranchReadiness )
 	? $packageBranchReadiness
 	: null;
-$packageWebhookCleanup    = isset( $packageWebhookCleanup ) && is_array( $packageWebhookCleanup )
+
+$repositoryBranchCheckOutcome = isset( $repositoryBranchCheckOutcome ) && is_string( $repositoryBranchCheckOutcome )
+	&& in_array( $repositoryBranchCheckOutcome, array( 'verified', 'unable_to_check', 'provider_unavailable' ), true )
+	? $repositoryBranchCheckOutcome
+	: null;
+$packageWebhookCleanup        = isset( $packageWebhookCleanup ) && is_array( $packageWebhookCleanup )
 	? $packageWebhookCleanup
 	: null;
-$packageSourceChoices     = is_array( $packageSource['choices'] ?? null ) ? $packageSource['choices'] : array();
-$packageAdvancedSections  = is_array( $packageSource['advanced_sections'] ?? null ) ? $packageSource['advanced_sections'] : array();
-$packageAdvancedSummary   = is_string( $packageSource['advanced_summary'] ?? null )
+$packageSourceChoices         = is_array( $packageSource['choices'] ?? null ) ? $packageSource['choices'] : array();
+$packageAdvancedSections      = is_array( $packageSource['advanced_sections'] ?? null ) ? $packageSource['advanced_sections'] : array();
+$packageAdvancedSummary       = is_string( $packageSource['advanced_summary'] ?? null )
 	? $packageSource['advanced_summary']
 	: __( 'Branch · provider default', 'ran-booster' );
-$packageSourceView        = is_string( $packageSource['selected'] ?? null ) ? $packageSource['selected'] : $package->getSource()->value;
-$packageCurrentSource     = is_string( $packageSource['current'] ?? null ) ? $packageSource['current'] : $package->getSource()->value;
-$packageSourceUnavailable = array_key_exists( 'unavailable', $packageSource ?? array() )
+$packageSourceView            = is_string( $packageSource['selected'] ?? null ) ? $packageSource['selected'] : $package->getSource()->value;
+$packageCurrentSource         = is_string( $packageSource['current'] ?? null ) ? $packageSource['current'] : $package->getSource()->value;
+$packageSourceUnavailable     = array_key_exists( 'unavailable', $packageSource ?? array() )
 	? true === $packageSource['unavailable']
 	: \RAN\PackageSource::BRANCH !== $package->getSource();
-$packageSourceMode        = 'edit';
-$packageRepositoryReady   = true;
-$packageAdvancedOpen      = isset( $_POST['ran_booster'] )
+$packageSourceMode            = 'edit';
+$packageRepositoryReady       = true;
+$packageAdvancedOpen          = isset( $_POST['ran_booster'] )
 	|| true === ( $packageSource['advanced_open'] ?? false )
 	|| $packageSourceView !== $packageCurrentSource;
-$packageDangerOpen        = in_array(
+$packageDangerOpen            = in_array(
 	$submittedAction,
 	array( $packageView->getAction( 'unlink' ), $packageView->getAction( 'unlink-delete' ) ),
 	true

@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -17,6 +18,8 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\UnknownProvider;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\Secrets\SecretsFile;
@@ -37,6 +40,7 @@ final readonly class ProviderSettingsPresenter {
 	private PublicRepositoryLookupProfileStore $publicLookupProfiles;
 	private CredentialExpiryObservationStore $expiryObservations;
 	private CredentialExpiryReminder $expiryReminders;
+	private RepositoryBranchCheckEvidenceStore $branchCheckEvidence;
 
 	public function __construct(
 		private ProviderRegistry $providers,
@@ -47,7 +51,8 @@ final readonly class ProviderSettingsPresenter {
 		?CredentialExpiryReminder $expiryReminders = null,
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null,
-		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null
+		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
 	) {
 		$this->publicLookupProfiles = $publicLookupProfiles ?? new PublicRepositoryLookupProfileStore();
 		$this->expiryObservations   = $expiryObservations ?? new CredentialExpiryObservationStore();
@@ -56,6 +61,7 @@ final readonly class ProviderSettingsPresenter {
 			$this->secrets,
 			$this->expiryObservations
 		);
+		$this->branchCheckEvidence  = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
 	}
 
 	/**
@@ -264,6 +270,80 @@ final readonly class ProviderSettingsPresenter {
 		} catch ( Throwable ) {
 			return null;
 		}
+	}
+
+	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
+	public function checkPackageRepositoryBranch( Package $package ): string {
+		if ( PackageSource::BRANCH !== $package->getSource() ) {
+			return 'unable_to_check';
+		}
+
+		try {
+			$provider = $this->providers->get( (string) $package->getProviderCode() );
+		} catch ( UnknownProvider ) {
+			return 'provider_unavailable';
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+
+		$archive = null;
+		$result  = 'unable_to_check';
+		try {
+			$repository = $package->getRepository()->reference;
+			if ( ! $repository->private ) {
+				$credentialId = null;
+				if ( $provider instanceof CredentialedPublicRepositoryBrowser
+					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
+					$credentialId = $this->publicLookupProfiles->get( $provider->getMetadata()->code->value );
+				}
+
+				$repository = new RepositoryReference(
+					$repository->locator,
+					$repository->providerRepositoryId,
+					false,
+					$credentialId
+				);
+			}
+
+			$archive     = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->getBranch() ) );
+			$resolvedRef = $archive->getResolvedRef();
+			if ( '' !== trim( $resolvedRef )
+				&& strlen( $resolvedRef ) <= 191
+				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolvedRef )
+			) {
+				$result = 'verified';
+			}
+		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Provider failures intentionally map to a closed result.
+		} catch ( Throwable ) {
+			// The provider failure is intentionally not exposed to administrators.
+		} finally {
+			if ( null !== $archive ) {
+				try {
+					$archive->cleanup();
+				} catch ( Throwable ) {
+					$result = 'unable_to_check';
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	/** @return array{outcome: 'verified', checked_at: string}|null */
+	public function packageRepositoryBranchEvidence( string $type, Package $package ): ?array {
+		return $this->branchCheckEvidence->find( $type, $package, $this->effectiveBranchCheckProfile( $package ) );
+	}
+
+	/** Persist a completed explicit check; non-verified results clear stale proof. */
+	public function recordPackageRepositoryBranchCheck( string $type, Package $package, string $outcome ): void {
+		$this->branchCheckEvidence->record( $type, $package, $this->effectiveBranchCheckProfile( $package ), $outcome );
+	}
+
+	private function effectiveBranchCheckProfile( Package $package ): ?string {
+		if ( $package->isPrivate() ) {
+			return $package->getCredentialId();
+		}
+		return $this->publicLookupProfiles->get( (string) $package->getProviderCode() );
 	}
 
 	/**

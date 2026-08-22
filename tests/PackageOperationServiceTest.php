@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use InvalidArgumentException;
 use RAN\Admin\ProviderSettingsPresenter;
+use RAN\Admin\PackageAdminController;
 use RAN\Booster;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentCoordinator;
@@ -91,6 +92,60 @@ final class PackageOperationServiceTest extends TestCase {
 		$query = $this->redirectQuery( $redirect );
 		self::assertSame( 'update', $query['ran_booster_result'] );
 		self::assertSame( 'example/example.php', $query['package'] );
+	}
+
+	public function testSaveAndCheckRedirectUsesTheAuthoritativeEditedPackageWithoutASuccessNotice(): void {
+		$package   = $this->plugin();
+		$dashboard = $this->dashboard( new OperationCoordinator(), $package );
+
+		$redirect = $dashboard->postPackageOperation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'branch'                             => 'feature/verified-after-save',
+					'subdirectory'                       => 'packages/example',
+					'check_repository_branch_after_save' => '1',
+				)
+			)
+		);
+
+		self::assertIsString( $redirect );
+		self::assertSame( 'feature/verified-after-save', $package->getBranch() );
+		self::assertSame( 'packages/example', $package->getSubdirectory() );
+		$query = $this->redirectQuery( $redirect );
+		self::assertSame( 'ran-booster-plugins', $query['page'] );
+		self::assertSame( 'example/example.php', $query['package'] );
+		self::assertSame( 'branch', $query['source_view'] );
+		self::assertSame( '1', $query['ran_booster_repository_branch_check'] );
+		self::assertArrayNotHasKey( 'ran_booster_result', $query );
+		self::assertArrayNotHasKey( '_ran_booster_notice_nonce', $query );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_repository_branch_nonce'],
+				PackageAdminController::repositoryBranchCheckAction( $package, 'plugin' )
+			)
+		);
+	}
+
+	public function testFailedSaveNeverProducesARepositoryBranchCheckRedirect(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$input     = $this->input(
+			'edit-plugin',
+			array(
+				'check_repository_branch_after_save' => '1',
+				'expected_branch'                    => 'older-branch',
+			)
+		);
+
+		self::assertFalse( $dashboard->postPackageOperation( 'edit-plugin', $input ) );
+		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertSame( 'ran_booster_package_edit_conflict', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'No settings were saved and no repository check ran.', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Save settings and check again.', $dashboard->messages[0]['message'] );
+
+		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
 	public function testFailedReinstallKeepsTheSavedSettingsNoticeBesideTheDeploymentError(): void {

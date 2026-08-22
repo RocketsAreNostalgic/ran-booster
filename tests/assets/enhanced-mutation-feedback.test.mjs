@@ -134,6 +134,20 @@ function fixture() {
 		setAttribute(name, value) {
 			errorAttributes.set(name, String(value));
 		},
+		querySelector(selector) {
+			if (selector !== 'p') {
+				return null;
+			}
+
+			return {
+				get textContent() {
+					return error.textContent;
+				},
+				set textContent(value) {
+					error.textContent = String(value);
+				},
+			};
+		},
 	};
 	const form = {
 		classList: classList(),
@@ -653,6 +667,56 @@ test('a package failure focuses and announces its rendered notice without copyin
 		{
 			message:
 				'The GitHub release must contain exactly one uploaded ZIP asset.',
+			type: 'assertive',
+		},
+	]);
+});
+
+test('an opted-in branch check moves its rendered provider failure beside the action', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	state.error.textContent = '';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-relocate-rendered-error';
+	let removed = false;
+	const renderedNotice = {
+		hidden: false,
+		textContent:
+			'The repository provider rate limit has been reached. Try again later.',
+		remove() {
+			removed = true;
+		},
+		querySelector(selector) {
+			return selector === 'p'
+				? {
+						textContent:
+							'The repository provider rate limit has been reached. Try again later.',
+					}
+				: null;
+		},
+	};
+	state.setRenderedErrors([renderedNotice]);
+
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+
+	assert.equal(removed, true);
+	assert.equal(state.error.hidden, false);
+	assert.equal(
+		state.error.textContent,
+		'The repository provider rate limit has been reached. Try again later.'
+	);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{
+			message:
+				'The repository provider rate limit has been reached. Try again later.',
 			type: 'assertive',
 		},
 	]);

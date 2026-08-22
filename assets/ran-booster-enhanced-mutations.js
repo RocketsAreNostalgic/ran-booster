@@ -275,6 +275,33 @@
 			return true;
 		}
 
+		function relocateRenderedFailure(form) {
+			if (
+				!form?.hasAttribute?.(
+					'data-ran-booster-relocate-rendered-error'
+				)
+			) {
+				return false;
+			}
+
+			const region = errorRegion(form);
+			const notice = renderedFailureNotice(form);
+			const message = renderedFailureMessage(notice);
+			if (!region || !message) {
+				return false;
+			}
+
+			const paragraph = region.querySelector?.('p');
+			if (paragraph) {
+				paragraph.textContent = message;
+			} else {
+				region.textContent = message;
+			}
+			notice.remove?.();
+			focusError(form);
+			return true;
+		}
+
 		function hideToast(toast) {
 			toast.classList.remove('is-visible');
 			toast.hidden = true;
@@ -504,6 +531,10 @@
 					successMessage: '',
 				};
 				pendingInteractionState.successMessage = successMessage;
+				return;
+			}
+
+			if (relocateRenderedFailure(form)) {
 				return;
 			}
 

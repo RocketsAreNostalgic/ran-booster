@@ -15,6 +15,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/Portability/BlueprintRepositoryVerifierTest.php',
 		'tests/Portability/EncryptedStoreBlueprintIntegrationTest.php',
 		'tests/Portability/TemporaryCredentialProvider.php',
+		'tests/Integration/phase-4.4-core-disposable-harness.php',
 		'tests/RepositoryProvider/BuiltInGitHubRegistrationTest.php',
 		'tests/RepositoryProvider/GitHubAnonymousBrowserHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubArchiveHostIntegrationTest.php',

@@ -570,7 +570,7 @@ class Dashboard {
 				$this->hasRequestedProvider(),
 				$this->requestedOpenPicker(),
 				$this->requestedPackageSourceView(),
-				'install' === ( $success['operation'] ?? null ) ? $success['identifier'] : null
+				in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null
 			)
 		);
 	}

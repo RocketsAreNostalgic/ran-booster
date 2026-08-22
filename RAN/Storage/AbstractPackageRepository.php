@@ -164,6 +164,9 @@ abstract class AbstractPackageRepository {
 		if ( ! $this->packageExists( (string) $model->package ) ) {
 			return $this->invalidPackageIdentityResult( PackageStorageOperation::UPDATE );
 		}
+		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source && null !== $model->subdirectory ) {
+			return $this->sourceConflictResult();
+		}
 		$data = array(
 			'repository'        => $model->repository,
 			'branch'            => $model->branch,
@@ -446,6 +449,7 @@ abstract class AbstractPackageRepository {
 			: $configuration->packageRoot();
 		if ( PackageSource::RELEASE_ASSET !== $package->getSource()
 			|| 1 !== $package->getSourceRevision()
+			|| null !== $package->getSubdirectory()
 			|| ! hash_equals( $expected, $identifier )
 			|| $userId < 0 ) {
 			return $this->sourceConflictResult();

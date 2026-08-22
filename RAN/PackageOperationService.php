@@ -170,7 +170,10 @@ final readonly class PackageOperationService {
 			);
 		}
 		$releaseManaged = PackageSource::RELEASE_ASSET === $existing->getSource();
-		$repository     = $releaseManaged
+		if ( $releaseManaged && null !== $existing->getSubdirectory() ) {
+			throw new RuntimeException( 'Published release packages with a repository subdirectory must return to Branch first.' );
+		}
+		$repository = $releaseManaged
 			? new ManagedRepository(
 				$existing->getProviderCode(),
 				(string) $existing->getRepository(),
@@ -180,7 +183,7 @@ final readonly class PackageOperationService {
 				'' === (string) $operation->credentialId ? null : $operation->credentialId
 			)
 			: $this->repository( $operation, $this->providerRepositoryIdForEdit( $operation, $existing ) );
-		$result         = 'plugin' === $operation->packageType
+		$result     = 'plugin' === $operation->packageType
 			? $this->plugins->editPlugin( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) )
 			: $this->themes->editTheme( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) );
 		$result->requireSuccess();

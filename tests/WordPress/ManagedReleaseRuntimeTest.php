@@ -341,6 +341,52 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'target_registration_failed', $registrar->failureCode( 'plugin', 'invalid/invalid.php' ) );
 	}
 
+	public function testRegistrarQuarantinesNestedLegacyPluginAndThemeAndSuppressesTheirOffers(): void {
+		$plugin  = $this->package(
+			'plugin',
+			self::NATIVE_PLUGIN,
+			'example',
+			DeploymentPolicy::MANUAL,
+			subdirectory: 'packages/example'
+		);
+		$theme   = $this->package(
+			'theme',
+			'example-theme',
+			'example-theme',
+			DeploymentPolicy::MANUAL,
+			subdirectory: 'themes/example'
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $plugin );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			new RuntimeReleaseStore(
+				array(
+					"plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ),
+					"theme\0example-theme"           => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
+				)
+			),
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry()
+		);
+
+		$registrar->register();
+		$pluginOffers = (object) array( 'response' => array( self::NATIVE_PLUGIN => (object) array() ) );
+		$themeOffers  = (object) array( 'response' => array( 'example-theme' => (object) array() ) );
+
+		self::assertNull( $registrar->target( 'plugin', self::NATIVE_PLUGIN ) );
+		self::assertNull( $registrar->target( 'theme', 'example-theme' ) );
+		self::assertSame( 'subdirectory_not_supported', $registrar->failureCode( 'plugin', self::NATIVE_PLUGIN ) );
+		self::assertSame( 'subdirectory_not_supported', $registrar->failureCode( 'theme', 'example-theme' ) );
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $registrar->suppressUnauthorizedPluginOffers( $pluginOffers )->response );
+		self::assertArrayNotHasKey( 'example-theme', $registrar->suppressUnauthorizedThemeOffers( $themeOffers )->response );
+	}
+
 	public function testRegistrarRejectsAProviderTargetThatReturnsFalse(): void {
 		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );
@@ -1442,6 +1488,130 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( DeploymentPolicy::AUTOMATIC, $package->getDeploymentPolicy() );
 	}
 
+	public function testNestedBranchPluginIsRejectedBeforeReleaseProviderWork(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH,
+			subdirectory: 'packages/example'
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore();
+		$listCalls = 0;
+		$providers = $this->releaseMetadataRegistry(
+			list: static function () use ( &$listCalls ): RepositoryReleaseCandidateList {
+				++$listCalls;
+
+				return new RepositoryReleaseCandidateList( array() );
+			}
+		);
+		$facade    = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, new RuntimeUpdaterLock(), $providers ),
+			new RuntimeUpdaterLock(),
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+
+		$status = $facade->status( 'plugin', 'example/example.php' );
+		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'nonce' );
+
+		self::assertSame( 'subdirectory_not_supported', $status->eligibility()->code() );
+		self::assertSame( 'subdirectory_not_supported', $result->code() );
+		self::assertSame( 0, $listCalls );
+		self::assertSame( array(), $store->transitions );
+	}
+
+	public function testNestedBranchThemeIsRejectedForPrereleaseBeforeReleaseProviderWork(): void {
+		$package = $this->package(
+			'theme',
+			'example-theme',
+			'example-theme',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH,
+			subdirectory: 'themes/example'
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$store     = new RuntimeReleaseStore();
+		$listCalls = 0;
+		$providers = $this->releaseMetadataRegistry(
+			list: static function () use ( &$listCalls ): RepositoryReleaseCandidateList {
+				++$listCalls;
+
+				return new RepositoryReleaseCandidateList( array() );
+			}
+		);
+		$facade    = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, new RuntimeUpdaterLock(), $providers ),
+			new RuntimeUpdaterLock(),
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+
+		$status = $facade->status( 'theme', 'example-theme' );
+		$result = $facade->enable( 'theme', 'example-theme', 1, 'prerelease', 'nonce' );
+
+		self::assertSame( 'subdirectory_not_supported', $status->eligibility()->code() );
+		self::assertSame( 'subdirectory_not_supported', $result->code() );
+		self::assertSame( 0, $listCalls );
+		self::assertSame( array(), $store->transitions );
+	}
+
+	public function testLegacyNestedReleaseStatusAndChannelChangesUseTheSameBoundedReason(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			subdirectory: 'packages/example'
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore(
+			array( "plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
+		);
+		$lock      = new RuntimeUpdaterLock();
+		$providers = $this->releaseMetadataRegistry();
+		$facade    = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+
+		$status = $facade->status( 'plugin', 'example/example.php' );
+		foreach ( array( 'stable', 'prerelease' ) as $channel ) {
+			$result = $facade->changeChannel( 'plugin', 'example/example.php', 1, $channel, 'nonce' );
+			self::assertSame( 'subdirectory_not_supported', $result->code() );
+		}
+
+		self::assertSame( 'subdirectory_not_supported', $status->eligibility()->code() );
+		self::assertSame( 'subdirectory_not_supported', $status->failureCode() );
+		self::assertSame( array(), $store->channelChanges );
+		self::assertSame( 0, $lock->acquires );
+	}
+
 	public function testFacadeProjectsNativeDiagnosticsAndRefreshesOnlyExactReleaseRevision(): void {
 		$package = $this->package(
 			'theme',
@@ -2032,7 +2202,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		string $credentialId = '',
 		string $provider = 'gh',
 		PackageSource $source = PackageSource::RELEASE_ASSET,
-		int $sourceRevision = 1
+		int $sourceRevision = 1,
+		?string $subdirectory = null
 	): Package {
 		$package = $this->createStub( Package::class );
 		$package->method( 'getIdentifier' )->willReturn( $identifier );
@@ -2048,6 +2219,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$package->method( 'getCredentialId' )->willReturn( $credentialId );
 		$package->method( 'getPrivate' )->willReturn( $private );
 		$package->method( 'getVersion' )->willReturn( '1.0.0' );
+		$package->method( 'getSubdirectory' )->willReturn( $subdirectory );
 		unset( $type );
 
 		return $package;

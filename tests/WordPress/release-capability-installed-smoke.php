@@ -84,7 +84,7 @@ try {
 		$assertResult( $list, 'release_candidates_available' );
 		$candidate = $list->data()['candidates'][0] ?? null;
 		if ( ! is_array( $candidate )
-			|| 42 !== ( $candidate['release_id'] ?? null )
+			|| '42' !== ( $candidate['release_id'] ?? null )
 			|| 'v2.0.0' !== ( $candidate['tag'] ?? null )
 			|| '2.0.0' !== ( $candidate['version'] ?? null )
 			|| false !== ( $candidate['prerelease'] ?? null )

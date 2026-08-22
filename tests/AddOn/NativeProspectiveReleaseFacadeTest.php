@@ -16,6 +16,7 @@ namespace Tests\AddOn;
 
 	use PHPUnit\Framework\TestCase;
 	use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
+	use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 	use RAN\Admin\PackageRepositoryRequestResolver;
 	use RAN\Deployment\DeploymentPolicy;
 	use RAN\Deployment\PreparedArtifact;
@@ -71,6 +72,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	private ?string $artifactPath                              = null;
 	private ?ProspectiveRepositoryReleaseArtifact $acquisition = null;
+
+	public function testProspectiveFacadeApiVersionTracksTheOpaqueReleaseIdContract(): void {
+		self::assertSame( 7, ProspectiveReleaseFacade::API_VERSION );
+	}
 
 	protected function setUp(): void {
 		ReleaseCandidatePreflight::reset();
@@ -737,6 +742,41 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, $lock->acquireCalls );
 		self::assertSame( 1, $lock->releaseCalls );
 		self::assertFileDoesNotExist( (string) $this->artifactPath );
+	}
+
+	public function testOpaqueReleaseIdPropagatesExactlyThroughFacadeInspectionAndInstallation(): void {
+		$opaqueId = 'gid://forge/release/{042}:leading-000';
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$facade   = $this->facade( $plugins, $executor );
+		$this->setReadyRelease();
+
+		$inspection = $facade->inspect(
+			'plugin',
+			$this->repositoryRequest(),
+			$opaqueId,
+			'v1.2.3',
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertTrue( $inspection->successful() );
+		self::assertSame( $opaqueId, $inspection->data()['release_id'] ?? null );
+		self::assertSame( $opaqueId, ProspectiveRepositoryProvider::$inspectionInput['release_id'] ?? null );
+
+		$installation = $facade->install(
+			'plugin',
+			$this->repositoryRequest(),
+			$opaqueId,
+			'v1.2.3',
+			(string) ( $inspection->data()['fingerprint'] ?? '' ),
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertTrue( $installation->successful() );
+		self::assertSame( 'installed', $installation->code() );
+		self::assertSame( $opaqueId, ProspectiveRepositoryProvider::$acquisitionInput['release_id'] ?? null );
 	}
 
 	public function testInspectReturnsTheFingerprintRequiredForInstallContinuity(): void {

@@ -993,8 +993,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame(
 			'plugin' === $type
-				? 'Plugin is already managed by Booster. No package settings were changed.'
-				: 'Theme is already managed by Booster. No package settings were changed.',
+				? 'Plugin is already installed and managed by Booster. No package settings were changed.'
+				: 'Theme is already installed and managed by Booster. No package settings were changed.',
 			$dashboard->messages[0]['message']
 		);
 	}

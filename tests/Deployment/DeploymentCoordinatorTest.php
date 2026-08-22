@@ -79,6 +79,8 @@ final class DeploymentCoordinatorTest extends TestCase {
 	private int $randomByte = 1;
 	/** @var list<string> */
 	private array $artifacts = array();
+	/** @var list<string> */
+	private array $directories = array();
 
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_worker_doing_cron']                = true;
@@ -121,6 +123,11 @@ final class DeploymentCoordinatorTest extends TestCase {
 		foreach ( $this->artifacts as $path ) {
 			if ( file_exists( $path ) || is_link( $path ) ) {
 				unlink( $path );
+			}
+		}
+		foreach ( $this->directories as $path ) {
+			if ( is_dir( $path ) ) {
+				rmdir( $path );
 			}
 		}
 		unset( $GLOBALS['wpdb'], $GLOBALS['ran_booster_worker_doing_cron'], $GLOBALS['ran_booster_storage_test_options'], $GLOBALS['ran_booster_package_mutation_guard_multisite'], $GLOBALS['ran_booster_package_mutation_guard_file_mods'], $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
@@ -305,6 +312,44 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertSame( 'succeeded', $result['status'] );
 		self::assertSame( DeploymentPolicy::DISABLED, $this->plugins->installed->getDeploymentPolicy() );
 		self::assertSame( 1, $this->plugins->stores );
+	}
+
+	public function testInstallWithAnExistingManagedTargetIsADurableNoChangeWithoutRemoteOrFilesystemWork(): void {
+		$slug = 'ran-booster-existing-managed-install-fixture';
+		$this->createPluginDestination( $slug );
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'different-branch', true, 'different-credential' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$this->plugins->byIdentifier->setSource( PackageSource::RELEASE_ASSET, 9 );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'succeeded', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_NO_CHANGE, $result['outcome_code'] );
+		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
+		self::assertSame( 0, $this->provider->prepareCalls );
+		self::assertSame( 0, $this->preflight->calls );
+		self::assertSame( 0, $this->executor->calls );
+		self::assertSame( 0, $this->plugins->stores );
+	}
+
+	public function testInstallWithAnExistingMismatchedManagedTargetStaysPolicyBlocked(): void {
+		$slug = 'ran-booster-existing-mismatched-install-fixture';
+		$this->createPluginDestination( $slug );
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/other', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_POLICY_BLOCKED, $result['outcome_code'] );
+		self::assertSame( DeploymentState::FAILED->value, $this->database->rows[0]['state'] );
+		self::assertSame( 0, $this->provider->prepareCalls );
+		self::assertSame( 0, $this->preflight->calls );
+		self::assertSame( 0, $this->executor->calls );
+		self::assertSame( 0, $this->plugins->stores );
 	}
 
 	public function testInstallTreatsAnExactExistingManagementConflictAsVerifiedSuccess(): void {
@@ -864,6 +909,15 @@ final class DeploymentCoordinatorTest extends TestCase {
 		$this->artifacts[] = $path;
 
 		return new PreparedArtifact( $path, str_repeat( 'a', 40 ), $version, hash_file( 'sha256', $path ), $identity['device'], $identity['inode'], $identity['size'], $identity['permissions'], $identity['links'] );
+	}
+
+	private function createPluginDestination( string $slug ): void {
+		$path = WP_PLUGIN_DIR . '/' . $slug;
+		if ( ! is_dir( WP_PLUGIN_DIR ) ) {
+			mkdir( WP_PLUGIN_DIR, 0700, true );
+		}
+		mkdir( $path, 0700 );
+		$this->directories[] = $path;
 	}
 
 	private function plugin( string $version = '1.0.0', string $repository = 'owner/example', string $slug = 'example' ): Plugin {

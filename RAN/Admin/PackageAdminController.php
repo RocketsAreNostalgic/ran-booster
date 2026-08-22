@@ -252,10 +252,10 @@ final class PackageAdminController {
 		if ( 'already-managed' === $operation ) {
 			$dashboard->addMessage(
 				array(
-					'type'    => 'success',
+					'type'    => 'warning',
 					'message' => sprintf(
 						/* translators: %s: package type, such as Plugin or Theme. */
-						__( '%s is already managed by Booster. No package settings were changed.', 'ran-booster' ),
+						__( '%s is already installed and managed by Booster. No package settings were changed.', 'ran-booster' ),
 						'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' )
 					),
 				)

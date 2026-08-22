@@ -51,7 +51,7 @@ final readonly class PackageOperationService {
 		};
 	}
 
-	/** @return array{status: 'succeeded'|'failed', package?: Package, correlation_id: string, outcome_code: string} */
+	/** @return array{status: 'succeeded'|'already-managed'|'failed', package?: Package, correlation_id: string, outcome_code: string} */
 	private function deploy( PackageOperation $operation ): array {
 		$result        = $this->deployments->executeManual( $operation );
 		$status        = $result['status'] ?? null;
@@ -79,6 +79,9 @@ final readonly class PackageOperationService {
 		}
 
 		$safe['package'] = $this->deployedPackage( $operation );
+		if ( 'install' === $operation->operation && DeploymentOutcome::CODE_NO_CHANGE === $outcomeCode ) {
+			$safe['status'] = 'already-managed';
+		}
 
 		return $safe;
 	}

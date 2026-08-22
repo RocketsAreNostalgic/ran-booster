@@ -303,6 +303,15 @@ class DeploymentCoordinator {
 					'outcome_code' => $outcome->getCode(),
 				)
 			);
+		} catch ( ExistingManagedDestination ) {
+			$outcome = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_NO_CHANGE );
+			BoosterLogger::log(
+				'install skipped because the destination is already managed',
+				$context + array(
+					'step'         => 'existing_managed_destination',
+					'outcome_code' => $outcome->getCode(),
+				)
+			);
 		} catch ( StaleDeployment ) {
 			$outcome = DeploymentOutcome::fromCode( $mutation ? DeploymentOutcome::CODE_INTERRUPTED : DeploymentOutcome::CODE_STALE_EVENT );
 			BoosterLogger::log(
@@ -524,6 +533,9 @@ class DeploymentCoordinator {
 				throw new RuntimeException( 'RAN Booster cannot replace its own plugin files.' );
 			}
 			if ( $this->destinationExists( (string) $data['package_type'], $request->packageSlug ) ) {
+				if ( $this->existingManagementMatchesInstallTarget( $attempt ) ) {
+					throw new ExistingManagedDestination();
+				}
 				throw new RuntimeException( 'The package destination already exists.' );
 			}
 
@@ -534,6 +546,28 @@ class DeploymentCoordinator {
 		$this->assertPackageSnapshot( $package, $data, $request );
 
 		return $package;
+	}
+
+	private function existingManagementMatchesInstallTarget( DeploymentAttempt $attempt ): bool {
+		try {
+			$data       = $attempt->safeData();
+			$request    = $attempt->getRequest();
+			$installed  = $this->installedPackage( (string) $data['package_type'], $request->packageSlug );
+			$identifier = $installed->getIdentifier();
+			if ( ! is_string( $identifier ) || '' === $identifier ) {
+				return false;
+			}
+			$existing = $this->packageFromIdentifier( (string) $data['package_type'], $identifier );
+
+			return hash_equals( $identifier, (string) $existing->getIdentifier() )
+				&& $existing->getProviderCode() === $data['provider']
+				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
+				&& hash_equals( (string) $existing->getRepository(), $request->repository )
+				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
+				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug );
+		} catch ( Throwable ) {
+			return false;
+		}
 	}
 
 	private function assertPackageSnapshot( Package $package, array $data, DeploymentRequest $request ): void {

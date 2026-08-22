@@ -186,8 +186,8 @@ final class PackageOperationServiceTest extends TestCase {
 			),
 			$notice
 		);
-		self::assertSame( 'success', $dashboard->messages[0]['type'] );
-		self::assertSame( 'Plugin is already managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
+		self::assertSame( 'warning', $dashboard->messages[0]['type'] );
+		self::assertSame( 'Plugin is already installed and managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
 	}
 
 	public function testLinkKeepsMismatchedExistingManagementAsStorageFailure(): void {
@@ -490,6 +490,65 @@ final class PackageOperationServiceTest extends TestCase {
 			self::assertInstanceOf( Package::class, $result['package'] );
 		}
 		self::assertSame( 4, $coordinator->calls );
+	}
+
+	public function testNoChangeInstallIsReportedAsAlreadyManaged(): void {
+		$coordinator         = new OperationCoordinator();
+		$coordinator->result = array(
+			'status'         => 'succeeded',
+			'correlation_id' => str_repeat( 'a', 32 ),
+			'outcome_code'   => 'no_change',
+		);
+		$service             = $this->service(
+			new OperationPluginRepository( $this->plugin() ),
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			$coordinator
+		);
+
+		$result = $service->execute( PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin' ) ) );
+
+		self::assertSame( 'already-managed', $result['status'] );
+		self::assertSame( 'no_change', $result['outcome_code'] );
+		self::assertInstanceOf( Package::class, $result['package'] );
+	}
+
+	public function testNoChangeInstallRedirectsToTheSignedAlreadyManagedWarning(): void {
+		$coordinator         = new OperationCoordinator();
+		$coordinator->result = array(
+			'status'         => 'succeeded',
+			'correlation_id' => str_repeat( 'a', 32 ),
+			'outcome_code'   => 'no_change',
+		);
+		$dashboard           = $this->dashboard( $coordinator );
+
+		$redirect = $dashboard->postPackageOperation( 'install-plugin', $this->input( 'install-plugin' ) );
+
+		self::assertIsString( $redirect );
+		$query = $this->redirectQuery( $redirect );
+		self::assertSame( 'already-managed', $query['ran_booster_result'] );
+		self::assertSame( 'example/example.php', $query['ran_booster_package'] );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_notice_nonce'],
+				'ran-booster-package-success|plugin|already-managed|example/example.php'
+			)
+		);
+		$_GET = $query;
+		self::assertSame(
+			array(
+				'operation'  => 'already-managed',
+				'identifier' => 'example/example.php',
+			),
+			$this->invokePackageSuccessNotice( $dashboard, 'plugin' )
+		);
+		self::assertSame(
+			array(
+				'type'    => 'warning',
+				'message' => 'Plugin is already installed and managed by Booster. No package settings were changed.',
+			),
+			$dashboard->messages[0]
+		);
 	}
 
 	public function testTerminalDeploymentFailureReturnsOnlyFixedSafeData(): void {

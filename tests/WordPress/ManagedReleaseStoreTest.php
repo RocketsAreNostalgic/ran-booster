@@ -138,6 +138,47 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( 'disabled', $database->row['deployment_policy'] );
 	}
 
+	public function testReleaseTransitionAndChannelChangeRejectNestedRowsWithoutWriting(): void {
+		$database = new ManagedReleaseStoreDatabase(
+			array(
+				'type'                  => 1,
+				'package'               => 'installed/example.php',
+				'source'                => 'branch',
+				'source_revision'       => 4,
+				'deployment_policy'     => 'manual',
+				'subdirectory'          => 'packages/example',
+				'release_configuration' => null,
+			)
+		);
+		$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+
+		try {
+			$store->transition(
+				'plugin',
+				'installed/example.php',
+				PackageSource::BRANCH,
+				4,
+				PackageSource::RELEASE_ASSET,
+				new ManagedReleaseConfiguration( 'example', 'example.php' ),
+				7
+			);
+			self::fail( 'A release transition must reject a configured subdirectory.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertStringContainsString( 'subdirectory is not supported', $failure->getMessage() );
+		}
+		self::assertSame( array(), $database->updates );
+
+		$database->row['source']                = PackageSource::RELEASE_ASSET->value;
+		$database->row['release_configuration'] = ( new ManagedReleaseConfiguration( 'example', 'example.php' ) )->toJson();
+		try {
+			$store->changeChannel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			self::fail( 'A release channel change must reject a configured subdirectory.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertStringContainsString( 'subdirectory is not supported', $failure->getMessage() );
+		}
+		self::assertSame( array(), $database->updates );
+	}
+
 	public function testSourceTransitionsPreserveDisabledAndManualAndResetAutomatic(): void {
 		foreach ( array(
 			'disabled'  => 'disabled',

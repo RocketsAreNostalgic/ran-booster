@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "../ran-wp-release-updater",
-                "reference": "5869c789348d7eb138d4686a4c101e676b7c472e"
+                "reference": "320fb89e1a93813907419cecab7e05892b6d9419"
             },
             "require": {
                 "ext-hash": "*",

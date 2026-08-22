@@ -22,11 +22,19 @@ function phase44_launcher(): void {
 	$wp     = getenv( 'RAN_BOOSTER_PHASE44_WORDPRESS_ROOT' ) ?: dirname( (string) $root, 3 );
 	$wp     = is_string( $wp ) ? realpath( $wp ) : false;
 	$zip    = is_string( $root ) ? $root . '/build/ran-booster-1.0.0-beta.27.zip' : '';
+	$artifactSha256       = getenv( 'RAN_BOOSTER_PHASE44_ARTIFACT_SHA256' );
+	$artifactSourceCommit = getenv( 'RAN_BOOSTER_PHASE44_ARTIFACT_SOURCE_COMMIT' );
 	$php    = phase44_php82();
 	$wpCli  = '/usr/local/bin/wp';
 	$mysqld = getenv( 'RAN_BOOSTER_PHASE44_MYSQLD' ) ?: '/Applications/Local.app/Contents/Resources/extraResources/lightning-services/mysql-8.4.0/bin/darwin-arm64/bin/mysqld';
-	if ( ! is_string( $root ) || ! is_string( $wp ) || ! is_file( $wp . '/wp-load.php' ) || is_link( $wp ) || ! is_file( $zip ) || '431801fe0a0bfb4bcab45bb2f8e0a52192c5119cd2833258123b168ff009da72' !== hash_file( 'sha256', $zip ) || ! is_file( $php ) || ! is_executable( $php ) || ! is_file( $wpCli ) || ! is_file( $mysqld ) || ! is_executable( $mysqld ) ) {
-		throw new RuntimeException( 'Phase 4.4 requires the exact local WordPress 7.0.4, PHP 8.2, WP-CLI, mysqld and built Core ZIP.' );
+	$artifactContractValid = is_string( $artifactSha256 )
+		&& is_string( $artifactSourceCommit )
+		&& 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $artifactSha256 )
+		&& 1 === preg_match( '/\A[a-f0-9]{40}\z/D', $artifactSourceCommit )
+		&& is_file( $zip )
+		&& phase44_exact_artifact( $zip, $artifactSha256, $artifactSourceCommit );
+	if ( ! is_string( $root ) || ! is_string( $wp ) || ! is_file( $wp . '/wp-load.php' ) || is_link( $wp ) || ! $artifactContractValid || ! is_file( $php ) || ! is_executable( $php ) || ! is_file( $wpCli ) || ! is_file( $mysqld ) || ! is_executable( $mysqld ) ) {
+		throw new RuntimeException( 'Phase 4.4 requires exact artifact SHA-256 and source-commit environment contracts, local WordPress 7.0.4, PHP 8.2, WP-CLI, mysqld and the built Core ZIP.' );
 	}
 	if ( '7.0.4' !== trim( phase44_command( array( $php, $wpCli, '--path=' . $wp, 'core', 'version' ), $wp )['stdout'] ) ) {
 		throw new RuntimeException( 'Phase 4.4 refuses a WordPress source other than 7.0.4.' );
@@ -139,6 +147,39 @@ function phase44_launcher(): void {
 			phase44_remove_tree( $base );
 		}
 	}
+}
+
+/**
+ * The artifact source is deliberately supplied separately from this proof's
+ * checkout HEAD: test-only evidence may follow the built release artifact.
+ */
+function phase44_exact_artifact( string $zip, string $expectedSha256, string $expectedSourceCommit ): bool {
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- The caller supplies the exact immutable artifact digest.
+	$actualSha256 = hash_file( 'sha256', $zip );
+	if ( ! is_string( $actualSha256 ) || ! hash_equals( $expectedSha256, $actualSha256 ) ) {
+		return false;
+	}
+	$archive = new ZipArchive();
+	if ( true !== $archive->open( $zip, ZipArchive::RDONLY ) ) {
+		return false;
+	}
+	try {
+		$marker = $archive->getFromName( 'ran-booster/ran-booster-release.json' );
+	} finally {
+		$archive->close();
+	}
+	try {
+		$document = is_string( $marker ) ? json_decode( $marker, true, 16, JSON_THROW_ON_ERROR ) : null;
+	} catch ( JsonException ) {
+		return false;
+	}
+
+	return array(
+		'schema'         => 'ran-booster-core-release',
+		'schema_version' => 1,
+		'version'        => '1.0.0-beta.27',
+		'commit'         => $expectedSourceCommit,
+	) === $document;
 }
 
 function phase44_worker(): void {

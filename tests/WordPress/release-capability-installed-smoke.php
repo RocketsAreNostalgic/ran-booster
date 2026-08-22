@@ -95,7 +95,7 @@ try {
 		$inspection = $facade->inspect(
 			$type,
 			$request,
-			42,
+			'42',
 			'v2.0.0',
 			'stable',
 			wp_create_nonce( $facade->nonceAction( 'inspect', $type ) )
@@ -109,7 +109,7 @@ try {
 		$result = $facade->install(
 			$type,
 			$request,
-			42,
+			'42',
 			'v2.0.0',
 			$evidence['fingerprint'],
 			'stable',

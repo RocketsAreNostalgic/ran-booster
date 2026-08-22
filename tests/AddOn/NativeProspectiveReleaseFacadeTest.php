@@ -177,11 +177,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		$results = array(
 			$facade->listCandidates( 'plugin', $repository, 'stable', 'valid-nonce' ),
-			$facade->inspect( 'plugin', $repository, 42, 'v1.2.3', 'stable', 'valid-nonce' ),
+			$facade->inspect( 'plugin', $repository, '42', 'v1.2.3', 'stable', 'valid-nonce' ),
 			$facade->install(
 				'plugin',
 				$repository,
-				42,
+				'42',
 				'v1.2.3',
 				self::FINGERPRINT,
 				'stable',
@@ -254,11 +254,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( array(), $listing->data() );
 
 		$results = array(
-			$facade->inspect( 'plugin', $repository, 42, 'v1.2.3', 'stable', 'valid-nonce' ),
+			$facade->inspect( 'plugin', $repository, '42', 'v1.2.3', 'stable', 'valid-nonce' ),
 			$facade->install(
 				'plugin',
 				$repository,
-				42,
+				'42',
 				'v1.2.3',
 				self::FINGERPRINT,
 				'stable',
@@ -312,7 +312,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -329,7 +329,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
 
-	public function testLegacyCandidateProjectionRejectsAnOverflowingProviderIdentity(): void {
+	public function testCandidateProjectionPreservesAFormerlyOverflowingProviderIdentity(): void {
 		$provider = new ProspectiveRepositoryProvider(
 			'gh',
 			new RepositoryReleaseCandidateList(
@@ -358,14 +358,14 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'valid-nonce'
 		);
 
-		self::assertFalse( $result->successful() );
-		self::assertSame( 'unable_to_check', $result->code() );
-		self::assertSame( array(), $result->data() );
+		self::assertTrue( $result->successful() );
+		self::assertSame( 'release_candidates_available', $result->code() );
+		self::assertSame( '9999999999999999999', $result->data()['candidates'][0]['release_id'] ?? null );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
 		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
 	}
 
-	public function testOpaqueProviderReleaseIdentitySurvivesDirectInspectionButNotTheNumericFacade(): void {
+	public function testOpaqueProviderReleaseIdentitySurvivesTheProspectiveFacade(): void {
 		$opaqueId   = 'release:opaque/42';
 		$provider   = new ProspectiveRepositoryProvider(
 			'gh',
@@ -399,11 +399,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'valid-nonce'
 		);
 
-		self::assertFalse( $result->successful() );
-		self::assertSame( 'unable_to_check', $result->code() );
-		self::assertSame( array(), $result->data() );
+		self::assertTrue( $result->successful() );
+		self::assertSame( 'release_candidates_available', $result->code() );
+		self::assertSame( $opaqueId, $result->data()['candidates'][0]['release_id'] ?? null );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$inspectionCalls, 'Only the direct Provider API inspection may receive the opaque ID.' );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$inspectionCalls );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
@@ -522,7 +522,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			array(
 				'candidates' => array(
 					array(
-						'release_id'           => 52,
+						'release_id'           => '52',
 						'tag'                  => 'v2.0.0-beta.2',
 						'version'              => '2.0.0-beta.2',
 						'prerelease'           => true,
@@ -530,7 +530,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 						'expected_asset_names' => array( 'example-2.0.0-beta.2.zip' ),
 					),
 					array(
-						'release_id'           => 42,
+						'release_id'           => '42',
 						'tag'                  => 'v1.2.3',
 						'version'              => '1.2.3',
 						'prerelease'           => false,
@@ -582,7 +582,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$facade->inspect(
 				'plugin',
 				$this->repositoryRequest(),
-				42,
+				'42',
 				'v1.2.3',
 				'preview',
 				'valid-nonce'
@@ -590,7 +590,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$facade->install(
 				'plugin',
 				$this->repositoryRequest(),
-				42,
+				'42',
 				'v1.2.3',
 				self::FINGERPRINT,
 				'preview',
@@ -618,7 +618,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -643,7 +643,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -669,7 +669,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -692,7 +692,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'prerelease',
@@ -746,7 +746,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->inspect(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			'stable',
 			'valid-nonce'
@@ -756,7 +756,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_ready', $result->code() );
 		self::assertSame(
 			array(
-				'release_id'   => 42,
+				'release_id'   => '42',
 				'tag'          => 'v1.2.3',
 				'version'      => '1.2.3',
 				'commit'       => str_repeat( 'a', 40 ),
@@ -823,7 +823,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$result = $facade->inspect(
 				'plugin',
 				$this->repositoryRequest(),
-				42,
+				'42',
 				'v1.2.3',
 				'stable',
 				'valid-nonce'
@@ -857,7 +857,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$result   = $facade->inspect(
 				'plugin',
 				$this->repositoryRequest(),
-				42,
+				'42',
 				'v1.2.3',
 				'stable',
 				'valid-nonce'
@@ -903,7 +903,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$result   = $facade->inspect(
 				'plugin',
 				$this->repositoryRequest(),
-				42,
+				'42',
 				'v1.2.3',
 				'stable',
 				'valid-nonce'
@@ -925,7 +925,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			'v1:' . str_repeat( 'b', 64 ),
 			'stable',
@@ -951,7 +951,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -979,7 +979,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1006,7 +1006,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1031,7 +1031,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1054,7 +1054,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1086,7 +1086,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1110,7 +1110,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1133,7 +1133,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1159,7 +1159,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1182,7 +1182,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1206,7 +1206,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1237,7 +1237,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
@@ -1271,7 +1271,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$result = $facade->install(
 			'plugin',
 			$this->repositoryRequest(),
-			42,
+			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',

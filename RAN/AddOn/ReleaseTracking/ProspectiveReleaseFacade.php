@@ -42,7 +42,7 @@ interface ProspectiveReleaseFacade {
 	public function inspect(
 		string $type,
 		array $repositoryRequest,
-		int $releaseId,
+		string $releaseId,
 		string $tag,
 		string $channel,
 		string $nonce
@@ -55,7 +55,7 @@ interface ProspectiveReleaseFacade {
 	public function install(
 		string $type,
 		array $repositoryRequest,
-		int $releaseId,
+		string $releaseId,
 		string $tag,
 		string $expectedFingerprint,
 		string $channel,

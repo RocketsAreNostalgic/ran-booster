@@ -43,13 +43,13 @@ final class ProspectiveReleaseFacadeDouble implements ProspectiveReleaseFacade {
 		return $this->result( 'list_candidates' );
 	}
 
-	public function inspect( string $type, array $repositoryRequest, int $releaseId, string $tag, string $channel, string $nonce ): ProspectiveReleaseResult {
+	public function inspect( string $type, array $repositoryRequest, string $releaseId, string $tag, string $channel, string $nonce ): ProspectiveReleaseResult {
 		$this->calls[] = array( 'inspect', $type, $repositoryRequest, $releaseId, $tag, $channel, $nonce );
 
 		return $this->result( 'inspect' );
 	}
 
-	public function install( string $type, array $repositoryRequest, int $releaseId, string $tag, string $expectedFingerprint, string $channel, string $nonce ): ProspectiveReleaseResult {
+	public function install( string $type, array $repositoryRequest, string $releaseId, string $tag, string $expectedFingerprint, string $channel, string $nonce ): ProspectiveReleaseResult {
 		$this->calls[] = array( 'install', $type, $repositoryRequest, $releaseId, $tag, $expectedFingerprint, $channel, $nonce );
 
 		return $this->result( 'install' );

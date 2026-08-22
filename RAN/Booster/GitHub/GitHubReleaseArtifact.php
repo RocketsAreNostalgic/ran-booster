@@ -123,32 +123,33 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 		$path           = $directory . '/archive.zip';
 		$input          = false;
 		$output         = false;
+		$copyIdentity   = null;
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- The random directory is the Core-owned custody boundary.
 		if ( null === $sourceIdentity || ! mkdir( $directory, 0700 ) ) {
-			$this->removeCopy( $path, $directory );
 			throw new RuntimeException();
 		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The provider source is copied only while its artifact permits inspection.
-		$input = fopen( $source, 'rb' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The exclusive Core destination is the temporary custody boundary.
-		$output = fopen( $path, 'x+b' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- The Core copy must remain private.
-		$private = chmod( $path, 0600 );
-		if ( false === $input || false === $output || ! $private ) {
-			if ( is_resource( $input ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Release the source stream before failed Core-copy cleanup.
-				fclose( $input );
-			}
-			if ( is_resource( $output ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Release the destination stream before failed Core-copy cleanup.
-				fclose( $output );
-			}
-			$this->removeCopy( $path, $directory );
+		$directoryIdentity = self::privateDirectoryIdentity( $directory );
+		if ( null === $directoryIdentity ) {
 			throw new RuntimeException();
 		}
 
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The provider source is copied only while its artifact permits inspection.
+			$input = fopen( $source, 'rb' );
+			if ( false === $input || $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
+				throw new RuntimeException();
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The exclusive Core destination is the temporary custody boundary.
+			$output = fopen( $path, 'x+b' );
+			if ( false === $output ) {
+				throw new RuntimeException();
+			}
+			$copyIdentity = self::createdFileIdentity( $path, $output );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- The Core copy must remain private.
+			if ( null === $copyIdentity || ! chmod( $path, 0600 ) ) {
+				throw new RuntimeException();
+			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_copy_to_stream -- The source is copied in a fixed upper bound without holding the archive in memory.
 			$size = stream_copy_to_stream( $input, $output, self::MAX_COPY_BYTES + 1 );
 			if ( false === $size || self::MAX_COPY_BYTES < $size ) {
@@ -165,8 +166,8 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 				$input = false;
 				throw new RuntimeException();
 			}
-			$input        = false;
-			$copyIdentity = PreparedArtifact::regularFileIdentity( $path );
+			$input            = false;
+			$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
 			$sourceDigest = hash_file( 'sha256', $source );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
@@ -175,14 +176,16 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 				|| ! is_string( $copyDigest )
 				|| ! hash_equals( $sourceDigest, $copyDigest )
 				|| $sourceIdentity !== PreparedArtifact::regularFileIdentity( $source )
-				|| null === $copyIdentity
-				|| $size !== $copyIdentity['size'] ) {
+				|| $directoryIdentity !== self::privateDirectoryIdentity( $directory )
+				|| $copyIdentity !== self::pathFileIdentity( $path )
+				|| null === $preparedIdentity
+				|| $size !== $preparedIdentity['size'] ) {
 				throw new RuntimeException();
 			}
 
-			return new PreparedArtifact( $path, $this->providerCommitId, $this->version, $sourceDigest, $copyIdentity['device'], $copyIdentity['inode'], $copyIdentity['size'], $copyIdentity['permissions'], $copyIdentity['links'], $directory );
+			return new PreparedArtifact( $path, $this->providerCommitId, $this->version, $sourceDigest, $preparedIdentity['device'], $preparedIdentity['inode'], $preparedIdentity['size'], $preparedIdentity['permissions'], $preparedIdentity['links'], $directory );
 		} catch ( \Throwable ) {
-			$this->removeCopy( $path, $directory );
+			$this->removeCopy( $path, $directory, $directoryIdentity, $copyIdentity );
 			throw new RuntimeException();
 		} finally {
 			if ( is_resource( $input ) ) {
@@ -196,14 +199,106 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 		}
 	}
 
-	private function removeCopy( string $path, string $directory ): void {
-		if ( is_file( $path ) || is_link( $path ) ) {
+	/**
+	 * @param array{device:int,inode:int,owner:int,group:int}                $directoryIdentity
+	 * @param array{device:int,inode:int,links:int,owner:int,group:int}|null $copyIdentity
+	 */
+	private function removeCopy( string $path, string $directory, array $directoryIdentity, ?array $copyIdentity ): void {
+		if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
+			return;
+		}
+		if ( null !== $copyIdentity ) {
+			if ( $copyIdentity !== self::pathFileIdentity( $path ) ) {
+				return;
+			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes only the failed Core-owned copy.
 			unlink( $path );
+			clearstatcache( true, $path );
+			if ( file_exists( $path ) || is_link( $path ) ) {
+				return;
+			}
+		} elseif ( file_exists( $path ) || is_link( $path ) ) {
+			return;
 		}
-		if ( is_dir( $directory ) && ! is_link( $directory ) ) {
+		if ( $directoryIdentity === self::privateDirectoryIdentity( $directory ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes only the failed Core-owned random directory.
 			rmdir( $directory );
 		}
+	}
+
+	/** @return array{device:int,inode:int,owner:int,group:int}|null */
+	private static function privateDirectoryIdentity( string $directory ): ?array {
+		clearstatcache( true, $directory );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- Symlink-aware identity is required for the Core-owned directory.
+		$stat = lstat( $directory );
+		$mode = false === $stat ? 0 : (int) ( $stat['mode'] ?? 0 );
+		if ( false === $stat
+			|| 0040000 !== ( $mode & 0170000 )
+			|| 0700 !== ( $mode & 0777 ) ) {
+			return null;
+		}
+
+		$identity = array(
+			'device' => (int) ( $stat['dev'] ?? -1 ),
+			'inode'  => (int) ( $stat['ino'] ?? 0 ),
+			'owner'  => (int) ( $stat['uid'] ?? -1 ),
+			'group'  => (int) ( $stat['gid'] ?? -1 ),
+		);
+
+		return $identity['device'] >= 0
+			&& $identity['inode'] > 0
+			&& $identity['owner'] >= 0
+			&& $identity['group'] >= 0
+			? $identity
+			: null;
+	}
+
+	/** @param resource $stream @return array{device:int,inode:int,links:int,owner:int,group:int}|null */
+	private static function createdFileIdentity( string $path, $stream ): ?array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fstat -- The exclusive file handle must identify the same Core-owned path.
+		$streamStat = fstat( $stream );
+		$pathStat   = self::pathFileStat( $path );
+		if ( false === $streamStat || null === $pathStat ) {
+			return null;
+		}
+		$streamIdentity = self::stableIdentity( $streamStat );
+		$pathIdentity   = self::stableIdentity( $pathStat );
+		if ( $pathIdentity['device'] < 0
+			|| $pathIdentity['inode'] <= 0
+			|| 1 !== $pathIdentity['links']
+			|| $pathIdentity['owner'] < 0
+			|| $pathIdentity['group'] < 0 ) {
+			return null;
+		}
+
+		return $streamIdentity === $pathIdentity ? $pathIdentity : null;
+	}
+
+	/** @return array{device:int,inode:int,links:int,owner:int,group:int}|null */
+	private static function pathFileIdentity( string $path ): ?array {
+		$stat = self::pathFileStat( $path );
+
+		return null === $stat ? null : self::stableIdentity( $stat );
+	}
+
+	/** @return array<string, int>|null */
+	private static function pathFileStat( string $path ): ?array {
+		clearstatcache( true, $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- Symlink-aware identity is required for the exclusive Core-owned file.
+		$stat = lstat( $path );
+		$mode = false === $stat ? 0 : (int) ( $stat['mode'] ?? 0 );
+
+		return false !== $stat && 0100000 === ( $mode & 0170000 ) ? $stat : null;
+	}
+
+	/** @param array<string, int> $stat @return array{device:int,inode:int,links:int,owner:int,group:int} */
+	private static function stableIdentity( array $stat ): array {
+		return array(
+			'device' => (int) ( $stat['dev'] ?? -1 ),
+			'inode'  => (int) ( $stat['ino'] ?? 0 ),
+			'links'  => (int) ( $stat['nlink'] ?? 0 ),
+			'owner'  => (int) ( $stat['uid'] ?? -1 ),
+			'group'  => (int) ( $stat['gid'] ?? -1 ),
+		);
 	}
 }

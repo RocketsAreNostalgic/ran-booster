@@ -325,6 +325,11 @@ final class ManagedReleaseTargetRegistrar {
 			}
 			$identifier = (string) $package->getIdentifier();
 			$key        = self::key( $type, $identifier );
+			if ( null !== $package->getSubdirectory() ) {
+				$this->failures[ $key ] = 'subdirectory_not_supported';
+
+				continue;
+			}
 			try {
 				$this->targets[ $key ] = $this->registerPackage( $type, $package );
 			} catch ( Throwable ) {
@@ -421,6 +426,12 @@ final class ManagedReleaseTargetRegistrar {
 		if ( PackageSource::RELEASE_ASSET !== $package->getSource() ) {
 			return array(
 				'release'   => false,
+				'authority' => null,
+			);
+		}
+		if ( null !== $package->getSubdirectory() ) {
+			return array(
+				'release'   => true,
 				'authority' => null,
 			);
 		}

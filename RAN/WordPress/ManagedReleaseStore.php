@@ -6,6 +6,7 @@ namespace RAN\WordPress;
 
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\PackageSubdirectory;
 use RAN\PackageSource;
 use RAN\Storage\Database;
 use RuntimeException;
@@ -67,6 +68,9 @@ class ManagedReleaseStore {
 		}
 
 		$before = $this->row( $type, $identifier );
+		if ( PackageSource::RELEASE_ASSET === $newSource ) {
+			$this->assertReleaseSubdirectory( $before );
+		}
 		if ( $expectedSource->value !== ( $before->source ?? null )
 			|| $expectedRevision !== (int) ( $before->source_revision ?? 0 ) ) {
 			return false;
@@ -131,6 +135,7 @@ class ManagedReleaseStore {
 		}
 
 		$before = $this->row( $type, $identifier );
+		$this->assertReleaseSubdirectory( $before );
 		if ( PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
 			|| $expectedRevision !== (int) ( $before->source_revision ?? 0 )
 			|| ! is_string( $before->release_configuration ?? null ) ) {
@@ -203,6 +208,18 @@ class ManagedReleaseStore {
 			|| strlen( $identifier ) > 255
 			|| str_contains( $identifier, "\0" ) ) {
 			throw new RuntimeException( 'The managed release package identity is invalid.' );
+		}
+	}
+
+	private function assertReleaseSubdirectory( object $row ): void {
+		try {
+			$subdirectory = PackageSubdirectory::normalize( $row->subdirectory ?? null );
+		} catch ( \InvalidArgumentException $exception ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The prior exception remains internal to the typed storage failure.
+			throw new RuntimeException( 'The managed release package subdirectory is invalid.', 0, $exception );
+		}
+		if ( null !== $subdirectory ) {
+			throw new RuntimeException( 'The managed release package subdirectory is not supported.' );
 		}
 	}
 

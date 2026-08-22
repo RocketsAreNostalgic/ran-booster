@@ -313,7 +313,8 @@ function phase44_github_response( array $fixture, array $args, string $url ): ?a
 }
 
 function phase44_prospective( string $root, string $site, string $type, string $mode ): array {
-	$archive = phase44_archive( $site, $type, 'ran-booster-p2-fixture-' . $type, '2.0.0', 'https://p2.invalid/fixtures/' . $type );
+	$packageRoot = 'ran-booster-p2-fixture-' . $type;
+	$archive     = phase44_archive( $site, $type, $packageRoot, '2.0.0', 'https://p2.invalid/fixtures/' . $type );
 	update_option( 'ran_booster_p2_' . $type . '_archive', $archive, false );
 	$container = require $root . '/tests/WordPress/core-container-fixture.php';
 	$facade    = $container->make( RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade::class );
@@ -335,10 +336,32 @@ function phase44_prospective( string $root, string $site, string $type, string $
 	if ( ! is_string( $fingerprint ) ) {
 		throw new RuntimeException( 'Prospective fingerprint is unavailable.' );
 	}
-	$source = array( 'fired' => false, 'regular' => false );
-	if ( 'failure' === $mode ) { $veto = static function ( mixed $path, mixed $remote, mixed $upgrader, array $extra ) use ( $type, &$source ): mixed { unset( $remote, $upgrader ); if ( $type === ( $extra['type'] ?? null ) ) { $source['fired'] = true; $source['regular'] = is_string( $path ) && is_dir( $path ) && ! is_link( $path ); return new WP_Error( 'phase44_prospective_source_veto' ); } return $path; }; add_filter( 'upgrader_source_selection', $veto, PHP_INT_MAX, 4 ); }
-	try { $result = $facade->install( $type, $request, '42', 'v2.0.0', $fingerprint, 'stable', wp_create_nonce( $facade->nonceAction( 'install', $type ) ) ); } finally { if ( isset( $veto ) ) remove_filter( 'upgrader_source_selection', $veto, PHP_INT_MAX ); }
-	if ( ( 'success' === $mode && ! $result->successful() ) || ( 'failure' === $mode && ( $result->successful() || ! $source['fired'] || ! $source['regular'] ) ) ) {
+	$source = array( 'fired' => false, 'regular' => false, 'root' => '' );
+	if ( 'failure' === $mode ) {
+		$veto = static function ( mixed $path, mixed $remote, mixed $upgrader, array $extra ) use ( $packageRoot, $type, &$source ): mixed {
+			unset( $remote, $upgrader );
+			$sourceRoot = is_string( $path ) ? basename( untrailingslashit( $path ) ) : '';
+			if ( 'install' !== ( $extra['action'] ?? null )
+				|| $type !== ( $extra['type'] ?? null )
+				|| ! hash_equals( $packageRoot, $sourceRoot ) ) {
+				return $path;
+			}
+			$source['fired']   = true;
+			$source['regular'] = is_dir( $path ) && ! is_link( $path );
+			$source['root']    = $sourceRoot;
+
+			return new WP_Error( 'phase44_prospective_source_veto' );
+		};
+		add_filter( 'upgrader_source_selection', $veto, 5, 4 );
+	}
+	try {
+		$result = $facade->install( $type, $request, '42', 'v2.0.0', $fingerprint, 'stable', wp_create_nonce( $facade->nonceAction( 'install', $type ) ) );
+	} finally {
+		if ( isset( $veto ) ) {
+			remove_filter( 'upgrader_source_selection', $veto, 5 );
+		}
+	}
+	if ( ( 'success' === $mode && ! $result->successful() ) || ( 'failure' === $mode && ( $result->successful() || ! $source['fired'] || ! $source['regular'] || ! hash_equals( $packageRoot, $source['root'] ) ) ) ) {
 		throw new RuntimeException( 'Prospective result did not match the requested manual scenario.' );
 	}
 	$artifact = get_option( 'ran_booster_p2_last_artifact', '' );

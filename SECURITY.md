@@ -8,7 +8,7 @@ https://github.com/RocketsAreNostalgic/ran-booster/security/advisories/new
 
 If that form is unavailable, open the
 [GitHub issue chooser](https://github.com/RocketsAreNostalgic/ran-booster/issues/new/choose)
-and select the `Security contact` template. Do not include vulnerability details, repository
+and select the `Security reporting help` template. Do not include vulnerability details, repository
 credentials, webhook secrets, WordPress salts, database contents, signed URLs,
 release assets, customer data, or production log extracts in a public issue.
 

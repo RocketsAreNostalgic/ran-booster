@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "../ran-wp-release-updater",
-                "reference": "320fb89e1a93813907419cecab7e05892b6d9419"
+                "reference": "1eef1515da8fad3119487b021fd5e35f67f5bbfe"
             },
             "require": {
                 "ext-hash": "*",
@@ -23,6 +23,9 @@
             "conflict": {
                 "ran/wp-github-release-updater": "*"
             },
+            "require-dev": {
+                "phpunit/phpunit": "^11.0"
+            },
             "type": "library",
             "autoload-dev": {
                 "psr-4": {
@@ -31,11 +34,19 @@
             },
             "scripts": {
                 "check": [
-                    "@validate:strict"
+                    "@validate:strict",
+                    "@test:unit",
+                    "@lint:php"
                 ],
                 "check:phase3": [
-                    "@validate:strict",
+                    "@check",
                     "@test:parity"
+                ],
+                "lint:php": [
+                    "find src tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l"
+                ],
+                "test:unit": [
+                    "phpunit --configuration phpunit.xml"
                 ],
                 "test:parity": [
                     "php tests/Integration/paired-github-provider-proof.php"

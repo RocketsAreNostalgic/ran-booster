@@ -136,6 +136,85 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 0, $coordinator->calls );
 	}
 
+	public function testLinkTreatsTheSameReleaseManagedTargetAsAlreadyManaged(): void {
+		$plugins                     = new OperationPluginRepository( $this->plugin() );
+		$plugins->freshAfterMutation = $this->plugin();
+		$plugins->freshAfterMutation->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'release', true, 'existing-access' ) );
+		$plugins->freshAfterMutation->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
+		$plugins->freshAfterMutation->setSource( PackageSource::RELEASE_ASSET, 7 );
+		$plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$dashboard               = new Dashboard(
+			new Database(),
+			$plugins,
+			new Booster(),
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor(),
+			( new \ReflectionClass( TroubleshootingService::class ) )->newInstanceWithoutConstructor(),
+			null,
+			null,
+			$this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() )
+		);
+
+		$redirect = $dashboard->postPackageOperation(
+			'install-plugin',
+			$this->input( 'install-plugin', array( 'dry-run' => '1' ) )
+		);
+
+		self::assertIsString( $redirect );
+		$query = $this->redirectQuery( $redirect );
+		self::assertSame( 'ran-booster-plugins', $query['page'] );
+		self::assertSame( 'already-managed', $query['ran_booster_result'] );
+		self::assertSame( 'example/example.php', $query['ran_booster_package'] );
+		self::assertSame( 'example/example.php', $query['package'] );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_notice_nonce'],
+				'ran-booster-package-success|plugin|already-managed|example/example.php'
+			)
+		);
+		$_GET   = $query;
+		$notice = $this->invokePackageSuccessNotice( $dashboard, 'plugin' );
+		self::assertSame(
+			array(
+				'operation'  => 'already-managed',
+				'identifier' => 'example/example.php',
+			),
+			$notice
+		);
+		self::assertSame( 'success', $dashboard->messages[0]['type'] );
+		self::assertSame( 'Plugin is already managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
+	}
+
+	public function testLinkKeepsMismatchedExistingManagementAsStorageFailure(): void {
+		$plugins                     = new OperationPluginRepository( $this->plugin() );
+		$plugins->freshAfterMutation = $this->plugin();
+		$plugins->freshAfterMutation->setRepository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
+		$plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$service                 = $this->service(
+			$plugins,
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			new OperationCoordinator()
+		);
+
+		try {
+			$service->execute(
+				PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
+			);
+			self::fail( 'A mismatched managed package must not be reported as linked.' );
+		} catch ( \RAN\Storage\PackageStorageFailure $failure ) {
+			self::assertSame( 'ran_booster_storage_adoption_conflict', $failure->getDiagnosticId() );
+		}
+	}
+
 	public function testLinkAndEditUseTheSharedUpdaterLock(): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
 		$lock    = new OperationUpdaterLock();
@@ -553,12 +632,25 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( array(), $dashboard->messages );
 	}
 
+	public function testForgedAlreadyManagedMarkerCannotCreateSuccessNotice(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$_GET      = array(
+			'ran_booster_result'        => 'already-managed',
+			'ran_booster_package'       => 'example/example.php',
+			'_ran_booster_notice_nonce' => 'forged',
+		);
+
+		self::assertNull( $this->invokePackageSuccessNotice( $dashboard, 'plugin' ) );
+		self::assertSame( array(), $dashboard->messages );
+	}
+
 	public function testSignedSuccessNoticeCannotBeCrossBoundAcrossTypeOperationOrPackage(): void {
 		$nonce = \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|install|example/example.php' );
 		$cases = array(
-			'type'      => array( 'theme', 'install', 'example/example.php' ),
-			'operation' => array( 'plugin', 'update', 'example/example.php' ),
-			'package'   => array( 'plugin', 'install', 'other/other.php' ),
+			'type'                      => array( 'theme', 'install', 'example/example.php' ),
+			'operation'                 => array( 'plugin', 'update', 'example/example.php' ),
+			'already managed operation' => array( 'plugin', 'already-managed', 'example/example.php' ),
+			'package'                   => array( 'plugin', 'install', 'other/other.php' ),
 		);
 
 		foreach ( $cases as $case => $values ) {
@@ -1156,6 +1248,7 @@ final class OperationPluginRepository extends PluginRepository {
 	public ?string $requestedSlug                         = null;
 	public ?\Throwable $unlinkFailure                     = null;
 	public ?Plugin $freshAfterMutation                    = null;
+	public ?PackageMutationResult $adoptionResult         = null;
 	public function __construct( private Plugin $package ) {}
 	public function fromSlug( $slug ) {
 		$this->requestedSlug = (string) $slug;
@@ -1170,7 +1263,7 @@ final class OperationPluginRepository extends PluginRepository {
 	}
 	public function adopt( Plugin $plugin ): PackageMutationResult {
 		$this->stored = $plugin;
-		return PackageMutationResult::changed( PackageStorageOperation::INSERT );
+		return $this->adoptionResult ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
 	public function editPlugin( $file, $input ): PackageMutationResult {
 		$this->edited = $input;

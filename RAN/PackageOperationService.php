@@ -113,7 +113,17 @@ final readonly class PackageOperationService {
 			PackageMutationGuard::assertPluginFileAllowed( $package->getIdentifier() );
 		}
 		$this->applyRepository( $package, $operation );
-		$this->adopt( $operation->packageType, $package )->requireSuccess();
+		$adoption = $this->adopt( $operation->packageType, $package );
+		if ( 'ran_booster_storage_adoption_conflict' === $adoption->getDiagnosticId() ) {
+			$existing = $this->matchingExistingTarget( $operation, $package );
+			if ( $existing instanceof Package ) {
+				return array(
+					'status'  => 'already-managed',
+					'package' => $existing,
+				);
+			}
+		}
+		$adoption->requireSuccess();
 		$identifier = $package->getIdentifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
@@ -123,6 +133,27 @@ final readonly class PackageOperationService {
 			'status'  => 'linked',
 			'package' => $this->find( $operation->packageType, $identifier ),
 		);
+	}
+
+	private function matchingExistingTarget( PackageOperation $operation, Package $requested ): ?Package {
+		$identifier = $requested->getIdentifier();
+		if ( ! is_string( $identifier ) || '' === $identifier ) {
+			return null;
+		}
+		try {
+			$existing = $this->find( $operation->packageType, $identifier );
+		} catch ( \Throwable ) {
+			return null;
+		}
+
+		return hash_equals( $identifier, (string) $existing->getIdentifier() )
+			&& $existing->getProviderCode() === $operation->providerCode
+			&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $operation->providerRepositoryId )
+			&& hash_equals( (string) $existing->getRepository(), (string) $operation->repository )
+			&& hash_equals( (string) $existing->getSubdirectory(), (string) $operation->subdirectory )
+			&& hash_equals( (string) $existing->getSlug(), (string) $operation->packageSlug )
+			? $existing
+			: null;
 	}
 
 	/** @return array{status: 'edited'|'conflict', package: Package} */

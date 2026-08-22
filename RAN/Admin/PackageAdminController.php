@@ -201,6 +201,9 @@ final class PackageAdminController {
 		$installAnother   = 'install' === $operation->operation && $this->enabled( $request, 'install_another' );
 		$returnToSettings = $reinstall || ( 'update' === $operation->operation && $this->enabled( $request, 'return_to_settings' ) );
 		$status           = $result['status'] ?? null;
+		if ( 'already-managed' === $status && ( $result['package'] ?? null ) instanceof Package ) {
+			return $this->successRedirect( $operation, $result['package'], $listArguments, false, true, 'already-managed' );
+		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
 			return $this->successRedirect( $operation, $result['package'], $listArguments, $installAnother, $returnToSettings || 'edited' === $status );
 		}
@@ -242,9 +245,23 @@ final class PackageAdminController {
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'unlink', 'unlink-and-delete' ), true )
+		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'unlink', 'unlink-and-delete', 'already-managed' ), true )
 			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
 			return null;
+		}
+		if ( 'already-managed' === $operation ) {
+			$dashboard->addMessage(
+				array(
+					'type'    => 'success',
+					'message' => sprintf(
+						/* translators: %s: package type, such as Plugin or Theme. */
+						__( '%s is already managed by Booster. No package settings were changed.', 'ran-booster' ),
+						'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' )
+					),
+				)
+			);
+
+			return compact( 'operation', 'identifier' );
 		}
 		$completed = match ( $operation ) {
 			'install' => __( 'installed', 'ran-booster' ),
@@ -501,17 +518,19 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, string> $listArguments */
-	private function successRedirect( PackageOperation $operation, Package|string $package, array $listArguments, bool $installAnother = false, bool $returnToSettings = false ): string {
+	private function successRedirect( PackageOperation $operation, Package|string $package, array $listArguments, bool $installAnother = false, bool $returnToSettings = false, ?string $resultOperation = null ): string {
 		$identifier = $package instanceof Package ? $package->getIdentifier() : $package;
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The deployed package identity is unavailable.' );
 		}
-		$type = $operation->packageType;
+		$type              = $operation->packageType;
+		$resultOperation ??= $operation->operation;
+
 		$args = array(
 			'page'                      => $installAnother ? 'ran-booster-' . $type . 's-create' : 'ran-booster-' . $type . 's',
-			'ran_booster_result'        => $operation->operation,
+			'ran_booster_result'        => $resultOperation,
 			'ran_booster_package'       => $identifier,
-			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $operation->operation . '|' . $identifier ),
+			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $resultOperation . '|' . $identifier ),
 		);
 		if ( $installAnother ) {
 			$args['provider']    = (string) $operation->providerCode;

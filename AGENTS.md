@@ -3,21 +3,9 @@
 This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
-- Internal maintainers use the ignored nested private workbench at
-  `ran-booster-workbench/` for Booster-family Dex state, plans and reviews.
-  Read its `AGENTS.md` and `.agents/skills/ran-booster-dex/SKILL.md` before
-  non-trivial work. Public clones without the workbench must not recreate
-  private planning or Dex state in this source repository.
-- Before editing, inspect the selected task, its parent, and its blockers, then
-  start the task. Verify the implementation before completing it and record the
-  implementation SHA and concrete verification evidence in the result.
-- Treat Dex readiness as executability, not product priority. Continue the
-  currently authorised plan until it is complete or the owner explicitly
-  approves a pause or switch. Before starting work under another proposal or
-  roadmap priority, state the transition and obtain approval; record the paused
-  plan, reason and exact return point in the affected Dex parent.
-- Never include Dex IDs in source, documentation, commit messages, or pull
-  request text.
+- Work from an accepted public request or issue. Inspect the affected code and
+  tests before editing, verify the result before declaring completion, and
+  record concrete check evidence. Do not invent unavailable private context.
 - Use bounded subagents for independent, inspectable work when that speeds up
   delivery without obscuring ownership.
 - Every pull request requires independent agent review after opening, against
@@ -59,10 +47,10 @@ directory and preserve unrelated work.
   requires a separate compatibility and ownership decision.
 - Treat production lines of code and concept count as an intense reviewed
   restriction, not a delivery target or an unbounded ceiling. Record
-  production, test, documentation and Dex deltas separately for non-trivial
-  features; test/docs/Dex deletion does not offset production growth. Before
-  adding Core production code, name the current Core-owned invariant, rejected
-  smaller alternatives and exact projected production-line, concrete-type,
+  production, test and documentation deltas separately for non-trivial
+  features; test or documentation deletion does not offset production growth.
+  Before adding Core production code, name the current Core-owned invariant,
+  rejected smaller alternatives and exact projected production-line, concrete-type,
   public-seam and persistent-state delta. Do not add a service, DTO, registry,
   facade or other future-proofing concept whose only consumer is hypothetical.
   Optional add-ons may receive a larger but still bounded and reviewed budget
@@ -102,10 +90,3 @@ directory and preserve unrelated work.
   verification, or use `HUSKY=0` solely to bypass a pnpm bootstrap failure.
   Once dependencies are current, use the normal `pnpm check` and Husky gates
   rather than substituting partial commands.
-
-Run Dex commands from `ran-booster-workbench/` and verify that `pnpm exec dex
-dir` resolves to that repository's `.dex` directory before sequential ledger
-mutations. From this Core root, `pnpm dex <command>` is the explicit forwarding
-entry point; the `workbench:*` scripts forward the workbench's other pnpm
-checks without merging its independent workspace or lockfile into Core. Never
-run `dex sync` without new authorization.

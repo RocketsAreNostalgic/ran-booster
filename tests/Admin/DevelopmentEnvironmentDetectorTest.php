@@ -38,7 +38,7 @@ final class DevelopmentEnvironmentDetectorTest extends TestCase {
 			array( 'http://site.localhost', 'production', array(), true ),
 			array( 'http://127.0.0.1', 'production', array(), true ),
 			array( 'http://[::1]', 'production', array(), true ),
-			array( 'https://example.com:10008', 'production', array(), true ),
+			array( 'https://example.com:10443', 'production', array(), true ),
 			array( 'http://example.com:80', 'production', array(), false ),
 			array( 'https://example.com:443', 'production', array(), false ),
 			array( 'https://example.com', 'production', array(), false ),

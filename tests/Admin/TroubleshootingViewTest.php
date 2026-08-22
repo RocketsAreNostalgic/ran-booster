@@ -944,7 +944,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'site'         => array(
 				'status'       => 'blocked',
 				'reason_codes' => array( 'callback_requires_public_https' ),
-				'callback_url' => 'http://localhost:10014/wp-json/ran-booster/v1/webhooks/gh',
+				'callback_url' => 'http://localhost:10443/wp-json/ran-booster/v1/webhooks/gh',
 			),
 			'repositories' => array(
 				array(

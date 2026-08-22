@@ -3,10 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-        "dex": "pnpm --dir ran-booster-workbench dex",
-        "workbench:check": "pnpm --dir ran-booster-workbench check",
-        "workbench:extensions:check": "pnpm --dir ran-booster-workbench extensions:check",
-        "workbench:release-health:gate": "pnpm --dir ran-booster-workbench release-health:gate",
         "format": "prettier --write 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs'",
         "format:check": "prettier --check 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs'",
         "lint:js": "eslint 'assets/**/*.js' 'tests/assets/**/*.mjs'",

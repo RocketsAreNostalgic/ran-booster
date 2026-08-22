@@ -12,8 +12,8 @@ Date: 2026-08-14
 - Extraction decision: **NO-GO**.
 
 Phase 4 created no extraction repository, Composer package, WordPress plugin
-entrypoint, release, tag, publication, merge, push, deployment, migration or
-Dex synchronization. It did not change provider behavior, credentials,
+entrypoint, release, tag, publication, merge, push, deployment, or migration. It
+did not change provider behavior, credentials,
 webhook/archive/mutation custody, schemas, options, tables, hooks or persistent
 state. The immutable published Core `v1.0.0-beta.16` and its certified consumers
 remain unchanged historical release evidence.

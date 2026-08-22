@@ -102,7 +102,6 @@ locked updater `ran/wp-github-release-updater` `v2.0.0-beta.5` at
   closed on unrelated Core/test classes; the installed readback driver and
   container fixture are source-owned while the reflected runtime objects are
   proved to originate in the installed ZIP.
-- Dex doctor: 857 tasks validated with no issues before closeout.
 
 ## Exact delta
 

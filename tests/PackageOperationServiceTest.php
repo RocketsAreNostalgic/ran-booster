@@ -423,7 +423,6 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testReleaseManagedPackageRetainsItsRepositoryIdentityWhileUpdatingAccessAndPolicy(): void {
 		$plugin = $this->plugin();
 		$plugin->setRepository( new ManagedRepository( 'gh', 'owner/release', 'R_release', 'stable', true, 'old-access' ) );
-		$plugin->setSubdirectory( 'packages/example' );
 		$plugin->setSource( PackageSource::RELEASE_ASSET, 2 );
 		$plugins = new OperationPluginRepository( $plugin );
 		$service = $this->service(
@@ -447,7 +446,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'expected_repository'             => 'owner/release',
 				'expected_branch'                 => 'stable',
 				'expected_credential_id'          => 'old-access',
-				'expected_subdirectory'           => 'packages/example',
+				'expected_subdirectory'           => '',
 				'expected_private'                => '1',
 				'expected_package_slug'           => 'example',
 				'expected_deployment_policy'      => DeploymentPolicy::MANUAL->value,
@@ -461,7 +460,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'R_release', $plugins->edited['provider_repository_id'] );
 		self::assertSame( 'stable', $plugins->edited['branch'] );
 		self::assertTrue( $plugins->edited['private'] );
-		self::assertSame( 'packages/example', $plugins->edited['subdirectory'] );
+		self::assertNull( $plugins->edited['subdirectory'] );
 		self::assertSame( 'new-access', $plugins->edited['credential_id'] );
 		self::assertSame( DeploymentPolicy::AUTOMATIC->value, $plugins->edited['deployment_policy'] );
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $plugins->edited['expected_source'] );
@@ -476,6 +475,30 @@ final class PackageOperationServiceTest extends TestCase {
 			)['status']
 		);
 		self::assertSame( 'example/example.php', $plugins->unlinked );
+	}
+
+	public function testLegacyReleaseManagedPackageWithSubdirectoryCannotBeEdited(): void {
+		$plugin = $this->plugin();
+		$plugin->setSubdirectory( 'packages/example' );
+		$plugin->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$plugins = new OperationPluginRepository( $plugin );
+		$service = $this->service(
+			$plugins,
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			new OperationCoordinator()
+		);
+		$input   = $this->input(
+			'edit-plugin',
+			array(
+				'expected_subdirectory'    => 'packages/example',
+				'expected_source'          => PackageSource::RELEASE_ASSET->value,
+				'expected_source_revision' => 2,
+			)
+		);
+
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'must return to Branch first' );
+		$service->execute( PackageOperation::fromInput( 'edit-plugin', $input ) );
 	}
 
 	public function testLinkOnlyReturnsTheDisabledPackageReadBack(): void {

@@ -142,6 +142,34 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertFalse( $release['release_asset']['disabled'] );
 	}
 
+	public function testNestedBranchDisablesPublishedReleaseChoiceWithTheRecoveryCopy(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$choices  = array(
+			'release_asset' => array(
+				'heading'     => 'Published releases',
+				'description' => '',
+				'meta'        => '',
+				'url'         => '',
+				'disabled'    => false,
+			),
+		);
+
+		$choice = $controls->filterSourceChoices(
+			$choices,
+			'edit',
+			'plugin',
+			new PackageProjection(),
+			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php'
+		);
+
+		self::assertTrue( $choice['release_asset']['disabled'] );
+		self::assertStringContainsString( 'repository root', $choice['release_asset']['description'] );
+		self::assertStringContainsString( 'Return to Branch', $choice['release_asset']['description'] );
+	}
+
 	public function testEveryMutationForwardsExactAuthorityRevisionChannelAndNonce(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$controls = ReleaseManagementFixture::controls( $tracking );

@@ -24,7 +24,7 @@ proposals may link here, but this register must remain self-contained.
   complexity at the recorded scale. “NO-GO” means the approach fails a current
   correctness, compatibility, security, or maintainability boundary.
 - Treat production lines and concept count as separate, restricted budgets.
-  Tests, documentation and Dex deletion do not offset production growth, and
+  Tests and documentation deletion do not offset production growth, and
   deletion in one repository does not justify an abstraction in another.
 - A positive Core delta or new Core service, DTO, registry, facade, public seam
   or persistent field requires the owner's approval before implementation,
@@ -122,7 +122,7 @@ Deployments wherever Core does not own the invariant.
 The following records the pre-Phase-0B baseline and its disposition; it is not
 a description of current behavior.
 
-- Both Local sites received GitHub `404` for the private Core releases feed
+- Two pre-release test sites received GitHub `404` for the private Core releases feed
   because Core self-update registers `accessToken: null`; the published
   alpha.22 ZIP, manifest, checksum, and commit were valid.
 - Mixed updater-copy selection is deterministic in both registration orders.

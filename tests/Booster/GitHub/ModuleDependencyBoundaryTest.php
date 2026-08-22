@@ -83,6 +83,10 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\WebhookNormalizer',
 		'RAN\RepositoryProvider\WebhookRejected',
 		'RAN\RepositoryProvider\WebhookRequest',
+		'RAN\WPReleaseUpdater\V1\Archive\TemporaryArtifact',
+		'RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver',
+		'RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseService',
+		'RAN\WPReleaseUpdater\V1\Provider\GitHub\ProspectiveReleaseArtifact',
 	);
 
 	public function testModuleImportsOnlyTheExplicitProviderApiAllowlist(): void {

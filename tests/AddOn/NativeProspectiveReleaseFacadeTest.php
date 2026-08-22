@@ -11,7 +11,6 @@ namespace Tests\AddOn;
 	require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 	require_once __DIR__ . '/../Portability/WpPusherCoexistenceWordPressFunctions.php';
 	require_once __DIR__ . '/../Support/ProspectiveReleaseFacadeWordPressFunctions.php';
-	require_once __DIR__ . '/../Support/ProspectiveReleaseUpdaterFixtures.php';
 	require_once __DIR__ . '/../fixtures/ran-booster-release-capability-provider/src/Providers.php';
 
 	use PHPUnit\Framework\TestCase;
@@ -55,9 +54,6 @@ namespace Tests\AddOn;
 	use RAN\WordPress\CorePackageExecutor;
 	use RAN\WordPress\ManagedReleaseConfiguration;
 	use RAN\WordPress\WordPressUpdaterLock;
-	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveCandidateFixture;
-	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveInspectionFixture;
-	use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseCandidatePreflight;
 	use RANBoosterReleaseCapabilityFixture\PartialProvider as ReleaseFixturePartialProvider;
 	use RANBoosterReleaseCapabilityFixture\ReleaseProvider as ReleaseFixtureCompleteProvider;
 	use RANBoosterReleaseCapabilityFixture\ZeroProvider as ReleaseFixtureZeroProvider;
@@ -78,7 +74,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	protected function setUp(): void {
-		ReleaseCandidatePreflight::reset();
 		ProspectiveRepositoryProvider::$resolveCalls     = 0;
 		ProspectiveRepositoryProvider::$listingCalls     = 0;
 		ProspectiveRepositoryProvider::$inspectionCalls  = 0;
@@ -104,7 +99,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$this->acquisition  = null;
 		unset( $GLOBALS['ran_booster_prospective_options'] );
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
-		ReleaseCandidatePreflight::reset();
 	}
 
 	public function testSupportedProviderCodesAreBoundedAndLocal(): void {
@@ -115,10 +109,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( array( 'gh' ), $facade->supportedProviderCodes( 'plugin' ) );
 		self::assertSame( array( 'gh' ), $facade->supportedProviderCodes( 'theme' ) );
 		self::assertSame( array(), $facade->supportedProviderCodes( 'invalid' ) );
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$discoverCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
@@ -199,11 +189,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertSame( 'unsupported_provider', $result->code() );
 			self::assertSame( array(), $result->data() );
 		}
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$discoverCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
-		self::assertSame( array(), ReleaseCandidatePreflight::$target );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
@@ -229,27 +214,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'unsupported_provider', $result->code() );
 		self::assertSame( array(), $result->data() );
 		self::assertSame( 0, $provider->resolveCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
-		self::assertSame( array(), ReleaseCandidatePreflight::$target );
 	}
 
 	public function testListingOnlyProviderFailsBeforeRepositoryResolutionOrCandidateListing(): void {
-		ReleaseCandidatePreflight::$candidates = array(
-			new ProspectiveCandidateFixture(
-				42,
-				'v1.2.3',
-				'1.2.3',
-				false,
-				'2026-08-17T12:00:00Z',
-				array( 'example-1.2.3.zip' )
-			),
-		);
-		$provider                              = new ProspectiveListingOnlyProvider( 'forge' );
-		$plugins                               = new ProspectivePluginRepository();
-		$executor                              = new ProspectiveExecutor();
-		$facade                                = $this->facade( $plugins, $executor, provider: $provider );
-		$repository                            = $this->repositoryRequest();
-		$repository['provider']                = 'forge';
+		$provider               = new ProspectiveListingOnlyProvider( 'forge' );
+		$plugins                = new ProspectivePluginRepository();
+		$executor               = new ProspectiveExecutor();
+		$facade                 = $this->facade( $plugins, $executor, provider: $provider );
+		$repository             = $this->repositoryRequest();
+		$repository['provider'] = 'forge';
 
 		self::assertSame( array(), $facade->supportedProviderCodes( 'plugin' ) );
 
@@ -277,10 +250,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$listingCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$discoverCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
@@ -303,7 +272,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( array(), $result->data() );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$listingCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
 	}
 
 	public function testProviderWithoutAcquisitionFailsInstallBeforeMutationOrRepositoryResolution(): void {
@@ -329,7 +297,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
 		self::assertSame( array(), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
@@ -367,7 +334,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_candidates_available', $result->code() );
 		self::assertSame( '9999999999999999999', $result->data()['candidates'][0]['release_id'] ?? null );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
 	}
 
 	public function testOpaqueProviderReleaseIdentitySurvivesTheProspectiveFacade(): void {
@@ -447,7 +413,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'unable_to_check', $result->code() );
 		self::assertSame( array(), $result->data() );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
 	}
 
 	public function testStableCandidateProjectionAcceptsProviderOwnedHyphenatedVersion(): void {
@@ -483,31 +448,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_candidates_available', $result->code() );
 		self::assertSame( '2026-08', $result->data()['candidates'][0]['version'] ?? null );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
 	}
 
 	public function testCandidateListMapsBoundedDisplayDataWithoutInspectingOrInstalling(): void {
-		ReleaseCandidatePreflight::$candidates = array(
-			new ProspectiveCandidateFixture(
-				52,
-				'v2.0.0-beta.2',
-				'2.0.0-beta.2',
-				true,
-				'2026-07-28T08:00:00Z',
-				array( 'example-2.0.0-beta.2.zip' )
-			),
-			new ProspectiveCandidateFixture(
-				42,
-				'v1.2.3',
-				'1.2.3',
-				false,
-				'2026-07-27T08:00:00Z',
-				array( 'example-1.2.3.zip' )
-			),
+		$provider = new ProspectiveRepositoryProvider(
+			candidateList: new RepositoryReleaseCandidateList(
+				array(
+					new RepositoryReleaseCandidate( '52', 'v2.0.0-beta.2', '2.0.0-beta.2', true, '2026-07-28T08:00:00Z', array( 'example-2.0.0-beta.2.zip' ) ),
+					new RepositoryReleaseCandidate( '42', 'v1.2.3', '1.2.3', false, '2026-07-27T08:00:00Z', array( 'example-1.2.3.zip' ) ),
+				)
+			)
 		);
-		$plugins                               = new ProspectivePluginRepository();
-		$executor                              = new ProspectiveExecutor();
-		$facade                                = $this->facade( $plugins, $executor );
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$facade   = $this->facade( $plugins, $executor, provider: $provider );
 
 		self::assertSame( array( 'gh' ), $facade->supportedProviderCodes( 'plugin' ) );
 		self::assertSame(
@@ -547,10 +501,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertSame( 1, ReleaseCandidatePreflight::$listCalls );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$listingCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
@@ -607,11 +558,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertFalse( $result->successful() );
 			self::assertSame( 'forbidden', $result->code() );
 		}
-		self::assertSame( 0, ReleaseCandidatePreflight::$listCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$discoverCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
-		self::assertSame( array(), ReleaseCandidatePreflight::$target );
 	}
 
 	public function testFailedExactValidationDoesNotExecuteOrPersistAnything(): void {
@@ -632,8 +578,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'release_invalid', $result->code() );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisitionCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
@@ -660,7 +604,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( array(), $result->data() );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisitionCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
@@ -736,7 +679,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$acquisitionInput['tag'] ?? null );
 		self::assertSame( self::FINGERPRINT, ProspectiveRepositoryProvider::$acquisitionInput['fingerprint'] ?? null );
 		self::assertSame( 'prerelease', ProspectiveRepositoryProvider::$acquisitionInput['channel'] ?? null );
-		self::assertSame( 0, ReleaseCandidatePreflight::$acquireCalls );
 		self::assertSame( 1, $this->acquisition?->handoffCalls );
 		self::assertSame( 0, $this->acquisition?->discardCalls );
 		self::assertSame( 1, $lock->acquireCalls );
@@ -816,7 +758,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( '42', ProspectiveRepositoryProvider::$inspectionInput['release_id'] ?? null );
 		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$inspectionInput['tag'] ?? null );
 		self::assertSame( 'stable', ProspectiveRepositoryProvider::$inspectionInput['channel'] ?? null );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
 	}
 
 	public function testInspectRequiresBothProviderFacetsBeforeRepositoryResolution(): void {
@@ -875,8 +816,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 		self::assertSame( 0, $metadataOnly->metadataCalls );
 		self::assertSame( 0, $inspectorOnly->inspectionCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
-		self::assertSame( array(), ReleaseCandidatePreflight::$target );
 	}
 
 	public function testInspectMapsOnlyClosedProviderRejections(): void {
@@ -908,7 +847,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertSame( array(), $result->data() );
 		}
 		self::assertSame( 0, ProspectiveRepositoryProvider::$metadataCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
 	}
 
 	public function testInspectRejectsProviderIdentityDriftBeforeMetadataProjection(): void {
@@ -953,7 +891,6 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertSame( 'release_invalid', $result->code() );
 		}
 		self::assertSame( 0, ProspectiveRepositoryProvider::$metadataCalls );
-		self::assertSame( 0, ReleaseCandidatePreflight::$inspectCalls );
 	}
 
 	public function testFingerprintMismatchCannotReachCore(): void {
@@ -1494,43 +1431,12 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		string $channel
 	): RepositoryReleaseCandidateList {
 		++self::$listingCalls;
+		unset( $packageType, $repository, $channel );
 		if ( $this->candidateList instanceof Throwable ) {
 			throw $this->candidateList;
 		}
-		if ( null !== $this->candidateList ) {
-			return $this->candidateList;
-		}
 
-		$preflight = ReleaseCandidatePreflight::fromProspectiveTarget(
-			array(
-				'repository'           => $repository->locator,
-				'providerRepositoryId' => $repository->providerRepositoryId,
-				'channel'              => $channel,
-				'accessToken'          => null,
-				'packageType'          => $packageType,
-			)
-		);
-		$releases  = $preflight->listCandidates();
-		if ( $releases instanceof \WP_Error ) {
-			return new RepositoryReleaseCandidateList( array() );
-		}
-		if ( ! is_array( $releases ) ) {
-			throw new RuntimeException( 'Release candidate fixtures are unavailable.' );
-		}
-
-		$candidates = array();
-		foreach ( $releases as $release ) {
-			$candidates[] = new RepositoryReleaseCandidate(
-				(string) $release->releaseId(),
-				$release->tag(),
-				$release->version(),
-				$release->isPrerelease(),
-				$release->publishedAt(),
-				$release->expectedAssetNames()
-			);
-		}
-
-		return new RepositoryReleaseCandidateList( $candidates );
+		return $this->candidateList ?? new RepositoryReleaseCandidateList( array() );
 	}
 
 	public function inspectRelease(

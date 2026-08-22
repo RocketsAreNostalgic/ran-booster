@@ -469,14 +469,15 @@ class CorePackageExecutor {
 		?string $identifier,
 		array $completions
 	): CorePackageExecutionResult {
-		$requiresCompletion = true === $result || $this->isRestoredPluginFailure( $type, $result );
+		$successfulInstallation = $this->isCanonicalInstallationResult( $result );
+		$requiresCompletion     = true === $result || $successfulInstallation || $this->isRestoredPluginFailure( $type, $result );
 		if ( array() !== $completions || $requiresCompletion ) {
 			if ( 1 !== count( $completions ) || ! $this->completionMatches( $completions[0], $type, $action, $identifier ) ) {
 				return CorePackageExecutionResult::failed( CorePackageExecutionFailure::OPERATION_MISMATCH );
 			}
 		}
 
-		if ( true === $result ) {
+		if ( true === $result || $successfulInstallation ) {
 			return CorePackageExecutionResult::succeeded();
 		}
 		if ( false === $result ) {
@@ -490,6 +491,33 @@ class CorePackageExecutor {
 		}
 
 		return CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_UNCERTAIN );
+	}
+
+	/**
+	 * WordPress may return WP_Upgrader::install_package()'s documented result
+	 * array after a successful automatic plugin or theme update.
+	 */
+	private function isCanonicalInstallationResult( mixed $result ): bool {
+		if ( ! is_array( $result )
+			|| array_keys( $result ) !== array( 'source', 'source_files', 'destination', 'destination_name', 'local_destination', 'remote_destination', 'clear_destination' )
+			|| ! is_string( $result['source'] )
+			|| ! is_array( $result['source_files'] )
+			|| ! array_is_list( $result['source_files'] )
+			|| ! is_string( $result['destination'] )
+			|| ! is_string( $result['destination_name'] )
+			|| ! is_string( $result['local_destination'] )
+			|| ! is_string( $result['remote_destination'] )
+			|| ! is_bool( $result['clear_destination'] ) ) {
+			return false;
+		}
+
+		foreach ( $result['source_files'] as $sourceFile ) {
+			if ( ! is_string( $sourceFile ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/** @param array<string, mixed> $completion */

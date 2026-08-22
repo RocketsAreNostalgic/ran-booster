@@ -602,7 +602,7 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	]);
 });
 
-test('a package failure copies its rendered summary into the global error banner', () => {
+test('a package failure focuses and announces its rendered notice without copying it globally', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
@@ -611,21 +611,31 @@ test('a package failure copies its rendered summary into the global error banner
 	state.error.textContent = '';
 	state.form.hasAttribute = (name) =>
 		name === 'data-ran-booster-package-mutation';
-	state.setRenderedErrors([
-		{
-			hidden: false,
-			textContent:
-				'The GitHub release must contain exactly one uploaded ZIP asset. Why this happened and how to fix it.',
-			querySelector(selector) {
-				return selector === 'p'
-					? {
-							textContent:
-								'The GitHub release must contain exactly one uploaded ZIP asset.',
-						}
-					: null;
-			},
+	const renderedNotice = {
+		hidden: false,
+		textContent:
+			'The GitHub release must contain exactly one uploaded ZIP asset. Why this happened and how to fix it.',
+		focusOptions: null,
+		attributes: new Map(),
+		focus(options) {
+			this.focusOptions = options;
 		},
-	]);
+		hasAttribute(name) {
+			return this.attributes.has(name);
+		},
+		setAttribute(name, value) {
+			this.attributes.set(name, String(value));
+		},
+		querySelector(selector) {
+			return selector === 'p'
+				? {
+						textContent:
+							'The GitHub release must contain exactly one uploaded ZIP asset.',
+					}
+				: null;
+		},
+	};
+	state.setRenderedErrors([renderedNotice]);
 
 	init();
 	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
@@ -633,12 +643,19 @@ test('a package failure copies its rendered summary into the global error banner
 		detail: { elt: state.swapTarget, xhr: { status: 200 } },
 	});
 
-	assert.equal(state.error.hidden, false);
-	assert.equal(
-		state.error.textContent,
-		'The GitHub release must contain exactly one uploaded ZIP asset.'
-	);
-	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.error.textContent, '');
+	assert.equal(state.error.focusOptions, null);
+	assert.equal(renderedNotice.attributes.get('role'), 'alert');
+	assert.equal(renderedNotice.attributes.get('tabindex'), '-1');
+	assert.deepEqual(renderedNotice.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{
+			message:
+				'The GitHub release must contain exactly one uploaded ZIP asset.',
+			type: 'assertive',
+		},
+	]);
 });
 
 test('a package response never reveals an empty global error banner', () => {

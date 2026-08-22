@@ -232,9 +232,9 @@
 			announce(region.textContent.trim(), 'error');
 		}
 
-		function renderedFailureMessage(form) {
+		function renderedFailureNotice(form) {
 			const region = errorRegion(form);
-			const notice = Array.from(
+			return Array.from(
 				document.querySelectorAll(
 					'#wpbody-content .notice-error, #wpbody-content .error'
 				)
@@ -245,12 +245,34 @@
 					(candidate.textContent || '').trim() !== ''
 				);
 			});
+		}
+
+		function renderedFailureMessage(notice) {
+			if (!notice) {
+				return '';
+			}
 
 			return (
 				notice?.querySelector?.('p')?.textContent ||
 				notice?.textContent ||
 				''
 			).trim();
+		}
+
+		function focusRenderedFailure(form) {
+			const notice = renderedFailureNotice(form);
+			const message = renderedFailureMessage(notice);
+			if (!message) {
+				return false;
+			}
+
+			notice.setAttribute?.('role', 'alert');
+			if (!notice.hasAttribute?.('tabindex')) {
+				notice.setAttribute?.('tabindex', '-1');
+			}
+			notice.focus?.({ preventScroll: true });
+			announce(message, 'error');
+			return true;
 		}
 
 		function hideToast(toast) {
@@ -486,12 +508,16 @@
 			}
 
 			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
-				focusError(form, renderedFailureMessage(form));
+				if (!focusRenderedFailure(form)) {
+					focusError(form);
+				}
 				return;
 			}
 
 			if (isPackageMutation(form) && errorRegion(form)) {
-				focusError(form, renderedFailureMessage(form));
+				if (!focusRenderedFailure(form)) {
+					focusError(form);
+				}
 			}
 		});
 

@@ -934,9 +934,9 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_active', $dashboard->messages[0]['code'] );
-		self::assertStringContainsString( 'earlier deployment for the plugin example could not be verified', $dashboard->messages[0]['message'] );
-		self::assertStringContainsString( 'not currently running', $dashboard->messages[0]['message'] );
-		self::assertStringContainsString( 'Open its recovery details', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'could not confirm how an earlier deployment of the plugin example ended', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'No deployment is currently running', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Check the package and allow another attempt', $dashboard->messages[0]['message'] );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 

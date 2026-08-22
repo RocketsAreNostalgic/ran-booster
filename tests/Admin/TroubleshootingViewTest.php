@@ -283,7 +283,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[attempt_id]" value="7"', $html );
 		self::assertStringContainsString( 'name="ran_booster[correlation_id]" value="' . str_repeat( 'b', 32 ) . '"', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirm_reviewed]" value="1" required', $html );
-		self::assertStringContainsString( 'Acknowledge historical uncertainty', $html );
+		self::assertStringContainsString( 'I have checked the package&#039;s current state and want to allow another deployment.', $html );
+		self::assertStringContainsString( 'Allow retry and return to theme settings', $html );
+		self::assertStringContainsString( '<form method="post" action="https://example.test/wp-admin/admin.php?page=ran-booster-themes&amp;package=example-theme">', $html );
 		self::assertStringNotContainsString( 'Blocked retry requests', $html );
 		self::assertStringContainsString( 'Back to Activity</a>', $html );
 		self::assertStringNotContainsString( 'class="button" href="' . $troubleshootingBase . '&amp;panel=activity"', $html );
@@ -373,9 +375,10 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Booster did not retain which final-state check could not be proved.', $html );
+		self::assertStringContainsString( 'WordPress reported that it changed this package, but Booster could not confirm the final result.', $html );
+		self::assertStringContainsString( 'Checking the box only clears the retry block. It does not change the package or prove what happened before.', $html );
 		self::assertStringContainsString( 'activity #8', $html );
-		self::assertStringContainsString( 'Acknowledge historical uncertainty', $html );
+		self::assertStringContainsString( 'Allow retry', $html );
 		self::assertStringNotContainsString( 'Provider request ID', $html );
 	}
 

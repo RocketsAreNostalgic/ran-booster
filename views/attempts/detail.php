@@ -50,14 +50,15 @@ $packageSettingsLabel = 'theme' === $packageType
 		<p><strong><?php echo esc_html( $outcomeLabel ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::forCode( (string) $item['outcome_code'] ) ); ?></p>
 		<?php if ( 'restoration_uncertain' === ( $item['outcome_code'] ?? null ) ) { ?>
 			<section class="notice notice-warning inline" aria-labelledby="ran-booster-historical-uncertainty-heading">
-				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'What this historical record can tell you', 'ran-booster' ); ?></h4>
-				<p><?php esc_html_e( 'Booster did not retain which final-state check could not be proved. It may have involved maintenance mode, the installed version, or plugin activation. It cannot truthfully diagnose that past event now.', 'ran-booster' ); ?></p>
+				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'Before you retry', 'ran-booster' ); ?></h4>
+				<p><?php esc_html_e( 'WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update.', 'ran-booster' ); ?></p>
 				<?php if ( $laterVerifiedAttempt instanceof DeploymentAttempt ) { ?>
 					<?php $laterVerifiedData = $laterVerifiedAttempt->safeData(); ?>
-					<p><?php echo esc_html( sprintf( /* translators: 1: later verified deployment date, 2: later deployment ID. */ __( 'A later deployment for this package was verified successfully on %1$s (activity #%2$d). This confirms that Booster verified the package after this historical warning.', 'ran-booster' ), (string) ( $laterVerifiedData['finished_at'] ?? $laterVerifiedData['created_at'] ?? '' ), $laterVerifiedAttempt->getId() ) ); ?></p>
+					<p><?php echo esc_html( sprintf( /* translators: 1: later verified deployment date, 2: later deployment ID. */ __( 'Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state.', 'ran-booster' ), (string) ( $laterVerifiedData['finished_at'] ?? $laterVerifiedData['created_at'] ?? '' ), $laterVerifiedAttempt->getId() ) ); ?></p>
 				<?php } else { ?>
-					<p><?php esc_html_e( 'Before acknowledging it, check that the package is present in WordPress, has the expected version and activation state, and that the site is not still in maintenance mode. A new retry will run its own current checks.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'Check that the package is present, has the expected version and activation state, and that the site is not in maintenance mode.', 'ran-booster' ); ?></p>
 				<?php } ?>
+				<p><?php esc_html_e( 'Checking the box only clears the retry block. It does not change the package or prove what happened before.', 'ran-booster' ); ?></p>
 			</section>
 		<?php } ?>
 		<dl class="ran-booster-activity__details">
@@ -86,13 +87,23 @@ $packageSettingsLabel = 'theme' === $packageType
 			<?php } ?>
 		</dl>
 		<?php if ( $attempt->requiresOperatorResolution() ) { ?>
-			<form method="post" action="">
+			<form method="post" action="<?php echo esc_url( $packageSettingsUrl ); ?>">
 				<?php wp_nonce_field( 'ran-booster-resolve-needs-attention' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="resolve-needs-attention">
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 				<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) $item['correlation_id'] ); ?>">
-				<p><label><input type="checkbox" name="ran_booster[confirm_reviewed]" value="1" required> <?php esc_html_e( 'I have reviewed this historical warning and understand that Booster cannot reconstruct the past final state.', 'ran-booster' ); ?></label></p>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Acknowledge historical uncertainty', 'ran-booster' ); ?></button>
+				<p><label><input type="checkbox" name="ran_booster[confirm_reviewed]" value="1" required> <?php esc_html_e( 'I have checked the package\'s current state and want to allow another deployment.', 'ran-booster' ); ?></label></p>
+				<button type="submit" class="button button-primary">
+					<?php
+					if ( '' === $packageSettingsUrl ) {
+						esc_html_e( 'Allow retry', 'ran-booster' );
+					} elseif ( 'theme' === $packageType ) {
+						esc_html_e( 'Allow retry and return to theme settings', 'ran-booster' );
+					} else {
+						esc_html_e( 'Allow retry and return to plugin settings', 'ran-booster' );
+					}
+					?>
+				</button>
 			</form>
 		<?php } ?>
 		<?php if ( 'running' === $item['state'] ) { ?>

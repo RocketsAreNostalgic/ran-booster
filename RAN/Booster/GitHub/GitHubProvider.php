@@ -56,7 +56,7 @@ use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
+final class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
 
@@ -73,6 +73,9 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 	private WebhookNormalizer $webhooks;
 	private Diagnostics $diagnostics;
 	private CredentialPolicy $credentialPolicy;
+
+	/** @var array<string, GitHubReleaseNativeTarget> */
+	private array $nativeTargets = array();
 
 	public static function create( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider {
 		return new self(
@@ -327,14 +330,9 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 			|| '' === $installedIdentifier ) {
 			return false;
 		}
-		$signal = 'ran_wp_github_release_updater_v1_has_registered_target';
-		if ( ! function_exists( $signal ) ) {
-			return false;
-		}
+		$key = self::nativeTargetKey( $packageType, $installedIdentifier );
 
-		$identity = strtolower( str_replace( '\\', '/', $installedIdentifier ) );
-
-		return true === $signal( $packageType, 'plugin' === $packageType ? ltrim( $identity, '/' ) : $identity );
+		return isset( $this->nativeTargets[ $key ] ) && $this->nativeTargets[ $key ]->status()->active;
 	}
 
 	public function createNativeTarget(
@@ -351,7 +349,7 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 			throw new RuntimeException( 'The GitHub release native target repository is invalid.' );
 		}
 
-		return new GitHubReleaseNativeTarget(
+		$target = new GitHubReleaseNativeTarget(
 			$packageType,
 			$metadataFile,
 			$repository->locator,
@@ -362,6 +360,15 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 			$channel,
 			$deploymentPolicy
 		);
+		$this->nativeTargets[ self::nativeTargetKey( $packageType, $installedIdentifier ) ] = $target;
+
+		return $target;
+	}
+
+	private static function nativeTargetKey( string $packageType, string $installedIdentifier ): string {
+		$identity = strtolower( str_replace( '\\', '/', $installedIdentifier ) );
+
+		return $packageType . ':' . ( 'plugin' === $packageType ? ltrim( $identity, '/' ) : $identity );
 	}
 
 	public function listReleaseCandidates(

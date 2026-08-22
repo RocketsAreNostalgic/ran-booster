@@ -49,12 +49,13 @@ committed_entries=(
 	'uninstall.php'
 	'views'
 )
-package_root='vendor/ran/wp-github-release-updater'
+package_root='vendor/ran/wp-release-updater'
 updater_version='v2.0.0-beta.8'
 updater_commit='d32d48fdf0128fddcee37b16af06001657af97a7'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
+	"$package_root/runtime-copy.json"
 	"$package_root/runtime.php"
 	"$package_root/src"
 )
@@ -252,7 +253,7 @@ if ! php -r '
 	fail "composer.lock must contain only ran/wp-github-release-updater $updater_version at $updater_commit as a production package."
 fi
 
-for package_entry in LICENSE bootstrap.php runtime.php src; do
+for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
 	[[ -e "$installed_package/$package_entry" ]] \
 		|| fail "the locked updater package is missing $package_entry."
 done
@@ -270,6 +271,7 @@ git archive \
 mkdir -p "$stage_root/$package_root"
 cp "$installed_package/LICENSE" "$stage_root/$package_root/LICENSE"
 cp "$installed_package/bootstrap.php" "$stage_root/$package_root/bootstrap.php"
+cp "$installed_package/runtime-copy.json" "$stage_root/$package_root/runtime-copy.json"
 cp "$installed_package/runtime.php" "$stage_root/$package_root/runtime.php"
 cp -R "$installed_package/src" "$stage_root/$package_root/src"
 

@@ -13,24 +13,18 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 	public function testReleaseUpdaterIsBoundBeforeEveryBootstrapCapture(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$localBinding = strpos( $bootstrap, '$ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::register(' );
-		$globalMirror = strpos( $bootstrap, '$GLOBALS[\'ran_booster_release_updater\'] = $ran_booster_release_updater;' );
-		$outerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_core_development_notice, $ran_booster_release_updater, $ran_booster_self_update_policy ): void {' );
-		$innerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater ): void {' );
-		$lateCapture  = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {' );
-		$apiGate      = strpos( $bootstrap, 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )' );
+		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
+		$activation   = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::activate();' );
+		$coreTarget   = strpos( $bootstrap, 'new GitHubReleaseNativeTarget(' );
+		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
-		self::assertIsInt( $localBinding );
-		self::assertIsInt( $globalMirror );
-		self::assertIsInt( $outerCapture );
-		self::assertIsInt( $innerCapture );
-		self::assertIsInt( $lateCapture );
-		self::assertIsInt( $apiGate );
-		self::assertLessThan( $globalMirror, $localBinding );
-		self::assertLessThan( $outerCapture, $globalMirror );
-		self::assertLessThan( $innerCapture, $outerCapture );
-		self::assertLessThan( $lateCapture, $innerCapture );
-		self::assertLessThan( $apiGate, $lateCapture );
+		self::assertIsInt( $registration );
+		self::assertIsInt( $activation );
+		self::assertIsInt( $coreTarget );
+		self::assertIsInt( $target );
+		self::assertLessThan( $activation, $registration );
+		self::assertLessThan( $coreTarget, $activation );
+		self::assertLessThan( $target, $activation );
 	}
 
 	public function testBundledSuccessorRegistersOnceAfterProviderSeal(): void {
@@ -38,33 +32,15 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 
 		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
 		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
-		$releaseControls      = strpos( $bootstrap, '$ran_booster_container->make( ReleaseManagementControls::class )->register();' );
-		$workflowControls     = strpos( $bootstrap, '$ran_booster_container->make( GitHubReleaseWorkflowControls::class )->register();' );
 		$runtimeInit          = strpos( $bootstrap, '$ran_booster_runtime->init()' );
 
 		self::assertIsInt( $providerRegistration );
 		self::assertIsInt( $providerSeal );
-		self::assertIsInt( $releaseControls );
-		self::assertIsInt( $workflowControls );
 		self::assertIsInt( $runtimeInit );
 		self::assertLessThan( $providerSeal, $providerRegistration );
-		self::assertLessThan( $releaseControls, $providerSeal );
-		self::assertLessThan( $workflowControls, $providerSeal );
-		self::assertLessThan( $runtimeInit, $releaseControls );
-		self::assertLessThan( $runtimeInit, $workflowControls );
-		self::assertSame(
-			1,
-			preg_match_all( '/\$ran_booster_container->make\( ReleaseManagementControls::class \)->register\(\);/', $bootstrap )
-		);
-		self::assertSame(
-			1,
-			preg_match_all( '/\$ran_booster_container->make\( GitHubReleaseWorkflowControls::class \)->register\(\);/', $bootstrap )
-		);
-		self::assertStringContainsString( 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )', $bootstrap );
-		self::assertMatchesRegularExpression(
-			'/GitHubReleaseWorkflowControls::class \)->register\(\);[\s\S]*?PHP_INT_MAX/',
-			$bootstrap
-		);
+		self::assertStringNotContainsString( 'ReleaseManagementControls::class )->register()', $bootstrap );
+		self::assertStringNotContainsString( 'GitHubReleaseWorkflowControls::class )->register()', $bootstrap );
+		self::assertStringNotContainsString( 'prospectiveApiVersion', $bootstrap );
 	}
 
 	public function testHardCutRemovesExternalReleasePublicationsAndProspectiveMarker(): void {

@@ -799,8 +799,8 @@ jobs:
                 mkdir -p "$expected_root"
                 unzip -q "$archive" -d "$expected_root"
                 diff -qr \
-                    "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
-                    "$plugin_root/vendor/ran/wp-github-release-updater"
+                    "$expected_root/ran-booster/vendor/ran/wp-release-updater" \
+                    "$plugin_root/vendor/ran/wp-release-updater"
 
   wordpress:
       name: WordPress ${{ matrix.wordpress }} / ${{ matrix.database }} / PHP 8.2
@@ -921,8 +921,8 @@ jobs:
                 mkdir -p "$expected_root"
                 unzip -q "$archive" -d "$expected_root"
                 diff -qr \
-                    "$expected_root/ran-booster/vendor/ran/wp-github-release-updater" \
-                    "$plugin_root/vendor/ran/wp-github-release-updater"
+                    "$expected_root/ran-booster/vendor/ran/wp-release-updater" \
+                    "$plugin_root/vendor/ran/wp-release-updater"
 
           - name: Read back the installed GitHub provider contract
             run: wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress

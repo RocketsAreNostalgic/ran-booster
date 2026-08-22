@@ -11,4 +11,4 @@ parameters:
 		- uninstall.php
 		- RAN
 	scanDirectories:
-		- vendor/ran/wp-github-release-updater/src
+		- vendor/ran/wp-release-updater/src

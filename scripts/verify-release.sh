@@ -53,12 +53,13 @@ committed_entries=(
 	'uninstall.php'
 	'views'
 )
-package_root='vendor/ran/wp-github-release-updater'
+package_root='vendor/ran/wp-release-updater'
 updater_version='v2.0.0-beta.8'
 updater_commit='d32d48fdf0128fddcee37b16af06001657af97a7'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
+	"$package_root/runtime-copy.json"
 	"$package_root/runtime.php"
 	"$package_root/src"
 )
@@ -270,7 +271,7 @@ if ! package_lock_record=$(
 fi
 IFS=$'\t' read -r package_name package_version package_commit lock_content_hash <<< "$package_lock_record"
 
-for package_entry in LICENSE bootstrap.php runtime.php src; do
+for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
 	[[ -e "$installed_package/$package_entry" ]] \
 		|| fail "the locked updater package is missing $package_entry."
 done
@@ -388,6 +389,7 @@ for required_path in \
 	'ran-booster/ran-booster.php' \
 	"ran-booster/$package_root/LICENSE" \
 	"ran-booster/$package_root/bootstrap.php" \
+	"ran-booster/$package_root/runtime-copy.json" \
 	"ran-booster/$package_root/runtime.php"; do
 	grep -Fqx "$required_path" "$archive_files" \
 		|| fail "required runtime file is missing: $required_path"
@@ -432,7 +434,7 @@ php -r '
 	|| fail 'installed Core release marker does not match the release version and commit.'
 
 archived_package="$extract_dir/ran-booster/$package_root"
-for package_entry in LICENSE bootstrap.php runtime.php; do
+for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php; do
 	cmp -s "$installed_package/$package_entry" "$archived_package/$package_entry" \
 		|| fail "archived updater $package_entry does not match the committed Composer lock."
 done

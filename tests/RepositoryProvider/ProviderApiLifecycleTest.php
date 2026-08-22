@@ -54,21 +54,15 @@ final class ProviderApiLifecycleTest extends TestCase {
 		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
 		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
 		$targetRegistration   = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
-		$releaseControls      = strpos( $bootstrap, 'make( ReleaseManagementControls::class )->register()' );
-		$workflowControls     = strpos( $bootstrap, 'make( GitHubReleaseWorkflowControls::class )->register()' );
 
 		self::assertIsInt( $providerRegistration );
 		self::assertIsInt( $providerSeal );
 		self::assertIsInt( $targetRegistration );
-		self::assertIsInt( $releaseControls );
-		self::assertIsInt( $workflowControls );
 		self::assertTrue( $providerRegistration < $providerSeal );
 		self::assertTrue( $providerSeal < $targetRegistration );
-		self::assertTrue( $targetRegistration < $releaseControls );
-		self::assertTrue( $releaseControls < $workflowControls );
 		self::assertSame( 1, substr_count( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' ) );
-		self::assertSame( 1, substr_count( $bootstrap, 'make( ReleaseManagementControls::class )->register()' ) );
-		self::assertSame( 1, substr_count( $bootstrap, 'make( GitHubReleaseWorkflowControls::class )->register()' ) );
+		self::assertStringNotContainsString( 'ReleaseManagementControls::class )->register()', $bootstrap );
+		self::assertStringNotContainsString( 'GitHubReleaseWorkflowControls::class )->register()', $bootstrap );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION', $bootstrap );
 		self::assertStringNotContainsString( 'ran_booster_release_tracking_ready', $bootstrap );
 		self::assertStringNotContainsString( 'ran_booster_prospective_release_ready', $bootstrap );

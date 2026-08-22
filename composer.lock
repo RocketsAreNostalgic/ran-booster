@@ -4,21 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a757467dc568be64dcc0b7881db2f783",
+    "content-hash": "b3da17c34fbc33f7c44db5dd587bda0d",
     "packages": [
         {
-            "name": "ran/wp-github-release-updater",
-            "version": "v2.0.0-beta.8",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater.git",
-                "reference": "d32d48fdf0128fddcee37b16af06001657af97a7"
-            },
+            "name": "ran/wp-release-updater",
+            "version": "0.1.0-beta.1",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-github-release-updater/zipball/d32d48fdf0128fddcee37b16af06001657af97a7",
-                "reference": "d32d48fdf0128fddcee37b16af06001657af97a7",
-                "shasum": ""
+                "type": "path",
+                "url": "../ran-wp-release-updater",
+                "reference": "5869c789348d7eb138d4686a4c101e676b7c472e"
             },
             "require": {
                 "ext-hash": "*",
@@ -26,12 +20,8 @@
                 "ext-zip": "*",
                 "php": "^8.2"
             },
-            "require-dev": {
-                "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-                "phpstan/phpstan": "^1.12",
-                "phpunit/phpunit": "^9.6",
-                "squizlabs/php_codesniffer": "^3.13.6",
-                "wp-coding-standards/wpcs": "^3.2"
+            "conflict": {
+                "ran/wp-github-release-updater": "*"
             },
             "type": "library",
             "autoload-dev": {
@@ -40,42 +30,33 @@
                 }
             },
             "scripts": {
-                "test": [
-                    "phpunit --configuration phpunit.xml"
+                "check": [
+                    "@validate:strict"
                 ],
-                "test:release-publisher": [
-                    "node --test tests/release-publisher.test.mjs"
+                "check:phase3": [
+                    "@validate:strict",
+                    "@test:parity"
                 ],
-                "test:performance": [
-                    "php tests/Characterization/managed-preflight-performance.php"
-                ],
-                "lint": [
-                    "phpcs --standard=phpcs.xml --report=summary"
-                ],
-                "analyze": [
-                    "phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=512M"
+                "test:parity": [
+                    "php tests/Integration/paired-github-provider-proof.php"
                 ],
                 "validate:strict": [
-                    "composer validate --strict"
-                ],
-                "check": [
-                    "@validate:strict",
-                    "@test",
-                    "@test:release-publisher",
-                    "@test:performance",
-                    "@lint",
-                    "@analyze"
+                    "composer validate --strict --no-check-publish"
                 ]
             },
             "license": [
                 "GPL-2.0-or-later"
             ],
-            "description": "GitHub Release update integration for WordPress plugins.",
+            "description": "Provider-neutral release update integration for WordPress plugins and themes.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/tree/v2.0.0-beta.8",
-                "issues": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater/issues"
+                "issues": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/issues",
+                "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
+                "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "time": "2026-08-21T10:10:03+00:00"
+            "transport-options": {
+                "symlink": false,
+                "relative": true
+            }
         }
     ],
     "packages-dev": [
@@ -2727,7 +2708,7 @@
         "phpcompatibility/phpcompatibility-paragonie": 20,
         "phpcompatibility/phpcompatibility-wp": 20,
         "ran/admin-shell": 20,
-        "ran/wp-github-release-updater": 10
+        "ran/wp-release-updater": 10
     },
     "prefer-stable": true,
     "prefer-lowest": false,

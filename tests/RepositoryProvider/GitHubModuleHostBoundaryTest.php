@@ -24,6 +24,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/github-provider-installed-readback.php',
+		'tests/WordPress/github-release-updater-bootstrap-smoke.php',
 	);
 
 	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {

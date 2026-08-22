@@ -46,10 +46,8 @@ use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
-use RAN\Admin\GitHubReleaseUpdateNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
-use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
-use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
+use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
 use RAN\Booster\GitHub\GitHubProvider;
@@ -62,8 +60,8 @@ use RAN\Runtime\UnsupportedMultisiteBootstrap;
 use RAN\Storage\Database;
 use RAN\Troubleshooting\CoreSelfUpdateStatus;
 use RAN\WordPress\CoreSelfUpdatePolicy;
-use RAN\WordPress\GitHubReleaseUpdaterBootstrap;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
+use RAN\WordPress\ReleaseUpdaterBootstrap;
 use RAN\WordPress\WordPressOrgUpdateRequestFilter;
 
 if ( ! function_exists( 'ran_booster_table_name' ) ) {
@@ -75,15 +73,9 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 	}
 }
 
-$ran_booster_version                    = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
-$ran_booster_self_update_policy         = CoreSelfUpdatePolicy::detect( __FILE__, $ran_booster_version );
-$ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::register(
-	pluginFile: __FILE__,
-	pluginVersion: $ran_booster_version,
-	nativeDiscovery: $ran_booster_self_update_policy->allowsNativeDiscovery()
-);
-$GLOBALS['ran_booster_release_updater'] = $ran_booster_release_updater;
-GitHubReleaseUpdateNotice::register( plugin_basename( __FILE__ ) );
+$ran_booster_version            = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+$ran_booster_self_update_policy = CoreSelfUpdatePolicy::detect( __FILE__, $ran_booster_version );
+ReleaseUpdaterBootstrap::register();
 
 $ran_booster_runtime_support = RuntimeSupport::current();
 if ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) ) {
@@ -105,7 +97,7 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 $ran_booster_core_development_notice = new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy );
 $ran_booster_core_development_notice->register();
 
-( static function () use ( $ran_booster_core_development_notice, $ran_booster_release_updater, $ran_booster_self_update_policy ): void {
+( static function () use ( $ran_booster_core_development_notice, $ran_booster_self_update_policy ): void {
 	$ran_booster_container            = new CoreContainer();
 	$ran_booster_runtime              = new Booster( $ran_booster_container );
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
@@ -118,20 +110,12 @@ $ran_booster_core_development_notice->register();
 	}
 	$ran_booster_container->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
 	$ran_booster_container->bind( CoreSelfUpdateDevelopmentNotice::class, $ran_booster_core_development_notice );
-	$ran_booster_container->bind(
-		CoreSelfUpdateStatus::class,
-		new CoreSelfUpdateStatus(
-			$ran_booster_self_update_policy,
-			$GLOBALS['ran_booster_release_updater']
-		)
-	);
-
 	register_activation_hook( __FILE__, array( $ran_booster_runtime, 'activate' ) );
 	register_deactivation_hook( __FILE__, array( $ran_booster_runtime, 'deactivate' ) );
 
 	add_action(
 		'plugins_loaded',
-		static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater ): void {
+		static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_self_update_policy ): void {
 			// All plugins have now had an opportunity to attach their provider
 			// registration callback. No provider consumer is resolved before this
 			// extension seam closes and the registry is sealed.
@@ -139,8 +123,27 @@ $ran_booster_core_development_notice->register();
 			do_action( 'ran_booster_register_providers', $providerRegistry );
 			$providerRegistry->seal();
 
+			ReleaseUpdaterBootstrap::activate();
+			$coreVersion       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+			$coreReleaseTarget = new GitHubReleaseNativeTarget(
+				'plugin',
+				__FILE__,
+				'RocketsAreNostalgic/ran-booster',
+				'1319710173',
+				'ran-booster',
+				plugin_basename( __FILE__ ),
+				null,
+				str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
+				$ran_booster_self_update_policy->allowsNativeDiscovery() ? 'forced-off' : 'disabled'
+			);
+			$coreReleaseTarget->register();
+			$ran_booster_container->bind(
+				CoreSelfUpdateStatus::class,
+				new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )
+			);
+
 			// Release targets join the package broker after every provider is
-			// available and before the request-local updater selects its runtime.
+			// available and after the request-local updater selects its runtime.
 			try {
 				$ran_booster_container->make( ManagedReleaseTargetRegistrar::class )->register();
 			} catch ( Throwable $exception ) {
@@ -153,18 +156,6 @@ $ran_booster_core_development_notice->register();
 
 			$portability      = $ran_booster_container->make( PortabilityFacade::class );
 			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
-			add_action(
-				'plugins_loaded',
-				static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {
-					if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-						!== GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater ) ) {
-						return;
-					}
-					$ran_booster_container->make( ReleaseManagementControls::class )->register();
-					$ran_booster_container->make( GitHubReleaseWorkflowControls::class )->register();
-				},
-				PHP_INT_MAX
-			);
 			if ( GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
 				GitHubProvider::registerLegacyAssistedHooksAddOnNotice();
 			} else {

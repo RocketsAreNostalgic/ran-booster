@@ -66,13 +66,10 @@ $assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_PROVIDER_AP
 $assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_ADDON_API_VERSION', 16" ), 'Add-on API 16 must remain explicit.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION' ), 'The removed Webhook Cleanup marker must stay absent.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_LOGGING_API_VERSION' ), 'The removed Logging API marker must stay absent.' );
-$updaterRegistration = is_string( $source ) ? strpos( $source, 'GitHubReleaseUpdaterBootstrap::register' ) : false;
+$updaterRegistration = is_string( $source ) ? strpos( $source, 'ReleaseUpdaterBootstrap::register' ) : false;
 $pluginsLoaded       = is_string( $source ) ? strpos( $source, "'plugins_loaded'" ) : false;
 $assert( false !== $updaterRegistration, 'Bootstrap must register the shared release updater.' );
-$assert(
-	str_contains( $source, "\$GLOBALS['ran_booster_release_updater']" ),
-	'Bootstrap must expose the passive updater diagnostics facade consistently.'
-);
+$assert( ! str_contains( $source, 'GitHubReleaseUpdaterBootstrap' ), 'Bootstrap must remove the GitHub-specific updater facade.' );
 $assert(
 	false !== $pluginsLoaded && $updaterRegistration < $pluginsLoaded,
 	'The shared release updater must register before plugins_loaded.'

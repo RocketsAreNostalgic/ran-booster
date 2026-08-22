@@ -7,7 +7,10 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleasePlatformContractTest extends TestCase {
-	private const UPDATER_COMMIT = 'd32d48fdf0128fddcee37b16af06001657af97a7';
+	private const UPDATER_COMMIT  = '320fb89e1a93813907419cecab7e05892b6d9419';
+	private const UPDATER_PACKAGE = 'ran/wp-release-updater';
+	private const UPDATER_PATH    = 'vendor/ran/wp-release-updater';
+	private const UPDATER_VERSION = '0.1.0-beta.1';
 
 	public function testComposerDeclaresTheZipRuntimeRequirement(): void {
 		$composer = json_decode(
@@ -20,12 +23,55 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertSame( '*', $composer['require']['ext-zip'] ?? null );
 	}
 
-	public function testReleaseScriptsPinTheLiteralUpdaterCommit(): void {
+	public function testReleaseScriptsPinTheNeutralUpdaterLockIdentity(): void {
 		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $scriptName ) {
 			$script = file_get_contents( dirname( __DIR__ ) . '/scripts/' . $scriptName ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
 			self::assertIsString( $script );
+			self::assertStringContainsString( "package_root='" . self::UPDATER_PATH . "'", $script );
+			self::assertStringContainsString( "updater_version='" . self::UPDATER_VERSION . "'", $script );
 			self::assertStringContainsString( "updater_commit='" . self::UPDATER_COMMIT . "'", $script );
-			self::assertStringContainsString( 'hash_equals( $argv[3], $source )', $script );
+			self::assertStringContainsString( '"' . self::UPDATER_PACKAGE . '" !==', $script );
+			self::assertStringContainsString( '"../ran-wp-release-updater" !== ( $dist["url"] ?? null )', $script );
+			self::assertStringContainsString( 'hash_equals( $argv[3], $dist["reference"] )', $script );
+			self::assertStringContainsString( 'array_key_exists( "source", $package )', $script );
+			self::assertStringContainsString( 'git -C "$updater_repository" archive "$updater_commit" | tar -xf - -C "$updater_checkout"', $script );
+			self::assertStringNotContainsString( 'ran/wp-github-release-updater', $script );
+		}
+	}
+
+	public function testComposerLockPinsTheNeutralRuntimeAndItsExactMetadata(): void {
+		$lock    = json_decode(
+			(string) file_get_contents( dirname( __DIR__ ) . '/composer.lock' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+			true,
+			512,
+			JSON_THROW_ON_ERROR
+		);
+		$package = $lock['packages'][0] ?? null;
+
+		self::assertIsArray( $package );
+		self::assertSame( self::UPDATER_PACKAGE, $package['name'] ?? null );
+		self::assertSame( self::UPDATER_VERSION, $package['version'] ?? null );
+		self::assertSame( 'path', $package['dist']['type'] ?? null );
+		self::assertSame( '../ran-wp-release-updater', $package['dist']['url'] ?? null );
+		self::assertSame( self::UPDATER_COMMIT, $package['dist']['reference'] ?? null );
+		self::assertArrayNotHasKey( 'source', $package );
+	}
+
+	public function testReleaseVerifierRequiresTheSupportedCoreAndNeutralRuntimeMarkers(): void {
+		$script = file_get_contents( dirname( __DIR__ ) . '/scripts/verify-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		self::assertIsString( $script );
+
+		foreach ( array(
+			"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );",
+			"define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );",
+			"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );",
+			"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );",
+			'public const API_VERSION = 2;',
+			'"$package_root/runtime-copy.json"',
+			'"$package_root/runtime.php"',
+			'for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do',
+		) as $marker ) {
+			self::assertStringContainsString( $marker, $script );
 		}
 	}
 

@@ -12,10 +12,12 @@ foreach ( array( 'ran-booster-managed-active', 'ran-booster-managed-inactive' ) 
 	if ( ! $ran_booster_theme->exists() || false !== $ran_booster_theme->errors() ) {
 		throw new RuntimeException( 'A managed fixture theme is unavailable.' );
 	}
-	if ( ! function_exists( 'ran_wp_github_release_updater_v1_has_registered_target' )
-		|| ! ran_wp_github_release_updater_v1_has_registered_target( 'theme', $ran_booster_stylesheet ) ) {
-		throw new RuntimeException( 'Booster did not register a managed theme fixture.' );
-	}
 }
 
-WP_CLI::success( 'Normal Booster registration covers active and inactive managed themes.' );
+$ran_booster_theme_hook = $GLOBALS['wp_filter']['update_themes_github.com'] ?? null;
+if ( ! $ran_booster_theme_hook instanceof WP_Hook
+	|| 2 !== count( $ran_booster_theme_hook->callbacks[10] ?? array() ) ) {
+	throw new RuntimeException( 'Booster did not register exactly one neutral updater callback for each managed theme fixture.' );
+}
+
+WP_CLI::success( 'Normal Booster registration covers active and inactive managed themes through the neutral updater hooks.' );

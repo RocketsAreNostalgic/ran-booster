@@ -942,32 +942,28 @@ jobs:
                   WP_CLI::success( "No global Core container or bulk credential enumerator is published." );
                 ' --path=build/wordpress
 
-          - name: Prove shared updater registration
+          - name: Read back the neutral updater runtime contract
             shell: bash
             run: |
-                wp eval '
-                  $updater = $GLOBALS["ran_booster_release_updater"] ?? null;
-                  if ( ! is_object( $updater ) || ! is_callable( array( $updater, "diagnostics" ) ) ) {
-                    throw new RuntimeException( "The shared updater facade is unavailable." );
-                  }
-                  $diagnostics = $updater->diagnostics();
+              wp eval '
+                  $runtime_root = WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater";
+                  $copy = json_decode( file_get_contents( $runtime_root . "/runtime-copy.json" ), true, 512, JSON_THROW_ON_ERROR );
                   $expected = array(
-                    "registered" => true,
-                    "selection_fixed" => true,
-                    "selected_version" => "2.0.0-beta.8",
-                    "repository" => "RocketsAreNostalgic/ran-booster",
-                    "channel" => "prerelease",
-                    "type" => "plugin",
-                    "package" => "ran-booster/ran-booster.php",
-                    "authentication_configured" => false,
-                    "private_support" => true,
+                    "package_revision" => "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "package_version" => "0.1.0-beta.1",
+                    "php_floor" => "8.2.0",
+                    "runtime_file" => "runtime.php",
+                    "runtime_protocol" => 1,
+                    "wordpress_floor" => "6.5.0",
                   );
-                  foreach ( $expected as $key => $value ) {
-                    if ( ( $diagnostics[$key] ?? null ) !== $value ) {
-                      throw new RuntimeException( "Unexpected shared updater diagnostic: " . $key );
-                    }
+                  if ( $copy !== $expected ) {
+                    throw new RuntimeException( "The neutral updater runtime-copy metadata is unexpected." );
                   }
-                  WP_CLI::success( "Shared updater diagnostics passed without a remote check." );
+                  $runtime = file_get_contents( $runtime_root . "/runtime.php" );
+                  if ( false === $runtime || ! str_contains( $runtime, "RAN\\\\WPReleaseUpdater\\\\V1\\\\WordPress\\\\NativePluginUpdater" ) ) {
+                    throw new RuntimeException( "The neutral updater V1 runtime marker is unavailable." );
+                  }
+                  WP_CLI::success( "Neutral updater runtime metadata and V1 marker passed." );
                 ' --path=build/wordpress
 
           - name: Prove database activation and storage

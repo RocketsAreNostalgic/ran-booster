@@ -128,7 +128,7 @@ final class ManagedReleaseTargetRegistrar {
 			return $reply;
 		}
 		try {
-			$authority = $this->nativeAuthority( $target['type'], $target['identifier'] );
+			$snapshot = $this->nativeAuthoritySnapshot( $target['type'], $target['identifier'] );
 		} catch ( PluginNotFound | ThemeNotFound ) {
 			return isset( $this->registeredAuthorities[ $key ] ) || isset( $this->targets[ $key ] )
 				? $this->nativeUpdateError( 'authority_changed' )
@@ -136,6 +136,12 @@ final class ManagedReleaseTargetRegistrar {
 		} catch ( Throwable ) {
 			return $this->nativeUpdateError( 'authority_changed' );
 		}
+		if ( ! $snapshot['release'] ) {
+			return $this->hasNativeTargetState( $key )
+				? $this->nativeUpdateError( 'authority_changed' )
+				: $reply;
+		}
+		$authority = $snapshot['authority'];
 		if ( null === $authority
 			|| ! $this->nativeTargetIsActive( $target['type'], $target['identifier'] )
 			|| ( $this->registeredAuthorities[ $key ] ?? null ) !== $authority ) {
@@ -197,13 +203,16 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		if ( null === $pending ) {
 			try {
-				$this->nativeAuthority( $target['type'], $target['identifier'] );
+				$snapshot = $this->nativeAuthoritySnapshot( $target['type'], $target['identifier'] );
 			} catch ( PluginNotFound | ThemeNotFound ) {
 				return isset( $this->registeredAuthorities[ $key ] ) || isset( $this->targets[ $key ] )
 					? $this->nativeUpdateError( 'authority_changed' )
 					: $reply;
 			} catch ( Throwable ) {
 				return $this->nativeUpdateError( 'authority_changed' );
+			}
+			if ( ! $snapshot['release'] && ! $this->hasNativeTargetState( $key ) ) {
+				return $reply;
 			}
 
 			return $this->nativeUpdateError( 'authority_changed' );
@@ -220,8 +229,10 @@ final class ManagedReleaseTargetRegistrar {
 			} else {
 				$lockToken = $lock->acquire();
 			}
-			$current = $this->nativeAuthority( $target['type'], $target['identifier'] );
-			if ( null === $current
+			$snapshot = $this->nativeAuthoritySnapshot( $target['type'], $target['identifier'] );
+			$current  = $snapshot['authority'];
+			if ( ! $snapshot['release']
+				|| null === $current
 				|| ! $this->nativeTargetIsActive( $target['type'], $target['identifier'] )
 				|| $pending['authority'] !== $current ) {
 				throw new \RuntimeException( 'The managed release authority changed.' );
@@ -402,29 +413,49 @@ final class ManagedReleaseTargetRegistrar {
 		return null;
 	}
 
-	/** @return array<string, int|string>|null */
-	private function nativeAuthority( string $type, string $identifier ): ?array {
-		$package       = 'plugin' === $type
+	/** @return array{release: bool, authority: array<string, int|string>|null} */
+	private function nativeAuthoritySnapshot( string $type, string $identifier ): array {
+		$package = 'plugin' === $type
 			? $this->plugins->boosterPluginFromFile( $identifier )
 			: $this->themes->boosterThemeFromStylesheet( $identifier );
+		if ( PackageSource::RELEASE_ASSET !== $package->getSource() ) {
+			return array(
+				'release'   => false,
+				'authority' => null,
+			);
+		}
 		$configuration = $this->store->configuration( $type, $identifier );
 		$repositoryId  = $package->getProviderRepositoryId();
 		$providerCode  = $package->getProviderCode();
-		if ( PackageSource::RELEASE_ASSET !== $package->getSource()
-			|| null === $providerCode
+		if ( null === $providerCode
 			|| ! is_string( $repositoryId )
 			|| '' === $repositoryId
 			|| null === $configuration
 			|| ! $this->configurationMatchesPackage( $type, $identifier, $configuration ) ) {
-			return null;
+			return array(
+				'release'   => true,
+				'authority' => null,
+			);
 		}
 		try {
 			$this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );
 		} catch ( Throwable ) {
-			return null;
+			return array(
+				'release'   => true,
+				'authority' => null,
+			);
 		}
 
-		return $this->authority( $package, $configuration );
+		return array(
+			'release'   => true,
+			'authority' => $this->authority( $package, $configuration ),
+		);
+	}
+
+	private function hasNativeTargetState( string $key ): bool {
+		return isset( $this->registeredAuthorities[ $key ] )
+			|| isset( $this->targets[ $key ] )
+			|| isset( $this->failures[ $key ] );
 	}
 
 	private function nativeTargetIsActive( string $type, string $identifier ): bool {
@@ -461,11 +492,13 @@ final class ManagedReleaseTargetRegistrar {
 			}
 			$key = self::key( $type, $identifier );
 			try {
-				$current = $this->nativeAuthority( $type, $identifier );
+				$snapshot = $this->nativeAuthoritySnapshot( $type, $identifier );
+				$current  = $snapshot['authority'];
 			} catch ( Throwable ) {
 				$current = null;
 			}
-			if ( null === $current
+			if ( ! ( $snapshot['release'] ?? false )
+				|| null === $current
 				|| ( $this->registeredAuthorities[ $key ] ?? null ) !== $current
 				|| ! $this->nativeTargetIsActive( $type, $identifier ) ) {
 				unset( $transient->response[ $identifier ] );

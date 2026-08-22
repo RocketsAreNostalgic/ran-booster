@@ -521,6 +521,26 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, self::NATIVE_EXTRA ) );
 	}
 
+	public function testBranchManagedTargetNeverEntersNativeReleaseMutationFence(): void {
+		$branch               = $this->package(
+			'plugin',
+			self::NATIVE_PLUGIN,
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		[ $registrar, $lock ] = $this->nativePluginRegistrar( $branch );
+		$incoming             = '/tmp/branch-artifact.zip';
+
+		self::assertSame(
+			$incoming,
+			$registrar->authorizeNativeDownload( $incoming, $incoming, new \stdClass(), self::NATIVE_EXTRA )
+		);
+		self::assertSame( $incoming, $registrar->fenceNativeMutation( $incoming, self::NATIVE_EXTRA ) );
+		self::assertSame( 0, $lock->acquires );
+		self::assertSame( array(), $lock->releases );
+	}
+
 	public function testRegisteredTargetFailsClosedWhenItsManagementRowDisappears(): void {
 		$release       = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		[ $registrar ] = $this->nativePluginRegistrar(

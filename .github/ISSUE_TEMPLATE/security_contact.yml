@@ -1,0 +1,24 @@
+name: Security contact
+description: Request a confidential contact path when private vulnerability reporting is unavailable.
+title: '[Security]: '
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Use this form only when GitHub private vulnerability reporting is unavailable.
+              Do not include vulnerability details, exploit steps, credentials, webhook
+              secrets, repository credentials, WordPress salts, private repository URLs,
+              signed URLs, full logs, customer data, or release assets.
+    - type: checkboxes
+      id: acknowledgements
+      attributes:
+          label: Required security acknowledgements
+          options:
+              - label: GitHub private vulnerability reporting is unavailable, and I am requesting a confidential contact route.
+                required: true
+              - label: I have not included vulnerability details, exploit steps, or reproduction traces in this report.
+                required: true
+              - label: I have removed secrets, private repository identifiers, and sensitive operations data from this report.
+                required: true
+              - label: I understand this public issue is only a request for private contact and contains no technical findings.
+                required: true

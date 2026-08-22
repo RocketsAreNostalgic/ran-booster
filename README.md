@@ -71,8 +71,8 @@ later falls outside an operational requirement, the site stays bootable but
 Booster pauses affected management and deployment operations until the
 requirement is restored.
 
-Use the [issue tracker](https://github.com/RocketsAreNostalgic/ran-booster/issues)
-for ordinary support and non-sensitive defects. Follow
+Follow [SUPPORT.md](SUPPORT.md) for ordinary support, non-sensitive defects,
+and feature requests. Follow
 [SECURITY.md](SECURITY.md) for confidential vulnerability reporting and
 [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change.
 

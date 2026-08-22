@@ -1,0 +1,86 @@
+name: Bug report
+description: Report a reproducible, non-sensitive problem with RAN Booster.
+title: '[Bug]: '
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thank you for helping improve RAN Booster. Do not include vulnerability details, credentials, webhook secrets, private repository or customer data, signed URLs, release assets, or full production logs. Use the private route in SECURITY.md for vulnerabilities.
+    - type: input
+      id: booster_version
+      attributes:
+          label: RAN Booster version
+          description: Use the version shown on the Plugins screen or in the installed plugin header.
+          placeholder: 1.0.0-beta.26
+      validations:
+          required: true
+    - type: input
+      id: wordpress_version
+      attributes:
+          label: WordPress version
+          placeholder: 7.0.3
+      validations:
+          required: true
+    - type: input
+      id: php_version
+      attributes:
+          label: PHP version
+          placeholder: 8.2.x
+      validations:
+          required: true
+    - type: input
+      id: database
+      attributes:
+          label: Database and version
+          placeholder: MySQL 8.0 or MariaDB 10.11
+      validations:
+          required: true
+    - type: input
+      id: provider
+      attributes:
+          label: Repository provider
+          description: Name the provider, but omit private repository identifiers unless essential.
+          placeholder: GitHub
+      validations:
+          required: true
+    - type: input
+      id: operation
+      attributes:
+          label: Package operation
+          description: For example, branch deployment, release update, webhook setup, or Blueprint import.
+      validations:
+          required: true
+    - type: textarea
+      id: steps
+      attributes:
+          label: Steps to reproduce
+          description: Give the smallest repeatable sequence. Replace private identities with neutral labels.
+      validations:
+          required: true
+    - type: textarea
+      id: expected
+      attributes:
+          label: Expected result
+      validations:
+          required: true
+    - type: textarea
+      id: actual
+      attributes:
+          label: Actual result
+          description: Include exact safe error text or a Booster support reference when available.
+      validations:
+          required: true
+    - type: textarea
+      id: diagnostics
+      attributes:
+          label: Sanitized diagnostics
+          description: Optional. Include only the smallest relevant excerpt after removing sensitive values and private identities.
+    - type: checkboxes
+      id: safety
+      attributes:
+          label: Safety check
+          options:
+              - label: I have removed credentials, secrets, signed URLs, private source, customer data, release assets, full logs, private workbench material, and Dex identifiers.
+                required: true
+              - label: This report does not disclose a security vulnerability.
+                required: true

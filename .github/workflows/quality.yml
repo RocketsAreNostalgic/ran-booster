@@ -668,6 +668,36 @@ jobs:
                 fetch-depth: 0
                 persist-credentials: false
 
+          - name: Check out locked neutral updater source
+            shell: bash
+            env:
+                RAN_SOURCE_COMMIT: ${{ github.sha }}
+            run: |
+                set -euo pipefail
+                source_commit="$RAN_SOURCE_COMMIT"
+                updater_commit="$(
+                  git show "${source_commit}:composer.lock" \
+                    | jq -er '
+                      [.packages[] | select(.name == "ran/wp-release-updater")] as $packages
+                      | if (($packages | length) == 1
+                          and $packages[0].dist.type == "path"
+                          and $packages[0].dist.url == "../ran-wp-release-updater"
+                          and ($packages[0].dist.reference | type) == "string")
+                        then $packages[0].dist.reference
+                        else error("Expected one exact locked neutral updater path package.")
+                        end
+                    '
+                )"
+                [[ "$updater_commit" =~ ^[0-9a-f]{40}$ ]]
+
+                updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"
+                test ! -e "$updater_repository"
+                git init --quiet "$updater_repository"
+                git -C "$updater_repository" remote add origin 'https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git'
+                git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"
+                git -C "$updater_repository" checkout --quiet --detach FETCH_HEAD
+                test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"
+
           - name: Prepare private test temporary directory
             shell: bash
             run: |

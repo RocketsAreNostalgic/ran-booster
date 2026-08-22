@@ -92,12 +92,12 @@ final class ReleaseWorkflowContractTest extends TestCase {
 	public function testQualityMaterializesTheExactLockedUpdaterForFreshArchives(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
-		self::assertStringContainsString( 'Check out locked neutral updater source', $workflow );
+		self::assertSame( 2, substr_count( $workflow, 'Check out locked neutral updater source' ) );
 		self::assertStringContainsString( 'git show "${source_commit}:composer.lock"', $workflow );
 		self::assertStringContainsString( '.name == "ran/wp-release-updater"', $workflow );
 		self::assertStringContainsString( '.dist.url == "../ran-wp-release-updater"', $workflow );
 		self::assertStringContainsString( 'updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"', $workflow );
-		self::assertStringContainsString( 'git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"', $workflow );
+		self::assertSame( 2, substr_count( $workflow, 'git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"' ) );
 		self::assertStringContainsString( 'test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"', $workflow );
 		self::assertStringNotContainsString( '320fb89e1a93813907419cecab7e05892b6d9419', $workflow );
 	}

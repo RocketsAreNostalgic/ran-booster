@@ -241,8 +241,9 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 					<div class="notice notice-warning inline">
 						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
 					</div>
-					<div class="ran-booster-settings-actions">
-						<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></a>
+					<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
+						<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+						<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a>
 					</div>
 				</div>
 			</section>
@@ -301,7 +302,8 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 
 			<div class="ran-booster-settings-actions ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
 				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( $settingsUrl ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form" <?php disabled( ! $packageMutationAvailable ); ?>><?php echo esc_html( $packageSettingsSaveLabel ); ?></button>
-				<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+				<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a>
 			</div>
 		<?php } ?>
 
@@ -343,5 +345,4 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 		</div>
 	</aside>
 </div>
-<p class="ran-booster-package-settings__install-another"><a href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a></p>
 <?php // phpcs:enable WordPress.Security.NonceVerification.Missing ?>

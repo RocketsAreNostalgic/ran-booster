@@ -48,17 +48,18 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 	<div class="ran-booster-source-choices">
 		<?php foreach ( $packageSourceChoices as $sourceKey => $sourceChoice ) { ?>
 			<?php
-			$isSelected = $sourceKey === $packageSourceView;
-			$classes    = 'ran-booster-source-choice' . ( $isSelected ? ' is-selected' : '' ) . ( $sourceChoice['disabled'] ? ' is-disabled' : '' );
-			$sourceSlug = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $sourceKey ) );
-			$tabId      = 'ran-booster-source-tab-' . $sourceSlug;
-			$panelId    = 'ran-booster-source-pane-' . $sourceSlug;
-			$sourceUrl  = wp_make_link_relative( $sourceChoice['url'] );
+			$isSelected          = $sourceKey === $packageSourceView;
+			$classes             = 'ran-booster-source-choice' . ( $isSelected ? ' is-selected' : '' ) . ( $sourceChoice['disabled'] ? ' is-disabled' : '' );
+			$sourceSlug          = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $sourceKey ) );
+			$tabId               = 'ran-booster-source-tab-' . $sourceSlug;
+			$panelId             = 'ran-booster-source-pane-' . $sourceSlug;
+			$sourceUrl           = wp_make_link_relative( $sourceChoice['url'] );
+			$disabledExplanation = $sourceChoice['disabled'] ? (string) $sourceChoice['description'] : '';
 			?>
 			<?php if ( 'edit' === $sourceChoiceMode && ! $sourceChoice['disabled'] ) { ?>
 				<a id="<?php echo esc_attr( $tabId ); ?>" aria-controls="<?php echo esc_attr( $panelId ); ?>" class="<?php echo esc_attr( $classes ); ?>" href="<?php echo esc_url( $sourceUrl . '#ran-booster-advanced-source-settings' ); ?>" hx-get="<?php echo esc_url( $sourceUrl ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-source-choice="<?php echo esc_attr( $sourceKey ); ?>"<?php echo $isSelected ? ' aria-current="true"' : ''; ?>>
 			<?php } else { ?>
-				<button id="<?php echo esc_attr( $tabId ); ?>" aria-controls="<?php echo esc_attr( $panelId ); ?>" aria-pressed="<?php echo $isSelected ? 'true' : 'false'; ?>" type="button" class="<?php echo esc_attr( $classes ); ?>" data-ran-booster-source-choice="<?php echo esc_attr( $sourceKey ); ?>" data-ran-booster-source-hydratable="<?php echo $sourceChoice['client_hydratable'] ? '1' : '0'; ?>" <?php disabled( $sourceChoice['disabled'] ); ?>>
+				<button id="<?php echo esc_attr( $tabId ); ?>" aria-controls="<?php echo esc_attr( $panelId ); ?>" aria-pressed="<?php echo $isSelected ? 'true' : 'false'; ?>"<?php echo $sourceChoice['disabled'] ? ' aria-disabled="true"' : ''; ?><?php echo '' !== $disabledExplanation ? ' title="' . esc_attr( $disabledExplanation ) . '"' : ''; ?> type="button" class="<?php echo esc_attr( $classes ); ?>" data-ran-booster-source-choice="<?php echo esc_attr( $sourceKey ); ?>" data-ran-booster-source-hydratable="<?php echo $sourceChoice['client_hydratable'] ? '1' : '0'; ?>">
 			<?php } ?>
 				<span class="ran-booster-source-choice__radio" aria-hidden="true"></span>
 				<span>

@@ -179,7 +179,7 @@
 	background: var(--ran-booster-surface-subtle);
 	color: var(--ran-booster-text-subtle);
 	cursor: not-allowed;
-	opacity: 0.58;
+	opacity: 1;
 }
 
 .ran-booster-source-choice.is-disabled:hover {

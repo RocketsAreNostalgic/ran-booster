@@ -150,6 +150,14 @@ test('a configured subdirectory makes Published releases unavailable and keeps B
 		/branchChoice\.focus\(\);[\s\S]*branchChoice\.click\(\);/
 	);
 	assert.match(
+		declaration('setChoiceState'),
+		/releaseChoice\.setAttribute\('title', disabled \? description : ''\)/
+	);
+	assert.match(
+		declaration('chooseRelease'),
+		/getAttribute\('aria-disabled'\) === 'true'/
+	);
+	assert.match(
 		declaration('listCandidates'),
 		/if \(hasSubdirectory\(\)\) \{\s*forceBranchForSubdirectory\(\);\s*return;/
 	);

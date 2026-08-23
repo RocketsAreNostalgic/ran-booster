@@ -9,6 +9,7 @@ use LogicException;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\InvalidPackageSubdirectory;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
@@ -531,6 +532,8 @@ final class PackageAdminController {
 			$message = 'The selected repository provider is not available.';
 		} catch ( UnsupportedProviderCapability $failure ) {
 			$message = 'The selected repository provider does not yet support this package operation.';
+		} catch ( InvalidPackageSubdirectory $failure ) {
+			$message = 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.';
 		} catch ( InvalidArgumentException $failure ) {
 			$message = 'Check the repository provider, account, repository, and credential fields.';
 		} catch ( RuntimeException $failure ) {

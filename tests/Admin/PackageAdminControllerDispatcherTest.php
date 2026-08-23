@@ -203,6 +203,45 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( $expectedPublicOnly, $provider->requests[0]->publicOnly );
 	}
 
+	public function testInvalidSubdirectoryNamesTheFieldBeforeProviderResolution(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$plugins   = new EditBoundaryPluginRepository( $package );
+		$themes    = new EditBoundaryThemeRepository( $package );
+		$provider  = new CapturingPublicLookupProvider();
+		$providers = new ProviderRegistry( array( $provider ) );
+		$request   = array(
+			'action'                             => 'edit-plugin',
+			'file'                               => 'fixture/fixture.php',
+			'provider'                           => 'gh',
+			'repository'                         => 'owner/replacement',
+			'credential_id'                      => '',
+			'branch'                             => 'main',
+			'subdirectory'                       => '../fixture',
+			'deployment_policy'                  => 'manual',
+			'check_repository_branch_after_save' => '1',
+		);
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'addFailureMessage' )
+			->with(
+				self::callback(
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.' === $message->get_error_message()
+				)
+			);
+		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: $plugins,
+			themes: $themes,
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', $request, true );
+
+		self::assertFalse( $result );
+		self::assertCount( 0, $provider->requests );
+	}
+
 	/** @return array<string, array{bool, string|null, bool}> */
 	public static function trustedPublicLookupPackages(): array {
 		return array(

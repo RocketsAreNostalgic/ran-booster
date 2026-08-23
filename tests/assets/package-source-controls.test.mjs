@@ -236,6 +236,23 @@ test('package source choices reveal their matching panels', () => {
 	}
 });
 
+test('an aria-disabled source choice remains unchanged when focused and activated', () => {
+	const state = fixture('owner/package');
+	state.release.attributes.set('aria-disabled', 'true');
+
+	try {
+		loadInitializer()();
+		state.release.tab.click();
+
+		assert.equal(state.release.attributes.get('aria-pressed'), 'false');
+		assert.equal(state.branch.attributes.get('aria-pressed'), 'true');
+		assert.deepEqual(state.sourceEvents, []);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
 test('package source navigation waits for the authoritative response', () => {
 	const state = fixture('owner/package');
 	state.release.attributes.set(

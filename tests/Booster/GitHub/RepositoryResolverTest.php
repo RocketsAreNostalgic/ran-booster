@@ -639,6 +639,49 @@ final class RepositoryResolverTest extends TestCase {
 		self::assertSame( 'unavailable', $result->reason );
 	}
 
+	public function testRepositoryPathCheckDistinguishesDirectoriesFromFilesAndMissingPaths(): void {
+		$browser = new RepositoryBrowser(
+			new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) )
+		);
+		$ref     = str_repeat( 'a', 40 );
+
+		\RAN\Booster\GitHub\repository_resolver_http_reset(
+			$this->response(
+				200,
+				array(
+					array(
+						'name' => 'plugin.php',
+						'type' => 'file',
+					),
+				)
+			)
+		);
+		self::assertTrue(
+			$browser->pathExists( 'RocketsAreNostalgic/private-plugin', $ref, 'packages/My Plugin', 'private-profile', true )
+		);
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
+		self::assertSame(
+			'https://api.github.com/repos/RocketsAreNostalgic/private-plugin/contents/packages/My%20Plugin?ref=' . $ref,
+			$requests[0]['url']
+		);
+		self::assertSame( 'Bearer ' . self::TOKEN, $requests[0]['arguments']['headers']['Authorization'] );
+		self::assertSame( 1024, $requests[0]['arguments']['limit_response_size'] );
+
+		\RAN\Booster\GitHub\repository_resolver_http_reset(
+			$this->response(
+				200,
+				array(
+					'name' => 'plugin.php',
+					'type' => 'file',
+				)
+			)
+		);
+		self::assertFalse( $browser->pathExists( 'RocketsAreNostalgic/private-plugin', $ref, 'packages/plugin.php', 'private-profile', true ) );
+
+		\RAN\Booster\GitHub\repository_resolver_http_reset( $this->errorResponse( 404, array() ) );
+		self::assertFalse( $browser->pathExists( 'RocketsAreNostalgic/private-plugin', $ref, 'packages/missing', 'private-profile', true ) );
+	}
+
 	private function provider( RepositoryResolverSecretsStub $secrets ): GitHubProvider {
 		$provider = GitHubProvider::create(
 			$secrets,

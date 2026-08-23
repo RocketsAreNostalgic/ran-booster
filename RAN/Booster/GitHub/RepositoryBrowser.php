@@ -7,6 +7,7 @@ namespace RAN\Booster\GitHub;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use RAN\PackageSubdirectory;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\RepositoryProvider\GitReferenceSyntax;
 use RAN\RepositoryProvider\CredentialValidationResult;
@@ -294,6 +295,50 @@ class RepositoryBrowser {
 		}
 
 		return strtolower( $sha );
+	}
+
+	/** Check one normalized repository-relative directory at an immutable ref. */
+	public function pathExists( string $fullName, string $ref, string $path, ?string $credentialId = null, bool $private = false ): bool {
+		$fullName = $this->validateRepositoryName( $fullName );
+		$path     = PackageSubdirectory::normalize( $path );
+		if ( null === $path || 1 !== preg_match( '/^[0-9a-f]{40}$/i', $ref ) ) {
+			throw new RuntimeException( 'The GitHub repository path check is invalid.', 400 );
+		}
+
+		$response = wp_remote_get(
+			self::PUBLIC_API_BASE . '/repos/' . $this->encodeRepositoryName( $fullName ) . '/contents/' . implode( '/', array_map( 'rawurlencode', explode( '/', $path ) ) ) . '?ref=' . rawurlencode( strtolower( $ref ) ),
+			array(
+				'timeout'             => 15,
+				'redirection'         => 0,
+				'limit_response_size' => 1024,
+				'reject_unsafe_urls'  => true,
+				'headers'             => $this->authenticatedRequestHeaders( $credentialId, $private ),
+			)
+		);
+		if ( is_wp_error( $response ) ) {
+			throw new RuntimeException( 'GitHub could not be reached to check the repository path.', 502 );
+		}
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		if ( 404 === $status ) {
+			return false;
+		}
+		if ( 401 === $status ) {
+			throw new RuntimeException( 'GitHub rejected the selected credential while checking the repository path.', 401 );
+		}
+		if ( $this->isRateLimitedResponse( $response, $status ) ) {
+			throw new RuntimeException( 'GitHub API rate limit has been reached. Try again later.', 429 );
+		}
+		if ( 403 === $status ) {
+			throw new RuntimeException( 'GitHub denied access while checking the repository path.', 403 );
+		}
+		if ( $status < 200 || $status >= 300 ) {
+			throw new RuntimeException( 'GitHub could not check the repository path.', 502 );
+		}
+
+		// GitHub returns a JSON list for a directory and an object for a file,
+		// symlink, or submodule. The bounded prefix is sufficient to distinguish
+		// those shapes without downloading a potentially large directory listing.
+		return '[' === substr( ltrim( wp_remote_retrieve_body( $response ) ), 0, 1 );
 	}
 
 	public function validateCredential( string $credentialId, float $timeout = 15.0 ): CredentialValidationResult {

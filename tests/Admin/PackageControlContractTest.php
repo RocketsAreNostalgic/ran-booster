@@ -50,7 +50,10 @@ final class PackageControlContractTest extends TestCase {
 		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-package-mutation' ) );
 		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-native-submit' ) );
 		self::assertStringContainsString( 'data-ran-booster-package-mutation', $reinstall );
-		self::assertStringContainsString( 'hx-include="#ran-booster-package-edit-form"', $edit );
+		$associatedSettingsInclude = 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"';
+		self::assertStringContainsString( $associatedSettingsInclude, $edit );
+		self::assertStringContainsString( $associatedSettingsInclude, $reinstall );
+		self::assertStringContainsString( $associatedSettingsInclude, $readiness );
 		self::assertStringContainsString( 'hx-get=', $source );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $source );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $source );

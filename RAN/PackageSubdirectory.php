@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN;
 
-use InvalidArgumentException;
-
 /**
  * Normalize and validate a repository-relative package directory.
  */
@@ -117,7 +115,7 @@ final class PackageSubdirectory {
 		}
 	}
 
-	private static function invalid(): InvalidArgumentException {
-		return new InvalidArgumentException( 'The package subdirectory must be a normalized relative path.' );
+	private static function invalid(): InvalidPackageSubdirectory {
+		return new InvalidPackageSubdirectory( 'The package subdirectory must be a normalized relative path.' );
 	}
 }

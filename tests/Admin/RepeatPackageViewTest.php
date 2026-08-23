@@ -464,6 +464,41 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
+	public function testDisabledSourceChoiceRemainsReadableFocusableAndExplainsItself(): void {
+		$packageView          = PackagePagePresenter::plugin();
+		$packageSourceMode    = 'create';
+		$packageSourceView    = 'branch';
+		$packageSourceChoices = array(
+			'branch'        => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy the configured branch.',
+				'meta'              => 'Available',
+				'url'               => '',
+				'disabled'          => false,
+				'client_hydratable' => false,
+			),
+			'release_asset' => array(
+				'heading'           => 'Published releases',
+				'description'       => 'Published releases require the repository root.',
+				'meta'              => 'Repository root required',
+				'url'               => '',
+				'disabled'          => true,
+				'client_hydratable' => false,
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
+		$html = (string) ob_get_clean();
+
+		self::assertMatchesRegularExpression(
+			'/data-ran-booster-source-choice="release_asset"[^>]*aria-disabled="true"|aria-disabled="true"[^>]*data-ran-booster-source-choice="release_asset"/',
+			$html
+		);
+		self::assertStringContainsString( 'title="Published releases require the repository root."', $html );
+		self::assertStringNotContainsString( ' disabled=', $html );
+	}
+
 	public function testReleaseManagedBranchViewShowsRetainedTargetWithoutBranchOperations(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
 			$package = $this->package( $packageView );

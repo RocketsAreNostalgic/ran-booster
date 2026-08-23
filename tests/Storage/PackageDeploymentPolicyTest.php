@@ -110,6 +110,24 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		self::assertSame( 4, $wpdb->rows[0]['source_revision'] );
 	}
 
+	public function testBulkPolicyDoesNotMutateAQuarantinedNestedRelease(): void {
+		global $wpdb;
+
+		$row                    = $this->storedRow( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL );
+		$row['source']          = PackageSource::RELEASE_ASSET->value;
+		$row['source_revision'] = 4;
+		$row['subdirectory']    = 'packages/alpha';
+		$wpdb->rows             = array( $row );
+
+		$this->expectException( PackageStorageFailure::class );
+		try {
+			$this->storage()->setPoliciesForTest( array( $this->snapshot( $row ) ), DeploymentPolicy::AUTOMATIC );
+		} finally {
+			self::assertSame( array(), $wpdb->updates );
+			self::assertSame( DeploymentPolicy::MANUAL->value, $wpdb->rows[0]['deployment_policy'] );
+		}
+	}
+
 	public function testPackageModelNormalizesPackagePrivacyValues(): void {
 		foreach ( array( false, 0, '0' ) as $value ) {
 			self::assertSame( 0, ( new PackageModel( array( 'private' => $value ) ) )->private );

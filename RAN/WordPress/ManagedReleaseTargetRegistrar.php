@@ -483,9 +483,19 @@ final class ManagedReleaseTargetRegistrar {
 				: $this->themes->allDeploymentThemes();
 		} catch ( Throwable ) {
 			$prefix = $type . "\0";
-			foreach ( array_keys( $this->registeredAuthorities ) as $key ) {
+			$keys   = array_unique(
+				array_merge(
+					array_keys( $this->registeredAuthorities ),
+					array_keys( $this->targets ),
+					array_keys( $this->failures )
+				)
+			);
+			foreach ( $keys as $key ) {
 				if ( str_starts_with( $key, $prefix ) ) {
-					unset( $transient->response[ substr( $key, strlen( $prefix ) ) ] );
+					$identifier = substr( $key, strlen( $prefix ) );
+					if ( '*' !== $identifier ) {
+						unset( $transient->response[ $identifier ] );
+					}
 				}
 			}
 

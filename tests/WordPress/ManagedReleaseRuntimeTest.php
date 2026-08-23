@@ -43,6 +43,7 @@ use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
+use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
 
@@ -837,6 +838,76 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertArrayHasKey( 'unmanaged/other.php', $filtered->response );
 	}
 
+	public function testRepositoryFailureStillSuppressesAQuarantinedLegacyReleaseOffer(): void {
+		$nested  = $this->package(
+			'plugin',
+			self::NATIVE_PLUGIN,
+			'example',
+			DeploymentPolicy::MANUAL,
+			subdirectory: 'packages/example'
+		);
+		$reads   = 0;
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturnCallback(
+			static function () use ( &$reads, $nested ): array {
+				if ( 0 < $reads++ ) {
+					throw new \RuntimeException( 'read failed' );
+				}
+
+				return array( self::NATIVE_PLUGIN => $nested );
+			}
+		);
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			new RuntimeReleaseStore(
+				array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
+			),
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry()
+		);
+		$registrar->register();
+		$offers = (object) array(
+			'response' => array(
+				self::NATIVE_PLUGIN   => (object) array(),
+				'unmanaged/other.php' => (object) array(),
+			),
+		);
+
+		$filtered = $registrar->suppressUnauthorizedPluginOffers( $offers );
+
+		self::assertSame( 'subdirectory_not_supported', $registrar->failureCode( 'plugin', self::NATIVE_PLUGIN ) );
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $filtered->response );
+		self::assertArrayHasKey( 'unmanaged/other.php', $filtered->response );
+	}
+
+	public function testPreviouslyRegisteredTargetBecomingNestedLosesItsOfferAndNativeMutationAuthority(): void {
+		$registered    = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$nested        = $this->package(
+			'plugin',
+			self::NATIVE_PLUGIN,
+			'example',
+			DeploymentPolicy::MANUAL,
+			subdirectory: 'packages/example'
+		);
+		$live          = $registered;
+		[ $registrar ] = $this->nativePluginRegistrar(
+			$registered,
+			static function () use ( &$live ): Package {
+				return $live;
+			}
+		);
+		$live          = $nested;
+		$offers        = (object) array( 'response' => array( self::NATIVE_PLUGIN => (object) array() ) );
+
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $registrar->suppressUnauthorizedPluginOffers( $offers )->response );
+		$this->assertNativeAuthorityError(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+	}
+
 	public function testRuntimeReleaseProviderDefaultTargetAcceptsTheNamedContractArguments(): void {
 		$target = ( new RuntimeReleaseProvider() )->createNativeTarget(
 			'plugin',
@@ -1022,6 +1093,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 1, $lock->acquires );
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 
+		$store->transitionFailure = new ManagedReleaseSubdirectoryNotSupported();
+		$rejected                 = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertFalse( $rejected->successful() );
+		self::assertSame( 'subdirectory_not_supported', $rejected->code() );
+		self::assertCount( 1, $store->transitions );
+		$store->transitionFailure = null;
+
 		$denied = $facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'wrong' );
 		self::assertFalse( $denied->successful() );
 		self::assertSame( 'forbidden', $denied->code() );
@@ -1032,8 +1110,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $contended->successful() );
 		self::assertSame( 'release_unavailable', $contended->code() );
 		self::assertCount( 1, $store->transitions );
-		self::assertSame( 2, $lock->acquires );
-		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		self::assertSame( 3, $lock->acquires );
+		self::assertSame( array( 'runtime-lock', 'runtime-lock' ), $lock->releases );
 	}
 
 	public function testReadOnlyPreflightBindsTargetRevisionAndChannelWithoutMutation(): void {
@@ -1994,6 +2072,26 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 1, $lock->acquires );
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 
+		$store->channelChangeFailure = new ManagedReleaseSubdirectoryNotSupported();
+		$store->replaceConfiguration(
+			'plugin',
+			'example/example.php',
+			new ManagedReleaseConfiguration( 'example', 'example.php', 'stable' )
+		);
+		$previewRejected = $facade->changeChannel( 'plugin', 'example/example.php', 1, 'prerelease', 'valid' );
+		self::assertFalse( $previewRejected->successful() );
+		self::assertSame( 'subdirectory_not_supported', $previewRejected->code() );
+		$store->replaceConfiguration(
+			'plugin',
+			'example/example.php',
+			new ManagedReleaseConfiguration( 'example', 'example.php', 'prerelease' )
+		);
+		$stableRejected = $facade->changeChannel( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertFalse( $stableRejected->successful() );
+		self::assertSame( 'subdirectory_not_supported', $stableRejected->code() );
+		self::assertCount( 1, $store->channelChanges );
+		$store->channelChangeFailure = null;
+
 		$lock->releaseSucceeds = false;
 		$releaseFailed         = $facade->changeChannel(
 			'plugin',
@@ -2005,8 +2103,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $releaseFailed->successful() );
 		self::assertSame( 'release_unavailable', $releaseFailed->code() );
 		self::assertCount( 2, $store->channelChanges );
-		self::assertSame( 2, $lock->acquires );
-		self::assertSame( array( 'runtime-lock', 'runtime-lock' ), $lock->releases );
+		self::assertSame( 4, $lock->acquires );
+		self::assertSame( array( 'runtime-lock', 'runtime-lock', 'runtime-lock', 'runtime-lock' ), $lock->releases );
 
 		$invalid = $facade->changeChannel(
 			'plugin',

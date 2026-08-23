@@ -13,6 +13,7 @@ use RAN\PackageSource;
 use RAN\Storage\Database;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
+use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RuntimeException;
 
 final class ManagedReleaseStoreTest extends TestCase {
@@ -163,7 +164,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 				7
 			);
 			self::fail( 'A release transition must reject a configured subdirectory.' );
-		} catch ( RuntimeException $failure ) {
+		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
 			self::assertStringContainsString( 'subdirectory is not supported', $failure->getMessage() );
 		}
 		self::assertSame( array(), $database->updates );
@@ -173,7 +174,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		try {
 			$store->changeChannel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
 			self::fail( 'A release channel change must reject a configured subdirectory.' );
-		} catch ( RuntimeException $failure ) {
+		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
 			self::assertStringContainsString( 'subdirectory is not supported', $failure->getMessage() );
 		}
 		self::assertSame( array(), $database->updates );

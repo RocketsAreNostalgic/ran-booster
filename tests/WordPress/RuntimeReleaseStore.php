@@ -16,12 +16,19 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 	/** @var list<array<string, mixed>> */
 	public array $channelChanges = array();
 
+	public ?\Throwable $transitionFailure    = null;
+	public ?\Throwable $channelChangeFailure = null;
+
 	/** @param array<string, ManagedReleaseConfiguration> $configurations */
 	public function __construct( private array $configurations = array() ) {
 	}
 
 	public function configuration( string $type, string $identifier ): ?ManagedReleaseConfiguration {
 		return $this->configurations[ $type . "\0" . $identifier ] ?? null;
+	}
+
+	public function replaceConfiguration( string $type, string $identifier, ManagedReleaseConfiguration $configuration ): void {
+		$this->configurations[ $type . "\0" . $identifier ] = $configuration;
 	}
 
 	public function transition(
@@ -33,6 +40,9 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 		?ManagedReleaseConfiguration $configuration,
 		int $userId
 	): bool {
+		if ( null !== $this->transitionFailure ) {
+			throw $this->transitionFailure;
+		}
 		$this->transitions[] = array(
 			'type'              => $type,
 			'identifier'        => $identifier,
@@ -53,6 +63,9 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 		string $channel,
 		int $userId
 	): bool {
+		if ( null !== $this->channelChangeFailure ) {
+			throw $this->channelChangeFailure;
+		}
 		$this->channelChanges[] = array(
 			'type'              => $type,
 			'identifier'        => $identifier,

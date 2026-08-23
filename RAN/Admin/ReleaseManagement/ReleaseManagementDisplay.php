@@ -105,21 +105,29 @@ final class ReleaseManagementDisplay {
 					<?php } ?>
 				</div>
 				<ul class="ran-booster-readiness-list">
-					<li class="ran-booster-readiness-item <?php echo $providerReady ? 'is-ok' : 'is-warning'; ?>">
-						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-						<strong><?php esc_html_e( 'Provider', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( $providerReady ? __( 'The repository provider supports published releases.', 'ran-booster' ) : __( 'The repository provider does not support published releases.', 'ran-booster' ) ); ?></span>
-					</li>
-					<li class="ran-booster-readiness-item <?php echo $repositoryReady ? 'is-ok' : 'is-warning'; ?>">
-						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-						<strong><?php esc_html_e( 'Repository', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( $repositoryReady && '' !== $repositoryLabel ? $repositoryLabel : __( 'The saved repository needs attention.', 'ran-booster' ) ); ?></span>
-					</li>
-					<li class="ran-booster-readiness-item <?php echo $updateUriReady ? 'is-ok' : 'is-warning'; ?>">
-						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-						<strong><?php esc_html_e( 'Update URI', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( $updateUriReady ? __( 'Matches the configured repository.', 'ran-booster' ) : $this->updateUriReadinessMessage( $eligibilityCode ) ); ?></span>
-					</li>
+					<?php if ( $subdirectoryIncompatible ) { ?>
+						<li class="ran-booster-readiness-item is-warning">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Package location', 'ran-booster' ); ?></strong>
+							<span><?php esc_html_e( 'This package uses a repository subdirectory. Published releases require the repository root.', 'ran-booster' ); ?></span>
+						</li>
+					<?php } else { ?>
+						<li class="ran-booster-readiness-item <?php echo $providerReady ? 'is-ok' : 'is-warning'; ?>">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Provider', 'ran-booster' ); ?></strong>
+							<span><?php echo esc_html( $providerReady ? __( 'The repository provider supports published releases.', 'ran-booster' ) : __( 'The repository provider does not support published releases.', 'ran-booster' ) ); ?></span>
+						</li>
+						<li class="ran-booster-readiness-item <?php echo $repositoryReady ? 'is-ok' : 'is-warning'; ?>">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Repository', 'ran-booster' ); ?></strong>
+							<span><?php echo esc_html( $repositoryReady && '' !== $repositoryLabel ? $repositoryLabel : __( 'The saved repository needs attention.', 'ran-booster' ) ); ?></span>
+						</li>
+						<li class="ran-booster-readiness-item <?php echo $updateUriReady ? 'is-ok' : 'is-warning'; ?>">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Update URI', 'ran-booster' ); ?></strong>
+							<span><?php echo esc_html( $updateUriReady ? __( 'Matches the configured repository.', 'ran-booster' ) : $this->updateUriReadinessMessage( $eligibilityCode ) ); ?></span>
+						</li>
+					<?php } ?>
 					<?php if ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) { ?>
 						<li class="ran-booster-readiness-item is-ok">
 							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>

@@ -188,8 +188,13 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertStringContainsString( 'Current source remains Branch.', $html );
 		self::assertStringContainsString( 'continue using its configured repository subdirectory with Branch deployments', $html );
+		self::assertStringContainsString( '<strong>Package location</strong>', $html );
+		self::assertStringContainsString( 'This package uses a repository subdirectory.', $html );
 		self::assertStringNotContainsString( 'Return to Branch', $html );
 		self::assertStringNotContainsString( 'Add this exact header', $html );
+		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
+		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
+		self::assertStringNotContainsString( '<strong>Update URI</strong>', $html );
 		self::assertStringContainsString( 'Recheck eligibility', $html );
 	}
 
@@ -232,6 +237,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertStringNotContainsString( 'Installation route', $html );
 		self::assertStringNotContainsString( 'Native WordPress Updates.', $html );
+		self::assertStringContainsString( '<strong>Package location</strong>', $html );
+		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
+		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
 		self::assertStringContainsString( 'Return to branch deployments', $html );
 	}
 

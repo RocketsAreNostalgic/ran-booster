@@ -154,7 +154,11 @@
 					const source = tab.getAttribute(
 						'data-ran-booster-source-choice'
 					);
-					if (!source || tab.disabled) {
+					if (
+						!source ||
+						tab.disabled ||
+						tab.getAttribute('aria-disabled') === 'true'
+					) {
 						return;
 					}
 

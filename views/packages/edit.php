@@ -98,7 +98,7 @@ $packageBranchReadiness   = isset( $packageBranchReadiness ) && is_array( $packa
 	: null;
 
 $repositoryBranchCheckOutcome = isset( $repositoryBranchCheckOutcome ) && is_string( $repositoryBranchCheckOutcome )
-	&& in_array( $repositoryBranchCheckOutcome, array( 'verified', 'unable_to_check', 'provider_unavailable' ), true )
+	&& in_array( $repositoryBranchCheckOutcome, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true )
 	? $repositoryBranchCheckOutcome
 	: null;
 $packageWebhookCleanup        = isset( $packageWebhookCleanup ) && is_array( $packageWebhookCleanup )
@@ -307,7 +307,7 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 			</section>
 
 			<div class="ran-booster-settings-actions ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
-				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( $settingsUrl ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form" <?php disabled( ! $packageMutationAvailable ); ?>><?php echo esc_html( $packageSettingsSaveLabel ); ?></button>
+				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( $settingsUrl ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]" <?php disabled( ! $packageMutationAvailable ); ?>><?php echo esc_html( $packageSettingsSaveLabel ); ?></button>
 				<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
 				<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a>
 			</div>

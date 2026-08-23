@@ -32,6 +32,7 @@ use RAN\RepositoryProvider\RepositoryBrowseResult;
 use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryPathInspector;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
 use RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected;
@@ -56,7 +57,7 @@ use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
 
-final readonly class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
+final readonly class GitHubProvider implements RepositoryProvider, RepositoryPathInspector, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 1;
 
@@ -294,6 +295,16 @@ final readonly class GitHubProvider implements RepositoryProvider, CredentialVal
 			$ref,
 			$this->archiveAuthorizer( $repository ),
 			$headVerifier
+		);
+	}
+
+	public function repositoryPathExists( RepositoryReference $repository, string $ref, string $path ): bool {
+		return $this->browser->pathExists(
+			$repository->locator,
+			$ref,
+			$path,
+			$repository->credentialId,
+			$repository->private
 		);
 	}
 

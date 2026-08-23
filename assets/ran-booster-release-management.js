@@ -182,7 +182,18 @@
 				state === 'unsupported' ||
 				state === 'subdirectory'
 		);
-		releaseChoice.disabled = disabled;
+		releaseChoice.disabled = false;
+		releaseChoice.setAttribute(
+			'aria-disabled',
+			disabled ? 'true' : 'false'
+		);
+		releaseChoice.setAttribute('title', disabled ? description : '');
+		releaseChoice.setAttribute(
+			'aria-label',
+			disabled
+				? `Published releases unavailable: ${description}`
+				: 'Published releases'
+		);
 		releaseChoice.setAttribute(
 			'aria-busy',
 			state === 'checking' ? 'true' : 'false'
@@ -540,7 +551,7 @@
 	};
 
 	const chooseRelease = () => {
-		if (releaseChoice.disabled) {
+		if (releaseChoice.getAttribute('aria-disabled') === 'true') {
 			return;
 		}
 		releaseSelected = true;

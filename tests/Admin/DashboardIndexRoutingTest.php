@@ -295,6 +295,51 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'deployment-profile', $provider->request?->repository->credentialId );
 	}
 
+	public function testRepositoryBranchCheckVerifiesAConfiguredSubdirectoryWhenTheProviderSupportsIt(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider();
+		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'verified', ( new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' ) )->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 1, $provider->pathCalls );
+		self::assertSame( 'packages/example', $provider->path );
+	}
+
+	public function testRepositoryBranchCheckReportsAMissingConfiguredSubdirectoryPrecisely(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider( pathExists: false );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/missing' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'subdirectory_unavailable', ( new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' ) )->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 1, $provider->pathCalls );
+		self::assertSame( 1, $provider->cleanupCalls );
+	}
+
+	public function testRepositoryBranchCheckDistinguishesAnUnavailablePathCheckFromAMissingPath(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider( pathCheckFails: true );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' ) )->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 1, $provider->pathCalls );
+		self::assertSame( 1, $provider->cleanupCalls );
+	}
+
 	public function testRepositoryBranchCheckFailsClosedWhenCleanupFails(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider( cleanupFails: true );
@@ -2041,7 +2086,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		string $repository = 'owner/repository',
 		string $branch = 'main',
 		string $credentialId = '',
-		bool $private = false
+		bool $private = false,
+		?string $subdirectory = null
 	): Package {
 		$package = $this->createStub( Package::class );
 		$package->method( 'getIdentifier' )->willReturn( $identifier );
@@ -2051,7 +2097,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package->method( 'getProviderRepositoryId' )->willReturn( $providerRepositoryId );
 		$package->method( 'getRepository' )->willReturn( new ManagedRepository( $provider, $repository, $providerRepositoryId, $branch, $private, $credentialId ) );
 		$package->method( 'getBranch' )->willReturn( $branch );
-		$package->method( 'getSubdirectory' )->willReturn( null );
+		$package->method( 'getSubdirectory' )->willReturn( $subdirectory );
 		$package->method( 'getSource' )->willReturn( $source );
 		$package->method( 'getSourceRevision' )->willReturn( 1 );
 		$package->method( 'getDeploymentPolicy' )->willReturn( $policy );
@@ -2284,16 +2330,22 @@ final class ReadyDashboardDatabase extends Database {
 	}
 }
 
-final class DashboardBranchCheckProvider implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
+final class DashboardBranchCheckProvider implements RepositoryProvider, CredentialedPublicRepositoryBrowser, \RAN\RepositoryProvider\RepositoryPathInspector {
 
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	public int $prepareCalls        = 0;
 	public int $resolvedRefCalls    = 0;
 	public int $cleanupCalls        = 0;
+	public int $pathCalls           = 0;
 	public ?ArchiveRequest $request = null;
+	public ?string $path            = null;
 
-	public function __construct( public readonly bool $cleanupFails = false ) {
+	public function __construct(
+		public readonly bool $cleanupFails = false,
+		public readonly bool $pathExists = true,
+		public readonly bool $pathCheckFails = false
+	) {
 	}
 
 	public function getMetadata(): ProviderMetadata {
@@ -2347,5 +2399,15 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 				}
 			}
 		};
+	}
+
+	public function repositoryPathExists( \RAN\RepositoryProvider\RepositoryReference $repository, string $ref, string $path ): bool {
+		unset( $repository, $ref );
+		++$this->pathCalls;
+		$this->path = $path;
+		if ( $this->pathCheckFails ) {
+			throw new RuntimeException( 'Path check fixture failure.' );
+		}
+		return $this->pathExists;
 	}
 }

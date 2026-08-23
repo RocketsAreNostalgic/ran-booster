@@ -491,7 +491,7 @@ class Dashboard {
 		return $this->render( 'packages/index', $this->packageIndexData( $packages, $packageView ) );
 	}
 
-	/** @return 'verified'|'unable_to_check'|'provider_unavailable'|null */
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
 	private function requestedPackageRepositoryBranchCheck( Package $package, string $type ): ?string {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This boundary verifies the action-specific nonce below.
 		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )

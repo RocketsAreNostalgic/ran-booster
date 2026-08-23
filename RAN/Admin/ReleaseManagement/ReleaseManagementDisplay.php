@@ -56,7 +56,7 @@ final class ReleaseManagementDisplay {
 		if ( is_string( $repositoryPath ) ) {
 			$repositoryLabel = trim( $repositoryPath, '/' );
 		}
-		$providerReady    = 'unsupported_provider' !== $eligibilityCode;
+		$providerReady    = ! $subdirectoryIncompatible && 'unsupported_provider' !== $eligibilityCode;
 		$repositoryReady  = $providerReady && 'invalid_repository' !== $eligibilityCode;
 		$updateUriReady   = in_array( $eligibilityCode, array( 'eligible', 'target_already_uses_ran_updater' ), true );
 		$releaseViewUrl   = add_query_arg( array( 'source_view' => 'release_asset' ), $settingsUrl );
@@ -83,6 +83,8 @@ final class ReleaseManagementDisplay {
 				<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Published release readiness', 'ran-booster' ); ?></h3>
 				<?php if ( 'branch' === $status->source() ) { ?>
 					<p><strong><?php esc_html_e( 'Current source remains Branch.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Check eligibility before changing source; nothing changes until you validate and confirm the switch.', 'ran-booster' ); ?></p>
+				<?php } elseif ( $subdirectoryIncompatible ) { ?>
+					<p><strong><?php esc_html_e( 'Published releases are quarantined for this package.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Return to Branch to preserve its configured repository subdirectory.', 'ran-booster' ); ?></p>
 				<?php } else { ?>
 					<p><strong><?php esc_html_e( 'Published releases are the package source.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Review package identity and release status. WordPress Updates installs validated releases.', 'ran-booster' ); ?></p>
 				<?php } ?>
@@ -118,7 +120,7 @@ final class ReleaseManagementDisplay {
 						<strong><?php esc_html_e( 'Update URI', 'ran-booster' ); ?></strong>
 						<span><?php echo esc_html( $updateUriReady ? __( 'Matches the configured repository.', 'ran-booster' ) : $this->updateUriReadinessMessage( $eligibilityCode ) ); ?></span>
 					</li>
-					<?php if ( 'release_asset' === $status->source() ) { ?>
+					<?php if ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) { ?>
 						<li class="ran-booster-readiness-item is-ok">
 							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 							<strong><?php esc_html_e( 'Package root', 'ran-booster' ); ?></strong>

@@ -170,6 +170,29 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Return to Branch', $choice['release_asset']['description'] );
 	}
 
+	public function testNestedPublishedReleaseRendersOnlyTheReturnToBranchRecovery(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status(
+				'release_asset',
+				'plugin',
+				ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED,
+				false,
+				'stable',
+				'subdirectory_not_supported'
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'Installation route', $html );
+		self::assertStringNotContainsString( 'Native WordPress Updates.', $html );
+		self::assertStringContainsString( 'Return to branch deployments', $html );
+	}
+
 	public function testEveryMutationForwardsExactAuthorityRevisionChannelAndNonce(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$controls = ReleaseManagementFixture::controls( $tracking );

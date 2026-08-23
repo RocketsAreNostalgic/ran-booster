@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;
+use RAN\PackageSubdirectory;
 use RAN\PackageSource;
 use RAN\Runtime\RuntimeSupport;
 use RAN\WordPress\ManagedReleaseConfiguration;
@@ -181,15 +182,19 @@ abstract class AbstractPackageRepository {
 		$data['provider']               = $model->provider;
 		$data['provider_repository_id'] = $model->provider_repository_id;
 
+		$where = array(
+			'package'         => $model->package,
+			'type'            => $this->packageType(),
+			'source'          => $expectedSource->source,
+			'source_revision' => $expectedSource->source_revision,
+		);
+		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source ) {
+			$where['subdirectory'] = null;
+		}
 		$result = $wpdb->update(
 			ran_booster_table_name(),
 			$data,
-			array(
-				'package'         => $model->package,
-				'type'            => $this->packageType(),
-				'source'          => $expectedSource->source,
-				'source_revision' => $expectedSource->source_revision,
-			)
+			$where
 		);
 
 		return $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
@@ -247,6 +252,15 @@ abstract class AbstractPackageRepository {
 				$rows = $this->lockedPackageRows( $identifier );
 				if ( 1 !== count( $rows ) || ! $this->rowMatches( $rows[0], $snapshot ) ) {
 					throw PackageStorageFailure::duplicatePackageRows();
+				}
+				try {
+					$subdirectory = PackageSubdirectory::normalize( $rows[0]->subdirectory ?? null );
+				} catch ( InvalidArgumentException ) {
+					throw PackageStorageFailure::writeFailed();
+				}
+				if ( PackageSource::RELEASE_ASSET->value === ( $rows[0]->source ?? null )
+					&& null !== $subdirectory ) {
+					throw PackageStorageFailure::writeFailed();
 				}
 
 				if ( $policy->value === (string) ( $rows[0]->deployment_policy ?? '' ) ) {

@@ -219,7 +219,7 @@ class ManagedReleaseStore {
 			throw new RuntimeException( 'The managed release package subdirectory is invalid.', 0, $exception );
 		}
 		if ( null !== $subdirectory ) {
-			throw new RuntimeException( 'The managed release package subdirectory is not supported.' );
+			throw new ManagedReleaseSubdirectoryNotSupported( 'The managed release package subdirectory is not supported.' );
 		}
 	}
 

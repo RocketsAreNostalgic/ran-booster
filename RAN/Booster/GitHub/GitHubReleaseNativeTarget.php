@@ -34,7 +34,9 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			|| ! in_array( $deploymentPolicy, array( 'disabled', 'forced-off', 'manual', 'automatic' ), true ) ) {
 			throw new LogicException( 'The GitHub release native target is incompatible.' );
 		}
-		$this->accessToken = is_callable( $accessToken ) ? Closure::fromCallable( $accessToken ) : $accessToken;
+		$this->accessToken = is_string( $accessToken ) || null === $accessToken
+			? $accessToken
+			: Closure::fromCallable( $accessToken );
 	}
 
 	public function register(): bool {

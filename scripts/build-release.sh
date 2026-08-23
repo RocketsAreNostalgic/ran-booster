@@ -267,7 +267,7 @@ for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
 	[[ -e "$installed_package/$package_entry" ]] \
 		|| fail "the locked updater package is missing $package_entry."
 done
-if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
+if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime-copy.json" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
 	fail 'the updater runtime allowlist must not contain symbolic links.'
 fi
 

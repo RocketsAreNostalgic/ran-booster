@@ -39,6 +39,16 @@ final class ReleasePlatformContractTest extends TestCase {
 		}
 	}
 
+	public function testReleaseScriptsRejectSymbolicLinksInEveryUpdaterRuntimeFile(): void {
+		$symlinkScan = 'find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime-copy.json" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .';
+
+		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $scriptName ) {
+			$script = file_get_contents( dirname( __DIR__ ) . '/scripts/' . $scriptName ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+			self::assertIsString( $script );
+			self::assertStringContainsString( $symlinkScan, $script );
+		}
+	}
+
 	public function testComposerLockPinsTheNeutralRuntimeAndItsExactMetadata(): void {
 		$lock    = json_decode(
 			(string) file_get_contents( dirname( __DIR__ ) . '/composer.lock' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.

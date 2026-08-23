@@ -25,6 +25,13 @@ final class NativeTargetsTest extends TestCase {
 		self::assertSame( 0, $reads );
 	}
 
+	public function testCallableLookingAccessTokenRemainsCredentialMaterial(): void {
+		$target      = $this->target( 'strlen' );
+		$accessToken = ( new \ReflectionProperty( GitHubReleaseNativeTarget::class, 'accessToken' ) )->getValue( $target );
+
+		self::assertSame( 'strlen', $accessToken );
+	}
+
 	public function testNativeStatusFailsClosedUntilTheNeutralRuntimeSuppliesOne(): void {
 		$status = $this->target( null )->status();
 

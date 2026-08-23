@@ -47,7 +47,6 @@ use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
-use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
 use RAN\Booster\GitHub\GitHubProvider;
@@ -55,6 +54,8 @@ use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedMultisiteBootstrap;
 use RAN\Storage\Database;
@@ -125,18 +126,29 @@ $ran_booster_core_development_notice->register();
 
 			ReleaseUpdaterBootstrap::activate();
 			$coreVersion       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
-			$coreReleaseTarget = new GitHubReleaseNativeTarget(
-				'plugin',
-				__FILE__,
-				'RocketsAreNostalgic/ran-booster',
-				'1319710173',
-				'ran-booster',
-				plugin_basename( __FILE__ ),
-				null,
-				str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
-				$ran_booster_self_update_policy->allowsNativeDiscovery() ? 'forced-off' : 'disabled'
-			);
-			$coreReleaseTarget->register();
+			$coreReleaseTarget = null;
+			try {
+				$coreReleaseTarget = $providerRegistry
+					->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )
+					->createNativeTarget(
+						'plugin',
+						new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null ),
+						__FILE__,
+						'ran-booster',
+						plugin_basename( __FILE__ ),
+						str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
+						$ran_booster_self_update_policy->allowsNativeDiscovery() ? 'forced-off' : 'disabled'
+					);
+				if ( ! $coreReleaseTarget->register() ) {
+					$coreReleaseTarget = null;
+				}
+			} catch ( Throwable $exception ) {
+				\RAN\Logging\BoosterLogger::logException(
+					'core self-update target registration unavailable',
+					$exception,
+					array( 'step' => 'core_self_update_target_registration' )
+				);
+			}
 			$ran_booster_container->bind(
 				CoreSelfUpdateStatus::class,
 				new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )

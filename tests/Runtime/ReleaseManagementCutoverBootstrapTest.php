@@ -15,7 +15,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 
 		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
 		$activation   = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::activate();' );
-		$coreTarget   = strpos( $bootstrap, 'new GitHubReleaseNativeTarget(' );
+		$coreTarget   = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
 		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
 		self::assertIsInt( $registration );
@@ -25,6 +25,24 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertLessThan( $activation, $registration );
 		self::assertLessThan( $coreTarget, $activation );
 		self::assertLessThan( $target, $activation );
+	}
+
+	public function testCoreSelfTargetUsesTheSealedGitHubReleaseCapability(): void {
+		$bootstrap = $this->source( 'ran-booster.php' );
+
+		$seal       = strpos( $bootstrap, '$providerRegistry->seal()' );
+		$capability = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
+		$reference  = strpos( $bootstrap, "new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null )" );
+		$statusBind = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )' );
+
+		self::assertIsInt( $seal );
+		self::assertIsInt( $capability );
+		self::assertIsInt( $reference );
+		self::assertIsInt( $statusBind );
+		self::assertLessThan( $capability, $seal );
+		self::assertLessThan( $reference, $capability );
+		self::assertLessThan( $statusBind, $reference );
+		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}
 
 	public function testBundledSuccessorRegistersOnceAfterProviderSeal(): void {

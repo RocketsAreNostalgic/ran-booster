@@ -45,6 +45,16 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}
 
+	public function testCurrentOrchestrationDocumentationNamesOnlyTheNeutralHandoff(): void {
+		$guide     = $this->source( 'docs/package-update-orchestration.md' );
+		$decisions = $this->source( 'docs/package-update-orchestration-decision-register.md' );
+
+		self::assertStringContainsString( 'ran_wp_release_updater_v1_core_artifact_handoff', $guide );
+		self::assertStringNotContainsString( 'ran_wp_github_release_updater_v1_core_reinstall_handoff', $guide );
+		self::assertStringContainsString( '## 2026-08-23 PU-007 owner decision — REPLACE IN PLACE', $decisions );
+		self::assertStringContainsString( 'historical evidence; it is superseded for current runtime', $decisions );
+	}
+
 	public function testBundledSuccessorRegistersOnceAfterProviderSeal(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 

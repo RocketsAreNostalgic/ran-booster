@@ -539,14 +539,15 @@ At the installer boundary, `CorePackageExecutor` presents the already-local
 archive through a request-only native offer and pre-download hook. WordPress
 does not download the repository ZIP again.
 
-The unfortunately named
-`ran_wp_github_release_updater_v1_core_reinstall_handoff` remains an active,
-request-scoped branch integration boundary. If the shared updater also sees
-the target, it may accept only Core's same unchanged preflighted path for the
-same type, installed identifier, `update` action, and package argument. It does
-not restore exact release Reinstall, broaden archive authority, or start release
-discovery. Removing or renaming this V1 filter requires a coordinated updater
-API change while the branch caller remains active.
+`ran_wp_release_updater_v1_core_artifact_handoff` is the active,
+request-scoped branch integration boundary. Core supplies one neutral
+`TemporaryArtifact` capability for the same unchanged preflighted path, package
+type, installed identifier, `update` action and expected version. The selected
+updater consumes it once, rechecks archive and staged-package identity at the
+native lifecycle boundaries, and retains cleanup through WordPress rollback.
+It does not restore exact release Reinstall, broaden archive authority or start
+release discovery. The former GitHub-specific filter and `ClaimedArtifact`
+contract are historical only and must not be registered alongside this path.
 
 ## Performance and repeated-work audit
 

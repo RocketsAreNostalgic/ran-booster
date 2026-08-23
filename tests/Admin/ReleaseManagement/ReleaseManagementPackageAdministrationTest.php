@@ -189,7 +189,27 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Current source remains Branch.', $html );
 		self::assertStringContainsString( 'continue using its configured repository subdirectory with Branch deployments', $html );
 		self::assertStringNotContainsString( 'Return to Branch', $html );
+		self::assertStringNotContainsString( 'Add this exact header', $html );
 		self::assertStringContainsString( 'Recheck eligibility', $html );
+	}
+
+	public function testMissingUpdateUriStillOffersTheExactHeaderRemediation(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status(
+				'branch',
+				'plugin',
+				ReleaseTrackingEligibility::MISSING_UPDATE_URI
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Add this exact header', $html );
+		self::assertStringContainsString( 'Update URI: https://github.com/example/example', $html );
 	}
 
 	public function testNestedPublishedReleaseRendersOnlyTheReturnToBranchRecovery(): void {

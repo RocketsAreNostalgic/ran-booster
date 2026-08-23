@@ -98,7 +98,7 @@ final class ReleaseManagementDisplay {
 				<div class="ran-booster-readiness-panel__top">
 					<div>
 						<h4><?php echo esc_html( $eligibility->eligible() ? __( 'Published release tracking is eligible', 'ran-booster' ) : __( 'Published releases are not eligible yet', 'ran-booster' ) ); ?></h4>
-						<p><?php echo esc_html( $eligibility->eligible() ? __( 'The installed package identity matches its configured repository.', 'ran-booster' ) : $this->eligibilityMessage( $eligibility ) ); ?></p>
+						<p><?php echo esc_html( $eligibility->eligible() ? __( 'The installed package identity matches its configured repository.', 'ran-booster' ) : $this->eligibilityMessage( $eligibility, $status->source() ) ); ?></p>
 					</div>
 					<?php if ( ! $eligibility->eligible() ) { ?>
 						<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Unavailable', 'ran-booster' ); ?></span>
@@ -839,9 +839,11 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	private function eligibilityMessage( object $eligibility ): string {
+	private function eligibilityMessage( object $eligibility, string $source ): string {
 		return match ( $eligibility->code() ) {
-			'subdirectory_not_supported' => __( 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.', 'ran-booster' ),
+			'subdirectory_not_supported' => 'branch' === $source
+				? __( 'Published releases require this plugin or theme to be at the repository root. This package can continue using its configured repository subdirectory with Branch deployments.', 'ran-booster' )
+				: __( 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.', 'ran-booster' ),
 			'missing_update_uri' => __( 'This package header does not declare an Update URI for its configured repository.', 'ran-booster' ),
 			'mismatched_update_uri' => __( 'This package header Update URI does not match its configured repository.', 'ran-booster' ),
 			'unsupported_provider' => __( 'The repository provider does not support published release tracking.', 'ran-booster' ),

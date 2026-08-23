@@ -136,7 +136,7 @@ final class ReleaseManagementControls {
 				&& 'release_asset' === $package->source();
 			if ( ! $releaseSourceIsCurrent
 				&& ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $status?->eligibility()->code() ) {
-				$choices['release_asset']['description'] = __( 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.', 'ran-booster' );
+				$choices['release_asset']['description'] = __( 'Published releases require this plugin or theme to be at the repository root. This package uses a repository subdirectory, so continue using Branch deployments.', 'ran-booster' );
 				$choices['release_asset']['meta']        = __( 'Repository subdirectory not supported', 'ran-booster' );
 				$choices['release_asset']['disabled']    = true;
 			} elseif ( ! $releaseSourceIsCurrent

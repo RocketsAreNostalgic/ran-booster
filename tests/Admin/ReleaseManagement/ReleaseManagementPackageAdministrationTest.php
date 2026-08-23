@@ -142,7 +142,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertFalse( $release['release_asset']['disabled'] );
 	}
 
-	public function testNestedBranchDisablesPublishedReleaseChoiceWithTheRecoveryCopy(): void {
+	public function testNestedBranchDisablesPublishedReleaseChoiceWithoutOfferingBranchRecovery(): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
 			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED )
 		);
@@ -167,7 +167,29 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertTrue( $choice['release_asset']['disabled'] );
 		self::assertStringContainsString( 'repository root', $choice['release_asset']['description'] );
-		self::assertStringContainsString( 'Return to Branch', $choice['release_asset']['description'] );
+		self::assertStringContainsString( 'continue using Branch deployments', $choice['release_asset']['description'] );
+		self::assertStringNotContainsString( 'Return to Branch', $choice['release_asset']['description'] );
+	}
+
+	public function testNestedBranchReadinessExplainsThatBranchRemainsAvailable(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status(
+				'branch',
+				'plugin',
+				ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Current source remains Branch.', $html );
+		self::assertStringContainsString( 'continue using its configured repository subdirectory with Branch deployments', $html );
+		self::assertStringNotContainsString( 'Return to Branch', $html );
+		self::assertStringContainsString( 'Recheck eligibility', $html );
 	}
 
 	public function testNestedPublishedReleaseRendersOnlyTheReturnToBranchRecovery(): void {

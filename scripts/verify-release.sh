@@ -55,7 +55,7 @@ committed_entries=(
 )
 package_root='vendor/ran/wp-release-updater'
 updater_version='0.1.0-beta.1'
-updater_commit='90c9f41db68e924326cd1e7612692eaad6c2ea4d'
+updater_commit='4af38e73ac8ab079dd36118f1f5e7f3d3f401929'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"

@@ -865,7 +865,7 @@ final class ReleaseManagementDisplay {
 
 	private function requiresUpdateUriRemediation( object $eligibility ): bool {
 		return '' !== $eligibility->expectedUpdateUri()
-			&& 'target_already_uses_ran_updater' !== $eligibility->code();
+			&& in_array( $eligibility->code(), array( 'missing_update_uri', 'mismatched_update_uri' ), true );
 	}
 
 	private function isProjection( object $package ): bool {

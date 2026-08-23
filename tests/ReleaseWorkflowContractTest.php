@@ -99,7 +99,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"', $workflow );
 		self::assertSame( 2, substr_count( $workflow, 'git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"' ) );
 		self::assertStringContainsString( 'test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"', $workflow );
-		self::assertStringContainsString( '"package_revision" => "c546309ae0a74518d64c2e05d6e703b723b0ca3b2dc328cb3d49f552f94975bc"', $workflow );
+		self::assertStringContainsString( '"package_revision" => "7490388dd650ae604e5e4004f7d3e88fd6c78767dd350da47b6b7bfad8b0a88e"', $workflow );
 		self::assertStringNotContainsString( '0b506753fb45115f946bf01253ab76b893b3804e33d0f5b6f8a14c2026d59516', $workflow );
 		self::assertStringNotContainsString( '320fb89e1a93813907419cecab7e05892b6d9419', $workflow );
 	}

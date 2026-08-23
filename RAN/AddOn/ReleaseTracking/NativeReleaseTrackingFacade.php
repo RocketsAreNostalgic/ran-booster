@@ -23,6 +23,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
+use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
 use Throwable;
@@ -320,6 +321,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					return $changed;
 				}
 			);
+			if ( $changed instanceof ManagedReleaseSubdirectoryNotSupported ) {
+				return $this->subdirectoryNotSupported();
+			}
 			if ( null === $changed ) {
 				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
 			}
@@ -390,6 +394,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					return $changed;
 				}
 			);
+			if ( $changed instanceof ManagedReleaseSubdirectoryNotSupported ) {
+				return $this->subdirectoryNotSupported();
+			}
 			if ( null === $changed ) {
 				return ReleaseTrackingResult::failed( 'release_unavailable', 'The release track could not be changed.' );
 			}
@@ -516,10 +523,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	/**
 	 * @param callable(): bool $mutation
+	 * @return bool|ManagedReleaseSubdirectoryNotSupported|null
 	 */
-	private function mutateWithUpdaterLock( callable $mutation ): ?bool {
+	private function mutateWithUpdaterLock( callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|null {
 		try {
 			return $this->updaterLock->run( $mutation );
+		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
+			return $failure;
 		} catch ( Throwable ) {
 			return null;
 		}

@@ -108,6 +108,8 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'role="tab"', $html );
 		self::assertStringContainsString( 'data-ran-booster-source-choice="branch"', $html );
 		self::assertStringContainsString( 'data-ran-booster-source-pane="branch"', $html );
+		self::assertStringContainsString( 'ran-booster-source-choice__radio', $html );
+		self::assertStringNotContainsString( 'ran-booster-source-choice--navigation', $html );
 		self::assertStringContainsString( 'id="ran-booster-package-configuration-heading"', $form );
 		self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $form );
 		self::assertStringContainsString( 'id="ran-booster-package-operation-heading"', $form );
@@ -434,6 +436,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$identifierValue      = 'plugin' === $packageView->getType() ? 'example/example.php' : 'example-theme';
 			$packageSourceMode    = 'edit';
 			$packageSourceView    = 'branch';
+			$packageCurrentSource = 'release_asset';
 			$packageSourceChoices = array();
 			foreach (
 				array(
@@ -455,12 +458,27 @@ final class RepeatPackageViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
 			$html = (string) ob_get_clean();
 
-			self::assertSame( 2, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $packageView->getType() );
 			self::assertStringNotContainsString( 'https://example.test', $html, $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $packageView->getType() );
+			self::assertStringContainsString( '>Branch</strong>', $html, $packageView->getType() );
+			self::assertStringContainsString( '>Published releases</strong>', $html, $packageView->getType() );
+			self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $packageView->getType() );
+			self::assertStringContainsString( 'role="navigation" aria-label="Package source settings"', $html, $packageView->getType() );
+			self::assertStringContainsString( 'Opening a settings view does not change the current source.', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'ran-booster-source-choice__current-source', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'Branch description', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'Published releases meta', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'ran-booster-source-choice__navigation-cue', $html, $packageView->getType() );
+			self::assertMatchesRegularExpression(
+				'/<span[^>]*aria-current="page"[^>]*data-ran-booster-source-choice="branch"|<span[^>]*data-ran-booster-source-choice="branch"[^>]*aria-current="page"/',
+				$html,
+				$packageView->getType()
+			);
 		}
 	}
 

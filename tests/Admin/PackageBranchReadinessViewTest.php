@@ -38,8 +38,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Branch and webhook setup', $html );
-		self::assertStringContainsString( 'Save the current package settings, then check the repository and branch now.', $html );
+		self::assertStringContainsString( 'Saved branch setup', $html );
+		self::assertStringContainsString( 'Review the requirements below.', $html );
 		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
 		self::assertStringContainsString( 'Remote webhook', $html );
 		self::assertStringContainsString( 'Booster cannot verify the remote webhook here.', $html );
@@ -187,7 +187,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Saved repository', $html );
 		self::assertStringContainsString( 'The branch <code>test</code> is saved. The repository identity is available locally; repository access and this branch have not been checked.', $html );
-		self::assertStringContainsString( 'Review the saved repository, branch, and local Push-to-Deploy requirements below.', $html );
+		self::assertStringContainsString( 'Review the requirements below.', $html );
 		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-pending">\s*<span[^>]*><\/span>\s*<strong>Saved repository<\/strong>/s', $html );
 		self::assertStringNotContainsString( 'test is ready', $html );
 		self::assertStringNotContainsString( 'ready for manual deployments', strtolower( $html ) );

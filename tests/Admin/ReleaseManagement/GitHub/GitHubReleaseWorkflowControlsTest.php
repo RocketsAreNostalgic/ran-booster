@@ -215,6 +215,96 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'notice-warning', $html );
 	}
 
+	public function testIneligibleGitHubPackageRendersDisabledWorkflowWithoutReadingSecretsOrRemoteState(): void {
+		$facade   = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::MISSING_UPDATE_URI )
+		);
+		$controls = $this->controls( $facade );
+		$package  = new class() {
+			public function providerCode(): string {
+				return 'gh';
+			}
+			public function type(): string {
+				return 'plugin';
+			}
+			public function identifier(): string {
+				return 'example/example.php';
+			}
+			public function sourceRevision(): int {
+				return 3;
+			}
+		};
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Release automation', $html );
+		self::assertStringContainsString( 'Release automation cannot be assessed with the current package settings.', $html );
+		self::assertStringContainsString( 'exact Update URI shown in Published release readiness above', $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertStringNotContainsString( '<form', $html );
+		self::assertStringNotContainsString( 'github_token', $html );
+		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
+
+		$controls->processWorkflowRequest( 'inspect', $this->request( 'inspect' ) );
+		self::assertNotContains( 'request-only-secret', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array() );
+		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
+	}
+
+	public function testUnavailableLocalStatusRendersDisabledWorkflowWithoutRemoteState(): void {
+		$facade                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$facade->throwOnStatus = true;
+		$controls              = $this->controls( $facade );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage(), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<details class="ran-booster-release-workflow" open>', $html );
+		self::assertStringContainsString( 'could not read the local Published release readiness', $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertStringNotContainsString( '<form', $html );
+		self::assertStringNotContainsString( 'github_token', $html );
+		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
+	}
+
+	public function testEligiblePublishedReleaseWithoutSetupRecordRendersDisabledBranchRecoveryPrompt(): void {
+		$controls = $this->controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage( 'release_asset' ), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<details class="ran-booster-release-workflow" open>', $html );
+		self::assertStringContainsString( 'Return to Branch before assessing setup again.', $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertStringNotContainsString( '<form', $html );
+		self::assertStringNotContainsString( 'github_token', $html );
+	}
+
+	private function githubPackage( string $source = 'branch' ): object {
+		return new class( $source ) {
+			public function __construct( private readonly string $source ) {
+			}
+			public function providerCode(): string {
+				return 'gh';
+			}
+			public function type(): string {
+				return 'plugin';
+			}
+			public function identifier(): string {
+				return 'example/example.php';
+			}
+			public function sourceRevision(): int {
+				return 3;
+			}
+			public function source(): string {
+				return $this->source;
+			}
+		};
+	}
+
 	private function controls(
 		?ReleaseTrackingFacadeDouble $facade = null,
 		?PluginRepositoryDouble $plugins = null,

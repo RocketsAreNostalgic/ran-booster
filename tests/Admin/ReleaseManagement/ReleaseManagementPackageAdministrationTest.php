@@ -108,7 +108,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array(), $tracking->calls );
 	}
 
-	public function testUnsupportedProviderDisablesBranchTransitionButPreservesReleaseRecovery(): void {
+	public function testGitHubIneligibilityLeavesPublishedReleaseSettingsViewNavigable(): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
 			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::UNSUPPORTED_PROVIDER )
 		);
@@ -138,12 +138,21 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php'
 		);
 
-		self::assertTrue( $branch['release_asset']['disabled'] );
+		self::assertFalse( $branch['release_asset']['disabled'] );
 		self::assertStringContainsString( 'not available', $branch['release_asset']['description'] );
 		self::assertFalse( $release['release_asset']['disabled'] );
+
+		$nonGitHub = $controls->filterSourceChoices(
+			$choices,
+			'edit',
+			'plugin',
+			new PackageProjection( 'branch', 'plugin', 3, 'bb' ),
+			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php'
+		);
+		self::assertTrue( $nonGitHub['release_asset']['disabled'] );
 	}
 
-	public function testNestedBranchDisablesPublishedReleaseChoiceWithoutOfferingBranchRecovery(): void {
+	public function testNestedGitHubBranchKeepsPublishedReleaseSettingsViewNavigableWithoutOfferingBranchRecovery(): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
 			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED )
 		);
@@ -166,7 +175,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php'
 		);
 
-		self::assertTrue( $choice['release_asset']['disabled'] );
+		self::assertFalse( $choice['release_asset']['disabled'] );
 		self::assertStringContainsString( 'repository root', $choice['release_asset']['description'] );
 		self::assertStringContainsString( 'continue using Branch deployments', $choice['release_asset']['description'] );
 		self::assertStringNotContainsString( 'Return to Branch', $choice['release_asset']['description'] );

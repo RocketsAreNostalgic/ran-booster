@@ -475,6 +475,12 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringContainsString( 'Opening a settings view does not change the current source.', $html, $packageView->getType() );
 			self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $packageView->getType() );
 			self::assertSame( 1, substr_count( $html, '>Active</span>' ), $packageView->getType() );
+			self::assertMatchesRegularExpression(
+				'/<span[^>]*class="ran-booster-source-choice__current-source"[^>]*>Active<\\/span>/',
+				$html,
+				$packageView->getType()
+			);
+			self::assertStringContainsString( 'ran-booster-source-choice__content', $html, $packageView->getType() );
 			self::assertStringNotContainsString( 'Current source', $html, $packageView->getType() );
 			self::assertMatchesRegularExpression(
 				'/data-ran-booster-source-choice="release_asset"[^>]*>[\\s\\S]*?ran-booster-source-choice__current-source[^>]*>Active<\\/span>/',

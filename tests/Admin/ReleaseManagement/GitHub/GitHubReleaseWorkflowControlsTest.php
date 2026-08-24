@@ -119,6 +119,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			self::assertFalse( $action['disabled'], $name );
 			self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=', htmlspecialchars( $action['url'] ), $name );
 			self::assertStringContainsString( 'source_view=release_asset', $action['url'], $name );
+			self::assertStringContainsString( 'ran_booster_open_advanced=1', $action['url'], $name );
 			self::assertStringEndsWith( '#ran-booster-advanced-source-settings', $action['url'], $name );
 			self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array(), $name );
 		}

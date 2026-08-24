@@ -920,10 +920,27 @@ final class DashboardIndexRoutingTest extends TestCase {
 			);
 			$data      = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
 
-			self::assertTrue( $data['packageSource']['advanced_open'], $type );
+			self::assertFalse( $data['packageSource']['advanced_open'], $type );
 			self::assertSame( array( '<section>Advanced source settings</section>' ), $data['packageSource']['advanced_sections'], $type );
 			self::assertArrayNotHasKey( 'sections', $data['packageSource'], $type );
 		}
+	}
+
+	public function testExplicitAdvancedOpenFlagOpensTheSelectedSourceView(): void {
+		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$_GET      = array(
+			'package'                   => 'plugin/example.php',
+			'source_view'               => 'branch',
+			'ran_booster_open_advanced' => '1',
+		);
+
+		$data = $dashboard->getPlugins()['data'];
+
+		self::assertTrue( $data['packageSource']['advanced_open'] );
+		self::assertSame( 'branch', $data['packageSource']['selected'] );
 	}
 
 	public function testAdvancedSourceSummaryProjectionIncludesTheSavedBranchSubdirectory(): void {

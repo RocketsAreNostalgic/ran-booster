@@ -117,8 +117,7 @@ $packageSourceUnavailable     = array_key_exists( 'unavailable', $packageSource 
 $packageSourceMode            = 'edit';
 $packageRepositoryReady       = true;
 $packageAdvancedOpen          = isset( $_POST['ran_booster'] )
-	|| true === ( $packageSource['advanced_open'] ?? false )
-	|| $packageSourceView !== $packageCurrentSource;
+	|| true === ( $packageSource['advanced_open'] ?? false );
 $packageDangerOpen            = in_array(
 	$submittedAction,
 	array( $packageView->getAction( 'unlink' ), $packageView->getAction( 'unlink-delete' ) ),

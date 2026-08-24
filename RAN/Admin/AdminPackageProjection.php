@@ -19,7 +19,8 @@ final readonly class AdminPackageProjection {
 		private string $source,
 		private int $sourceRevision,
 		private string $deploymentPolicy,
-		private string $settingsUrl
+		private string $settingsUrl,
+		private string $subdirectory = ''
 	) {
 		if ( ! in_array( $this->type, array( 'plugin', 'theme' ), true ) ) {
 			throw new InvalidArgumentException( 'Package projections require a known package type.' );
@@ -39,6 +40,10 @@ final readonly class AdminPackageProjection {
 
 		if ( ! in_array( $this->source, array( 'branch', 'release_asset' ), true ) || $this->sourceRevision < 1 ) {
 			throw new InvalidArgumentException( 'Package projections require a valid source identity.' );
+		}
+
+		if ( strlen( trim( $this->subdirectory ) ) > 255 ) {
+			throw new InvalidArgumentException( 'Package projections require a bounded repository subdirectory.' );
 		}
 
 		if ( ! in_array( $this->deploymentPolicy, array( 'disabled', 'manual', 'automatic' ), true ) ) {
@@ -79,6 +84,10 @@ final readonly class AdminPackageProjection {
 
 	public function sourceRevision(): int {
 		return $this->sourceRevision;
+	}
+
+	public function subdirectory(): string {
+		return $this->subdirectory;
 	}
 
 	public function deploymentPolicy(): string {

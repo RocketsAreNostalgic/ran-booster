@@ -894,6 +894,34 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function testAdvancedSourceSummaryProjectionIncludesTheSavedBranchSubdirectory(): void {
+		$package = $this->managedPackage(
+			'plugin/example.php',
+			'Example Plugin',
+			'plugin-repository-id',
+			subdirectory: 'packages/example'
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$_GET      = array( 'package' => 'plugin/example.php' );
+
+		$data = $dashboard->getPlugins()['data'];
+
+		self::assertSame(
+			array(
+				'heading' => 'Branch deployments',
+				'badges'  => array(
+					array(
+						'label' => 'packages/example',
+					),
+				),
+				'status'  => 'Active',
+			),
+			$data['packageSource']['advanced_summary_projection']
+		);
+	}
+
 	public function testReleaseDeploymentHooksReceiveExactOuterCreateEditAndIndexArguments(): void {
 		$sourceCalls  = array();
 		$sectionCalls = array();

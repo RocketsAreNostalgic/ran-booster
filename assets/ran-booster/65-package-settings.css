@@ -189,14 +189,14 @@
 
 .ran-booster-source-choice:focus,
 .ran-booster-source-choice:hover {
-	border-color: var(--ran-booster-link-strong);
 	background: var(--ran-booster-surface-info);
 	color: var(--ran-booster-text-muted);
 }
 
 .ran-booster-source-choice.is-selected {
 	padding: calc(var(--ran-booster-space-16) - 1px);
-	border: 2px solid var(--ran-booster-link-strong);
+	border-radius: var(--ran-booster-radius-control)
+		var(--ran-booster-radius-control) 0 0;
 	background: var(--ran-booster-surface-info);
 }
 
@@ -226,7 +226,6 @@
 	position: relative;
 	z-index: 1;
 	padding: var(--ran-booster-space-10) var(--ran-booster-space-14);
-	border-color: var(--ran-booster-link-strong);
 	border-block-end-color: var(--ran-booster-surface);
 	background: var(--ran-booster-surface);
 	cursor: default;
@@ -245,8 +244,6 @@
 	.ran-booster-package-source--navigation
 	+ .ran-booster-package-source-pane {
 	margin-block-start: 0;
-	padding: var(--ran-booster-space-20);
-	border: 1px solid var(--ran-booster-link-strong);
 	background: var(--ran-booster-surface);
 }
 

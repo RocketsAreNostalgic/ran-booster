@@ -75,6 +75,30 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'Legacy, unverified', $html );
 	}
 
+	public function testUnavailableRendersReadOnlyAssessPromptWithReasonAndNoFormInputs(): void {
+		$reason = 'A temporary upstream limitation prevents direct assessment right now.';
+		$html   = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+			array(
+				'unavailable'        => true,
+				'unavailable_reason' => $reason,
+				'forms'              => array(
+					'inspect' => $this->form( 'inspect' ),
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'Release automation', $html );
+		self::assertStringContainsString( 'Release automation cannot be assessed with the current package settings.', $html );
+		self::assertStringContainsString( '<details class="ran-booster-release-workflow" open>', $html );
+		self::assertStringContainsString( 'Assess source-ready release setup', $html );
+		self::assertStringContainsString( $reason, $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertStringNotContainsString( '<form', $html );
+		self::assertStringNotContainsString( 'name="github_token"', $html );
+		self::assertStringNotContainsString( 'type="hidden"', $html );
+		self::assertStringNotContainsString( 'type="password"', $html );
+	}
+
 	public function testLegacyAndUnknownEvidenceRemainDisplayOnlyAndEscaped(): void {
 		$display = new GitHubReleaseWorkflowDisplay();
 		$legacy  = $display->workflow(

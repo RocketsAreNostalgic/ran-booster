@@ -7,16 +7,18 @@ namespace RAN\Admin\ReleaseManagement\GitHub;
 /** @internal GitHub-specific release workflow presentation. */
 final class GitHubReleaseWorkflowDisplay {
 	public function workflow( array $view ): string {
-		$code       = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
-		$successful = true === ( $view['result_successful'] ?? false );
-		$preview    = is_array( $view['preview'] ?? null ) ? $view['preview'] : null;
-		$record     = is_array( $view['record'] ?? null ) ? $view['record'] : null;
-		$legacy     = is_array( $view['legacy'] ?? null ) ? $view['legacy'] : null;
-		$forms      = is_array( $view['forms'] ?? null ) ? $view['forms'] : array();
-		$open       = null !== $preview || null !== $record || null !== $legacy || str_starts_with( $code, 'workflow_' );
-		$html       = '<details class="ran-booster-release-workflow"' . ( $open ? ' open' : '' ) . '>';
-		$html      .= '<summary><strong>' . esc_html__( 'Release automation', 'ran-booster' ) . '</strong></summary>';
-		$html      .= '<div class="ran-booster-release-workflow__body"><p>'
+		$code        = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
+		$successful  = true === ( $view['result_successful'] ?? false );
+		$preview     = is_array( $view['preview'] ?? null ) ? $view['preview'] : null;
+		$record      = is_array( $view['record'] ?? null ) ? $view['record'] : null;
+		$legacy      = is_array( $view['legacy'] ?? null ) ? $view['legacy'] : null;
+		$forms       = is_array( $view['forms'] ?? null ) ? $view['forms'] : array();
+		$unavailable = true === ( $view['unavailable'] ?? false );
+		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
+		$open        = $unavailable || null !== $preview || null !== $record || null !== $legacy || str_starts_with( $code, 'workflow_' );
+		$html        = '<details class="ran-booster-release-workflow"' . ( $open ? ' open' : '' ) . '>';
+		$html       .= '<summary><strong>' . esc_html__( 'Release automation', 'ran-booster' ) . '</strong></summary>';
+		$html       .= '<div class="ran-booster-release-workflow__body"><p>'
 			. esc_html__( 'Assess the exact source tree and immutable template pack, then open one atomic draft pull request for review.', 'ran-booster' ) . '</p>';
 
 		if ( str_starts_with( $code, 'workflow_' ) ) {
@@ -24,7 +26,13 @@ final class GitHubReleaseWorkflowDisplay {
 				. ( $successful ? ' data-ran-booster-package-success' : '' ) . '><p>' . esc_html( $this->workflowMessage( $code ) ) . '</p></div>';
 		}
 
-		if ( null !== $preview ) {
+		if ( $unavailable ) {
+			$html .= '<p>' . esc_html__( 'Release automation cannot be assessed with the current package settings.', 'ran-booster' ) . '</p>';
+			if ( '' !== $reason ) {
+				$html .= '<p class="description">' . esc_html( $reason ) . '</p>';
+			}
+			$html .= '<p><button type="submit" class="button" disabled>' . esc_html__( 'Assess source-ready release setup', 'ran-booster' ) . '</button></p>';
+		} elseif ( null !== $preview ) {
 			$html .= $this->preview( $preview );
 			$key   = 'template_update' === ( $preview['kind'] ?? null ) ? 'update_setup' : 'setup';
 			$html .= $this->form( is_array( $forms[ $key ] ?? null ) ? $forms[ $key ] : array() );

@@ -97,7 +97,7 @@ $repositoryStateClass             = match ( true ) {
 };
 $setupSummary = match ( true ) {
 	$needsAttention => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
-	default         => __( 'Review the saved repository, branch, and local Push-to-Deploy requirements below.', 'ran-booster' ),
+	default         => __( 'Review the requirements below.', 'ran-booster' ),
 };
 if ( in_array( $repositoryBranchCheckOutcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {
 	$savedRepositoryLabel = __( 'is accessible with the saved repository settings.', 'ran-booster' );
@@ -148,10 +148,6 @@ $subdirectoryStateClass = match ( $repositoryBranchCheckOutcome ?? null ) {
 
 ?>
 <section id="ran-booster-branch-readiness" class="ran-booster-package-source-readiness" aria-labelledby="ran-booster-branch-readiness-heading">
-	<header>
-		<h3 id="ran-booster-branch-readiness-heading" class="ran-booster-section__title"><?php esc_html_e( 'Branch and webhook setup', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Save the current package settings, then check the repository and branch now. Booster checks them again when a deployment starts.', 'ran-booster' ); ?></p>
-	</header>
 	<div>
 		<div class="ran-booster-readiness-panel">
 			<div class="ran-booster-readiness-panel__top">

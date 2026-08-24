@@ -33,6 +33,13 @@ if ( ! function_exists( 'esc_html_e' ) ) {
 	}
 }
 
+if ( ! function_exists( 'esc_html__' ) ) {
+	function esc_html__( string $text, string $domain = 'default' ): string {
+		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText,WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test shim forwards fixture strings.
+		return esc_html( __( $text, $domain ) );
+	}
+}
+
 if ( ! function_exists( 'esc_attr_e' ) ) {
 	function esc_attr_e( string $text, string $domain = 'default' ): void {
 		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText,WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test shim forwards fixture strings.

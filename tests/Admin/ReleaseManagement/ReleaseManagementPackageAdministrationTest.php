@@ -30,6 +30,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
 		$html = (string) ob_get_clean();
 
+		self::assertStringContainsString( 'Track verified release assets and install them through WordPress.', $html );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/admin-post.php"', $html );
 		self::assertStringContainsString( 'name="action" value="ran_booster_release_enable"', $html );
 		self::assertStringContainsString( 'name="expected_type" value="plugin"', $html );

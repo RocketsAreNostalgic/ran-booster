@@ -12,10 +12,14 @@
 		callback();
 	}
 
-	onDomReady(initPackageAdmin);
+	onDomReady(function () {
+		consumeAdvancedSettingsOpenRequest();
+		initPackageAdmin();
+	});
 
 	document.addEventListener('htmx:afterSwap', function (event) {
 		if (event.detail?.target?.id === 'wpbody-content') {
+			consumeAdvancedSettingsOpenRequest();
 			const developmentNotice = document.querySelector(
 				'[data-ran-booster-core-development-notice]'
 			);
@@ -27,6 +31,16 @@
 			initPackageAdmin();
 		}
 	});
+
+	function consumeAdvancedSettingsOpenRequest() {
+		const url = new URL(window.location.href);
+		if (!url.searchParams.has('ran_booster_open_advanced')) {
+			return;
+		}
+
+		url.searchParams.delete('ran_booster_open_advanced');
+		window.history.replaceState(window.history.state, '', url);
+	}
 
 	function initPackageAdmin() {
 		initPackageMutationForms();

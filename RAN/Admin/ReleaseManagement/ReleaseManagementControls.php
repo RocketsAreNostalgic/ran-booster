@@ -463,7 +463,13 @@ final class ReleaseManagementControls {
 			|| ( is_string( $request['return_to_settings'] ?? null ) && '1' === wp_unslash( $request['return_to_settings'] ) );
 		$url      = $this->returnUrl( $outcome['type'], $outcome['identifier'], $settings );
 		if ( $settings ) {
-			$url = add_query_arg( 'source_view', 'return_to_branch' === $operation ? 'branch' : 'release_asset', $url );
+			$url = add_query_arg(
+				array(
+					'source_view'               => 'return_to_branch' === $operation ? 'branch' : 'release_asset',
+					'ran_booster_open_advanced' => '1',
+				),
+				$url
+			);
 		}
 		$channel = in_array( $operation, array( 'enable', 'change_channel' ), true )
 			? $this->releaseChannelFrom( $request )

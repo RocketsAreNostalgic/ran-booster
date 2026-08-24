@@ -239,7 +239,8 @@ final class GitHubReleaseWorkflowControls {
 		if ( '' !== $outcome['preview_key'] ) {
 			$args[ self::PREVIEW_QUERY_KEY ] = $outcome['preview_key'];
 		}
-		$args['source_view'] = 'release_asset';
+		$args['source_view']               = 'release_asset';
+		$args['ran_booster_open_advanced'] = '1';
 
 		return add_query_arg( $args, $this->returnUrl( $outcome['type'], $outcome['identifier'], true ) )
 			. '#ran-booster-advanced-source-settings';
@@ -386,7 +387,13 @@ final class GitHubReleaseWorkflowControls {
 		}
 
 		$settingsUrl = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) );
-		$settingsUrl = add_query_arg( 'source_view', 'release_asset', $settingsUrl ) . '#ran-booster-advanced-source-settings';
+		$settingsUrl = add_query_arg(
+			array(
+				'source_view'               => 'release_asset',
+				'ran_booster_open_advanced' => '1',
+			),
+			$settingsUrl
+		) . '#ran-booster-advanced-source-settings';
 		$label       = $multiple
 			? sprintf(
 				/* translators: %s is a managed plugin file or theme stylesheet. */

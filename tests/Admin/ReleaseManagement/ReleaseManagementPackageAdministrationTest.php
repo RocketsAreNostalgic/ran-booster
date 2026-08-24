@@ -46,6 +46,43 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array(), $tracking->calls );
 	}
 
+	public function testIneligibleReleaseTrackIsVisiblyBoundedAndExplainsWhyItIsDisabled(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::MISSING_UPDATE_URI )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'ran-booster-settings-section ran-booster-release-track-section', $html );
+		self::assertStringContainsString( 'ran-booster-release-track-control is-disabled" disabled', $html );
+		self::assertSame( 2, substr_count( $html, 'class="button ran-booster-release-track-option"' ) );
+		self::assertStringContainsString( 'Stable follows final published releases. Preview also includes prereleases.', $html );
+		self::assertStringContainsString( 'notice notice-warning inline ran-booster-release-track-notice', $html );
+		self::assertStringContainsString( 'Complete the eligibility requirements above before choosing a release track.', $html );
+	}
+
+	public function testManagedReleaseTrackPresentsCurrentAndAlternativeAsOneControl(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( 'release_asset', channel: 'stable' )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'class="button button-primary ran-booster-release-track-option is-current" aria-current="true"', $html );
+		self::assertStringContainsString( 'Current release track', $html );
+		self::assertStringContainsString( 'name="release_channel" value="prerelease"', $html );
+		self::assertStringContainsString( 'aria-label="Switch to Preview releases"', $html );
+		self::assertStringNotContainsString( 'type="hidden" name="release_channel"', $html );
+	}
+
 	#[DataProvider( 'packageTypes' )]
 	public function testReleaseManagedRowsAndActionsHavePluginThemeParity( string $type, string $identifier ): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
@@ -197,6 +234,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
 		self::assertStringNotContainsString( '<strong>Update URI</strong>', $html );
 		self::assertStringContainsString( 'Recheck eligibility', $html );
+		self::assertStringContainsString( 'ran_booster_open_advanced=1', $html );
 	}
 
 	public function testMissingUpdateUriStillOffersTheExactHeaderRemediation(): void {
@@ -250,6 +288,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		foreach ( array( 'enable', 'change_channel', 'refresh', 'return_to_branch' ) as $operation ) {
 			$request = $this->request( $operation );
+			if ( 'refresh' === $operation ) {
+				$request['return_to_settings'] = '1';
+			}
 			if ( 'enable' === $operation ) {
 				$request['release_channel'] = 'stable';
 			}
@@ -260,6 +301,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			$url = $controls->processAdminPostRequest( $operation, $request );
 			self::assertStringContainsString( 'ran_booster_release_result=', $url, $operation );
 			self::assertStringContainsString( 'ran_booster_release_result_nonce=', $url, $operation );
+			self::assertStringContainsString( 'ran_booster_open_advanced=1', $url, $operation );
 			self::assertStringNotContainsString( 'release_deployments', $url, $operation );
 		}
 

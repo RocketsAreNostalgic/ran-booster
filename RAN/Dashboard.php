@@ -464,7 +464,8 @@ class Dashboard {
 					$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
 					$this->providerSettings->buildPackageBranchReadiness( $package ),
 					$this->providerSettings->buildPackageWebhookRetention( $package ),
-					$this->requestedPackageSourceView()
+					$this->requestedPackageSourceView(),
+					$this->requestedAdvancedSettingsOpen()
 				);
 				$editData['repositoryBranchCheckOutcome']  = $repositoryBranchCheckOutcome;
 				$editData['repositoryBranchCheckEvidence'] = $repositoryBranchCheckEvidence;
@@ -597,6 +598,16 @@ class Dashboard {
 		return in_array( $value, array( 'branch', 'release_asset' ), true ) ? $value : '';
 	}
 
+	private function requestedAdvancedSettingsOpen(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
+		$value = isset( $_GET['ran_booster_open_advanced'] ) && is_string( $_GET['ran_booster_open_advanced'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
+			? sanitize_key( wp_unslash( $_GET['ran_booster_open_advanced'] ) )
+			: '';
+
+		return '1' === $value;
+	}
+
 	private function renderPackageCreate( PackagePagePresenter $packageView ): mixed {
 		try {
 			$this->db->requireReady();
@@ -612,7 +623,8 @@ class Dashboard {
 				$this->hasRequestedProvider(),
 				$this->requestedOpenPicker(),
 				$this->requestedPackageSourceView(),
-				in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null
+				in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null,
+				$this->requestedAdvancedSettingsOpen()
 			)
 		);
 	}

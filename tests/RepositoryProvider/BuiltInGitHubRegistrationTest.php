@@ -9,6 +9,7 @@ namespace Tests\RepositoryProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\BoosterServiceProvider;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
@@ -86,6 +87,10 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertSame( 100, $metadata->admin?->navigation?->slot );
 		self::assertSame( 1, $secrets->credentialStoresIssued );
 		self::assertSame( 0, $secrets->credentialStore->reads );
+
+		$firstControls  = $container->make( RepositoryWebhookManagementControls::class );
+		$secondControls = $container->make( RepositoryWebhookManagementControls::class );
+		self::assertSame( $firstControls, $secondControls );
 	}
 }
 

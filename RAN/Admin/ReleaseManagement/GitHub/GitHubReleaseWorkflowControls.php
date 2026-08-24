@@ -65,7 +65,7 @@ final class GitHubReleaseWorkflowControls {
 		$code = is_array( $result ) && str_starts_with( (string) ( $result['code'] ?? '' ), 'workflow_' ) ? (string) $result['code'] : '';
 		$view = $this->requestBoundary(
 			fn (): ?array => $this->workflowView( $package, $code, true === ( $result['successful'] ?? false ), $this->requestedPreviewKey(), (string) ( $result['channel'] ?? '' ) ),
-			null
+			$this->unavailableWorkflowView( __( 'Booster could not read the local Published release readiness for this package. Try again after reviewing its settings.', 'ran-booster' ) )
 		);
 		if ( is_array( $view ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The display owner escapes its complete projection.
@@ -286,9 +286,12 @@ final class GitHubReleaseWorkflowControls {
 		if ( ! is_string( $type ) || ! is_string( $identifier ) || ! is_int( $revision ) ) {
 			return null;
 		}
-		$status = $this->workflowStatus( $type, $identifier, $revision, false );
+		$status = $this->workflowDisplayStatus( $type, $identifier, $revision );
 		if ( null === $status ) {
-			return null;
+			return $this->unavailableWorkflowView( __( 'Booster could not confirm the local Published release readiness for this package. Try again after reviewing its settings.', 'ran-booster' ) );
+		}
+		if ( ! $status->eligible() ) {
+			return $this->unavailableWorkflowView( $this->workflowUnavailableReason( $status ), $code, $successful );
 		}
 
 		$channel = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : $status->channel();
@@ -296,7 +299,14 @@ final class GitHubReleaseWorkflowControls {
 		$record  = $this->workflowRecords->find( $status->providerRepositoryId() );
 		$legacy  = null === $record
 			? $this->workflowRecords->legacyEvidence( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) : null;
-		$forms   = array();
+		if ( null === $record && null === $legacy && 'release_asset' === $status->source() ) {
+			return $this->unavailableWorkflowView(
+				__( 'Release workflow setup is available before switching from Branch deployments. Return to Branch before assessing setup again.', 'ran-booster' ),
+				$code,
+				$successful
+			);
+		}
+		$forms = array();
 		if ( null !== $preview ) {
 			$operation           = 'template_update' === $preview['kind'] ? 'update_setup' : 'setup';
 			$forms[ $operation ] = $this->workflowForm(
@@ -322,6 +332,44 @@ final class GitHubReleaseWorkflowControls {
 			'legacy'            => $legacy,
 			'forms'             => array_filter( $forms, 'is_array' ),
 		);
+	}
+
+	/** @return array<string,mixed> */
+	private function unavailableWorkflowView( string $reason, string $code = '', bool $successful = false ): array {
+		return array(
+			'result_code'        => $code,
+			'result_successful'  => $successful,
+			'unavailable'        => true,
+			'unavailable_reason' => $reason,
+			'preview'            => null,
+			'record'             => null,
+			'legacy'             => null,
+			'forms'              => array(),
+		);
+	}
+
+	/** Render-only identity check. POST requests continue through workflowStatus(). */
+	private function workflowDisplayStatus( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
+		$status = $this->releases?->status( $type, $identifier );
+		if ( ! $status instanceof ReleaseTrackingStatus || $revision !== $status->sourceRevision()
+			|| ! hash_equals( $type, $status->type() ) || ! hash_equals( $identifier, $status->identifier() ) ) {
+			return null;
+		}
+
+		return $status;
+	}
+
+	private function workflowUnavailableReason( ReleaseTrackingStatus $status ): string {
+		return match ( $status->eligibility()->code() ) {
+			'missing_update_uri' => __( 'This package needs the exact Update URI shown in Published release readiness above.', 'ran-booster' ),
+			'mismatched_update_uri' => __( 'This package Update URI must match the configured repository.', 'ran-booster' ),
+			'unsupported_provider' => __( 'This repository provider cannot use published-release tracking.', 'ran-booster' ),
+			'invalid_repository' => __( 'The saved repository needs attention before release automation can be assessed.', 'ran-booster' ),
+			'invalid_package_identity' => __( 'The installed package identity must match the configured repository.', 'ran-booster' ),
+			'subdirectory_not_supported' => __( 'Published releases require this package at the repository root; continue using Branch deployments for a repository subdirectory.', 'ran-booster' ),
+			'target_already_uses_ran_updater' => __( 'This package already has its own release updater, so Booster cannot manage published releases as well.', 'ran-booster' ),
+			default => __( 'Resolve the Published release readiness requirements above before assessing release automation.', 'ran-booster' ),
+		};
 	}
 
 	/** @return array<string,mixed>|null */

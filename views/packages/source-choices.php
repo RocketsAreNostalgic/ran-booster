@@ -78,7 +78,7 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 				<?php if ( 'create' === $sourceChoiceMode ) { ?>
 					<span class="ran-booster-source-choice__radio" aria-hidden="true"></span>
 				<?php } ?>
-				<span>
+				<span class="ran-booster-source-choice__content">
 					<strong data-ran-booster-source-heading><?php echo esc_html( $sourceHeading ); ?></strong>
 					<?php if ( 'create' === $sourceChoiceMode ) { ?>
 						<small data-ran-booster-source-description><?php echo esc_html( $sourceChoice['description'] ); ?></small>

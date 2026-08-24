@@ -37,8 +37,11 @@ final class ManagedReleaseTargetRegistrar {
 
 	private bool $registered = false;
 
-	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool}> */
+	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool, phase?: string}> */
 	private array $nativeUpdates = array();
+
+	/** @var array{upgrader: object, type: 'plugin'|'theme', count: int, current: int, lock: ?string, restore: bool, poison: bool, targets: array<string, true>}|null */
+	private ?array $manualBulkRun = null;
 
 	public function __construct(
 		private PluginRepository $plugins,
@@ -87,6 +90,7 @@ final class ManagedReleaseTargetRegistrar {
 		if ( function_exists( 'add_filter' ) ) {
 			add_filter( 'upgrader_pre_download', array( $this, 'authorizeNativeDownload' ), PHP_INT_MIN, 4 );
 			add_filter( 'upgrader_pre_install', array( $this, 'fenceNativeMutation' ), 1, 2 );
+			add_filter( 'upgrader_install_package_result', array( $this, 'captureNativeInstallResult' ), PHP_INT_MAX, 2 );
 			add_filter( 'site_transient_update_plugins', array( $this, 'suppressUnauthorizedPluginOffers' ), PHP_INT_MAX );
 			add_filter( 'site_transient_update_themes', array( $this, 'suppressUnauthorizedThemeOffers' ), PHP_INT_MAX );
 			add_action( 'upgrader_process_complete', array( $this, 'completeNativeMutation' ), PHP_INT_MAX, 2 );
@@ -113,11 +117,8 @@ final class ManagedReleaseTargetRegistrar {
 		array $hookExtra
 	): mixed {
 		unset( $package );
-		$bulk             = true === ( $upgrader->bulk ?? false );
-		$singleTargetBulk = $bulk
-			&& 1 === ( $upgrader->update_count ?? null )
-			&& 1 === ( $upgrader->update_current ?? null );
-		$target           = $this->nativeTarget( $hookExtra, $bulk );
+		$bulk   = true === ( $upgrader->bulk ?? false );
+		$target = $this->nativeTarget( $hookExtra, $bulk );
 		if ( null === $target ) {
 			return $reply;
 		}
@@ -146,14 +147,30 @@ final class ManagedReleaseTargetRegistrar {
 		} catch ( Throwable ) {
 			return $this->nativeUpdateError( 'authority_changed' );
 		}
-		if ( $bulk && ! $singleTargetBulk ) {
-			return $this->nativeUpdateError( 'unsupported_context' );
-		}
 		$automatic = isset( $upgrader->skin )
 			&& is_object( $upgrader->skin )
 			&& 'Automatic_Upgrader_Skin' === get_class( $upgrader->skin );
 		if ( $automatic && ( ! function_exists( 'doing_action' ) || ! doing_action( 'wp_maybe_auto_update' ) ) ) {
 			return $this->nativeUpdateError( 'unsupported_context' );
+		}
+		if ( null !== $this->manualBulkRun && ( ! $bulk || $this->manualBulkRun['upgrader'] !== $upgrader ) ) {
+			$this->manualBulkRun['poison'] = true;
+
+			return $this->nativeUpdateError( 'authority_changed' );
+		}
+		if ( $bulk ) {
+			if ( $automatic || ! $this->recordManualBulkTarget( $upgrader, $target ) ) {
+				return $this->nativeUpdateError( $automatic ? 'unsupported_context' : 'authority_changed' );
+			}
+			$this->nativeUpdates[ $key ] = array(
+				'authority' => $authority,
+				'automatic' => false,
+				'lock'      => null,
+				'restore'   => false,
+				'phase'     => 'authorized',
+			);
+
+			return $reply;
 		}
 		$outerLock = null;
 		if ( $automatic ) {
@@ -190,6 +207,23 @@ final class ManagedReleaseTargetRegistrar {
 		$pending   = $this->nativeUpdates[ $key ] ?? null;
 		$lock      = $this->updaterLock;
 		$lockToken = null;
+		$bulkRun   = null !== $this->manualBulkRun && isset( $this->manualBulkRun['targets'][ $key ] );
+		if ( null !== $this->manualBulkRun ) {
+			if ( ! $bulkRun || null === $pending ) {
+				if ( isset( $this->registeredAuthorities[ $key ] ) || isset( $this->targets[ $key ] ) ) {
+					$this->manualBulkRun['poison'] = true;
+
+					return $this->nativeUpdateError( 'authority_changed' );
+				}
+
+				return $reply;
+			}
+			if ( $reply instanceof \WP_Error || 'authorized' !== ( $pending['phase'] ?? null ) || $this->manualBulkRun['poison'] ) {
+				$this->manualBulkRun['poison'] = true;
+
+				return $reply instanceof \WP_Error ? $reply : $this->nativeUpdateError( 'authority_changed' );
+			}
+		}
 		if ( $reply instanceof \WP_Error ) {
 			unset( $this->nativeUpdates[ $key ] );
 
@@ -210,7 +244,19 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		try {
 			PackageMutationGuard::assertPackageMutationAllowed();
-			if ( $pending['automatic'] ) {
+			if ( $bulkRun ) {
+				if ( null === $this->manualBulkRun['lock'] ) {
+					$this->manualBulkRun['lock'] = $lock->acquire();
+					add_action(
+						'shutdown',
+						function (): void {
+							$this->releaseManualBulkRun( true );
+						},
+						PHP_INT_MAX,
+						0
+					);
+				}
+			} elseif ( $pending['automatic'] ) {
 				if ( ! function_exists( 'doing_action' )
 					|| ! doing_action( 'wp_maybe_auto_update' )
 					|| null === $pending['lock']
@@ -226,12 +272,19 @@ final class ManagedReleaseTargetRegistrar {
 				|| $pending['authority'] !== $current ) {
 				throw new \RuntimeException( 'The managed release authority changed.' );
 			}
-			if ( null !== $lockToken ) {
+			if ( $bulkRun ) {
+				$this->nativeUpdates[ $key ]['phase'] = 'fenced';
+			} elseif ( null !== $lockToken ) {
 				$this->nativeUpdates[ $key ]['lock'] = $lockToken;
 			}
 
 			return $reply;
 		} catch ( Throwable ) {
+			if ( $bulkRun ) {
+				$this->manualBulkRun['poison'] = true;
+
+				return $this->nativeUpdateError( 'authority_changed' );
+			}
 			if ( null !== $lockToken ) {
 				try {
 					$lock->release( $lockToken );
@@ -247,7 +300,29 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	/** @param array<string, mixed> $hookExtra */
+	public function captureNativeInstallResult( mixed $result, array $hookExtra ): mixed {
+		if ( null === $this->manualBulkRun ) {
+			return $result;
+		}
+		$target = $this->nativeTarget( $hookExtra, true );
+		$key    = null === $target ? null : self::key( $target['type'], $target['identifier'] );
+		if ( null === $key || ! isset( $this->manualBulkRun['targets'][ $key ] )
+			|| 'fenced' !== ( $this->nativeUpdates[ $key ]['phase'] ?? null ) ) {
+			return $result;
+		}
+		$this->nativeUpdates[ $key ]['phase'] = 'terminal';
+		$this->manualBulkRun['restore']       = $this->manualBulkRun['restore'] || ( $result instanceof \WP_Error && ! empty( $hookExtra['temp_backup'] ) );
+
+		return $result;
+	}
+
+	/** @param array<string, mixed> $hookExtra */
 	public function completeNativeMutation( object $upgrader, array $hookExtra ): void {
+		if ( null !== $this->manualBulkRun ) {
+			$this->completeManualBulkRun( $upgrader, $hookExtra );
+
+			return;
+		}
 		$target = $this->nativeTarget( $hookExtra, true === ( $hookExtra['bulk'] ?? false ) );
 		if ( null === $target ) {
 			return;
@@ -261,27 +336,121 @@ final class ManagedReleaseTargetRegistrar {
 			return;
 		}
 
-		$release = function () use ( $pending ): void {
-			try {
-				if ( ! $this->updaterLock->release( $pending['lock'] ) ) {
-					throw new \RuntimeException( 'The native update lock was replaced.' );
-				}
-			} catch ( Throwable $failure ) {
-				BoosterLogger::logException(
-					'native update lock release failed',
-					$failure,
-					array( 'step' => 'native_update_lock_release' )
-				);
-			}
-		};
-		$failed  = ( $upgrader->skin->result ?? null ) instanceof \WP_Error
+		$failed = ( $upgrader->skin->result ?? null ) instanceof \WP_Error
 			|| ( $upgrader->result ?? null ) instanceof \WP_Error;
 		if ( $failed && $pending['restore'] ) {
-			add_action( 'shutdown', $release, PHP_INT_MAX, 0 );
+			add_action(
+				'shutdown',
+				function () use ( $pending ): void {
+					$this->releaseNativeLock( $pending['lock'] );
+				},
+				PHP_INT_MAX,
+				0
+			);
 
 			return;
 		}
-		$release();
+		$this->releaseNativeLock( $pending['lock'] );
+	}
+
+	/** @param array{type: 'plugin'|'theme', identifier: string} $target */
+	private function recordManualBulkTarget( object $upgrader, array $target ): bool {
+		$count   = $upgrader->update_count ?? null;
+		$current = $upgrader->update_current ?? null;
+		if ( ! is_int( $count ) || ! is_int( $current ) || $count < 1 || $current < 1 || $current > $count ) {
+			if ( null !== $this->manualBulkRun ) {
+				$this->manualBulkRun['poison'] = true;
+			}
+
+			return false;
+		}
+		if ( null === $this->manualBulkRun ) {
+			$this->manualBulkRun = array(
+				'upgrader' => $upgrader,
+				'type'     => $target['type'],
+				'count'    => $count,
+				'current'  => $current,
+				'lock'     => null,
+				'restore'  => false,
+				'poison'   => false,
+				'targets'  => array(),
+			);
+		} elseif ( $this->manualBulkRun['poison']
+			|| $this->manualBulkRun['upgrader'] !== $upgrader
+			|| $this->manualBulkRun['type'] !== $target['type']
+			|| $this->manualBulkRun['count'] !== $count
+			|| $current <= $this->manualBulkRun['current'] ) {
+			$this->manualBulkRun['poison'] = true;
+
+			return false;
+		} else {
+			$this->manualBulkRun['current'] = $current;
+		}
+		$key = self::key( $target['type'], $target['identifier'] );
+		if ( isset( $this->nativeUpdates[ $key ] ) ) {
+			$this->manualBulkRun['poison'] = true;
+
+			return false;
+		}
+		$this->manualBulkRun['targets'][ $key ] = true;
+
+		return true;
+	}
+
+	/** @param array<string, mixed> $hookExtra */
+	private function completeManualBulkRun( object $upgrader, array $hookExtra ): void {
+		$run = $this->manualBulkRun;
+		if ( $run['upgrader'] !== $upgrader || 'update' !== ( $hookExtra['action'] ?? null )
+			|| true !== ( $hookExtra['bulk'] ?? false ) || $run['type'] !== ( $hookExtra['type'] ?? null ) ) {
+			return;
+		}
+		$names = 'plugin' === $run['type'] ? ( $hookExtra['plugins'] ?? null ) : ( $hookExtra['themes'] ?? null );
+		if ( ! is_array( $names ) || $run['count'] !== count( $names ) || count( $names ) !== count( array_unique( $names, SORT_REGULAR ) )
+			|| count( array_filter( $names, static fn ( mixed $name ): bool => ! is_string( $name ) || '' === $name ) ) > 0 ) {
+			return;
+		}
+		foreach ( $run['targets'] as $key => $_present ) {
+			$pending = $this->nativeUpdates[ $key ] ?? null;
+			if ( 'terminal' !== ( $pending['phase'] ?? null ) || ! in_array( substr( $key, strlen( $run['type'] ) + 1 ), $names, true ) ) {
+				return;
+			}
+		}
+		if ( $run['poison'] || $run['restore'] ) {
+			return;
+		}
+		$this->releaseManualBulkRun( false );
+	}
+
+	private function releaseManualBulkRun( bool $shutdown ): void {
+		if ( null === $this->manualBulkRun || null === $this->manualBulkRun['lock'] ) {
+			return;
+		}
+		$result = $this->releaseNativeLock( $this->manualBulkRun['lock'] );
+		if ( true === $result || false === $result || $shutdown ) {
+			foreach ( $this->manualBulkRun['targets'] as $key => $_present ) {
+				unset( $this->nativeUpdates[ $key ] );
+			}
+			$this->manualBulkRun = null;
+		}
+	}
+
+	private function releaseNativeLock( string $token ): ?bool {
+		try {
+			if ( $this->updaterLock->release( $token ) ) {
+				return true;
+			}
+			BoosterLogger::logException(
+				'native update lock release failed',
+				new \RuntimeException( 'The native update lock was replaced.' ),
+				array( 'step' => 'native_update_lock_release' )
+			);
+
+			return false;
+		} catch ( Throwable $failure ) {
+			BoosterLogger::logException( 'native update lock release failed', $failure, array( 'step' => 'native_update_lock_release' ) );
+
+			return null;
+		}
 	}
 
 	public function target( string $type, string $identifier ): ?RepositoryReleaseNativeTarget {

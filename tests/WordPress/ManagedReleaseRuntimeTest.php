@@ -836,11 +836,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 1, $lock->acquires );
 	}
 
-	public function testManagedNativeMultiTargetAndMalformedBulkUpdatesFailClosed(): void {
+	public function testManagedNativeMalformedBulkUpdatesFailClosed(): void {
 		$package       = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL );
 		[ $registrar ] = $this->nativePluginRegistrar( $package );
 
-		foreach ( array( array( 2, 1 ), array( '1', 1 ), array( 1, null ) ) as $state ) {
+		foreach ( array( array( '1', 1 ), array( 1, null ) ) as $state ) {
 			$result = $registrar->authorizeNativeDownload(
 				false,
 				'package.zip',
@@ -853,7 +853,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			);
 
 			self::assertInstanceOf( \WP_Error::class, $result );
-			self::assertSame( 'ran_booster_native_update_unsupported_context', $result->get_error_code() );
+			self::assertSame( 'ran_booster_native_update_authority_changed', $result->get_error_code() );
 		}
 	}
 
@@ -867,9 +867,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'update_count'   => 1,
 			'update_current' => 1,
 			'result'         => array(),
-			'skin'           => (object) array(
-				'result' => new \WP_Error( 'install_failed', 'failed' ),
-			),
 		);
 		$itemExtra            = array(
 			'plugin'      => self::NATIVE_PLUGIN,
@@ -878,6 +875,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $upgrader, $itemExtra ) );
 		self::assertFalse( $registrar->fenceNativeMutation( false, $itemExtra ) );
+		self::assertInstanceOf( \WP_Error::class, $registrar->captureNativeInstallResult( new \WP_Error( 'install_failed', 'failed' ), $itemExtra ) );
 		self::assertSame( 1, $lock->acquires );
 
 		$registrar->completeNativeMutation(
@@ -900,6 +898,349 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertCount( 1, $shutdown );
 		self::assertSame( PHP_INT_MAX, $shutdown[0]['priority'] );
 		$shutdown[0]['callback']();
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testManagedPluginBulkLifecycleCapturesEachItemAndCompletesOnce(): void {
+		$first                = $this->package( 'plugin', 'first/first.php', 'first', DeploymentPolicy::MANUAL );
+		$last                 = $this->package( 'plugin', 'last/last.php', 'last', DeploymentPolicy::MANUAL );
+		$reads                = (object) array( 'count' => 0 );
+		[ $registrar, $lock ] = $this->nativeBulkPluginRegistrar( array( $first, $last ), $reads );
+		$reads->count         = 0;
+		$upgrader             = (object) array(
+			'bulk'           => true,
+			'update_count'   => 3,
+			'update_current' => 1,
+			'result'         => array(),
+		);
+
+		foreach ( array( $first, $last ) as $index => $package ) {
+			if ( 1 === $index ) {
+				$upgrader->update_current = 2;
+				$unmanaged                = array(
+					'action' => 'update',
+					'type'   => 'plugin',
+					'plugin' => 'unmanaged/middle.php',
+				);
+				self::assertFalse( $registrar->authorizeNativeDownload( false, 'ordinary.zip', $upgrader, $unmanaged ) );
+				self::assertFalse( $registrar->fenceNativeMutation( false, $unmanaged ) );
+				self::assertSame( array( 'destination' => '/test/plugins/unmanaged' ), $registrar->captureNativeInstallResult( array( 'destination' => '/test/plugins/unmanaged' ), $unmanaged ) );
+			}
+			$upgrader->update_current = 0 === $index ? 1 : 3;
+			$extra                    = array(
+				'action' => 'update',
+				'type'   => 'plugin',
+				'plugin' => $package->getIdentifier(),
+			);
+			self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $upgrader, $extra ) );
+			self::assertFalse( $registrar->fenceNativeMutation( false, $extra ) );
+			self::assertSame( array( 'destination' => '/test/plugins/' . $package->getSlug() ), $registrar->captureNativeInstallResult( array( 'destination' => '/test/plugins/' . $package->getSlug() ), $extra ) );
+		}
+
+		$registrar->completeNativeMutation(
+			$upgrader,
+			array(
+				'action'  => 'update',
+				'type'    => 'plugin',
+				'bulk'    => true,
+				'plugins' => array( 'first/first.php', 'unmanaged/middle.php', 'last/last.php' ),
+			)
+		);
+
+		self::assertSame( 1, $lock->acquires );
+		self::assertSame( 4, $reads->count );
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		$shutdown = $this->shutdownCallbacks();
+		self::assertCount( 1, $shutdown );
+		$shutdown[0]['callback']();
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		$next = (object) array(
+			'bulk'           => true,
+			'update_count'   => 1,
+			'update_current' => 1,
+		);
+		self::assertFalse(
+			$registrar->authorizeNativeDownload(
+				false,
+				'package.zip',
+				$next,
+				array(
+					'action' => 'update',
+					'type'   => 'plugin',
+					'plugin' => 'first/first.php',
+				)
+			)
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testManagedThemeBulkLifecycleCapturesEachItemAndCompletesOnce(): void {
+		$first                = $this->package( 'theme', 'first-theme', 'first-theme', DeploymentPolicy::MANUAL );
+		$last                 = $this->package( 'theme', 'last-theme', 'last-theme', DeploymentPolicy::MANUAL );
+		[ $registrar, $lock ] = $this->nativeBulkThemeRegistrar( array( $first, $last ) );
+		$upgrader             = (object) array(
+			'bulk'           => true,
+			'update_count'   => 3,
+			'update_current' => 1,
+			'result'         => array(),
+		);
+
+		foreach ( array( $first, $last ) as $index => $package ) {
+			if ( 1 === $index ) {
+				$upgrader->update_current = 2;
+				$unmanaged                = array(
+					'action' => 'update',
+					'type'   => 'theme',
+					'theme'  => 'unmanaged-theme',
+				);
+				self::assertFalse( $registrar->authorizeNativeDownload( false, 'ordinary.zip', $upgrader, $unmanaged ) );
+				self::assertFalse( $registrar->fenceNativeMutation( false, $unmanaged ) );
+				self::assertSame( array( 'destination' => '/test/themes/unmanaged' ), $registrar->captureNativeInstallResult( array( 'destination' => '/test/themes/unmanaged' ), $unmanaged ) );
+			}
+			$upgrader->update_current = 0 === $index ? 1 : 3;
+			$extra                    = array(
+				'action' => 'update',
+				'type'   => 'theme',
+				'theme'  => $package->getIdentifier(),
+			);
+			self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $upgrader, $extra ) );
+			self::assertFalse( $registrar->fenceNativeMutation( false, $extra ) );
+			$registrar->captureNativeInstallResult( array( 'destination' => '/test/themes/' . $package->getIdentifier() ), $extra );
+		}
+
+		$registrar->completeNativeMutation(
+			$upgrader,
+			array(
+				'action' => 'update',
+				'type'   => 'theme',
+				'bulk'   => true,
+				'themes' => array( 'first-theme', 'unmanaged-theme', 'last-theme' ),
+			)
+		);
+
+		self::assertSame( 1, $lock->acquires );
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		$shutdown = $this->shutdownCallbacks();
+		self::assertCount( 1, $shutdown );
+		$shutdown[0]['callback']();
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testBulkFailureDefersReleaseDespiteSuccessfulAggregateResult(): void {
+		$first                = $this->package( 'plugin', 'first/first.php', 'first', DeploymentPolicy::MANUAL );
+		$last                 = $this->package( 'plugin', 'last/last.php', 'last', DeploymentPolicy::MANUAL );
+		[ $registrar, $lock ] = $this->nativeBulkPluginRegistrar( array( $first, $last ), (object) array( 'count' => 0 ) );
+		$upgrader             = (object) array(
+			'bulk'           => true,
+			'update_count'   => 2,
+			'update_current' => 1,
+			'result'         => array( 'success' => true ),
+		);
+		$firstExtra           = array(
+			'action'      => 'update',
+			'type'        => 'plugin',
+			'plugin'      => 'first/first.php',
+			'temp_backup' => array( 'slug' => 'first' ),
+		);
+		$lastExtra            = array(
+			'action' => 'update',
+			'type'   => 'plugin',
+			'plugin' => 'last/last.php',
+		);
+
+		self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $upgrader, $firstExtra ) );
+		self::assertFalse( $registrar->fenceNativeMutation( false, $firstExtra ) );
+		$registrar->captureNativeInstallResult( new \WP_Error( 'install_failed', 'failed' ), $firstExtra );
+		$upgrader->update_current = 2;
+		self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $upgrader, $lastExtra ) );
+		self::assertFalse( $registrar->fenceNativeMutation( false, $lastExtra ) );
+		$registrar->captureNativeInstallResult( array( 'destination' => '/test/plugins/last' ), $lastExtra );
+		$registrar->completeNativeMutation(
+			$upgrader,
+			array(
+				'action'  => 'update',
+				'type'    => 'plugin',
+				'bulk'    => true,
+				'plugins' => array( 'first/first.php', 'last/last.php' ),
+			)
+		);
+
+		self::assertSame( array(), $lock->releases );
+		$shutdown = $this->shutdownCallbacks();
+		self::assertCount( 1, $shutdown );
+		self::assertSame( PHP_INT_MAX, $shutdown[0]['priority'] );
+		$shutdown[0]['callback']();
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testBulkLifecycleRejectsInvalidCoordinatesAndSecondUpgraderWithoutCreatingState(): void {
+		$first                = $this->package( 'plugin', 'first/first.php', 'first', DeploymentPolicy::MANUAL );
+		$last                 = $this->package( 'plugin', 'last/last.php', 'last', DeploymentPolicy::MANUAL );
+		[ $registrar, $lock ] = $this->nativeBulkPluginRegistrar( array( $first, $last ), (object) array( 'count' => 0 ) );
+		$first                = (object) array(
+			'bulk'           => true,
+			'update_count'   => 3,
+			'update_current' => 2,
+		);
+		$extra                = array(
+			'action' => 'update',
+			'type'   => 'plugin',
+			'plugin' => 'first/first.php',
+		);
+
+		self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $first, $extra ) );
+		self::assertFalse( $registrar->fenceNativeMutation( false, $extra ) );
+		foreach ( array( array( 3, 2 ), array( 3, 1 ), array( '3', 3 ), array( 3, null ) ) as $coordinate ) {
+			$first->update_count   = $coordinate[0];
+			$first->update_current = $coordinate[1];
+			$result                = $registrar->authorizeNativeDownload( false, 'package.zip', $first, $extra );
+			self::assertInstanceOf( \WP_Error::class, $result );
+		}
+		$lastExtra = array(
+			'action' => 'update',
+			'type'   => 'plugin',
+			'plugin' => 'last/last.php',
+		);
+		$second    = (object) array(
+			'bulk'           => true,
+			'update_count'   => 3,
+			'update_current' => 3,
+		);
+		self::assertInstanceOf( \WP_Error::class, $registrar->authorizeNativeDownload( false, 'package.zip', $second, $lastExtra ) );
+		$first->update_count   = 3;
+		$first->update_current = 3;
+		self::assertInstanceOf( \WP_Error::class, $registrar->authorizeNativeDownload( false, 'package.zip', $first, $lastExtra ) );
+		$registrar->completeNativeMutation(
+			$first,
+			array(
+				'action'  => 'update',
+				'type'    => 'plugin',
+				'bulk'    => true,
+				'plugins' => array( 'first/first.php', 'unmanaged/middle.php', 'last/last.php' ),
+			)
+		);
+		self::assertSame( array(), $lock->releases );
+		$this->shutdownCallbacks()[0]['callback']();
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		self::assertSame( 1, $lock->acquires );
+
+		[ $unrecorded, $unrecordedLock ] = $this->nativePluginRegistrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
+		self::assertInstanceOf( \WP_Error::class, $unrecorded->fenceNativeMutation( false, $extra ) );
+		self::assertSame( 0, $unrecordedLock->acquires );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testBulkCompletionAndReleaseFailuresAreFailClosedAndRetryAtShutdown(): void {
+		$package              = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		[ $registrar, $lock ] = $this->nativePluginRegistrar( $package );
+		$upgrader             = (object) array(
+			'bulk'           => true,
+			'update_count'   => 1,
+			'update_current' => 1,
+		);
+		$extra                = array(
+			'action' => 'update',
+			'type'   => 'plugin',
+			'plugin' => self::NATIVE_PLUGIN,
+		);
+
+		self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $upgrader, $extra ) );
+		self::assertFalse( $registrar->fenceNativeMutation( false, $extra ) );
+		$registrar->captureNativeInstallResult( array( 'destination' => '/test/plugins/example' ), $extra );
+		$registrar->completeNativeMutation(
+			$upgrader,
+			array(
+				'action' => 'update',
+				'type'   => 'plugin',
+				'bulk'   => true,
+			)
+		);
+		$registrar->completeNativeMutation(
+			$upgrader,
+			array(
+				'action'  => 'update',
+				'type'    => 'plugin',
+				'bulk'    => true,
+				'plugins' => array( self::NATIVE_PLUGIN, self::NATIVE_PLUGIN ),
+			)
+		);
+		self::assertSame( array(), $lock->releases );
+
+		$lock->releaseSucceeds = false;
+		$registrar->completeNativeMutation(
+			$upgrader,
+			array(
+				'action'  => 'update',
+				'type'    => 'plugin',
+				'bulk'    => true,
+				'plugins' => array( self::NATIVE_PLUGIN ),
+			)
+		);
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		$shutdown = $this->shutdownCallbacks();
+		self::assertCount( 1, $shutdown );
+		$lock->releaseSucceeds = true;
+		$shutdown[0]['callback']();
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+
+		[ $throwingRegistrar, $throwingLock ] = $this->nativePluginRegistrar( $package );
+		self::assertFalse( $throwingRegistrar->authorizeNativeDownload( false, 'package.zip', $upgrader, $extra ) );
+		self::assertFalse( $throwingRegistrar->fenceNativeMutation( false, $extra ) );
+		$throwingRegistrar->captureNativeInstallResult( array( 'destination' => '/test/plugins/example' ), $extra );
+		$throwingLock->releaseThrows = true;
+		$throwingRegistrar->completeNativeMutation(
+			$upgrader,
+			array(
+				'action'  => 'update',
+				'type'    => 'plugin',
+				'bulk'    => true,
+				'plugins' => array( self::NATIVE_PLUGIN ),
+			)
+		);
+		$shutdown = $this->shutdownCallbacks();
+		self::assertCount( 2, $shutdown );
+		$throwingLock->releaseThrows = false;
+		$shutdown[1]['callback']();
+		self::assertSame( array( 'runtime-lock', 'runtime-lock' ), $throwingLock->releases );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testActiveManualBulkRejectsNestedManagedNonBulkUpdater(): void {
+		$first                = $this->package( 'plugin', 'first/first.php', 'first', DeploymentPolicy::MANUAL );
+		$last                 = $this->package( 'plugin', 'last/last.php', 'last', DeploymentPolicy::MANUAL );
+		[ $registrar, $lock ] = $this->nativeBulkPluginRegistrar( array( $first, $last ), (object) array( 'count' => 0 ) );
+		$outer                = (object) array(
+			'bulk'           => true,
+			'update_count'   => 2,
+			'update_current' => 1,
+		);
+		$firstExtra           = array(
+			'action' => 'update',
+			'type'   => 'plugin',
+			'plugin' => 'first/first.php',
+		);
+		$lastExtra            = array(
+			'action' => 'update',
+			'type'   => 'plugin',
+			'plugin' => 'last/last.php',
+		);
+
+		self::assertFalse( $registrar->authorizeNativeDownload( false, 'package.zip', $outer, $firstExtra ) );
+		self::assertFalse( $registrar->fenceNativeMutation( false, $firstExtra ) );
+		self::assertInstanceOf( \WP_Error::class, $registrar->authorizeNativeDownload( false, 'package.zip', (object) array(), $lastExtra ) );
+		$outer->update_current = 2;
+		self::assertInstanceOf( \WP_Error::class, $registrar->authorizeNativeDownload( false, 'package.zip', $outer, $lastExtra ) );
+		self::assertSame( array(), $lock->releases );
+		$this->shutdownCallbacks()[0]['callback']();
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 	}
 
@@ -2086,6 +2427,81 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		return array( $registrar, $lock, $facade );
 	}
 
+	/** @return list<array{hook: string, callback: callable, priority: int, acceptedArgs: int}> */
+	private function shutdownCallbacks(): array {
+		return array_values(
+			array_filter(
+				$GLOBALS['ran_booster_runtime_actions'],
+				static fn ( array $action ): bool => 'shutdown' === ( $action['hook'] ?? null )
+			)
+		);
+	}
+
+	/**
+	 * @param list<Package> $packages
+	 * @return array{ManagedReleaseTargetRegistrar, RuntimeUpdaterLock}
+	 */
+	private function nativeBulkPluginRegistrar( array $packages, object $reads ): array {
+		$byIdentifier   = array();
+		$configurations = array();
+		foreach ( $packages as $package ) {
+			$identifier                                 = $package->getIdentifier();
+			$byIdentifier[ $identifier ]                = $package;
+			$configurations[ "plugin\0" . $identifier ] = new ManagedReleaseConfiguration( $package->getSlug(), basename( $identifier ) );
+		}
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( $byIdentifier );
+		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
+			static function ( string $identifier ) use ( $byIdentifier, $reads ): Package {
+				if ( ! isset( $byIdentifier[ $identifier ] ) ) {
+					throw new PluginNotFound();
+				}
+				++$reads->count;
+
+				return $byIdentifier[ $identifier ];
+			}
+		);
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$lock      = new RuntimeUpdaterLock();
+		$registrar = new ManagedReleaseTargetRegistrar( $plugins, $themes, new RuntimeReleaseStore( $configurations ), $lock, $this->releaseMetadataRegistry() );
+		$registrar->register();
+
+		return array( $registrar, $lock );
+	}
+
+	/**
+	 * @param list<Package> $packages
+	 * @return array{ManagedReleaseTargetRegistrar, RuntimeUpdaterLock}
+	 */
+	private function nativeBulkThemeRegistrar( array $packages ): array {
+		$byIdentifier   = array();
+		$configurations = array();
+		foreach ( $packages as $package ) {
+			$identifier                                = $package->getIdentifier();
+			$byIdentifier[ $identifier ]               = $package;
+			$configurations[ "theme\0" . $identifier ] = new ManagedReleaseConfiguration( $identifier, 'style.css' );
+		}
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( $byIdentifier );
+		$themes->method( 'boosterThemeFromStylesheet' )->willReturnCallback(
+			static function ( string $identifier ) use ( $byIdentifier ): Package {
+				if ( ! isset( $byIdentifier[ $identifier ] ) ) {
+					throw new ThemeNotFound();
+				}
+
+				return $byIdentifier[ $identifier ];
+			}
+		);
+		$lock      = new RuntimeUpdaterLock();
+		$registrar = new ManagedReleaseTargetRegistrar( $plugins, $themes, new RuntimeReleaseStore( $configurations ), $lock, $this->releaseMetadataRegistry() );
+		$registrar->register();
+
+		return array( $registrar, $lock );
+	}
+
 	private function assertNativeAuthorityError( mixed $result ): void {
 		self::assertInstanceOf( \WP_Error::class, $result );
 		self::assertSame( 'ran_booster_native_update_authority_changed', $result->get_error_code() );
@@ -2129,6 +2545,7 @@ final class RuntimeUpdaterLock extends WordPressUpdaterLock {
 	public int $tokenReads       = 0;
 	public bool $acquireFails    = false;
 	public bool $releaseSucceeds = true;
+	public bool $releaseThrows   = false;
 
 	/** @var list<string> */
 	public array $releases = array();
@@ -2152,6 +2569,9 @@ final class RuntimeUpdaterLock extends WordPressUpdaterLock {
 
 	public function release( string $token ): bool {
 		$this->releases[] = $token;
+		if ( $this->releaseThrows ) {
+			throw new \RuntimeException( 'release failed' );
+		}
 
 		return $this->releaseSucceeds;
 	}

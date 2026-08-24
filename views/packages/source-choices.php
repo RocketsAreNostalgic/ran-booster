@@ -53,13 +53,14 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 			<?php esc_html_e( 'Choose or enter a repository above before configuring its package source.', 'ran-booster' ); ?>
 		</p>
 	</header>
-	<div class="ran-booster-source-choices<?php echo 'edit' === $sourceChoiceMode ? ' ran-booster-source-choices--navigation' : ''; ?>"<?php echo 'edit' === $sourceChoiceMode ? ' role="navigation" aria-label="' . esc_attr( __( 'Package source settings', 'ran-booster' ) ) . '"' : ''; ?>>
+	<div class="ran-booster-source-choices<?php echo 'edit' === $sourceChoiceMode ? ' ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix' : ''; ?>"<?php echo 'edit' === $sourceChoiceMode ? ' role="navigation" aria-label="' . esc_attr( __( 'Package source settings', 'ran-booster' ) ) . '"' : ''; ?>>
 		<?php foreach ( $packageSourceChoices as $sourceKey => $sourceChoice ) { ?>
 			<?php
 			$isSelected          = $sourceKey === $packageSourceView;
+			$isCurrent           = 'edit' === $sourceChoiceMode && isset( $packageCurrentSource ) && $sourceKey === $packageCurrentSource;
 			$isNavigationLink    = 'edit' === $sourceChoiceMode && ! $sourceChoice['disabled'] && ! $isSelected;
 			$isCurrentView       = 'edit' === $sourceChoiceMode && ! $sourceChoice['disabled'] && $isSelected;
-			$classes             = 'ran-booster-source-choice' . ( 'edit' === $sourceChoiceMode ? ' ran-booster-source-choice--navigation' : '' ) . ( $isSelected ? ' is-selected' : '' ) . ( $sourceChoice['disabled'] ? ' is-disabled' : '' );
+			$classes             = 'ran-booster-source-choice' . ( 'edit' === $sourceChoiceMode ? ' ran-booster-source-choice--navigation nav-tab' : '' ) . ( $isSelected ? ' is-selected' : '' ) . ( 'edit' === $sourceChoiceMode && $isSelected ? ' nav-tab-active' : '' ) . ( $sourceChoice['disabled'] ? ' is-disabled' : '' );
 			$sourceHeading       = $sourceChoice['heading'];
 			$sourceSlug          = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $sourceKey ) );
 			$tabId               = 'ran-booster-source-tab-' . $sourceSlug;
@@ -86,6 +87,9 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 						<?php } ?>
 					<?php } ?>
 				</span>
+				<?php if ( $isCurrent ) { ?>
+					<span class="ran-booster-source-choice__current-source"><?php esc_html_e( 'Active', 'ran-booster' ); ?></span>
+				<?php } ?>
 			<?php if ( $isNavigationLink ) { ?>
 				</a>
 			<?php } elseif ( $isCurrentView ) { ?>

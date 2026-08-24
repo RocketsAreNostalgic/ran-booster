@@ -177,6 +177,7 @@ final class ReleaseManagementControls {
 				aria-labelledby="ran-booster-source-tab-release_asset"
 				data-ran-booster-source-pane="release_asset"
 			>
+				<p class="ran-booster-package-source-pane__description"><?php esc_html_e( 'Track verified release assets and install them through WordPress.', 'ran-booster' ); ?></p>
 			<?php
 		}
 

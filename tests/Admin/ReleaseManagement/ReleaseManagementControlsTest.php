@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
 use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
+use Tests\Admin\ReleaseManagement\Support\PackageProjection;
+use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementControlsTest extends TestCase {
 	#[Before]
@@ -126,6 +128,49 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Release Deployments', $html );
 		self::assertStringNotContainsString( 'ran-booster-release-deployments', $html );
 		self::assertStringNotContainsString( 'add-on', strtolower( $html ) );
+	}
+
+	public function testAdvancedSourceSummaryReflectsPersistedSourceInEditModeRegardlessOfSelectedTab(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'branch' );
+
+		self::assertSame(
+			'Published releases · Active',
+			$controls->filterAdvancedSourceSummary( 'Branch deployments', 'edit', 'plugin', 'branch', $package )
+		);
+		self::assertSame(
+			'Published releases · Active',
+			$controls->filterAdvancedSourceSummary( 'Branch deployments', 'edit', 'plugin', 'release_asset', $package )
+		);
+
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		self::assertSame(
+			'Branch deployments · Active',
+			$controls->filterAdvancedSourceSummary( 'Published releases', 'edit', 'plugin', 'branch', $package )
+		);
+		self::assertSame(
+			'Branch deployments · Active',
+			$controls->filterAdvancedSourceSummary( 'Published releases', 'edit', 'plugin', 'release_asset', $package )
+		);
+	}
+
+	public function testAdvancedSourceSummaryCreateModePreservesProspectivePublishedReleaseBehavior(): void {
+		$controls = ReleaseManagementFixture::controls();
+
+		self::assertSame(
+			'Published releases · Stable',
+			$controls->filterAdvancedSourceSummary(
+				'Branch deployments',
+				'create',
+				'plugin',
+				'release_asset',
+				null
+			)
+		);
 	}
 
 	public function testNeutralControlSourceContainsNoRetiredRouteQueryAssetOrTextDomain(): void {

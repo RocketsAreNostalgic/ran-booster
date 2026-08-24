@@ -297,25 +297,9 @@ final class ReleaseManagementDisplay {
 		if ( null === $status ) {
 			return $fallback;
 		}
-		if ( 'branch' === $selectedSource && 'release_asset' === $status->source() ) {
-			return sprintf(
-				/* translators: %s is the retained Branch source summary. */
-				__( 'Return to %s', 'ran-booster' ),
-				$fallback
-			);
-		}
-		if ( 'release_asset' !== $selectedSource ) {
-			return $fallback;
-		}
-		$track = $this->releaseTrackLabel(
-			'release_asset' === $status->source() ? $status->channel() : 'stable'
-		);
-
-		return sprintf(
-			/* translators: %s is the release track. */
-			__( 'Published releases · %s', 'ran-booster' ),
-			$track
-		);
+		return 'branch' === $status->source()
+			? __( 'Branch deployments · Active', 'ran-booster' )
+			: __( 'Published releases · Active', 'ran-booster' );
 	}
 
 	public function releaseTrackMeta( string $fallback, object $package, ?ReleaseTrackingStatus $status ): string {

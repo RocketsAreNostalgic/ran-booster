@@ -27,6 +27,37 @@ use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
 use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class GitHubReleaseWorkflowControlsTest extends TestCase {
+	public function testGitHubPackageKeepsDisabledReleaseSettingsViewNavigable(): void {
+		$choices  = array(
+			'release_asset' => array(
+				'disabled' => true,
+			),
+		);
+		$controls = $this->controls();
+
+		$github = $controls->keepReleaseSettingsDiscoverable(
+			$choices,
+			'edit',
+			'plugin',
+			$this->githubPackage(),
+			'https://example.test/settings'
+		);
+		$other  = $controls->keepReleaseSettingsDiscoverable(
+			$choices,
+			'edit',
+			'plugin',
+			new class() {
+				public function providerCode(): string {
+					return 'bb';
+				}
+			},
+			'https://example.test/settings'
+		);
+
+		self::assertFalse( $github['release_asset']['disabled'] );
+		self::assertTrue( $other['release_asset']['disabled'] );
+	}
+
 	#[Before]
 	public function resetWordPress(): void {
 		ReleaseManagementFixture::resetWordPress();
@@ -38,7 +69,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 	}
 
 	public function testRegistersOnlyTheFiveNewGitHubWorkflowRoutes(): void {
-		$this->controls()->register();
+		$controls = $this->controls();
+		$controls->register();
 
 		self::assertSame(
 			array(
@@ -51,7 +83,90 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			),
 			array_keys( $GLOBALS['ran_booster_release_management_test_actions'] ?? array() )
 		);
+		self::assertSame(
+			array(
+				'callback'      => array( $controls, 'enrichRepositoryRows' ),
+				'priority'      => 20,
+				'accepted_args' => 4,
+			),
+			$GLOBALS['ran_booster_release_management_test_filters']['ran_booster_provider_repository_rows'][0]
+		);
 		self::assertStringNotContainsString( 'release_deployments', implode( '|', array_keys( $GLOBALS['ran_booster_release_management_test_actions'] ) ) );
+	}
+
+	public function testRepositoryRowsExposeLocalReleaseAutomationStatusAndNavigation(): void {
+		$cases = array(
+			'ready'       => array( ReleaseManagementFixture::status(), 'Ready to assess', 'ok', 'branch' ),
+			'unavailable' => array( ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::MISSING_UPDATE_URI ), 'Unavailable', 'warning', 'branch' ),
+			'release'     => array( ReleaseManagementFixture::status( 'release_asset' ), 'Available from Branch', 'pending', 'release_asset' ),
+		);
+
+		foreach ( $cases as $name => $case ) {
+			list( $status, $expected, $tone, $source ) = $case;
+			$this->resetWordPress();
+			$rows   = $this->controls( new ReleaseTrackingFacadeDouble( $status ) )->enrichRepositoryRows(
+				$this->repositoryRows( $source ),
+				'gh',
+				array(),
+				'https://example.test/return'
+			);
+			$detail = $rows['101']['details'][0];
+			$action = array_values( $rows['101']['actions'] )[0];
+
+			self::assertSame( 'Release automation', $detail['label'], $name );
+			self::assertSame( $expected, $detail['value'], $name );
+			self::assertSame( $tone, $detail['tone'], $name );
+			self::assertFalse( $action['disabled'], $name );
+			self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=', htmlspecialchars( $action['url'] ), $name );
+			self::assertStringContainsString( 'source_view=release_asset', $action['url'], $name );
+			self::assertStringEndsWith( '#ran-booster-advanced-source-settings', $action['url'], $name );
+			self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array(), $name );
+		}
+	}
+
+	public function testRepositoryRowsReportOnlyAnExactMatchingSetupRecordAsConfigured(): void {
+		self::assertTrue( ( new SetupRecordStore() )->save( $this->setupRecord() ) );
+		$controls   = $this->controls();
+		$configured = $controls->enrichRepositoryRows( $this->repositoryRows(), 'gh', array(), 'https://example.test/return' );
+
+		self::assertSame( 'Configured', $configured['101']['details'][0]['value'] );
+		$GLOBALS['ran_booster_release_deployments_test_options'] = array();
+		self::assertTrue( ( new SetupRecordStore() )->save( $this->setupRecord( 'other/other.php' ) ) );
+		$mismatched = $this->controls()->enrichRepositoryRows( $this->repositoryRows(), 'gh', array(), 'https://example.test/return' );
+
+		self::assertSame( 'Unavailable', $mismatched['101']['details'][0]['value'] );
+	}
+
+	public function testRepositoryRowsFailClosedOnPackageIdentityMismatchAndIgnoreOtherProviders(): void {
+		$rows     = $this->repositoryRows();
+		$facade   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$controls = $this->controls( $facade, new PluginRepositoryDouble( repositoryId: '202' ) );
+
+		self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, 'bb', array(), 'https://example.test/return' ) );
+		$github = $controls->enrichRepositoryRows( $rows, 'gh', array(), 'https://example.test/return' );
+
+		self::assertSame( 'Unavailable', $github['101']['details'][0]['value'] );
+		self::assertSame( 0, $facade->statusReads );
+	}
+
+	public function testMultipleRepositoryPackagesHaveDistinctBoundedVisibleLabels(): void {
+		$rows                              = $this->repositoryRows();
+		$rows['101']['package_references'] = array( 'example/example.php', 'example-theme' );
+		$pluginStatus                      = ReleaseManagementFixture::status();
+		$facade                            = new ReleaseTrackingFacadeDouble( $pluginStatus );
+		$controls                          = $this->controls( $facade );
+		$projected                         = $controls->enrichRepositoryRows( $rows, 'gh', array(), 'https://example.test/return' );
+		$labels                            = array_column( $projected['101']['details'], 'label' );
+		$actions                           = array_values( $projected['101']['actions'] );
+		$actionLabels                      = array_column( $actions, 'label' );
+
+		self::assertSame( array( 'Release automation — example/example.php', 'Release automation — example-theme' ), $labels );
+		self::assertSame( array( 'Release automation: example/example.php', 'Release automation: example-theme' ), $actionLabels );
+		self::assertStringContainsString( 'page=ran-booster-plugins', $actions[0]['url'] );
+		self::assertStringContainsString( 'page=ran-booster-themes', $actions[1]['url'] );
+		foreach ( array_merge( $labels, $actionLabels ) as $label ) {
+			self::assertLessThanOrEqual( 96, strlen( $label ) );
+		}
 	}
 
 	public function testComposesTheMovedGitHubKernelWithoutOwningRemoteOrSetupState(): void {
@@ -363,6 +478,57 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'other' ),
 			'other',
 			'1.0.0'
+		);
+	}
+
+	/** @return array<string, array<string, mixed>> */
+	private function repositoryRows( string $source = 'branch' ): array {
+		return array(
+			'101' => array(
+				'key'                => '101',
+				'provider_code'      => 'gh',
+				'repository_id'      => '101',
+				'repository'         => 'example/example',
+				'source_key'         => $source,
+				'historical'         => false,
+				'package_references' => array( 'example/example.php' ),
+				'details'            => array(),
+				'actions'            => array(),
+			),
+		);
+	}
+
+	/** @return array<string, int|string> */
+	private function setupRecord( string $identifier = 'example/example.php' ): array {
+		return array(
+			'schema_version'        => 2,
+			'operation'             => 'bootstrap',
+			'repo_id'               => '101',
+			'repository'            => 'example/example',
+			'package_type'          => 'plugin',
+			'package_identifier'    => $identifier,
+			'source_revision'       => 3,
+			'default_branch'        => 'main',
+			'base_sha'              => str_repeat( 'a', 40 ),
+			'setup_branch'          => 'ran-booster/release-setup-v2-aaaaaaaaaaaa-deadbeef',
+			'head_sha'              => str_repeat( 'b', 40 ),
+			'pr_number'             => 42,
+			'profile_id'            => 'source-ready-wordpress-plugin/2',
+			'template_repo_name'    => 'RocketsAreNostalgic/ran-booster-release-bootstrap-templates',
+			'template_repo_id'      => '1322743261',
+			'template_release_id'   => 41,
+			'template_tag'          => 'v1.2.3',
+			'template_commit'       => str_repeat( 'c', 40 ),
+			'template_asset_id'     => 73,
+			'template_asset_name'   => 'ran-booster-release-bootstrap-templates.zip',
+			'template_asset_size'   => 1000,
+			'template_asset_digest' => str_repeat( 'd', 64 ),
+			'manifest_digest'       => str_repeat( 'e', 64 ),
+			'receipt_digest'        => str_repeat( 'f', 64 ),
+			'consumer_api'          => 2,
+			'pack_version'          => '1.2.3',
+			'bundle_hash'           => str_repeat( '1', 64 ),
+			'changed_path_hash'     => str_repeat( '2', 64 ),
 		);
 	}
 }

@@ -134,17 +134,16 @@ final class ReleaseManagementControls {
 			$choices['release_asset']['meta'] = $this->requestBoundary( fn (): string => $this->display->releaseTrackMeta( $choices['release_asset']['meta'], $package, $status ), $choices['release_asset']['meta'] );
 			$releaseSourceIsCurrent           = is_callable( array( $package, 'source' ) )
 				&& 'release_asset' === $package->source();
-			$githubPackage                    = is_callable( array( $package, 'providerCode' ) ) && 'gh' === $package->providerCode();
 			if ( ! $releaseSourceIsCurrent
 				&& ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $status?->eligibility()->code() ) {
 				$choices['release_asset']['description'] = __( 'Published releases require this plugin or theme to be at the repository root. This package uses a repository subdirectory, so continue using Branch deployments.', 'ran-booster' );
 				$choices['release_asset']['meta']        = __( 'Repository subdirectory not supported', 'ran-booster' );
-				$choices['release_asset']['disabled']    = ! $githubPackage;
+				$choices['release_asset']['disabled']    = true;
 			} elseif ( ! $releaseSourceIsCurrent
 				&& false === $this->display->releaseProviderSupported( $package, $status ) ) {
 				$choices['release_asset']['description'] = __( 'Published releases are not available for this repository provider.', 'ran-booster' );
 				$choices['release_asset']['meta']        = __( 'Provider capability unavailable', 'ran-booster' );
-				$choices['release_asset']['disabled']    = ! $githubPackage;
+				$choices['release_asset']['disabled']    = true;
 			}
 		}
 

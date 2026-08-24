@@ -202,6 +202,34 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'href="https://example.test/settings-two"', $html );
 	}
 
+	public function testItKeepsUnavailableReleaseAutomationNavigationEnabled(): void {
+		$html = $this->render(
+			array(
+				'repository' => 'owner/repository',
+				'details'    => array(
+					array(
+						'label' => 'Release automation',
+						'value' => 'Unavailable',
+						'tone'  => 'warning',
+					),
+				),
+				'actions'    => array(
+					array(
+						'key'           => 'gh:release-automation-example',
+						'label'         => 'Release automation',
+						'url'           => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&source_view=release_asset#ran-booster-advanced-source-settings',
+						'disabled'      => false,
+						'screen_reader' => 'example/example.php',
+					),
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'ran-booster-badge--warning">Unavailable</span>', $html );
+		self::assertStringContainsString( 'class="button" href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=example%2Fexample.php&amp;source_view=release_asset#ran-booster-advanced-source-settings"', $html );
+		self::assertStringNotContainsString( 'disabled aria-disabled="true"', $html );
+	}
+
 	/** @param array<string, mixed> $row */
 	private function render( array $row ): string {
 		ob_start();

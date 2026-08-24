@@ -407,6 +407,13 @@ final class ProviderRepositoryRowsNormalizer {
 		$presented = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
+		$presented = apply_filters(
+			'ran_booster_provider_repository_rows',
+			$presented,
+			$providerCode,
+			$projections,
+			$returnUrl
+		);
 		$rows      = $this->normalize( $rows, $presented, $providerCode );
 		$selected  = null;
 		foreach ( $rows as $row ) {

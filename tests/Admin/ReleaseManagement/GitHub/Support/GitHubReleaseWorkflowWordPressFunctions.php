@@ -28,6 +28,10 @@ function add_action( string $hook, callable $callback, int $priority = 10, int $
 	return \RAN\Admin\ReleaseManagement\add_action( $hook, $callback, $priority, $acceptedArgs );
 }
 
+function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+	return \RAN\Admin\ReleaseManagement\add_filter( $hook, $callback, $priority, $acceptedArgs );
+}
+
 function wp_json_encode( mixed $value ): string|false {
 	return \RAN\Admin\ReleaseManagement\wp_json_encode( $value );
 }

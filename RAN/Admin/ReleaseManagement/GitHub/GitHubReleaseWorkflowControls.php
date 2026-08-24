@@ -44,12 +44,72 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	public function register(): void {
+		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'keepReleaseSettingsDiscoverable' ), 20, 5 );
 		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'renderAdvancedSourceSection' ), 20, 5 );
+		add_filter( 'ran_booster_provider_repository_rows', array( $this, 'enrichRepositoryRows' ), 20, 4 );
 		add_action( 'admin_post_ran_booster_github_release_workflow_inspect', array( $this, 'handleWorkflowInspect' ) );
 		add_action( 'admin_post_ran_booster_github_release_workflow_setup', array( $this, 'handleWorkflowSetup' ) );
 		add_action( 'admin_post_ran_booster_github_release_workflow_outcome', array( $this, 'handleWorkflowOutcome' ) );
 		add_action( 'admin_post_ran_booster_github_release_workflow_update_inspect', array( $this, 'handleWorkflowUpdateInspect' ) );
 		add_action( 'admin_post_ran_booster_github_release_workflow_update_setup', array( $this, 'handleWorkflowUpdateSetup' ) );
+	}
+
+	/**
+	 * Keep GitHub's release-automation explanation reachable when Core disables the release transition.
+	 *
+	 * @param array<string, array<string, mixed>> $choices
+	 * @return array<string, array<string, mixed>>
+	 */
+	public function keepReleaseSettingsDiscoverable(
+		array $choices,
+		string $mode,
+		string $type,
+		?object $package,
+		string $pageUrl
+	): array {
+		unset( $type, $pageUrl );
+		if ( 'edit' !== $mode || null === $package || ! isset( $choices['release_asset'] )
+			|| ! is_callable( array( $package, 'providerCode' ) ) || 'gh' !== (string) $package->providerCode() ) {
+			return $choices;
+		}
+
+		$choices['release_asset']['disabled'] = false;
+		return $choices;
+	}
+
+	/**
+	 * Add local GitHub release-automation status and navigation to managed repository rows.
+	 *
+	 * @param array<string, array<string, mixed>> $rows
+	 * @param array<string, array<string, mixed>> $repositoryProjections
+	 * @return array<string, array<string, mixed>>
+	 */
+	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
+		unset( $repositoryProjections, $returnUrl );
+		if ( 'gh' !== $providerCode ) {
+			return $rows;
+		}
+
+		foreach ( $rows as &$row ) {
+			if ( ! is_array( $row ) || true === ( $row['historical'] ?? false ) ) {
+				continue;
+			}
+			$references = is_array( $row['package_references'] ?? null )
+				? array_values( array_filter( $row['package_references'], 'is_string' ) )
+				: array();
+			$multiple   = 1 < count( $references );
+			foreach ( $references as $reference ) {
+				$projection = $this->repositoryReleaseAutomationProjection( $row, $reference, $multiple );
+				if ( null === $projection ) {
+					continue;
+				}
+				$row['details'][]                               = $projection['detail'];
+				$row['actions'][ $projection['action']['key'] ] = $projection['action'];
+			}
+		}
+		unset( $row );
+
+		return $rows;
 	}
 
 	public function renderAdvancedSourceSection( string $mode, string $type, string $selectedSource, ?object $package, string $pageUrl ): void {
@@ -271,6 +331,125 @@ final class GitHubReleaseWorkflowControls {
 		} catch ( Throwable ) {
 			return false;
 		}
+	}
+
+	/**
+	 * @param array<string, mixed> $row
+	 * @return array{detail:array{label:string,value:string,tone:string},action:array<string,mixed>}|null
+	 */
+	private function repositoryReleaseAutomationProjection( array $row, string $reference, bool $multiple ): ?array {
+		$isPlugin = str_ends_with( strtolower( $reference ), '.php' );
+		if ( ! $isPlugin && 1 !== preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) {
+			return null;
+		}
+		$type       = $isPlugin ? 'plugin' : 'theme';
+		$package    = $this->localPackage( $type, $reference );
+		$status     = null;
+		$repository = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+		$locator    = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$exact      = null !== $package && '' !== $repository
+			&& is_callable( array( $package, 'getIdentifier' ) )
+			&& is_callable( array( $package, 'getProviderCode' ) )
+			&& is_callable( array( $package, 'getProviderRepositoryId' ) )
+			&& is_callable( array( $package, 'getRepository' ) )
+			&& is_callable( array( $package, 'getSourceRevision' ) )
+			&& is_string( $package->getIdentifier() )
+			&& hash_equals( $reference, $package->getIdentifier() )
+			&& 'gh' === (string) $package->getProviderCode()
+			&& is_string( $package->getProviderRepositoryId() )
+			&& hash_equals( $repository, $package->getProviderRepositoryId() )
+			&& hash_equals( $locator, (string) $package->getRepository() );
+		if ( $exact ) {
+			$status = $this->requestBoundary(
+				fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $reference, $package->getSourceRevision() ),
+				null
+			);
+			$exact  = $status instanceof ReleaseTrackingStatus
+				&& hash_equals( $repository, $status->providerRepositoryId() )
+				&& ( ! is_string( $row['source_key'] ?? null ) || hash_equals( $row['source_key'], $status->source() ) );
+		}
+
+		$value = __( 'Unavailable', 'ran-booster' );
+		$tone  = 'warning';
+		if ( $exact && $status instanceof ReleaseTrackingStatus ) {
+			$record   = $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repository ), null );
+			$occupied = $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repository ), true );
+			if ( $this->recordMatchesStatus( $record, $status, $locator ) ) {
+				$value = __( 'Configured', 'ran-booster' );
+				$tone  = 'ok';
+			} elseif ( ! $occupied && $status->eligible() ) {
+				$value = 'branch' === $status->source()
+					? __( 'Ready to assess', 'ran-booster' )
+					: __( 'Available from Branch', 'ran-booster' );
+				$tone  = 'branch' === $status->source() ? 'ok' : 'pending';
+			}
+		}
+
+		$settingsUrl = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) );
+		$settingsUrl = add_query_arg( 'source_view', 'release_asset', $settingsUrl ) . '#ran-booster-advanced-source-settings';
+		$label       = $multiple
+			? sprintf(
+				/* translators: %s is a managed plugin file or theme stylesheet. */
+				__( 'Release automation: %s', 'ran-booster' ),
+				$this->boundedReference( $reference, 74 )
+			)
+			: __( 'Release automation', 'ran-booster' );
+		$detailLabel = $multiple
+			? sprintf(
+				/* translators: %s is a managed plugin file or theme stylesheet. */
+				__( 'Release automation — %s', 'ran-booster' ),
+				$this->boundedReference( $reference, 70 )
+			)
+			: __( 'Release automation', 'ran-booster' );
+		$key = 'gh:release-automation-' . substr( hash( 'sha256', $type . '|' . $reference ), 0, 16 );
+
+		return array(
+			'detail' => array(
+				'label' => $detailLabel,
+				'value' => $value,
+				'tone'  => $tone,
+			),
+			'action' => array(
+				'key'           => $key,
+				'label'         => $label,
+				'type'          => 'link',
+				'url'           => $settingsUrl,
+				'hidden'        => array(),
+				'disabled'      => false,
+				'external'      => false,
+				'described_by'  => '',
+				'screen_reader' => $reference,
+			),
+		);
+	}
+
+	private function localPackage( string $type, string $identifier ): ?object {
+		return $this->requestBoundary(
+			fn (): object => 'plugin' === $type
+				? $this->plugins->boosterPluginFromFile( $identifier )
+				: $this->themes->boosterThemeFromStylesheet( $identifier ),
+			null
+		);
+	}
+
+	/** @param array<string, mixed>|null $record */
+	private function recordMatchesStatus( ?array $record, ReleaseTrackingStatus $status, string $repository ): bool {
+		return is_array( $record )
+			&& is_string( $record['repo_id'] ?? null )
+			&& hash_equals( $status->providerRepositoryId(), $record['repo_id'] )
+			&& is_string( $record['package_type'] ?? null )
+			&& hash_equals( $status->type(), $record['package_type'] )
+			&& is_string( $record['package_identifier'] ?? null )
+			&& hash_equals( $status->identifier(), $record['package_identifier'] )
+			&& is_string( $record['repository'] ?? null )
+			&& hash_equals( $repository, $record['repository'] )
+			&& $status->sourceRevision() === ( $record['source_revision'] ?? null );
+	}
+
+	private function boundedReference( string $reference, int $maximum ): string {
+		return strlen( $reference ) <= $maximum
+			? $reference
+			: substr( $reference, 0, $maximum - 3 ) . '...';
 	}
 
 	/** @return array<string,mixed>|null */

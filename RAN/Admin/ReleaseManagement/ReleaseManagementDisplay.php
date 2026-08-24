@@ -60,7 +60,13 @@ final class ReleaseManagementDisplay {
 		$repositoryReady  = $providerReady && 'invalid_repository' !== $eligibilityCode;
 		$updateUriReady   = in_array( $eligibilityCode, array( 'eligible', 'target_already_uses_ran_updater' ), true );
 		$releaseViewUrl   = add_query_arg( array( 'source_view' => 'release_asset' ), $settingsUrl );
-		$recheckUrl       = add_query_arg( self::ELIGIBILITY_RECHECK_QUERY_KEY, '1', $releaseViewUrl );
+		$recheckUrl       = add_query_arg(
+			array(
+				self::ELIGIBILITY_RECHECK_QUERY_KEY => '1',
+				'ran_booster_open_advanced'         => '1',
+			),
+			$releaseViewUrl
+		);
 		$recheckArguments = array();
 		wp_parse_str( (string) wp_parse_url( $recheckUrl, PHP_URL_QUERY ), $recheckArguments );
 		$recheckQueryPosition = strpos( $recheckUrl, '?' );
@@ -211,24 +217,26 @@ final class ReleaseManagementDisplay {
 				</div>
 			</div>
 		</section>
-		<section class="ran-booster-release-track" aria-labelledby="ran-booster-release-track-heading">
-			<header>
+		<section class="ran-booster-settings-section ran-booster-release-track-section" aria-labelledby="ran-booster-release-track-heading">
+			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-release-track-heading"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
 			</header>
-			<?php if ( null !== $trackNonceAction ) { ?>
-				<form id="<?php echo esc_attr( $trackFormId ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $status->source() ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>" data-ran-booster-package-mutation>
-					<?php $this->adminPostFields( 'branch' === $status->source() ? 'enable' : 'change_channel', $package, $trackNonceAction ); ?>
-					<?php if ( 'branch' === $status->source() ) { ?>
-						<?php $this->renderReleaseTrack( $selectedChannel, __( 'Preview includes eligible alpha, beta and release-candidate builds. Drafts remain excluded.', 'ran-booster' ), 'ran-booster-release-track-description', true ); ?>
-					<?php } else { ?>
-						<?php $this->renderManagedReleaseTrack( $selectedChannel ); ?>
-					<?php } ?>
-				</form>
-			<?php } elseif ( $eligibility->eligible() || ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) ) { ?>
-				<?php $this->renderControlsUnavailable(); ?>
-			<?php } else { ?>
-				<?php $this->renderIneligibleReleaseTrack( $selectedChannel ); ?>
-			<?php } ?>
+			<div class="ran-booster-settings-section__body">
+				<?php if ( null !== $trackNonceAction ) { ?>
+					<form id="<?php echo esc_attr( $trackFormId ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $status->source() ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>" data-ran-booster-package-mutation>
+						<?php $this->adminPostFields( 'branch' === $status->source() ? 'enable' : 'change_channel', $package, $trackNonceAction ); ?>
+						<?php if ( 'branch' === $status->source() ) { ?>
+							<?php $this->renderReleaseTrack( $selectedChannel, __( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds. Drafts remain excluded.', 'ran-booster' ), 'ran-booster-release-track-description', true ); ?>
+						<?php } else { ?>
+							<?php $this->renderManagedReleaseTrack( $selectedChannel ); ?>
+						<?php } ?>
+					</form>
+				<?php } elseif ( $eligibility->eligible() || ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) ) { ?>
+					<?php $this->renderControlsUnavailable(); ?>
+				<?php } else { ?>
+					<?php $this->renderIneligibleReleaseTrack( $selectedChannel ); ?>
+				<?php } ?>
+			</div>
 		</section>
 		<?php
 	}
@@ -378,16 +386,18 @@ final class ReleaseManagementDisplay {
 		bool $visuallyHiddenLegend = false
 	): void {
 		?>
-		<fieldset class="ran-booster-release-track" data-ran-booster-release-channel-control>
+		<fieldset class="ran-booster-release-track-control" data-ran-booster-release-channel-control>
 			<legend<?php echo $visuallyHiddenLegend ? ' class="screen-reader-text"' : ''; ?>><?php esc_html_e( 'Release track', 'ran-booster' ); ?></legend>
-			<label>
-				<input type="radio" name="release_channel" value="stable"<?php checked( 'stable' === $selectedChannel ); ?> aria-describedby="<?php echo esc_attr( $descriptionId ); ?>" data-ran-booster-release-channel>
-				<?php echo esc_html( $this->releaseTrackLabel( 'stable' ) ); ?>
-			</label>
-			<label>
-				<input type="radio" name="release_channel" value="prerelease"<?php checked( 'prerelease' === $selectedChannel ); ?> aria-describedby="<?php echo esc_attr( $descriptionId ); ?>" data-ran-booster-release-channel>
-				<?php echo esc_html( $this->releaseTrackLabel( 'prerelease' ) ); ?>
-			</label>
+			<div class="button-group ran-booster-release-track-options">
+				<label class="button ran-booster-release-track-option">
+					<input type="radio" class="screen-reader-text" name="release_channel" value="stable"<?php checked( 'stable' === $selectedChannel ); ?> aria-describedby="<?php echo esc_attr( $descriptionId ); ?>" data-ran-booster-release-channel>
+					<span><?php echo esc_html( $this->releaseTrackLabel( 'stable' ) ); ?></span>
+				</label>
+				<label class="button ran-booster-release-track-option">
+					<input type="radio" class="screen-reader-text" name="release_channel" value="prerelease"<?php checked( 'prerelease' === $selectedChannel ); ?> aria-describedby="<?php echo esc_attr( $descriptionId ); ?>" data-ran-booster-release-channel>
+					<span><?php echo esc_html( $this->releaseTrackLabel( 'prerelease' ) ); ?></span>
+				</label>
+			</div>
 			<p id="<?php echo esc_attr( $descriptionId ); ?>" class="description"><?php echo esc_html( $description ); ?></p>
 		</fieldset>
 		<?php
@@ -395,18 +405,29 @@ final class ReleaseManagementDisplay {
 
 	private function renderManagedReleaseTrack( string $currentChannel ): void {
 		$preview     = 'prerelease' === $currentChannel;
-		$current     = $this->releaseTrackLabel( $currentChannel );
 		$nextChannel = $preview ? 'stable' : 'prerelease';
-		$switchLabel = $preview ? __( 'Switch to Stable', 'ran-booster' ) : __( 'Switch to Preview', 'ran-booster' );
+		$switchLabel = sprintf(
+			/* translators: %s is the destination release track, Stable or Preview. */
+			__( 'Switch to %s releases', 'ran-booster' ),
+			$this->releaseTrackLabel( $nextChannel )
+		);
 		?>
-		<fieldset class="ran-booster-release-track">
+		<fieldset class="ran-booster-release-track-control">
 			<legend class="screen-reader-text"><?php esc_html_e( 'Release track', 'ran-booster' ); ?></legend>
-			<p>
-				<strong><?php esc_html_e( 'Current:', 'ran-booster' ); ?></strong>
-				<?php echo esc_html( $current ); ?>
-				<input type="hidden" name="release_channel" value="<?php echo esc_attr( $nextChannel ); ?>">
-				<button type="submit" class="button"><?php echo esc_html( $switchLabel ); ?></button>
-			</p>
+			<div class="button-group ran-booster-release-track-options">
+				<?php foreach ( array( 'stable', 'prerelease' ) as $channel ) { ?>
+					<?php if ( $channel === $currentChannel ) { ?>
+						<span class="button button-primary ran-booster-release-track-option is-current" aria-current="true">
+							<span><?php echo esc_html( $this->releaseTrackLabel( $channel ) ); ?></span>
+							<span class="screen-reader-text"><?php esc_html_e( 'Current release track', 'ran-booster' ); ?></span>
+						</span>
+					<?php } else { ?>
+						<button type="submit" class="button ran-booster-release-track-option" name="release_channel" value="<?php echo esc_attr( $nextChannel ); ?>" aria-label="<?php echo esc_attr( $switchLabel ); ?>">
+							<span><?php echo esc_html( $this->releaseTrackLabel( $channel ) ); ?></span>
+						</button>
+					<?php } ?>
+				<?php } ?>
+			</div>
 			<p class="description"><?php esc_html_e( 'Preview includes prereleases, which may be unstable; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade the package.', 'ran-booster' ); ?></p>
 		</fieldset>
 		<?php
@@ -414,17 +435,20 @@ final class ReleaseManagementDisplay {
 
 	private function renderIneligibleReleaseTrack( string $selectedChannel ): void {
 		?>
-		<fieldset class="ran-booster-release-track" disabled>
+		<fieldset class="ran-booster-release-track-control is-disabled" disabled>
 			<legend class="screen-reader-text"><?php esc_html_e( 'Release track', 'ran-booster' ); ?></legend>
-			<label>
-				<input type="radio" name="release_channel" value="stable"<?php checked( 'stable' === $selectedChannel ); ?>>
-				<?php echo esc_html( $this->releaseTrackLabel( 'stable' ) ); ?>
-			</label>
-			<label>
-				<input type="radio" name="release_channel" value="prerelease"<?php checked( 'prerelease' === $selectedChannel ); ?>>
-				<?php echo esc_html( $this->releaseTrackLabel( 'prerelease' ) ); ?>
-			</label>
-			<p class="description"><?php esc_html_e( 'Stable follows final published releases. Preview also includes prereleases. Resolve the eligibility requirements above to choose a release track.', 'ran-booster' ); ?></p>
+			<div class="button-group ran-booster-release-track-options">
+				<label class="button ran-booster-release-track-option">
+					<input type="radio" class="screen-reader-text" name="release_channel" value="stable"<?php checked( 'stable' === $selectedChannel ); ?>>
+					<span><?php echo esc_html( $this->releaseTrackLabel( 'stable' ) ); ?></span>
+				</label>
+				<label class="button ran-booster-release-track-option">
+					<input type="radio" class="screen-reader-text" name="release_channel" value="prerelease"<?php checked( 'prerelease' === $selectedChannel ); ?>>
+					<span><?php echo esc_html( $this->releaseTrackLabel( 'prerelease' ) ); ?></span>
+				</label>
+			</div>
+			<p class="description"><?php esc_html_e( 'Stable follows final published releases. Preview also includes prereleases.', 'ran-booster' ); ?></p>
+			<div class="notice notice-warning inline ran-booster-release-track-notice"><p><?php esc_html_e( 'Complete the eligibility requirements above before choosing a release track.', 'ran-booster' ); ?></p></div>
 		</fieldset>
 		<?php
 	}

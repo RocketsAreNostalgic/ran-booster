@@ -120,7 +120,8 @@ final class PackagePagePresenter {
 		array $packageProviderSettings,
 		?array $packageBranchReadiness,
 		?array $webhookRetention,
-		string $requestedSourceView
+		string $requestedSourceView,
+		bool $openAdvanced = false
 	): array {
 		return array(
 			'packageProviderSettings' => $packageProviderSettings,
@@ -129,7 +130,7 @@ final class PackagePagePresenter {
 			'package'                 => $package,
 			'packageView'             => $this,
 			'packageExtensionPanels'  => $this->extensionPanels( $package ),
-			'packageSource'           => $this->sourceComposition( 'edit', $requestedSourceView, $package ),
+			'packageSource'           => $this->sourceComposition( 'edit', $requestedSourceView, $package, $openAdvanced ),
 		);
 	}
 
@@ -139,14 +140,15 @@ final class PackagePagePresenter {
 		bool $explicitProvider,
 		bool $openRepositoryPicker,
 		string $requestedSourceView,
-		?string $managedPackageIdentifier = null
+		?string $managedPackageIdentifier = null,
+		bool $openAdvanced = false
 	): array {
 		return array(
 			'packageProviderSettings'  => $packageProviderSettings,
 			'packageView'              => $this,
 			'explicitProvider'         => $explicitProvider,
 			'openRepositoryPicker'     => $openRepositoryPicker,
-			'packageSource'            => $this->sourceComposition( 'create', $requestedSourceView ),
+			'packageSource'            => $this->sourceComposition( 'create', $requestedSourceView, null, $openAdvanced ),
 			'managedPackageIdentifier' => $managedPackageIdentifier,
 		);
 	}
@@ -263,7 +265,7 @@ final class PackagePagePresenter {
 	 *   unavailable: bool
 	 * }
 	 */
-	private function sourceComposition( string $mode, string $requested, ?Package $package = null ): array {
+	private function sourceComposition( string $mode, string $requested, ?Package $package = null, bool $openAdvanced = false ): array {
 		$projection = null === $package ? null : $this->projection( $package );
 		$pageUrl    = null === $projection
 			? add_query_arg( 'page', $this->getCreatePageSlug(), $this->getAdminUrl() )
@@ -323,7 +325,7 @@ final class PackagePagePresenter {
 			'advanced_summary_projection' => $this->advancedSourceSummaryProjection( $mode, $selected, $package, $projection ),
 			'selected'                    => $selected,
 			'current'                     => $current,
-			'advanced_open'               => '' !== $requested,
+			'advanced_open'               => $openAdvanced,
 			'unavailable'                 => PackageSource::BRANCH->value !== $current
 				&& ( ! isset( $choices[ $current ] ) || ! $choices[ $current ]['hydrated'] ),
 		);

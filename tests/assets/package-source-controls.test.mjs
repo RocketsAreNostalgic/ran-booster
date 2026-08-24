@@ -7,8 +7,8 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
-function loadInitializer() {
-	const signature = '\tfunction initPackageSourceControls() {';
+function loadFunction(name, scope = {}) {
+	const signature = `\tfunction ${name}() {`;
 	const start = source.indexOf(signature);
 
 	assert.notEqual(start, -1, 'The package source initializer must exist.');
@@ -37,7 +37,14 @@ function loadInitializer() {
 		'The package source initializer must be complete.'
 	);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	return Function(
+		...Object.keys(scope),
+		`"use strict"; return (${source.slice(start, end)});`
+	)(...Object.values(scope));
+}
+
+function loadInitializer() {
+	return loadFunction('initPackageSourceControls');
 }
 
 function classListFixture(initial = []) {
@@ -56,6 +63,30 @@ function classListFixture(initial = []) {
 		},
 	};
 }
+
+test('an explicit Advanced settings route is consumed after its first render', () => {
+	let replaced = '';
+	const window = {
+		location: {
+			href: 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&source_view=release_asset&ran_booster_open_advanced=1#ran-booster-advanced-source-settings',
+		},
+		history: {
+			state: { retained: true },
+			replaceState(state, title, url) {
+				assert.deepEqual(state, { retained: true });
+				assert.equal(title, '');
+				replaced = String(url);
+			},
+		},
+	};
+
+	loadFunction('consumeAdvancedSettingsOpenRequest', { URL, window })();
+
+	assert.equal(
+		replaced,
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&source_view=release_asset#ran-booster-advanced-source-settings'
+	);
+});
 
 function tabFixture(sourceName, selected = false) {
 	const listeners = new Map();

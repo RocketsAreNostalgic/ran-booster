@@ -8,8 +8,7 @@ final readonly class PackageProjection {
 	public function __construct(
 		private string $sourceValue = 'branch',
 		private string $typeValue = 'plugin',
-		private int $revisionValue = 3,
-		private string $providerCodeValue = 'gh'
+		private int $revisionValue = 3
 	) {
 	}
 
@@ -23,10 +22,6 @@ final readonly class PackageProjection {
 
 	public function displayName(): string {
 		return 'theme' === $this->typeValue ? 'Example Theme' : 'Example Plugin';
-	}
-
-	public function providerCode(): string {
-		return $this->providerCodeValue;
 	}
 
 	public function source(): string {

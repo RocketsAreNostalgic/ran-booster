@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 require_once __DIR__ . '/../Support/PackageViewWordPressFunctions.php';
+require_once __DIR__ . '/../Support/DocumentationHookWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php';
 
@@ -13,6 +14,86 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
 
 final class ProviderRepositoryRowsNormalizerTest extends TestCase {
+	protected function setUp(): void {
+		$GLOBALS['ran_booster_documentation_test_filters'] = array();
+	}
+
+	public function testProjectAppliesBoundedProviderEnrichmentBeforeNormalization(): void {
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows, string $providerCode, array $projections, string $returnUrl ): array {
+			self::assertSame( 'gh', $providerCode );
+			self::assertNotEmpty( $projections );
+			self::assertSame( 'https://example.test/repositories', $returnUrl );
+			$key                       = (string) array_key_first( $rows );
+			$rows[ $key ]['details'][] = array(
+				'label' => 'Release automation',
+				'value' => 'Ready to assess',
+				'tone'  => 'ok',
+			);
+			$rows[ $key ]['actions']['gh:release-automation'] = array(
+				'key'           => 'gh:release-automation',
+				'label'         => 'Release automation',
+				'type'          => 'link',
+				'url'           => 'https://example.test/package-settings',
+				'hidden'        => array(),
+				'disabled'      => false,
+				'external'      => false,
+				'described_by'  => '',
+				'screen_reader' => 'example/example.php',
+			);
+
+			return $rows;
+		};
+
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+			array(
+				array(
+					'target'               => 'example/example',
+					'repository_id'        => '101',
+					'source'               => 'branch',
+					'package_references'   => array( 'example/example.php' ),
+					'deployment_policies'  => array(
+						'automatic' => 0,
+						'manual'    => 1,
+						'disabled'  => 0,
+					),
+					'automatic_count'      => 0,
+					'repository_url'       => 'https://github.com/example/example',
+					'webhook_settings_url' => null,
+				),
+			),
+			'gh',
+			'GitHub',
+			'GitHub webhooks',
+			'GitHub secret',
+			'https://example.test/webhooks/gh',
+			true,
+			array(
+				'by_id'         => array(
+					'101' => array(
+						'repository_id'         => '101',
+						'eligible'              => true,
+						'package_references'    => array( 'example/example.php' ),
+						'deployment_policies'   => array(
+							'automatic' => 0,
+							'manual'    => 1,
+							'disabled'  => 0,
+						),
+						'reason_codes'          => array(),
+						'local_secret_coverage' => 'repository',
+					),
+				),
+				'by_repository' => array(),
+			),
+			null,
+			'',
+			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
+			'https://example.test/repositories'
+		);
+		$row    = array_values( $result['rows'] )[0];
+
+		self::assertSame( 'Ready to assess', $row['details'][0]['value'] );
+		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
+	}
 
 	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {
 		$base                              = $this->baseRows();

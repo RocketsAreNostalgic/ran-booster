@@ -9,6 +9,7 @@ require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
 
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
 use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
 use Tests\Admin\ReleaseManagement\Support\PackageProjection;
@@ -33,6 +34,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 				'ran_booster_admin_package_management_actions',
 				'ran_booster_admin_package_source_choices',
 				'ran_booster_admin_package_advanced_source_summary',
+				'ran_booster_admin_package_advanced_source_summary_projection',
 				'ran_booster_documentation_sections_before_about',
 			),
 			$filters
@@ -170,6 +172,78 @@ final class ReleaseManagementControlsTest extends TestCase {
 				'release_asset',
 				null
 			)
+		);
+	}
+
+	public function testAdvancedSourceSummaryProjectionTracksPersistedSource(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', 'plugin', ReleaseTrackingEligibility::ELIGIBLE, false, 'prerelease' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection(
+			'branch',
+			'plugin',
+			3
+		);
+
+		$result = $controls->filterAdvancedSourceSummaryProjection(
+			array(
+				'heading' => 'Branch deployments',
+				'badges'  => array(
+					array( 'label' => 'Stable' ),
+				),
+			),
+			'edit',
+			'plugin',
+			'release_asset',
+			$package
+		);
+
+		self::assertSame(
+			array(
+				'heading' => 'Published releases',
+				'badges'  => array(
+					array(
+						'label' => 'Preview',
+					),
+				),
+				'status'  => 'Active',
+			),
+			$result
+		);
+
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin', ReleaseTrackingEligibility::ELIGIBLE, false, 'stable' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection(
+			'release_asset',
+			'plugin',
+			3,
+			'src/plugins'
+		);
+
+		$result = $controls->filterAdvancedSourceSummaryProjection(
+			array(
+				'heading' => 'Published releases',
+				'badges'  => array(
+					array( 'label' => 'Stable' ),
+					array( 'label' => 'Active' ),
+				),
+			),
+			'edit',
+			'plugin',
+			'branch',
+			$package
+		);
+
+		self::assertSame(
+			array(
+				'heading' => 'Branch deployments',
+				'badges'  => array(
+					array(
+						'label' => 'src/plugins',
+					),
+				),
+				'status'  => 'Active',
+			),
+			$result
 		);
 	}
 

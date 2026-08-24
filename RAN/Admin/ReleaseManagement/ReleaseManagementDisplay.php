@@ -302,6 +302,51 @@ final class ReleaseManagementDisplay {
 			: __( 'Published releases · Active', 'ran-booster' );
 	}
 
+	/**
+	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
+	 */
+	public function advancedSourceSummaryProjection(
+		array $fallback,
+		string $mode,
+		?object $package,
+		?ReleaseTrackingStatus $status
+	): array {
+		if ( 'create' === $mode ) {
+			return $fallback;
+		}
+		if ( null === $package || null === $status ) {
+			return $fallback;
+		}
+
+		if ( 'branch' === $status->source() ) {
+			$subdirectory = is_callable( array( $package, 'subdirectory' ) )
+				&& is_string( $package->subdirectory() )
+				? trim( (string) $package->subdirectory() )
+				: '';
+			$badges       = array();
+			if ( '' !== $subdirectory ) {
+				$badges[] = array(
+					'label' => $subdirectory,
+				);
+			}
+			return array(
+				'heading' => __( 'Branch deployments', 'ran-booster' ),
+				'badges'  => $badges,
+				'status'  => __( 'Active', 'ran-booster' ),
+			);
+		}
+
+		return array(
+			'heading' => __( 'Published releases', 'ran-booster' ),
+			'badges'  => array(
+				array(
+					'label' => 'prerelease' === $status->channel() ? __( 'Preview', 'ran-booster' ) : __( 'Stable', 'ran-booster' ),
+				),
+			),
+			'status'  => __( 'Active', 'ran-booster' ),
+		);
+	}
+
 	public function releaseTrackMeta( string $fallback, object $package, ?ReleaseTrackingStatus $status ): string {
 		if ( ! $this->isProjection( $package ) || 'release_asset' !== $package->source() ) {
 			return $fallback;

@@ -42,6 +42,7 @@ final class ReleaseManagementControls {
 		add_filter( 'ran_booster_admin_package_management_actions', array( $this, 'filterManagementActions' ), 10, 3 );
 		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'filterSourceChoices' ), 10, 5 );
 		add_filter( 'ran_booster_admin_package_advanced_source_summary', array( $this, 'filterAdvancedSourceSummary' ), 10, 5 );
+		add_filter( 'ran_booster_admin_package_advanced_source_summary_projection', array( $this, 'filterAdvancedSourceSummaryProjection' ), 10, 5 );
 		add_filter( 'ran_booster_documentation_sections_before_about', array( $this, 'filterDocumentationSections' ), 10, 3 );
 		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'renderAdvancedSourceSection' ), 10, 5 );
 		add_action( 'admin_notices', array( $this, 'renderOperationNotice' ) );
@@ -211,6 +212,32 @@ final class ReleaseManagementControls {
 		}
 
 		return $this->requestBoundary( fn (): string => $this->display->advancedSourceSummary( $summary, $mode, $selectedSource, $package, null === $package ? null : $this->packageStatus( $package ) ), $summary );
+	}
+
+	/**
+	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
+	 */
+	public function filterAdvancedSourceSummaryProjection(
+		array $projection,
+		string $mode,
+		string $type,
+		string $selectedSource,
+		?object $package
+	): array {
+		unset( $type, $selectedSource );
+		if ( null === $this->tracking ) {
+			return $projection;
+		}
+
+		return $this->requestBoundary(
+			fn (): array => $this->display->advancedSourceSummaryProjection(
+				$projection,
+				$mode,
+				$package,
+				null === $package ? null : $this->packageStatus( $package )
+			),
+			$projection
+		);
 	}
 
 	public function renderOperationNotice(): void {

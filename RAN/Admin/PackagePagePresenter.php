@@ -252,6 +252,11 @@ final class PackagePagePresenter {
 	 *   choices: array<string, array<string, mixed>>,
 	 *   advanced_sections: list<string>,
 	 *   advanced_summary: string,
+	 *   advanced_summary_projection: array{
+	 *     heading: string,
+	 *     badges: list<array{label: string}>,
+	 *     status: string
+	 *   },
 	 *   selected: string,
 	 *   current: string,
 	 *   advanced_open: bool,
@@ -312,13 +317,14 @@ final class PackagePagePresenter {
 		}
 
 		return array(
-			'choices'           => $choices,
-			'advanced_sections' => $this->advancedSourceSections( $mode, $selected, $projection, $pageUrl ),
-			'advanced_summary'  => $this->advancedSourceSummary( $mode, $selected, $choices, $projection, $package ),
-			'selected'          => $selected,
-			'current'           => $current,
-			'advanced_open'     => '' !== $requested,
-			'unavailable'       => PackageSource::BRANCH->value !== $current
+			'choices'                     => $choices,
+			'advanced_sections'           => $this->advancedSourceSections( $mode, $selected, $projection, $pageUrl ),
+			'advanced_summary'            => $this->advancedSourceSummary( $mode, $selected, $choices, $projection, $package ),
+			'advanced_summary_projection' => $this->advancedSourceSummaryProjection( $mode, $selected, $package, $projection ),
+			'selected'                    => $selected,
+			'current'                     => $current,
+			'advanced_open'               => '' !== $requested,
+			'unavailable'                 => PackageSource::BRANCH->value !== $current
 				&& ( ! isset( $choices[ $current ] ) || ! $choices[ $current ]['hydrated'] ),
 		);
 	}
@@ -394,6 +400,99 @@ final class PackagePagePresenter {
 		}
 
 		return $summary;
+	}
+
+	/**
+	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
+	 */
+	private function advancedSourceSummaryProjection(
+		string $mode,
+		string $selected,
+		?Package $package,
+		?AdminPackageProjection $projection
+	): array {
+		$source  = 'edit' === $mode && null !== $package
+			? $package->getSource()->value
+			: $selected;
+		$heading = PackageSource::BRANCH->value === $source
+			? __( 'Branch deployments', 'ran-booster' )
+			: __( 'Published releases', 'ran-booster' );
+		$badges  = array();
+		$status  = '';
+		if ( 'edit' === $mode && null !== $package ) {
+			if ( PackageSource::BRANCH->value === $source && null !== $projection ) {
+				$subdirectory = trim( $projection->subdirectory() );
+				if ( '' !== $subdirectory ) {
+					$badges[] = array(
+						'label' => $subdirectory,
+					);
+				}
+				$status = __( 'Active', 'ran-booster' );
+			} elseif ( PackageSource::RELEASE_ASSET->value === $source ) {
+				$badges[] = array(
+					'label' => __( 'Stable', 'ran-booster' ),
+				);
+				$status   = __( 'Active', 'ran-booster' );
+			}
+		} elseif ( 'create' === $mode && PackageSource::RELEASE_ASSET->value === $selected ) {
+			$badges[] = array(
+				'label' => __( 'Stable', 'ran-booster' ),
+			);
+		}
+
+		$baseline = apply_filters(
+			'ran_booster_admin_package_advanced_source_summary_projection',
+			array(
+				'heading' => $heading,
+				'badges'  => $badges,
+				'status'  => $status,
+			),
+			$mode,
+			$this->type,
+			$selected,
+			$projection
+		);
+
+		if ( is_array( $baseline ) && isset( $baseline['heading'] ) && is_string( $baseline['heading'] ) ) {
+			$validatedHeading = trim( wp_strip_all_tags( $baseline['heading'], true ) );
+			if ( '' === $validatedHeading || strlen( $validatedHeading ) > 80 ) {
+				return array(
+					'heading' => $heading,
+					'badges'  => $badges,
+					'status'  => $status,
+				);
+			}
+			if ( is_array( $baseline['badges'] ) ) {
+				$validated = array();
+				foreach ( $baseline['badges'] as $badge ) {
+					$label = is_array( $badge ) && is_string( $badge['label'] ?? null )
+						? trim( wp_strip_all_tags( $badge['label'], true ) )
+						: '';
+					if ( '' !== $label && strlen( $label ) <= 255 && count( $validated ) < 3 ) {
+						$validated[] = array(
+							'label' => $label,
+						);
+					}
+				}
+				$badges = $validated;
+			} else {
+				$badges = array();
+			}
+			$validatedStatus = is_string( $baseline['status'] ?? null )
+				? trim( wp_strip_all_tags( $baseline['status'], true ) )
+				: '';
+			return array(
+				'heading' => $validatedHeading,
+				'badges'  => $badges,
+				'status'  => strlen( $validatedStatus ) <= 40 ? $validatedStatus : '',
+			);
+		}
+
+		return array(
+			'heading' => $heading,
+			'badges'  => $badges,
+			'status'  => $status,
+		);
 	}
 
 	/** @return list<string> */
@@ -605,6 +704,9 @@ final class PackagePagePresenter {
 	}
 
 	private function projection( Package $package ): AdminPackageProjection {
+		$subdirectory = is_string( $package->getSubdirectory() )
+			? trim( $package->getSubdirectory() )
+			: '';
 		return new AdminPackageProjection(
 			$this->type,
 			(string) $package->getIdentifier(),
@@ -619,7 +721,8 @@ final class PackagePagePresenter {
 					'package' => (string) $package->getIdentifier(),
 				),
 				$this->getAdminUrl()
-			)
+			),
+			$subdirectory
 		);
 	}
 

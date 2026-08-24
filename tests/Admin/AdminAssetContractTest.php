@@ -515,11 +515,11 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-webhook-url input \\{\\s+flex: 0 1 auto;\\s+\\}[\\s\\S]+\\.ran-booster-credential-table td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+justify-content: flex-start;[\\s\\S]+white-space: normal;/',
+			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-webhook-url input \\{\\s+flex: 0 1 auto;\\s+inline-size: 100%;\\s+\\}[\\s\\S]+\\.ran-booster-credential-table td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+justify-content: flex-start;[\\s\\S]+white-space: normal;/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider-management__header > \\.button \\{\\s+align-self: flex-end;\\s+\\}/',
+			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider \\.button \\{\\s+inline-size: auto;\\s+align-self: flex-start;\\s+text-align: center;\\s+\\}/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
@@ -530,7 +530,7 @@ final class AdminAssetContractTest extends TestCase {
 			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> tbody\\s+> tr\\s+> td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;/',
 			$css
 		);
-		self::assertMatchesRegularExpression(
+		self::assertDoesNotMatchRegularExpression(
 			'/@media screen and \\(max-width: 480px\\)[\\s\\S]+\\.ran-booster-provider-management__header > \\.button \\{\\s+align-self: stretch;\\s+inline-size: 100%;/',
 			$css
 		);

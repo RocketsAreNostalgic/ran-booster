@@ -25,7 +25,7 @@
 	box-sizing: border-box;
 	min-block-size: 4.5rem;
 	margin-block: var(--ran-booster-space-12) var(--ran-booster-space-10);
-	border-block: 1px solid var(--ran-booster-border-subtle);
+	border-block: 1px solid var(--ran-booster-border);
 }
 
 .ran-booster-admin .ran-booster-release-status h4,
@@ -56,8 +56,9 @@
 	gap: var(--ran-booster-space-10);
 	align-items: center;
 	min-block-size: 36px;
-	padding: var(--ran-booster-space-1) var(--ran-booster-space-8);
-	border-block-end: 1px solid var(--ran-booster-border-subtle);
+	margin-block-start: var(--ran-booster-space-8) 0;
+	padding: var(--ran-booster-space-5) var(--ran-booster-space-8);
+	border-block-end: 1px solid var(--ran-booster-border);
 }
 
 .ran-booster-admin .ran-booster-release-candidate input[type="radio"] {
@@ -66,6 +67,109 @@
 
 .ran-booster-admin .ran-booster-release-candidate:has(input:checked) {
 	background: var(--ran-booster-surface-info);
+}
+
+.ran-booster-admin .ran-booster-release-candidate:has(input:disabled) {
+	color: var(--ran-booster-text-muted);
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.ran-booster-admin .ran-booster-release-candidate__outcome {
+	display: inline-block;
+	grid-column: 2;
+	margin: var(--ran-booster-space-3) 0 0;
+	padding-block-end: var(--ran-booster-space-5);
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-release-candidate > .button {
+	grid-column: 2;
+	justify-self: start;
+	margin-block-start: var(--ran-booster-space-5);
+}
+
+.ran-booster-admin .ran-booster-release-installed-version {
+	display: block;
+	margin: 0;
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-managed-release-browser {
+	margin-block-start: var(--ran-booster-space-18);
+	padding-block-start: var(--ran-booster-space-16);
+	border-block-start: 1px solid var(--ran-booster-border);
+}
+
+.ran-booster-admin .ran-booster-managed-release-browser__header {
+	display: flex;
+	gap: var(--ran-booster-space-12);
+	align-items: start;
+	justify-content: space-between;
+}
+
+.ran-booster-admin .ran-booster-managed-release-browser__header h4,
+.ran-booster-admin .ran-booster-managed-release-browser__header p {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-managed-release-browser__header p {
+	max-inline-size: 42rem;
+	margin-block-start: var(--ran-booster-space-5);
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-managed-release-browser__notice {
+	margin: var(--ran-booster-space-12) 0 0;
+}
+
+.ran-booster-admin .ran-booster-release-settings-disclosure,
+.ran-booster-admin .ran-booster-release-workflow {
+	margin-block-start: var(--ran-booster-space-12);
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-release-settings-disclosure summary,
+.ran-booster-admin .ran-booster-release-workflow summary {
+	padding: var(--ran-booster-space-10) var(--ran-booster-space-12);
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.ran-booster-admin .ran-booster-release-settings-disclosure[open] > summary,
+.ran-booster-admin .ran-booster-release-workflow[open] > summary {
+	border-block-end: 1px solid var(--ran-booster-border);
+}
+
+.ran-booster-admin
+	.ran-booster-release-settings-disclosure
+	summary:focus-visible,
+.ran-booster-admin .ran-booster-release-workflow summary:focus-visible {
+	outline: 2px solid var(--ran-booster-link-strong);
+	outline-offset: -2px;
+}
+
+.ran-booster-admin .ran-booster-release-settings-disclosure > :not(summary),
+.ran-booster-admin .ran-booster-release-workflow__body {
+	padding-inline: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-release-settings-disclosure > :last-child,
+.ran-booster-admin .ran-booster-release-workflow__body {
+	padding-block-end: var(--ran-booster-space-12);
+}
+
+@media (max-width: 782px) {
+	.ran-booster-admin .ran-booster-managed-release-browser__header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.ran-booster-admin .ran-booster-managed-release-browser__header .button {
+		align-self: start;
+	}
 }
 
 .ran-booster-admin .ran-booster-release-preflight {

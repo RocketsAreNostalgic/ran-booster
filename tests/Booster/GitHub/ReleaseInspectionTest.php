@@ -14,6 +14,7 @@ use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveInspectionFixture;
 use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseCandidatePreflight;
@@ -62,14 +63,19 @@ final class ReleaseInspectionTest extends TestCase {
 		self::assertSame( array(), $credentials->lookups );
 	}
 
-	public function testExactReleaseHttp404RemainsOperationalBecauseItsStageIsAmbiguous(): void {
+	public function testExactReleaseHttp404UsesTheRetriableReadBoundary(): void {
 		ReleaseCandidatePreflight::$inspection = new \WP_Error(
 			'github_updater_github_http_error',
 			'upstream-secret-message',
 			array( 'status' => 404 )
 		);
 
-		$this->assertOperationalFailureIsRedacted();
+		try {
+			$this->inspectPublicRelease();
+			self::fail( 'A 404 release read must be retriable with another credential.' );
+		} catch ( RepositoryReleaseReadUnavailable $exception ) {
+			self::assertStringNotContainsString( 'upstream-secret-message', $exception->getMessage() );
+		}
 	}
 
 	public function testOtherGitHubHttpFailuresRemainOperationalAndRedacted(): void {
@@ -159,9 +165,7 @@ final class ReleaseInspectionTest extends TestCase {
 		try {
 			$this->inspectPublicRelease();
 			self::fail( 'Operational inspection failures must throw.' );
-		} catch ( RuntimeException $exception ) {
-			self::assertNotInstanceOf( RepositoryReleaseInspectionRejected::class, $exception );
-			self::assertSame( 'GitHub could not inspect the selected release.', $exception->getMessage() );
+		} catch ( RepositoryReleaseReadUnavailable $exception ) {
 			self::assertStringNotContainsString( 'upstream-secret-message', $exception->getMessage() );
 		}
 	}

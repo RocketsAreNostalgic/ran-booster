@@ -51,6 +51,8 @@ final class ReleaseManagementControlsTest extends TestCase {
 				'admin_post_ran_booster_release_install',
 				'wp_ajax_ran_booster_release_list_candidates',
 				'wp_ajax_ran_booster_release_inspect',
+				'wp_ajax_ran_booster_managed_release_list_candidates',
+				'wp_ajax_ran_booster_managed_release_inspect',
 			),
 			$actions
 		);

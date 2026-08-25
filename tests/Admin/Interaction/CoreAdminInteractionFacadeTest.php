@@ -94,7 +94,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 		self::assertStringContainsString( ' data-ran-booster-enhanced-mutation', $attributes );
 		self::assertStringContainsString( ' data-ran-booster-error-target="#repository-webhook-management-error"', $attributes );
-		self::assertStringContainsString( ' hx-post="https://example.test/wp-admin/admin-post.php"', $attributes );
+		self::assertStringContainsString( ' hx-post="/wp-admin/admin-post.php"', $attributes );
 		self::assertSame( 2, substr_count( $attributes, '#ran-booster-provider-task-panel' ) );
 		self::assertStringContainsString( ' hx-sync="this:drop"', $attributes );
 		self::assertStringContainsString( '&quot;repository-webhook-management:manage-webhook&quot;', $attributes );
@@ -178,7 +178,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			'<tr id="' . $request->targetElementId() . '"><td>Checked</td></tr>',
 			$html
 		);
-		self::assertSame( $this->transporterCanonicalUrl(), $this->header( 'HX-Replace-Url' ) );
+		self::assertSame( wp_make_link_relative( $this->transporterCanonicalUrl() ), $this->header( 'HX-Replace-Url' ) );
 		self::assertStringContainsString( 'Package checked.', (string) $this->header( 'HX-Trigger-After-Swap' ) );
 		self::assertSame( array(), $this->redirects );
 	}
@@ -259,6 +259,8 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$decoded = json_decode( $location, true );
 		self::assertIsArray( $decoded );
 		self::assertSame( '#ran-booster-provider-task-panel', $decoded['target'] );
+		self::assertStringStartsWith( '/wp-admin/', $decoded['path'] );
+		self::assertStringNotContainsString( 'https://example.test', $decoded['path'] );
 		self::assertStringContainsString( 'ran_booster_interaction_message=GitHub%20webhook%20configured.', $decoded['path'] );
 
 		$this->loadQueryFromUrl( $decoded['path'] );
@@ -271,7 +273,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			'GitHub webhook configured.',
 			(string) $this->header( 'HX-Trigger-After-Swap' )
 		);
-		self::assertSame( $this->canonicalUrl(), $this->header( 'HX-Replace-Url' ) );
+		self::assertSame( wp_make_link_relative( $this->canonicalUrl() ), $this->header( 'HX-Replace-Url' ) );
 	}
 
 	public function testTamperedPendingFeedbackIsIgnored(): void {

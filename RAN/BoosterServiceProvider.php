@@ -404,7 +404,8 @@ final class BoosterServiceProvider {
 			$releaseStore,
 			$releaseRegistrar,
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class )
+			$container->make( ProviderRegistry::class ),
+			publicLookupProfile: static fn ( string $provider ): ?string => $container->make( PublicRepositoryLookupProfileStore::class )->get( $provider )
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
@@ -429,7 +430,8 @@ final class BoosterServiceProvider {
 						$container->make( ProviderRegistry::class )
 					),
 					'read',
-				)
+				),
+				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) )
 			)
 		);
 	}

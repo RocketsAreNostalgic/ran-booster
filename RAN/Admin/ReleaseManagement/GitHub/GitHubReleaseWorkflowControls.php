@@ -166,7 +166,7 @@ final class GitHubReleaseWorkflowControls {
 		if ( is_string( $hxRequest ) && 'true' === strtolower( $hxRequest ) ) {
 			$location = wp_json_encode(
 				array(
-					'path'   => $url,
+					'path'   => wp_make_link_relative( $url ),
 					'target' => '#wpbody-content',
 					'select' => '#wpbody-content',
 					'swap'   => 'outerHTML show:none',

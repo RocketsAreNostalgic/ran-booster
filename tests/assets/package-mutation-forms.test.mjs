@@ -173,6 +173,29 @@ test('an add-on package form keeps its anchored swap while Core derives the rest
 	assert.deepEqual(processed, [addOnForm]);
 });
 
+test('an absolute native action becomes an origin-relative HTMX post target', () => {
+	const absoluteAction = 'http://localhost:10008/wp-admin/admin-post.php';
+	const mutationForm = form({ action: absoluteAction });
+	const init = loadFunction('initPackageMutationForms', {
+		document: {
+			querySelectorAll() {
+				return [mutationForm];
+			},
+		},
+		window: {
+			htmx: { process() {} },
+		},
+	});
+
+	init();
+
+	assert.equal(mutationForm.getAttribute('action'), absoluteAction);
+	assert.equal(
+		mutationForm.getAttribute('hx-post'),
+		'/wp-admin/admin-post.php'
+	);
+});
+
 test('an existing package mutation contract is not reprocessed', () => {
 	const enhancedForm = form({ enhanced: true });
 	let processCalls = 0;

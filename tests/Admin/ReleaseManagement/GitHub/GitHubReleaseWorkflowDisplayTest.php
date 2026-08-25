@@ -45,6 +45,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( '&lt;script&gt;path&lt;/script&gt;', $html );
 		self::assertStringContainsString( '&lt;script&gt;confirm&lt;/script&gt;', $html );
 		self::assertStringContainsString( 'data-ran-booster-package-success', $html );
+		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
 		self::assertStringContainsString( 'name="github_token"', $html );
 		self::assertStringContainsString( 'name="github_token" autocomplete="off" class="regular-text" required', $html );
 	}
@@ -73,6 +74,8 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Check for template updates', $html );
 		self::assertStringNotContainsString( 'Assess source-ready release setup', $html );
 		self::assertStringNotContainsString( 'Legacy, unverified', $html );
+		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow">', $html );
+		self::assertStringNotContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
 	}
 
 	public function testUnavailableRendersReadOnlyAssessPromptWithReasonAndNoFormInputs(): void {
@@ -89,7 +92,8 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 
 		self::assertStringContainsString( 'Release automation', $html );
 		self::assertStringContainsString( 'Release automation cannot be assessed with the current package settings.', $html );
-		self::assertStringContainsString( '<details class="ran-booster-release-workflow" open>', $html );
+		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow">', $html );
+		self::assertStringNotContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
 		self::assertStringContainsString( 'Assess source-ready release setup', $html );
 		self::assertStringContainsString( $reason, $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
@@ -116,6 +120,8 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( '&lt;script&gt;branch&lt;/script&gt;', $legacy );
 		self::assertStringNotContainsString( '<script>', $legacy );
 		self::assertStringNotContainsString( '<form', $legacy );
+		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow">', $legacy );
+		self::assertStringNotContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $legacy );
 
 		$unknown = $display->workflow(
 			array(

@@ -123,41 +123,35 @@
 	margin: var(--ran-booster-space-12) 0 0;
 }
 
-.ran-booster-admin .ran-booster-release-settings-disclosure,
-.ran-booster-admin .ran-booster-release-workflow {
+.ran-booster-admin .ran-booster-release-settings-disclosure {
 	margin-block-start: var(--ran-booster-space-12);
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface-subtle);
 }
 
-.ran-booster-admin .ran-booster-release-settings-disclosure summary,
-.ran-booster-admin .ran-booster-release-workflow summary {
+.ran-booster-admin .ran-booster-release-settings-disclosure summary {
 	padding: var(--ran-booster-space-10) var(--ran-booster-space-12);
 	font-weight: 600;
 	cursor: pointer;
 }
 
-.ran-booster-admin .ran-booster-release-settings-disclosure[open] > summary,
-.ran-booster-admin .ran-booster-release-workflow[open] > summary {
+.ran-booster-admin .ran-booster-release-settings-disclosure[open] > summary {
 	border-block-end: 1px solid var(--ran-booster-border);
 }
 
 .ran-booster-admin
 	.ran-booster-release-settings-disclosure
-	summary:focus-visible,
-.ran-booster-admin .ran-booster-release-workflow summary:focus-visible {
+	summary:focus-visible {
 	outline: 2px solid var(--ran-booster-link-strong);
 	outline-offset: -2px;
 }
 
-.ran-booster-admin .ran-booster-release-settings-disclosure > :not(summary),
-.ran-booster-admin .ran-booster-release-workflow__body {
+.ran-booster-admin .ran-booster-release-settings-disclosure > :not(summary) {
 	padding-inline: var(--ran-booster-space-12);
 }
 
-.ran-booster-admin .ran-booster-release-settings-disclosure > :last-child,
-.ran-booster-admin .ran-booster-release-workflow__body {
+.ran-booster-admin .ran-booster-release-settings-disclosure > :last-child {
 	padding-block-end: var(--ran-booster-space-12);
 }
 

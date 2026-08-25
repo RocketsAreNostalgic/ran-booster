@@ -377,7 +377,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage(), 'https://example.test/settings' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<details class="ran-booster-release-workflow" open>', $html );
+		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow">', $html );
+		self::assertStringNotContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
 		self::assertStringContainsString( 'could not read the local Published release readiness', $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
 		self::assertStringNotContainsString( '<form', $html );
@@ -392,7 +393,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage( 'release_asset' ), 'https://example.test/settings' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<details class="ran-booster-release-workflow" open>', $html );
+		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow">', $html );
+		self::assertStringNotContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
 		self::assertStringContainsString( 'Return to Branch before assessing setup again.', $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
 		self::assertStringNotContainsString( '<form', $html );

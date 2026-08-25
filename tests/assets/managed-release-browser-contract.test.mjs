@@ -11,6 +11,13 @@ const styles = fs.readFileSync(
 	new URL('../../assets/ran-booster-release-management.css', import.meta.url),
 	'utf8'
 );
+const packageStyles = fs.readFileSync(
+	new URL(
+		'../../assets/ran-booster/65-package-settings.css',
+		import.meta.url
+	),
+	'utf8'
+);
 
 class Node {
 	constructor(tagName) {
@@ -535,21 +542,18 @@ test('managed browser leaves refresh busy for the current request when a stale l
 	assert.equal(harness.browser.getAttribute('aria-busy'), 'false');
 });
 
-test('published release lists and release automation share disclosure styling', () => {
+test('release automation and webhook setup share one disclosure shell', () => {
 	assert.match(
-		styles,
-		/\.ran-booster-release-settings-disclosure,\s*\.ran-booster-admin \.ran-booster-release-workflow \{/
-	);
-	assert.match(
-		styles,
-		/\.ran-booster-release-settings-disclosure\[open\] > summary,\s*\.ran-booster-admin \.ran-booster-release-workflow\[open\] > summary \{[\s\S]*border-block-end: 1px solid var\(--ran-booster-border\)/
+		packageStyles,
+		/\.ran-booster-package-disclosure \{[\s\S]*border-radius: var\(--ran-booster-radius-surface\)/
 	);
 	assert.match(
-		styles,
-		/\.ran-booster-release-settings-disclosure > :not\(summary\),\s*\.ran-booster-admin \.ran-booster-release-workflow__body \{[\s\S]*padding-inline:/
+		packageStyles,
+		/\.ran-booster-package-disclosure > summary \{[\s\S]*grid-template-columns: 10px minmax\(0, 1fr\) auto[\s\S]*\.ran-booster-package-disclosure > summary::before \{[\s\S]*transform: rotate\(-45deg\)/
 	);
-	assert.doesNotMatch(
-		styles,
-		/--ran-booster-border-subtle|--ran-booster-radius\)/
+	assert.match(
+		packageStyles,
+		/\.ran-booster-package-disclosure\[open\] > summary \{[\s\S]*border-block-end: 1px solid var\(--ran-booster-border\)/
 	);
+	assert.doesNotMatch(styles, /ran-booster-release-workflow \{/);
 });

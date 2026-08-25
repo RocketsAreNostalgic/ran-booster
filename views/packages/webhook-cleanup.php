@@ -31,11 +31,10 @@ $reviewRequested = isset( $_GET['webhook_cleanup'] ) && is_scalar( $_GET['webhoo
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	&& '1' === (string) wp_unslash( $_GET['webhook_cleanup'] );
 ?>
-<section id="ran-booster-webhook-cleanup" class="notice notice-info inline ran-booster-webhook-cleanup" aria-labelledby="ran-booster-webhook-cleanup-heading">
-	<h3 id="ran-booster-webhook-cleanup-heading"><?php esc_html_e( 'Push-to-Deploy paused', 'ran-booster' ); ?></h3>
-	<p><?php esc_html_e( 'This package currently uses Published releases, so repository pushes will not deploy it. Its previous webhook settings have been retained in case you return to Branch.', 'ran-booster' ); ?></p>
-	<details class="ran-booster-webhook-cleanup__review"<?php echo $reviewRequested ? ' open' : ''; ?>>
-		<summary><?php esc_html_e( 'Review retained webhook', 'ran-booster' ); ?></summary>
+<details id="ran-booster-webhook-cleanup" class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-webhook-cleanup"<?php echo $reviewRequested ? ' open' : ''; ?>>
+	<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong><span class="ran-booster-webhook-cleanup__state"><?php esc_html_e( 'Paused', 'ran-booster' ); ?></span></summary>
+	<div class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body">
+		<p><?php esc_html_e( 'This package currently uses Published releases, so repository pushes will not deploy it. Its previous webhook settings have been retained in case you return to Branch.', 'ran-booster' ); ?></p>
 		<div class="ran-booster-webhook-cleanup__content">
 			<p><strong><?php esc_html_e( 'Signing setup', 'ran-booster' ); ?>:</strong> <?php echo esc_html( $coverageDescription ); ?></p>
 			<?php if ( ! $webhookCleanupContext->branchEvidenceAvailable() ) { ?>
@@ -75,5 +74,5 @@ $reviewRequested = isset( $_GET['webhook_cleanup'] ) && is_scalar( $_GET['webhoo
 				<a href="<?php echo esc_url( $webhookCleanupContext->documentationUrl() ); ?>"><?php esc_html_e( 'Webhook cleanup guidance', 'ran-booster' ); ?></a>
 			</div>
 		</div>
-	</details>
-</section>
+	</div>
+</details>

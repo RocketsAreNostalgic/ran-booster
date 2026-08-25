@@ -562,8 +562,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h4>', $html );
-		self::assertStringContainsString( 'Back to managed repositories', $html );
+		self::assertStringContainsString( '>Repository webhook</h5>', $html );
+		self::assertStringContainsString( 'Back to repositories', $html );
+		self::assertStringContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( 'workspace/route', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $html );
 	}

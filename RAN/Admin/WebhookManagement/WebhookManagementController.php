@@ -93,39 +93,29 @@ final class WebhookManagementController {
 		$resultCode = $result['code'];
 
 		$safeRepositoryId = strlen( $repositoryId ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ? $repositoryId : '';
+		$returnUrl        = $this->safeReturnUrl( $this->stringValue( $request, 'return_url' ), $providerCode, $safeRepositoryId );
 		if ( null !== $this->adminInteraction
 			&& $metadata instanceof ProviderMetadata
 			&& true === $result['inline_safe'] ) {
-			$request = $this->interactionRequest( $providerCode, $safeRepositoryId );
+			$request = $this->interactionRequest( $returnUrl );
 			$outcome = true === $result['successful']
 				? AdminInteractionOutcome::success( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) )
 				: AdminInteractionOutcome::validationFailure( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) );
 			$this->adminInteraction->respond( $outcome );
 		}
 
-		$recoveryQuery    = null === $result['recovery']
-			? ''
-			: '&recovery_hook=' . rawurlencode( $result['recovery']['hook_id'] ) . '&recovery_profile=' . rawurlencode( $result['recovery']['profile_id'] );
-		$remediation      = false === $result['inline_safe'] ? $this->safeRemediation( $result['remediation'] ) : null;
-		$remediationQuery = null === $remediation
-			? ''
-			: '&webhook_management_remediation=' . rawurlencode( $remediation )
-				. '&_ran_booster_webhook_result_nonce=' . rawurlencode(
-					( $this->createNonce )( $this->resultNonceAction( $providerCode, $safeRepositoryId, $resultCode, $remediation ) )
-				);
-
-		$redirect = admin_url( 'admin.php?page=ran-booster' );
-		if ( $metadata instanceof ProviderMetadata ) {
-			$redirect .= '&tab=' . rawurlencode( $metadata->code->value );
+		$remediation = false === $result['inline_safe'] ? $this->safeRemediation( $result['remediation'] ) : null;
+		$args        = array( 'webhook_management_result' => $resultCode );
+		if ( null !== $result['recovery'] ) {
+			$args['recovery_hook']    = $result['recovery']['hook_id'];
+			$args['recovery_profile'] = $result['recovery']['profile_id'];
+		}
+		if ( null !== $remediation ) {
+			$args['webhook_management_remediation']    = $remediation;
+			$args['_ran_booster_webhook_result_nonce'] = ( $this->createNonce )( $this->resultNonceAction( $providerCode, $safeRepositoryId, $resultCode, $remediation ) );
 		}
 
-		return $redirect
-			. '&panel=repositories'
-			. ( '' === $safeRepositoryId ? '' : '&repository=' . rawurlencode( $safeRepositoryId ) )
-			. '&webhook_management_result=' . rawurlencode( $resultCode )
-			. $recoveryQuery
-			. $remediationQuery
-			. '#ran-booster-repository-webhook-management-operation-heading';
+		return add_query_arg( $args, $returnUrl );
 	}
 
 	/** @return list<ProviderMetadata> */
@@ -188,12 +178,31 @@ final class WebhookManagementController {
 			: null;
 	}
 
-	private function interactionRequest( string $providerCode, string $repositoryId ): AdminInteractionRequest {
+	private function interactionRequest( string $returnUrl ): AdminInteractionRequest {
 		return AdminInteractionRequest::providerRepositories(
 			'repository-webhook-management:manage-webhook',
-			admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . '#ran-booster-repository-webhook-management-operation-heading',
+			$returnUrl,
 			'repository-webhook-management-error'
 		);
+	}
+
+	private function safeReturnUrl( string $candidate, string $providerCode, string $repositoryId ): string {
+		$fallback = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories'
+			. ( '' === $repositoryId ? '' : '&repository=' . rawurlencode( $repositoryId ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Reconstructs an allowlisted same-admin route; the candidate is never returned directly.
+		$parts = parse_url( $candidate );
+		if ( ! is_array( $parts ) ) {
+			return $fallback;
+		}
+		parse_str( (string) ( $parts['query'] ?? '' ), $query );
+		$page    = is_string( $query['page'] ?? null ) ? $query['page'] : '';
+		$package = is_string( $query['package'] ?? null ) ? $query['package'] : '';
+		if ( ! in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
+			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package ) ) {
+			return $fallback;
+		}
+
+		return admin_url( 'admin.php?page=' . $page . '&package=' . rawurlencode( $package ) );
 	}
 
 	private function capableProviderMetadata( string $providerCode ): ?ProviderMetadata {

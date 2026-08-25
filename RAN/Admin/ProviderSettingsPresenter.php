@@ -861,7 +861,7 @@ final readonly class ProviderSettingsPresenter {
 		);
 	}
 
-	/** @return array{type:string,identifier:string,display_name:string,settings_url:string,source:string,branch:string,subdirectory:string,deployment_policy:string} */
+	/** @return array{type:string,identifier:string,display_name:string,settings_url:string,source:string,source_revision:int,branch:string,subdirectory:string,deployment_policy:string} */
 	private function packageSummary( Package $package, PackageSource $source, string $type ): array {
 		$identifier = (string) $package->getIdentifier();
 		$page       = 'theme' === $type ? 'ran-booster-themes' : 'ran-booster-plugins';
@@ -872,6 +872,7 @@ final readonly class ProviderSettingsPresenter {
 			'display_name'      => $package->getDisplayName(),
 			'settings_url'      => admin_url( 'admin.php?page=' . $page . '&package=' . rawurlencode( $identifier ) ),
 			'source'            => $source->value,
+			'source_revision'   => $package->getSourceRevision(),
 			'branch'            => (string) $package->getBranch(),
 			'subdirectory'      => (string) $package->getSubdirectory(),
 			'deployment_policy' => $package->getDeploymentPolicy()->value,

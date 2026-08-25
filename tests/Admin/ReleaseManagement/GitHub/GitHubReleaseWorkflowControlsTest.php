@@ -151,15 +151,21 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 	}
 
 	public function testMultipleRepositoryPackagesHaveDistinctBoundedVisibleLabels(): void {
-		$rows                              = $this->repositoryRows();
-		$rows['101']['package_references'] = array( 'example/example.php', 'example-theme' );
-		$pluginStatus                      = ReleaseManagementFixture::status();
-		$facade                            = new ReleaseTrackingFacadeDouble( $pluginStatus );
-		$controls                          = $this->controls( $facade );
-		$projected                         = $controls->enrichRepositoryRows( $rows, 'gh', array(), 'https://example.test/return' );
-		$labels                            = array_column( $projected['101']['details'], 'label' );
-		$actions                           = array_values( $projected['101']['actions'] );
-		$actionLabels                      = array_column( $actions, 'label' );
+		$rows                               = $this->repositoryRows();
+		$rows['101']['package_references']  = array( 'example/example.php', 'example-theme' );
+		$rows['101']['package_summaries'][] = array(
+			'type'            => 'theme',
+			'identifier'      => 'example-theme',
+			'source'          => 'branch',
+			'source_revision' => 3,
+		);
+		$pluginStatus                       = ReleaseManagementFixture::status();
+		$facade                             = new ReleaseTrackingFacadeDouble( $pluginStatus );
+		$controls                           = $this->controls( $facade );
+		$projected                          = $controls->enrichRepositoryRows( $rows, 'gh', array(), 'https://example.test/return' );
+		$labels                             = array_column( $projected['101']['details'], 'label' );
+		$actions                            = array_values( $projected['101']['actions'] );
+		$actionLabels                       = array_column( $actions, 'label' );
 
 		self::assertSame( array( 'Release automation — example/example.php', 'Release automation — example-theme' ), $labels );
 		self::assertSame( array( 'Release automation: example/example.php', 'Release automation: example-theme' ), $actionLabels );
@@ -495,6 +501,14 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 				'source_key'         => $source,
 				'historical'         => false,
 				'package_references' => array( 'example/example.php' ),
+				'package_summaries'  => array(
+					array(
+						'type'            => 'plugin',
+						'identifier'      => 'example/example.php',
+						'source'          => $source,
+						'source_revision' => 3,
+					),
+				),
 				'details'            => array(),
 				'actions'            => array(),
 			),

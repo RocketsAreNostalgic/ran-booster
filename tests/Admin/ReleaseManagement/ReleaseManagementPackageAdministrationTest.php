@@ -121,6 +121,77 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array( 'inspect_candidate', 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce-for-release-tracking-inspect_candidate-plugin-example/example.php-3-stable' ), $tracking->calls[1] );
 	}
 
+	public function testManagedBrowserRendersADisabledNativeCoreUpdateBoundToTheCurrentOffer(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			new \RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus(
+				'plugin',
+				'example/example.php',
+				'release_asset',
+				3,
+				'101',
+				'manual',
+				new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-plugin' ),
+				new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0' ),
+				'example-plugin',
+				'1.0.0',
+				'1.2.0',
+				true,
+				'',
+				'',
+				'',
+				'stable'
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Install now</a>', $html );
+		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update', $html );
+		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-version="1.2.0"', $html );
+		self::assertStringContainsString( 'button button-primary disabled ran-booster-managed-release-native-update', $html );
+		self::assertStringContainsString( 'aria-disabled="true"', $html );
+		self::assertStringContainsString( 'action=upgrade-plugin', $html );
+		self::assertStringContainsString( 'plugin=example%2Fexample.php', $html );
+		self::assertStringContainsString( '_wpnonce=nonce-for-upgrade-plugin_example%2Fexample.php', $html );
+	}
+
+	public function testManagedThemeBrowserUsesTheNativeThemeUpgradeRoute(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			new \RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus(
+				'theme',
+				'example-theme',
+				'release_asset',
+				3,
+				'101',
+				'manual',
+				new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-theme' ),
+				new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-theme', '1.2.0', 'https://example.test/releases/v1.2.0' ),
+				'example-theme',
+				'1.0.0',
+				'1.2.0',
+				true,
+				'',
+				'',
+				'',
+				'stable'
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset', 'theme' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'theme', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'action=upgrade-theme', $html );
+		self::assertStringContainsString( 'theme=example-theme', $html );
+		self::assertStringContainsString( '_wpnonce=nonce-for-upgrade-theme_example-theme', $html );
+	}
+
 	public function testManagedBrowserSeparatesEmptyStableAndPreviewTracksFromReadFailures(): void {
 		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->candidateList = new RepositoryReleaseCandidateList( array() );

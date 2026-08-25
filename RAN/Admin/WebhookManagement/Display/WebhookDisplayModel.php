@@ -423,9 +423,12 @@ final class WebhookDisplayModel {
 		$history = null === $record ? null : WebhookHistory::fromRecord( $record )->toArray();
 		$details = array(
 			array(
-				'label' => __( 'Recorded hook status', 'ran-booster' ),
-				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
-				'tone'  => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+				'key'      => 'core:webhook-recorded-status',
+				'label'    => __( 'Recorded hook status', 'ran-booster' ),
+				'value'    => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
+				'tone'     => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+				'recorded' => null !== $history,
+				'state'    => $statusCode,
 			),
 			array(
 				'label' => __( 'Observation', 'ran-booster' ),

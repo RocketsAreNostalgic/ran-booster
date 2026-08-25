@@ -73,7 +73,6 @@ final class ReleaseManagementDisplay {
 		$recheckActionUrl     = false === $recheckQueryPosition
 			? $recheckUrl
 			: substr( $recheckUrl, 0, $recheckQueryPosition );
-		$branchViewUrl        = add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl );
 		$trackFormId          = 'ran-booster-release-track-form';
 		$trackNonceAction     = null;
 		$refreshNonceAction   = null;
@@ -160,11 +159,6 @@ final class ReleaseManagementDisplay {
 						<p class="ran-booster-release-code"><code><?php echo esc_html( 'Update URI: ' . $expectedUpdateUri ); ?></code></p>
 					</div>
 				<?php } ?>
-				<?php if ( $eligibility->eligible() && 'branch' === $status->source() ) { ?>
-					<div class="notice notice-warning inline">
-						<p><?php esc_html_e( 'Booster will freshly validate a matching release before changing the package source. Automatic resets to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
-					</div>
-				<?php } ?>
 				<?php if ( 'release_asset' === $status->source() && '' !== $status->failureCode() ) { ?>
 					<div class="notice notice-warning inline">
 						<p><?php echo esc_html( $this->diagnosticMessage( $status->failureCode() ) ); ?></p>
@@ -172,10 +166,7 @@ final class ReleaseManagementDisplay {
 					</div>
 				<?php } ?>
 				<div class="ran-booster-readiness-actions">
-					<?php if ( 'branch' === $status->source() && null !== $trackNonceAction ) { ?>
-						<button type="submit" class="button button-primary" form="<?php echo esc_attr( $trackFormId ); ?>"><?php esc_html_e( 'Validate and switch source', 'ran-booster' ); ?></button>
-						<a class="button" href="<?php echo esc_url( $branchViewUrl ); ?>"><?php esc_html_e( 'Keep branch source', 'ran-booster' ); ?></a>
-					<?php } elseif ( 'branch' === $status->source() ) { ?>
+					<?php if ( 'branch' === $status->source() && null === $trackNonceAction ) { ?>
 						<form
 							action="<?php echo esc_url( $recheckActionUrl ); ?>"
 							method="get"
@@ -183,11 +174,11 @@ final class ReleaseManagementDisplay {
 							data-ran-booster-enhanced-mutation
 							data-ran-booster-package-mutation
 							data-ran-booster-error-target="#ran-booster-package-mutation-error"
-							hx-get="<?php echo esc_url( $recheckUrl ); ?>"
+							hx-get="<?php echo esc_url( wp_make_link_relative( $recheckUrl ) ); ?>"
 							hx-target="#wpbody-content"
 							hx-select="#wpbody-content"
 							hx-swap="outerHTML show:#ran-booster-advanced-source-settings:top"
-							hx-push-url="<?php echo esc_url( $releaseViewUrl ); ?>"
+							hx-push-url="<?php echo esc_url( wp_make_link_relative( $releaseViewUrl ) ); ?>"
 							hx-sync="this:drop"
 						>
 							<?php foreach ( $recheckArguments as $name => $value ) { ?>
@@ -227,6 +218,12 @@ final class ReleaseManagementDisplay {
 						<?php $this->adminPostFields( 'branch' === $status->source() ? 'enable' : 'change_channel', $package, $trackNonceAction ); ?>
 						<?php if ( 'branch' === $status->source() ) { ?>
 							<?php $this->renderReleaseTrack( $selectedChannel, __( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds. Drafts remain excluded.', 'ran-booster' ), 'ran-booster-release-track-description', true ); ?>
+							<div class="notice notice-warning inline">
+								<p><?php esc_html_e( 'Booster will freshly validate a matching release before changing the package source. Automatic resets to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
+							</div>
+							<div class="ran-booster-readiness-actions">
+								<button type="submit" class="button button-primary"><?php esc_html_e( 'Validate and switch source', 'ran-booster' ); ?></button>
+							</div>
 						<?php } else { ?>
 							<?php $this->renderManagedReleaseTrack( $selectedChannel ); ?>
 						<?php } ?>
@@ -236,8 +233,53 @@ final class ReleaseManagementDisplay {
 				<?php } else { ?>
 					<?php $this->renderIneligibleReleaseTrack( $selectedChannel ); ?>
 				<?php } ?>
+				<?php if ( 'release_asset' === $status->source() && $eligibility->eligible() && '' === $status->failureCode() ) { ?>
+					<?php $this->renderManagedCandidateBrowser( $status, $nonceActions ); ?>
+				<?php } ?>
 			</div>
 		</section>
+		<?php
+	}
+
+	/** @param array<string,string> $nonceActions */
+	private function renderManagedCandidateBrowser( ReleaseTrackingStatus $status, array $nonceActions ): void {
+		$listNonce    = $nonceActions['list_candidates'] ?? '';
+		$inspectNonce = $nonceActions['inspect_candidate'] ?? '';
+		if ( '' === $listNonce || '' === $inspectNonce ) {
+			return;
+		}
+		?>
+		<div
+			class="ran-booster-managed-release-browser"
+			data-ran-booster-managed-release-browser
+			data-ran-booster-managed-release-type="<?php echo esc_attr( $status->type() ); ?>"
+			data-ran-booster-managed-release-identifier="<?php echo esc_attr( $status->identifier() ); ?>"
+			data-ran-booster-managed-release-revision="<?php echo esc_attr( (string) $status->sourceRevision() ); ?>"
+			data-ran-booster-managed-release-channel="<?php echo esc_attr( $status->channel() ); ?>"
+			data-ran-booster-managed-release-list-nonce="<?php echo esc_attr( $listNonce ); ?>"
+			data-ran-booster-managed-release-inspect-nonce="<?php echo esc_attr( $inspectNonce ); ?>"
+			data-ran-booster-managed-release-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+		>
+			<div class="ran-booster-managed-release-browser__header">
+				<div>
+					<h4><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></h4>
+					<p><?php esc_html_e( 'Review the latest eligible release and the version installed on this site. WordPress Updates remains the installation route.', 'ran-booster' ); ?></p>
+				</div>
+				<button type="button" class="button" data-ran-booster-managed-release-retry><?php esc_html_e( 'Refresh releases', 'ran-booster' ); ?></button>
+			</div>
+			<div class="notice notice-warning inline ran-booster-managed-release-browser__notice" data-ran-booster-managed-release-error hidden>
+				<p data-ran-booster-managed-release-error-message></p>
+			</div>
+			<fieldset class="ran-booster-release-candidates" data-ran-booster-managed-release-candidates hidden>
+				<legend class="screen-reader-text"><?php esc_html_e( 'Available published releases', 'ran-booster' ); ?></legend>
+				<div data-ran-booster-managed-release-candidate-list></div>
+			</fieldset>
+			<div class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-managed-release-status>
+				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
+				<p data-ran-booster-managed-release-message><?php esc_html_e( 'Check the saved release track for eligible candidates.', 'ran-booster' ); ?></p>
+			</div>
+			<a class="button" href="<?php echo esc_url( admin_url( 'update-core.php' ) ); ?>" data-ran-booster-managed-release-updates hidden><?php esc_html_e( 'Open WordPress updates', 'ran-booster' ); ?></a>
+		</div>
 		<?php
 	}
 
@@ -279,8 +321,12 @@ final class ReleaseManagementDisplay {
 			<?php } else { ?>
 				<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="ran-booster-release-return-form" data-ran-booster-package-mutation>
 					<?php $this->adminPostFields( 'return_to_branch', $package, $nonceAction ); ?>
-					<p class="description"><?php esc_html_e( 'Returning resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
-					<p><button type="submit" class="button"><?php esc_html_e( 'Return to branch deployments', 'ran-booster' ); ?></button></p>
+					<div class="notice notice-warning inline">
+						<p><?php esc_html_e( 'Returning resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
+					</div>
+					<div class="ran-booster-readiness-actions">
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Return to branch deployments', 'ran-booster' ); ?></button>
+					</div>
 				</form>
 			<?php } ?>
 		</div>
@@ -428,7 +474,7 @@ final class ReleaseManagementDisplay {
 					<?php } ?>
 				<?php } ?>
 			</div>
-			<p class="description"><?php esc_html_e( 'Preview includes prereleases, which may be unstable; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade the package.', 'ran-booster' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Preview shows published alpha, beta and release-candidate builds only; they may be unstable. Switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade the package.', 'ran-booster' ); ?></p>
 		</fieldset>
 		<?php
 	}

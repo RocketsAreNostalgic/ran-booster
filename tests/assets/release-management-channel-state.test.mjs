@@ -72,7 +72,10 @@ test('selected release track maps to the stored release channel', () => {
 test('prospective client contains no managed release track dirty-state behavior', () => {
 	assert.doesNotMatch(source, /ran-booster-release-track-save/);
 	assert.doesNotMatch(source, /ranBoosterInitialReleaseChannel/);
-	assert.doesNotMatch(source, /htmx:afterSwap/);
+	assert.match(
+		source,
+		/htmx:afterSwap[\s\S]*initializeManagedReleaseBrowserAfterSwap/
+	);
 });
 
 test('loading state is carried by the stable release pane instead of a spinner', () => {
@@ -91,6 +94,119 @@ test('loading state is carried by the stable release pane instead of a spinner',
 		/ran-booster-enhanced-mutation__submitter--busy/
 	);
 	assert.match(declaration('setChoiceState'), /ran-booster-update-is-active/);
+});
+
+test('loading candidates auto-selects the newest release and uses the shared disclosure treatment', () => {
+	let inspectCalls = 0;
+	const candidateList = {
+		children: [],
+		append(label) {
+			this.children.push(label);
+		},
+		replaceChildren() {
+			this.children = [];
+		},
+	};
+	const createInput = () => {
+		const listeners = {};
+		return {
+			checked: false,
+			type: '',
+			name: '',
+			value: '',
+			addEventListener(name, handler) {
+				listeners[name] = handler;
+			},
+			dispatchEvent(event) {
+				if (listeners[event.type]) {
+					listeners[event.type](event);
+				}
+			},
+		};
+	};
+	const document = {
+		createElement(tagName) {
+			if (tagName === 'label') {
+				return {
+					append(...nodes) {
+						this.children = nodes;
+					},
+				};
+			}
+			if (tagName === 'input') {
+				return createInput();
+			}
+			return {
+				append(...nodes) {
+					this.children = nodes;
+				},
+			};
+		},
+	};
+	const createHarness = Function(
+		'document',
+		'candidateList',
+		'candidates',
+		'releaseChannel',
+		'setChoiceState',
+		'setStatus',
+		'showUnavailable',
+		'setHidden',
+		'install',
+		'details',
+		'inspectRelease',
+		`"use strict";
+		let requestSequence = 0;
+		let selectedRelease = null;
+		${declaration('showCandidates')}
+		return {
+			showCandidates,
+			state: () => ({ requestSequence, selectedRelease }),
+		};`
+	)(
+		document,
+		candidateList,
+		{ hidden: false },
+		() => 'stable',
+		() => {},
+		() => {},
+		() => {},
+		() => {},
+		{ hidden: false },
+		{ hidden: false },
+		() => {
+			inspectCalls += 1;
+		}
+	);
+	const harness = createHarness;
+
+	harness.showCandidates({
+		candidates: [
+			{
+				release_id: 8,
+				tag: 'v1.1.0',
+				version: '1.1.0',
+				published_at: '2026-01-01T00:00:00Z',
+			},
+			{
+				release_id: 9,
+				tag: 'v1.2.0',
+				version: '1.2.0',
+				published_at: '2026-02-01T00:00:00Z',
+			},
+		],
+	});
+
+	assert.equal(inspectCalls, 1);
+	assert.equal(harness.state().selectedRelease.id, 9);
+	assert.equal(harness.state().selectedRelease.tag, 'v1.2.0');
+	assert.equal(harness.state().selectedRelease.channel, 'stable');
+	assert.equal(candidateList.children.length, 2);
+	assert.equal(candidateList.children[0].children[0].checked, true);
+	assert.equal(
+		candidateList.children[1].className,
+		'ran-booster-release-settings-disclosure'
+	);
 });
 
 test('final install submits the shared Core create form', () => {

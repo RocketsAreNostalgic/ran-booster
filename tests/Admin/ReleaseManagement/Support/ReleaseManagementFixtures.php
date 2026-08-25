@@ -16,10 +16,12 @@ final class ReleaseManagementFixture {
 		?callable $readCandidates = null
 	): ReleaseManagementControls {
 		$prospective ??= new ProspectiveReleaseFacadeDouble();
+		$tracking    ??= new ReleaseTrackingFacadeDouble( self::status() );
 		return new ReleaseManagementControls(
-			$tracking ?? new ReleaseTrackingFacadeDouble( self::status() ),
+			$tracking,
 			$prospective,
-			$readCandidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->listCandidates( $type, $repository, $channel, '' )
+			$readCandidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->listCandidates( $type, $repository, $channel, '' ),
+			$tracking
 		);
 	}
 

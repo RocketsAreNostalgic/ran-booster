@@ -1,5 +1,389 @@
+const managedReleaseBrowsers = new WeakSet();
+
+const initializeManagedReleaseBrowser = (managedBrowser) => {
+	if (managedReleaseBrowsers.has(managedBrowser)) {
+		return;
+	}
+	managedReleaseBrowsers.add(managedBrowser);
+	const candidates = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-candidates]'
+	);
+	const candidateList = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-candidate-list]'
+	);
+	const heading = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-heading]'
+	);
+	const message = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-message]'
+	);
+	const retry = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-retry]'
+	);
+	const updates = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-updates]'
+	);
+	const errorNotice = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-error]'
+	);
+	const errorMessage = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-error-message]'
+	);
+	let selected = null;
+	let selectedOutcome = null;
+	let selectedLabel = null;
+	const candidateElements = new Map();
+	let sequence = 0;
+	const setStatus = (title, text) => {
+		if (heading) {
+			heading.textContent = title;
+		}
+		if (message) {
+			message.textContent = text;
+		}
+	};
+	const clearError = () => {
+		if (errorNotice) {
+			errorNotice.hidden = true;
+		}
+	};
+	const showError = (text) => {
+		if (errorMessage) {
+			errorMessage.textContent = text;
+		}
+		if (errorNotice) {
+			errorNotice.hidden = false;
+		}
+	};
+	const setListBusy = (busy) => {
+		managedBrowser.setAttribute('aria-busy', busy ? 'true' : 'false');
+		if (retry) {
+			retry.disabled = busy;
+			retry.classList.toggle(
+				'ran-booster-enhanced-mutation__submitter--busy',
+				busy
+			);
+			retry.classList.toggle('ran-booster-update-is-active', busy);
+		}
+	};
+	const request = async (operation, extra = {}) => {
+		const data = new FormData();
+		data.append(
+			'action',
+			operation === 'list'
+				? 'ran_booster_managed_release_list_candidates'
+				: 'ran_booster_managed_release_inspect'
+		);
+		data.append(
+			'expected_type',
+			managedBrowser.dataset.ranBoosterManagedReleaseType
+		);
+		data.append(
+			'expected_identifier',
+			managedBrowser.dataset.ranBoosterManagedReleaseIdentifier
+		);
+		data.append(
+			'expected_source_revision',
+			managedBrowser.dataset.ranBoosterManagedReleaseRevision
+		);
+		data.append(
+			'release_channel',
+			managedBrowser.dataset.ranBoosterManagedReleaseChannel
+		);
+		data.append(
+			'_wpnonce',
+			operation === 'list'
+				? managedBrowser.dataset.ranBoosterManagedReleaseListNonce
+				: managedBrowser.dataset.ranBoosterManagedReleaseInspectNonce
+		);
+		Object.entries(extra).forEach(([key, value]) =>
+			data.append(key, value)
+		);
+		const ajaxUrl = managedBrowser.dataset.ranBoosterManagedReleaseAjaxUrl;
+		let requestUrl = ajaxUrl;
+		try {
+			const parsedUrl = new URL(ajaxUrl);
+			requestUrl = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+		} catch {
+			// Relative AJAX URLs are already safe for same-origin requests.
+		}
+		const response = await window.fetch(requestUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: data,
+		});
+		if (!response.ok) {
+			throw new Error('request_failed');
+		}
+		return response.json();
+	};
+	const inspect = async () => {
+		if (!selected) {
+			return;
+		}
+		const current = ++sequence;
+		clearError();
+		setStatus(
+			'Inspecting published release…',
+			'Booster is validating the selected release without changing the installed package.'
+		);
+		try {
+			const response = await request('inspect', {
+				release_id: selected.release_id,
+				release_tag: selected.tag,
+			});
+			if (current !== sequence) {
+				return;
+			}
+			if (!response.successful || response.code !== 'release_ready') {
+				throw new Error('inspection_failed');
+			}
+			const relationship = response.data.version_relationship;
+			setStatus(
+				'Release checked',
+				relationship === 'newer'
+					? `Version ${response.data.version} is available in WordPress Updates.`
+					: `Version ${response.data.version} is installed.`
+			);
+			if (selectedOutcome) {
+				selectedOutcome.textContent =
+					relationship === 'newer'
+						? `Version ${response.data.version} is available in WordPress Updates.`
+						: `Version ${response.data.version} is installed.`;
+				selectedOutcome.hidden = relationship !== 'newer';
+			}
+			if (updates) {
+				updates.hidden = relationship !== 'newer';
+				if (relationship === 'newer' && selectedLabel) {
+					selectedLabel.append(updates);
+				}
+			}
+		} catch {
+			if (current === sequence) {
+				showError(
+					'Booster could not check the selected release. Refresh releases and try again.'
+				);
+				setStatus(
+					'Published release could not be inspected',
+					'The saved package or release may have changed. Refresh and try again.'
+				);
+			}
+		}
+	};
+	const list = async () => {
+		const current = ++sequence;
+		selected = null;
+		clearError();
+		setListBusy(true);
+		if (updates) {
+			updates.hidden = true;
+		}
+		setStatus(
+			'Checking published releases…',
+			'Reading eligible candidates for this managed package.'
+		);
+		try {
+			const response = await request('list');
+			if (current !== sequence) {
+				return;
+			}
+			const releases = Array.isArray(response.data?.candidates)
+				? response.data.candidates
+						.slice()
+						.sort(
+							(left, right) =>
+								Date.parse(right.published_at) -
+								Date.parse(left.published_at)
+						)
+						.slice(0, 8)
+				: [];
+			if (
+				!response.successful ||
+				!['release_candidates_available', 'no_releases'].includes(
+					response.code
+				) ||
+				!candidateList
+			) {
+				throw new Error('no_releases');
+			}
+			candidateList.replaceChildren();
+			if (response.code === 'no_releases') {
+				const empty = document.createElement('p');
+				empty.className = 'ran-booster-release-candidate';
+				empty.textContent =
+					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===
+					'prerelease'
+						? 'No Preview releases have been published for this package yet.'
+						: 'No Stable releases have been published for this package yet.';
+				candidateList.append(empty);
+				if (candidates) {
+					candidates.hidden = false;
+				}
+				setStatus('No published releases found', empty.textContent);
+				return;
+			}
+			if (releases.length === 0) {
+				throw new Error('invalid_candidates');
+			}
+			const installedCandidate = releases.find(
+				(candidate) => candidate.version_relationship === 'same'
+			);
+			const visible = [releases[0]];
+			if (installedCandidate && installedCandidate !== releases[0]) {
+				visible.push(installedCandidate);
+			}
+			const earlier = releases.filter(
+				(candidate) => !visible.includes(candidate)
+			);
+			const appendCandidate = (candidate, target) => {
+				const label = document.createElement('label');
+				label.className = 'ran-booster-release-candidate';
+				const input = document.createElement('input');
+				input.type = 'radio';
+				input.name = 'ran_booster_managed_release_candidate';
+				input.dataset.releaseId = String(candidate.release_id);
+				const older = candidate.version_relationship === 'older';
+				input.disabled = older;
+				input.addEventListener('change', () => {
+					if (selectedOutcome) {
+						selectedOutcome.hidden = true;
+					}
+					selected = candidate;
+					selectedLabel = label;
+					selectedOutcome = outcome;
+					inspect();
+				});
+				let marker =
+					candidate === releases[0] ? ' · Latest eligible' : '';
+				if (older) {
+					marker += ' · Older than installed';
+				} else if (candidate.version_relationship === 'same') {
+					marker += ' · Installed/current';
+				} else {
+					marker += ' · Newer than installed';
+				}
+				const outcome = document.createElement('p');
+				outcome.className = 'ran-booster-release-candidate__outcome';
+				outcome.hidden = true;
+				label.append(
+					input,
+					document.createTextNode(
+						`${candidate.version} (${candidate.tag}) · ${candidate.prerelease ? 'Preview' : 'Stable'}${marker}`
+					),
+					outcome
+				);
+				candidateElements.set(candidate, { label, outcome });
+				target.append(label);
+			};
+			visible.forEach((candidate) =>
+				appendCandidate(candidate, candidateList)
+			);
+			if (response.data.installed_version && !installedCandidate) {
+				const installed = document.createElement('p');
+				installed.className =
+					'ran-booster-release-candidate ran-booster-release-installed-version';
+				installed.textContent = `Installed version: ${response.data.installed_version}`;
+				candidateList.append(installed);
+			}
+			if (earlier.length > 0) {
+				const disclosure = document.createElement('details');
+				disclosure.className =
+					'ran-booster-release-settings-disclosure';
+				const summary = document.createElement('summary');
+				summary.textContent = `Show ${earlier.length} earlier release${earlier.length === 1 ? '' : 's'}`;
+				disclosure.append(summary);
+				if (
+					earlier.some(
+						(candidate) =>
+							candidate.version_relationship === 'older'
+					)
+				) {
+					const warning = document.createElement('p');
+					warning.textContent =
+						'Downgrades are unavailable because package data migrations may not be reversible. For recovery, follow the package-specific instructions or restore a backup.';
+					disclosure.append(warning);
+				}
+				earlier.forEach((candidate) =>
+					appendCandidate(candidate, disclosure)
+				);
+				candidateList.append(disclosure);
+			}
+			if (candidates) {
+				candidates.hidden = false;
+			}
+			const inspectable = releases.filter(
+				(candidate) => candidate.version_relationship !== 'older'
+			);
+			if (inspectable.length > 0) {
+				setStatus(
+					'Release candidates loaded',
+					`${releases.length} eligible release${releases.length === 1 ? '' : 's'} found. Inspecting the newest available release.`
+				);
+				selected = inspectable[0];
+				selectedLabel = candidateElements.get(selected)?.label || null;
+				selectedOutcome =
+					candidateElements.get(selected)?.outcome || null;
+				const input = candidateList.querySelector(
+					`input[data-release-id="${selected.release_id}"]`
+				);
+				if (input) {
+					input.checked = true;
+				}
+				setListBusy(false);
+				inspect();
+			} else {
+				setStatus(
+					'No current or newer published release found',
+					'Every available release is older. WordPress Updates will not downgrade this package.'
+				);
+			}
+		} catch {
+			if (current === sequence) {
+				showError(
+					'Booster could not load published releases. The repository provider may be temporarily unavailable or rate-limited. Try again later.'
+				);
+				setStatus(
+					'Published releases could not be checked',
+					'Booster could not read eligible releases for the saved package.'
+				);
+			}
+		} finally {
+			if (current === sequence) {
+				setListBusy(false);
+			}
+		}
+	};
+	retry?.addEventListener('click', list);
+	list();
+};
+
 (() => {
 	'use strict';
+
+	const initializeManagedReleaseBrowserAfterSwap = (event) => {
+		if (event.detail?.target?.id !== 'wpbody-content') {
+			return;
+		}
+		const managedBrowser = document.querySelector(
+			'[data-ran-booster-managed-release-browser]'
+		);
+		if (managedBrowser) {
+			initializeManagedReleaseBrowser(managedBrowser);
+		}
+	};
+
+	document.addEventListener(
+		'htmx:afterSwap',
+		initializeManagedReleaseBrowserAfterSwap
+	);
+
+	const managedBrowser = document.querySelector(
+		'[data-ran-booster-managed-release-browser]'
+	);
+	if (managedBrowser) {
+		initializeManagedReleaseBrowser(managedBrowser);
+		return;
+	}
 
 	const form = document.querySelector('[data-ran-booster-package-create]');
 	const releaseChoice = document.querySelector(
@@ -399,7 +783,14 @@
 
 	const showCandidates = (data) => {
 		const releases = Array.isArray(data.candidates)
-			? data.candidates.slice(0, 8)
+			? data.candidates
+					.slice()
+					.sort(
+						(left, right) =>
+							Date.parse(right.published_at) -
+							Date.parse(left.published_at)
+					)
+					.slice(0, 8)
 			: [];
 		if (!candidateList || releases.length === 0) {
 			showUnavailable('no_releases');
@@ -407,13 +798,15 @@
 		}
 		selectedRelease = null;
 		candidateList.replaceChildren();
-		releases.forEach((candidate) => {
+		const candidateInputs = [];
+		const appendCandidate = (candidate, target) => {
 			const label = document.createElement('label');
 			label.className = 'ran-booster-release-candidate';
 			const input = document.createElement('input');
 			input.type = 'radio';
 			input.name = 'ran_booster_release_candidate';
 			input.value = String(candidate.release_id);
+			candidateInputs.push(input);
 			input.addEventListener('change', () => {
 				requestSequence += 1;
 				selectedRelease = {
@@ -430,8 +823,30 @@
 			const track = candidate.prerelease ? 'Preview' : 'Stable';
 			text.textContent = `${candidate.version} (${candidate.tag}) · ${track}`;
 			label.append(input, text);
-			candidateList.append(label);
-		});
+			target.append(label);
+		};
+		appendCandidate(releases[0], candidateList);
+		if (releases.length > 1) {
+			const disclosure = document.createElement('details');
+			disclosure.className = 'ran-booster-release-settings-disclosure';
+			const summary = document.createElement('summary');
+			const earlier = releases.slice(1);
+			summary.textContent = `Show ${earlier.length} earlier release${earlier.length === 1 ? '' : 's'}`;
+			disclosure.append(summary);
+			earlier.forEach((candidate) =>
+				appendCandidate(candidate, disclosure)
+			);
+			candidateList.append(disclosure);
+		}
+		const firstCandidate = candidateInputs[0];
+		if (firstCandidate) {
+			firstCandidate.checked = true;
+			const event =
+				typeof Event === 'function'
+					? new Event('change', { bubbles: true })
+					: { type: 'change' };
+			firstCandidate.dispatchEvent(event);
+		}
 		setChoiceState(
 			'available',
 			`${releases.length} eligible published release${releases.length === 1 ? '' : 's'} found.`,

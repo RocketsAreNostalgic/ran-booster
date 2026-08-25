@@ -102,7 +102,7 @@ final class SignedAdminInteractionFlow {
 
 				$location = wp_json_encode(
 					array(
-						'path'   => $outcomeUrl,
+						'path'   => wp_make_link_relative( $outcomeUrl ),
 						'target' => $request->targetSelector,
 						'select' => $request->targetSelector,
 						'swap'   => 'outerHTML show:none',
@@ -160,7 +160,7 @@ final class SignedAdminInteractionFlow {
 		}
 
 		( $this->emitStatus )( $this->status( $kind ) );
-		( $this->emitHeader )( 'HX-Replace-Url', $request->canonicalUrl );
+		( $this->emitHeader )( 'HX-Replace-Url', wp_make_link_relative( $request->canonicalUrl ) );
 		( $this->emitHeader )( 'HX-Trigger-After-Swap', $this->successTrigger( $request, $message ) );
 		echo $fragment; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The add-on renderer owns escaping; the exact row wrapper is validated above.
 		( $this->terminate )();
@@ -203,7 +203,7 @@ final class SignedAdminInteractionFlow {
 					( $this->emitHeader )( 'HX-Trigger-After-Swap', $trigger );
 				}
 			}
-			( $this->emitHeader )( 'HX-Replace-Url', $request->canonicalUrl );
+			( $this->emitHeader )( 'HX-Replace-Url', wp_make_link_relative( $request->canonicalUrl ) );
 
 			return;
 		}

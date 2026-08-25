@@ -173,6 +173,17 @@ function wp_json_encode( mixed $value ): string|false {
 	return json_encode( $value );
 }
 
+function wp_make_link_relative( string $link ): string {
+	$parts = wp_parse_url( $link );
+	if ( ! is_array( $parts ) ) {
+		return $link;
+	}
+
+	return ( $parts['path'] ?? '' )
+		. ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' )
+		. ( isset( $parts['fragment'] ) ? '#' . $parts['fragment'] : '' );
+}
+
 function wp_safe_redirect( string $url ): bool {
 	$GLOBALS['ran_booster_release_management_test_redirect'] = $url;
 	throw new RuntimeException( 'native-redirect' );

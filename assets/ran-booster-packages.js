@@ -296,12 +296,20 @@
 					return;
 				}
 
+				const nativeAction = form.getAttribute('action') || '';
+				let hxPost = nativeAction;
+				try {
+					const actionUrl = new URL(nativeAction);
+					hxPost = `${actionUrl.pathname}${actionUrl.search}${actionUrl.hash}`;
+				} catch {
+					// Relative actions already have the HTMX-safe form.
+				}
 				let requiresProcessing = false;
 				const attributes = {
 					'data-ran-booster-enhanced-mutation': '',
 					'data-ran-booster-error-target':
 						'#ran-booster-package-mutation-error',
-					'hx-post': form.getAttribute('action') || '',
+					'hx-post': hxPost,
 					'hx-select': '#wpbody-content',
 					'hx-swap': 'outerHTML show:none',
 					'hx-sync': 'this:drop',

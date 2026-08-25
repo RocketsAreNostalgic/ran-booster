@@ -37,6 +37,7 @@ use Throwable;
  * Secret-bearing records are deliberately never requested from the sidecar.
  */
 final readonly class ProviderSettingsPresenter {
+	private const MAX_REPOSITORY_PACKAGE_SUMMARIES = 20;
 
 	private PublicRepositoryLookupProfileStore $publicLookupProfiles;
 	private CredentialExpiryObservationStore $expiryObservations;
@@ -704,7 +705,7 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * List repository targets already managed by Booster without mutating package rows.
 	 *
-	 * @return array{available: bool, owners: list<string>, repositories: list<array{target: string, repository_id: string, source: string, package_count: int, automatic_count: int, package_references: list<string>, deployment_policies: array{automatic: int, manual: int, disabled: int}, repository_url: string|null, webhook_settings_url: string|null}>}
+	 * @return array{available: bool, owners: list<string>, repositories: list<array<string, mixed>>}
 	 */
 	private function managedRepositories( string $provider, RepositoryProvider $repositoryProvider, bool $branchOnly ): array {
 		if ( null === $this->plugins || null === $this->themes ) {
@@ -717,8 +718,20 @@ final readonly class ProviderSettingsPresenter {
 
 		try {
 			$packages = array_merge(
-				$this->plugins->allDeploymentPlugins(),
-				$this->themes->allDeploymentThemes()
+				array_map(
+					static fn ( Package $package ): array => array(
+						'package' => $package,
+						'type'    => 'plugin',
+					),
+					array_values( $this->plugins->allDeploymentPlugins() )
+				),
+				array_map(
+					static fn ( Package $package ): array => array(
+						'package' => $package,
+						'type'    => 'theme',
+					),
+					array_values( $this->themes->allDeploymentThemes() )
+				)
 			);
 		} catch ( Throwable ) {
 				return array(
@@ -728,50 +741,98 @@ final readonly class ProviderSettingsPresenter {
 				);
 		}
 
-		$owners       = array();
-		$repositories = array();
-		foreach ( $packages as $package ) {
-			$source = $package->getSource();
+		$owners                 = array();
+		$repositories           = array();
+		$idsByLocator           = array();
+		$locatorsByRepositoryId = array();
+		foreach ( $packages as $entry ) {
+			$package = $entry['package'];
+			$source  = $package->getSource();
 			if ( $package->getProviderCode() !== $provider
 				|| ( $branchOnly && PackageSource::BRANCH !== $source ) ) {
 				continue;
 			}
 
-			$target = trim( (string) $package->getRepository() );
+			$target       = trim( (string) $package->getRepository() );
+			$repositoryId = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
 			if ( '' === $target ) {
 				continue;
 			}
+			$normalizedTarget = strtolower( trim( $target, '/' ) );
+			if ( '' !== $repositoryId ) {
+				$idsByLocator[ $normalizedTarget ][ $repositoryId ]           = true;
+				$locatorsByRepositoryId[ $repositoryId ][ $normalizedTarget ] = true;
+			}
+		}
 
-			$key   = strtolower( $target ) . ( $branchOnly ? '' : '|' . $source->value );
+		foreach ( $packages as $entry ) {
+			$package = $entry['package'];
+			$source  = $package->getSource();
+			if ( $package->getProviderCode() !== $provider
+				|| ( $branchOnly && PackageSource::BRANCH !== $source ) ) {
+				continue;
+			}
+
+			$target       = trim( (string) $package->getRepository() );
+			$repositoryId = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
+			if ( '' === $target ) {
+				continue;
+			}
+			$normalizedTarget = strtolower( trim( $target, '/' ) );
+			$identityConflict = '' !== $repositoryId && (
+				1 < count( $idsByLocator[ $normalizedTarget ] ?? array() )
+				|| 1 < count( $locatorsByRepositoryId[ $repositoryId ] ?? array() )
+			);
+
+			// Provider IDs, not mutable locators or package source, are the live-row
+			// authority. An absent ID stays visible for review but is never operable.
+			$key   = '' === $repositoryId
+				? 'historical:' . hash( 'sha256', $target . '|' . $source->value . '|' . (string) $package->getIdentifier() )
+				: $repositoryId;
 			$parts = explode( '/', trim( $target, '/' ), 2 );
 			if ( 2 === count( $parts ) && '' !== trim( $parts[0] ) ) {
 				$owners[ strtolower( $parts[0] ) ] = $parts[0];
 			}
 			if ( ! isset( $repositories[ $key ] ) ) {
 				$repositories[ $key ] = array(
-					'target'               => $target,
-					'repository_id'        => (string) ( $package->getProviderRepositoryId() ?? '' ),
-					'source'               => $source->value,
-					'package_count'        => 0,
-					'automatic_count'      => 0,
-					'package_references'   => array(),
-					'deployment_policies'  => array(
+					'target'                    => $target,
+					'repository_id'             => $repositoryId,
+					'sources'                   => array( $source->value => true ),
+					'historical'                => '' === $repositoryId || $identityConflict,
+					'identity_conflict'         => $identityConflict,
+					'package_count'             => 0,
+					'automatic_count'           => 0,
+					'package_references'        => array(),
+					'branch_package_references' => array(),
+					'package_summaries'         => array(),
+					'deployment_policies'       => array(
 						'automatic' => 0,
 						'manual'    => 0,
 						'disabled'  => 0,
 					),
-					'repository_url'       => $this->repositoryUrl( $repositoryProvider, $target ),
-					'webhook_settings_url' => PackageSource::BRANCH === $source
+					'repository_url'            => $identityConflict ? null : $this->repositoryUrl( $repositoryProvider, $target ),
+					'webhook_settings_url'      => PackageSource::BRANCH === $source && ! $identityConflict
 						? $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target )
 						: null,
 				);
-			} elseif ( $repositories[ $key ]['repository_id'] !== (string) ( $package->getProviderRepositoryId() ?? '' ) ) {
-				$repositories[ $key ]['repository_id'] = '';
+			}
+			if ( $identityConflict ) {
+				$repositories[ $key ]['historical']           = true;
+				$repositories[ $key ]['identity_conflict']    = true;
+				$repositories[ $key ]['repository_url']       = null;
+				$repositories[ $key ]['webhook_settings_url'] = null;
 			}
 
+			$repositories[ $key ]['sources'][ $source->value ] = true;
 			++$repositories[ $key ]['package_count'];
 			$repositories[ $key ]['package_references'][] = (string) $package->getIdentifier();
-			$policy                                       = $package->getDeploymentPolicy()->value;
+			if ( PackageSource::BRANCH === $source ) {
+				$repositories[ $key ]['branch_package_references'][] = (string) $package->getIdentifier();
+			}
+			if ( self::MAX_REPOSITORY_PACKAGE_SUMMARIES > count( $repositories[ $key ]['package_summaries'] ) ) {
+				$repositories[ $key ]['package_summaries'][] = $this->packageSummary( $package, $source, $entry['type'] );
+			}
+			$policy = $package->getDeploymentPolicy()->value;
 			++$repositories[ $key ]['deployment_policies'][ $policy ];
 			if ( 'automatic' === $policy ) {
 				++$repositories[ $key ]['automatic_count'];
@@ -780,6 +841,13 @@ final readonly class ProviderSettingsPresenter {
 
 		foreach ( $repositories as &$repository ) {
 			sort( $repository['package_references'], SORT_STRING );
+			sort( $repository['branch_package_references'], SORT_STRING );
+			usort( $repository['package_summaries'], static fn ( array $left, array $right ): int => strcmp( $left['identifier'], $right['identifier'] ) );
+			$repository['package_summaries_omitted'] = max( 0, $repository['package_count'] - count( $repository['package_summaries'] ) );
+			$sourceKeys                              = array_keys( $repository['sources'] );
+			sort( $sourceKeys, SORT_STRING );
+			$repository['source'] = 2 === count( $sourceKeys ) ? 'mixed' : ( $sourceKeys[0] ?? PackageSource::BRANCH->value );
+			unset( $repository['sources'] );
 		}
 		unset( $repository );
 
@@ -790,6 +858,23 @@ final readonly class ProviderSettingsPresenter {
 			'available'    => true,
 			'owners'       => array_values( $owners ),
 			'repositories' => array_values( $repositories ),
+		);
+	}
+
+	/** @return array{type:string,identifier:string,display_name:string,settings_url:string,source:string,branch:string,subdirectory:string,deployment_policy:string} */
+	private function packageSummary( Package $package, PackageSource $source, string $type ): array {
+		$identifier = (string) $package->getIdentifier();
+		$page       = 'theme' === $type ? 'ran-booster-themes' : 'ran-booster-plugins';
+
+		return array(
+			'type'              => $type,
+			'identifier'        => $identifier,
+			'display_name'      => $package->getDisplayName(),
+			'settings_url'      => admin_url( 'admin.php?page=' . $page . '&package=' . rawurlencode( $identifier ) ),
+			'source'            => $source->value,
+			'branch'            => (string) $package->getBranch(),
+			'subdirectory'      => (string) $package->getSubdirectory(),
+			'deployment_policy' => $package->getDeploymentPolicy()->value,
 		);
 	}
 

@@ -46,6 +46,7 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
@@ -402,6 +403,9 @@ final readonly class GitHubProvider implements RepositoryProvider, RepositoryPat
 				'packageType'          => $packageType,
 			)
 		);
+		if ( $preflight instanceof \WP_Error && $this->isReleaseReadUnavailable( $preflight ) ) {
+			throw new RepositoryReleaseReadUnavailable( 'GitHub release candidate access is unavailable.', 503 );
+		}
 		if ( $preflight instanceof \WP_Error || ! is_callable( array( $preflight, 'listCandidates' ) ) ) {
 			throw new RuntimeException( 'GitHub release candidate listing is unavailable.', 503 );
 		}
@@ -409,6 +413,9 @@ final readonly class GitHubProvider implements RepositoryProvider, RepositoryPat
 		if ( $releases instanceof \WP_Error ) {
 			if ( 'github_updater_no_eligible_release' === $releases->get_error_code() ) {
 				return new RepositoryReleaseCandidateList( array() );
+			}
+			if ( $this->isReleaseReadUnavailable( $releases ) ) {
+				throw new RepositoryReleaseReadUnavailable( 'GitHub release candidate access is unavailable.', 502 );
 			}
 
 			throw new RuntimeException( 'GitHub could not list release candidates.', 502 );
@@ -495,6 +502,9 @@ final readonly class GitHubProvider implements RepositoryProvider, RepositoryPat
 				'packageType'          => $packageType,
 			)
 		);
+		if ( $preflight instanceof \WP_Error && $this->isReleaseReadUnavailable( $preflight ) ) {
+			throw new RepositoryReleaseReadUnavailable( 'GitHub release inspection access is unavailable.', 503 );
+		}
 		if ( $preflight instanceof \WP_Error || ! is_callable( array( $preflight, 'inspectExact' ) ) ) {
 			throw new RuntimeException( 'GitHub release inspection is unavailable.', 503 );
 		}
@@ -833,8 +843,35 @@ final readonly class GitHubProvider implements RepositoryProvider, RepositoryPat
 		if ( $this->isInvalidReleaseFailureCode( $code ) ) {
 			throw RepositoryReleaseInspectionRejected::invalidRelease();
 		}
+		if ( $this->isReleaseReadUnavailable( $failure ) ) {
+			throw new RepositoryReleaseReadUnavailable( 'GitHub release inspection access is unavailable.', 502 );
+		}
 
 		throw new RuntimeException( 'GitHub could not inspect the selected release.', 502 );
+	}
+
+	private function isReleaseReadUnavailable( \WP_Error $failure ): bool {
+		$code = $failure->get_error_code();
+		if ( in_array(
+			$code,
+			array(
+				'github_updater_github_authentication_failed',
+				'github_updater_github_forbidden',
+				'github_updater_credentials_unavailable',
+				'github_updater_invalid_access_token',
+				'github_updater_rate_limited',
+				'github_updater_http_transport_failed',
+			),
+			true
+		) ) {
+			return true;
+		}
+
+		$data = $failure->get_error_data();
+
+		return 'github_updater_github_http_error' === $code
+			&& is_array( $data )
+			&& 404 === (int) ( $data['status'] ?? 0 );
 	}
 
 	private function rejectReleaseAcquisition( \WP_Error $failure ): never {

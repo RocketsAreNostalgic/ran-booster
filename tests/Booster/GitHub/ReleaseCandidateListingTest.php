@@ -14,6 +14,7 @@ use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\WPGitHubReleaseUpdater\V1\WordPress\ProspectiveCandidateFixture;
 use RAN\WPGitHubReleaseUpdater\V1\WordPress\ReleaseCandidatePreflight;
 use RuntimeException;
@@ -112,6 +113,18 @@ final class ReleaseCandidateListingTest extends TestCase {
 			self::assertStringNotContainsString( 'upstream-secret-message', $exception->getMessage() );
 		}
 		self::assertSame( 1, ReleaseCandidatePreflight::$listCalls );
+	}
+
+	public function testAccessAndTransportFailuresUseTheRetriableReadBoundary(): void {
+		foreach ( array( 'github_updater_github_authentication_failed', 'github_updater_github_forbidden', 'github_updater_credentials_unavailable', 'github_updater_invalid_access_token', 'github_updater_rate_limited', 'github_updater_http_transport_failed' ) as $code ) {
+			ReleaseCandidatePreflight::$candidates = new \WP_Error( $code, 'upstream-secret-message' );
+			try {
+				$this->provider( new RepositoryResolverSecretsStub() )->listReleaseCandidates( 'plugin', new RepositoryReference( 'owner/example', '123456789', false, null ), 'stable' );
+				self::fail( 'Retriable release-read failures must be typed.' );
+			} catch ( RepositoryReleaseReadUnavailable $exception ) {
+				self::assertStringNotContainsString( 'upstream-secret-message', $exception->getMessage() );
+			}
+		}
 	}
 
 	public function testPrivateListingKeepsCredentialResolutionProviderBoundAndLazy(): void {

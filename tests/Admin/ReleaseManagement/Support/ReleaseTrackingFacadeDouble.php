@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tests\Admin\ReleaseManagement\Support;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
+use RAN\Admin\ReleaseManagement\ManagedReleaseBrowser;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingResult;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use RuntimeException;
 
-final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade {
+final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, ManagedReleaseBrowser {
 	public int $statusReads = 0;
 
 	public int $statusListReads = 0;
@@ -26,6 +28,10 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade {
 	public bool $throwOnStatus = false;
 
 	public bool $throwOnNonce = false;
+
+	public ?RepositoryReleaseCandidateList $candidateList = null;
+
+	public ?ReleaseTrackingPreflight $candidateInspection = null;
 
 	public function __construct( private ReleaseTrackingStatus $releaseStatus ) {
 	}
@@ -71,6 +77,18 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade {
 		$this->calls[] = array( 'preflight', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
 
 		return $this->releaseStatus->preflight();
+	}
+
+	public function listCandidates( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ?RepositoryReleaseCandidateList {
+		$this->calls[] = array( 'list_candidates', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
+
+		return $this->candidateList;
+	}
+
+	public function inspectCandidate( string $type, string $identifier, int $expectedSourceRevision, string $releaseId, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
+		$this->calls[] = array( 'inspect_candidate', $type, $identifier, $expectedSourceRevision, $releaseId, $tag, $channel, $nonce );
+
+		return $this->candidateInspection;
 	}
 
 	public function enable( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ReleaseTrackingResult {

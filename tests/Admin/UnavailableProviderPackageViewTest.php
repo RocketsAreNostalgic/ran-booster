@@ -329,6 +329,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			'default_provider' => 'temporarily-offline',
 			'providers'        => array( $this->providerOption( 'temporarily-offline', true ) ),
 		);
+		$packageSource           = array(
+			'current'     => PackageSource::RELEASE_ASSET->value,
+			'selected'    => PackageSource::BRANCH->value,
+			'unavailable' => false,
+		);
 		$packageWebhookCleanup   = array(
 			'context' => new WebhookCleanupContext(
 				'plugin',
@@ -352,13 +357,39 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Webhook setup retained', $html );
-		self::assertStringContainsString( 'A repository-specific signing secret remains available locally.', $html );
-		self::assertStringContainsString( 'Review webhook cleanup', $html );
+		self::assertStringContainsString( 'Push-to-Deploy paused', $html );
+		self::assertStringContainsString( 'This package currently uses Published releases, so repository pushes will not deploy it. Its previous webhook settings have been retained in case you return to Branch.', $html );
+		self::assertStringContainsString( 'Review retained webhook', $html );
+		self::assertStringNotContainsString( 'Webhook setup retained', $html );
+		self::assertStringNotContainsString( 'Review webhook cleanup', $html );
+		self::assertMatchesRegularExpression( '/<details class="ran-booster-webhook-cleanup__review">[\\s\\S]*?A repository-specific signing secret remains available locally./', $html );
 		self::assertStringContainsString( 'Cleanup is unavailable because 1 branch-managed package still uses this repository setup.', $html );
 		self::assertStringContainsString( 'Open provider webhooks', $html );
 		self::assertStringContainsString( 'Manage signing secrets', $html );
 		self::assertStringContainsString( '#ran-booster-webhook-cleanup', $html );
+		$branchPosition    = strpos( $html, 'id="ran-booster-repository-branch"' );
+		$cleanupPosition   = strpos( $html, 'id="ran-booster-webhook-cleanup"' );
+		$operationPosition = strpos( $html, 'id="ran-booster-package-operation-heading"' );
+		self::assertIsInt( $branchPosition );
+		self::assertIsInt( $cleanupPosition );
+		self::assertIsInt( $operationPosition );
+		self::assertGreaterThan( $branchPosition, $cleanupPosition );
+		self::assertGreaterThan( $cleanupPosition, $operationPosition );
+
+		$packageSource['selected'] = PackageSource::RELEASE_ASSET->value;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$releaseView = (string) ob_get_clean();
+		self::assertMatchesRegularExpression(
+			'/data-ran-booster-source-pane="branch"[\s\S]*?data-ran-booster-branch-fields[\s\S]*?hidden[\s\S]*?Push-to-Deploy paused/',
+			$releaseView
+		);
+
+		$_GET['webhook_cleanup'] = '1';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$reviewRequested = (string) ob_get_clean();
+		self::assertStringContainsString( '<details class="ran-booster-webhook-cleanup__review" open>', $reviewRequested );
 
 		$packageWebhookCleanup['context'] = new WebhookCleanupContext(
 			'plugin',
@@ -379,7 +410,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$withoutEvidence = (string) ob_get_clean();
 
-		self::assertStringNotContainsString( 'Webhook setup retained', $withoutEvidence );
+		self::assertStringNotContainsString( 'Push-to-Deploy paused', $withoutEvidence );
 	}
 
 	public function testReleaseManagedListUsesTheExistingDeploymentPositionAndReadOnlySummary(): void {

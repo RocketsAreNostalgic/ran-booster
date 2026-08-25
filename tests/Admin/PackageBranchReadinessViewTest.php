@@ -58,12 +58,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'hx-post=', $html );
+		self::assertStringContainsString( 'hx-post="/wp-admin/admin.php?', $html );
 		self::assertStringNotContainsString( 'name="ran_booster_branch_readiness_check"', $html );
 		self::assertStringNotContainsString( 'hx-get=', $html );
 		self::assertStringContainsString( 'hx-target="#wpbody-content"', $html );
 		self::assertStringContainsString( 'hx-select="#wpbody-content"', $html );
 		self::assertStringContainsString( 'hx-swap="outerHTML show:#ran-booster-branch-readiness:top"', $html );
 		self::assertStringContainsString( 'hx-push-url=', $html );
+		self::assertStringContainsString( 'hx-push-url="/wp-admin/admin.php?', $html );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $html );
 		self::assertStringContainsString( 'id="ran-booster-repository-branch-check-error"', $html );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-repository-branch-check-error"', $html );

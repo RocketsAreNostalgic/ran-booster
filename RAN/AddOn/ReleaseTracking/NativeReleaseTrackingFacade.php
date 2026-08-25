@@ -15,6 +15,8 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
+use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\UnsupportedProviderCapability;
 use RAN\RepositoryProvider\UnknownProvider;
 use RAN\Runtime\RuntimeSupport;
@@ -50,6 +52,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	/** @var \Closure(string): void */
 	private \Closure $invalidateNative;
+
+	/** @var \Closure(string): ?string */
+	private \Closure $publicLookupProfile;
 	private WordPressUpdaterLock $updaterLock;
 
 	/**
@@ -58,6 +63,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): void|null         $refreshNative
 	 * @param callable(): bool|null $metadataEligible
 	 * @param callable(string): void|null         $invalidateNative
+	 * @param callable(string): ?string|null      $publicLookupProfile
 	 */
 	public function __construct(
 		private PluginRepository $plugins,
@@ -70,7 +76,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $verifyNonce = null,
 		?callable $refreshNative = null,
 		?callable $metadataEligible = null,
-		?callable $invalidateNative = null
+		?callable $invalidateNative = null,
+		?callable $publicLookupProfile = null
 	) {
 		$this->updaterLock                   = $updaterLock;
 		$this->canManage                     = null === $canManage
@@ -98,6 +105,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				delete_site_transient( 'plugin' === $type ? 'update_plugins' : 'update_themes' );
 			}
 			: \Closure::fromCallable( $invalidateNative );
+		$this->publicLookupProfile           = null === $publicLookupProfile
+			? static fn ( string $provider ): ?string => null
+			: \Closure::fromCallable( $publicLookupProfile );
 	}
 
 	public function nonceAction(
@@ -107,8 +117,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		int $sourceRevision,
 		string $channel = ''
 	): string {
-		$preflight = 'preflight' === $operation;
-		if ( ! in_array( $operation, array( 'preflight', 'enable', 'refresh', 'change_channel', 'return_to_branch' ), true )
+		$preflight = in_array( $operation, array( 'preflight', 'list_candidates', 'inspect_candidate' ), true );
+		if ( ! in_array( $operation, array( 'preflight', 'list_candidates', 'inspect_candidate', 'enable', 'refresh', 'change_channel', 'return_to_branch' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| '' === $identifier
 			|| $sourceRevision < 1
@@ -241,6 +251,147 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		} catch ( Throwable ) {
 			return null;
 		}
+	}
+
+	public function listCandidates(
+		string $type,
+		string $identifier,
+		int $expectedSourceRevision,
+		string $channel,
+		string $nonce
+	): ?\RAN\RepositoryProvider\RepositoryReleaseCandidateList {
+		if ( ! RuntimeSupport::current()->allowsManagedOperations()
+			|| ! $this->validChannel( $channel )
+			|| ! $this->authorized( 'list_candidates', $type, $identifier, $expectedSourceRevision, $nonce, $channel ) ) {
+			return null;
+		}
+
+		try {
+			$package = $this->managedPackageForBrowser( $type, $identifier, $expectedSourceRevision );
+			if ( null === $package ) {
+				return null;
+			}
+			$listing = $this->providers->requireCapability( (string) $package->getProviderCode(), RepositoryReleaseCandidateListing::class );
+
+			foreach ( $this->releaseBrowserRepositories( $package ) as $repository ) {
+				try {
+					return $listing->listReleaseCandidates( $type, $repository, $channel );
+				} catch ( RepositoryReleaseReadUnavailable ) {
+					continue;
+				}
+			}
+
+			return null;
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
+	public function inspectCandidate(
+		string $type,
+		string $identifier,
+		int $expectedSourceRevision,
+		string $releaseId,
+		string $tag,
+		string $channel,
+		string $nonce
+	): ?ReleaseTrackingPreflight {
+		if ( ! RuntimeSupport::current()->allowsManagedOperations()
+			|| '' === $releaseId
+			|| '' === $tag
+			|| ! $this->validChannel( $channel )
+			|| ! $this->authorized( 'inspect_candidate', $type, $identifier, $expectedSourceRevision, $nonce, $channel ) ) {
+			return null;
+		}
+
+		try {
+			$package = $this->managedPackageForBrowser( $type, $identifier, $expectedSourceRevision );
+			if ( null === $package ) {
+				return null;
+			}
+			$configuration = $this->store->configuration( $type, $identifier );
+			if ( null === $configuration || $channel !== $configuration->channel() ) {
+				return null;
+			}
+			$provider   = (string) $package->getProviderCode();
+			$inspector  = $this->providers->requireCapability( $provider, RepositoryReleaseInspector::class );
+			$metadata   = $this->providers->requireCapability( $provider, RepositoryReleaseMetadata::class );
+			$inspection = null;
+			$repository = null;
+			foreach ( $this->releaseBrowserRepositories( $package ) as $repository ) {
+				try {
+					$inspection = $inspector->inspectRelease( $type, $repository, $releaseId, $tag, $channel );
+					break;
+				} catch ( RepositoryReleaseReadUnavailable ) {
+					continue;
+				}
+			}
+			if ( null === $inspection || null === $repository ) {
+				return null;
+			}
+			if ( ! hash_equals( $releaseId, $inspection->providerReleaseId )
+				|| ! hash_equals( $tag, $inspection->tag )
+				|| ! hash_equals( $configuration->packageRoot(), $inspection->packageRoot )
+				|| ! hash_equals( $configuration->metadataFile(), $inspection->mainFile ) ) {
+				return null;
+			}
+			$url = $metadata->releaseDetailsUrl( $repository, $inspection->tag );
+			if ( '' === $url ) {
+				return null;
+			}
+			$comparison = version_compare( $inspection->version, $package->getVersion() );
+
+			return new ReleaseTrackingPreflight(
+				ReleaseTrackingPreflight::READY,
+				$inspection->packageRoot,
+				$inspection->version,
+				$url,
+				$inspection->tag,
+				$inspection->version,
+				$comparison > 0 ? 'newer' : ( $comparison < 0 ? 'older' : 'same' )
+			);
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
+	private function managedPackageForBrowser( string $type, string $identifier, int $revision ): ?Package {
+		$package = $this->package( $type, $identifier );
+		if ( PackageSource::RELEASE_ASSET !== $package->getSource()
+			|| $revision !== $package->getSourceRevision()
+			|| ! $this->releaseSourceSupported( $package ) ) {
+			return null;
+		}
+
+		return $package;
+	}
+
+	/** @return list<RepositoryReference> */
+	private function releaseBrowserRepositories( Package $package ): array {
+		$repository = $package->getRepository()->reference;
+		$profileId  = ( $this->publicLookupProfile )( (string) $package->getProviderCode() );
+		if ( null !== $repository->credentialId ) {
+			return $profileId === $repository->credentialId || null === $profileId
+				? array( $repository )
+				: array( $repository, $this->repositoryWithCredential( $repository, $profileId ) );
+		}
+		if ( null !== $profileId ) {
+			return array( $this->repositoryWithCredential( $repository, $profileId ) );
+		}
+		if ( $repository->private ) {
+			return array();
+		}
+
+		return array( $repository );
+	}
+
+	private function repositoryWithCredential( RepositoryReference $repository, string $credentialId ): RepositoryReference {
+		return new RepositoryReference(
+			$repository->locator,
+			$repository->providerRepositoryId,
+			$repository->private,
+			$credentialId
+		);
 	}
 
 	public function enable(
@@ -705,83 +856,104 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 		try {
 			$this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );
-			$listing    = $this->providers->requireCapability( $providerCode, RepositoryReleaseCandidateListing::class );
-			$inspector  = $this->providers->requireCapability( $providerCode, RepositoryReleaseInspector::class );
-			$metadata   = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );
-			$repository = $package->getRepository()->reference;
-			$candidates = $listing->listReleaseCandidates( $type, $repository, $channel )->candidates;
-			if ( array() === $candidates ) {
-				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'no_releases' );
-			}
-
-			$inspected = 0;
-			foreach ( $candidates as $candidate ) {
-				if ( 'stable' === $channel && $candidate->prerelease ) {
-					return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'invalid_release' );
-				}
-				++$inspected;
-
+			$listing   = $this->providers->requireCapability( $providerCode, RepositoryReleaseCandidateListing::class );
+			$inspector = $this->providers->requireCapability( $providerCode, RepositoryReleaseInspector::class );
+			$metadata  = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );
+			foreach ( $this->releaseBrowserRepositories( $package ) as $repository ) {
 				try {
-					$inspection = $inspector->inspectRelease(
-						$type,
-						$repository,
-						$candidate->providerReleaseId,
-						$candidate->tag,
-						$channel
-					);
-				} catch ( RepositoryReleaseInspectionRejected $failure ) {
-					if ( RepositoryReleaseInspectionRejected::INCOMPATIBLE === $failure->reason ) {
-						if ( 2 === $inspected ) {
-							return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'release_incompatible' );
-						}
-						continue;
-					}
-
-					return new ReleaseTrackingPreflight(
-						RepositoryReleaseInspectionRejected::NO_RELEASES === $failure->reason
-							? ReleaseTrackingPreflight::RELEASE_UNAVAILABLE
-							: ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
-						$packageRoot,
-						reasonCode: RepositoryReleaseInspectionRejected::NO_RELEASES === $failure->reason
-							? 'no_releases'
-							: 'invalid_release'
-					);
+					return $this->repositoryPreflight( $type, $repository, $packageRoot, $headerFile, $channel, $package, $listing, $inspector, $metadata );
+				} catch ( RepositoryReleaseReadUnavailable ) {
+					continue;
 				}
-
-				if ( ! hash_equals( $candidate->providerReleaseId, $inspection->providerReleaseId )
-					|| ! hash_equals( $candidate->tag, $inspection->tag )
-					|| ! hash_equals( $candidate->version, $inspection->version )
-					|| ! hash_equals( $packageRoot, $inspection->packageRoot )
-					|| ! hash_equals( $headerFile, $inspection->mainFile ) ) {
-					return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'release_identity_mismatch' );
-				}
-
-				$comparison   = version_compare( $inspection->version, $package->getVersion() );
-				$relationship = match ( true ) {
-					$comparison > 0 => 'newer',
-					$comparison < 0 => 'older',
-					default => 'same',
-				};
-				$releaseUrl = $metadata->releaseDetailsUrl( $repository, $inspection->tag );
-				if ( '' === $releaseUrl ) {
-					throw new InvalidArgumentException( 'The release details URL is unavailable.' );
-				}
-
-				return new ReleaseTrackingPreflight(
-					ReleaseTrackingPreflight::READY,
-					$packageRoot,
-					$inspection->version,
-					$releaseUrl,
-					$inspection->tag,
-					$inspection->version,
-					$relationship
-				);
 			}
 
-			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'release_incompatible' );
+			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'provider_unavailable' );
 		} catch ( Throwable ) {
 			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $packageRoot, reasonCode: 'provider_unavailable' );
 		}
+	}
+
+	private function repositoryPreflight(
+		string $type,
+		RepositoryReference $repository,
+		string $packageRoot,
+		string $headerFile,
+		string $channel,
+		Package $package,
+		RepositoryReleaseCandidateListing $listing,
+		RepositoryReleaseInspector $inspector,
+		RepositoryReleaseMetadata $metadata
+	): ReleaseTrackingPreflight {
+		$candidates = $listing->listReleaseCandidates( $type, $repository, $channel )->candidates;
+		if ( array() === $candidates ) {
+			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'no_releases' );
+		}
+
+		$inspected = 0;
+		foreach ( $candidates as $candidate ) {
+			if ( 'stable' === $channel && $candidate->prerelease ) {
+				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'invalid_release' );
+			}
+			++$inspected;
+
+			try {
+				$inspection = $inspector->inspectRelease(
+					$type,
+					$repository,
+					$candidate->providerReleaseId,
+					$candidate->tag,
+					$channel
+				);
+			} catch ( RepositoryReleaseInspectionRejected $failure ) {
+				if ( RepositoryReleaseInspectionRejected::INCOMPATIBLE === $failure->reason ) {
+					if ( 2 === $inspected ) {
+						return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'release_incompatible' );
+					}
+					continue;
+				}
+
+				return new ReleaseTrackingPreflight(
+					RepositoryReleaseInspectionRejected::NO_RELEASES === $failure->reason
+						? ReleaseTrackingPreflight::RELEASE_UNAVAILABLE
+						: ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
+					$packageRoot,
+					reasonCode: RepositoryReleaseInspectionRejected::NO_RELEASES === $failure->reason
+						? 'no_releases'
+						: 'invalid_release'
+				);
+			}
+
+			if ( ! hash_equals( $candidate->providerReleaseId, $inspection->providerReleaseId )
+				|| ! hash_equals( $candidate->tag, $inspection->tag )
+				|| ! hash_equals( $candidate->version, $inspection->version )
+				|| ! hash_equals( $packageRoot, $inspection->packageRoot )
+				|| ! hash_equals( $headerFile, $inspection->mainFile ) ) {
+				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $packageRoot, reasonCode: 'release_identity_mismatch' );
+			}
+
+			$comparison   = version_compare( $inspection->version, $package->getVersion() );
+			$relationship = match ( true ) {
+				$comparison > 0 => 'newer',
+				$comparison < 0 => 'older',
+				default => 'same',
+			};
+			$releaseUrl = $metadata->releaseDetailsUrl( $repository, $inspection->tag );
+			if ( '' === $releaseUrl ) {
+				throw new InvalidArgumentException( 'The release details URL is unavailable.' );
+			}
+
+			return new ReleaseTrackingPreflight(
+				ReleaseTrackingPreflight::READY,
+				$packageRoot,
+				$inspection->version,
+				$releaseUrl,
+				$inspection->tag,
+				$inspection->version,
+				$relationship
+			);
+		}
+
+		return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $packageRoot, reasonCode: 'release_incompatible' );
 	}
 
 	private function configurationFor(

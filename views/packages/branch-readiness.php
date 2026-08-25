@@ -234,11 +234,11 @@ $subdirectoryStateClass = match ( $repositoryBranchCheckOutcome ?? null ) {
 					data-ran-booster-enhanced-mutation
 					data-ran-booster-error-target="#ran-booster-repository-branch-check-error"
 					data-ran-booster-relocate-rendered-error
-					hx-post="<?php echo esc_url( $settingsUrl ); ?>"
+					hx-post="<?php echo esc_url( wp_make_link_relative( (string) $settingsUrl ) ); ?>"
 					hx-target="#wpbody-content"
 					hx-select="#wpbody-content"
 					hx-swap="outerHTML show:#ran-booster-branch-readiness:top"
-					hx-push-url="<?php echo esc_url( $checkReturnUrl ); ?>"
+					hx-push-url="<?php echo esc_url( wp_make_link_relative( (string) $checkReturnUrl ) ); ?>"
 					hx-sync="this:drop"
 					hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
 					<?php disabled( isset( $packageMutationAvailable ) && false === $packageMutationAvailable ); ?>

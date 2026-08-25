@@ -89,6 +89,15 @@
 	margin-block-start: var(--ran-booster-space-5);
 }
 
+.ran-booster-admin .ran-booster-managed-release-native-update {
+	margin-block-start: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-release-candidate__warning {
+	grid-column: 1 / -1;
+	margin: var(--ran-booster-space-8) 0 0;
+}
+
 .ran-booster-admin .ran-booster-release-installed-version {
 	display: block;
 	margin: 0;

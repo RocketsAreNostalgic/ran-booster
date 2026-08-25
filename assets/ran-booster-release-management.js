@@ -20,8 +20,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const retry = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-retry]'
 	);
-	const updates = managedBrowser.querySelector(
-		'[data-ran-booster-managed-release-updates]'
+	const nativeUpdate = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-native-update]'
 	);
 	const errorNotice = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-error]'
@@ -31,7 +31,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	);
 	let selected = null;
 	let selectedOutcome = null;
-	let selectedLabel = null;
 	const candidateElements = new Map();
 	let sequence = 0;
 	const setStatus = (title, text) => {
@@ -66,6 +65,35 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			retry.classList.toggle('ran-booster-update-is-active', busy);
 		}
 	};
+	const disableNativeUpdate = () => {
+		if (!nativeUpdate) {
+			return;
+		}
+		nativeUpdate.removeAttribute('href');
+		nativeUpdate.setAttribute('aria-disabled', 'true');
+		nativeUpdate.setAttribute('tabindex', '-1');
+		nativeUpdate.classList.add('disabled');
+		nativeUpdate.textContent = 'Install now';
+	};
+	const enableNativeUpdate = (version) => {
+		const url =
+			managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl;
+		if (!nativeUpdate || !url) {
+			return false;
+		}
+		nativeUpdate.setAttribute('href', url);
+		nativeUpdate.setAttribute('aria-disabled', 'false');
+		nativeUpdate.removeAttribute('tabindex');
+		nativeUpdate.classList.remove('disabled');
+		nativeUpdate.textContent = `Install ${version} now`;
+		return true;
+	};
+	const isNativeUpdateOffer = (candidate) =>
+		candidate.version_relationship === 'newer' &&
+		candidate.version ===
+			managedBrowser.dataset
+				.ranBoosterManagedReleaseNativeUpdateVersion &&
+		Boolean(managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl);
 	const request = async (operation, extra = {}) => {
 		const data = new FormData();
 		data.append(
@@ -139,24 +167,26 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('inspection_failed');
 			}
 			const relationship = response.data.version_relationship;
-			setStatus(
-				'Release checked',
-				relationship === 'newer'
-					? `Version ${response.data.version} is available in WordPress Updates.`
-					: `Version ${response.data.version} is installed.`
-			);
+			const nativeOffer = isNativeUpdateOffer(response.data);
+			let outcomeMessage = `Version ${response.data.version} is installed.`;
+			let statusMessage = outcomeMessage;
+			if (relationship === 'newer') {
+				outcomeMessage = nativeOffer
+					? `Version ${response.data.version} is ready to install.`
+					: `Version ${response.data.version} is newer, but it is not the current WordPress update offer.`;
+				statusMessage = nativeOffer
+					? outcomeMessage
+					: `${outcomeMessage} Refresh releases before installing.`;
+			}
+			setStatus('Release checked', statusMessage);
 			if (selectedOutcome) {
-				selectedOutcome.textContent =
-					relationship === 'newer'
-						? `Version ${response.data.version} is available in WordPress Updates.`
-						: `Version ${response.data.version} is installed.`;
+				selectedOutcome.textContent = outcomeMessage;
 				selectedOutcome.hidden = relationship !== 'newer';
 			}
-			if (updates) {
-				updates.hidden = relationship !== 'newer';
-				if (relationship === 'newer' && selectedLabel) {
-					selectedLabel.append(updates);
-				}
+			if (nativeOffer) {
+				enableNativeUpdate(response.data.version);
+			} else {
+				disableNativeUpdate();
 			}
 		} catch {
 			if (current === sequence) {
@@ -175,9 +205,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		selected = null;
 		clearError();
 		setListBusy(true);
-		if (updates) {
-			updates.hidden = true;
-		}
+		disableNativeUpdate();
 		setStatus(
 			'Checking published releases…',
 			'Reading eligible candidates for this managed package.'
@@ -225,11 +253,13 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (releases.length === 0) {
 				throw new Error('invalid_candidates');
 			}
+			const nativeOffer = releases.find(isNativeUpdateOffer);
+			const preferredCandidate = nativeOffer || releases[0];
 			const installedCandidate = releases.find(
 				(candidate) => candidate.version_relationship === 'same'
 			);
-			const visible = [releases[0]];
-			if (installedCandidate && installedCandidate !== releases[0]) {
+			const visible = [preferredCandidate];
+			if (installedCandidate && !visible.includes(installedCandidate)) {
 				visible.push(installedCandidate);
 			}
 			const earlier = releases.filter(
@@ -245,16 +275,18 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				const older = candidate.version_relationship === 'older';
 				input.disabled = older;
 				input.addEventListener('change', () => {
+					disableNativeUpdate();
 					if (selectedOutcome) {
 						selectedOutcome.hidden = true;
 					}
 					selected = candidate;
-					selectedLabel = label;
 					selectedOutcome = outcome;
 					inspect();
 				});
 				let marker =
-					candidate === releases[0] ? ' · Latest eligible' : '';
+					candidate === preferredCandidate
+						? ' · Latest eligible'
+						: '';
 				if (older) {
 					marker += ' · Older than installed';
 				} else if (candidate.version_relationship === 'same') {
@@ -272,7 +304,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					),
 					outcome
 				);
-				candidateElements.set(candidate, { label, outcome });
+				candidateElements.set(candidate, { outcome });
 				target.append(label);
 			};
 			visible.forEach((candidate) =>
@@ -319,8 +351,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					'Release candidates loaded',
 					`${releases.length} eligible release${releases.length === 1 ? '' : 's'} found. Inspecting the newest available release.`
 				);
-				selected = inspectable[0];
-				selectedLabel = candidateElements.get(selected)?.label || null;
+				selected = nativeOffer || inspectable[0];
 				selectedOutcome =
 					candidateElements.get(selected)?.outcome || null;
 				const input = candidateList.querySelector(
@@ -332,6 +363,17 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				setListBusy(false);
 				inspect();
 			} else {
+				if (
+					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===
+					'prerelease'
+				) {
+					const warning = document.createElement('p');
+					warning.className =
+						'notice notice-warning inline ran-booster-release-candidate__warning';
+					warning.textContent =
+						'Preview track currently offers only versions older than installed. WordPress Updates will not downgrade this package.';
+					candidateList.append(warning);
+				}
 				setStatus(
 					'No current or newer published release found',
 					'Every available release is older. WordPress Updates will not downgrade this package.'
@@ -353,6 +395,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 		}
 	};
+	nativeUpdate?.addEventListener('click', (event) => {
+		if ('true' === nativeUpdate.getAttribute('aria-disabled')) {
+			event.preventDefault();
+		}
+	});
 	retry?.addEventListener('click', list);
 	list();
 };

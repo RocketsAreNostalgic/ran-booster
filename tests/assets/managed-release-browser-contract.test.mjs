@@ -64,6 +64,9 @@ class Node {
 	setAttribute(name, value) {
 		this.attributes.set(name, value);
 	}
+	removeAttribute(name) {
+		this.attributes.delete(name);
+	}
 	async dispatch(type) {
 		return Promise.all(
 			this.listeners[type]?.map((listener) => listener()) || []
@@ -110,6 +113,9 @@ const createHarness = (responses) => {
 		ranBoosterManagedReleaseListNonce: 'list',
 		ranBoosterManagedReleaseInspectNonce: 'inspect',
 		ranBoosterManagedReleaseAjaxUrl: '/ajax',
+		ranBoosterManagedReleaseNativeUpdateUrl:
+			'/wp-admin/update.php?action=upgrade-plugin&plugin=example%2Fplugin.php&_wpnonce=upgrade',
+		ranBoosterManagedReleaseNativeUpdateVersion: '3.0.0',
 	};
 	for (const name of [
 		'candidates',
@@ -120,7 +126,7 @@ const createHarness = (responses) => {
 		'error',
 		'error-message',
 		'details',
-		'updates',
+		'native-update',
 		'version',
 		'relationship',
 	]) {
@@ -128,7 +134,8 @@ const createHarness = (responses) => {
 	}
 	nodes.get('candidates').hidden = true;
 	nodes.get('error').hidden = true;
-	nodes.get('updates').hidden = true;
+	nodes.get('native-update').setAttribute('aria-disabled', 'true');
+	nodes.get('native-update').textContent = 'Install now';
 	nodes.get('retry').textContent = 'Refresh releases';
 	browser.querySelector = (selector) =>
 		nodes.get(selector.match(/managed-release-([a-z-]+)/)?.[1]) || null;
@@ -259,7 +266,15 @@ test('managed browser selects and inspects the newest current candidate, preserv
 		).hidden,
 		true
 	);
-	assert.equal(harness.nodes.get('updates').hidden, true);
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'true'
+	);
+	assert.equal(
+		harness.nodes.get('native-update').classList.contains('disabled'),
+		true
+	);
+	assert.equal(harness.nodes.get('native-update').textContent, 'Install now');
 	assert.equal(harness.nodes.get('retry').disabled, false);
 	assert.equal(
 		harness.nodes
@@ -326,10 +341,13 @@ test('managed browser keeps installed version separate and ignores stale respons
 		},
 	});
 	await flush();
-	assert.equal(harness.nodes.get('updates').hidden, true);
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'true'
+	);
 });
 
-test('managed browser offers WordPress Updates only after inspecting a newer release', async () => {
+test('managed browser enables the native Core update only for its exact newer inspected offer', async () => {
 	const harness = createHarness([
 		{
 			successful: true,
@@ -355,14 +373,145 @@ test('managed browser offers WordPress Updates only after inspecting a newer rel
 	harness.initialize(harness.browser);
 	await flush();
 	await flush();
-	assert.equal(harness.nodes.get('updates').hidden, false);
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'false'
+	);
+	assert.equal(
+		harness.nodes.get('native-update').classList.contains('disabled'),
+		false
+	);
+	assert.equal(
+		harness.nodes.get('native-update').textContent,
+		'Install 3.0.0 now'
+	);
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('href'),
+		'/wp-admin/update.php?action=upgrade-plugin&plugin=example%2Fplugin.php&_wpnonce=upgrade'
+	);
 	const outcome = descendants(harness.nodes.get('candidate-list')).find(
 		(node) => node.className === 'ran-booster-release-candidate__outcome'
 	);
 	assert.equal(outcome.hidden, false);
+	assert.equal(outcome.textContent, 'Version 3.0.0 is ready to install.');
+});
+
+test('managed browser prefers and marks the exact rendered update offer over a later-published candidate', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate(
+						'later',
+						'3.1.0',
+						'newer',
+						'2026-08-04T00:00:00Z'
+					),
+					candidate(
+						'offer',
+						'3.0.0',
+						'newer',
+						'2026-08-03T00:00:00Z'
+					),
+				],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '3.0.0',
+				tag: 'v3.0.0',
+				installed_version: '2.0.0',
+				version_relationship: 'newer',
+			},
+		},
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(harness.requests[1].get('release_id'), 'offer');
 	assert.equal(
-		outcome.textContent,
-		'Version 3.0.0 is available in WordPress Updates.'
+		descendants(harness.nodes.get('candidate-list')).find(
+			(node) => node.tagName === 'input' && node.checked
+		).dataset.releaseId,
+		'offer'
+	);
+	assert.match(
+		descendants(harness.nodes.get('candidate-list'))
+			.map((node) => node.textContent || '')
+			.join(' '),
+		/3\.0\.0 \(v3\.0\.0\).*Latest eligible/
+	);
+});
+
+test('managed browser leaves the native Core update disabled for a newer release outside the rendered offer', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate(
+						'other',
+						'3.1.0',
+						'newer',
+						'2026-08-03T00:00:00Z'
+					),
+				],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '3.1.0',
+				tag: 'v3.1.0',
+				installed_version: '2.0.0',
+				version_relationship: 'newer',
+			},
+		},
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'true'
+	);
+	assert.equal(harness.nodes.get('native-update').getAttribute('href'), null);
+	assert.equal(harness.nodes.get('native-update').textContent, 'Install now');
+});
+
+test('managed browser shows an explicit no-downgrade warning when Preview offers only older releases', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate('old', '1.0.0', 'older', '2026-08-03T00:00:00Z'),
+				],
+			},
+		},
+	]);
+	harness.browser.dataset.ranBoosterManagedReleaseChannel = 'prerelease';
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.match(
+		descendants(harness.nodes.get('candidate-list'))
+			.map((node) => node.textContent || '')
+			.join(' '),
+		/Preview track currently offers only versions older than installed\. WordPress Updates will not downgrade this package\./
 	);
 });
 

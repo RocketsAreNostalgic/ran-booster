@@ -103,6 +103,14 @@ function admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 }
 
+function self_admin_url( string $path = '' ): string {
+	return admin_url( $path );
+}
+
+function wp_nonce_url( string $actionurl, int|string $action = -1, string $name = '_wpnonce' ): string {
+	return add_query_arg( $name, wp_create_nonce( (string) $action ), $actionurl );
+}
+
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {
 	if ( is_array( $key ) ) {
 		$args = $key;

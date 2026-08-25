@@ -243,8 +243,9 @@ final class ReleaseManagementDisplay {
 
 	/** @param array<string,string> $nonceActions */
 	private function renderManagedCandidateBrowser( ReleaseTrackingStatus $status, array $nonceActions ): void {
-		$listNonce    = $nonceActions['list_candidates'] ?? '';
-		$inspectNonce = $nonceActions['inspect_candidate'] ?? '';
+		$listNonce       = $nonceActions['list_candidates'] ?? '';
+		$inspectNonce    = $nonceActions['inspect_candidate'] ?? '';
+		$nativeUpdateUrl = $this->nativeUpdateUrl( $status );
 		if ( '' === $listNonce || '' === $inspectNonce ) {
 			return;
 		}
@@ -259,6 +260,8 @@ final class ReleaseManagementDisplay {
 			data-ran-booster-managed-release-list-nonce="<?php echo esc_attr( $listNonce ); ?>"
 			data-ran-booster-managed-release-inspect-nonce="<?php echo esc_attr( $inspectNonce ); ?>"
 			data-ran-booster-managed-release-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+			data-ran-booster-managed-release-native-update-url="<?php echo esc_url( $nativeUpdateUrl ); ?>"
+			data-ran-booster-managed-release-native-update-version="<?php echo esc_attr( $status->latestVersion() ); ?>"
 		>
 			<div class="ran-booster-managed-release-browser__header">
 				<div>
@@ -278,9 +281,41 @@ final class ReleaseManagementDisplay {
 				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 				<p data-ran-booster-managed-release-message><?php esc_html_e( 'Check the saved release track for eligible candidates.', 'ran-booster' ); ?></p>
 			</div>
-			<a class="button" href="<?php echo esc_url( admin_url( 'update-core.php' ) ); ?>" data-ran-booster-managed-release-updates hidden><?php esc_html_e( 'Open WordPress updates', 'ran-booster' ); ?></a>
+			<a class="button button-primary disabled ran-booster-managed-release-native-update" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Install now', 'ran-booster' ); ?></a>
 		</div>
 		<?php
+	}
+
+	private function nativeUpdateUrl( ReleaseTrackingStatus $status ): string {
+		if ( ! $status->updateAvailable() || '' === $status->latestVersion() ) {
+			return '';
+		}
+
+		$type       = $status->type();
+		$identifier = $status->identifier();
+		if ( 'plugin' === $type ) {
+			return wp_nonce_url(
+				add_query_arg(
+					array(
+						'action' => 'upgrade-plugin',
+						'plugin' => $identifier,
+					),
+					self_admin_url( 'update.php' )
+				),
+				'upgrade-plugin_' . $identifier
+			);
+		}
+
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => 'upgrade-theme',
+					'theme'  => $identifier,
+				),
+				self_admin_url( 'update.php' )
+			),
+			'upgrade-theme_' . $identifier
+		);
 	}
 
 	public function renderAdvancedSourceSection(

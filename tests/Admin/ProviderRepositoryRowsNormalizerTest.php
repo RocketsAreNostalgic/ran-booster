@@ -159,6 +159,143 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
 	}
 
+	public function testProjectsMixedSourcesAndKeepsWebhookConsumersBranchOnly(): void {
+		$capturedProjections = array();
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows, string $providerCode, array $projections ) use ( &$capturedProjections ): array {
+			$capturedProjections = $projections;
+
+			return $rows;
+		};
+
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+			array(
+				array(
+					'target'                    => 'owner/mixed',
+					'repository_id'             => '101',
+					'source'                    => 'mixed',
+					'package_references'        => array( 'owner/plugin.php', 'owner-theme' ),
+					'branch_package_references' => array( 'owner/plugin.php' ),
+					'deployment_policies'       => array(
+						'automatic' => 1,
+						'manual'    => 1,
+						'disabled'  => 0,
+					),
+					'package_summaries'         => array(
+						$this->summary( 'plugin', 'owner/plugin.php', 'Plugin', 'branch', 'main', 'packages/plugin', 'automatic' ),
+						$this->summary( 'theme', 'owner-theme', 'Theme', 'release_asset', '', '', 'manual' ),
+					),
+				),
+				array(
+					'target'              => 'owner/release',
+					'repository_id'       => '202',
+					'source'              => 'release_asset',
+					'package_references'  => array( 'release-theme' ),
+					'deployment_policies' => array(
+						'automatic' => 0,
+						'manual'    => 1,
+						'disabled'  => 0,
+					),
+					'package_summaries'   => array( $this->summary( 'theme', 'release-theme', 'Release theme', 'release_asset', '', '', 'manual' ) ),
+				),
+				array(
+					'target'              => 'owner/branch',
+					'repository_id'       => '303',
+					'source'              => 'branch',
+					'package_references'  => array( 'branch/plugin.php' ),
+					'deployment_policies' => array(
+						'automatic' => 1,
+						'manual'    => 0,
+						'disabled'  => 0,
+					),
+					'package_summaries'   => array( $this->summary( 'plugin', 'branch/plugin.php', 'Branch plugin', 'branch', 'trunk', '', 'automatic' ) ),
+				),
+				array(
+					'target'              => 'owner/unresolved',
+					'repository_id'       => '',
+					'source'              => 'branch',
+					'historical'          => true,
+					'package_references'  => array( 'unresolved/plugin.php' ),
+					'deployment_policies' => array(
+						'automatic' => 0,
+						'manual'    => 1,
+						'disabled'  => 0,
+					),
+					'package_summaries'   => array( $this->summary( 'plugin', 'unresolved/plugin.php', 'Unresolved', 'branch', 'main', '', 'manual' ) ),
+				),
+				array(
+					'target'              => 'owner/conflict',
+					'repository_id'       => '404',
+					'source'              => 'branch',
+					'package_references'  => array( 'conflict/plugin.php' ),
+					'deployment_policies' => array(
+						'automatic' => 1,
+						'manual'    => 0,
+						'disabled'  => 0,
+					),
+					'package_summaries'   => array( $this->summary( 'plugin', 'conflict/plugin.php', 'Conflict', 'branch', 'main', '', 'automatic' ) ),
+				),
+			),
+			'gh',
+			'GitHub',
+			'GitHub webhooks',
+			'GitHub secret',
+			'https://example.test/webhooks/gh',
+			true,
+			array(
+				'by_id'         => array(
+					'404' => array(
+						'repository_id' => '404',
+						'reason_codes'  => array( 'repository_identity_conflict' ),
+					),
+				),
+				'by_repository' => array(),
+			),
+			null,
+			'',
+			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
+			'https://example.test/repositories'
+		);
+
+		self::assertCount( 5, $result['rows'] );
+		self::assertSame( 'mixed', $result['rows']['101']['source_key'] );
+		self::assertSame( 'Mixed sources', $result['rows']['101']['source_label'] );
+		self::assertSame( 'packages/plugin', $result['rows']['101']['package_summaries'][0]['subdirectory'] );
+		self::assertSame( array( 'owner/plugin.php' ), $capturedProjections['101']['package_references'] );
+		self::assertArrayNotHasKey( '202', $capturedProjections );
+		self::assertFalse( $result['rows']['303']['historical'] );
+		self::assertTrue( $result['rows'][ 'repository:' . hash( 'sha256', 'gh|owner/unresolved|branch' ) ]['historical'] );
+		self::assertSame( array(), $result['rows'][ 'repository:' . hash( 'sha256', 'gh|owner/unresolved|branch' ) ]['actions'] );
+		self::assertTrue( $result['rows']['404']['historical'] );
+		self::assertSame( array(), $result['rows']['404']['actions'] );
+		self::assertArrayNotHasKey( '404', $capturedProjections );
+	}
+
+	public function testRejectsProviderRewriteOfImmutablePackageSummaries(): void {
+		$base                                 = $this->baseRows();
+		$base['repo-42']['package_summaries'] = array( $this->summary( 'plugin', 'example/example.php', 'Example', 'branch', 'main', '', 'manual' ) );
+		$presented                            = $base;
+		$presented['repo-42']['package_summaries'][0]['source'] = 'release_asset';
+
+		$this->expectException( LogicException::class );
+		$this->expectExceptionMessage( 'must not rewrite Core repository fields' );
+
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $presented, 'gh' );
+	}
+
+	/** @return array<string, string> */
+	private function summary( string $type, string $identifier, string $displayName, string $source, string $branch, string $subdirectory, string $policy ): array {
+		return array(
+			'type'              => $type,
+			'identifier'        => $identifier,
+			'display_name'      => $displayName,
+			'settings_url'      => 'https://example.test/wp-admin/admin.php?page=ran-booster-' . ( 'theme' === $type ? 'themes' : 'plugins' ) . '&package=' . rawurlencode( $identifier ),
+			'source'            => $source,
+			'branch'            => $branch,
+			'subdirectory'      => $subdirectory,
+			'deployment_policy' => $policy,
+		);
+	}
+
 	/** @return array<string, array<string, mixed>> */
 	private function baseRows(): array {
 		return array(

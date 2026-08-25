@@ -568,6 +568,87 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $html );
 	}
 
+	public function testProviderRepositoryProjectionUnifiesPackageTypesAndSourcesByStableIdentity(): void {
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				$this->managedPackage(
+					'plugin/shared.php',
+					'Shared Plugin',
+					'repo-shared',
+					provider: 'bb',
+					repository: 'workspace/shared',
+					subdirectory: 'packages/plugin'
+				),
+			)
+		);
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn(
+			array(
+				$this->managedPackage(
+					'shared-theme',
+					'Shared Theme',
+					'repo-shared',
+					\RAN\PackageSource::RELEASE_ASSET,
+					'bb',
+					repository: 'workspace/shared'
+				),
+			)
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			themes: $themes,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertCount( 1, $data['provider_repositories']['repositories'] );
+		$repository = $data['provider_repositories']['repositories'][0];
+		self::assertSame( 'repo-shared', $repository['repository_id'] );
+		self::assertSame( 'mixed', $repository['source'] );
+		self::assertSame( array( 'plugin/shared.php' ), $repository['branch_package_references'] );
+		self::assertSame( array( 'plugin', 'theme' ), array_column( $repository['package_summaries'], 'type' ) );
+		self::assertSame( 'packages/plugin', $repository['package_summaries'][0]['subdirectory'] );
+		self::assertCount( 1, $data['managed_webhook_repositories']['repositories'] );
+		self::assertSame( 'branch', $data['managed_webhook_repositories']['repositories'][0]['source'] );
+		self::assertSame( 'Mixed sources', $data['repositoryTableRows'][0]['source_label'] );
+	}
+
+	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				$this->managedPackage( 'plugin/one.php', 'One', 'repo-conflict', provider: 'bb', repository: 'workspace/one' ),
+				$this->managedPackage( 'plugin/two.php', 'Two', 'repo-conflict', provider: 'bb', repository: 'workspace/two' ),
+				$this->managedPackage( 'plugin/three.php', 'Three', 'repo-three', provider: 'bb', repository: 'workspace/shared-locator' ),
+				$this->managedPackage( 'plugin/four.php', 'Four', 'repo-four', provider: 'bb', repository: 'workspace/shared-locator' ),
+			)
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertCount( 3, $data['repositoryTableRows'] );
+		foreach ( $data['repositoryTableRows'] as $row ) {
+			self::assertTrue( $row['historical'] );
+			self::assertSame( array(), $row['actions'] );
+			self::assertSame( '', $row['repository_url'] );
+			self::assertSame( 'Repository identity conflict', $row['statuses'][0]['label'] );
+		}
+	}
+
 	public function testSelectedAddOnUsesTheRegisteredTabAndSafeContext(): void {
 		$registry = new AdminAddOnRegistry( array(), 7, 7 );
 		$registry->register(

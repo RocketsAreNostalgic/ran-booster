@@ -1372,6 +1372,7 @@ final readonly class ProviderSettingsPresenter {
 			'credentialRowCount'             => count( $credentialProjection['rows'] ),
 			'credentialScopes'               => $credentialProjection['scopes'],
 			'webhookRowCount'                => count( $webhookRows ),
+			'readyWebhookProfileCount'       => count( array_filter( $webhookRows, static fn ( array $row ): bool => 'ready' === ( $row['status_key'] ?? null ) ) ),
 			'credentialSummary'              => $summaries['credential'],
 			'webhookSummary'                 => $summaries['webhook'],
 			'credentialList'                 => $credentialList,

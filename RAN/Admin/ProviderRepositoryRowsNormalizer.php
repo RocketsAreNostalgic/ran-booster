@@ -45,10 +45,10 @@ final class ProviderRepositoryRowsNormalizer {
 				'admin.php'
 			);
 		}
-		$counts       = $this->counts( $managed['repositories'] );
-		$sharedLabel  = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
-		$webhookLabel = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
-		$model        = $this->project(
+		$counts            = $this->counts( $managed['repositories'] );
+		$sharedLabel       = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
+		$webhookLabel      = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
+		$model             = $this->project(
 			$repositories['repositories'],
 			$providerCode,
 			$providerLabel,
@@ -62,6 +62,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$providerUrl,
 			$taskUrls['repositories']
 		);
+		$repositorySummary = $this->repositorySummary( $model['rows'] );
 
 		return array(
 			'providerTask'                     => in_array( $data['providerTask'] ?? null, array( 'repositories', 'setup' ), true ) ? $data['providerTask'] : 'status',
@@ -69,6 +70,8 @@ final class ProviderRepositoryRowsNormalizer {
 			'webhookEndpoint'                  => $endpoint,
 			'webhookAssistanceProviderCapable' => null !== $site,
 			'webhookAssistanceSiteReady'       => $siteReady,
+			'repositoryIntegrationAvailable'   => array() !== $model['rows'] || ( ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] ) ),
+			'repositoryIntegrationSummary'     => $repositorySummary,
 			'webhookSiteReasons'               => $this->siteReasons( $reasonCodes, $siteEndpoint ),
 			'webhookHasHardFailure'            => array() !== array_intersect( $reasonCodes, array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ),
 			'taskUrls'                         => $taskUrls,
@@ -84,6 +87,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'repositoryTableRows'              => array_values( $model['rows'] ),
 			'repositoryRowCountLabel'          => sprintf( _n( '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'ran-booster' ), count( $model['rows'] ) ),
 			'selectedRepositoryRow'            => $model['selected'],
+			'activityUrl'                      => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 		) + $this->copy( $providerLabel, is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null, $counts, $sharedLabel );
 	}
 
@@ -377,6 +381,14 @@ final class ProviderRepositoryRowsNormalizer {
 					'scope'  => '',
 					'target' => '',
 				) : null );
+			$detailUrl       = '' !== $repositoryId && ! $historical
+				? $providerUrl(
+					array(
+						'panel'      => 'repositories',
+						'repository' => $repositoryId,
+					)
+				)
+				: '';
 			$rows[ $rowKey ] = array(
 				'key'                       => $rowKey,
 				'provider_code'             => $providerCode,
@@ -385,6 +397,8 @@ final class ProviderRepositoryRowsNormalizer {
 				'provider_label'            => $providerLabel,
 				'repository'                => $locator,
 				'repository_url'            => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
+				'detail_url'                => $detailUrl,
+				'review_url'                => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 				'package_type_label'        => $typeLabel,
 				'source_key'                => $source,
 				'source_label'              => match ( $source ) {
@@ -534,6 +548,7 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( ! is_array( $detail ) ) {
 				throw new LogicException( 'Repository details must be display maps.' );
 			}
+			$this->boundedString( $detail['key'] ?? '', 96, true );
 			$this->boundedString( $detail['label'] ?? null, 96, false );
 			$this->boundedString( $detail['value'] ?? null, 255, true );
 			$tone = $this->boundedString( $detail['tone'] ?? '', 16, true );
@@ -541,7 +556,48 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Repository detail tones are invalid.' );
 			}
 			$this->boundedString( $detail['datetime'] ?? '', 64, true );
+			$this->boundedString( $detail['state'] ?? '', 64, true );
+			if ( isset( $detail['recorded'] ) && ! is_bool( $detail['recorded'] ) ) {
+				throw new LogicException( 'Repository detail recorded flags must be boolean.' );
+			}
 		}
+	}
+
+	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int} */
+	private function repositorySummary( array $rows ): array {
+		$recordedHooks = 0;
+		$needsReview   = 0;
+		foreach ( $rows as $row ) {
+			$recorded = false;
+			$healthy  = false;
+			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
+				if ( ! is_array( $detail ) || 'core:webhook-recorded-status' !== ( $detail['key'] ?? null ) ) {
+					continue;
+				}
+				$recorded = true === ( $detail['recorded'] ?? false );
+				$healthy  = 'configured' === ( $detail['state'] ?? null );
+				break;
+			}
+			if ( $recorded ) {
+				++$recordedHooks;
+			}
+			$automaticBranch = false;
+			foreach ( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array() as $summary ) {
+				if ( is_array( $summary ) && 'branch' === ( $summary['source'] ?? null ) && 'automatic' === ( $summary['deployment_policy'] ?? null ) ) {
+					$automaticBranch = true;
+					break;
+				}
+			}
+			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
+				++$needsReview;
+			}
+		}
+
+		return array(
+			'repositories'   => count( $rows ),
+			'recorded_hooks' => $recordedHooks,
+			'needs_review'   => $needsReview,
+		);
 	}
 
 	/**
@@ -560,6 +616,8 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository_id'      => $repositoryId,
 			'repository'         => $this->boundedString( $row['repository'] ?? null, 255, false ),
 			'repository_url'     => $this->safeUrl( $row['repository_url'] ?? '' ),
+			'detail_url'         => '',
+			'review_url'         => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 			'historical'         => true,
 			'types'              => $this->badges( $row['types'] ?? array() ),
 			'package_message'    => $this->boundedString( $row['package_message'] ?? '', 255, true ),

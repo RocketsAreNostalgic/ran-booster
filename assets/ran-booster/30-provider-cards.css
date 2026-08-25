@@ -584,7 +584,41 @@
 	padding: var(--ran-booster-space-20);
 	border: 1px solid var(--ran-booster-divider);
 	background: var(--ran-booster-surface);
-	min-block-size: 550px !important;
+}
+
+.ran-booster-admin .ran-booster-repository-integration-status {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	margin: 0 0 var(--ran-booster-space-16);
+	border: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-repository-integration-status > div {
+	min-inline-size: 0;
+	padding: var(--ran-booster-space-14);
+	border-inline-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-repository-integration-status > div:last-child {
+	border-inline-end: 0;
+}
+
+.ran-booster-admin .ran-booster-repository-integration-status dt {
+	margin-block-end: var(--ran-booster-space-4);
+	color: var(--ran-booster-text-subtle);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-repository-integration-status dd {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-provider-task-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+	margin-block-start: var(--ran-booster-space-14);
 }
 
 ::view-transition-group(ran-booster-provider-task-panel),

@@ -282,7 +282,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $presented, 'gh' );
 	}
 
-	/** @return array<string, string> */
+	/** @return array<string, int|string> */
 	private function summary( string $type, string $identifier, string $displayName, string $source, string $branch, string $subdirectory, string $policy ): array {
 		return array(
 			'type'              => $type,
@@ -290,6 +290,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			'display_name'      => $displayName,
 			'settings_url'      => 'https://example.test/wp-admin/admin.php?page=ran-booster-' . ( 'theme' === $type ? 'themes' : 'plugins' ) . '&package=' . rawurlencode( $identifier ),
 			'source'            => $source,
+			'source_revision'   => 1,
 			'branch'            => $branch,
 			'subdirectory'      => $subdirectory,
 			'deployment_policy' => $policy,

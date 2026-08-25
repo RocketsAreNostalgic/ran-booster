@@ -333,6 +333,16 @@
 		overflow-x: visible;
 	}
 
+	.ran-booster-admin .ran-booster-repository-detail__header,
+	.ran-booster-admin .ran-booster-repository-detail__receiver {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__facts > div {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
 	.ran-booster-admin .ran-booster-data-table,
 	.ran-booster-admin .ran-booster-data-table tbody,
 	.ran-booster-admin .ran-booster-data-table tr,

@@ -101,7 +101,7 @@ final class RepositoryWebhookManagementControls {
 		<details class="ran-booster-package-disclosure ran-booster-package-webhook-setup" data-ran-booster-package-webhook-setup>
 			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
 			<div class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body">
-				<p><?php esc_html_e( 'Set up or check this repository webhook. This does not enable Automatic updates; choose that separately in Package operation. After an operation, Booster returns to the provider repository view.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Set up or check this repository webhook. This does not enable Automatic updates; choose that separately in Package operation. Enhanced operations return to these package settings.', 'ran-booster' ); ?></p>
 				<?php require __DIR__ . '/views/panel.php'; ?>
 			</div>
 		</details>

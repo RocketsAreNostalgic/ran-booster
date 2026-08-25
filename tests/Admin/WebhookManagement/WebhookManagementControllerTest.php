@@ -307,6 +307,24 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'synthetic-request-credential', serialize( $store->record?->toArray() ) );
 	}
 
+	public function testPackageInitiatedOperationReturnsToTheAllowlistedPackageSettingsRoute(): void {
+		$redirect = $this->controller()->handleAdminPost(
+			$this->request(
+				array(
+					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&unsafe=discarded',
+				)
+			),
+			'valid'
+		);
+
+		self::assertStringContainsString( 'page=ran-booster-plugins', $redirect );
+		self::assertStringContainsString( 'package=example%2Fexample.php', $redirect );
+		self::assertStringContainsString( 'webhook_management_result=', $redirect );
+		self::assertStringNotContainsString( 'unsafe=', $redirect );
+		self::assertStringNotContainsString( 'panel=repositories', $redirect );
+		self::assertStringNotContainsString( '#ran-booster-', $redirect );
+	}
+
 	public function testCompleteNonGitHubProviderUsesTheSamePlacementAndOperationPath(): void {
 		$providerCode  = 'fixture-provider';
 		$providerLabel = 'Fixture Forge';

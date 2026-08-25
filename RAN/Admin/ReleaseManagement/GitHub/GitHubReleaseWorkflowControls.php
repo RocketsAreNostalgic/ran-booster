@@ -94,12 +94,12 @@ final class GitHubReleaseWorkflowControls {
 			if ( ! is_array( $row ) || true === ( $row['historical'] ?? false ) ) {
 				continue;
 			}
-			$references = is_array( $row['package_references'] ?? null )
-				? array_values( array_filter( $row['package_references'], 'is_string' ) )
+			$summaries = is_array( $row['package_summaries'] ?? null )
+				? array_values( array_filter( $row['package_summaries'], 'is_array' ) )
 				: array();
-			$multiple   = 1 < count( $references );
-			foreach ( $references as $reference ) {
-				$projection = $this->repositoryReleaseAutomationProjection( $row, $reference, $multiple );
+			$multiple  = 1 < count( $summaries );
+			foreach ( $summaries as $summary ) {
+				$projection = $this->repositoryReleaseAutomationProjection( $row, $summary, $multiple );
 				if ( null === $projection ) {
 					continue;
 				}
@@ -336,14 +336,19 @@ final class GitHubReleaseWorkflowControls {
 
 	/**
 	 * @param array<string, mixed> $row
+	 * @param array<string, mixed> $summary
 	 * @return array{detail:array{label:string,value:string,tone:string},action:array<string,mixed>}|null
 	 */
-	private function repositoryReleaseAutomationProjection( array $row, string $reference, bool $multiple ): ?array {
-		$isPlugin = str_ends_with( strtolower( $reference ), '.php' );
-		if ( ! $isPlugin && 1 !== preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) {
+	private function repositoryReleaseAutomationProjection( array $row, array $summary, bool $multiple ): ?array {
+		$type            = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
+		$reference       = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
+		$summarySource   = is_string( $summary['source'] ?? null ) ? $summary['source'] : '';
+		$summaryRevision = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || '' === $reference
+			|| ! in_array( $summarySource, array( 'branch', 'release_asset' ), true ) || 1 > $summaryRevision ) {
 			return null;
 		}
-		$type       = $isPlugin ? 'plugin' : 'theme';
+		$isPlugin   = 'plugin' === $type;
 		$package    = $this->localPackage( $type, $reference );
 		$status     = null;
 		$repository = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
@@ -359,15 +364,19 @@ final class GitHubReleaseWorkflowControls {
 			&& 'gh' === (string) $package->getProviderCode()
 			&& is_string( $package->getProviderRepositoryId() )
 			&& hash_equals( $repository, $package->getProviderRepositoryId() )
-			&& hash_equals( $locator, (string) $package->getRepository() );
+			&& hash_equals( $locator, (string) $package->getRepository() )
+			&& $summaryRevision === $package->getSourceRevision();
 		if ( $exact ) {
 			$status = $this->requestBoundary(
-				fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $reference, $package->getSourceRevision() ),
+				fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $reference, $summaryRevision ),
 				null
 			);
 			$exact  = $status instanceof ReleaseTrackingStatus
 				&& hash_equals( $repository, $status->providerRepositoryId() )
-				&& ( ! is_string( $row['source_key'] ?? null ) || hash_equals( $row['source_key'], $status->source() ) );
+				&& hash_equals( $type, $status->type() )
+				&& hash_equals( $reference, $status->identifier() )
+				&& $summaryRevision === $status->sourceRevision()
+				&& hash_equals( $summarySource, $status->source() );
 		}
 
 		$value = __( 'Unavailable', 'ran-booster' );
@@ -412,6 +421,7 @@ final class GitHubReleaseWorkflowControls {
 
 		return array(
 			'detail' => array(
+				'key'   => $key,
 				'label' => $detailLabel,
 				'value' => $value,
 				'tone'  => $tone,

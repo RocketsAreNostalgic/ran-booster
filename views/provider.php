@@ -305,17 +305,40 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 				</section>
 				<?php } else { ?>
 					<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="repositories" aria-labelledby="ran-booster-managed-webhook-repositories-heading">
+						<?php if ( '' === $requestedRepositoryId ) { ?>
 						<div class="ran-booster-provider-task-panel__heading">
 							<div>
-								<h4 id="ran-booster-managed-webhook-repositories-heading" class="ran-booster-section__title"><?php echo esc_html( '' === $requestedRepositoryId ? __( 'Managed repositories', 'ran-booster' ) : __( 'Repository webhook', 'ran-booster' ) ); ?></h4>
+								<h4 id="ran-booster-managed-webhook-repositories-heading" class="ran-booster-section__title"><?php esc_html_e( 'Managed repositories', 'ran-booster' ); ?></h4>
 								<p class="ran-booster-section__description"><?php echo esc_html( $repositoryWebhookDescription ); ?></p>
 							</div>
 						</div>
+						<?php } ?>
 							<?php if ( '' !== $requestedRepositoryId ) { ?>
-								<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to managed repositories', 'ran-booster' ); ?></a></p>
 								<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
-									<?php $repositoryTableRenderer->render( 'ran-booster-managed-webhook-repositories-heading', array( $selectedRepositoryRow ) ); ?>
+									<?php
+									$hasBranchConsumer = false;
+									foreach ( $selectedRepositoryRow['package_summaries'] as $packageSummary ) {
+										if ( is_array( $packageSummary ) && 'branch' === ( $packageSummary['source'] ?? null ) ) {
+											$hasBranchConsumer = true;
+											break;
+										}
+									}
+									$repositoryDetailRenderer->render(
+										$selectedRepositoryRow,
+										$provider['label'],
+										$repositoryListUrl,
+										$activityUrl,
+										$webhookAssistanceSiteReady,
+										$webhookAssistanceSiteReady ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhookSiteReasons ),
+										$hasBranchConsumer && null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
+											? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl ): void {
+												$webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
+											}
+											: null
+									);
+									?>
 								<?php } else { ?>
+									<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
 									<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
 								<?php } ?>
 							<?php } elseif ( array() !== $repositoryTableRows ) { ?>
@@ -341,11 +364,6 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 							<?php } else { ?>
 								<p class="description"><?php esc_html_e( 'Managed repository status is temporarily unavailable.', 'ran-booster' ); ?></p>
 							<?php } ?>
-							<?php
-							if ( is_array( $selectedRepositoryRow ) && null !== $webhookManagement ) {
-								$webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
-							}
-							?>
 				</section>
 			<?php } ?>
 					</div>

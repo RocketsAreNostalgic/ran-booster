@@ -172,6 +172,7 @@ final class WebhookDisplayModel {
 			'provider_label'      => $providerLabel,
 			'repository_id'       => $repositoryId,
 			'repository'          => $target->repository(),
+			'return_url'          => $this->panelUrl( $returnUrl, $repositoryId ),
 			'interaction_request' => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
 			'result'              => null === $resultCode ? null : array(
 				'class'   => $this->isSuccessfulResult( $resultCode ) ? 'notice-success' : 'notice-error',
@@ -509,9 +510,12 @@ final class WebhookDisplayModel {
 	}
 
 	private function panelUrl( string $returnUrl, string $repositoryId ): string {
+		if ( 1 === preg_match( '/[?&]page=ran-booster-(?:plugins|themes)(?:&|$)/', $returnUrl ) ) {
+			return $returnUrl;
+		}
 		$url = 1 === preg_match( '/[?&]repository=/', $returnUrl ) ? $returnUrl : $returnUrl . ( str_contains( $returnUrl, '?' ) ? '&' : '?' ) . 'repository=' . rawurlencode( $repositoryId );
 
-		return $url . '#ran-booster-repository-webhook-management-operation-heading';
+		return $url;
 	}
 
 	private function operationUrl( string $operation, string $providerCode, string $repositoryId ): string {

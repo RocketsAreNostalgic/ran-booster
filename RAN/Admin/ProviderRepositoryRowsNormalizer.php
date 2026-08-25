@@ -701,7 +701,7 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/**
-	 * @return list<array{type:string,identifier:string,display_name:string,settings_url:string,source:string,branch:string,subdirectory:string,deployment_policy:string}>
+	 * @return list<array{type:string,identifier:string,display_name:string,settings_url:string,source:string,source_revision:int,branch:string,subdirectory:string,deployment_policy:string}>
 	 */
 	private function packageSummaries( mixed $summaries ): array {
 		if ( ! is_array( $summaries ) || count( $summaries ) > 20 ) {
@@ -713,12 +713,14 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( ! is_array( $summary ) ) {
 				throw new LogicException( 'Repository package summaries must be display maps.' );
 			}
-			$type   = $this->boundedString( $summary['type'] ?? null, 16, false );
-			$source = $this->boundedString( $summary['source'] ?? null, 32, false );
-			$policy = $this->boundedString( $summary['deployment_policy'] ?? null, 16, false );
+			$type     = $this->boundedString( $summary['type'] ?? null, 16, false );
+			$source   = $this->boundedString( $summary['source'] ?? null, 32, false );
+			$policy   = $this->boundedString( $summary['deployment_policy'] ?? null, 16, false );
+			$revision = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
 			if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 				|| ! in_array( $source, array( 'branch', 'release_asset' ), true )
-				|| ! in_array( $policy, array( 'automatic', 'manual', 'disabled' ), true ) ) {
+				|| ! in_array( $policy, array( 'automatic', 'manual', 'disabled' ), true )
+				|| 1 > $revision ) {
 				throw new LogicException( 'Repository package summary values are invalid.' );
 			}
 			$normalized[] = array(
@@ -727,6 +729,7 @@ final class ProviderRepositoryRowsNormalizer {
 				'display_name'      => $this->boundedString( $summary['display_name'] ?? null, 255, false ),
 				'settings_url'      => $this->safeUrl( $summary['settings_url'] ?? null, false ),
 				'source'            => $source,
+				'source_revision'   => $revision,
 				'branch'            => $this->boundedString( $summary['branch'] ?? '', 255, true ),
 				'subdirectory'      => $this->boundedString( $summary['subdirectory'] ?? '', 255, true ),
 				'deployment_policy' => $policy,

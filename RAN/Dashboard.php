@@ -19,6 +19,7 @@ use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
+use RAN\Admin\Component\RepositoryDetailRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
@@ -218,6 +219,7 @@ class Dashboard {
 			$data['webhookManagement']               = $this->webhookManagement;
 			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
 			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
+			$data['repositoryDetailRenderer']        = new RepositoryDetailRenderer();
 			$data['repositoryTableRenderer']         = new RepositoryTableRenderer();
 		} elseif ( null !== $selectedTab && 'portability' === $selectedTab->getKey() ) {
 			try {

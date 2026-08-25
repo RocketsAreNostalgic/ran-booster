@@ -7,6 +7,7 @@ namespace Tests\Admin;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
+use RAN\Admin\Component\RepositoryDetailRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ProviderSettingsPresenter;
@@ -44,6 +45,7 @@ final class TroubleshootingViewTest extends TestCase {
 				'webhookManagement'               => null,
 				'statusSummaryRenderer'           => new AdminStatusSummaryRenderer(),
 				'providerManagementTableRenderer' => new ProviderManagementTableRenderer(),
+				'repositoryDetailRenderer'        => new RepositoryDetailRenderer(),
 				'repositoryTableRenderer'         => new RepositoryTableRenderer(),
 			)
 		);
@@ -784,11 +786,13 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryHtml = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h4>', $repositoryHtml );
-		self::assertStringContainsString( 'Back to managed repositories', $repositoryHtml );
+		self::assertStringContainsString( '>Repository webhook</h5>', $repositoryHtml );
+		self::assertStringContainsString( 'Back to repositories', $repositoryHtml );
+		self::assertStringContainsString( 'Packages using this repository', $repositoryHtml );
+		self::assertStringContainsString( 'This is local history, not live provider state.', $repositoryHtml );
 		self::assertStringNotContainsString( '#ran-booster-branch-readiness', html_entity_decode( $repositoryHtml ) );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $repositoryHtml );
-		self::assertSame( 1, substr_count( $repositoryHtml, 'data-ran-booster-provider-repository' ) );
+		self::assertSame( 0, substr_count( $repositoryHtml, 'data-ran-booster-provider-repository' ) );
 		self::assertStringNotContainsString( "\n\t\t\tManage webhook", $repositoryHtml );
 
 		$requestedRepositoryId = 'stale-repository';

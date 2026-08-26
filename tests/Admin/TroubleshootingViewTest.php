@@ -791,7 +791,6 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryHtml = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryHtml );
 		self::assertStringContainsString( 'Back to repositories', $repositoryHtml );
 		self::assertStringContainsString( 'Packages using this repository', $repositoryHtml );
 		self::assertStringContainsString( 'Management history', $repositoryHtml );
@@ -800,6 +799,15 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $repositoryHtml );
 		self::assertSame( 0, substr_count( $repositoryHtml, 'data-ran-booster-provider-repository' ) );
 		self::assertStringNotContainsString( "\n\t\t\tManage webhook", $repositoryHtml );
+
+		$repositoryView   = 'branch';
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$repositoryBranchHtml = (string) ob_get_clean();
+		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryBranchHtml );
 
 		$requestedRepositoryId = 'stale-repository';
 		$providerViewData      = $this->providerViewData( get_defined_vars() );

@@ -78,6 +78,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame(
 			array(
 				'ran_booster_admin_package_advanced_source_sections',
+				'ran_booster_admin_repository_release_sections',
 				'admin_post_ran_booster_github_release_workflow_inspect',
 				'admin_post_ran_booster_github_release_workflow_setup',
 				'admin_post_ran_booster_github_release_workflow_outcome',
@@ -120,10 +121,9 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			self::assertSame( $expected, $detail['value'], $name );
 			self::assertSame( $tone, $detail['tone'], $name );
 			self::assertFalse( $action['disabled'], $name );
-			self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=', htmlspecialchars( $action['url'] ), $name );
-			self::assertStringContainsString( 'source_view=release_asset', $action['url'], $name );
-			self::assertStringContainsString( 'ran_booster_open_advanced=1', $action['url'], $name );
-			self::assertStringEndsWith( '#ran-booster-advanced-source-settings', $action['url'], $name );
+			self::assertStringContainsString( 'panel=repositories', $action['url'], $name );
+			self::assertStringContainsString( 'repository=101', $action['url'], $name );
+			self::assertStringContainsString( 'repository_view=releases', $action['url'], $name );
 			self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array(), $name );
 		}
 	}
@@ -139,6 +139,23 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$mismatched = $this->controls()->enrichRepositoryRows( $this->repositoryRows(), 'gh', array(), 'https://example.test/return' );
 
 		self::assertSame( 'Unavailable', $mismatched['101']['details'][0]['value'] );
+	}
+
+	public function testRepositoryReleasePanelUsesLocalExactPackageStatusAndSavedCredentials(): void {
+		$controls = $this->controls();
+		$row      = $this->repositoryRows()['101'];
+		$row['package_summaries'][0]['display_name'] = 'Example plugin';
+		$row['package_summaries'][0]['settings_url'] = 'https://example.test/plugin-settings';
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/return' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Example plugin', $html );
+		self::assertStringContainsString( 'Assess source-ready release setup', $html );
+		self::assertStringContainsString( 'name="booster_credential_id"', $html );
+		self::assertStringContainsString( 'Package settings', $html );
+		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
 	public function testRepositoryRowsFailClosedOnPackageIdentityMismatchAndIgnoreOtherProviders(): void {
@@ -172,8 +189,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 
 		self::assertSame( array( 'Release automation — example/example.php', 'Release automation — example-theme' ), $labels );
 		self::assertSame( array( 'Release automation: example/example.php', 'Release automation: example-theme' ), $actionLabels );
-		self::assertStringContainsString( 'page=ran-booster-plugins', $actions[0]['url'] );
-		self::assertStringContainsString( 'page=ran-booster-themes', $actions[1]['url'] );
+		self::assertStringContainsString( 'repository_view=releases', $actions[0]['url'] );
+		self::assertSame( $actions[0]['url'], $actions[1]['url'] );
 		foreach ( array_merge( $labels, $actionLabels ) as $label ) {
 			self::assertLessThanOrEqual( 96, strlen( $label ) );
 		}
@@ -350,7 +367,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, 'https://example.test/settings' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Assess source-ready release setup', $html );
+		self::assertStringContainsString( 'Manage release automation', $html );
 		self::assertStringNotContainsString( 'GitHub may have accepted only part', $html );
 		self::assertStringNotContainsString( 'notice-warning', $html );
 	}
@@ -380,9 +397,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Release automation', $html );
-		self::assertStringContainsString( 'Release automation cannot be assessed with the current package settings.', $html );
-		self::assertStringContainsString( 'exact Update URI shown in Published release readiness above', $html );
-		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertStringContainsString( 'Workflow setup and recorded pull requests are managed with the repository.', $html );
+		self::assertStringContainsString( 'repository_view=releases', html_entity_decode( $html ) );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'booster_credential_id', $html );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
@@ -401,10 +417,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage(), 'https://example.test/settings' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow">', $html );
-		self::assertStringNotContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
-		self::assertStringContainsString( 'could not read the local Published release readiness', $html );
-		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertSame( '', $html );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'booster_credential_id', $html );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
@@ -417,10 +430,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage( 'release_asset' ), 'https://example.test/settings' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow">', $html );
-		self::assertStringNotContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
-		self::assertStringContainsString( 'Return to Branch before assessing setup again.', $html );
-		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertStringContainsString( 'Manage release automation', $html );
+		self::assertStringContainsString( 'repository_view=releases', html_entity_decode( $html ) );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'booster_credential_id', $html );
 	}

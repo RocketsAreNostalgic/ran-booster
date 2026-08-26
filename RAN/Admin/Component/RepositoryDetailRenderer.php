@@ -46,7 +46,7 @@ final class RepositoryDetailRenderer {
 					<a class="button" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $providerLabel ) ); ?></a>
 				<?php } ?>
 			</header>
-			<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true">
+			<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-push-url="true" hx-history="false" hx-sync="this:replace">
 				<?php
 				foreach ( array(
 					'status'   => __( 'Status', 'ran-booster' ),
@@ -71,9 +71,9 @@ final class RepositoryDetailRenderer {
 							<?php $this->renderUnavailableWebhookCards( $sourceKey ); ?>
 						<?php } ?>
 					<?php } elseif ( null !== $renderReleasePanel ) { ?>
-						<?php $renderReleasePanel(); ?>
+						<div id="ran-booster-repository-release-workflows"><?php $renderReleasePanel(); ?></div>
 					<?php } else { ?>
-						<?php $this->renderUnavailableReleaseCards( $packages ); ?>
+						<div id="ran-booster-repository-release-workflows"><?php $this->renderUnavailableReleaseCards( $packages ); ?></div>
 					<?php } ?>
 				</main>
 

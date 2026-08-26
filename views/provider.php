@@ -169,9 +169,17 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 				$activityUrl,
 				$webhookAssistanceSiteReady,
 				$webhookAssistanceSiteReady ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhookSiteReasons ),
+				$repositoryView,
+				$repositoryViewUrls,
+				$repositoryViewRequestUrls,
 				null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
 					? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, $selectedRepositoryRow ): void {
 						$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+					}
+					: null,
+				'gh' === $provider['code']
+					? static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {
+						do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $providerReturnUrl );
 					}
 					: null
 			);
@@ -362,10 +370,18 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 										$activityUrl,
 										$webhookAssistanceSiteReady,
 										$webhookAssistanceSiteReady ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhookSiteReasons ),
+										$repositoryView,
+										$repositoryViewUrls,
+										$repositoryViewRequestUrls,
 										null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
 										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, $selectedRepositoryRow ): void {
 											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 										}
+											: null,
+										'gh' === $provider['code']
+											? static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {
+												do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $providerReturnUrl );
+											}
 											: null
 									);
 									?>

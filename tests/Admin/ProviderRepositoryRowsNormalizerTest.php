@@ -303,16 +303,43 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$result = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
 			array(
-				'provider' => array( 'code' => 'gh', 'label' => 'GitHub', 'capabilities' => array(), 'webhook_scopes' => array() ),
-				'providerTask' => 'repositories',
-				'repositoryView' => 'releases',
+				'provider'              => array(
+					'code'           => 'gh',
+					'label'          => 'GitHub',
+					'capabilities'   => array(),
+					'webhook_scopes' => array(),
+				),
+				'providerTask'          => 'repositories',
+				'repositoryView'        => 'releases',
 				'requestedRepositoryId' => '101',
 				'provider_repositories' => array(
 					'repositories' => array(
-						array( 'target' => 'owner/release', 'repository_id' => '101', 'source' => 'release_asset', 'package_summaries' => array( $this->summary( 'plugin', 'release/plugin.php', 'Release', 'release_asset', '', '', 'manual' ) ) ),
-						array( 'target' => 'owner/branch', 'repository_id' => '202', 'source' => 'branch', 'package_summaries' => array( $this->summary( 'plugin', 'branch/plugin.php', 'Branch', 'branch', 'main', '', 'manual' ) ) ),
-						array( 'target' => 'owner/old', 'repository_id' => '303', 'source' => 'release_asset', 'historical' => true, 'package_summaries' => array( $this->summary( 'plugin', 'old/plugin.php', 'Old', 'release_asset', '', '', 'manual' ) ) ),
-						array( 'target' => 'owner/partial', 'repository_id' => '404', 'source' => 'release_asset', 'package_summaries_omitted' => 1, 'package_summaries' => array( $this->summary( 'plugin', 'partial/plugin.php', 'Partial', 'release_asset', '', '', 'manual' ) ) ),
+						array(
+							'target'            => 'owner/release',
+							'repository_id'     => '101',
+							'source'            => 'release_asset',
+							'package_summaries' => array( $this->summary( 'plugin', 'release/plugin.php', 'Release', 'release_asset', '', '', 'manual' ) ),
+						),
+						array(
+							'target'            => 'owner/branch',
+							'repository_id'     => '202',
+							'source'            => 'branch',
+							'package_summaries' => array( $this->summary( 'plugin', 'branch/plugin.php', 'Branch', 'branch', 'main', '', 'manual' ) ),
+						),
+						array(
+							'target'            => 'owner/old',
+							'repository_id'     => '303',
+							'source'            => 'release_asset',
+							'historical'        => true,
+							'package_summaries' => array( $this->summary( 'plugin', 'old/plugin.php', 'Old', 'release_asset', '', '', 'manual' ) ),
+						),
+						array(
+							'target'                    => 'owner/partial',
+							'repository_id'             => '404',
+							'source'                    => 'release_asset',
+							'package_summaries_omitted' => 1,
+							'package_summaries'         => array( $this->summary( 'plugin', 'partial/plugin.php', 'Partial', 'release_asset', '', '', 'manual' ) ),
+						),
 					),
 				),
 			)

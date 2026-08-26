@@ -45,10 +45,10 @@ final class ProviderRepositoryRowsNormalizer {
 				'admin.php'
 			);
 		}
-		$counts            = $this->counts( $managed['repositories'] );
-		$sharedLabel       = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
-		$webhookLabel      = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
-		$model             = $this->project(
+		$counts                    = $this->counts( $managed['repositories'] );
+		$sharedLabel               = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
+		$webhookLabel              = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
+		$model                     = $this->project(
 			$repositories['repositories'],
 			$providerCode,
 			$providerLabel,
@@ -62,12 +62,12 @@ final class ProviderRepositoryRowsNormalizer {
 			$providerUrl,
 			$taskUrls['repositories']
 		);
-		$repositorySummary            = $this->repositorySummary( $model['rows'] );
-		$repositoryView               = in_array( $data['repositoryView'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repositoryView'] : 'status';
-		$repositoryViewUrls           = array();
-		$repositoryViewRequestUrls    = array();
+		$repositorySummary         = $this->repositorySummary( $model['rows'] );
+		$repositoryView            = in_array( $data['repositoryView'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repositoryView'] : 'status';
+		$repositoryViewUrls        = array();
+		$repositoryViewRequestUrls = array();
 		foreach ( array( 'status', 'branch', 'releases' ) as $view ) {
-			$args = array(
+			$args        = array(
 				'panel'           => 'repositories',
 				'repository_view' => $view,
 			);
@@ -78,7 +78,7 @@ final class ProviderRepositoryRowsNormalizer {
 				'repository_view' => $view,
 			);
 			if ( '' !== $model['requested_id'] ) {
-				$args = array(
+				$args        = array(
 					'panel'           => 'repositories',
 					'repository'      => $model['requested_id'],
 					'repository_view' => $view,
@@ -586,8 +586,8 @@ final class ProviderRepositoryRowsNormalizer {
 
 	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_workflows_needing_review:int} */
 	private function repositorySummary( array $rows ): array {
-		$recordedHooks = 0;
-		$needsReview   = 0;
+		$recordedHooks                 = 0;
+		$needsReview                   = 0;
 		$releasePackages               = 0;
 		$releaseRepositories           = 0;
 		$releaseWorkflowsNeedingReview = 0;

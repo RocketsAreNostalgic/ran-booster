@@ -15,8 +15,8 @@ final class GitHubReleaseWorkflowDisplay {
 		$forms       = is_array( $view['forms'] ?? null ) ? $view['forms'] : array();
 		$unavailable = true === ( $view['unavailable'] ?? false );
 		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
-		$html        = '<div class="ran-booster-release-workflow"><div class="ran-booster-release-workflow__body"><p>'
-			. esc_html__( 'Assess the exact source tree and immutable template pack, then open one atomic draft pull request for review.', 'ran-booster' ) . '</p>';
+		$state       = is_string( $view['automation_state'] ?? null ) ? $view['automation_state'] : '';
+		$html        = '<div class="ran-booster-release-workflow"><div class="ran-booster-release-workflow__body">';
 
 		if ( str_starts_with( $code, 'workflow_' ) ) {
 			$html .= '<div class="notice ' . esc_attr( $successful ? 'notice-success' : 'notice-warning' ) . ' inline"'
@@ -24,16 +24,17 @@ final class GitHubReleaseWorkflowDisplay {
 		}
 
 		if ( $unavailable ) {
-			$html .= '<p>' . esc_html__( 'Release automation cannot be assessed with the current package settings.', 'ran-booster' ) . '</p>';
+			$html .= '<p><strong>' . esc_html( 'not_needed' === $state ? __( 'Release automation is not needed.', 'ran-booster' ) : __( 'Release automation is unavailable.', 'ran-booster' ) ) . '</strong></p>';
 			if ( '' !== $reason ) {
 				$html .= '<p class="description">' . esc_html( $reason ) . '</p>';
 			}
-			$html .= '<p><button type="submit" class="button" disabled>' . esc_html__( 'Assess source-ready release setup', 'ran-booster' ) . '</button></p>';
+			$html .= '<p><button type="button" class="button" disabled>' . esc_html__( 'Set up release automation', 'ran-booster' ) . '</button></p>';
 		} elseif ( null !== $preview ) {
 			$html .= $this->preview( $preview );
 			$key   = 'template_update' === ( $preview['kind'] ?? null ) ? 'update_setup' : 'setup';
 			$html .= $this->form( is_array( $forms[ $key ] ?? null ) ? $forms[ $key ] : array() );
 		} elseif ( null === $record ) {
+			$html .= '<p>' . esc_html__( 'Booster can assess this repository and prepare one atomic draft pull request. Nothing is merged automatically.', 'ran-booster' ) . '</p>';
 			$html .= $this->form( is_array( $forms['inspect'] ?? null ) ? $forms['inspect'] : array() );
 		}
 
@@ -95,8 +96,8 @@ final class GitHubReleaseWorkflowDisplay {
 		$credentialsUrl = is_string( $form['credentials_url'] ?? null ) ? $form['credentials_url'] : '';
 		$confirm        = is_string( $form['confirm'] ?? null ) ? $form['confirm'] : '';
 		$buttons        = array(
-			'inspect'        => __( 'Assess source-ready release setup', 'ran-booster' ),
-			'setup'          => __( 'Open atomic draft pull request', 'ran-booster' ),
+			'inspect'        => __( 'Assess release setup', 'ran-booster' ),
+			'setup'          => __( 'Open draft pull request', 'ran-booster' ),
 			'outcome'        => __( 'Check pull request outcome', 'ran-booster' ),
 			'update_inspect' => __( 'Check for template updates', 'ran-booster' ),
 			'update_setup'   => __( 'Open template update draft pull request', 'ran-booster' ),

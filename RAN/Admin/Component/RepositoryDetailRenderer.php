@@ -55,8 +55,12 @@ final class RepositoryDetailRenderer {
 				) as $view => $label ) {
 					$url        = is_string( $viewUrls[ $view ] ?? null ) ? $viewUrls[ $view ] : $listUrl;
 					$requestUrl = is_string( $viewRequestUrls[ $view ] ?? null ) ? $viewRequestUrls[ $view ] : $url;
+					$hasSource  = ( 'branch' === $view && in_array( $sourceKey, array( 'branch', 'mixed' ), true ) )
+						|| ( 'releases' === $view && in_array( $sourceKey, array( 'release_asset', 'mixed' ), true ) );
 					?>
-					<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $requestUrl ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $activeView === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a>
+					<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $requestUrl ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $activeView === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $hasSource ) { ?>
+						<span class="ran-booster-provider-task-tab__source-indicator" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Active for one or more packages in this repository.', 'ran-booster' ); ?></span>
+					<?php } ?></a>
 				<?php } ?>
 			</nav>
 

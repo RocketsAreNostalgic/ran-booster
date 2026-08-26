@@ -16,6 +16,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'repository'        => 'owner/shared',
 			'repository_url'    => 'https://github.com/owner/shared',
 			'source_label'      => 'Mixed sources',
+			'source_key'        => 'mixed',
 			'package_summaries' => array(
 				array(
 					'type'              => 'plugin',
@@ -97,6 +98,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
+		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
+		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
 		self::assertStringContainsString( '1 package uses Branch deployments', $html );
 		self::assertStringContainsString( '1 package tracks Published releases', $html );
 		self::assertStringContainsString( 'Release automation — owner/plugin.php', $html );

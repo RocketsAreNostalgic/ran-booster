@@ -91,11 +91,13 @@ final class GitHubReleaseWorkflowDisplay {
 
 	/** @param array<string,mixed> $form */
 	private function form( array $form ): string {
-		$operation = is_string( $form['operation'] ?? null ) ? $form['operation'] : '';
-		$action    = is_string( $form['action'] ?? null ) ? $form['action'] : '';
-		$fields    = is_array( $form['fields'] ?? null ) ? $form['fields'] : array();
-		$confirm   = is_string( $form['confirm'] ?? null ) ? $form['confirm'] : '';
-		$buttons   = array(
+		$operation      = is_string( $form['operation'] ?? null ) ? $form['operation'] : '';
+		$action         = is_string( $form['action'] ?? null ) ? $form['action'] : '';
+		$fields         = is_array( $form['fields'] ?? null ) ? $form['fields'] : array();
+		$credentials    = is_array( $form['credentials'] ?? null ) ? $form['credentials'] : array();
+		$credentialsUrl = is_string( $form['credentials_url'] ?? null ) ? $form['credentials_url'] : '';
+		$confirm        = is_string( $form['confirm'] ?? null ) ? $form['confirm'] : '';
+		$buttons        = array(
 			'inspect'        => __( 'Assess source-ready release setup', 'ran-booster' ),
 			'setup'          => __( 'Open atomic draft pull request', 'ran-booster' ),
 			'outcome'        => __( 'Check pull request outcome', 'ran-booster' ),
@@ -116,12 +118,23 @@ final class GitHubReleaseWorkflowDisplay {
 				. '<br><input type="text" name="confirm_repository" required autocomplete="off" class="regular-text" placeholder="' . esc_attr( $confirm ) . '"></label></p>';
 		}
 		$write = in_array( $operation, array( 'setup', 'update_setup' ), true );
-		$html .= '<p><label>' . esc_html__( 'Request-only GitHub token', 'ran-booster' )
-			. '<br><input type="password" name="github_token" autocomplete="off" class="regular-text"' . ( $write ? ' required' : '' ) . '></label></p>';
+		$html .= '<p><label>' . esc_html__( 'Saved GitHub credential', 'ran-booster' )
+			. '<br><select name="booster_credential_id"' . ( $write ? ' required' : '' ) . '><option value="">'
+			. esc_html__( 'Anonymous public inspection', 'ran-booster' ) . '</option>';
+		foreach ( $credentials as $credential ) {
+			if ( is_array( $credential ) && is_string( $credential['id'] ?? null ) && is_string( $credential['label'] ?? null ) ) {
+				$html .= '<option value="' . esc_attr( $credential['id'] ) . '">' . esc_html( $credential['label'] ) . '</option>';
+			}
+		}
+		$html .= '</select></label>';
+		if ( '' !== $credentialsUrl ) {
+			$html .= ' <a class="button" href="' . esc_url( $credentialsUrl ) . '">' . esc_html__( 'Manage credentials', 'ran-booster' ) . '</a>';
+		}
+		$html .= '</p>';
 		$html .= '<p class="description">' . esc_html(
 			$write
-			? __( 'Use Contents: write, Workflows: write and Pull requests: write. The token is never stored.', 'ran-booster' )
-			: __( 'Public repositories need no token. Private reads need a request-only token.', 'ran-booster' )
+			? __( 'Choose a saved credential with Contents: write, Workflows: write and Pull requests: write. Its secret is never stored with this setup.', 'ran-booster' )
+			: __( 'Public repositories can be inspected anonymously. Private inspection needs a saved credential.', 'ran-booster' )
 		) . '</p>';
 
 		return $html . '<p><button type="submit" class="button' . ( $write ? ' button-primary' : '' ) . '">'
@@ -139,7 +152,7 @@ final class GitHubReleaseWorkflowDisplay {
 			'workflow_template_current' => __( 'The managed template pack is current.', 'ran-booster' ),
 			'workflow_template_update_available' => __( 'A newer compatible template pack is available. Review its exact changed paths before opening a draft.', 'ran-booster' ),
 			'workflow_partial' => __( 'GitHub may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
-			'workflow_unauthorised' => __( 'GitHub did not authorise the operation with the request-only token.', 'ran-booster' ),
+			'workflow_unauthorised' => __( 'GitHub did not authorise the operation with the selected saved credential.', 'ran-booster' ),
 			'workflow_remote_unavailable' => __( 'GitHub or the canonical template source did not provide trustworthy current state. Booster made no change.', 'ran-booster' ),
 			'workflow_release_ready' => __( 'This repository already has a working published release. Bootstrap is not needed.', 'ran-booster' ),
 			'workflow_release_automation_conflict' => __( 'Competing release automation was detected. Review and reconcile it before using Booster setup.', 'ran-booster' ),

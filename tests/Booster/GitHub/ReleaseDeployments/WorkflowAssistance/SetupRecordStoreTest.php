@@ -24,6 +24,7 @@ final class SetupRecordStoreTest extends TestCase {
 		self::assertSame( hash( 'sha256', serialize( $record ) ), hash( 'sha256', serialize( $store->find( '123456789' ) ) ) );
 		self::assertFalse( $GLOBALS['ran_booster_release_deployments_test_option_updates'][0][2] );
 		self::assertFalse( $store->save( $record + array( 'github_token' => 'secret' ) ) );
+		self::assertFalse( $store->save( $record + array( 'booster_credential_id' => 'credential_1' ) ) );
 		self::assertFalse( $store->save( array_replace( $record, array( 'consumer_api' => 1 ) ) ) );
 		self::assertFalse( $store->save( array_replace( $record, array( 'setup_branch' => 'ran-booster/release-setup-v1-old' ) ) ) );
 		self::assertFalse( $store->save( array_replace( $record, array( 'template_repo_name' => 'attacker/templates' ) ) ) );

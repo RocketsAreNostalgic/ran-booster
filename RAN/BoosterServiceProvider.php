@@ -43,6 +43,7 @@ use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Internal\CoreContainer;
 use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
 use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
+use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
@@ -236,6 +237,15 @@ final class BoosterServiceProvider {
 			)
 		);
 		$container->bind( ProviderRegistry::class, $providers );
+		$container->bind(
+			GitHubReleaseWorkflowControls::class,
+			static fn ( CoreContainer $container ): GitHubReleaseWorkflowControls => new GitHubReleaseWorkflowControls(
+				$container->make( ReleaseTrackingFacade::class ),
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
+				$secrets->credentialsFor( 'gh' )
+			)
+		);
 		$container->bind(
 			WebhookAssistanceFacade::class,
 			static fn ( CoreContainer $container ): WebhookAssistanceFacade => new AssistedWebhookFacade(

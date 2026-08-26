@@ -62,7 +62,38 @@ final class ProviderRepositoryRowsNormalizer {
 			$providerUrl,
 			$taskUrls['repositories']
 		);
-		$repositorySummary = $this->repositorySummary( $model['rows'] );
+		$repositorySummary            = $this->repositorySummary( $model['rows'] );
+		$repositoryView               = in_array( $data['repositoryView'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repositoryView'] : 'status';
+		$repositoryViewUrls           = array();
+		$repositoryViewRequestUrls    = array();
+		foreach ( array( 'status', 'branch', 'releases' ) as $view ) {
+			$args = array(
+				'panel'           => 'repositories',
+				'repository_view' => $view,
+			);
+			$requestArgs = array(
+				'page'            => 'ran-booster',
+				'tab'             => $providerCode,
+				'panel'           => 'repositories',
+				'repository_view' => $view,
+			);
+			if ( '' !== $model['requested_id'] ) {
+				$args = array(
+					'panel'           => 'repositories',
+					'repository'      => $model['requested_id'],
+					'repository_view' => $view,
+				);
+				$requestArgs = array(
+					'page'            => 'ran-booster',
+					'tab'             => $providerCode,
+					'panel'           => 'repositories',
+					'repository'      => $model['requested_id'],
+					'repository_view' => $view,
+				);
+			}
+			$repositoryViewUrls[ $view ]        = $providerUrl( $args );
+			$repositoryViewRequestUrls[ $view ] = add_query_arg( $requestArgs, 'admin.php' );
+		}
 
 		return array(
 			'providerTask'                     => in_array( $data['providerTask'] ?? null, array( 'repositories', 'setup' ), true ) ? $data['providerTask'] : 'status',
@@ -82,6 +113,9 @@ final class ProviderRepositoryRowsNormalizer {
 			'installThemeUrl'                  => admin_url( 'admin.php?page=ran-booster-themes-create&provider=' . rawurlencode( $providerCode ) ),
 			'automaticPackageCount'            => $counts['automatic'],
 			'requestedRepositoryId'            => $model['requested_id'],
+			'repositoryView'                   => $repositoryView,
+			'repositoryViewUrls'               => $repositoryViewUrls,
+			'repositoryViewRequestUrls'        => $repositoryViewRequestUrls,
 			'repositoryListUrl'                => $model['list_url'],
 			'providerReturnUrl'                => $model['return_url'],
 			'repositoryTableRows'              => array_values( $model['rows'] ),
@@ -544,10 +578,13 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 
-	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int} */
+	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_workflows_needing_review:int} */
 	private function repositorySummary( array $rows ): array {
 		$recordedHooks = 0;
 		$needsReview   = 0;
+		$releasePackages               = 0;
+		$releaseRepositories           = 0;
+		$releaseWorkflowsNeedingReview = 0;
 		foreach ( $rows as $row ) {
 			$recorded = false;
 			$healthy  = false;
@@ -572,12 +609,40 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
 				++$needsReview;
 			}
+			if ( true === ( $row['historical'] ?? false ) || 0 !== (int) ( $row['package_summaries_omitted'] ?? 0 ) ) {
+				continue;
+			}
+			$releasePackagesInRepository = 0;
+			foreach ( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array() as $summary ) {
+				if ( is_array( $summary ) && 'release_asset' === ( $summary['source'] ?? null ) ) {
+					++$releasePackagesInRepository;
+				}
+			}
+			if ( 0 < $releasePackagesInRepository ) {
+				$releasePackages += $releasePackagesInRepository;
+				++$releaseRepositories;
+			}
+			$providerReleaseDetailPrefix = is_string( $row['provider_code'] ?? null )
+				? $row['provider_code'] . ':release-automation-'
+				: '';
+			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
+				if ( ! is_array( $detail )
+					|| '' === $providerReleaseDetailPrefix
+					|| ! str_starts_with( (string) ( $detail['key'] ?? '' ), $providerReleaseDetailPrefix )
+					|| ! in_array( $detail['tone'] ?? null, array( 'pending', 'warning' ), true ) ) {
+					continue;
+				}
+				++$releaseWorkflowsNeedingReview;
+			}
 		}
 
 		return array(
-			'repositories'   => count( $rows ),
-			'recorded_hooks' => $recordedHooks,
-			'needs_review'   => $needsReview,
+			'repositories'                     => count( $rows ),
+			'recorded_hooks'                   => $recordedHooks,
+			'needs_review'                     => $needsReview,
+			'release_packages'                 => $releasePackages,
+			'release_repositories'             => $releaseRepositories,
+			'release_workflows_needing_review' => $releaseWorkflowsNeedingReview,
 		);
 	}
 

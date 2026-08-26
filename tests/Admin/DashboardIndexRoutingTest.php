@@ -383,9 +383,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testProviderRouteSelectsFocusedViewsTasksAndBoundedListState(): void {
 		$_GET = array(
-			'tab'     => 'bb',
-			'view'    => 'secrets',
-			'panel'   => 'setup',
+			'tab'             => 'bb',
+			'view'            => 'secrets',
+			'panel'           => 'setup',
+			'repository_view' => 'releases',
 			's'       => ' workspace ',
 			'scope'   => 'owner',
 			'status'  => 'ready',
@@ -397,6 +398,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'secrets', $data['providerView'] );
 		self::assertSame( 'setup', $data['providerTask'] );
+		self::assertSame( 'releases', $data['repositoryView'] );
 		self::assertSame(
 			array(
 				'search'   => 'workspace',
@@ -411,14 +413,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$data['providerListState']
 		);
 
-		$_GET['view']    = 'unknown';
-		$_GET['panel']   = 'unknown';
-		$_GET['orderby'] = 'unknown';
+		$_GET['view']            = 'unknown';
+		$_GET['panel']           = 'unknown';
+		$_GET['repository_view'] = 'unknown';
+		$_GET['orderby']         = 'unknown';
 
 		$fallback = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->getIndex()['data'];
 
 		self::assertSame( 'overview', $fallback['providerView'] );
 		self::assertSame( 'status', $fallback['providerTask'] );
+		self::assertSame( 'status', $fallback['repositoryView'] );
 		self::assertSame( 'name', $fallback['providerListState']['orderby'] );
 	}
 

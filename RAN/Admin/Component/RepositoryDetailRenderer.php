@@ -71,7 +71,7 @@ final class RepositoryDetailRenderer {
 							<?php $this->renderUnavailableWebhookCards( $sourceKey ); ?>
 						<?php } ?>
 					<?php } elseif ( null !== $renderReleasePanel ) { ?>
-						<div id="ran-booster-repository-release-workflows"><?php $renderReleasePanel(); ?></div>
+						<div id="ran-booster-repository-release-workflows"><?php $this->renderReleaseContent( $renderReleasePanel, $packages ); ?></div>
 					<?php } else { ?>
 						<div id="ran-booster-repository-release-workflows"><?php $this->renderUnavailableReleaseCards( $packages ); ?></div>
 					<?php } ?>
@@ -83,6 +83,28 @@ final class RepositoryDetailRenderer {
 			</div>
 		</div>
 		<?php
+	}
+
+	/** @param callable():void $renderReleasePanel @param list<array<string,mixed>> $packages */
+	private function renderReleaseContent( callable $renderReleasePanel, array $packages ): void {
+		$bufferLevel = ob_get_level();
+		ob_start();
+		try {
+			$renderReleasePanel();
+			$output = (string) ob_get_clean();
+		} catch ( \Throwable ) {
+			while ( ob_get_level() > $bufferLevel ) {
+				ob_end_clean();
+			}
+			$output = '';
+		}
+		if ( '' !== trim( $output ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Provider owns escaping inside the bounded composition seam.
+			echo $output;
+			return;
+		}
+
+		$this->renderUnavailableReleaseCards( $packages );
 	}
 
 	/** @param array<string, mixed> $row @param list<array<string, mixed>> $packages */

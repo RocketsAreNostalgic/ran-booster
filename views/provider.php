@@ -177,11 +177,9 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 						$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 					}
 					: null,
-				'gh' === $provider['code']
-					? static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {
-						do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $providerReturnUrl );
-					}
-					: null
+				static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {
+					do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $providerReturnUrl );
+				}
 			);
 			?>
 		<?php } else { ?>
@@ -378,11 +376,9 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 										}
 											: null,
-										'gh' === $provider['code']
-											? static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {
-												do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $providerReturnUrl );
-											}
-											: null
+										static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {
+											do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $providerReturnUrl );
+										}
 									);
 									?>
 								<?php } else { ?>

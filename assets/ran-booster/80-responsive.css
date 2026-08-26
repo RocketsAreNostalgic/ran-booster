@@ -107,6 +107,10 @@
 	.ran-booster-admin .ran-booster-repository-record__action-group {
 		justify-content: flex-start;
 	}
+
+	.ran-booster-admin .ran-booster-repository-integration-status {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 
 @media screen and (max-width: 960px) {
@@ -180,6 +184,10 @@
 
 	.ran-booster-admin .ran-booster-provider-task-tab {
 		flex: 0 0 auto;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__tabs {
+		margin-block-end: var(--ran-booster-space-16);
 	}
 
 	.ran-booster-admin

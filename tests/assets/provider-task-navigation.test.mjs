@@ -78,6 +78,13 @@ function fixture() {
 		dataset: { ranBoosterProviderTask: 'repositories' },
 		id: 'ran-booster-provider-task-panel',
 	};
+	const repositoryTab = {
+		focusOptions: null,
+		focus(options) {
+			this.focusOptions = options;
+		},
+	};
+	let activeRepositoryTab = null;
 	const dispatched = [];
 	const region = {
 		id: 'ran-booster-provider-tasks',
@@ -93,6 +100,12 @@ function fixture() {
 			}
 			if (selector === '#ran-booster-provider-task-panel') {
 				return panel;
+			}
+			if (
+				selector ===
+				'.ran-booster-repository-detail__tabs [aria-current="page"]'
+			) {
+				return activeRepositoryTab;
 			}
 			return null;
 		},
@@ -129,6 +142,10 @@ function fixture() {
 		otherAttributes,
 		panel,
 		progress,
+		repositoryTab,
+		setActiveRepositoryTab(tab) {
+			activeRepositoryTab = tab;
+		},
 		region,
 	};
 }
@@ -170,6 +187,22 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	assert.equal(state.dispatched[0].type, 'ran-booster:provider-tasks-ready');
 	assert.equal(state.dispatched[0].detail.panel, state.panel);
 	assert.equal(state.dispatched[0].detail.root, state.region);
+});
+
+test('repository task swaps restore focus to the active repository subtab', () => {
+	const state = fixture();
+	const init = loadFunction('initProviderTaskNavigation', {
+		CustomEvent: TestCustomEvent,
+		document: state.document,
+		initProviderRepositoryFilter() {},
+	});
+
+	state.setActiveRepositoryTab(state.repositoryTab);
+	init();
+	state.listeners.get('htmx:afterSwap')({ detail: { target: state.panel } });
+
+	assert.deepEqual(state.repositoryTab.focusOptions, { preventScroll: true });
+	assert.equal(state.current.focusOptions, null);
 });
 
 test('provider task request failures retain the view and expose its alert', () => {

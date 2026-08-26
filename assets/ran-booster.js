@@ -117,7 +117,12 @@
 						tab.removeAttribute('aria-current');
 					}
 				});
-			currentTab?.focus({ preventScroll: true });
+			const currentRepositoryTab = region.querySelector(
+				'.ran-booster-repository-detail__tabs [aria-current="page"]'
+			);
+			(currentRepositoryTab || currentTab)?.focus({
+				preventScroll: true,
+			});
 
 			region.dispatchEvent(
 				new CustomEvent('ran-booster:provider-tasks-ready', {

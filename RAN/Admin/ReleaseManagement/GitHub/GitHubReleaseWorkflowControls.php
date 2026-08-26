@@ -187,7 +187,6 @@ final class GitHubReleaseWorkflowControls {
 			</header>
 			<div class="ran-booster-settings-section__body">
 		<?php if ( array() === $packagesForReleaseAutomation ) { ?>
-			?>
 			<div class="notice notice-warning inline"><p><?php echo esc_html__( 'No exact package release-automation authority is available for this repository.', 'ran-booster' ); ?></p></div>
 			<?php
 		} else {
@@ -209,7 +208,6 @@ final class GitHubReleaseWorkflowControls {
 				</div>
 			<?php } ?>
 		<?php } ?>
-		?>
 			</div>
 		</section>
 		<?php

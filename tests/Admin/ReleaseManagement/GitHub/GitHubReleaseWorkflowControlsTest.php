@@ -152,6 +152,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-release-heading">Release automation</h3>', $html );
+		self::assertStringNotContainsString( '?>', $html );
 		self::assertStringNotContainsString( 'Example plugin', $html );
 		self::assertStringNotContainsString( '<h3>Example plugin</h3>', $html );
 		self::assertStringNotContainsString( '<details', $html );

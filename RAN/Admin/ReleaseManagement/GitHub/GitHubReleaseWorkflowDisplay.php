@@ -15,10 +15,7 @@ final class GitHubReleaseWorkflowDisplay {
 		$forms       = is_array( $view['forms'] ?? null ) ? $view['forms'] : array();
 		$unavailable = true === ( $view['unavailable'] ?? false );
 		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
-		$open        = null !== $preview || str_starts_with( $code, 'workflow_' );
-		$html        = '<details class="ran-booster-package-disclosure ran-booster-release-workflow"' . ( $open ? ' open' : '' ) . '>';
-		$html       .= '<summary><strong>' . esc_html__( 'Release automation', 'ran-booster' ) . '</strong></summary>';
-		$html       .= '<div class="ran-booster-package-disclosure__body ran-booster-release-workflow__body"><p>'
+		$html        = '<div class="ran-booster-release-workflow"><div class="ran-booster-release-workflow__body"><p>'
 			. esc_html__( 'Assess the exact source tree and immutable template pack, then open one atomic draft pull request for review.', 'ran-booster' ) . '</p>';
 
 		if ( str_starts_with( $code, 'workflow_' ) ) {
@@ -59,7 +56,7 @@ final class GitHubReleaseWorkflowDisplay {
 			}
 		}
 
-		return $html . '</div></details>';
+		return $html . '</div></div>';
 	}
 
 	/** @param array<string,mixed> $preview */

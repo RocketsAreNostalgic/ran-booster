@@ -151,9 +151,14 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/return' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Example plugin', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-release-heading">Release automation</h3>', $html );
+		self::assertStringNotContainsString( 'Example plugin', $html );
+		self::assertStringNotContainsString( '<h3>Example plugin</h3>', $html );
+		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringContainsString( 'Assess source-ready release setup', $html );
 		self::assertStringContainsString( 'name="booster_credential_id"', $html );
+		self::assertStringContainsString( 'name="expected_identifier" value="example/example.php"', $html );
+		self::assertStringContainsString( 'name="expected_source_revision" value="3"', $html );
 		self::assertStringContainsString( 'Package settings', $html );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}

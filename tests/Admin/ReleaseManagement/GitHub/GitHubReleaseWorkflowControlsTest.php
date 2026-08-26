@@ -8,6 +8,7 @@ require_once __DIR__ . '/../Support/ReleaseManagementWordPressFunctions.php';
 require_once dirname( __DIR__, 3 ) . '/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/WorkflowAssistanceTestBootstrap.php';
 require_once __DIR__ . '/Support/GitHubReleaseWorkflowWordPressFunctions.php';
 require_once __DIR__ . '/Support/GitHubReleaseWorkflowTransportFunctions.php';
+require_once __DIR__ . '/Support/ReleaseWorkflowCredentialStoreDouble.php';
 require_once __DIR__ . '/../Support/ReleaseManagementFixtures.php';
 
 use PHPUnit\Framework\Attributes\Before;
@@ -19,10 +20,12 @@ use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
 use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowDisplay;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;
+use RAN\RepositoryProvider\ProviderCredentialStore;
 use ReflectionMethod;
 use ReflectionProperty;
 use Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble;
 use Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble;
+use Tests\Admin\ReleaseManagement\GitHub\Support\ReleaseWorkflowCredentialStoreDouble;
 use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
 use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
@@ -196,7 +199,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'update_option(', $bytes );
 	}
 
-	public function testPermissionsRejectBeforePackageLookupOrRequestOnlyTokenRead(): void {
+	public function testPermissionsRejectBeforePackageLookupOrSavedCredentialRead(): void {
 		foreach ( array( 'manage_options', 'update_plugins' ) as $denied ) {
 			$this->resetWordPress();
 			$plugins = new PluginRepositoryDouble();
@@ -207,12 +210,12 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 
 			self::assertSame( 0, $plugins->reads, $denied );
 			self::assertSame( 0, $facade->statusReads, $denied );
-			self::assertNotContains( 'request-only-secret', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array(), $denied );
+			self::assertNotContains( 'credential_1', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array(), $denied );
 			self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array(), $denied );
 		}
 	}
 
-	public function testNonGitHubMissingAndStalePackagesRejectBeforeStatusOrTokenRead(): void {
+	public function testNonGitHubMissingAndStalePackagesRejectBeforeStatusOrSavedCredentialRead(): void {
 		foreach ( array(
 			'non-gh'  => new PluginRepositoryDouble( 'acme', 3 ),
 			'missing' => new PluginRepositoryDouble( 'gh', 3, true ),
@@ -226,12 +229,12 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			self::assertSame( 1, $plugins->reads, $name );
 			self::assertSame( 0, $facade->statusReads, $name );
 			self::assertSame( array(), $facade->calls, $name );
-			self::assertNotContains( 'request-only-secret', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array(), $name );
+			self::assertNotContains( 'credential_1', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array(), $name );
 			self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array(), $name );
 		}
 	}
 
-	public function testNonceRejectsAfterExactGitHubPackageGateButBeforeTokenRead(): void {
+	public function testNonceRejectsAfterExactGitHubPackageGateButBeforeSavedCredentialRead(): void {
 		$plugins             = new PluginRepositoryDouble();
 		$facade              = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$request             = $this->request( 'inspect' );
@@ -242,26 +245,29 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 1, $plugins->reads );
 		self::assertSame( 1, $facade->statusReads );
 		self::assertSame( array(), $facade->calls );
-		self::assertNotContains( 'request-only-secret', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array() );
+		self::assertNotContains( 'credential_1', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array() );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
-	public function testAuthorisedInspectReadsTokenOnlyAfterCapabilitiesAndNonce(): void {
-		$facade = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
-		$url    = $this->controls( $facade )->processWorkflowRequest( 'inspect', $this->request( 'inspect' ) );
-		$events = $GLOBALS['ran_booster_github_release_workflow_test_events'] ?? array();
+	public function testAuthorisedInspectResolvesSavedCredentialOnlyAfterCapabilitiesAndNonce(): void {
+		$facade      = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$credentials = new ReleaseWorkflowCredentialStoreDouble();
+		$url         = $this->controls( $facade, credentials: $credentials )->processWorkflowRequest( 'inspect', $this->request( 'inspect' ) );
+		$events      = $GLOBALS['ran_booster_github_release_workflow_test_events'] ?? array();
 
-		$manage = array_search( 'capability:manage_options', $events, true );
-		$update = array_search( 'capability:update_plugins', $events, true );
-		$verify = array_search( 'verify:' . $this->nonceAction( 'inspect' ), $events, true );
-		$secret = array_search( 'unslash:request-only-secret', $events, true );
+		$manage     = array_search( 'capability:manage_options', $events, true );
+		$update     = array_search( 'capability:update_plugins', $events, true );
+		$verify     = array_search( 'verify:' . $this->nonceAction( 'inspect' ), $events, true );
+		$credential = array_search( 'unslash:credential_1', $events, true );
 		self::assertIsInt( $manage );
 		self::assertIsInt( $update );
 		self::assertIsInt( $verify );
-		self::assertIsInt( $secret );
-		self::assertTrue( $manage < $secret );
-		self::assertTrue( $update < $secret );
-		self::assertTrue( $verify < $secret );
+		self::assertIsInt( $credential );
+		self::assertTrue( $manage < $credential );
+		self::assertTrue( $update < $credential );
+		self::assertTrue( $verify < $credential );
+		self::assertSame( 1, $credentials->profileReads );
+		self::assertSame( 1, $credentials->materialReads );
 		self::assertSame( array( array( 'preflight', 'plugin', 'example/example.php', 3, 'stable', 'core-preflight' ) ), $facade->calls );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 
@@ -271,6 +277,18 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'stable', $query['ran_booster_github_release_workflow_channel'] );
 		self::assertArrayHasKey( 'ran_booster_github_release_workflow_result_nonce', $query );
 		self::assertStringNotContainsString( 'release_deployments', $url );
+	}
+
+	public function testWriteRejectsMissingSavedCredentialBeforeCoreExecution(): void {
+		$credentials                      = new ReleaseWorkflowCredentialStoreDouble();
+		$request                          = $this->request( 'setup', str_repeat( 'a', 32 ) );
+		$request['booster_credential_id'] = '';
+		$url                              = $this->controls( credentials: $credentials )->processWorkflowRequest( 'setup', $request );
+
+		self::assertSame( 0, $credentials->profileReads );
+		self::assertSame( 0, $credentials->materialReads );
+		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
+		self::assertSame( 'workflow_unauthorised', $this->query( $url )['ran_booster_github_release_workflow_result'] );
 	}
 
 	public function testAllFiveFormsUseTheirExactRegisteredActionAndNewPreviewVocabulary(): void {
@@ -366,11 +384,11 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'exact Update URI shown in Published release readiness above', $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
 		self::assertStringNotContainsString( '<form', $html );
-		self::assertStringNotContainsString( 'github_token', $html );
+		self::assertStringNotContainsString( 'booster_credential_id', $html );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 
 		$controls->processWorkflowRequest( 'inspect', $this->request( 'inspect' ) );
-		self::assertNotContains( 'request-only-secret', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array() );
+		self::assertNotContains( 'credential_1', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array() );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
@@ -388,7 +406,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'could not read the local Published release readiness', $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
 		self::assertStringNotContainsString( '<form', $html );
-		self::assertStringNotContainsString( 'github_token', $html );
+		self::assertStringNotContainsString( 'booster_credential_id', $html );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
@@ -404,7 +422,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'Return to Branch before assessing setup again.', $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
 		self::assertStringNotContainsString( '<form', $html );
-		self::assertStringNotContainsString( 'github_token', $html );
+		self::assertStringNotContainsString( 'booster_credential_id', $html );
 	}
 
 	private function githubPackage( string $source = 'branch' ): object {
@@ -432,12 +450,14 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 	private function controls(
 		?ReleaseTrackingFacadeDouble $facade = null,
 		?PluginRepositoryDouble $plugins = null,
-		?ThemeRepositoryDouble $themes = null
+		?ThemeRepositoryDouble $themes = null,
+		?ProviderCredentialStore $credentials = null
 	): GitHubReleaseWorkflowControls {
 		return new GitHubReleaseWorkflowControls(
 			$facade ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ),
 			$plugins ?? new PluginRepositoryDouble(),
-			$themes ?? new ThemeRepositoryDouble()
+			$themes ?? new ThemeRepositoryDouble(),
+			$credentials ?? new ReleaseWorkflowCredentialStoreDouble()
 		);
 	}
 
@@ -448,7 +468,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			'expected_identifier'      => 'example/example.php',
 			'expected_source_revision' => '3',
 			'_wpnonce'                 => 'nonce-for-' . $this->nonceAction( $operation, $preview ),
-			'github_token'             => 'request-only-secret',
+			'booster_credential_id'    => 'credential_1',
 			'confirm_repository'       => 'example/example',
 		);
 		if ( 'inspect' === $operation ) {

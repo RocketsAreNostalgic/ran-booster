@@ -46,8 +46,9 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( '&lt;script&gt;confirm&lt;/script&gt;', $html );
 		self::assertStringContainsString( 'data-ran-booster-package-success', $html );
 		self::assertStringContainsString( '<details class="ran-booster-package-disclosure ran-booster-release-workflow" open>', $html );
-		self::assertStringContainsString( 'name="github_token"', $html );
-		self::assertStringContainsString( 'name="github_token" autocomplete="off" class="regular-text" required', $html );
+		self::assertStringContainsString( 'name="booster_credential_id"', $html );
+		self::assertStringContainsString( 'name="booster_credential_id" required', $html );
+		self::assertStringContainsString( 'Manage credentials', $html );
 	}
 
 	public function testSchemaTwoRecordRendersOnlyCurrentOutcomeAndUpdateControls(): void {
@@ -98,7 +99,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( $reason, $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
 		self::assertStringNotContainsString( '<form', $html );
-		self::assertStringNotContainsString( 'name="github_token"', $html );
+		self::assertStringNotContainsString( 'name="booster_credential_id"', $html );
 		self::assertStringNotContainsString( 'type="hidden"', $html );
 		self::assertStringNotContainsString( 'type="password"', $html );
 	}
@@ -146,9 +147,9 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			self::assertStringNotContainsString( 'release_deployments', $html, $operation );
 			self::assertStringNotContainsString( 'workflow_workflow', $html, $operation );
 			if ( in_array( $operation, array( 'setup', 'update_setup' ), true ) ) {
-				self::assertStringContainsString( 'name="github_token" autocomplete="off" class="regular-text" required', $html, $operation );
+				self::assertStringContainsString( 'name="booster_credential_id" required', $html, $operation );
 			} else {
-				self::assertStringNotContainsString( 'class="regular-text" required', $html, $operation );
+				self::assertStringContainsString( 'name="booster_credential_id"', $html, $operation );
 			}
 		}
 	}
@@ -173,14 +174,21 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	/** @return array<string,mixed> */
 	private function form( string $operation, string $confirmation = '' ): array {
 		return array(
-			'operation' => $operation,
-			'action'    => 'https://example.test/wp-admin/admin-post.php',
-			'fields'    => array(
+			'operation'       => $operation,
+			'action'          => 'https://example.test/wp-admin/admin-post.php',
+			'fields'          => array(
 				'action'      => 'ran_booster_github_release_workflow_' . $operation,
 				'_wpnonce'    => 'nonce-for-' . $operation,
 				'hostile_key' => '"><script>hidden</script>',
 			),
-			'confirm'   => $confirmation,
+			'confirm'         => $confirmation,
+			'credentials'     => array(
+				array(
+					'id'    => 'credential_1',
+					'label' => 'Example credential',
+				),
+			),
+			'credentials_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials',
 		);
 	}
 }

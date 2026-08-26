@@ -77,7 +77,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'ran_booster_admin_package_advanced_source_sections',
+				'ran_booster_admin_package_release_readiness_actions',
 				'ran_booster_admin_repository_release_sections',
 				'admin_post_ran_booster_github_release_workflow_inspect',
 				'admin_post_ran_booster_github_release_workflow_setup',
@@ -165,7 +165,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'No package uses Published releases yet.', $html );
 		self::assertStringContainsString( 'Booster does not contact the provider while rendering this checklist.', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-repository-release-automation-heading">Release automation</h4>', $html );
-		self::assertStringContainsString( 'Optional repository-level workflow setup. Published-release tracking remains available without it.', $html );
+		self::assertStringContainsString( 'No local workflow record claims this repository yet. It is ready to assess.', $html );
 		self::assertStringContainsString( '>Ready to assess</span>', $html );
 		self::assertStringContainsString( 'No local workflow record claims this repository yet. It is ready to assess.', $html );
 		$readinessPosition  = strpos( $html, 'ran-booster-repository-release-readiness-heading' );
@@ -422,20 +422,19 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		};
 
 		ob_start();
-		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, 'https://example.test/settings' );
+		$controls->renderPackageReleaseAutomationLink( $package, $status );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Repository integration', $html );
-		self::assertStringContainsString( '>Ready to assess</span>', $html );
-		self::assertStringContainsString( 'Open repository Published releases', $html );
+		self::assertStringContainsString( 'Manage release automation', $html );
+		self::assertStringContainsString( 'repository_view=releases', html_entity_decode( $html ) );
+		self::assertStringNotContainsString( 'ran-booster-badge', $html );
+		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'GitHub may have accepted only part', $html );
-		self::assertStringNotContainsString( 'notice-warning', $html );
 	}
 
-	public function testIneligibleGitHubPackageRendersDisabledWorkflowWithoutReadingSecretsOrRemoteState(): void {
-		$facade   = new ReleaseTrackingFacadeDouble(
-			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::MISSING_UPDATE_URI )
-		);
+	public function testIneligibleGitHubPackageRendersOnlyTheRepositoryAutomationLink(): void {
+		$status   = ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::MISSING_UPDATE_URI );
+		$facade   = new ReleaseTrackingFacadeDouble( $status );
 		$controls = $this->controls( $facade );
 		$package  = new class() {
 			public function providerCode(): string {
@@ -453,13 +452,12 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		};
 
 		ob_start();
-		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, 'https://example.test/settings' );
+		$controls->renderPackageReleaseAutomationLink( $package, $status );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Repository integration', $html );
-		self::assertStringContainsString( '>Needs attention</span>', $html );
-		self::assertStringContainsString( 'Repository-level release workflow ownership and recorded readiness are managed on this repository', $html );
+		self::assertStringContainsString( 'Manage release automation', $html );
 		self::assertStringContainsString( 'repository_view=releases', html_entity_decode( $html ) );
+		self::assertStringNotContainsString( 'ran-booster-badge', $html );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'booster_credential_id', $html );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
@@ -469,13 +467,13 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
-	public function testUnavailableLocalStatusRendersDisabledWorkflowWithoutRemoteState(): void {
+	public function testPackageAutomationLinkFailsClosedForMismatchedStatus(): void {
 		$facade                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$facade->throwOnStatus = true;
 		$controls              = $this->controls( $facade );
 
 		ob_start();
-		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage(), 'https://example.test/settings' );
+		$controls->renderPackageReleaseAutomationLink( $this->githubPackage(), $this->workflowStatus( 'other/other.php' ) );
 		$html = (string) ob_get_clean();
 
 		self::assertSame( '', $html );
@@ -484,16 +482,16 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
-	public function testEligiblePublishedReleaseWithoutSetupRecordReportsAutomationAsNotNeeded(): void {
+	public function testEligiblePublishedReleaseRendersOnlyTheRepositoryAutomationLink(): void {
 		$controls = $this->controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
 
 		ob_start();
-		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage( 'release_asset' ), 'https://example.test/settings' );
+		$controls->renderPackageReleaseAutomationLink( $this->githubPackage( 'release_asset' ), ReleaseManagementFixture::status( 'release_asset' ) );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Not needed</span>', $html );
-		self::assertStringContainsString( 'Open repository Published releases', $html );
+		self::assertStringContainsString( 'Manage release automation', $html );
 		self::assertStringContainsString( 'repository_view=releases', html_entity_decode( $html ) );
+		self::assertStringNotContainsString( 'ran-booster-badge', $html );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'booster_credential_id', $html );
 	}
@@ -503,18 +501,38 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls = $this->controls( new ReleaseTrackingFacadeDouble( $status ) );
 
 		ob_start();
-		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $this->githubPackage( 'release_asset' ), 'https://example.test/settings' );
-		$packageHtml = (string) ob_get_clean();
-
-		ob_start();
 		$controls->renderRepositoryReleaseSections( $this->repositoryRows( 'release_asset' )['101'], 'https://example.test/return' );
 		$repositoryHtml = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Needs attention</span>', $packageHtml );
-		self::assertStringNotContainsString( '>Not needed</span>', $packageHtml );
 		self::assertStringContainsString( 'The installed package does not declare the required Update URI.', $repositoryHtml );
 		self::assertStringNotContainsString( '>Not needed</span>', $repositoryHtml );
 		self::assertStringNotContainsString( 'Release automation is not needed.', $repositoryHtml );
+	}
+
+	public function testEligiblePublishedReleaseWithoutFreshPreflightReportsAutomationAvailableFromBranch(): void {
+		$status   = new ReleaseTrackingStatus(
+			'plugin',
+			'example/example.php',
+			'release_asset',
+			3,
+			'101',
+			'manual',
+			new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-plugin' ),
+			null,
+			'example-plugin',
+			'1.0.0',
+			'1.0.0'
+		);
+		$controls = $this->controls( new ReleaseTrackingFacadeDouble( $status ) );
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $this->repositoryRows( 'release_asset' )['101'], 'https://example.test/return' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Available from Branch</span>', $html );
+		self::assertStringNotContainsString( '>Needs attention</span>', $html );
+		self::assertStringNotContainsString( '>Not needed</span>', $html );
+		self::assertStringContainsString( 'available after returning a package to Branch', $html );
 	}
 
 	public function testRepositoryReleasePanelFailsClosedWhenStatusSourceDoesNotMatchTheExactSummary(): void {
@@ -543,7 +561,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( '1 of 1 packages use Published releases.', $html );
 		self::assertStringContainsString( 'Published releases · Stable track.', $html );
 		self::assertStringContainsString( '>Not needed</span>', $html );
-		self::assertStringContainsString( 'Release automation is not needed.', $html );
+		self::assertStringContainsString( 'A compatible published release is already available. Release-workflow bootstrap is unnecessary.', $html );
 		self::assertStringContainsString( '<button type="button" class="button" disabled>Set up release automation</button>', $html );
 		self::assertStringNotContainsString( 'Assess release setup', $html );
 		self::assertStringNotContainsString( 'Review package release settings', $html );

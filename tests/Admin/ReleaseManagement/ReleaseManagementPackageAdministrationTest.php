@@ -52,6 +52,33 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array(), $tracking->calls );
 	}
 
+	public function testPackageReleaseReadinessActionsRenderInsideTheExistingActionRow(): void {
+		\RAN\Admin\ReleaseManagement\add_action(
+			'ran_booster_admin_package_release_readiness_actions',
+			static function ( object $package, object $status ): void {
+				unset( $package, $status );
+				echo '<a href="https://example.test/repository-releases">Manage release automation</a>';
+			},
+			20,
+			2
+		);
+		$controls = ReleaseManagementFixture::controls();
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		$actionsStart = strpos( $html, '<div class="ran-booster-readiness-actions">' );
+		$linkPosition = strpos( $html, '>Manage release automation</a>' );
+		$actionsEnd   = false === $actionsStart ? false : strpos( $html, '</div>', $actionsStart );
+		self::assertIsInt( $actionsStart );
+		self::assertIsInt( $linkPosition );
+		self::assertIsInt( $actionsEnd );
+		self::assertTrue( $actionsStart < $linkPosition );
+		self::assertTrue( $linkPosition < $actionsEnd );
+	}
+
 	public function testIneligibleReleaseTrackIsVisiblyBoundedAndExplainsWhyItIsDisabled(): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
 			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::MISSING_UPDATE_URI )

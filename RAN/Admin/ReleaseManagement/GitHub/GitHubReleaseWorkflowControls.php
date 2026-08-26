@@ -47,7 +47,7 @@ final class GitHubReleaseWorkflowControls {
 
 	public function register(): void {
 		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'keepReleaseSettingsDiscoverable' ), 20, 5 );
-		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'renderAdvancedSourceSection' ), 20, 5 );
+		add_action( 'ran_booster_admin_package_release_readiness_actions', array( $this, 'renderPackageReleaseAutomationLink' ), 20, 2 );
 		add_filter( 'ran_booster_provider_repository_rows', array( $this, 'enrichRepositoryRows' ), 20, 4 );
 		add_action( 'ran_booster_admin_repository_release_sections', array( $this, 'renderRepositoryReleaseSections' ), 20, 2 );
 		add_action( 'admin_post_ran_booster_github_release_workflow_inspect', array( $this, 'handleWorkflowInspect' ) );
@@ -115,37 +115,20 @@ final class GitHubReleaseWorkflowControls {
 		return $rows;
 	}
 
-	public function renderAdvancedSourceSection( string $mode, string $type, string $selectedSource, ?object $package, string $pageUrl ): void {
-		if ( 'edit' !== $mode || 'release_asset' !== $selectedSource || null === $package
-			|| ! is_callable( array( $package, 'providerCode' ) ) || 'gh' !== (string) $package->providerCode() ) {
+	public function renderPackageReleaseAutomationLink( object $package, ReleaseTrackingStatus $status ): void {
+		if ( ! is_callable( array( $package, 'providerCode' ) ) || 'gh' !== (string) $package->providerCode()
+			|| ! is_callable( array( $package, 'type' ) ) || ! is_callable( array( $package, 'identifier' ) )
+			|| ! is_callable( array( $package, 'sourceRevision' ) ) ) {
 			return;
 		}
-		if ( ! is_callable( array( $package, 'type' ) ) || ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'sourceRevision' ) ) ) {
+		if ( ! hash_equals( $status->type(), (string) $package->type() )
+			|| ! hash_equals( $status->identifier(), (string) $package->identifier() )
+			|| $status->sourceRevision() !== (int) $package->sourceRevision() ) {
 			return;
 		}
-		$status = $this->requestBoundary( fn (): ?ReleaseTrackingStatus => $this->workflowDisplayStatus( (string) $package->type(), (string) $package->identifier(), (int) $package->sourceRevision() ), null );
-		if ( null === $status ) {
-			return;
-		}
-		$repositoryId  = $status->providerRepositoryId();
-		$record        = $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repositoryId ), null );
-		$occupied      = $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repositoryId ), true );
-		$configured    = $this->recordMatchesPackageStatus( $record, $status );
-		$readyToAssess = ! $occupied && $status->eligible() && 'branch' === $status->source();
-		$notNeeded     = ! $configured && $this->releaseAutomationNotNeeded( $status );
-		$state         = $configured
-			? __( 'Setup recorded', 'ran-booster' )
-			: ( $notNeeded ? __( 'Not needed', 'ran-booster' ) : ( $readyToAssess ? __( 'Ready to assess', 'ran-booster' ) : __( 'Needs attention', 'ran-booster' ) ) );
-		$tone          = $configured
-			? 'ran-booster-badge--warning'
-			: ( $notNeeded || $readyToAssess ? 'ran-booster-badge--success' : 'ran-booster-badge--error' );
-		$url           = $this->repositoryReleaseUrl( $repositoryId );
-		echo '<div class="ran-booster-release-workflow-handoff"><p><strong>' . esc_html__( 'Repository integration', 'ran-booster' )
-			. '</strong> <span class="ran-booster-badge ' . esc_attr( $tone ) . '">'
-			. esc_html( $state )
-			. '</span></p><p class="description">' . esc_html__( 'Repository-level release workflow ownership and recorded readiness are managed on this repository’s Published releases tab.', 'ran-booster' )
-			. '</p><p><a class="button" href="' . esc_url( $url ) . '">' . esc_html__( 'Open repository Published releases', 'ran-booster' ) . '</a></p></div>';
-		unset( $type, $pageUrl );
+
+		echo '<a href="' . esc_url( $this->repositoryReleaseUrl( $status->providerRepositoryId() ) ) . '">'
+			. esc_html__( 'Manage release automation', 'ran-booster' ) . '</a>';
 	}
 
 	/** @param array<string,mixed> $row */
@@ -154,21 +137,22 @@ final class GitHubReleaseWorkflowControls {
 		if ( 'gh' !== ( $row['provider_code'] ?? null ) || true === ( $row['historical'] ?? false ) ) {
 			return;
 		}
-		$repositoryId                 = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
-		$repository                   = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
-		$summaries                    = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
-		$packagesForReleaseAutomation = array();
-		$exactPackageRelationships    = 0;
-		$record                       = $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repositoryId ), null );
-		$recordOccupied               = $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repositoryId ), true );
-		$workflowOwner                = '';
-		$workflowReadyToAssess        = false;
-		$workflowNotNeededPackages    = 0;
-		$exactPackageStatuses         = 0;
-		$allExactPackagesEligible     = true;
-		$releaseTrackingPackages      = 0;
-		$packageReadiness             = array();
-		$result                       = $this->requestedResult();
+		$repositoryId                        = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+		$repository                          = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$summaries                           = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
+		$packagesForReleaseAutomation        = array();
+		$exactPackageRelationships           = 0;
+		$record                              = $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repositoryId ), null );
+		$recordOccupied                      = $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repositoryId ), true );
+		$workflowOwner                       = '';
+		$workflowReadyToAssess               = false;
+		$workflowNotNeededPackages           = 0;
+		$workflowAvailableFromBranchPackages = 0;
+		$exactPackageStatuses                = 0;
+		$allExactPackagesEligible            = true;
+		$releaseTrackingPackages             = 0;
+		$packageReadiness                    = array();
+		$result                              = $this->requestedResult();
 		foreach ( $summaries as $summary ) {
 			$type          = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
 			$identifier    = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
@@ -201,6 +185,9 @@ final class GitHubReleaseWorkflowControls {
 				}
 				if ( null === $record && $this->releaseAutomationNotNeeded( $status ) ) {
 					++$workflowNotNeededPackages;
+				}
+				if ( null === $record && $this->releaseAutomationAvailableFromBranch( $status ) ) {
+					++$workflowAvailableFromBranchPackages;
 				}
 				$packageReadiness[] = array(
 					'name'         => is_string( $summary['display_name'] ?? null ) ? $summary['display_name'] : $identifier,
@@ -250,22 +237,33 @@ final class GitHubReleaseWorkflowControls {
 				'view'           => $view,
 			);
 		}
-		$packageReady      = 0 < $exactPackageRelationships
+		$packageReady                = 0 < $exactPackageRelationships
 			&& $exactPackageRelationships === $exactPackageStatuses
 			&& $allExactPackagesEligible;
-		$workflowNotNeeded = 0 < $exactPackageStatuses
+		$workflowNotNeeded           = 0 < $exactPackageStatuses
 			&& $workflowNotNeededPackages === $exactPackageStatuses;
+		$workflowAvailableFromBranch = 0 < $exactPackageStatuses
+			&& $workflowAvailableFromBranchPackages === $exactPackageStatuses;
+		$automationState             = $this->repositoryReleaseAutomationState(
+			$workflowOwner,
+			$workflowReadyToAssess,
+			$workflowNotNeeded,
+			$workflowAvailableFromBranch,
+			$recordOccupied
+		);
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-release-heading"><?php echo esc_html__( 'Published releases', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<?php $this->renderRepositoryReleaseLifecycle( $exactPackageRelationships, $packageReady, $releaseTrackingPackages, $workflowOwner, $workflowReadyToAssess, $workflowNotNeeded ); ?>
+				<?php $this->renderRepositoryReleaseLifecycle( $exactPackageRelationships, $packageReady, $releaseTrackingPackages, $workflowOwner, $workflowReadyToAssess, $workflowNotNeeded, $workflowAvailableFromBranch ); ?>
 				<?php $this->renderRepositoryReadiness( $repository, $exactPackageRelationships, $packageReadiness ); ?>
 				<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">
-					<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-release-automation-heading"><?php echo esc_html__( 'Release automation', 'ran-booster' ); ?></h4><p><?php echo esc_html__( 'Optional repository-level workflow setup. Published-release tracking remains available without it.', 'ran-booster' ); ?></p></div></div>
-					<?php $this->renderRepositoryReleaseAutomationState( $workflowOwner, $workflowReadyToAssess, $workflowNotNeeded, $recordOccupied ); ?>
+					<div class="ran-booster-readiness-panel__top"><div>
+						<div class="ran-booster-release-automation-heading"><h4 id="ran-booster-repository-release-automation-heading"><?php echo esc_html__( 'Release automation', 'ran-booster' ); ?></h4><span class="ran-booster-badge <?php echo esc_attr( $automationState['tone'] ); ?>"><?php echo esc_html( $automationState['label'] ); ?></span></div>
+						<p><?php echo esc_html( $automationState['message'] ); ?></p>
+					</div></div>
 		<?php if ( array() === $packagesForReleaseAutomation ) { ?>
 			<div class="notice notice-warning inline"><p><?php echo esc_html__( 'No exact package release-automation authority is available for this repository.', 'ran-booster' ); ?></p></div>
 			<?php
@@ -282,7 +280,7 @@ final class GitHubReleaseWorkflowControls {
 							<a href="<?php echo esc_url( $packageForReleaseAutomation['settings_url'] ); ?>"><?php echo esc_html__( 'Open package settings', 'ran-booster' ); ?></a>
 						<?php } ?></div>
 					<?php } ?>
-				<div class="ran-booster-repository-release-package__body"><?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Display projection escapes complete output. ?><?php echo $this->display->workflow( $packageForReleaseAutomation['view'] ); ?></div>
+				<div class="ran-booster-repository-release-package__body"><?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Display projection escapes complete output. ?><?php echo $this->display->workflow( $packageForReleaseAutomation['view'], true ); ?></div>
 				<?php if ( ! $multiplePackages && $packageForReleaseAutomation['needs_settings'] && '' !== $packageForReleaseAutomation['settings_url'] ) { ?>
 					<p><a href="<?php echo esc_url( $packageForReleaseAutomation['settings_url'] ); ?>"><?php echo esc_html__( 'Review package release settings', 'ran-booster' ); ?></a></p>
 				<?php } ?>
@@ -295,7 +293,7 @@ final class GitHubReleaseWorkflowControls {
 		<?php
 	}
 
-	private function renderRepositoryReleaseLifecycle( int $exactPackageRelationships, bool $packageReady, int $releaseTrackingPackages, string $workflowOwner, bool $workflowReadyToAssess, bool $workflowNotNeeded ): void {
+	private function renderRepositoryReleaseLifecycle( int $exactPackageRelationships, bool $packageReady, int $releaseTrackingPackages, string $workflowOwner, bool $workflowReadyToAssess, bool $workflowNotNeeded, bool $workflowAvailableFromBranch ): void {
 		$trackingReady = 0 < $releaseTrackingPackages && $releaseTrackingPackages === $exactPackageRelationships;
 		$trackingLabel = 0 < $releaseTrackingPackages
 			? sprintf(
@@ -312,7 +310,9 @@ final class GitHubReleaseWorkflowControls {
 				? __( 'A compatible published release is already available, so bootstrap is unnecessary.', 'ran-booster' )
 				: ( $workflowReadyToAssess
 					? __( 'Optional release-workflow setup is ready to assess.', 'ran-booster' )
-					: __( 'Optional release-workflow setup needs attention.', 'ran-booster' ) ) );
+					: ( $workflowAvailableFromBranch
+						? __( 'Optional release-workflow setup is available after returning a package to Branch.', 'ran-booster' )
+						: __( 'Optional release-workflow setup needs attention.', 'ran-booster' ) ) ) );
 		$items           = array(
 			array(
 				'label'   => __( 'Prepare packages', 'ran-booster' ),
@@ -327,7 +327,7 @@ final class GitHubReleaseWorkflowControls {
 			array(
 				'label'   => __( 'Automate releases (optional)', 'ran-booster' ),
 				'message' => $automationLabel,
-				'state'   => $automationReady ? 'is-ok' : 'is-warning',
+				'state'   => $automationReady ? 'is-ok' : ( $workflowAvailableFromBranch ? 'is-pending' : 'is-warning' ),
 			),
 		);
 		?>
@@ -408,36 +408,41 @@ final class GitHubReleaseWorkflowControls {
 		<?php
 	}
 
-	private function renderRepositoryReleaseAutomationState( string $workflowOwner, bool $workflowReadyToAssess, bool $workflowNotNeeded, bool $recordOccupied ): void {
-		$state           = __( 'Needs attention', 'ran-booster' );
-		$tone            = 'ran-booster-badge--error';
-		$workflowMessage = __( 'No exact local release-workflow status is available for this repository.', 'ran-booster' );
+	/** @return array{label:string,tone:string,message:string} */
+	private function repositoryReleaseAutomationState( string $workflowOwner, bool $workflowReadyToAssess, bool $workflowNotNeeded, bool $workflowAvailableFromBranch, bool $recordOccupied ): array {
+		$state   = __( 'Needs attention', 'ran-booster' );
+		$tone    = 'ran-booster-badge--error';
+		$message = __( 'No exact local release-workflow status is available for this repository.', 'ran-booster' );
 		if ( '' !== $workflowOwner ) {
-			$state           = __( 'Setup recorded', 'ran-booster' );
-			$tone            = 'ran-booster-badge--warning';
-			$workflowMessage = sprintf(
+			$state   = __( 'Setup recorded', 'ran-booster' );
+			$tone    = 'ran-booster-badge--warning';
+			$message = sprintf(
 				/* translators: %s: exact package type and name. */
 				__( 'Booster recorded a draft release-workflow setup for %s. Check its outcome before treating the remote workflow as current.', 'ran-booster' ),
 				$workflowOwner
 			);
 		} elseif ( $workflowNotNeeded ) {
-			$state           = __( 'Not needed', 'ran-booster' );
-			$tone            = 'ran-booster-badge--success';
-			$workflowMessage = __( 'A compatible published release is already available. Release-workflow bootstrap is unnecessary.', 'ran-booster' );
+			$state   = __( 'Not needed', 'ran-booster' );
+			$tone    = 'ran-booster-badge--success';
+			$message = __( 'A compatible published release is already available. Release-workflow bootstrap is unnecessary.', 'ran-booster' );
 		} elseif ( $workflowReadyToAssess ) {
-			$state           = __( 'Ready to assess', 'ran-booster' );
-			$tone            = 'ran-booster-badge--success';
-			$workflowMessage = __( 'No local workflow record claims this repository yet. It is ready to assess.', 'ran-booster' );
+			$state   = __( 'Ready to assess', 'ran-booster' );
+			$tone    = 'ran-booster-badge--success';
+			$message = __( 'No local workflow record claims this repository yet. It is ready to assess.', 'ran-booster' );
 		} elseif ( $recordOccupied ) {
-			$state           = __( 'Blocked', 'ran-booster' );
-			$workflowMessage = __( 'A local workflow record is occupied by a different package or revision. Review it before setup.', 'ran-booster' );
+			$state   = __( 'Blocked', 'ran-booster' );
+			$message = __( 'A local workflow record is occupied by a different package or revision. Review it before setup.', 'ran-booster' );
+		} elseif ( $workflowAvailableFromBranch ) {
+			$state   = __( 'Available from Branch', 'ran-booster' );
+			$tone    = 'ran-booster-badge--warning';
+			$message = __( 'This package already uses Published releases. Return it to Branch if you want Booster to assess release-workflow setup.', 'ran-booster' );
 		}
-		?>
-		<div class="ran-booster-repository-release-automation__state">
-			<p><span class="ran-booster-badge <?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $state ); ?></span></p>
-			<p><?php echo esc_html( $workflowMessage ); ?></p>
-		</div>
-		<?php
+
+		return array(
+			'label'   => $state,
+			'tone'    => $tone,
+			'message' => $message,
+		);
 	}
 
 	private function releaseAutomationNotNeeded( ReleaseTrackingStatus $status ): bool {
@@ -448,6 +453,13 @@ final class GitHubReleaseWorkflowControls {
 			&& '' === $status->failureCode()
 			&& null !== $preflight
 			&& $preflight->ready();
+	}
+
+	private function releaseAutomationAvailableFromBranch( ReleaseTrackingStatus $status ): bool {
+		return $status->eligible()
+			&& 'release_asset' === $status->source()
+			&& '' === $status->failureCode()
+			&& ! $this->releaseAutomationNotNeeded( $status );
 	}
 
 	private function statusMatchesSummary( ReleaseTrackingStatus $status, string $type, string $identifier, string $source, int $revision, string $repositoryId ): bool {

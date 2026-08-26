@@ -273,7 +273,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'line-height: 1;', $webhookManagement );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-release-automation {', $webhookManagement );
 		self::assertStringContainsString(
-			".ran-booster-admin .ran-booster-repository-release-automation__state {\n\tpadding: var(--ran-booster-space-16) var(--ran-booster-space-18);\n\tborder-block-end: 1px solid var(--ran-booster-border);",
+			".ran-booster-admin .ran-booster-release-automation-heading {\n\tdisplay: flex;\n\tflex-wrap: wrap;\n\talign-items: center;\n\tgap: var(--ran-booster-space-8);",
 			$webhookManagement
 		);
 		self::assertStringContainsString(

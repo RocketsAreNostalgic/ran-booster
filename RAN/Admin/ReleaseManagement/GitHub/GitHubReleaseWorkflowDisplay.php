@@ -6,7 +6,7 @@ namespace RAN\Admin\ReleaseManagement\GitHub;
 
 /** @internal GitHub-specific release workflow presentation. */
 final class GitHubReleaseWorkflowDisplay {
-	public function workflow( array $view ): string {
+	public function workflow( array $view, bool $compactUnavailable = false ): string {
 		$code        = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
 		$successful  = true === ( $view['result_successful'] ?? false );
 		$preview     = is_array( $view['preview'] ?? null ) ? $view['preview'] : null;
@@ -24,7 +24,9 @@ final class GitHubReleaseWorkflowDisplay {
 		}
 
 		if ( $unavailable ) {
-			$html .= '<p><strong>' . esc_html( 'not_needed' === $state ? __( 'Release automation is not needed.', 'ran-booster' ) : __( 'Release automation is unavailable.', 'ran-booster' ) ) . '</strong></p>';
+			if ( ! $compactUnavailable ) {
+				$html .= '<p><strong>' . esc_html( 'not_needed' === $state ? __( 'Release automation is not needed.', 'ran-booster' ) : __( 'Release automation is unavailable.', 'ran-booster' ) ) . '</strong></p>';
+			}
 			if ( '' !== $reason ) {
 				$html .= '<p class="description">' . esc_html( $reason ) . '</p>';
 			}

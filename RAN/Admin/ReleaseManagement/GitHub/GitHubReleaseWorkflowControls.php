@@ -146,7 +146,8 @@ final class GitHubReleaseWorkflowControls {
 		$recordOccupied               = $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repositoryId ), true );
 		$workflowOwner                = '';
 		$workflowReadyToAssess        = false;
-		$workflowEstablishedPackages  = 0;
+		$exactReleaseRelationships    = 0;
+		$establishedReleasePackages   = 0;
 		$exactPackageStatuses         = 0;
 		$allExactPackagesEligible     = true;
 		$releaseTrackingPackages      = 0;
@@ -166,6 +167,9 @@ final class GitHubReleaseWorkflowControls {
 				continue;
 			}
 			++$exactPackageRelationships;
+			if ( 'release_asset' === $summarySource ) {
+				++$exactReleaseRelationships;
+			}
 			$status      = $this->requestBoundary( fn (): ?ReleaseTrackingStatus => $this->workflowDisplayStatus( $type, $identifier, $revision ), null );
 			$exactStatus = $status instanceof ReleaseTrackingStatus
 				&& $this->statusMatchesSummary( $status, $type, $identifier, $summarySource, $revision, $repositoryId );
@@ -182,8 +186,8 @@ final class GitHubReleaseWorkflowControls {
 				} elseif ( null === $record && $status->eligible() && 'branch' === $status->source() ) {
 					$workflowReadyToAssess = true;
 				}
-				if ( $this->releaseAutomationEstablished( $status ) ) {
-					++$workflowEstablishedPackages;
+				if ( 'release_asset' === $summarySource && $this->releaseAutomationEstablished( $status ) ) {
+					++$establishedReleasePackages;
 				}
 				$packageReadiness[] = array(
 					'name'         => is_string( $summary['display_name'] ?? null ) ? $summary['display_name'] : $identifier,
@@ -236,9 +240,8 @@ final class GitHubReleaseWorkflowControls {
 		$packageReady        = 0 < $exactPackageRelationships
 			&& $exactPackageRelationships === $exactPackageStatuses
 			&& $allExactPackagesEligible;
-		$workflowEstablished = 0 < $exactPackageRelationships
-			&& $exactPackageRelationships === $exactPackageStatuses
-			&& $workflowEstablishedPackages === $exactPackageStatuses;
+		$workflowEstablished = 1 === $exactReleaseRelationships
+			&& 1 === $establishedReleasePackages;
 		$automationState     = $this->repositoryReleaseAutomationState(
 			$workflowOwner,
 			$workflowReadyToAssess,

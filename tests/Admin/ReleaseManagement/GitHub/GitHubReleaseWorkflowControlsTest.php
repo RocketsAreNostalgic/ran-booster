@@ -535,7 +535,27 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'Release automation is established; published releases are already being produced for this repository.', $html );
 	}
 
-	public function testRepositoryAutomationDoesNotReportEstablishedWhenAnyExactPackageStatusIsUnconfirmed(): void {
+	public function testRepositoryAutomationRemainsEstablishedWithUnrelatedBranchPackages(): void {
+		$controls                    = $this->controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
+		$row                         = $this->repositoryRows( 'release_asset' )['101'];
+		$row['source_key']           = 'mixed';
+		$row['package_references'][] = 'example-theme';
+		$row['package_summaries'][]  = array(
+			'type'            => 'theme',
+			'identifier'      => 'example-theme',
+			'source'          => 'branch',
+			'source_revision' => 3,
+		);
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/return' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Established</span>', $html );
+		self::assertStringContainsString( 'Release automation is established; published releases are already being produced for this repository.', $html );
+	}
+
+	public function testRepositoryAutomationFailsClosedForASecondReleaseRelationshipWithUnconfirmedStatus(): void {
 		$controls                    = $this->controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
 		$row                         = $this->repositoryRows( 'release_asset' )['101'];
 		$row['package_references'][] = 'example-theme';

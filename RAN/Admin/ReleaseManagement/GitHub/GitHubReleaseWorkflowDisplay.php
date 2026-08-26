@@ -25,12 +25,13 @@ final class GitHubReleaseWorkflowDisplay {
 
 		if ( $unavailable ) {
 			if ( ! $compactUnavailable ) {
-				$html .= '<p><strong>' . esc_html( 'not_needed' === $state ? __( 'Release automation is not needed.', 'ran-booster' ) : __( 'Release automation is unavailable.', 'ran-booster' ) ) . '</strong></p>';
+				$html .= '<p><strong>' . esc_html( 'established' === $state ? __( 'Release automation is established.', 'ran-booster' ) : __( 'Release automation is unavailable.', 'ran-booster' ) ) . '</strong></p>';
 			}
 			if ( '' !== $reason ) {
 				$html .= '<p class="description">' . esc_html( $reason ) . '</p>';
 			}
-			$html .= '<p><button type="button" class="button" disabled>' . esc_html__( 'Set up release automation', 'ran-booster' ) . '</button></p>';
+			$buttonLabel = 'established' === $state ? __( 'Release automation established', 'ran-booster' ) : __( 'Set up release automation', 'ran-booster' );
+			$html       .= '<p><button type="button" class="button" disabled>' . esc_html( $buttonLabel ) . '</button></p>';
 		} elseif ( null !== $preview ) {
 			$html .= $this->preview( $preview );
 			$key   = 'template_update' === ( $preview['kind'] ?? null ) ? 'update_setup' : 'setup';
@@ -154,7 +155,7 @@ final class GitHubReleaseWorkflowDisplay {
 			'workflow_partial' => __( 'GitHub may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
 			'workflow_unauthorised' => __( 'GitHub did not authorise the operation with the selected saved credential.', 'ran-booster' ),
 			'workflow_remote_unavailable' => __( 'GitHub or the canonical template source did not provide trustworthy current state. Booster made no change.', 'ran-booster' ),
-			'workflow_release_ready' => __( 'This repository already has a working published release. Bootstrap is not needed.', 'ran-booster' ),
+			'workflow_release_ready' => __( 'A working published release was verified. Release automation is established for this repository.', 'ran-booster' ),
 			'workflow_release_automation_conflict' => __( 'Competing release automation was detected. Review and reconcile it before using Booster setup.', 'ran-booster' ),
 			'workflow_profile_missing', 'workflow_profile_modified' => __( 'The managed release profile is missing or modified. Booster made no change.', 'ran-booster' ),
 			'workflow_target_changed', 'workflow_template_superseded' => __( 'The repository or template identity changed. Assess the current state again.', 'ran-booster' ),

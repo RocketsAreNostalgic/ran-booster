@@ -112,16 +112,16 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 				'result_successful'  => true,
 				'unavailable'        => true,
 				'unavailable_reason' => 'A compatible published release was verified just now.',
-				'automation_state'   => 'not_needed',
+				'automation_state'   => 'established',
 				'forms'              => array(
 					'inspect' => $this->form( 'inspect' ),
 				),
 			)
 		);
 
-		self::assertStringContainsString( 'This repository already has a working published release. Bootstrap is not needed.', $html );
-		self::assertStringContainsString( 'Release automation is not needed.', $html );
-		self::assertStringContainsString( '<button type="button" class="button" disabled>Set up release automation</button>', $html );
+		self::assertStringContainsString( 'A working published release was verified. Release automation is established for this repository.', $html );
+		self::assertStringContainsString( 'Release automation is established.', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled>Release automation established</button>', $html );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'Assess release setup', $html );
 	}

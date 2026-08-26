@@ -46,6 +46,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'name="release_channel" value="stable"', $html );
 		self::assertStringContainsString( 'name="release_channel" value="prerelease"', $html );
 		self::assertStringNotContainsString( 'ran_booster_release_deployments', $html );
+		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
+		self::assertStringNotContainsString( '<strong>Provider</strong>', $html );
+		self::assertStringNotContainsString( '<strong>Repository</strong>', $html );
 		self::assertSame( array(), $tracking->calls );
 	}
 

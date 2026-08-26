@@ -8,6 +8,10 @@ function __( string $text, string $domain = 'default' ): string {
 	return \RAN\Admin\ReleaseManagement\__( $text, $domain );
 }
 
+function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
+	return 1 === $number ? $single : $plural;
+}
+
 function esc_html( mixed $value ): string {
 	return \RAN\Admin\ReleaseManagement\esc_html( $value );
 }

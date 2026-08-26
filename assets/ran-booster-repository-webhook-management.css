@@ -84,25 +84,44 @@
 }
 
 .ran-booster-admin .ran-booster-webhook-step {
+	display: grid;
+	grid-template-columns:
+		calc(
+			var(--ran-booster-status-marker-size) +
+				(2 * var(--ran-booster-status-marker-border-width))
+		)
+		minmax(0, 1fr);
+	column-gap: var(--ran-booster-space-10);
 	min-inline-size: 0;
-	padding: var(--ran-booster-space-14);
+	padding: var(--ran-booster-space-12);
 	border: 1px solid var(--ran-booster-divider);
 	background: var(--ran-booster-surface-subtle);
 }
 
 .ran-booster-admin .ran-booster-webhook-step > span {
-	display: inline-grid;
-	inline-size: 24px;
-	block-size: 24px;
+	display: grid;
+	grid-row: span 2;
+	box-sizing: content-box;
+	inline-size: var(--ran-booster-status-marker-size);
+	min-inline-size: var(--ran-booster-status-marker-size);
+	max-inline-size: var(--ran-booster-status-marker-size);
+	block-size: var(--ran-booster-status-marker-size);
+	min-block-size: var(--ran-booster-status-marker-size);
+	max-block-size: var(--ran-booster-status-marker-size);
+	aspect-ratio: 1;
 	place-items: center;
-	margin-block-end: var(--ran-booster-space-10);
-	border: 1px solid var(--ran-booster-border);
-	border-radius: 50%;
-	font-weight: 600;
+	border: var(--ran-booster-status-marker-border-width) solid currentcolor;
+	border-radius: var(--ran-booster-radius-circle);
+	font-size: var(--ran-booster-status-marker-font-size);
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	overflow: hidden;
 }
 
 .ran-booster-admin .ran-booster-webhook-step strong {
 	display: block;
+	color: var(--ran-booster-text);
 }
 
 .ran-booster-admin .ran-booster-webhook-step p {
@@ -111,14 +130,14 @@
 }
 
 .ran-booster-admin .ran-booster-webhook-step.is-ok > span {
-	border-color: var(--ran-booster-status-ok-border);
-	background: var(--ran-booster-status-ok-background);
 	color: var(--ran-booster-status-ok);
 }
 
 .ran-booster-admin .ran-booster-webhook-step.is-warning > span {
-	border-color: var(--ran-booster-status-warning-border);
-	background: var(--ran-booster-status-warning-background);
+	color: var(--ran-booster-status-warning);
+}
+
+.ran-booster-admin .ran-booster-webhook-step.is-pending > span {
 	color: var(--ran-booster-status-warning);
 }
 
@@ -126,11 +145,53 @@
 	opacity: 0.62;
 }
 
-/* Repository detail inherits the provider card border-box reset; preserve the shared readiness icon footprint. */
+/* Repository detail inherits the provider card reset; preserve the shared marker footprint. */
 .ran-booster-admin
 	.ran-booster-repository-webhook-readiness
+	.ran-booster-readiness-icon,
+.ran-booster-admin
+	.ran-booster-repository-release-readiness
 	.ran-booster-readiness-icon {
 	box-sizing: content-box;
+}
+
+.ran-booster-admin .ran-booster-repository-release-automation {
+	margin-block-start: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-repository-release-automation__state {
+	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
+	border-block-end: 1px solid var(--ran-booster-border);
+}
+
+.ran-booster-admin .ran-booster-repository-release-automation__state p {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-repository-release-automation__state p + p {
+	margin-block-start: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-repository-release-package {
+	border: 0;
+	background: transparent;
+}
+
+.ran-booster-admin .ran-booster-repository-release-package__body {
+	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-release-package
+	.ran-booster-readiness-panel__top {
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-release-package
+	+ .ran-booster-repository-release-package
+	> .ran-booster-readiness-panel__top {
+	border-block-start: 1px solid var(--ran-booster-border);
 }
 
 @media screen and (max-width: 782px) {

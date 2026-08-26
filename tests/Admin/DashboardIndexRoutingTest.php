@@ -530,11 +530,18 @@ final class DashboardIndexRoutingTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h5>', $html );
+		self::assertStringContainsString( '>Repository webhook</h3>', $html );
 		self::assertStringContainsString( 'Back to repositories', $html );
 		self::assertStringContainsString( 'Packages using this repository', $html );
+		self::assertStringContainsString( 'ran-booster-repository-detail__layout', $html );
+		self::assertStringContainsString( 'ran-booster-repository-detail__sidebar', $html );
+		self::assertStringContainsString( 'Management history', $html );
 		self::assertStringContainsString( 'workspace/route', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $html );
+		self::assertStringNotContainsString( 'Repository access', $html );
+		self::assertStringNotContainsString( 'Public repository lookup', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-provider-task="status"', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider__footer', $html );
 	}
 
 	public function testProviderRepositoryProjectionUnifiesPackageTypesAndSourcesByStableIdentity(): void {

@@ -40,7 +40,6 @@ use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
-use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Internal\CoreContainer;
 use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
 use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
@@ -248,7 +247,6 @@ final class BoosterServiceProvider {
 		$webhookControls = new RepositoryWebhookManagementControls(
 			$container->make( WebhookAssistanceFacade::class ),
 			$container->make( AdminInteractionFacade::class ),
-			new ManagedPackageWebhookAuthorityResolver( $container->make( PluginRepository::class ), $container->make( ThemeRepository::class ) ),
 			$container->make( ProviderRegistry::class ),
 			(string) $runtime->boosterPath,
 			(string) $runtime->boosterUrl

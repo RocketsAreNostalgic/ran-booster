@@ -126,6 +126,14 @@
 	.ran-booster-admin .ran-booster-webhook-endpoint > div:last-child {
 		border-inline-end: 0;
 	}
+
+	.ran-booster-admin .ran-booster-repository-detail__layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__sidebar {
+		position: static;
+	}
 }
 
 @media screen and (max-width: 782px) {
@@ -195,8 +203,7 @@
 	}
 
 	.ran-booster-admin .ran-booster-readiness-overview,
-	.ran-booster-admin .ran-booster-repository-integration-status,
-	.ran-booster-admin .ran-booster-webhook-steps {
+	.ran-booster-admin .ran-booster-repository-integration-status {
 		grid-template-columns: minmax(0, 1fr);
 	}
 

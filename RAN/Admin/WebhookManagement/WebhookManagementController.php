@@ -17,7 +17,8 @@ use RAN\RepositoryProvider\WebhookNormalizer;
 
 /** @internal Owns the registered request boundary and response transport. */
 final class WebhookManagementController {
-	public const ADMIN_POST_ACTION = 'ran_booster_repository_webhook_management_operation';
+	public const ADMIN_POST_ACTION        = 'ran_booster_repository_webhook_management_operation';
+	public const CREATE_REPOSITORY_SECRET = 'create_repository_secret';
 
 	private const NONCE_ACTION_PREFIX = 'ran_booster_repository_webhook_';
 
@@ -65,6 +66,7 @@ final class WebhookManagementController {
 		$providerCode = $this->stringValue( $request, 'provider_code' );
 		$repositoryId = $this->stringValue( $request, 'repository_id' );
 		$credentialId = $this->stringValue( $request, 'booster_credential_id' );
+		$profileId    = $this->stringValue( $request, 'webhook_profile_id' );
 		$metadata     = $this->providerMetadata( $providerCode );
 		$result       = array(
 			'code'        => 'invalid_request',
@@ -76,19 +78,12 @@ final class WebhookManagementController {
 
 		if ( ! ( $this->canManage )() ) {
 			$result['code'] = 'forbidden';
+		} elseif ( 'setup' === $operation && '' === $profileId ) {
+			$result['code'] = 'invalid_request';
 		} elseif ( $metadata instanceof ProviderMetadata
-			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove' ), true )
+			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove', 'test' ), true )
 			&& ( $this->verifyNonce )( $nonce, $this->nonceAction( $operation, $providerCode, $repositoryId ) ) ) {
-			$requestCredential = $this->stringValue( $request, 'request_credential' );
-			$savedCredential   = '' === $credentialId ? null : $credentialId;
-			$requestOnly       = '' === $requestCredential ? null : $requestCredential;
-			unset( $request['request_credential'] );
-			$requestCredential = '';
-			try {
-				$result = $this->operations->execute( $operation, $providerCode, $repositoryId, $savedCredential, $requestOnly, $nonce );
-			} finally {
-				$requestOnly = null;
-			}
+			$result = $this->operations->execute( $operation, $providerCode, $repositoryId, '' === $credentialId ? null : $credentialId, 'setup' === $operation ? ( self::CREATE_REPOSITORY_SECRET === $profileId ? null : $profileId ) : null, $nonce );
 		}
 		$resultCode = $result['code'];
 

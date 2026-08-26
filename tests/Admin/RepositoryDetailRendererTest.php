@@ -84,7 +84,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Ignores pushes', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
-		self::assertStringContainsString( 'Release automation', $html );
+		self::assertStringNotContainsString( 'Release automation', $html );
+		self::assertStringContainsString( 'data-test-webhook', $html );
+		self::assertStringNotContainsString( 'Provider receiver', $html );
+		self::assertStringNotContainsString( 'Receiver ready.', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 	}
@@ -121,8 +124,22 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'No eligible Branch package', $html );
+		self::assertStringContainsString( 'no Branch package currently uses this repository webhook', $html );
+		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section"' ) );
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup"', $html );
+		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section"', $html );
+		self::assertStringContainsString( 'Webhook setup', $html );
+		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
+		self::assertStringContainsString( '>Set up webhook</button>', $html );
+		self::assertStringContainsString( 'Management history', $html );
+		self::assertStringContainsString( 'Recorded hook status', $html );
+		self::assertStringContainsString( 'Managed hook not yet set', $html );
+		self::assertStringContainsString( 'No historical observation', $html );
+		self::assertStringContainsString( 'Recorded hook profile', $html );
+		self::assertStringContainsString( 'Last checked', $html );
+		self::assertStringContainsString( 'Never', $html );
+		self::assertStringContainsString( 'View delivery evidence in Activity', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 }

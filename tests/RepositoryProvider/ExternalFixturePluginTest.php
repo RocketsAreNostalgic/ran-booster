@@ -74,20 +74,24 @@ final class ExternalFixturePluginTest extends TestCase {
 					return $this->provider->prepareArchive( $request );
 				}
 
-				public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessSetup( $repositoryId, $repository, $credentialProfileId, $requestCredential );
+				public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessSetup( $repositoryId, $repository, $credentialProfileId );
 				}
 
-				public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessCheck( $repositoryId, $repository, $credentialProfileId, $hookId, $requestCredential );
+				public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessCheck( $repositoryId, $repository, $credentialProfileId, $hookId );
 				}
 
-				public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessReconfigure( $repositoryId, $repository, $credentialProfileId, $hookId, $requestCredential );
+				public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessReconfigure( $repositoryId, $repository, $credentialProfileId, $hookId );
 				}
 
-				public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessRemove( $repositoryId, $repository, $credentialProfileId, $hookId, $requestCredential );
+				public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessRemove( $repositoryId, $repository, $credentialProfileId, $hookId );
+				}
+
+				public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assessTest( $repositoryId, $repository, $credentialProfileId, $hookId );
 				}
 			};
 
@@ -251,7 +255,7 @@ final class ExternalFixturePluginTest extends TestCase {
 				$fitness->assessSetup( $resolved['provider_repository_id'], $resolved['repository'], $credentialId )->toArray()['code']
 			);
 			$management = $registry->requireCapability( 'fixture-provider', RepositoryWebhookManagement::class );
-			$operation  = $management->setup( $resolved['provider_repository_id'], $resolved['repository'], 'https://site.example/webhook', $credentialId, null, str_repeat( 's', 32 ) );
+			$operation  = $management->setup( $resolved['provider_repository_id'], $resolved['repository'], 'https://site.example/webhook', $credentialId, str_repeat( 's', 32 ) );
 			self::assertSame( 'configured_pending_delivery', $operation->code() );
 			self::assertStringNotContainsString( 'fixture_not-a-real-secret', json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
 			self::assertStringNotContainsString( str_repeat( 's', 32 ), json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );

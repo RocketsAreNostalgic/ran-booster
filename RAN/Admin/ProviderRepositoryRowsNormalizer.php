@@ -348,7 +348,7 @@ final class ProviderRepositoryRowsNormalizer {
 				? $this->webhookManagementAction( $locator, $describedBy )
 				: array();
 			if ( ! $historical ) {
-				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator );
+				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $providerWebhookSettingsLabel, $locator );
 			}
 			$secretTarget    = 'shared' === $coverage ? (string) strtok( $locator, '/' ) : $locator;
 			$secretLink      = 'none' === $coverage ? array(
@@ -484,27 +484,8 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/** @param array<string,array<string,mixed>> $actions @param array<string,mixed> $repository @param list<string> $references */
-	private function appendRepositoryActions( array &$actions, array $repository, array $references, bool $isRelease, string $coverage, string $providerLabel, string $reasonId, string $locator ): void {
-		if ( $isRelease ) {
-			$url       = '';
-			$reference = $references[0] ?? '';
-			$isPlugin  = is_string( $reference ) && str_ends_with( strtolower( $reference ), '.php' );
-			if ( is_string( $reference ) && '' !== $reference && ( $isPlugin || 1 === preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) ) {
-				$url = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) . '&webhook_cleanup=1#ran-booster-webhook-cleanup' );
-			}
-			$key             = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'core:webhook-cleanup-review' : 'core:provider-webhooks';
-			$actions[ $key ] = array(
-				'key'           => $key,
-				'label'         => 'core:webhook-cleanup-review' === $key ? __( 'Review webhook cleanup', 'ran-booster' ) : $providerLabel,
-				'type'          => 'link',
-				'url'           => $url,
-				'hidden'        => array(),
-				'disabled'      => '' === $url,
-				'external'      => 'core:provider-webhooks' === $key,
-				'described_by'  => $reasonId,
-				'screen_reader' => $locator,
-			);
-		} elseif ( is_string( $repository['webhook_settings_url'] ?? null ) ) {
+	private function appendRepositoryActions( array &$actions, array $repository, array $references, bool $isRelease, string $providerLabel, string $locator ): void {
+		if ( ! $isRelease && is_string( $repository['webhook_settings_url'] ?? null ) ) {
 			$actions['core:provider-webhooks'] = array(
 				'key'           => 'core:provider-webhooks',
 				'label'         => $providerLabel,

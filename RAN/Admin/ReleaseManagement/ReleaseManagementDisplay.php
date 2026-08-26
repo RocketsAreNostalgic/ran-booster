@@ -176,6 +176,7 @@ final class ReleaseManagementDisplay {
 							<a href="<?php echo esc_url( $expectedUpdateUri ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open repository', 'ran-booster' ); ?></a>
 						</span>
 					<?php } ?>
+					<?php do_action( 'ran_booster_admin_package_release_readiness_actions', $package, $status ); ?>
 				</div>
 			</div>
 		</section>

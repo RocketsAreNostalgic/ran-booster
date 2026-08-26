@@ -716,7 +716,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'id="ran-booster-repository-integrations-heading"' ), strpos( $html, 'id="ran-booster-webhook-secrets-heading"' ) );
 		self::assertSame( 0, substr_count( $html, 'Manage signing secrets' ) );
 		self::assertStringContainsString( 'id="ran-booster-repository-integrations-heading" class="ran-booster-section__title">Repository integrations</h3>', $html );
-		self::assertStringContainsString( 'Review site delivery readiness, repositories connected to managed packages, and the shared webhook receiver.', $html );
+		self::assertStringContainsString( 'Review site delivery readiness, repositories connected to managed packages, Published release automation, and the shared webhook receiver.', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-summary--pending' ) );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-dot is-pending' ) );
 		self::assertStringNotContainsString( 'ran-booster-status-summary--attention', $html );

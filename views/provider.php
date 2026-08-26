@@ -248,7 +248,7 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-repository-integrations-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository integrations', 'ran-booster' ); ?></h3>
 				<p class="ran-booster-section__description">
-						<?php esc_html_e( 'Review site delivery readiness, repositories connected to managed packages, and the shared webhook receiver.', 'ran-booster' ); ?>
+						<?php esc_html_e( 'Review site delivery readiness, repositories connected to managed packages, Published release automation, and the shared webhook receiver.', 'ran-booster' ); ?>
 					</p>
 				</header>
 				<div class="ran-booster-provider-section__body">
@@ -293,6 +293,7 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 								<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhookAssistanceSiteReady ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for provider delivery', 'ran-booster' ) ); ?></dd></div>
 								<div><dt><?php esc_html_e( 'Signing profiles', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of locally ready signing profiles. */ _n( '%d ready locally', '%d ready locally', $readyWebhookProfileCount, 'ran-booster' ), $readyWebhookProfileCount ) ); ?></dd></div>
 								<div><dt><?php esc_html_e( 'Repository hooks', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: number of locally recorded hooks, 2: number of hook records needing review. */ __( '%1$d recorded locally · %2$d need review', 'ran-booster' ), $repositoryIntegrationSummary['recorded_hooks'], $repositoryIntegrationSummary['needs_review'] ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: number of Published release packages, 2: number of repositories, 3: number of release workflows needing review. */ __( '%1$d packages in %2$d repositories · %3$d workflows need review', 'ran-booster' ), $repositoryIntegrationSummary['release_packages'], $repositoryIntegrationSummary['release_repositories'], $repositoryIntegrationSummary['release_workflows_needing_review'] ) ); ?></dd></div>
 							</dl>
 							<?php if ( ! $webhookAssistanceProviderCapable || ! $webhookAssistanceSiteReady ) { ?>
 								<div class="notice <?php echo esc_attr( $webhookHasHardFailure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>

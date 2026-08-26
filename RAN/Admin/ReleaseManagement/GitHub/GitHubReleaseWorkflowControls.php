@@ -12,6 +12,7 @@ use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SourceReadyAssessor;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;
+use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use Throwable;
@@ -35,7 +36,8 @@ final class GitHubReleaseWorkflowControls {
 	public function __construct(
 		private readonly ReleaseTrackingFacade $releases,
 		private readonly PluginRepository $plugins,
-		private readonly ThemeRepository $themes
+		private readonly ThemeRepository $themes,
+		private readonly ProviderCredentialStore $credentials
 	) {
 		$this->tracking        = new ReleaseTrackingOperations( $releases );
 		$this->workflowRecords = new SetupRecordStore();
@@ -192,45 +194,55 @@ final class GitHubReleaseWorkflowControls {
 		$channel    = 'inspect' === $operation ? $this->releaseChannelFrom( $request ) : '';
 		$outcome    = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false );
 		$operations = array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' );
+		$package    = null;
 
 		if ( in_array( $operation, $operations, true ) && '' !== $type && '' !== $identifier && $revision > 0
 			&& null !== $preview && '' !== $nonce && ( 'inspect' !== $operation || '' !== $channel )
-			&& current_user_can( 'manage_options' ) && current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' )
-			&& $this->packageUsesBundledGitHub( $type, $identifier, $revision ) ) {
-			if ( null === $this->releases || null === $this->applications ) {
-				$outcome = $this->workflowResult( $type, $identifier, 'workflow_remote_unavailable', false );
-			} else {
-				$bootstrap = in_array( $operation, array( 'inspect', 'setup' ), true );
-				$status    = $this->requestBoundary( fn (): ?ReleaseTrackingStatus => $this->workflowStatus( $type, $identifier, $revision, $bootstrap ), null );
-				if ( null !== $status && 1 === wp_verify_nonce( $nonce, $this->workflowNonceAction( $operation, $status, $preview ) ) ) {
-					// Request-only secrets and Core preflight nonces are deliberately unread until local authority is proven.
-					$token        = is_string( $request['github_token'] ?? null ) ? wp_unslash( $request['github_token'] ) : '';
-					$confirmation = is_string( $request['confirm_repository'] ?? null ) ? wp_unslash( $request['confirm_repository'] ) : '';
-					$retry        = $this->workflowResult( $type, $identifier, 'workflow_remote_unavailable', false, $preview );
-					if ( 'setup' === $operation ) {
-						$projection = $this->requestBoundary( fn (): ?array => $this->applications?->preview( $preview, $status ), null );
-						$channel    = is_array( $projection ) && is_string( $projection['preflight_channel'] ?? null )
-							? $this->releaseChannelFrom( array( 'release_channel' => $projection['preflight_channel'] ) ) : '';
+			&& current_user_can( 'manage_options' ) && current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
+			$package = $this->bundledGitHubPackage( $type, $identifier, $revision );
+			if ( is_object( $package ) ) {
+				if ( null === $this->releases || null === $this->applications ) {
+					$outcome = $this->workflowResult( $type, $identifier, 'workflow_remote_unavailable', false );
+				} else {
+					$bootstrap = in_array( $operation, array( 'inspect', 'setup' ), true );
+					$status    = $this->requestBoundary( fn (): ?ReleaseTrackingStatus => $this->workflowStatus( $type, $identifier, $revision, $bootstrap ), null );
+					if ( null !== $status && $this->packageMatchesStatus( $package, $status )
+						&& 1 === wp_verify_nonce( $nonce, $this->workflowNonceAction( $operation, $status, $preview ) ) ) {
+						// Saved credential secrets are deliberately unread until local authority is proven.
+						$credentialId = is_string( $request['booster_credential_id'] ?? null ) ? wp_unslash( $request['booster_credential_id'] ) : '';
+						$write        = in_array( $operation, array( 'setup', 'update_setup' ), true );
+						$token        = $this->credentialToken( $credentialId, $write );
+						$confirmation = is_string( $request['confirm_repository'] ?? null ) ? wp_unslash( $request['confirm_repository'] ) : '';
+						$retry        = $this->workflowResult( $type, $identifier, 'workflow_remote_unavailable', false, $preview );
+						if ( ( $write || '' !== $credentialId ) && '' === $token ) {
+							$outcome = $this->workflowResult( $type, $identifier, 'workflow_unauthorised', false, $preview );
+						} else {
+							if ( 'setup' === $operation ) {
+								$projection = $this->requestBoundary( fn (): ?array => $this->applications?->preview( $preview, $status ), null );
+								$channel    = is_array( $projection ) && is_string( $projection['preflight_channel'] ?? null )
+								? $this->releaseChannelFrom( array( 'release_channel' => $projection['preflight_channel'] ) ) : '';
+							}
+							$outcome = $this->requestBoundary(
+								fn (): array => match ( $operation ) {
+									'inspect' => $this->applications->inspect( $status, $channel, $this->workflowPreflightNonce( $request, $channel ), $token ),
+									'setup' => $this->applications->setup(
+										$status,
+										$preview,
+										$confirmation,
+										array(
+											'stable'     => $this->workflowPreflightNonce( $request, 'stable' ),
+											'prerelease' => $this->workflowPreflightNonce( $request, 'prerelease' ),
+										),
+										$token
+									),
+									'outcome' => $this->applications->outcome( $status, $token ),
+									'update_inspect' => $this->applications->inspectUpdate( $status, $token ),
+									'update_setup' => $this->applications->setupUpdate( $status, $preview, $confirmation, $token ),
+									},
+								$retry
+							);
+						}
 					}
-					$outcome = $this->requestBoundary(
-						fn (): array => match ( $operation ) {
-							'inspect' => $this->applications->inspect( $status, $channel, $this->workflowPreflightNonce( $request, $channel ), $token ),
-							'setup' => $this->applications->setup(
-								$status,
-								$preview,
-								$confirmation,
-								array(
-									'stable'     => $this->workflowPreflightNonce( $request, 'stable' ),
-									'prerelease' => $this->workflowPreflightNonce( $request, 'prerelease' ),
-								),
-								$token
-							),
-							'outcome' => $this->applications->outcome( $status, $token ),
-							'update_inspect' => $this->applications->inspectUpdate( $status, $token ),
-							'update_setup' => $this->applications->setupUpdate( $status, $preview, $confirmation, $token ),
-						},
-						$retry
-					);
 				}
 			}
 		}
@@ -295,6 +307,25 @@ final class GitHubReleaseWorkflowControls {
 		return $status;
 	}
 
+	private function credentialToken( string $credentialId, bool $required ): string {
+		if ( '' === $credentialId ) {
+			return '';
+		}
+
+		try {
+			$profile = $this->credentials->credentialProfiles()[ $credentialId ] ?? null;
+			if ( ! is_array( $profile ) || 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] ) || empty( $profile['configured'] ) ) {
+				return '';
+			}
+			$material = $this->credentials->credentialMaterial( $credentialId );
+			$secret   = is_array( $material ) && is_string( $material['secret'] ?? null ) ? trim( $material['secret'] ) : '';
+
+			return '' === $secret && $required ? '' : $secret;
+		} catch ( Throwable ) {
+			return '';
+		}
+	}
+
 	private function workflowNonceAction( string $operation, ReleaseTrackingStatus $status, string $preview = '' ): string {
 		return 'ran-booster-github-release-workflow-' . $operation . '-' . hash(
 			'sha256',
@@ -321,14 +352,26 @@ final class GitHubReleaseWorkflowControls {
 		);
 	}
 
-	private function packageUsesBundledGitHub( string $type, string $identifier, int $revision ): bool {
+	private function bundledGitHubPackage( string $type, string $identifier, int $revision ): ?object {
 		try {
 			$package = 'plugin' === $type
 				? $this->plugins->boosterPluginFromFile( $identifier )
 				: $this->themes->boosterThemeFromStylesheet( $identifier );
 
-			return $revision === $package->getSourceRevision()
-				&& 'gh' === (string) $package->getProviderCode();
+			return is_object( $package ) && is_callable( array( $package, 'getProviderRepositoryId' ) )
+				&& $revision === $package->getSourceRevision() && 'gh' === (string) $package->getProviderCode()
+				? $package
+				: null;
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
+	private function packageMatchesStatus( object $package, ReleaseTrackingStatus $status ): bool {
+		try {
+			$repositoryId = $package->getProviderRepositoryId();
+
+			return is_string( $repositoryId ) && hash_equals( $repositoryId, $status->providerRepositoryId() );
 		} catch ( Throwable ) {
 			return false;
 		}
@@ -502,7 +545,8 @@ final class GitHubReleaseWorkflowControls {
 				$successful
 			);
 		}
-		$forms = array();
+		$forms       = array();
+		$credentials = $this->credentialChoices();
 		if ( null !== $preview ) {
 			$operation           = 'template_update' === $preview['kind'] ? 'update_setup' : 'setup';
 			$forms[ $operation ] = $this->workflowForm(
@@ -510,14 +554,15 @@ final class GitHubReleaseWorkflowControls {
 				$status,
 				$previewKey,
 				$preview['repository'],
-				$preview['preflight_channel']
+				$preview['preflight_channel'],
+				$credentials
 			);
 		} elseif ( null === $record && 'branch' === $status->source() ) {
-			$forms['inspect'] = $this->workflowForm( 'inspect', $status, '', '', $channel );
+			$forms['inspect'] = $this->workflowForm( 'inspect', $status, '', '', $channel, $credentials );
 		}
 		if ( null !== $record ) {
-			$forms['outcome']        = $this->workflowForm( 'outcome', $status );
-			$forms['update_inspect'] = $this->workflowForm( 'update_inspect', $status );
+			$forms['outcome']        = $this->workflowForm( 'outcome', $status, credentials: $credentials );
+			$forms['update_inspect'] = $this->workflowForm( 'update_inspect', $status, credentials: $credentials );
 		}
 
 		return array(
@@ -574,7 +619,8 @@ final class GitHubReleaseWorkflowControls {
 		ReleaseTrackingStatus $status,
 		string $preview = '',
 		string $confirmation = '',
-		string $channel = ''
+		string $channel = '',
+		array $credentials = array()
 	): ?array {
 		$preflight = '';
 		if ( in_array( $operation, array( 'inspect', 'setup' ), true ) ) {
@@ -605,11 +651,35 @@ final class GitHubReleaseWorkflowControls {
 		}
 
 		return array(
-			'operation' => $operation,
-			'action'    => admin_url( 'admin-post.php' ),
-			'fields'    => $fields,
-			'confirm'   => $confirmation,
+			'operation'       => $operation,
+			'action'          => admin_url( 'admin-post.php' ),
+			'fields'          => $fields,
+			'confirm'         => $confirmation,
+			'credentials'     => $credentials,
+			'credentials_url' => admin_url( 'admin.php?page=ran-booster&tab=gh&view=credentials' ),
 		);
+	}
+
+	/** @return list<array{id:string,label:string}> */
+	private function credentialChoices(): array {
+		try {
+			$profiles = $this->credentials->credentialProfiles();
+		} catch ( Throwable ) {
+			return array();
+		}
+		$choices = array();
+		foreach ( $profiles as $profile ) {
+			if ( ! is_array( $profile ) || 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] )
+				|| empty( $profile['configured'] ) || ! is_string( $profile['id'] ?? null ) || ! is_string( $profile['label'] ?? null ) || ! is_string( $profile['kind'] ?? null ) ) {
+				continue;
+			}
+			$choices[] = array(
+				'id'    => $profile['id'],
+				'label' => $profile['label'] . ' (' . $profile['kind'] . ')',
+			);
+		}
+
+		return $choices;
 	}
 
 

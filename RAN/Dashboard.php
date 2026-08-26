@@ -211,6 +211,7 @@ class Dashboard {
 			);
 			$data['providerView']      = $this->requestedProviderView();
 			$data['providerTask']      = $this->requestedProviderTask();
+			$data['repositoryView']    = $this->requestedProviderRepositoryView();
 			$data['providerListState'] = $this->requestedProviderListState();
 
 			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
@@ -838,6 +839,16 @@ class Dashboard {
 			: '';
 
 		return in_array( $task, array( 'repositories', 'setup' ), true ) ? $task : 'status';
+	}
+
+	private function requestedProviderRepositoryView(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
+		$view = isset( $_GET['repository_view'] ) && is_string( $_GET['repository_view'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
+			? sanitize_key( wp_unslash( $_GET['repository_view'] ) )
+			: '';
+
+		return in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? $view : 'status';
 	}
 
 	private function requestedProviderRepositoryId(): string {

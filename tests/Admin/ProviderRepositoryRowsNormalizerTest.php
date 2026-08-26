@@ -283,6 +283,49 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertArrayNotHasKey( '404', $capturedProjections );
 	}
 
+	public function testProjectPageBuildsExactRepositoryViewUrlsAndLocalReleaseSummary(): void {
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
+			$rows['101']['details'][] = array(
+				'key'   => 'gh:release-automation-aaaaaaaaaaaaaaaa',
+				'label' => 'Release automation',
+				'value' => 'Available from Branch',
+				'tone'  => 'pending',
+			);
+			$rows['202']['details'][] = array(
+				'key'   => 'gh:release-automation-bbbbbbbbbbbbbbbb',
+				'label' => 'Release automation',
+				'value' => 'Unavailable',
+				'tone'  => 'warning',
+			);
+
+			return $rows;
+		};
+
+		$result = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+			array(
+				'provider' => array( 'code' => 'gh', 'label' => 'GitHub', 'capabilities' => array(), 'webhook_scopes' => array() ),
+				'providerTask' => 'repositories',
+				'repositoryView' => 'releases',
+				'requestedRepositoryId' => '101',
+				'provider_repositories' => array(
+					'repositories' => array(
+						array( 'target' => 'owner/release', 'repository_id' => '101', 'source' => 'release_asset', 'package_summaries' => array( $this->summary( 'plugin', 'release/plugin.php', 'Release', 'release_asset', '', '', 'manual' ) ) ),
+						array( 'target' => 'owner/branch', 'repository_id' => '202', 'source' => 'branch', 'package_summaries' => array( $this->summary( 'plugin', 'branch/plugin.php', 'Branch', 'branch', 'main', '', 'manual' ) ) ),
+						array( 'target' => 'owner/old', 'repository_id' => '303', 'source' => 'release_asset', 'historical' => true, 'package_summaries' => array( $this->summary( 'plugin', 'old/plugin.php', 'Old', 'release_asset', '', '', 'manual' ) ) ),
+						array( 'target' => 'owner/partial', 'repository_id' => '404', 'source' => 'release_asset', 'package_summaries_omitted' => 1, 'package_summaries' => array( $this->summary( 'plugin', 'partial/plugin.php', 'Partial', 'release_asset', '', '', 'manual' ) ) ),
+					),
+				),
+			)
+		);
+
+		self::assertSame( 'releases', $result['repositoryView'] );
+		self::assertStringContainsString( 'panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repositoryViewUrls']['status'] ) );
+		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
+		self::assertSame( 1, $result['repositoryIntegrationSummary']['release_packages'] );
+		self::assertSame( 1, $result['repositoryIntegrationSummary']['release_repositories'] );
+		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
+	}
+
 	public function testRejectsProviderRewriteOfImmutablePackageSummaries(): void {
 		$base                                 = $this->baseRows();
 		$base['repo-42']['package_summaries'] = array( $this->summary( 'plugin', 'example/example.php', 'Example', 'branch', 'main', '', 'manual' ) );

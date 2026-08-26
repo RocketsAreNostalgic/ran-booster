@@ -106,6 +106,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser', $html );
 		self::assertStringNotContainsString( 'Downgrades are unavailable because package data migrations may not be reversible.', $html );
+		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
+		self::assertStringContainsString( '<strong>Release status</strong>', $html );
+		self::assertStringNotContainsString( '<strong>Package root</strong>', $html );
+		self::assertStringNotContainsString( '<strong>Installation route</strong>', $html );
 		self::assertStringContainsString( 'Open WordPress updates', $html );
 		self::assertStringNotContainsString( 'Install published plugin', $html );
 
@@ -452,6 +456,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Installation route', $html );
 		self::assertStringNotContainsString( 'Native WordPress Updates.', $html );
 		self::assertStringContainsString( '<strong>Package location</strong>', $html );
+		self::assertStringContainsString( '<strong>Release status</strong>', $html );
+		self::assertStringContainsString( 'Why this happened and how to fix it', $html );
 		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
 		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
 		self::assertStringContainsString( 'Return to branch deployments', $html );

@@ -74,7 +74,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'https://github.com/owner/example/pull/17', $html );
 		self::assertStringContainsString( 'Check pull request outcome', $html );
 		self::assertStringContainsString( 'Check for template updates', $html );
-		self::assertStringNotContainsString( 'Assess source-ready release setup', $html );
+		self::assertStringNotContainsString( 'Assess release setup', $html );
 		self::assertStringNotContainsString( 'Legacy, unverified', $html );
 		self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $html );
 		self::assertStringNotContainsString( '<details', $html );
@@ -93,16 +93,37 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'Release automation', $html );
-		self::assertStringContainsString( 'Release automation cannot be assessed with the current package settings.', $html );
+		self::assertStringContainsString( 'Release automation is unavailable.', $html );
 		self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $html );
 		self::assertStringNotContainsString( '<details', $html );
-		self::assertStringContainsString( 'Assess source-ready release setup', $html );
+		self::assertStringContainsString( 'Set up release automation', $html );
 		self::assertStringContainsString( $reason, $html );
-		self::assertStringContainsString( '<button type="submit" class="button" disabled>', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled>', $html );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertStringNotContainsString( 'name="booster_credential_id"', $html );
 		self::assertStringNotContainsString( 'type="hidden"', $html );
 		self::assertStringNotContainsString( 'type="password"', $html );
+	}
+
+	public function testVerifiedReleaseDisablesBootstrapWithoutRenderingAnotherAssessAction(): void {
+		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+			array(
+				'result_code'        => 'workflow_release_ready',
+				'result_successful'  => true,
+				'unavailable'        => true,
+				'unavailable_reason' => 'A compatible published release was verified just now.',
+				'automation_state'   => 'not_needed',
+				'forms'              => array(
+					'inspect' => $this->form( 'inspect' ),
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'This repository already has a working published release. Bootstrap is not needed.', $html );
+		self::assertStringContainsString( 'Release automation is not needed.', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled>Set up release automation</button>', $html );
+		self::assertStringNotContainsString( '<form', $html );
+		self::assertStringNotContainsString( 'Assess release setup', $html );
 	}
 
 	public function testLegacyAndUnknownEvidenceRemainDisplayOnlyAndEscaped(): void {

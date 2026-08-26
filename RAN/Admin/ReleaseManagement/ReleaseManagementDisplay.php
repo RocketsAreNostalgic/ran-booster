@@ -116,24 +116,12 @@ final class ReleaseManagementDisplay {
 							<span><?php echo esc_html( $updateUriReady ? __( 'The installed package identity and Update URI match the configured repository.', 'ran-booster' ) : $this->updateUriReadinessMessage( $eligibilityCode ) ); ?></span>
 						</li>
 					<?php } ?>
-					<?php if ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) { ?>
-						<li class="ran-booster-readiness-item is-ok">
+					<?php if ( 'release_asset' === $status->source() ) { ?>
+						<li class="ran-booster-readiness-item <?php echo '' === $status->failureCode() ? 'is-ok' : 'is-warning'; ?>">
 							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-							<strong><?php esc_html_e( 'Package root', 'ran-booster' ); ?></strong>
-							<span><code><?php echo esc_html( $status->packageRoot() ); ?></code></span>
+							<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
+							<span><?php echo esc_html( $this->releaseStatusMessage( $status ) ); ?></span>
 						</li>
-						<li class="ran-booster-readiness-item is-ok">
-							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-							<strong><?php esc_html_e( 'Installation route', 'ran-booster' ); ?></strong>
-							<span><?php esc_html_e( 'Native WordPress Updates.', 'ran-booster' ); ?></span>
-						</li>
-						<?php if ( '' === $status->failureCode() ) { ?>
-							<li class="ran-booster-readiness-item is-ok">
-								<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-								<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
-								<span><?php echo esc_html( $this->releaseStatusMessage( $status ) ); ?></span>
-							</li>
-						<?php } ?>
 					<?php } ?>
 				</ul>
 				<?php if ( 'branch' === $status->source() && ! $eligibility->eligible() && $this->requiresUpdateUriRemediation( $eligibility ) ) { ?>

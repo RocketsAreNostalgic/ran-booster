@@ -36,7 +36,7 @@ use RuntimeException;
 
 final readonly class Provider implements RepositoryProvider, ProviderCredentialPolicySupplier, CredentialValidator, WebhookNormalizer, RepositoryWebhookFitness, RepositoryWebhookManagement {
 	public const OPERATION = 'repository-webhook-management';
-	public const VERSION   = 1;
+	public const VERSION   = 3;
 
 	private ProviderCode $code;
 	private Client $client;
@@ -178,56 +178,61 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return null !== $this->deliveryEvidence->latestAuthenticatedDelivery();
 	}
 
-	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId, $requestCredential );
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId, $requestCredential );
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId, $requestCredential );
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->fitness( $credentialProfileId, $requestCredential );
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+		return $this->fitness( $credentialProfileId );
 	}
 
-	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
-		$this->credential( $credentialProfileId, $requestCredential );
+	public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+		return $this->assessRemove( $repositoryId, $repository, $credentialProfileId, $hookId );
+	}
+
+	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, string $signingSecret ): RepositoryWebhookOperationResult {
+		$this->credential( $credentialProfileId );
 
 		return $this->operation( 'configured_pending_delivery', 'configured_pending_delivery' );
 	}
 
-	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential ): RepositoryWebhookOperationResult {
-		$this->credential( $credentialProfileId, $requestCredential );
+	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
+		$this->credential( $credentialProfileId );
 
 		return $this->operation( 'fixture_configuration_confirmed', 'unknown' );
 	}
 
-	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
-		$this->credential( $credentialProfileId, $requestCredential );
+	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, string $signingSecret ): RepositoryWebhookOperationResult {
+		$this->credential( $credentialProfileId );
 
 		return $this->operation( 'configured_pending_delivery', 'configured_pending_delivery' );
 	}
 
-	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential ): RepositoryWebhookOperationResult {
-		$this->credential( $credentialProfileId, $requestCredential );
+	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
+		$this->credential( $credentialProfileId );
 
 		return $this->operation( 'fixture_absence_confirmed', 'absent' );
 	}
 
-	private function fitness( ?string $credentialId, ?string $requestCredential ): RepositoryWebhookFitnessResult {
-		$this->credential( $credentialId, $requestCredential );
+	public function test( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
+		return $this->check( $repositoryId, $repository, $hookId, $callbackUrl, $credentialProfileId );
+	}
+
+	private function fitness( ?string $credentialId ): RepositoryWebhookFitnessResult {
+		$this->credential( $credentialId );
 
 		return new RepositoryWebhookFitnessResult( 'supported', 'suitable', 'appropriate', 'observed', 'fixture.permission.webhook_exact', gmdate( 'Y-m-d\TH:i:s\Z' ), 'No fixture remediation is required.' );
 	}
 
-	private function credential( ?string $credentialId, ?string $requestCredential ): void {
-		if ( null !== $requestCredential && '' !== trim( $requestCredential ) ) {
-			return;
-		}
+	private function credential( ?string $credentialId ): void {
 		if ( null === $credentialId || ! $this->validateCredential( $credentialId )->isValid() ) {
 			throw new RuntimeException( 'The fixture operation credential is unavailable.' );
 		}

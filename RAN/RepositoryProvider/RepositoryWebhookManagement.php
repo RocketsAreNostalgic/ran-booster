@@ -3,16 +3,15 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use RAN\Provider\ProviderCapability;
-/** Fixed execution surface for repository-webhook-management/1. */
+/** Fixed execution surface for repository-webhook-management/3. */
 interface RepositoryWebhookManagement extends ProviderCapability {
 	public const OPERATION = 'repository-webhook-management';
-	public const VERSION   = 1;
+	public const VERSION   = 3;
 	public function setup(
 		string $repositoryId,
 		string $repository,
 		string $callbackUrl,
 		?string $credentialProfileId,
-		#[\SensitiveParameter] ?string $requestCredential,
 		#[\SensitiveParameter] string $signingSecret
 	): RepositoryWebhookOperationResult;
 	public function check(
@@ -20,8 +19,7 @@ interface RepositoryWebhookManagement extends ProviderCapability {
 		string $repository,
 		string $hookId,
 		string $callbackUrl,
-		?string $credentialProfileId,
-		#[\SensitiveParameter] ?string $requestCredential
+		?string $credentialProfileId
 	): RepositoryWebhookOperationResult;
 	public function reconfigure(
 		string $repositoryId,
@@ -29,7 +27,6 @@ interface RepositoryWebhookManagement extends ProviderCapability {
 		string $hookId,
 		string $callbackUrl,
 		?string $credentialProfileId,
-		#[\SensitiveParameter] ?string $requestCredential,
 		#[\SensitiveParameter] string $signingSecret
 	): RepositoryWebhookOperationResult;
 	public function remove(
@@ -37,7 +34,13 @@ interface RepositoryWebhookManagement extends ProviderCapability {
 		string $repository,
 		string $hookId,
 		string $callbackUrl,
-		?string $credentialProfileId,
-		#[\SensitiveParameter] ?string $requestCredential
+		?string $credentialProfileId
+	): RepositoryWebhookOperationResult;
+	public function test(
+		string $repositoryId,
+		string $repository,
+		string $hookId,
+		string $callbackUrl,
+		?string $credentialProfileId
 	): RepositoryWebhookOperationResult;
 }

@@ -150,7 +150,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 	}
 
 	private function record( string $repositoryId ): InstallationRecord {
-		return new InstallationRecord( 'gh', $repositoryId, 'owner/example', '77', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-08-20T01:02:03Z', '2026-08-20T01:02:03Z' );
+		return new InstallationRecord( 'gh', $repositoryId, 'owner/example', '77', 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-08-20T01:02:03Z', '2026-08-20T01:02:03Z' );
 	}
 
 	/**

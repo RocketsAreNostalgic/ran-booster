@@ -27,7 +27,7 @@ final class WebhookOperationCoordinator {
 		string $providerCode,
 		string $repositoryId,
 		?string $credentialId,
-		#[\SensitiveParameter] ?string $requestCredential,
+		?string $selectedProfileId,
 		string $nonce
 	): array {
 		try {
@@ -45,19 +45,36 @@ final class WebhookOperationCoordinator {
 		if ( null !== $record && $record->requiresHookIdentification() ) {
 			return $this->outcome( 'manual_recovery_required' );
 		}
-		if ( ( null === $credentialId ) === ( null === $requestCredential )
+		if ( null === $credentialId
 			|| ( 'setup' === $operation && null !== $record )
 			|| ( 'setup' !== $operation && ( null === $record
 				|| ! hash_equals( $target->repository(), $record->repository() ) ) ) ) {
 			return $this->outcome( 'invalid_token', inlineSafe: true );
 		}
+		if ( 'setup' === $operation && null !== $selectedProfileId ) {
+			$selected = false;
+			try {
+				foreach ( $this->facade->webhookProfileChoices( $providerCode, $repositoryId ) as $choice ) {
+					if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && hash_equals( $selectedProfileId, $choice['id'] ) ) {
+						$selected = true;
+						break;
+					}
+				}
+			} catch ( \Throwable ) {
+				$selected = false;
+			}
+			if ( ! $selected ) {
+				return $this->outcome( 'invalid_request', inlineSafe: true );
+			}
+		}
 
 		try {
 			$result = match ( $operation ) {
-				'setup'       => $this->facade->setup( $target, $credentialId, $nonce, $requestCredential ),
-				'check'       => $this->facade->check( $target, $credentialId, $record->hookId(), $record->webhookProfileId(), $record->webhookProfileRevision(), $nonce, $requestCredential ),
-				'reconfigure' => $this->facade->reconfigure( $target, $credentialId, $record->hookId(), $record->webhookProfileId(), $record->webhookProfileRevision(), $nonce, $requestCredential ),
-				'remove'      => $this->facade->remove( $target, $credentialId, $record->hookId(), $record->webhookProfileId(), $record->webhookProfileRevision(), $nonce, $requestCredential ),
+				'setup'       => $this->facade->setup( $target, $credentialId, $nonce, $selectedProfileId ),
+				'check'       => $this->facade->check( $target, $credentialId, $record->hookId(), $record->webhookProfileId(), $record->webhookProfileRevision(), $nonce ),
+				'reconfigure' => $this->facade->reconfigure( $target, $credentialId, $record->hookId(), $record->webhookProfileId(), $record->webhookProfileRevision(), $nonce ),
+				'remove'      => $this->facade->remove( $target, $credentialId, $record->hookId(), $record->webhookProfileId(), $record->webhookProfileRevision(), $nonce ),
+				'test'        => $this->facade->test( $target, $credentialId, $record->hookId(), $record->webhookProfileId(), $record->webhookProfileRevision(), $nonce ),
 			};
 		} catch ( \Throwable ) {
 			return $this->outcome( 'operation_failed' );
@@ -66,11 +83,11 @@ final class WebhookOperationCoordinator {
 			return $this->outcome( 'operation_failed' );
 		}
 
-		return $this->applyResult( $operation, $target, $record, $result );
+		return $this->applyResult( $operation, $target, $record, $credentialId, $result );
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function applyResult( string $operation, AssistanceTarget $target, ?InstallationRecord $record, RepositoryWebhookOperationResult $result ): array {
+	private function applyResult( string $operation, AssistanceTarget $target, ?InstallationRecord $record, string $credentialId, RepositoryWebhookOperationResult $result ): array {
 		$projection    = $result->toArray();
 		$state         = $projection['state'] ?? null;
 		$code          = $this->safeCode( $projection['code'] ?? null, 'operation_failed' );
@@ -91,7 +108,7 @@ final class WebhookOperationCoordinator {
 		}
 
 		if ( 'setup' === $operation ) {
-			$outcome    = $this->recordSetup( $target, $result, $state, $code, $observed, $delivery );
+			$outcome    = $this->recordSetup( $target, $result, $credentialId, $state, $code, $observed, $delivery );
 			$successful = 'succeeded' === $state && $this->successfulCode( $outcome['code'] );
 
 			return $this->finalizeOutcome( $outcome, $remediation, $successful, $successful || 'failed' === $state );
@@ -101,9 +118,10 @@ final class WebhookOperationCoordinator {
 		}
 
 		$outcome = match ( $operation ) {
-			'check'       => $this->outcome( $this->recordCheck( $record, $state, $code, $observed, $target->endpoint(), $delivery, $configuration ) ),
-			'reconfigure' => $this->recordReconfigure( $record, $target, $result, $state, $code, $observed, $delivery ),
+			'check'       => $this->outcome( $this->recordCheck( $record, $credentialId, $state, $code, $observed, $target->endpoint(), $delivery, $configuration ) ),
+			'reconfigure' => $this->recordReconfigure( $record, $target, $result, $credentialId, $state, $code, $observed, $delivery ),
 			'remove'      => $this->outcome( $this->recordRemove( $record, $result, $state, $code, $observed ) ),
+			'test'        => $this->outcome( $this->recordTest( $record, $credentialId, $state, $code, $observed ) ),
 		};
 
 		$successful = match ( $operation ) {
@@ -113,9 +131,10 @@ final class WebhookOperationCoordinator {
 			),
 			'reconfigure' => 'succeeded' === $state && $this->successfulCode( $outcome['code'] ),
 			'remove' => $result->confirmsAbsence() && 'removed' === $outcome['code'],
+			'test' => 'succeeded' === $state && 'ping_verified' === $outcome['code'],
 		};
 		$inlineSafe = match ( $operation ) {
-			'check', 'remove' => $successful || 'failed' === $state,
+			'check', 'remove', 'test' => $successful || 'failed' === $state,
 			'reconfigure' => $successful || ( 'failed' === $state && 'absent' !== $delivery ),
 		};
 
@@ -123,7 +142,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function recordSetup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $state, string $code, string $observed, string $delivery ): array {
+	private function recordSetup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $credentialId, string $state, string $code, string $observed, string $delivery ): array {
 		if ( 'failed' === $state ) {
 			return $this->outcome( $code );
 		}
@@ -148,6 +167,7 @@ final class WebhookOperationCoordinator {
 			$target->repositoryId(),
 			$target->repository(),
 			$hookId,
+			$credentialId,
 			$profile->id(),
 			$profile->scope(),
 			$profile->revision(),
@@ -183,7 +203,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/** @param array<string, mixed> $configuration */
-	private function recordCheck( InstallationRecord $record, string $state, string $code, string $observed, string $endpoint, string $delivery, array $configuration ): string {
+	private function recordCheck( InstallationRecord $record, string $managementCredentialId, string $state, string $code, string $observed, string $endpoint, string $delivery, array $configuration ): string {
 		if ( 'failed' === $state ) {
 			return $code;
 		}
@@ -197,7 +217,9 @@ final class WebhookOperationCoordinator {
 			'local_profile_missing' === $code => 'local_profile_missing',
 			default => 'needs_verification',
 		};
-		$next       = $record->withCheck( $status, $observed, 'succeeded' === $state ? $endpoint : null );
+		$next       = 'succeeded' === $state
+			? $record->withManagementCredential( $managementCredentialId, $status, $observed, $endpoint )
+			: $record->withCheck( $status, $observed );
 		$resultCode = match ( true ) {
 			'succeeded' === $state && 'absent' === $delivery => 'remote_missing',
 			'configuration_drift' === $status => 'configuration_drift',
@@ -209,7 +231,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function recordReconfigure( InstallationRecord $record, AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $state, string $code, string $observed, string $delivery ): array {
+	private function recordReconfigure( InstallationRecord $record, AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $managementCredentialId, string $state, string $code, string $observed, string $delivery ): array {
 		if ( 'absent' === $delivery ) {
 			return $this->outcome( $this->writeResultCode( $this->records->saveIfCurrent( $record->withCheck( 'remote_missing', $observed ), $record ), 'remote_missing' ) );
 		}
@@ -226,6 +248,7 @@ final class WebhookOperationCoordinator {
 			return $this->outcome( 'operation_failed' );
 		}
 		$next = $record->withProfile(
+			$managementCredentialId,
 			$profile->id(),
 			$profile->scope(),
 			$profile->revision(),
@@ -257,6 +280,19 @@ final class WebhookOperationCoordinator {
 		}
 
 		return $code;
+	}
+
+	private function recordTest( InstallationRecord $record, string $managementCredentialId, string $state, string $code, string $observed ): string {
+		if ( ! ( ( 'succeeded' === $state && in_array( $code, array( 'ping_requested', 'ping_verified' ), true ) ) || ( 'failed' === $state && 'ping_delivery_failed' === $code ) ) ) {
+			return $code;
+		}
+
+		$status = 'ping_verified' === $code ? 'configured' : 'needs_verification';
+
+		return $this->writeResultCode(
+			$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, $status, $observed ), $record ),
+			$code
+		);
 	}
 
 	private function resultProfile( RepositoryWebhookOperationResult $result, string $providerCode ): ?WebhookProfileMetadata {
@@ -311,7 +347,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	private function successfulCode( string $code ): bool {
-		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
+		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed', 'ping_verified' ), true );
 	}
 
 	private function safeCode( mixed $code, string $fallback ): string {

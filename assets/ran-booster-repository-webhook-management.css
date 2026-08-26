@@ -3,9 +3,51 @@
 	gap: var(--ran-booster-space-20);
 }
 
+.ran-booster-admin .ran-booster-repository-webhook-setup {
+	margin-block-start: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-setup__body {
+	padding: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-setup
+	.ran-booster-repository-webhook-management__layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--ran-booster-space-20);
+	border-block-start: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-setup
+	.ran-booster-repository-webhook-management__form {
+	padding: 0;
+}
+
 .ran-booster-admin .ran-booster-repository-webhook-management__field input {
 	width: 100%;
 	max-width: none;
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__select-action {
+	display: flex;
+	gap: var(--ran-booster-space-10);
+	align-items: center;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-management__select-action
+	select {
+	flex: 1 1 auto;
+	min-inline-size: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-management__select-action
+	.button {
+	flex: 0 0 auto;
 }
 
 .ran-booster-admin
@@ -19,7 +61,79 @@
 	margin: 0;
 }
 
+.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {
+	margin: var(--ran-booster-space-10) 0 0;
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-readiness.is-inactive {
+	background: var(--ran-booster-surface-subtle);
+	opacity: 0.62;
+}
+
+.ran-booster-admin .ran-booster-webhook-steps {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: var(--ran-booster-space-12);
+	margin: 0 0 var(--ran-booster-space-18);
+	padding: 0;
+	list-style: none;
+}
+
+.ran-booster-admin .ran-booster-webhook-step {
+	min-inline-size: 0;
+	padding: var(--ran-booster-space-14);
+	border: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-webhook-step > span {
+	display: inline-grid;
+	inline-size: 24px;
+	block-size: 24px;
+	place-items: center;
+	margin-block-end: var(--ran-booster-space-10);
+	border: 1px solid var(--ran-booster-border);
+	border-radius: 50%;
+	font-weight: 600;
+}
+
+.ran-booster-admin .ran-booster-webhook-step strong {
+	display: block;
+}
+
+.ran-booster-admin .ran-booster-webhook-step p {
+	margin: var(--ran-booster-space-4) 0 0;
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-webhook-step.is-ok > span {
+	border-color: var(--ran-booster-status-ok-border);
+	background: var(--ran-booster-status-ok-background);
+	color: var(--ran-booster-status-ok);
+}
+
+.ran-booster-admin .ran-booster-webhook-step.is-warning > span {
+	border-color: var(--ran-booster-status-warning-border);
+	background: var(--ran-booster-status-warning-background);
+	color: var(--ran-booster-status-warning);
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-lifecycle.is-inactive {
+	opacity: 0.62;
+}
+
+/* Repository detail inherits the provider card border-box reset; preserve the shared readiness icon footprint. */
+.ran-booster-admin
+	.ran-booster-repository-webhook-readiness
+	.ran-booster-readiness-icon {
+	box-sizing: content-box;
+}
+
 @media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-webhook-steps {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
 	.ran-booster-admin .ran-booster-repository-webhook-management__actions {
 		align-items: stretch;
 		flex-direction: column;
@@ -27,6 +141,19 @@
 
 	.ran-booster-admin
 		.ran-booster-repository-webhook-management__actions
+		.button {
+		width: 100%;
+		text-align: center;
+	}
+
+	.ran-booster-admin
+		.ran-booster-repository-webhook-management__select-action {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.ran-booster-admin
+		.ran-booster-repository-webhook-management__select-action
 		.button {
 		width: 100%;
 		text-align: center;

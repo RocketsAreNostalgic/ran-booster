@@ -12,7 +12,6 @@ require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionRenderer.p
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
 use RAN\Admin\PackagePagePresenter;
-use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
@@ -321,7 +320,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'value="unlink-delete-plugin"', $withoutAddOn );
 	}
 
-	public function testReleaseManagedEditShowsOnlyEvidenceBackedCleanupReview(): void {
+	public function testReleaseManagedEditRoutesWebhookManagementToTheRepositoryPage(): void {
 		$package = $this->package();
 		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
 		$packageView             = PackagePagePresenter::plugin();
@@ -334,82 +333,19 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			'selected'    => PackageSource::BRANCH->value,
 			'unavailable' => false,
 		);
-		$packageWebhookCleanup   = array(
-			'context' => new WebhookCleanupContext(
-				'plugin',
-				'exact/exact.php',
-				'temporarily-offline',
-				'stable-provider-id',
-				'owner/exact-repository',
-				'repository',
-				true,
-				true,
-				array( 'branch/shared.php' ),
-				'https://provider.example/owner/exact-repository/hooks',
-				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=temporarily-offline&view=secrets',
-				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation#ran-booster-webhook-cleanup',
-				'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=exact%2Fexact.php'
-			),
-			'actions' => array(),
-		);
-
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Webhook setup', $html );
-		self::assertStringContainsString( 'Paused', $html );
-		self::assertStringContainsString( 'This package currently uses Published releases, so repository pushes will not deploy it. Its previous webhook settings have been retained in case you return to Branch.', $html );
-		self::assertStringNotContainsString( 'Push-to-Deploy paused', $html );
-		self::assertMatchesRegularExpression( '/<details id="ran-booster-webhook-cleanup" class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-webhook-cleanup">[\\s\\S]*?A repository-specific signing secret remains available locally./', $html );
-		self::assertStringContainsString( 'Cleanup is unavailable because 1 branch-managed package still uses this repository setup.', $html );
-		self::assertStringContainsString( 'Open provider webhooks', $html );
-		self::assertStringContainsString( 'Manage signing secrets', $html );
-		self::assertStringContainsString( '#ran-booster-webhook-cleanup', $html );
-		$branchPosition    = strpos( $html, 'id="ran-booster-repository-branch"' );
-		$cleanupPosition   = strpos( $html, 'id="ran-booster-webhook-cleanup"' );
-		$operationPosition = strpos( $html, 'id="ran-booster-package-operation-heading"' );
-		self::assertIsInt( $branchPosition );
-		self::assertIsInt( $cleanupPosition );
-		self::assertIsInt( $operationPosition );
-		self::assertGreaterThan( $branchPosition, $cleanupPosition );
-		self::assertGreaterThan( $cleanupPosition, $operationPosition );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=stable-provider-id', $html );
+		self::assertStringContainsString( '>View repository webhook status</a>', $html );
 
 		$packageSource['selected'] = PackageSource::RELEASE_ASSET->value;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$releaseView = (string) ob_get_clean();
-		self::assertMatchesRegularExpression(
-			'/data-ran-booster-source-pane="branch"[\s\S]*?data-ran-booster-branch-fields[\s\S]*?hidden[\s\S]*?Webhook setup[\s\S]*?Paused/',
-			$releaseView
-		);
-
-		$_GET['webhook_cleanup'] = '1';
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
-		$reviewRequested = (string) ob_get_clean();
-		self::assertStringContainsString( '<details id="ran-booster-webhook-cleanup" class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-webhook-cleanup" open>', $reviewRequested );
-
-		$packageWebhookCleanup['context'] = new WebhookCleanupContext(
-			'plugin',
-			'exact/exact.php',
-			'temporarily-offline',
-			'stable-provider-id',
-			'owner/exact-repository',
-			'none',
-			true,
-			true,
-			array(),
-			'https://provider.example/owner/exact-repository/hooks',
-			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=temporarily-offline&view=secrets',
-			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation#ran-booster-webhook-cleanup',
-			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=exact%2Fexact.php'
-		);
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
-		$withoutEvidence = (string) ob_get_clean();
-
-		self::assertStringNotContainsString( 'Webhook setup', $withoutEvidence );
+		self::assertStringNotContainsString( 'Webhook setup', $releaseView );
+		self::assertStringContainsString( '>View repository webhook status</a>', $releaseView );
 	}
 
 	public function testReleaseManagedListUsesTheExistingDeploymentPositionAndReadOnlySummary(): void {

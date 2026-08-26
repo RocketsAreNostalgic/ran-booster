@@ -706,14 +706,19 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-provider', $html );
 		self::assertStringContainsString( 'Repository access', $html );
-		self::assertStringContainsString( 'Saved credentials provide access to private repositories entered manually.', $html );
+		self::assertStringContainsString( 'Saved credentials enable access to private repositories entered manually.', $html );
 		self::assertStringContainsString( '>Add credential</button>', $html );
 		self::assertStringContainsString( 'data-credential-modal="access"', $html );
 		self::assertStringNotContainsString( 'ran-booster-credential-table--access', $html );
+		self::assertStringContainsString( 'id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title">Signing secrets</h3>', $html );
+		self::assertStringContainsString( 'Signing secrets verify repository webhook deliveries.', $html );
+		self::assertStringContainsString( 'data-modal="webhook">Add webhook secret</button>', $html );
+		self::assertLessThan( strpos( $html, 'id="ran-booster-repository-integrations-heading"' ), strpos( $html, 'id="ran-booster-webhook-secrets-heading"' ) );
+		self::assertSame( 0, substr_count( $html, 'Manage signing secrets' ) );
 		self::assertStringContainsString( 'id="ran-booster-repository-integrations-heading" class="ran-booster-section__title">Repository integrations</h3>', $html );
-		self::assertStringContainsString( 'Review site delivery readiness, repositories connected to managed packages, and webhook setup.', $html );
-		self::assertSame( 1, substr_count( $html, 'ran-booster-status-summary--pending' ) );
-		self::assertSame( 1, substr_count( $html, 'ran-booster-status-dot is-pending' ) );
+		self::assertStringContainsString( 'Review site delivery readiness, repositories connected to managed packages, and the shared webhook receiver.', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-status-summary--pending' ) );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-status-dot is-pending' ) );
 		self::assertStringNotContainsString( 'ran-booster-status-summary--attention', $html );
 		self::assertStringContainsString( 'panel=status', $html );
 		self::assertStringContainsString( 'panel=repositories', $html );
@@ -786,9 +791,10 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryHtml = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h5>', $repositoryHtml );
+		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryHtml );
 		self::assertStringContainsString( 'Back to repositories', $repositoryHtml );
 		self::assertStringContainsString( 'Packages using this repository', $repositoryHtml );
+		self::assertStringContainsString( 'Management history', $repositoryHtml );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $repositoryHtml );
 		self::assertStringNotContainsString( '#ran-booster-branch-readiness', html_entity_decode( $repositoryHtml ) );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $repositoryHtml );
@@ -1084,6 +1090,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Public lookup (public_lookup)', $html );
 		self::assertStringContainsString( 'dedicated, expiring, least-privilege credential', $html );
 		self::assertStringContainsString( 'Credential guidance', $html );
+		self::assertStringNotContainsString( 'The active provider can read every credential saved under its provider code', $html );
 		self::assertStringContainsString( 'Deleting it returns Fixture public lookup to Anonymous', $html );
 		self::assertStringContainsString( 'ran-booster-credential-self-destruct', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider-disclosure ran-booster-public-lookup-profile', $html );
@@ -1352,14 +1359,23 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$setupHtml = (string) ob_get_clean();
 
-		self::assertSame( 1, substr_count( $setupHtml, 'hx-boost="true"' ) );
+		self::assertSame( 2, substr_count( $setupHtml, 'hx-boost="true"' ) );
 		self::assertMatchesRegularExpression(
-			'/panel=setup"[^>]+data-ran-booster-provider-task="setup"[^>]+aria-current="page">Webhook setup<\/a>/',
+			'/panel=setup"[^>]+data-ran-booster-provider-task="setup"[^>]+aria-current="page">Webhook receiver<\/a>/',
 			$setupHtml
 		);
-		self::assertStringContainsString( '<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title">Webhook setup</h4>', $setupHtml );
-		self::assertStringContainsString( 'Create the Bitbucket webhook', $setupHtml );
+		self::assertStringContainsString( '<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title">Webhook receiver</h4>', $setupHtml );
+		self::assertStringContainsString( 'This provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $setupHtml );
+		self::assertStringContainsString( 'Manage repositories', $setupHtml );
+		self::assertStringContainsString( 'panel=repositories', $setupHtml );
+		self::assertStringContainsString( 'Payload URL', $setupHtml );
+		self::assertStringContainsString( 'application/json', $setupHtml );
 		self::assertStringContainsString( 'Repository push', $setupHtml );
+		self::assertStringContainsString( 'Open Bitbucket instructions', $setupHtml );
+		self::assertStringContainsString( 'Detailed manual setup and troubleshooting', $setupHtml );
+		self::assertStringNotContainsString( 'Choose a signing secret', $setupHtml );
+		self::assertStringNotContainsString( 'Manage webhook automatically', $setupHtml );
+		self::assertStringNotContainsString( 'enable Automatic from package settings', $setupHtml );
 		self::assertStringNotContainsString( 'GitHub', $setupHtml );
 
 		$providerTask     = 'repositories';

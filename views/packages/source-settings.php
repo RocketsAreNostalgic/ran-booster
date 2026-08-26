@@ -48,9 +48,6 @@ ob_start();
 				<?php } ?>
 			<?php } ?>
 		<?php } ?>
-		<?php if ( $isPackageEdit && $releaseManaged && null !== $packageWebhookCleanup ) { ?>
-			<?php require __DIR__ . '/webhook-cleanup.php'; ?>
-		<?php } ?>
 	</div>
 	<?php if ( ! ( $isPackageEdit && $releaseManaged && 'branch' === $packageSourceView ) ) { ?>
 		<?php foreach ( $packageAdvancedSections as $packageAdvancedSection ) { ?>

@@ -40,22 +40,31 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Saved branch setup', $html );
 		self::assertStringContainsString( 'Review the requirements below.', $html );
-		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
-		self::assertStringContainsString( 'Remote webhook', $html );
-		self::assertStringContainsString( 'Booster cannot verify the remote webhook here.', $html );
-		self::assertStringContainsString( 'Manage repository webhook', $html );
+		self::assertStringContainsString( 'Repository subdirectory', $html );
+		self::assertStringContainsString( 'Root is used; no repository subdirectory is configured.', $html );
+		self::assertStringContainsString( 'Webhook health', $html );
+		self::assertStringContainsString( 'Local webhook requirements are ready.', $html );
+		self::assertStringContainsString( 'Review repository webhook settings', $html );
 		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42', $html );
-		self::assertStringContainsString( 'href="https://github.com/owner/example/settings/hooks"', $html );
-		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
+		self::assertStringNotContainsString( '#ran-booster-managed-webhook-repositories-heading', $html );
+		self::assertStringNotContainsString( 'Remote webhook', $html );
+		self::assertStringNotContainsString( 'Signing secret', $html );
+		self::assertStringNotContainsString( 'Local receiver', $html );
+		self::assertStringNotContainsString( 'A repository-specific signing secret is saved.', $html );
+		self::assertStringNotContainsString( 'href="https://github.com/owner/example/settings/hooks"', $html );
 		self::assertStringNotContainsString( 'Manage signing secrets', $html );
-		self::assertStringContainsString( 'Booster Activity', $html );
-		self::assertStringContainsString( 'ran-booster-readiness-actions__links', $html );
+		self::assertStringNotContainsString( 'Setup instructions', $html );
+		self::assertStringNotContainsString( 'Booster Activity', $html );
+		self::assertStringNotContainsString( 'ran-booster-readiness-actions__links', $html );
+		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
+		self::assertStringContainsString( '>Review repository webhook settings</a>', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42"', $html );
+		self::assertStringNotContainsString( 'repository=repo-42#', $html );
 		$checkPosition  = strpos( $html, '>Save settings and check</button>' );
-		$managePosition = strpos( $html, '>Manage repository webhook</a>' );
+		$managePosition = strrpos( $html, '>Review repository webhook settings</a>' );
 		self::assertIsInt( $checkPosition );
 		self::assertIsInt( $managePosition );
 		self::assertTrue( $checkPosition < $managePosition );
-		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'hx-post=', $html );
 		self::assertStringContainsString( 'hx-post="/wp-admin/admin.php?', $html );
@@ -75,6 +84,32 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-package-mutation', $html );
 		self::assertStringNotContainsString( 'remote webhook is configured', strtolower( $html ) );
 		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
+	}
+
+	public function testMissingStableRepositoryIdentityDoesNotProvideANavigableWebhookRoute(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$packageBranchReadiness   = array(
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'reason_codes'          => array( 'repository_identity_unavailable' ),
+				'local_secret_coverage' => 'unknown',
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Review repository webhook settings</button>', $html );
+		self::assertMatchesRegularExpression( '/<button[^>]+disabled[^>]*>Review repository webhook settings<\\/button>/', $html );
+		self::assertStringNotContainsString( 'panel=repositories', $html );
 	}
 
 	#[DataProvider( 'subdirectoryChecklistProvider' )]
@@ -150,15 +185,12 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( '<strong>Saved repository</strong>', $html );
 		self::assertStringContainsString( 'The branch <code>main</code> is saved. The repository identity is available locally; repository access and this branch have not been checked.', $html );
-		self::assertStringContainsString( '<strong>Local receiver</strong>', $html );
-		self::assertStringContainsString( 'This WordPress URL cannot receive provider webhooks.', $html );
-		self::assertStringContainsString( 'Use a public HTTPS WordPress URL or a secure tunnel.', $html );
-		self::assertStringContainsString( 'Manual deployments remain available.', $html );
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/options-general.php"', $html );
-		self::assertStringContainsString( 'Review WordPress URLs', $html );
-		self::assertStringContainsString( 'Manage signing secrets', $html );
+		self::assertStringContainsString( '<strong>Webhook health</strong>', $html );
+		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42', $html );
-		self::assertStringContainsString( 'Manage repository webhooks', $html );
+		self::assertStringContainsString( 'Review repository webhook settings', $html );
+		self::assertStringNotContainsString( 'Review WordPress URLs', $html );
+		self::assertStringNotContainsString( 'Manage signing secrets', $html );
 		self::assertStringNotContainsString( 'The local webhook endpoint needs attention.', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
@@ -193,6 +225,89 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-pending">\s*<span[^>]*><\/span>\s*<strong>Saved repository<\/strong>/s', $html );
 		self::assertStringNotContainsString( 'test is ready', $html );
 		self::assertStringNotContainsString( 'ready for manual deployments', strtolower( $html ) );
+	}
+
+	public function testPublishedReleasesKeepsTheSavedRepositoryIdentityGreen(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$releaseManaged           = true;
+		$packageCurrentSource     = 'release_asset';
+		$packageSourceView        = 'branch';
+		$providerRepositoryId     = 'repo-42';
+		$repositoryValue          = 'owner/example';
+		$packageBranchReadiness   = null;
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-ok">\s*<span[^>]*><\\/span>\s*<strong>Saved repository<\\/strong>/s', $html );
+		self::assertStringContainsString( 'The branch <code>main</code> is saved. The repository identity is available locally; repository access and this branch have not been checked.', $html );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42', $html );
+		self::assertStringContainsString( 'Pushes are ignored while this package uses Published releases.', $html );
+		self::assertStringContainsString( '>View repository webhook status</a>', $html );
+		self::assertStringNotContainsString( 'Review repository webhook settings</button>', $html );
+	}
+
+	public function testBranchPackageUsesItsPersistedIdentityWhenReadinessOmitsIt(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$providerRepositoryId     = '1315521150';
+		$repositoryValue          = 'owner/booster-fixture-plugin';
+		$releaseManaged           = false;
+		$packageBranchReadiness   = array(
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'repository'            => 'owner/booster-fixture-plugin',
+				'reason_codes'          => array(),
+				'local_secret_coverage' => 'unknown',
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'panel=repositories&amp;repository=1315521150', $html );
+		self::assertStringContainsString( '>Review repository webhook settings</a>', $html );
+	}
+
+	public function testBranchPackageDoesNotUsePersistedIdentityWhenReadinessReportsAConflict(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$providerRepositoryId     = '1315521150';
+		$repositoryValue          = 'owner/booster-fixture-plugin';
+		$releaseManaged           = false;
+		$packageBranchReadiness   = array(
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'repository'            => 'owner/booster-fixture-plugin',
+				'reason_codes'          => array( 'repository_identity_conflict' ),
+				'local_secret_coverage' => 'unknown',
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'panel=repositories', $html );
+		self::assertMatchesRegularExpression( '/<button[^>]+disabled[^>]*>Review repository webhook settings<\\/button>/', $html );
 	}
 
 	#[DataProvider( 'repositoryBranchCheckOutcomeProvider' )]
@@ -262,13 +377,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( $expectedMessage, $html );
-		self::assertStringContainsString( 'Manual deployments remain available.', $html );
-		self::assertStringContainsString( 'Review Booster diagnostics', $html );
-		self::assertStringContainsString(
-			'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting"',
-			$html
-		);
+		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
+		self::assertStringContainsString( 'Webhook health', $html );
+		self::assertStringContainsString( '>Review repository webhook settings</button>', $html );
+		self::assertStringNotContainsString( '<a href=', $html );
+		self::assertStringNotContainsString( 'Review Booster diagnostics', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 
@@ -308,7 +421,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'ran-booster-badge--error', $html );
 		self::assertStringContainsString( 'Automatic branch deployment setup needs attention', $html );
-		self::assertStringContainsString( 'Local signing-secret status is unavailable', $html );
+		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 	}
 
 	public function testVerifiedRepositoryBranchCheckUsesOnlyTheGreenRepositoryRow(): void {
@@ -317,7 +430,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable     = true;
 		$branchValue                  = 'main';
 		$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
-		$savedSubdirectoryValue       = 'packages/example';
+		$savedSubdirectoryValue       = '';
 		$packageBranchReadiness       = array(
 			'site'       => array(
 				'status'       => 'ready',
@@ -338,7 +451,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'notice notice-success inline', $html );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-repository-branch-check' ) );
 		self::assertStringContainsString( 'The branch <code>main</code> is accessible with the saved repository settings.', $html );
-		self::assertStringContainsString( 'The subdirectory <code>packages/example</code> is accessible at this branch.', $html );
+		self::assertStringContainsString( 'Root is used; no repository subdirectory is configured.', $html );
+		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-ok">\s*<span[^>]*><\/span>\s*<strong>Repository subdirectory<\/strong>/s', $html );
 		self::assertStringNotContainsString( 'main is saved.', $html );
 		self::assertStringNotContainsString( 'Local evidence refreshed.', $html );
 		self::assertMatchesRegularExpression( '/hx-push-url="[^"]*source_view=branch[^"]*#ran-booster-branch-readiness"/', $html );

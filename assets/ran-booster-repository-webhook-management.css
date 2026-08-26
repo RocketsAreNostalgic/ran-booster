@@ -79,6 +79,10 @@
 	list-style: none;
 }
 
+.ran-booster-admin .ran-booster-repository-release-lifecycle {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .ran-booster-admin .ran-booster-webhook-step {
 	min-inline-size: 0;
 	padding: var(--ran-booster-space-14);

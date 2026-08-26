@@ -230,6 +230,10 @@ final class AdminAssetContractTest extends TestCase {
 			".ran-booster-admin .ran-booster-webhook-steps {\n\tdisplay: grid;\n\tgrid-template-columns: repeat(4, minmax(0, 1fr));",
 			$webhookManagement
 		);
+		self::assertStringContainsString(
+			".ran-booster-admin .ran-booster-repository-release-lifecycle {\n\tgrid-template-columns: repeat(3, minmax(0, 1fr));",
+			$webhookManagement
+		);
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-ok > span {', $webhookManagement );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-warning > span {', $webhookManagement );
 	}

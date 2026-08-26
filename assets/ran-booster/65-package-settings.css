@@ -627,7 +627,12 @@
 
 .ran-booster-admin .ran-booster-readiness-item {
 	display: grid;
-	grid-template-columns: 20px minmax(140px, 0.8fr) minmax(0, 1.4fr);
+	grid-template-columns:
+		calc(
+			var(--ran-booster-status-marker-size) +
+				(2 * var(--ran-booster-status-marker-border-width))
+		)
+		minmax(140px, 0.8fr) minmax(0, 1.4fr);
 	align-items: center;
 	gap: var(--ran-booster-space-10);
 	min-block-size: 46px;
@@ -651,13 +656,22 @@
 
 .ran-booster-admin .ran-booster-readiness-icon {
 	display: grid;
-	inline-size: 18px;
-	block-size: 18px;
+	box-sizing: content-box;
+	inline-size: var(--ran-booster-status-marker-size);
+	min-inline-size: var(--ran-booster-status-marker-size);
+	max-inline-size: var(--ran-booster-status-marker-size);
+	block-size: var(--ran-booster-status-marker-size);
+	min-block-size: var(--ran-booster-status-marker-size);
+	max-block-size: var(--ran-booster-status-marker-size);
+	aspect-ratio: 1;
 	place-items: center;
-	border: 2px solid currentcolor;
+	border: var(--ran-booster-status-marker-border-width) solid currentcolor;
 	border-radius: var(--ran-booster-radius-circle);
-	font-size: 14px;
+	font-size: var(--ran-booster-status-marker-font-size);
 	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	overflow: hidden;
 }
 
 .ran-booster-admin
@@ -949,7 +963,12 @@
 	}
 
 	.ran-booster-admin .ran-booster-readiness-item {
-		grid-template-columns: 20px minmax(0, 1fr);
+		grid-template-columns:
+			calc(
+				var(--ran-booster-status-marker-size) +
+					(2 * var(--ran-booster-status-marker-border-width))
+			)
+			minmax(0, 1fr);
 	}
 
 	.ran-booster-admin .ran-booster-readiness-item > span:last-child {

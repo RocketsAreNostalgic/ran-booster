@@ -219,11 +219,32 @@ final class AdminAssetContractTest extends TestCase {
 		);
 	}
 
-	public function testRepositoryWebhookReadinessIconsKeepTheSharedChecklistFootprint(): void {
+	public function testRepositoryStatusMarkersKeepTheSharedChecklistFootprint(): void {
+		$foundations       = $this->asset( 'ran-booster/00-foundations.css' );
+		$packageSettings   = $this->asset( 'ran-booster/65-package-settings.css' );
 		$webhookManagement = $this->asset( 'ran-booster-repository-webhook-management.css' );
 
+		self::assertStringContainsString( '--ran-booster-status-marker-size: 18px;', $foundations );
+		self::assertStringContainsString( '--ran-booster-status-marker-border-width: 2px;', $foundations );
+		self::assertStringContainsString( '--ran-booster-status-marker-font-size: 12px;', $foundations );
 		self::assertStringContainsString(
-			".ran-booster-repository-webhook-readiness\n\t.ran-booster-readiness-icon {\n\tbox-sizing: content-box;",
+			".ran-booster-admin .ran-booster-readiness-icon {\n\tdisplay: grid;\n\tbox-sizing: content-box;\n\tinline-size: var(--ran-booster-status-marker-size);",
+			$packageSettings
+		);
+		self::assertStringContainsString( 'min-inline-size: var(--ran-booster-status-marker-size);', $packageSettings );
+		self::assertStringContainsString( 'aspect-ratio: 1;', $packageSettings );
+		self::assertStringContainsString( 'font-variant-numeric: tabular-nums;', $packageSettings );
+		self::assertSame(
+			2,
+			substr_count( $packageSettings, 'var(--ran-booster-status-marker-size) +' )
+		);
+		self::assertStringNotContainsString( 'grid-template-columns: 20px', $packageSettings );
+		self::assertStringContainsString(
+			".ran-booster-repository-webhook-readiness\n\t.ran-booster-readiness-icon,",
+			$webhookManagement
+		);
+		self::assertStringContainsString(
+			".ran-booster-repository-release-readiness\n\t.ran-booster-readiness-icon {\n\tbox-sizing: content-box;",
 			$webhookManagement
 		);
 		self::assertStringContainsString(
@@ -236,6 +257,33 @@ final class AdminAssetContractTest extends TestCase {
 		);
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-ok > span {', $webhookManagement );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-warning > span {', $webhookManagement );
+		self::assertStringContainsString(
+			".ran-booster-admin .ran-booster-webhook-step {\n\tdisplay: grid;\n\tgrid-template-columns:",
+			$webhookManagement
+		);
+		self::assertStringContainsString(
+			'var(--ran-booster-status-marker-size)',
+			$webhookManagement
+		);
+		self::assertStringContainsString(
+			".ran-booster-admin .ran-booster-webhook-step > span {\n\tdisplay: grid;\n\tgrid-row: span 2;\n\tbox-sizing: content-box;\n\tinline-size: var(--ran-booster-status-marker-size);",
+			$webhookManagement
+		);
+		self::assertStringContainsString( 'max-block-size: var(--ran-booster-status-marker-size);', $webhookManagement );
+		self::assertStringContainsString( 'line-height: 1;', $webhookManagement );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-release-automation {', $webhookManagement );
+		self::assertStringContainsString(
+			".ran-booster-admin .ran-booster-repository-release-automation__state {\n\tpadding: var(--ran-booster-space-16) var(--ran-booster-space-18);\n\tborder-block-end: 1px solid var(--ran-booster-border);",
+			$webhookManagement
+		);
+		self::assertStringContainsString(
+			".ran-booster-admin .ran-booster-repository-release-package {\n\tborder: 0;\n\tbackground: transparent;",
+			$webhookManagement
+		);
+		self::assertStringContainsString(
+			".ran-booster-admin .ran-booster-repository-release-package__body {\n\tpadding: var(--ran-booster-space-16) var(--ran-booster-space-18);",
+			$webhookManagement
+		);
 	}
 
 	public function testRepositoryWebhookSetupKeepsItsFormFullWidth(): void {

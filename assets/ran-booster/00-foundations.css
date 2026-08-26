@@ -71,6 +71,9 @@
 	--ran-booster-status-pending-background: var(--ran-booster-color-blue-100);
 	--ran-booster-status-neutral: var(--ran-booster-text-muted);
 	--ran-booster-status-neutral-background: var(--ran-booster-surface-subtle);
+	--ran-booster-status-marker-size: 18px;
+	--ran-booster-status-marker-border-width: 2px;
+	--ran-booster-status-marker-font-size: 12px;
 	--ran-booster-space-1: 1px;
 	--ran-booster-space-2: 2px;
 	--ran-booster-space-3: 3px;

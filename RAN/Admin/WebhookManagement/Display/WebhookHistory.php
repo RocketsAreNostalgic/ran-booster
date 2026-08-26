@@ -8,7 +8,7 @@ use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 
-/** @internal Exact local schema-3 history read. */
+/** @internal Exact local schema-4 history read. */
 final readonly class WebhookHistory {
 	public function __construct( private ManagedPackageWebhookAuthorityResolver $authorities, private InstallationStore $records ) {}
 

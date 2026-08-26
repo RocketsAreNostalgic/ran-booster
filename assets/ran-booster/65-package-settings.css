@@ -861,21 +861,6 @@
 	padding: 0 var(--ran-booster-space-16) var(--ran-booster-space-16);
 }
 
-.ran-booster-admin .ran-booster-webhook-cleanup__state {
-	color: var(--ran-booster-text-muted);
-	font-weight: 600;
-}
-
-.ran-booster-admin .ran-booster-webhook-cleanup__content {
-	margin-block-start: var(--ran-booster-space-14);
-	padding-block-start: var(--ran-booster-space-14);
-	border-block-start: 1px solid var(--ran-booster-border);
-}
-
-.ran-booster-admin .ran-booster-webhook-cleanup__actions {
-	margin-block-start: var(--ran-booster-space-14);
-}
-
 @media screen and (max-width: 960px) {
 	.ran-booster-admin .ran-booster-package-settings {
 		grid-template-columns: minmax(0, 1fr);
@@ -954,16 +939,6 @@
 	.ran-booster-admin .ran-booster-package-danger-zone__actions .button {
 		inline-size: 100%;
 		justify-self: stretch;
-		text-align: center;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-cleanup__actions {
-		align-items: stretch;
-		flex-direction: column;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-cleanup__actions .button {
-		inline-size: 100%;
 		text-align: center;
 	}
 

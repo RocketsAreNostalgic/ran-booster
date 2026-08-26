@@ -21,6 +21,7 @@ use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\RepositoryProvider\WebhookEnvelope;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\RepositoryProvider\WebhookRequest;
@@ -64,19 +65,23 @@ abstract class WebhookManagementCapabilityProvider implements RepositoryProvider
 }
 
 trait SuppliesWebhookFitness {
-	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+		return $this->unexpectedFitnessOperation();
+	}
+
+	public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
@@ -87,19 +92,23 @@ trait SuppliesWebhookFitness {
 }
 
 trait SuppliesWebhookManagement {
-	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
+	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, string $signingSecret ): RepositoryWebhookOperationResult {
 		return $this->unexpectedManagementOperation();
 	}
 
-	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential ): RepositoryWebhookOperationResult {
+	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
 		return $this->unexpectedManagementOperation();
 	}
 
-	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential, string $signingSecret ): RepositoryWebhookOperationResult {
+	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, string $signingSecret ): RepositoryWebhookOperationResult {
 		return $this->unexpectedManagementOperation();
 	}
 
-	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, ?string $requestCredential ): RepositoryWebhookOperationResult {
+	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
+		return $this->unexpectedManagementOperation();
+	}
+
+	public function test( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
 		return $this->unexpectedManagementOperation();
 	}
 
@@ -109,7 +118,7 @@ trait SuppliesWebhookManagement {
 	}
 }
 
-final class CompleteWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness, RepositoryWebhookManagement, WebhookNormalizer {
+final class CompleteWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryWebhookSettingsLink, WebhookNormalizer {
 	use SuppliesWebhookFitness;
 	use SuppliesWebhookManagement;
 
@@ -128,6 +137,10 @@ final class CompleteWebhookManagementCapabilityProvider extends WebhookManagemen
 		unset( $request );
 
 		return WebhookEnvelope::ignored();
+	}
+
+	public function repositoryWebhookSettingsUrl( string $locator ): string {
+		return 'https://fixture-provider.example.test/' . rawurlencode( $locator ) . '/settings/hooks';
 	}
 }
 

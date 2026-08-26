@@ -12,7 +12,7 @@ use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 use RAN\Secrets\SecretsFile;
 
-/** Core-governed repository-webhook-management/1 facade. */
+/** Core-governed repository-webhook-management/2 facade. */
 final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 	/** @var \Closure(): bool */
@@ -105,9 +105,35 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		}
 	}
 
+	/** @return list<array{id:string,label:string,scope:string}> */
+	public function webhookProfileChoices( string $providerCode, string $repositoryId ): array {
+		$providerCode = $this->providerCode( $providerCode );
+		if ( ! ( $this->canManage )() || ! $this->storageAvailable() || ! $this->validRepositoryId( $repositoryId ) ) {
+			return array();
+		}
+		try {
+			$target  = $this->currentTarget( $providerCode, $repositoryId, true );
+			$choices = array();
+			foreach ( null === $target ? array() : $this->secrets->webhookProfiles( $providerCode ) as $profileId => $profile ) {
+				if ( ! is_string( $profileId ) || ! $this->validWebhookProfileId( $profileId ) || ! is_array( $profile ) || ! $this->appliesTo( $target, $profile ) || ! is_string( $profile['label'] ?? null ) ) {
+					continue;
+				}
+				$choices[] = array(
+					'id'    => $profileId,
+					'label' => $profile['label'],
+					'scope' => (string) $profile['scope'],
+				);
+			}
+
+			return $choices;
+		} catch ( \Throwable ) {
+			return array();
+		}
+	}
+
 	public function profile( string $providerCode, string $repositoryId, string $profileId ): ?WebhookProfileMetadata {
 		$providerCode = $this->providerCode( $providerCode );
-		if ( ! ( $this->canManage )() || ! $this->storageAvailable() || ! $this->validRepositoryId( $repositoryId ) || ! $this->validProfileId( $profileId ) ) {
+		if ( ! ( $this->canManage )() || ! $this->storageAvailable() || ! $this->validRepositoryId( $repositoryId ) || ! $this->validWebhookProfileId( $profileId ) ) {
 			return null;
 		}
 		try {
@@ -120,45 +146,49 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		}
 	}
 
-	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->assess( 'setup', $target, $credentialProfileId, null, null, null, $nonce, false, $requestCredential );
+	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'setup', $target, $credentialProfileId, null, null, null, $nonce, false );
 	}
 
-	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->assess( 'check', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false, $requestCredential );
+	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'check', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false );
 	}
 
-	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->assess( 'reconfigure', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false, $requestCredential );
+	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'reconfigure', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false );
 	}
 
-	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->assess( 'remove', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, true, $requestCredential );
+	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'remove', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, true );
 	}
 
-	public function setup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function assessTest( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'test', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false );
+	}
+
+	public function setup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, ?string $webhookProfileId = null ): RepositoryWebhookOperationResult {
 		return $this->withTargetLock(
 			$target,
-			fn (): RepositoryWebhookOperationResult => $this->setupLocked( $target, $credentialProfileId, $nonce, $requestCredential )
+			fn (): RepositoryWebhookOperationResult => $this->setupLocked( $target, $credentialProfileId, $webhookProfileId, $nonce )
 		);
 	}
 
-	public function check( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function check( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
 		return $this->withTargetLock(
 			$target,
-			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, $requestCredential ): RepositoryWebhookOperationResult {
+			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'check', $target, $nonce );
 				$profile = null === $current ? null : $this->exactProfile( $current, $profileId, $profileRevision );
-				if ( null === $current || null === $profile || ! $this->credentialSourceAvailable( $current->providerCode(), $credentialProfileId, $requestCredential ) ) {
+				if ( null === $current || null === $profile || ! $this->credentialProfileAvailable( $current->providerCode(), (string) $credentialProfileId ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
 				try {
-					if ( ! $this->identityConfirmed( 'check', $current, $credentialProfileId, $requestCredential, $hookId ) ) {
+					if ( ! $this->identityConfirmed( 'check', $current, $credentialProfileId, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
 					}
 					$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
 
-					return $provider->check( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $requestCredential )->withProfile( $profile );
+					return $provider->check( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
 				} catch ( \Throwable ) {
 					return $this->failed( 'operation_failed' )->withProfile( $profile );
 				}
@@ -166,24 +196,24 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		);
 	}
 
-	public function reconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function reconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
 		return $this->withTargetLock(
 			$target,
-			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, $requestCredential ): RepositoryWebhookOperationResult {
+			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'reconfigure', $target, $nonce );
 				$record  = null === $current ? null : $this->profileRecord( $current->providerCode(), $profileId );
-				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->appliesMetadata( $current, $record[0] ) || ! $this->credentialSourceAvailable( $current->providerCode(), $credentialProfileId, $requestCredential ) ) {
+				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->appliesMetadata( $current, $record[0] ) || ! $this->credentialProfileAvailable( $current->providerCode(), (string) $credentialProfileId ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
 				$providerStarted = false;
 				try {
-					if ( ! $this->identityConfirmed( 'reconfigure', $current, $credentialProfileId, $requestCredential, $hookId ) ) {
+					if ( ! $this->identityConfirmed( 'reconfigure', $current, $credentialProfileId, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $record[0] );
 					}
 					$provider        = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
 					$providerStarted = true;
 
-					return $provider->reconfigure( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $requestCredential, $record[1] )->withProfile( $record[0] );
+					return $provider->reconfigure( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $record[1] )->withProfile( $record[0] );
 				} catch ( \Throwable ) {
 					if ( $providerStarted ) {
 						return $this->mutationOutcomeUnknown( 'reconfigure_outcome_unknown', $hookId )->withProfile( $record[0] );
@@ -195,24 +225,24 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		);
 	}
 
-	public function remove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function remove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
 		return $this->withTargetLock(
 			$target,
-			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, $requestCredential ): RepositoryWebhookOperationResult {
+			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'remove', $target, $nonce, true );
 				$record  = null === $current ? null : $this->profileRecord( $current->providerCode(), $profileId );
-				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->appliesMetadata( $current, $record[0] ) || ! $this->credentialSourceAvailable( $current->providerCode(), $credentialProfileId, $requestCredential ) ) {
+				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->appliesMetadata( $current, $record[0] ) || ! $this->credentialProfileAvailable( $current->providerCode(), (string) $credentialProfileId ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
 				$profile         = $record[0];
 				$providerStarted = false;
 				try {
-					if ( ! $this->identityConfirmed( 'remove', $current, $credentialProfileId, $requestCredential, $hookId ) ) {
+					if ( ! $this->identityConfirmed( 'remove', $current, $credentialProfileId, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
 					}
 					$provider        = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
 					$providerStarted = true;
-					$result          = $provider->remove( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $requestCredential )->withProfile( $profile );
+					$result          = $provider->remove( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
 					if ( $result->confirmsAbsence() && 'created' === $profile->disposition() && ! $this->deleteProfileIfRevision( $current->providerCode(), $profile->id(), $profile->revision() ) ) {
 						return $result->asPartial( 'local_profile_release_failed', 'The remote hook is absent; remove the retained local profile before replacing it.' );
 					}
@@ -229,21 +259,44 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		);
 	}
 
-	private function assess( string $action, AssistanceTarget $target, ?string $credentialId, ?string $hookId, ?string $profileId, ?int $profileRevision, string $nonce, bool $allowCleanup, ?string $requestCredential ): RepositoryWebhookFitnessResult {
+	public function test( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
+		return $this->withTargetLock(
+			$target,
+			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
+				$current = $this->authorize( 'test', $target, $nonce );
+				$profile = null === $current ? null : $this->exactProfile( $current, $profileId, $profileRevision );
+				if ( null === $current || null === $profile || ! $this->credentialProfileAvailable( $current->providerCode(), (string) $credentialProfileId ) ) {
+					return $this->failed( 'operation_unauthorized' );
+				}
+				try {
+					if ( ! $this->identityConfirmed( 'test', $current, $credentialProfileId, $hookId ) ) {
+						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
+					}
+					$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+
+					return $provider->test( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
+				} catch ( \Throwable ) {
+					return $this->failed( 'operation_failed' )->withProfile( $profile );
+				}
+			}
+		);
+	}
+
+	private function assess( string $action, AssistanceTarget $target, ?string $credentialId, ?string $hookId, ?string $profileId, ?int $profileRevision, string $nonce, bool $allowCleanup ): RepositoryWebhookFitnessResult {
 		$current = $this->authorize( $action, $target, $nonce, $allowCleanup );
-		if ( null === $current || ! $this->credentialSourceAvailable( $current->providerCode(), $credentialId, $requestCredential ) || ( null !== $profileId && null === $this->exactProfile( $current, $profileId, (int) $profileRevision ) ) ) {
+		if ( null === $current || ! $this->credentialProfileAvailable( $current->providerCode(), (string) $credentialId ) || ( null !== $profileId && null === $this->exactProfile( $current, $profileId, (int) $profileRevision ) ) ) {
 			return $this->fitnessUnavailable( 'assessment_unauthorized' );
 		}
 		try {
-			return $this->providerAssessment( $action, $current, $credentialId, $requestCredential, $hookId );
+			return $this->providerAssessment( $action, $current, $credentialId, $hookId );
 		} catch ( \Throwable ) {
 			return $this->fitnessUnavailable( 'assessment_unavailable' );
 		}
 	}
 
-	private function setupLocked( AssistanceTarget $target, ?string $credentialId, string $nonce, ?string $requestCredential ): RepositoryWebhookOperationResult {
+	private function setupLocked( AssistanceTarget $target, ?string $credentialId, ?string $selectedProfileId, string $nonce ): RepositoryWebhookOperationResult {
 		$current = $this->authorize( 'setup', $target, $nonce );
-		if ( null === $current || ! $this->credentialSourceAvailable( $current->providerCode(), $credentialId, $requestCredential ) ) {
+		if ( null === $current || ! $this->credentialProfileAvailable( $current->providerCode(), (string) $credentialId ) ) {
 			return $this->failed( 'operation_unauthorized' );
 		}
 		$created         = false;
@@ -252,12 +305,15 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		$profileId       = null;
 		$createdRevision = null;
 		try {
-			if ( ! $this->identityConfirmed( 'setup', $current, $credentialId, $requestCredential ) ) {
+			$selection = null === $selectedProfileId ? null : $this->selectProfile( $current, $selectedProfileId );
+			if ( null !== $selectedProfileId && null === $selection ) {
+				return $this->failed( 'operation_unauthorized' );
+			}
+			if ( ! $this->identityConfirmed( 'setup', $current, $credentialId ) ) {
 				return $this->failed( 'repository_identity_unconfirmed' );
 			}
-			$provider  = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
-			$selection = $this->selectProfile( $current, null );
-			if ( null === $selection ) {
+			$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+			if ( null === $selection && null === $selectedProfileId ) {
 				$profileId       = $this->secrets->saveWebhook(
 					$current->providerCode(),
 					null,
@@ -279,7 +335,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			}
 			list($metadata, $secret) = $selection;
 			$providerStarted         = true;
-			$result                  = $provider->setup( $current->repositoryId(), $current->repository(), $current->endpoint(), $credentialId, $requestCredential, $secret );
+			$result                  = $provider->setup( $current->repositoryId(), $current->repository(), $current->endpoint(), $credentialId, $secret );
 			if ( $created && 'failed' === $result->state() ) {
 				return $this->cleanupCreatedProfile( $current->providerCode(), $metadata->id(), $metadata->revision(), $result, $metadata, 'Retain the local profile and inspect both local and remote state.' );
 			}
@@ -297,22 +353,23 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		}
 	}
 
-	private function identityConfirmed( string $action, AssistanceTarget $target, ?string $credentialId, ?string $requestCredential, ?string $hookId = null ): bool {
-		$fitness = $this->providerAssessment( $action, $target, $credentialId, $requestCredential, $hookId )->toArray();
+	private function identityConfirmed( string $action, AssistanceTarget $target, ?string $credentialId, ?string $hookId = null ): bool {
+		$fitness = $this->providerAssessment( $action, $target, $credentialId, $hookId )->toArray();
 
 		return 'supported' === $fitness['support']
 			&& in_array( $fitness['suitability'], array( 'suitable', 'unknown' ), true )
 			&& in_array( $fitness['evidence'], array( 'observed', 'inferred', 'unknown_by_design' ), true );
 	}
 
-	private function providerAssessment( string $action, AssistanceTarget $target, ?string $credentialId, ?string $requestCredential, ?string $hookId ): RepositoryWebhookFitnessResult {
+	private function providerAssessment( string $action, AssistanceTarget $target, ?string $credentialId, ?string $hookId ): RepositoryWebhookFitnessResult {
 		$provider = $this->providers->requireCapability( $target->providerCode(), RepositoryWebhookFitness::class );
 
 		return match ( $action ) {
-			'setup'       => $provider->assessSetup( $target->repositoryId(), $target->repository(), $credentialId, $requestCredential ),
-			'check'       => $provider->assessCheck( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId, $requestCredential ),
-			'reconfigure' => $provider->assessReconfigure( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId, $requestCredential ),
-			'remove'      => $provider->assessRemove( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId, $requestCredential ),
+			'setup'       => $provider->assessSetup( $target->repositoryId(), $target->repository(), $credentialId ),
+			'check'       => $provider->assessCheck( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId ),
+			'reconfigure' => $provider->assessReconfigure( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId ),
+			'remove'      => $provider->assessRemove( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId ),
+			'test'        => $provider->assessTest( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId ),
 		};
 	}
 
@@ -389,13 +446,6 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return null;
 	}
 
-	private function credentialSourceAvailable( string $providerCode, ?string $credentialId, ?string $requestCredential ): bool {
-		$saved   = null !== $credentialId && '' !== trim( $credentialId );
-		$request = null !== $requestCredential && '' !== trim( $requestCredential );
-
-		return $saved !== $request && ( $request || $this->credentialProfileAvailable( $providerCode, (string) $credentialId ) );
-	}
-
 	private function credentialProfileAvailable( string $providerCode, string $credentialId ): bool {
 		if ( ! $this->validCredentialId( $credentialId ) ) {
 			return false;
@@ -419,17 +469,10 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	/** @return array{WebhookProfileMetadata,string}|null */
-	private function selectProfile( AssistanceTarget $target, ?string $recordedProfileId ): ?array {
+	private function selectProfile( AssistanceTarget $target, string $profileId ): ?array {
 		$materials = $this->secrets->webhookMaterials( $target->providerCode() );
-		if ( null !== $recordedProfileId && isset( $materials[ $recordedProfileId ] ) && $this->appliesTo( $target, $materials[ $recordedProfileId ] ) ) {
-			return $this->profileRecordFromMaterial( $target->providerCode(), $recordedProfileId, $materials[ $recordedProfileId ] );
-		}
-		foreach ( array( 'repository', 'owner' ) as $scope ) {
-			foreach ( $materials as $profileId => $material ) {
-				if ( $scope === ( $material['scope'] ?? null ) && $this->appliesTo( $target, $material ) ) {
-					return $this->profileRecordFromMaterial( $target->providerCode(), (string) $profileId, $material );
-				}
-			}
+		if ( isset( $materials[ $profileId ] ) && $this->appliesTo( $target, $materials[ $profileId ] ) ) {
+			return $this->profileRecordFromMaterial( $target->providerCode(), $profileId, $materials[ $profileId ] );
 		}
 
 		return null;
@@ -539,6 +582,10 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 	private function validProfileId( string $profileId ): bool {
 		return 1 === preg_match( '/^wh_[a-f0-9]{24}$/', $profileId );
+	}
+
+	private function validWebhookProfileId( string $profileId ): bool {
+		return SecretsFile::CONSTANT_PROFILE === $profileId || $this->validProfileId( $profileId );
 	}
 
 	private function validCredentialId( string $credentialId ): bool {

@@ -419,11 +419,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'view'            => 'secrets',
 			'panel'           => 'setup',
 			'repository_view' => 'releases',
-			's'       => ' workspace ',
-			'scope'   => 'owner',
-			'status'  => 'ready',
-			'orderby' => 'usage',
-			'order'   => 'desc',
+			's'               => ' workspace ',
+			'scope'           => 'owner',
+			'status'          => 'ready',
+			'orderby'         => 'usage',
+			'order'           => 'desc',
 		);
 
 		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->getIndex()['data'];
@@ -566,7 +566,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h3>', $html );
+		self::assertStringContainsString( 'Integration status', $html );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="branch"', $html );
 		self::assertStringContainsString( 'Back to repositories', $html );
 		self::assertStringContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( 'ran-booster-repository-detail__layout', $html );

@@ -46,9 +46,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'label' => 'Recorded hook',
 					'value' => 'Configured at last check',
 				),
-					array(
-						'key'   => 'gh:release-automation-a',
-						'label' => 'Release automation — owner/plugin.php',
+				array(
+					'key'   => 'gh:release-automation-a',
+					'label' => 'Release automation — owner/plugin.php',
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
 				),
@@ -70,19 +70,19 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'GitHub',
 			'https://example.test/repositories',
 			'https://example.test/activity',
-				true,
-				'Receiver ready.',
-				'status',
-				$this->viewUrls(),
-				$this->viewRequestUrls(),
-				static function () use ( &$webhookRendered ): void {
+			true,
+			'Receiver ready.',
+			'status',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			static function () use ( &$webhookRendered ): void {
 					$webhookRendered = true;
 					echo '<div data-test-webhook></div>';
-				},
-				static function () use ( &$releaseRendered ): void {
+			},
+			static function () use ( &$releaseRendered ): void {
 					$releaseRendered = true;
 					echo '<div data-test-release></div>';
-				}
+			}
 		);
 		$html = (string) ob_get_clean();
 
@@ -95,6 +95,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
 		self::assertStringContainsString( 'Integration status', $html );
+		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
+		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '1 package uses Branch deployments', $html );
 		self::assertStringContainsString( '1 package tracks Published releases', $html );
 		self::assertStringContainsString( 'Release automation — owner/plugin.php', $html );
@@ -133,13 +135,13 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'Bitbucket',
 			'https://example.test/repositories',
 			'https://example.test/activity',
-				false,
-				'Receiver unavailable.',
-				'branch',
-				$this->viewUrls(),
-				$this->viewRequestUrls(),
-				null,
-				null
+			false,
+			'Receiver unavailable.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
 		);
 		$html = (string) ob_get_clean();
 
@@ -163,7 +165,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 	}
 
 	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {
-		$row = array(
+		$row             = array(
 			'repository'        => 'owner/releases',
 			'repository_url'    => 'https://github.com/owner/releases',
 			'source_label'      => 'Published releases',

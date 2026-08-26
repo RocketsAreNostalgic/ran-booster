@@ -588,7 +588,7 @@
 
 .ran-booster-admin .ran-booster-repository-integration-status {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	margin: 0 0 var(--ran-booster-space-16);
 	border: 1px solid var(--ran-booster-divider);
 }
@@ -648,6 +648,12 @@
 	margin-block-end: var(--ran-booster-space-18);
 }
 
+.ran-booster-admin .ran-booster-repository-detail__tabs {
+	max-inline-size: 100%;
+	margin-block: 0 var(--ran-booster-space-18);
+	overflow-x: auto;
+}
+
 .ran-booster-admin .ran-booster-repository-detail__header p {
 	margin-block: var(--ran-booster-space-4) 0;
 }
@@ -676,6 +682,17 @@
 
 .ran-booster-admin .ran-booster-repository-detail__main {
 	min-inline-size: 0;
+}
+
+.ran-booster-admin .ran-booster-repository-release-section,
+.ran-booster-admin
+	.ran-booster-repository-release-section
+	.ran-booster-settings-section__body,
+.ran-booster-admin
+	.ran-booster-repository-release-section
+	.ran-booster-package-disclosure__body {
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
 }
 
 .ran-booster-admin

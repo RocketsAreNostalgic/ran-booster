@@ -140,11 +140,11 @@ final class GitHubReleaseWorkflowControls {
 		if ( 'gh' !== ( $row['provider_code'] ?? null ) || true === ( $row['historical'] ?? false ) ) {
 			return;
 		}
-		$repositoryId = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
-		$repository   = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
-		$summaries    = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
-		$rendered     = 0;
-		$result       = $this->requestedResult();
+		$repositoryId                 = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+		$repository                   = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$summaries                    = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
+		$packagesForReleaseAutomation = array();
+		$result                       = $this->requestedResult();
 		foreach ( $summaries as $summary ) {
 			$type       = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
 			$identifier = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
@@ -173,25 +173,46 @@ final class GitHubReleaseWorkflowControls {
 			if ( ! is_array( $view ) ) {
 				continue;
 			}
-			++$rendered;
-			$name        = is_string( $summary['display_name'] ?? null ) ? $summary['display_name'] : $identifier;
-			$settingsUrl = is_string( $summary['settings_url'] ?? null ) ? $summary['settings_url'] : '';
-			?>
-			<section class="ran-booster-settings-section ran-booster-repository-release-section">
-				<header class="ran-booster-settings-section__header"><div><h3><?php echo esc_html( $name ); ?></h3><p class="description"><?php echo esc_html( ucfirst( $type ) . ' · ' . ( 'release_asset' === ( $summary['source'] ?? null ) ? __( 'Published releases', 'ran-booster' ) : __( 'Branch deployments', 'ran-booster' ) ) ); ?></p></div>
-				<?php
-				if ( '' !== $settingsUrl ) {
-					?>
-					<a class="button" href="<?php echo esc_url( $settingsUrl ); ?>"><?php echo esc_html__( 'Package settings', 'ran-booster' ); ?></a><?php } ?></header>
-				<div class="ran-booster-settings-section__body"><?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Display projection escapes complete output. ?><?php echo $this->display->workflow( $view ); ?></div>
-			</section>
-			<?php
+			$packagesForReleaseAutomation[] = array(
+				'name'         => is_string( $summary['display_name'] ?? null ) ? $summary['display_name'] : $identifier,
+				'settings_url' => is_string( $summary['settings_url'] ?? null ) ? $summary['settings_url'] : '',
+				'summary'      => ucfirst( $type ) . ' · ' . ( 'release_asset' === ( $summary['source'] ?? null ) ? __( 'Published releases', 'ran-booster' ) : __( 'Branch deployments', 'ran-booster' ) ),
+				'view'         => $view,
+			);
 		}
-		if ( 0 === $rendered ) {
+		?>
+		<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">
+			<header class="ran-booster-settings-section__header">
+				<h3 id="ran-booster-repository-release-heading"><?php echo esc_html__( 'Release automation', 'ran-booster' ); ?></h3>
+			</header>
+			<div class="ran-booster-settings-section__body">
+		<?php if ( array() === $packagesForReleaseAutomation ) { ?>
 			?>
 			<div class="notice notice-warning inline"><p><?php echo esc_html__( 'No exact package release-automation authority is available for this repository.', 'ran-booster' ); ?></p></div>
 			<?php
-		}
+		} else {
+			?>
+			<?php $multiplePackages = 1 < count( $packagesForReleaseAutomation ); ?>
+			<?php foreach ( $packagesForReleaseAutomation as $packageForReleaseAutomation ) { ?>
+				<div class="ran-booster-readiness-panel ran-booster-repository-release-package">
+					<div class="ran-booster-readiness-panel__top"><div>
+						<?php
+						if ( $multiplePackages ) {
+							?>
+							<p><?php echo esc_html( $packageForReleaseAutomation['summary'] . ' · ' . $packageForReleaseAutomation['name'] ); ?></p><?php } ?>
+					</div>
+					<?php
+					if ( '' !== $packageForReleaseAutomation['settings_url'] ) {
+						?>
+						<a class="button" href="<?php echo esc_url( $packageForReleaseAutomation['settings_url'] ); ?>"><?php echo esc_html__( 'Package settings', 'ran-booster' ); ?></a><?php } ?></div>
+					<div class="ran-booster-repository-release-package__body"><?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Display projection escapes complete output. ?><?php echo $this->display->workflow( $packageForReleaseAutomation['view'] ); ?></div>
+				</div>
+			<?php } ?>
+		<?php } ?>
+		?>
+			</div>
+		</section>
+		<?php
 	}
 
 	public function handleWorkflowInspect(): never {

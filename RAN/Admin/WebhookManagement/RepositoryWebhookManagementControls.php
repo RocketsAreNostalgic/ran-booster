@@ -78,62 +78,79 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	public function renderRepositoryPanel( string $providerCode, string $repositoryId, string $returnUrl ): bool {
-		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
-		if ( ! $metadata instanceof ProviderMetadata ) {
-			return false;
-		}
-
-		$context = $this->controller->panelContext();
-		$model   = $this->display->panel( $providerCode, $metadata->label, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
+		$model = $this->repositoryWebhookPanelModel( $providerCode, $repositoryId, $returnUrl );
 		if ( null === $model ) {
 			return false;
 		}
 		$model['webhooks_url'] = $this->repositoryWebhookSettingsUrl( $providerCode, $repositoryId, $model['repository'] );
-
-		ob_start();
-		$this->adminInteraction->renderFormAttributes( $model['interaction_request'] );
-		$formAttributes = (string) ob_get_clean();
-		require __DIR__ . '/views/panel.php';
+		echo $this->renderRepositoryWebhookPanelModel( $model ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed Core panel template escapes the normalized model.
 
 		return true;
+	}
+
+	/** @return array<string,mixed>|null */
+	private function repositoryWebhookPanelModel( string $providerCode, string $repositoryId, string $returnUrl ): ?array {
+		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
+		if ( ! $metadata instanceof ProviderMetadata ) {
+			return null;
+		}
+
+		$context = $this->controller->panelContext();
+		return $this->display->panel( $providerCode, $metadata->label, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
+	}
+
+	/** @param array<string,mixed> $model */
+	private function renderRepositoryWebhookPanelModel( array $model ): string {
+		ob_start();
+		if ( null !== ( $model['interaction_request'] ?? null ) ) {
+			$this->adminInteraction->renderFormAttributes( $model['interaction_request'] );
+		}
+		$formAttributes = (string) ob_get_clean();
+		ob_start();
+		require __DIR__ . '/views/panel.php';
+		return (string) ob_get_clean();
 	}
 
 	/** Render the existing webhook setup disclosure on its repository-owned page. */
 	public function renderRepositoryWebhookSetup( string $providerCode, string $repositoryId, string $returnUrl, bool $hasBranchConsumer = true, string $repository = '' ): void {
 		$readinessItems = $this->repositoryWebhookReadinessItems( $providerCode, $repositoryId, $hasBranchConsumer );
-		$panel          = '';
-		$sectionWarning = null;
-		if ( $hasBranchConsumer ) {
-			ob_start();
-			$rendered = $this->renderRepositoryPanel( $providerCode, $repositoryId, $returnUrl );
-			$panel    = (string) ob_get_clean();
-			if ( ! $rendered ) {
-				$metadata = $this->controller->providerMetadata( $providerCode );
-				if ( $metadata instanceof ProviderMetadata ) {
-					$sectionWarning = $this->repositoryWebhookUnavailableReason( $providerCode, $repositoryId );
-					$model          = $this->display->unavailablePanel(
-						$providerCode,
-						$metadata->label,
-						$repositoryId,
-						'' !== trim( $repository ) ? $repository : $repositoryId,
-						$returnUrl,
-						$sectionWarning,
-						$this->repositoryWebhookSettingsUrl( $providerCode, $repositoryId, '' !== trim( $repository ) ? $repository : null )
-					);
-					ob_start();
-					$formAttributes = '';
-					require __DIR__ . '/views/panel.php';
-					$panel = (string) ob_get_clean();
-				}
+		$metadata       = $this->controller->providerMetadata( $providerCode );
+		$model          = $hasBranchConsumer ? $this->repositoryWebhookPanelModel( $providerCode, $repositoryId, $returnUrl ) : null;
+		$notices        = array();
+		if ( ! is_array( $model ) && $metadata instanceof ProviderMetadata ) {
+			$reason    = ! $hasBranchConsumer
+				? __( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', 'ran-booster' )
+				: $this->repositoryWebhookUnavailableReason( $providerCode, $repositoryId );
+			$model     = $this->display->unavailablePanel(
+				$providerCode,
+				$metadata->label,
+				$repositoryId,
+				'' !== trim( $repository ) ? $repository : $repositoryId,
+				$returnUrl,
+				$reason,
+				$this->repositoryWebhookSettingsUrl( $providerCode, $repositoryId, '' !== trim( $repository ) ? $repository : null )
+			);
+			$notices[] = array(
+				'class'   => 'notice-warning',
+				'message' => $reason,
+			);
+		}
+		if ( is_array( $model ) ) {
+			$model['webhooks_url'] = $this->repositoryWebhookSettingsUrl( $providerCode, $repositoryId, $model['repository'] );
+			if ( is_array( $model['result'] ?? null ) ) {
+				$notices[] = $model['result'];
 			}
+			if ( is_string( $model['recovery_warning'] ?? null ) ) {
+				$notices[] = array(
+					'class'   => 'notice-warning',
+					'message' => $model['recovery_warning'],
+				);
+			}
+			$model['result']           = null;
+			$model['recovery_warning'] = null;
 		}
 
-		$this->renderRepositoryWebhookSection(
-			$readinessItems,
-			$panel,
-			$hasBranchConsumer,
-			$sectionWarning
-		);
+		$this->renderRepositoryWebhookSection( $readinessItems, is_array( $model ) ? $this->renderRepositoryWebhookPanelModel( $model ) : '', $hasBranchConsumer, $notices );
 	}
 
 	private function repositoryWebhookSettingsUrl( string $providerCode, string $repositoryId, ?string $fallbackRepository ): ?string {
@@ -186,36 +203,33 @@ final class RepositoryWebhookManagementControls {
 		return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
 	}
 
-	private function renderRepositoryWebhookSetupRegion( string $panel, bool $hasBranchConsumer ): void {
+	private function renderRepositoryWebhookSetupRegion( string $panel ): void {
 		?>
 		<div class="ran-booster-repository-webhook-setup__content">
-			<?php if ( '' === trim( $panel ) ) { ?>
-				<p><?php echo esc_html( $hasBranchConsumer ? __( 'Webhook operations are unavailable until Booster can confirm this managed repository.', 'ran-booster' ) : __( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', 'ran-booster' ) ); ?></p>
-				<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button></p>
-			<?php } else { ?>
-				<?php echo $panel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured output is rendered and escaped by the fixed Core panel view. ?>
-			<?php } ?>
+			<?php echo $panel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured output is rendered and escaped by the fixed Core panel view. ?>
 		</div>
 		<?php
 	}
 
-	/** @param list<array{label:string,message:string,state:string}> $items */
-	private function renderRepositoryWebhookSection( array $items, string $panel, bool $hasBranchConsumer, ?string $sectionWarning ): void {
+	/** @param list<array{label:string,message:string,state:string}> $items @param list<array{class:string,message:string}> $notices */
+	private function renderRepositoryWebhookSection( array $items, string $panel, bool $hasBranchConsumer, array $notices ): void {
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Repository webhook', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<?php if ( is_string( $sectionWarning ) ) : ?>
-					<div class="notice notice-warning inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $sectionWarning ); ?></p></div>
-				<?php endif; ?>
+				<div class="ran-booster-repository-webhook-management__notices">
+					<?php foreach ( $notices as $notice ) { ?>
+						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
+					<?php } ?>
+				</div>
 				<?php $this->renderRepositoryWebhookLifecycle( $items, ! $hasBranchConsumer ); ?>
 				<?php $this->renderRepositoryWebhookReadiness( $items, ! $hasBranchConsumer ); ?>
-				<section class="ran-booster-readiness-panel ran-booster-repository-webhook-setup" aria-labelledby="ran-booster-repository-webhook-setup-heading">
+				<section class="ran-booster-readiness-panel ran-booster-repository-webhook-setup<?php echo $hasBranchConsumer ? '' : ' is-inactive'; ?>" aria-labelledby="ran-booster-repository-webhook-setup-heading"<?php echo $hasBranchConsumer ? '' : ' aria-disabled="true"'; ?>>
 					<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4><p><?php esc_html_e( 'Sets up this repository’s webhook. Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p></div></div>
 					<div class="ran-booster-repository-webhook-setup__body">
-						<?php $this->renderRepositoryWebhookSetupRegion( $panel, $hasBranchConsumer ); ?>
+						<?php $this->renderRepositoryWebhookSetupRegion( $panel ); ?>
 					</div>
 				</section>
 			</div>

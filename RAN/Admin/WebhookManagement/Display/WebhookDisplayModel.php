@@ -140,16 +140,7 @@ final class WebhookDisplayModel {
 		$status                  = null === $record ? null : $this->projectedStatus( $record );
 		$credentials             = $this->credentialChoices( $providerCode );
 		$operations              = null === $recovery ? $this->availableOperations( $target, $record, $status, $providerLabel, array() !== $credentials ) : array();
-		$operationModels         = array();
-		foreach ( $operations as $operation => $label ) {
-			$operationModels[] = array(
-				'key'      => $operation,
-				'label'    => $label,
-				'url'      => $this->operationUrl( $operation, $providerCode, $repositoryId ),
-				'primary'  => array_key_first( $operations ) === $operation,
-				'disabled' => str_starts_with( $operation, 'disabled:' ),
-			);
-		}
+		$operationModels         = $this->operationModels( $operations, $providerCode, $repositoryId );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
@@ -169,32 +160,57 @@ final class WebhookDisplayModel {
 		}
 
 		return array(
-			'disabled'                      => false,
-			'unavailable_reason'            => null,
-			'show_saved_credential_control' => true,
-			'show_webhook_profile_control'  => null === $record,
-			'credentials_url'               => $this->providerSettingsUrl( $providerCode, 'credentials' ),
-			'secrets_url'                   => $this->providerSettingsUrl( $providerCode, 'secrets' ),
-			'form_action'                   => admin_url( 'admin-post.php' ),
-			'admin_action'                  => 'ran_booster_repository_webhook_management_operation',
-			'provider_code'                 => $providerCode,
-			'provider_label'                => $providerLabel,
-			'repository_id'                 => $repositoryId,
-			'repository'                    => $target->repository(),
-			'webhooks_url'                  => $webhooksUrl,
-			'return_url'                    => $this->panelUrl( $returnUrl, $repositoryId ),
-			'interaction_request'           => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
-			'result'                        => null === $resultCode ? null : array(
+			'disabled'                    => false,
+			'unavailable_reason'          => null,
+			'webhook_profile_disabled'    => null !== $record,
+			'webhook_profile_placeholder' => null === $record
+				? __( 'Choose a signing secret', 'ran-booster' )
+				: ( 'local_profile_missing' === $status ? __( 'Recorded signing secret is unavailable', 'ran-booster' ) : __( 'Recorded signing secret', 'ran-booster' ) ),
+			'credentials_url'             => $this->providerSettingsUrl( $providerCode, 'credentials' ),
+			'secrets_url'                 => $this->providerSettingsUrl( $providerCode, 'secrets' ),
+			'form_action'                 => admin_url( 'admin-post.php' ),
+			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
+			'provider_code'               => $providerCode,
+			'provider_label'              => $providerLabel,
+			'repository_id'               => $repositoryId,
+			'repository'                  => $target->repository(),
+			'webhooks_url'                => $webhooksUrl,
+			'return_url'                  => $this->panelUrl( $returnUrl, $repositoryId ),
+			'interaction_request'         => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
+			'result'                      => null === $resultCode ? null : array(
 				'class'   => $this->resultNoticeClass( $resultCode ),
 				'message' => $this->notice( $resultCode, $recovery, $remediation ),
 			),
-			'recovery_warning'              => $recoveryWarning,
-			'management_credential_id'      => null === $record ? null : $record->managementCredentialId(),
-			'credential_choices'            => $credentials,
-			'webhook_profile_choices'       => null === $record ? $this->webhookProfileChoices( $providerCode, $repositoryId ) : array(),
-			'operations'                    => $operationModels,
-			'action_help'                   => $help,
+			'recovery_warning'            => $recoveryWarning,
+			'management_credential_id'    => null === $record ? null : $record->managementCredentialId(),
+			'credential_choices'          => $credentials,
+			'webhook_profile_choices'     => null === $record ? $this->webhookProfileChoices( $providerCode, $repositoryId ) : array(),
+			'operations'                  => $operationModels,
+			'action_help'                 => $help,
 		);
+	}
+
+	/** @param array<string,string> $available @return list<array{key:string,label:string,url:string,primary:bool,disabled:bool}> */
+	private function operationModels( array $available, string $providerCode, string $repositoryId ): array {
+		$labels     = array(
+			'setup'       => __( 'Set up webhook', 'ran-booster' ),
+			'check'       => __( 'Check webhook', 'ran-booster' ),
+			'reconfigure' => __( 'Update webhook', 'ran-booster' ),
+			'test'        => __( 'Test webhook', 'ran-booster' ),
+			'remove'      => __( 'Remove webhook', 'ran-booster' ),
+		);
+		$operations = array();
+		foreach ( $labels as $operation => $label ) {
+			$operations[] = array(
+				'key'      => $operation,
+				'label'    => $label,
+				'url'      => $this->operationUrl( $operation, $providerCode, $repositoryId ),
+				'primary'  => 'setup' === $operation,
+				'disabled' => ! isset( $available[ $operation ] ),
+			);
+		}
+
+		return $operations;
 	}
 
 	/**
@@ -202,43 +218,28 @@ final class WebhookDisplayModel {
 	 */
 	public function unavailablePanel( string $providerCode, string $providerLabel, string $repositoryId, string $repository, string $returnUrl, string $reason, ?string $webhooksUrl = null ): array {
 		return array(
-			'disabled'                      => true,
-			'unavailable_reason'            => $reason,
-			'show_saved_credential_control' => true,
-			'show_webhook_profile_control'  => true,
-			'management_credential_id'      => null,
-			'credentials_url'               => $this->providerSettingsUrl( $providerCode, 'credentials' ),
-			'secrets_url'                   => $this->providerSettingsUrl( $providerCode, 'secrets' ),
-			'form_action'                   => admin_url( 'admin-post.php' ),
-			'admin_action'                  => 'ran_booster_repository_webhook_management_operation',
-			'provider_code'                 => $providerCode,
-			'provider_label'                => $providerLabel,
-			'repository_id'                 => $repositoryId,
-			'repository'                    => $repository,
-			'webhooks_url'                  => $webhooksUrl,
-			'return_url'                    => $this->panelUrl( $returnUrl, $repositoryId ),
-			'interaction_request'           => null,
-			'result'                        => null,
-			'recovery_warning'              => null,
-			'credential_choices'            => $this->credentialChoices( $providerCode ),
-			'webhook_profile_choices'       => array(),
-			'operations'                    => array(
-				array(
-					'key'      => 'setup',
-					'label'    => __( 'Set up webhook', 'ran-booster' ),
-					'url'      => $this->operationUrl( 'setup', $providerCode, $repositoryId ),
-					'primary'  => true,
-					'disabled' => false,
-				),
-				array(
-					'key'      => 'test',
-					'label'    => __( 'Test webhook', 'ran-booster' ),
-					'url'      => $this->operationUrl( 'test', $providerCode, $repositoryId ),
-					'primary'  => false,
-					'disabled' => true,
-				),
-			),
-			'action_help'                   => null,
+			'disabled'                    => true,
+			'unavailable_reason'          => $reason,
+			'webhook_profile_disabled'    => true,
+			'webhook_profile_placeholder' => __( 'Choose a signing secret', 'ran-booster' ),
+			'management_credential_id'    => null,
+			'credentials_url'             => $this->providerSettingsUrl( $providerCode, 'credentials' ),
+			'secrets_url'                 => $this->providerSettingsUrl( $providerCode, 'secrets' ),
+			'form_action'                 => admin_url( 'admin-post.php' ),
+			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
+			'provider_code'               => $providerCode,
+			'provider_label'              => $providerLabel,
+			'repository_id'               => $repositoryId,
+			'repository'                  => $repository,
+			'webhooks_url'                => $webhooksUrl,
+			'return_url'                  => $this->panelUrl( $returnUrl, $repositoryId ),
+			'interaction_request'         => null,
+			'result'                      => null,
+			'recovery_warning'            => null,
+			'credential_choices'          => $this->credentialChoices( $providerCode ),
+			'webhook_profile_choices'     => array(),
+			'operations'                  => $this->operationModels( array(), $providerCode, $repositoryId ),
+			'action_help'                 => null,
 		);
 	}
 

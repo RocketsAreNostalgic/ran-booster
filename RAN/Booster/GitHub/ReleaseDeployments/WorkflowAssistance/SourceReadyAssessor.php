@@ -122,13 +122,13 @@ final class SourceReadyAssessor {
 			return SourceReadyAssessment::refused( 'repository_unsupported' );
 		}
 
+		if ( $this->hasCompetingReleaseAutomation( $snapshot ) ) {
+			return SourceReadyAssessment::refused( 'release_automation_conflict' );
+		}
 		foreach ( self::GENERATED_PATHS as $path ) {
 			if ( $snapshot->has( $path ) ) {
 				return SourceReadyAssessment::refused( 'release_path_conflict' );
 			}
-		}
-		if ( $this->hasExistingReleaseAutomation( $snapshot ) ) {
-			return SourceReadyAssessment::refused( 'release_automation_conflict' );
 		}
 
 		$header = $this->header( $snapshot, $type, $installedVersion, $expectedUpdateUri );
@@ -327,7 +327,7 @@ final class SourceReadyAssessor {
 		);
 	}
 
-	private function hasExistingReleaseAutomation( RepositorySnapshot $snapshot ): bool {
+	public function hasCompetingReleaseAutomation( RepositorySnapshot $snapshot ): bool {
 		foreach ( array_keys( $snapshot->entries() ) as $path ) {
 			if ( ! in_array( $path, self::GENERATED_PATHS, true )
 				&& in_array( basename( $path ), array( '.release-please-manifest.json', 'release-please-config.json' ), true ) ) {

@@ -132,6 +132,10 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Release Deployments', $html );
 		self::assertStringNotContainsString( 'ran-booster-release-deployments', $html );
 		self::assertStringNotContainsString( 'add-on', strtolower( $html ) );
+		self::assertStringContainsString( 'https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases', $html );
+		self::assertStringContainsString( 'https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases', $html );
+		self::assertStringContainsString( 'optional supply-chain hardening. Booster’s setup pull request does not enable that repository setting.', $html );
+		self::assertStringNotContainsString( 'PU-032', $html );
 	}
 
 	public function testAdvancedSourceSummaryReflectsPersistedSourceInEditModeRegardlessOfSelectedTab(): void {

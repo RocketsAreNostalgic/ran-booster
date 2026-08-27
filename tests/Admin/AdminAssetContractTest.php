@@ -290,7 +290,7 @@ final class AdminAssetContractTest extends TestCase {
 		$webhookManagement = $this->asset( 'ran-booster-repository-webhook-management.css' );
 		$controls          = $this->source( 'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php' );
 
-		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup"', $controls );
+		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup', $controls );
 		self::assertStringContainsString( 'class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"', $controls );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__body"', $controls );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-setup__body {', $webhookManagement );

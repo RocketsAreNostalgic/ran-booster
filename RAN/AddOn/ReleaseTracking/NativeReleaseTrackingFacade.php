@@ -117,8 +117,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		int $sourceRevision,
 		string $channel = ''
 	): string {
-		$preflight = in_array( $operation, array( 'preflight', 'list_candidates', 'inspect_candidate' ), true );
-		if ( ! in_array( $operation, array( 'preflight', 'list_candidates', 'inspect_candidate', 'enable', 'refresh', 'change_channel', 'return_to_branch' ), true )
+		$preflight = in_array( $operation, array( 'preflight', 'assessment_preflight', 'list_candidates', 'inspect_candidate' ), true );
+		if ( ! in_array( $operation, array( 'preflight', 'assessment_preflight', 'list_candidates', 'inspect_candidate', 'enable', 'refresh', 'change_channel', 'return_to_branch' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| '' === $identifier
 			|| $sourceRevision < 1
@@ -248,6 +248,40 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$channel,
 				$package,
 				$this->eligibility( $type, $identifier, $package )
+			);
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
+	public function assessmentPreflight(
+		string $type,
+		string $identifier,
+		int $expectedSourceRevision,
+		string $channel,
+		string $nonce
+	): ?ReleaseTrackingPreflight {
+		if ( ! RuntimeSupport::current()->allowsManagedOperations()
+			|| ! $this->validChannel( $channel )
+			|| ! $this->authorized( 'assessment_preflight', $type, $identifier, $expectedSourceRevision, $nonce, $channel ) ) {
+			return null;
+		}
+
+		try {
+			$package     = $this->package( $type, $identifier );
+			$eligibility = $this->eligibility( $type, $identifier, $package );
+			if ( ! in_array( $package->getSource(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true )
+				|| $expectedSourceRevision !== $package->getSourceRevision()
+				|| ! $eligibility->eligible() ) {
+				return null;
+			}
+
+			return $this->providerPreflight(
+				$type,
+				$package,
+				$eligibility->packageRoot(),
+				$this->headerFile( $type, $identifier ),
+				$channel
 			);
 		} catch ( Throwable ) {
 			return null;

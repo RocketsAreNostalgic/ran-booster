@@ -268,7 +268,107 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'This site can receive webhook deliveries.', $html );
 		self::assertStringContainsString( 'Configured at the last recorded check on 2026-08-20T01:02:03Z.', $html );
 		self::assertStringContainsString( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', $html );
-		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Set up webhook</button>', $html );
+		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup is-inactive"', $html );
+		self::assertStringContainsString( 'aria-labelledby="ran-booster-repository-webhook-setup-heading" aria-disabled="true"', $html );
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-management__panel"', $html );
+		self::assertStringContainsString( 'name="booster_credential_id" disabled="disabled"', $html );
+		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
+		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Test webhook</button>', $html );
+		self::assertStringContainsString( 'Manage credentials</a>', $html );
+		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
+	}
+
+	public function testRepositoryWebhookShellKeepsItsChildZonesAndControlLabelsAcrossActiveAndInactiveStates(): void {
+		$method = new \ReflectionMethod( $this->controls(), 'renderRepositoryWebhookSection' );
+		$items  = array(
+			array(
+				'label'   => 'Branch demand',
+				'message' => 'Known branch demand.',
+				'state'   => 'is-pending',
+			),
+			array(
+				'label'   => 'Signing profile',
+				'message' => 'Known signing profile.',
+				'state'   => 'is-pending',
+			),
+			array(
+				'label'   => 'Provider receiver',
+				'message' => 'Known receiver.',
+				'state'   => 'is-ok',
+			),
+			array(
+				'label'   => 'Remote hook',
+				'message' => 'Known remote hook.',
+				'state'   => 'is-pending',
+			),
+		);
+		$panel  = '<div class="ran-booster-repository-webhook-management__panel"><button>Set up webhook</button><button>Test webhook</button></div>';
+
+		ob_start();
+		$method->invoke( $this->controls(), $items, $panel, true, array() );
+		$active = (string) ob_get_clean();
+		ob_start();
+		$method->invoke(
+			$this->controls(),
+			$items,
+			$panel,
+			false,
+			array(
+				array(
+					'class'   => 'notice-warning',
+					'message' => 'Branch deployments are inactive.',
+				),
+			)
+		);
+		$inactive = (string) ob_get_clean();
+
+		self::assertSame( $this->repositoryWebhookShellStructure( $active ), $this->repositoryWebhookShellStructure( $inactive ) );
+		foreach ( array( 'Repository webhook', 'Repository webhook lifecycle', 'Webhook readiness', 'Webhook setup', 'Set up webhook', 'Test webhook' ) as $label ) {
+			self::assertStringContainsString( $label, $active );
+			self::assertStringContainsString( $label, $inactive );
+		}
+	}
+
+	public function testWebhookControlTemplateKeepsCredentialSecretAndOperationIdentitiesAcrossRecordStates(): void {
+		$method = new \ReflectionMethod( $this->controls(), 'renderRepositoryWebhookPanelModel' );
+		$states = array(
+			'unconfigured'       => $this->webhookPanelModel(
+				false,
+				false,
+				array( 'setup' => false )
+			),
+			'configured_healthy' => $this->webhookPanelModel(
+				true,
+				false,
+				array(
+					'check'  => false,
+					'test'   => false,
+					'remove' => false,
+				)
+			),
+			'drift'              => $this->webhookPanelModel(
+				true,
+				false,
+				array(
+					'check'       => false,
+					'reconfigure' => false,
+					'test'        => false,
+					'remove'      => false,
+				)
+			),
+			'inactive'           => $this->webhookPanelModel( true, true, array() ),
+		);
+
+		foreach ( $states as $state => $model ) {
+			$html = (string) $method->invoke( $this->controls(), $model );
+			self::assertSame( 1, substr_count( $html, 'name="booster_credential_id"' ), $state );
+			self::assertSame( 1, substr_count( $html, 'name="webhook_profile_id"' ), $state );
+			foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $label ) {
+				self::assertStringContainsString( $label, $html, $state );
+			}
+		}
 	}
 
 	public function testRepositoryWebhookSetupRegionRemainsLabelledWhenTheTargetIsUnavailable(): void {
@@ -363,6 +463,75 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			new ProviderRegistry( $providers ),
 			dirname( __DIR__, 3 ) . '/',
 			'https://example.test/wp-content/plugins/ran-booster/'
+		);
+	}
+
+	/** @return list<string> */
+	private function repositoryWebhookShellStructure( string $html ): array {
+		$zones     = array(
+			'ran-booster-settings-section__header',
+			'ran-booster-repository-webhook-management__notices',
+			'ran-booster-repository-webhook-lifecycle',
+			'ran-booster-repository-webhook-readiness',
+			'ran-booster-repository-webhook-setup',
+		);
+		$positions = array();
+		foreach ( $zones as $zone ) {
+			$position = strpos( $html, $zone );
+			self::assertIsInt( $position, $zone );
+			$positions[ $position ] = $zone;
+		}
+		ksort( $positions );
+
+		return array_values( $positions );
+	}
+
+	/** @param array<string,bool> $enabledOperations @return array<string,mixed> */
+	private function webhookPanelModel( bool $recorded, bool $disabled, array $enabledOperations ): array {
+		$operations = array();
+		$labels     = array(
+			'setup'       => 'Set up webhook',
+			'check'       => 'Check webhook',
+			'reconfigure' => 'Update webhook',
+			'test'        => 'Test webhook',
+			'remove'      => 'Remove webhook',
+		);
+		foreach ( $labels as $key => $label ) {
+			$operations[] = array(
+				'key'      => $key,
+				'label'    => $label,
+				'url'      => 'https://example.test/' . $key,
+				'primary'  => 'setup' === $key,
+				'disabled' => ! ( $enabledOperations[ $key ] ?? true ),
+			);
+		}
+
+		return array(
+			'disabled'                    => $disabled,
+			'webhook_profile_disabled'    => $recorded || $disabled,
+			'webhook_profile_placeholder' => $recorded ? 'Recorded signing secret' : 'Choose a signing secret',
+			'form_action'                 => 'https://example.test/wp-admin/admin-post.php',
+			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
+			'provider_code'               => 'fixture-provider',
+			'provider_label'              => 'Fixture Forge',
+			'repository_id'               => '1234',
+			'return_url'                  => 'https://example.test/repository',
+			'interaction_request'         => null,
+			'result'                      => null,
+			'recovery_warning'            => null,
+			'management_credential_id'    => $recorded ? 'credential-1' : null,
+			'credential_choices'          => array(
+				array(
+					'id'    => 'credential-1',
+					'label' => 'Credential',
+				),
+			),
+			'webhook_profile_choices'     => array(),
+			'credentials_url'             => 'https://example.test/credentials',
+			'secrets_url'                 => 'https://example.test/secrets',
+			'operations'                  => $operations,
+			'action_help'                 => null,
+			'webhooks_url'                => null,
 		);
 	}
 }

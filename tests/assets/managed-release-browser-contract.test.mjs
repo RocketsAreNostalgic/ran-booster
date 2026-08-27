@@ -199,6 +199,19 @@ const createHarness = (responses, nativeOfferReleaseId = 'offer') => {
 	};
 };
 
+test('disabled managed browser does not initialize or fetch', async () => {
+	const harness = createHarness([]);
+	harness.browser.dataset.ranBoosterManagedReleaseBrowserDisabled = 'true';
+	delete harness.browser.dataset.ranBoosterManagedReleaseListNonce;
+	delete harness.browser.dataset.ranBoosterManagedReleaseInspectNonce;
+
+	harness.initialize(harness.browser);
+	await flush();
+
+	assert.equal(harness.requests.length, 0);
+	assert.equal(harness.nodes.get('retry').listeners.click?.length || 0, 0);
+});
+
 test('managed browser uses an origin-relative AJAX URL', async () => {
 	const harness = createHarness([
 		{

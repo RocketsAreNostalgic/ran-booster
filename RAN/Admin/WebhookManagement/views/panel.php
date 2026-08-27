@@ -8,7 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** @var array<string, mixed> $model */
 /** @var string $formAttributes */
-$disabled = true === ( $model['disabled'] ?? false );
+$disabled        = true === ( $model['disabled'] ?? false );
+$profileDisabled = $disabled || true === ( $model['webhook_profile_disabled'] ?? false );
 ?>
 <div class="ran-booster-repository-webhook-management">
 
@@ -26,7 +27,6 @@ $disabled = true === ( $model['disabled'] ?? false );
 				<input type="hidden" name="repository_id" value="<?php echo esc_attr( $model['repository_id'] ); ?>">
 				<input type="hidden" name="return_url" value="<?php echo esc_url( $model['return_url'] ); ?>">
 				<div id="repository-webhook-management-error"></div>
-				<?php if ( true === ( $model['show_saved_credential_control'] ?? false ) ) : ?>
 					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
 						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-saved-credential"><?php esc_html_e( 'Management credential', 'ran-booster' ); ?></label>
 						<div class="ran-booster-repository-webhook-management__select-action">
@@ -40,14 +40,12 @@ $disabled = true === ( $model['disabled'] ?? false );
 						</div>
 						<span class="description"><?php esc_html_e( 'Choose the saved credential used to manage this repository webhook. A current selection does not prove provider authority until the operation checks it.', 'ran-booster' ); ?></span>
 					</div>
-				<?php endif; ?>
 
-				<?php if ( true === ( $model['show_webhook_profile_control'] ?? false ) ) : ?>
 					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
 						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-webhook-profile"><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></label>
 						<div class="ran-booster-repository-webhook-management__select-action">
-							<select id="repository-webhook-management-webhook-profile" name="webhook_profile_id"<?php disabled( $disabled ); ?><?php echo $disabled ? '' : ' required'; ?>>
-								<option value="" selected disabled><?php esc_html_e( 'Choose a signing secret', 'ran-booster' ); ?></option>
+							<select id="repository-webhook-management-webhook-profile" name="webhook_profile_id"<?php disabled( $profileDisabled ); ?><?php echo $profileDisabled ? '' : ' required'; ?>>
+								<option value="" selected disabled><?php echo esc_html( $model['webhook_profile_placeholder'] ); ?></option>
 								<option value="create_repository_secret"><?php esc_html_e( 'Create a repository signing secret', 'ran-booster' ); ?></option>
 								<?php foreach ( $model['webhook_profile_choices'] as $choice ) : ?>
 									<option value="<?php echo esc_attr( $choice['id'] ); ?>"><?php echo esc_html( $choice['label'] . ' (' . $choice['scope'] . ')' ); ?></option>
@@ -57,7 +55,6 @@ $disabled = true === ( $model['disabled'] ?? false );
 						</div>
 						<span class="description"><?php esc_html_e( 'Choose an applicable saved signing secret, or create one only for this repository.', 'ran-booster' ); ?></span>
 					</div>
-				<?php endif; ?>
 
 				<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions">
 					<?php foreach ( $model['operations'] as $operation ) : ?>
@@ -72,7 +69,7 @@ $disabled = true === ( $model['disabled'] ?? false );
 				<?php if ( is_string( $model['action_help'] ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php echo esc_html( $model['action_help'] ); ?></p>
 				<?php endif; ?>
-				<?php if ( null === ( $model['management_credential_id'] ?? null ) && true === ( $model['show_webhook_profile_control'] ?? false ) ) : ?>
+				<?php if ( null === ( $model['management_credential_id'] ?? null ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php esc_html_e( 'Test webhook is disabled until Booster has an exact recorded hook for this repository.', 'ran-booster' ); ?></p>
 				<?php endif; ?>
 			</form>

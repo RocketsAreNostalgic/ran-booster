@@ -534,14 +534,28 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( ' disabled=', $html );
 	}
 
-	public function testReleaseManagedBranchViewShowsRetainedTargetWithoutBranchOperations(): void {
-		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
+	/** @return list<array{PackagePagePresenter, PackageSource, bool}> */
+	public static function branchViewSourceMatrix(): array {
+		return array(
+			array( PackagePagePresenter::plugin(), PackageSource::BRANCH, false ),
+			array( PackagePagePresenter::theme(), PackageSource::BRANCH, false ),
+			array( PackagePagePresenter::plugin(), PackageSource::RELEASE_ASSET, true ),
+			array( PackagePagePresenter::theme(), PackageSource::RELEASE_ASSET, true ),
+		);
+	}
+
+	#[DataProvider( 'branchViewSourceMatrix' )]
+	public function testBranchViewKeepsItsStableShellAndAdvancedSectionsForEveryCurrentSource(
+		PackagePagePresenter $packageView,
+		PackageSource $currentSource,
+		bool $branchSettingsInactive
+	): void {
 			$package = $this->package( $packageView );
-			$package->setSource( PackageSource::RELEASE_ASSET, 2 );
+			$package->setSource( $currentSource, 2 );
 
 			$packageProviderSettings = $this->providerSettings( true );
 			$packageSource           = array(
-				'current'           => PackageSource::RELEASE_ASSET->value,
+				'current'           => $currentSource->value,
 				'selected'          => PackageSource::BRANCH->value,
 				'unavailable'       => false,
 				'advanced_sections' => array( '<div class="ran-booster-release-return">Return action</div>' ),
@@ -551,39 +565,51 @@ final class RepeatPackageViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 			$html = (string) ob_get_clean();
 
-			self::assertStringNotContainsString(
-				'data-ran-booster-settings-reinstall',
-				$html,
-				$packageView->getType()
-			);
+			if ( $branchSettingsInactive ) {
+				self::assertStringNotContainsString(
+					'data-ran-booster-settings-reinstall',
+					$html,
+					$packageView->getType()
+				);
+			}
 			self::assertMatchesRegularExpression(
 				'/data-ran-booster-branch-fields\s*>/',
 				$html,
 				$packageView->getType()
 			);
-			self::assertMatchesRegularExpression(
-				'/id="ran-booster-repository-branch"[^>]*disabled="disabled"/',
-				$html,
+			self::assertSame(
+				$branchSettingsInactive,
+				1 === preg_match( '/id="ran-booster-repository-branch"[^>]*disabled="disabled"/', $html ),
 				$packageView->getType()
 			);
-			self::assertMatchesRegularExpression(
-				'/id="ran-booster-repository-subdirectory"[^>]*disabled="disabled"/',
-				$html,
+			self::assertSame(
+				$branchSettingsInactive,
+				1 === preg_match( '/id="ran-booster-repository-subdirectory"[^>]*disabled="disabled"/', $html ),
 				$packageView->getType()
 			);
 			self::assertStringContainsString( 'Branch readiness', $html, $packageView->getType() );
-			self::assertStringContainsString(
-				'Published releases remain the package source and settings are retained until returning.',
-				$html,
+			self::assertStringNotContainsString( 'Published releases remain the package source and settings are retained until returning.', $html, $packageView->getType() );
+			self::assertStringContainsString( 'class="screen-reader-text">' . ( $branchSettingsInactive ? 'Inactive Branch deployment settings' : 'Branch deployment settings' ) . '</legend>', $html, $packageView->getType() );
+			self::assertSame(
+				$branchSettingsInactive,
+				1 === preg_match( '/ran-booster-branch-settings is-inactive[^>]*disabled="disabled"[^>]*aria-disabled="true"/', $html ),
 				$packageView->getType()
 			);
-			self::assertMatchesRegularExpression( '/ran-booster-branch-settings is-inactive[^>]*disabled="disabled"[^>]*aria-disabled="true"/', $html, $packageView->getType() );
 			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html, $packageView->getType() );
-			self::assertTrue(
-				strpos( $html, 'id="ran-booster-branch-readiness"' ) < strpos( $html, 'class="ran-booster-release-return"' ),
-				$packageView->getType()
-			);
-		}
+			$branchPanePosition   = strpos( $html, 'id="ran-booster-source-pane-branch"' );
+			$returnPosition       = strpos( $html, 'class="ran-booster-release-return"' );
+			$branchFieldsPosition = strpos( $html, '<fieldset class="ran-booster-branch-settings' );
+			$readinessPosition    = strpos( $html, 'id="ran-booster-branch-readiness"' );
+			$headerStartPosition  = false === $branchPanePosition ? false : strpos( $html, '<header class="ran-booster-package-source-pane__header">', $branchPanePosition );
+			self::assertIsInt( $branchPanePosition, $packageView->getType() );
+			self::assertIsInt( $returnPosition, $packageView->getType() );
+			self::assertIsInt( $branchFieldsPosition, $packageView->getType() );
+			self::assertIsInt( $readinessPosition, $packageView->getType() );
+			self::assertIsInt( $headerStartPosition, $packageView->getType() );
+			self::assertTrue( $branchPanePosition < $returnPosition, $packageView->getType() );
+			self::assertTrue( $returnPosition < $headerStartPosition, $packageView->getType() );
+			self::assertTrue( $headerStartPosition < $branchFieldsPosition, $packageView->getType() );
+			self::assertTrue( $branchFieldsPosition < $readinessPosition, $packageView->getType() );
 	}
 
 	/** @return array{default_provider: string, providers: list<array<string, mixed>>} */

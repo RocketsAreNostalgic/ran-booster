@@ -31,7 +31,8 @@ final class ReleaseManagementFixture {
 		string $eligibilityCode = ReleaseTrackingEligibility::ELIGIBLE,
 		bool $updateAvailable = false,
 		string $channel = 'stable',
-		string $failureCode = ''
+		string $failureCode = '',
+		string $deploymentPolicy = 'manual'
 	): ReleaseTrackingStatus {
 		$identifier = 'theme' === $type ? 'example-theme' : 'example/example.php';
 
@@ -41,7 +42,7 @@ final class ReleaseManagementFixture {
 			$source,
 			3,
 			'101',
-			'manual',
+			$deploymentPolicy,
 			new ReleaseTrackingEligibility(
 				$eligibilityCode,
 				'https://github.com/example/example',

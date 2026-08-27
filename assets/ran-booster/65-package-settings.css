@@ -167,6 +167,24 @@
 	color: var(--ran-booster-text-muted);
 }
 
+.ran-booster-admin .ran-booster-source-transition {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-12);
+	margin-block: var(--ran-booster-space-16);
+	padding: var(--ran-booster-space-14) var(--ran-booster-space-16);
+	border: 1px solid var(--ran-booster-border);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-source-transition > p {
+	margin: 0;
+	min-inline-size: 0;
+	color: var(--ran-booster-text-muted);
+}
+
 .ran-booster-admin .ran-booster-branch-settings {
 	margin: 0;
 	padding: 0;

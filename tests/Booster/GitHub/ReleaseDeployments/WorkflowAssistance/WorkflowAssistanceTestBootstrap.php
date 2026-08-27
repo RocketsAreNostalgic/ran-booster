@@ -42,6 +42,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_remote_retrieve_body' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\wp_remote_retrieve_header' ) ) {
+	/** @param array<string,mixed> $response */
+	function wp_remote_retrieve_header( array $response, string $header ): string {
+		$value = $response['headers'][ $header ] ?? '';
+		return is_string( $value ) ? $value : '';
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\wp_parse_url' ) ) {
 	function wp_parse_url( string $url, int $component = -1 ): array|int|string|null|false {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Minimal test shim for WordPress's wrapper.
@@ -58,6 +66,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_option' ) ) {
 if ( ! function_exists( __NAMESPACE__ . '\\update_option' ) ) {
 	function update_option( string $option, mixed $value, mixed $autoload = null ): bool {
 		$GLOBALS['ran_booster_release_deployments_test_option_updates'][] = array( $option, $value, $autoload );
+		if ( false === ( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] ?? true ) ) {
+			return false;
+		}
 		$stored = $GLOBALS['ran_booster_release_deployments_test_option_override'] ?? $value;
 		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ] = $stored;
 		return true;

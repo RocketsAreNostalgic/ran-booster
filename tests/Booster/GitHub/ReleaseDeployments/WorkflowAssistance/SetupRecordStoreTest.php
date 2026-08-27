@@ -14,6 +14,7 @@ final class SetupRecordStoreTest extends TestCase {
 		$GLOBALS['ran_booster_release_deployments_test_options']        = array();
 		$GLOBALS['ran_booster_release_deployments_test_option_updates'] = array();
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_override'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] );
 	}
 	public function testSchemaTwoIsExactBoundedAndNonAutoloaded(): void {
 		$store  = new SetupRecordStore();
@@ -111,6 +112,169 @@ final class SetupRecordStoreTest extends TestCase {
 		self::assertFalse( ( new SetupRecordStore() )->save( array_replace( $this->record(), array( 'repo_id' => '101' ) ) ) );
 		self::assertTrue( ( new SetupRecordStore() )->save( array_replace( $this->record(), array( 'repo_id' => '100' ) ) ) );
 	}
+	public function testAssessmentObservationIsExactBoundedAndReplacesOnlyItsLatestTuple(): void {
+		$store       = new SetupRecordStore();
+		$observation = $this->observation();
+		self::assertTrue( $store->saveAssessmentObservation( $observation ) );
+		self::assertSame( $observation, $store->assessmentObservation( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertNull( $store->assessmentObservation( '123456789', 'theme', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertFalse( $store->saveAssessmentObservation( $observation + array( 'token' => 'secret' ) ) );
+		self::assertFalse( $store->saveAssessmentObservation( array_replace( $observation, array( 'kind' => 'unexpected' ) ) ) );
+		self::assertFalse( $store->saveAssessmentObservation( array_replace( $observation, array( 'observed_at' => '2026-08-27' ) ) ) );
+
+		$replacement = array_replace(
+			$observation,
+			array(
+				'kind'        => 'booster_setup_verified',
+				'observed_at' => '2026-08-27T12:35:56Z',
+			)
+		);
+		self::assertTrue( $store->saveAssessmentObservation( $replacement ) );
+		self::assertSame( $replacement, $store->assessmentObservation( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertCount( 1, $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_assessment_observations'] );
+		self::assertFalse( $GLOBALS['ran_booster_release_deployments_test_option_updates'][0][2] );
+	}
+	public function testMalformedAssessmentObservationOptionFailsClosed(): void {
+		$observation = $this->observation();
+		$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_assessment_observations'] = array( $observation, $observation );
+		$store = new SetupRecordStore();
+		self::assertNull( $store->assessmentObservation( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertFalse( $store->saveAssessmentObservation( $observation ) );
+		self::assertSame( array(), $GLOBALS['ran_booster_release_deployments_test_option_updates'] );
+	}
+	public function testAssessmentObservationPrunesSupersededSourceRevisionsBeforeTheCap(): void {
+		$store = new SetupRecordStore();
+		self::assertTrue( $store->saveAssessmentObservation( $this->observation() ) );
+		$current = array_replace(
+			$this->observation(),
+			array(
+				'kind'            => 'no_recognisable_automation',
+				'source_revision' => 4,
+				'observed_at'     => '2026-08-27T12:35:56Z',
+			)
+		);
+		self::assertTrue( $store->saveAssessmentObservation( $current ) );
+		self::assertNull( $store->assessmentObservation( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertSame( $current, $store->assessmentObservation( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
+		self::assertCount( 1, $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_assessment_observations'] );
+	}
+	public function testAssessmentObservationDeterministicallyEvictsTheOldestValidEntryAtCapacity(): void {
+		$store = new SetupRecordStore();
+		for ( $index = 1; $index <= 100; ++$index ) {
+			self::assertTrue(
+				$store->saveAssessmentObservation(
+					array_replace(
+						$this->observation(),
+						array(
+							'repository_id'      => (string) $index,
+							'package_identifier' => 'example-' . $index . '/example.php',
+							'observed_at'        => 1 === $index ? '2025-08-27T12:34:56Z' : '2026-08-27T12:34:56Z',
+						)
+					)
+				)
+			);
+		}
+		$new = array_replace(
+			$this->observation(),
+			array(
+				'repository_id'      => '101',
+				'package_identifier' => 'example-101/example.php',
+				'observed_at'        => '2027-08-27T12:34:56Z',
+			)
+		);
+		self::assertTrue( $store->saveAssessmentObservation( $new ) );
+		self::assertNull( $store->assessmentObservation( '1', 'plugin', 'example-1/example.php', 3 ) );
+		self::assertSame( $new, $store->assessmentObservation( '101', 'plugin', 'example-101/example.php', 3 ) );
+		self::assertCount( 100, $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_assessment_observations'] );
+	}
+	public function testFailureHistoryIsBoundedToSafeValidatedFailureEvidence(): void {
+		$store   = new SetupRecordStore();
+		$failure = array(
+			'operation'             => 'inspect',
+			'outcome_code'          => 'workflow_remote_unavailable',
+			'failure_stage'         => 'repository_snapshot',
+			'package_type'          => 'plugin',
+			'package_identifier'    => 'example-plugin/example-plugin.php',
+			'source_revision'       => 3,
+			'repository_id'         => '123456789',
+			'diagnostic_code'       => 'provider_unavailable',
+			'diagnostic_available'  => true,
+			'correlation_reference' => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+			'recorded_at'           => '2026-08-27T12:34:56Z',
+		);
+
+		self::assertTrue( $store->recordFailure( $failure ) );
+		self::assertSame(
+			array( $failure ),
+			$store->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 )
+		);
+		self::assertSame( array(), $store->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
+		self::assertFalse( $store->recordFailure( $failure + array( 'token' => 'secret' ) ) );
+		self::assertFalse( $store->recordFailure( $failure + array( 'message' => 'secret' ) ) );
+		self::assertFalse( $store->recordFailure( $failure + array( 'url' => 'https://example.test' ) ) );
+		self::assertFalse( $store->recordFailure( array_replace( $failure, array( 'failure_stage' => 'invalid_stage' ) ) ) );
+		self::assertFalse( $store->recordFailure( array_replace( $failure, array( 'diagnostic_code' => str_repeat( 'a', 65 ) ) ) ) );
+		self::assertFalse( $store->recordFailure( array_replace( $failure, array( 'diagnostic_available' => 'yes' ) ) ) );
+
+		for ( $index = 1; $index <= 20; ++$index ) {
+			self::assertTrue( $store->recordFailure( array_replace( $failure, array( 'correlation_reference' => sprintf( '%032x', $index ) ) ) ) );
+		}
+
+		$history = $store->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertLessThanOrEqual( 12, count( $history ) );
+		self::assertContains( sprintf( '%032x', 20 ), array_column( $history, 'correlation_reference' ) );
+
+		$GLOBALS['ran_booster_release_deployments_test_option_update_result'] = false;
+		self::assertFalse( $store->recordFailure( array_replace( $failure, array( 'correlation_reference' => str_repeat( 'b', 32 ) ) ) ) );
+		unset( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] );
+	}
+	public function testLegacyFailureHistoryIsRetainedAndUpgradedWhenRecordingANewFailure(): void {
+		$legacy = array(
+			'operation'             => 'inspect',
+			'outcome_code'          => 'workflow_remote_unavailable',
+			'failure_stage'         => 'repository_snapshot',
+			'package_type'          => 'plugin',
+			'package_identifier'    => 'example-plugin/example-plugin.php',
+			'source_revision'       => 3,
+			'repository_id'         => '123456789',
+			'correlation_reference' => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+			'recorded_at'           => '2026-08-27T12:34:56Z',
+		);
+		$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_failure_history'] = array( $legacy );
+		$store = new SetupRecordStore();
+		$new   = array_merge(
+			array_slice( $legacy, 0, 7, true ),
+			array(
+				'diagnostic_code'       => 'provider_unavailable',
+				'diagnostic_available'  => true,
+				'correlation_reference' => 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+				'recorded_at'           => '2026-08-27T12:35:56Z',
+			)
+		);
+
+		self::assertTrue( $store->recordFailure( $new ) );
+		$history = $store->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertCount( 2, $history );
+		self::assertSame( 'diagnostic_detail_unavailable', $history[0]['diagnostic_code'] );
+		self::assertFalse( $history[0]['diagnostic_available'] );
+		self::assertSame( $new, $history[1] );
+		self::assertSame(
+			array(
+				'operation',
+				'outcome_code',
+				'failure_stage',
+				'package_type',
+				'package_identifier',
+				'source_revision',
+				'repository_id',
+				'diagnostic_code',
+				'diagnostic_available',
+				'correlation_reference',
+				'recorded_at',
+			),
+			array_keys( $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_failure_history'][0] )
+		);
+	}
 	/** @return array<string,int|string> */
 	private function record(): array {
 		return array(
@@ -142,6 +306,17 @@ final class SetupRecordStoreTest extends TestCase {
 			'pack_version'          => '1.2.3',
 			'bundle_hash'           => str_repeat( '1', 64 ),
 			'changed_path_hash'     => str_repeat( '2', 64 ),
+		);
+	}
+	/** @return array<string,int|string> */
+	private function observation(): array {
+		return array(
+			'kind'               => 'existing_automation_detected',
+			'repository_id'      => '123456789',
+			'package_type'       => 'plugin',
+			'package_identifier' => 'example-plugin/example-plugin.php',
+			'source_revision'    => 3,
+			'observed_at'        => '2026-08-27T12:34:56Z',
 		);
 	}
 }

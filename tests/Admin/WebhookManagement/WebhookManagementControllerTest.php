@@ -316,7 +316,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array(), $gateway->calls, 'Rendering must not assess or execute a provider operation.' );
 	}
 
-	public function testExistingWebhookRecordPreselectsItsManagementCredentialButNotItsSigningSecret(): void {
+	public function testExistingWebhookRecordPreselectsItsManagementCredentialAndKeepsItsRecordedSigningSecretVisible(): void {
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record();
 
@@ -325,8 +325,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'value="check"', $html );
 		self::assertStringContainsString( 'name="booster_credential_id" required>', $html );
 		self::assertStringContainsString( 'value="credential_1" selected="selected"', $html );
-		self::assertStringNotContainsString( 'name="webhook_profile_id"', $html );
-		self::assertStringNotContainsString( 'Create a repository signing secret', $html );
+		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
+		self::assertStringContainsString( 'Recorded signing secret', $html );
+		self::assertStringContainsString( 'Create a repository signing secret', $html );
 	}
 
 	public function testSuccessfulRecordedOperationsReplaceOnlyTheManagementCredentialId(): void {
@@ -567,7 +568,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
 	}
 
-	public function testNullHookAmbiguityPersistsTargetScopedRecoveryAndSuppressesBlindSetup(): void {
+	public function testNullHookAmbiguityPersistsTargetScopedRecoveryAndDisablesBlindSetup(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult( 'ambiguous', 'setup_response_invalid', null );
 		$store           = new OperationStoreFixture();
@@ -587,7 +588,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		$html = $this->renderPanel( $gateway, $store );
 		self::assertStringContainsString( 'without a stable hook ID', $html );
-		self::assertStringNotContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
 	}
 
 	public function testSetupSaveFailureFallsBackToDurableOrphanEvidence(): void {
@@ -604,7 +606,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=orphaned', $redirect );
 	}
 
-	public function testRepeatedSetupSaveFailureReturnsBoundedRecoveryReferencesAndSuppressesRetryView(): void {
+	public function testRepeatedSetupSaveFailureReturnsBoundedRecoveryReferencesAndDisablesRetryView(): void {
 		$gateway                      = $this->gateway();
 		$store                        = new OperationStoreFixture();
 		$store->saveFailuresRemaining = 2;
@@ -623,7 +625,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->renderPanel( $gateway, $store );
 		self::assertStringContainsString( 'provider hook reference 77', $html );
 		self::assertStringContainsString( 'Core signing profile wh_0123456789abcdef01234567', $html );
-		self::assertStringNotContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
 	}
 
 	public function testCoreAuthoritativeFitnessBlockMakesNoRemoteMutationAndLeavesRecordsUnchanged(): void {
@@ -782,7 +785,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'could not confirm whether the remote hook was removed', $html );
 		self::assertStringContainsString( 'value="check"', $html );
-		self::assertStringNotContainsString( 'value="remove"', $html );
+		self::assertStringContainsString( 'value="remove"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Remove webhook</button>', $html );
 	}
 
 	public function testConfirmedAbsenceDeletesOnlyTheLocalRecoveryRecord(): void {
@@ -861,7 +865,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
 		self::assertStringContainsString( 'Run Check or inspect the hook at the provider before retrying an update', $html );
 		self::assertStringContainsString( 'value="check"', $html );
-		self::assertStringNotContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
 	}
 
 	public function testAmbiguousProviderRemediationSurvivesOnlyItsSignedRedirect(): void {
@@ -941,7 +946,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'then run Check before retrying', $html );
 		self::assertStringContainsString( 'value="check"', $html );
-		self::assertStringNotContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
 	}
 
 	public function testVerifiedResultCopyDoesNotClaimThatCheckProvedSignedDelivery(): void {

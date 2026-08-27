@@ -57,7 +57,7 @@ final class BoosterLoggerTest extends TestCase {
 	public function testCaptureWorksWithoutWordPressDebugLoggingAndUsesOnlySafeOneLineContext(): void {
 		self::assertFalse( defined( 'WP_DEBUG_LOG' ) );
 
-		BoosterLogger::log(
+		$logged = BoosterLogger::log(
 			"deployment\nstarted",
 			array(
 				'attempt_id' => "attempt-\r\n1",
@@ -66,6 +66,7 @@ final class BoosterLoggerTest extends TestCase {
 				'headers'    => array( 'Authorization' => 'sentinel-authorization' ),
 			)
 		);
+		self::assertTrue( $logged );
 
 		$entries = $this->capture->snapshot()['entries'];
 		self::assertCount( 1, $entries );
@@ -105,11 +106,11 @@ final class BoosterLoggerTest extends TestCase {
 
 	public function testInactiveOrBrokenCaptureDoesNotAffectLoggingCallers(): void {
 		$this->capture->stop();
-		BoosterLogger::log( 'after stop', array( 'step' => 'ignored' ) );
+		self::assertFalse( BoosterLogger::log( 'after stop', array( 'step' => 'ignored' ) ) );
 		self::assertSame( array(), $this->capture->snapshot()['entries'] );
 
 		chmod( $this->directory . '/ran-booster-debug.php', 0644 );
-		BoosterLogger::log( 'unsafe file', array( 'step' => 'ignored' ) );
+		self::assertFalse( BoosterLogger::log( 'unsafe file', array( 'step' => 'ignored' ) ) );
 		self::assertSame( 'malformed', $this->capture->snapshot()['state'] );
 	}
 
@@ -121,7 +122,7 @@ final class BoosterLoggerTest extends TestCase {
 		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Separate-process test redirects PHP's normal error-log destination to a disposable fixture.
 		self::assertNotFalse( ini_set( 'error_log', $wordpressLog ) );
 
-		BoosterLogger::log( 'dual destination', array( 'step' => 'logging' ) );
+		self::assertTrue( BoosterLogger::log( 'dual destination', array( 'step' => 'logging' ) ) );
 
 		$expected = '[ran-booster] dual destination {"step":"logging"}';
 		self::assertStringContainsString( $expected, (string) file_get_contents( $wordpressLog ) );

@@ -35,14 +35,15 @@ final class TemplatePackRepositoryClient {
 	 *
 	 * @return array{code:string, pack?:TemplatePack, newer_incompatible?:bool}
 	 */
-	public function discover(): array {
-		$repository = $this->repository();
+	public function discover( string $token = '' ): array {
+		$repository = $this->repository( $token );
 		if ( 'ok' !== $repository['code'] ) {
 			return $repository;
 		}
 		$list = $this->jsonRequest(
 			'/repos/' . self::REPOSITORY . '/releases?per_page=' . self::RELEASE_WINDOW . '&page=1',
-			self::JSON_BODY_LIMIT
+			self::JSON_BODY_LIMIT,
+			$token
 		);
 		if ( 'ok' !== $list['code'] ) {
 			return $list;
@@ -68,7 +69,7 @@ final class TemplatePackRepositoryClient {
 
 		$newerIncompatible = false;
 		foreach ( $candidates as $candidate ) {
-			$result = $this->verifiedRelease( $candidate );
+			$result = $this->verifiedRelease( $candidate, $token );
 			if ( 'template_pack_incompatible' === $result['code'] ) {
 				$newerIncompatible = true;
 				continue;
@@ -93,17 +94,18 @@ final class TemplatePackRepositoryClient {
 	 * @param array<string, mixed> $expectedIdentity
 	 * @return array{code:string, pack?:TemplatePack}
 	 */
-	public function exact( array $expectedIdentity ): array {
+	public function exact( array $expectedIdentity, string $token = '' ): array {
 		if ( ! $this->expectedIdentityBelongsHere( $expectedIdentity ) ) {
 			return $this->error( 'template_pack_changed' );
 		}
-		$repository = $this->repository();
+		$repository = $this->repository( $token );
 		if ( 'ok' !== $repository['code'] ) {
 			return $repository;
 		}
 		$release = $this->jsonRequest(
 			'/repos/' . self::REPOSITORY . '/releases/' . $expectedIdentity['release_id'],
-			self::JSON_BODY_LIMIT
+			self::JSON_BODY_LIMIT,
+			$token
 		);
 		if ( 'ok' !== $release['code'] ) {
 			return $release;
@@ -112,7 +114,7 @@ final class TemplatePackRepositoryClient {
 		if ( ! is_array( $candidate ) || ! $this->candidateMatchesExpected( $candidate, $expectedIdentity ) ) {
 			return $this->error( 'template_pack_changed' );
 		}
-		$result = $this->verifiedRelease( $candidate );
+		$result = $this->verifiedRelease( $candidate, $token );
 		if ( 'ok' !== $result['code'] ) {
 			return in_array( $result['code'], array( 'template_pack_incompatible', 'template_pack_unavailable' ), true )
 				? $result
@@ -123,8 +125,8 @@ final class TemplatePackRepositoryClient {
 	}
 
 	/** @return array{code:string} */
-	private function repository(): array {
-		$response = $this->jsonRequest( '/repos/' . self::REPOSITORY, 65536 );
+	private function repository( string $token ): array {
+		$response = $this->jsonRequest( '/repos/' . self::REPOSITORY, 65536, $token );
 		if ( 'ok' !== $response['code'] ) {
 			return $response;
 		}
@@ -139,10 +141,11 @@ final class TemplatePackRepositoryClient {
 	 * @param array<string, mixed> $candidate
 	 * @return array{code:string, pack?:TemplatePack}
 	 */
-	private function verifiedRelease( array $candidate ): array {
+	private function verifiedRelease( array $candidate, string $token ): array {
 		$release = $this->jsonRequest(
 			'/repos/' . self::REPOSITORY . '/releases/' . $candidate['release_id'],
-			self::JSON_BODY_LIMIT
+			self::JSON_BODY_LIMIT,
+			$token
 		);
 		if ( 'ok' !== $release['code'] ) {
 			return $release;
@@ -153,7 +156,8 @@ final class TemplatePackRepositoryClient {
 		}
 		$tag = $this->jsonRequest(
 			'/repos/' . self::REPOSITORY . '/git/ref/tags/' . rawurlencode( $candidate['release_tag'] ),
-			32768
+			32768,
+			$token
 		);
 		if ( 'ok' !== $tag['code'] ) {
 			return $tag;
@@ -166,7 +170,8 @@ final class TemplatePackRepositoryClient {
 
 		$commit = $this->jsonRequest(
 			'/repos/' . self::REPOSITORY . '/commits/' . rawurlencode( $candidate['release_tag'] ),
-			32768
+			32768,
+			$token
 		);
 		if ( 'ok' !== $commit['code'] ) {
 			return $commit;
@@ -178,7 +183,8 @@ final class TemplatePackRepositoryClient {
 		}
 		$asset = $this->binaryRequest(
 			'/repos/' . self::REPOSITORY . '/releases/assets/' . $candidate['asset_id'],
-			$candidate['asset_size']
+			$candidate['asset_size'],
+			$token
 		);
 		if ( 'ok' !== $asset['code'] ) {
 			return $asset;
@@ -323,8 +329,8 @@ final class TemplatePackRepositoryClient {
 	}
 
 	/** @return array{code:string, data?:array<string,mixed>|list<mixed>} */
-	private function jsonRequest( string $path, int $limit ): array {
-		$response = $this->request( $path, 'application/vnd.github+json', $limit, 0 );
+	private function jsonRequest( string $path, int $limit, string $token ): array {
+		$response = $this->request( $path, 'application/vnd.github+json', $limit, 0, $token );
 		if ( 'ok' !== $response['code'] ) {
 			return $response;
 		}
@@ -338,12 +344,12 @@ final class TemplatePackRepositoryClient {
 	}
 
 	/** @return array{code:string, body?:string} */
-	private function binaryRequest( string $path, int $expectedSize ): array {
-		return $this->request( $path, 'application/octet-stream', min( self::ASSET_BODY_LIMIT, $expectedSize + 1 ), 3 );
+	private function binaryRequest( string $path, int $expectedSize, string $token ): array {
+		return $this->request( $path, 'application/octet-stream', min( self::ASSET_BODY_LIMIT, $expectedSize + 1 ), 3, $token );
 	}
 
 	/** @return array{code:string, body?:string} */
-	private function request( string $path, string $accept, int $limit, int $redirects ): array {
+	private function request( string $path, string $accept, int $limit, int $redirects, string $token ): array {
 		if ( ! str_starts_with( $path, '/repos/' ) || $limit < 1 || $limit > self::ASSET_BODY_LIMIT ) {
 			return $this->error( 'template_pack_invalid' );
 		}
@@ -358,6 +364,9 @@ final class TemplatePackRepositoryClient {
 			'reject_unsafe_urls'  => true,
 			'limit_response_size' => $limit,
 		);
+		if ( '' !== $token ) {
+			$args['headers']['Authorization'] = 'Bearer ' . $token;
+		}
 		try {
 			$response = ( $this->send )( 'GET', self::API_ROOT . $path, $args );
 		} catch ( Throwable ) {

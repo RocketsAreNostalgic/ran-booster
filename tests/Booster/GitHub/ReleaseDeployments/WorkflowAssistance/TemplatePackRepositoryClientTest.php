@@ -118,6 +118,27 @@ final class TemplatePackRepositoryClientTest extends TestCase {
 		);
 	}
 
+	public function testAuthenticatedRequestsSendTheOperationTokenForJsonAndAssetReads(): void {
+		$archive   = TemplatePackApi2Fixture::archive();
+		$release   = $this->release( 41, 'v1.2.3', $archive );
+		$transport = new TemplatePackScriptedTransport(
+			array(
+				$this->repositoryResponse(),
+				$this->response( 200, array( $release ) ),
+				$this->response( 200, $release ),
+				$this->tagResponse(),
+				$this->response( 200, array( 'sha' => TemplatePackApi2Fixture::COMMIT ) ),
+				$this->binaryResponse( 200, $archive ),
+			)
+		);
+
+		self::assertSame( 'ok', $this->client( $transport )->discover( 'operation-token' )['code'] );
+		foreach ( $transport->requests as $request ) {
+			self::assertSame( 'Bearer operation-token', $request['args']['headers']['Authorization'] );
+		}
+		self::assertSame( 'application/octet-stream', $transport->requests[5]['args']['headers']['Accept'] );
+	}
+
 	public function testRepositoryAndAssetDigestMismatchesFailClosed(): void {
 		$wrongRepository = new TemplatePackScriptedTransport(
 			array(

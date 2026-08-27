@@ -118,6 +118,24 @@ final class SourceReadyAssessorTest extends TestCase {
 		self::assertSame( 'runtime_paths_unknown', $assessor->assess( $executable, 'plugin', 'example-plugin', self::VERSION, 'https://github.com/' . self::REPOSITORY )->code() );
 	}
 
+	public function testCompetingReleaseAutomationOutranksAGeneratedPathCollision(): void {
+		$result = ( new SourceReadyAssessor() )->assess(
+			$this->snapshot(
+				array(
+					'example-plugin.php' => $this->pluginHeader(),
+					'version.txt'        => self::VERSION,
+					'.github/workflows/publish-release.yml' => "steps:\n  - uses: softprops/action-gh-release@v2\n",
+				)
+			),
+			'plugin',
+			'example-plugin',
+			self::VERSION,
+			'https://github.com/' . self::REPOSITORY
+		);
+
+		self::assertSame( 'release_automation_conflict', $result->code() );
+	}
+
 	public function testCustomPrettierOwnershipAndPotVersioningRefuse(): void {
 		$assessor = new SourceReadyAssessor();
 		$custom   = $assessor->assess(

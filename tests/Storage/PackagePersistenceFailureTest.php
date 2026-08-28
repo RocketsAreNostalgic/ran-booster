@@ -301,14 +301,14 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$storage = $this->storage();
 		$package = $this->package();
 
-		$wpdb->successfulReadsBeforeFailure = 1;
+		$wpdb->successfulReadsBeforeFailure = 2;
 		$insertResult                       = $storage->storeForTest( $package );
 		$this->assertAmbiguousWrite( $insertResult, PackageStorageOperation::INSERT );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
 		$wpdb                               = new StorageTestWpdb();
 		$wpdb->rows[]                       = $this->storedRow();
-		$wpdb->successfulReadsBeforeFailure = 1;
+		$wpdb->successfulReadsBeforeFailure = 2;
 		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
 		$updateResult = $storage->storeForTest( $package );
 		$this->assertAmbiguousWrite( $updateResult, PackageStorageOperation::UPDATE );
@@ -317,14 +317,14 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$wpdb                               = new StorageTestWpdb();
 		$wpdb->rows[]                       = $this->storedRow();
 		$wpdb->updateResult                 = 0;
-		$wpdb->successfulReadsBeforeFailure = 1;
+		$wpdb->successfulReadsBeforeFailure = 2;
 		$zeroUpdateResult                   = $storage->storeForTest( $package );
 		$this->assertAmbiguousWrite( $zeroUpdateResult, PackageStorageOperation::UPDATE );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
 		$wpdb                               = new StorageTestWpdb();
 		$wpdb->rows[]                       = $this->storedRow();
-		$wpdb->successfulReadsBeforeFailure = 0;
+		$wpdb->successfulReadsBeforeFailure = 1;
 		$editResult                         = $storage->editForTest( 'example/example.php', $this->editInput() );
 		$this->assertAmbiguousWrite( $editResult, PackageStorageOperation::UPDATE );
 
@@ -332,7 +332,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$wpdb                               = new StorageTestWpdb();
 		$wpdb->rows[]                       = $this->storedRow();
 		$wpdb->updateResult                 = 0;
-		$wpdb->successfulReadsBeforeFailure = 0;
+		$wpdb->successfulReadsBeforeFailure = 1;
 		$zeroEditResult                     = $storage->editForTest( 'example/example.php', $this->editInput() );
 		$this->assertAmbiguousWrite( $zeroEditResult, PackageStorageOperation::UPDATE );
 

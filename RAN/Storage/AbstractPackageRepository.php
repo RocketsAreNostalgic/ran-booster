@@ -191,13 +191,39 @@ abstract class AbstractPackageRepository {
 		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source ) {
 			$where['subdirectory'] = null;
 		}
-		$result = $wpdb->update(
-			ran_booster_table_name(),
-			$data,
-			$where
-		);
+		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
+			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
+		}
+		try {
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+				$model->provider,
+				$model->provider_repository_id,
+				$this->packageType(),
+				$model->package,
+				PackageSource::from( $expectedSource->source ),
+				true
+			);
+			if ( ! $assessment['allowed'] ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->repositorySourceResult( $assessment, PackageStorageOperation::UPDATE );
+			}
+			$result   = $wpdb->update( ran_booster_table_name(), $data, $where );
+			$verified = $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
+			if ( ! $verified->isSuccessful() ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $verified;
+			}
+			if ( false === $wpdb->query( 'COMMIT' ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->postWriteVerificationFailure( PackageStorageOperation::UPDATE );
+			}
 
-		return $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
+			return $verified;
+		} catch ( Throwable $exception ) {
+			$wpdb->query( 'ROLLBACK' );
+			return $this->failureResult( PackageStorageFailure::queryFailed() );
+		}
 	}
 
 	/**
@@ -340,58 +366,64 @@ abstract class AbstractPackageRepository {
 			'package' => $model->package,
 			'type'    => $this->packageType(),
 		);
+		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
+			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
+		}
 		try {
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+				$model->provider,
+				$model->provider_repository_id,
+				$this->packageType(),
+				$model->package,
+				$package->getSource(),
+				true
+			);
+			if ( ! $assessment['allowed'] ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->repositorySourceResult( $assessment, PackageStorageOperation::INSERT );
+			}
 			$existingRows = $this->packageRows( $model->package );
-		} catch ( PackageStorageFailure $failure ) {
-			return $this->failureResult( $failure );
-		}
-
-		if ( count( $existingRows ) > 1 ) {
-			return PackageMutationResult::conflict(
-				PackageStorageOperation::QUERY,
-				'ran_booster_storage_duplicate_package',
-				__( 'Booster found conflicting package management records. No package changes were made.', 'ran-booster' )
-			);
-		}
-
-		if ( array() !== $existingRows ) {
-			try {
+			if ( count( $existingRows ) > 1 ) {
+				$wpdb->query( 'ROLLBACK' );
+				return PackageMutationResult::conflict( PackageStorageOperation::QUERY, 'ran_booster_storage_duplicate_package', __( 'Booster found conflicting package management records. No package changes were made.', 'ran-booster' ) );
+			}
+			if ( array() !== $existingRows ) {
 				$storedSource = $this->sourceModelFromRow( $existingRows[0] );
-			} catch ( InvalidArgumentException ) {
-				return $this->sourceConflictResult();
+				if ( PackageSource::BRANCH->value !== $storedSource->source || PackageSource::BRANCH !== $package->getSource() || $storedSource->source_revision !== $package->getSourceRevision() || PHP_INT_MAX === $storedSource->source_revision ) {
+					$wpdb->query( 'ROLLBACK' );
+					return $this->sourceConflictResult();
+				}
+				$data['source']           = PackageSource::BRANCH->value;
+				$data['source_revision']  = $storedSource->source_revision + 1;
+				$where['source']          = PackageSource::BRANCH->value;
+				$where['source_revision'] = $storedSource->source_revision;
+				$result                   = $wpdb->update( $tableName, $data, $where );
+				$verified                 = $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
+			} else {
+				$insertData = array_merge(
+					array(
+						'package' => $model->package,
+						'type'    => $this->packageType(),
+					),
+					$data
+				);
+				$result     = $wpdb->insert( $tableName, $insertData );
+				$verified   = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
 			}
-			if ( PackageSource::BRANCH->value !== $storedSource->source
-				|| PackageSource::BRANCH !== $package->getSource()
-				|| $storedSource->source_revision !== $package->getSourceRevision()
-				|| PHP_INT_MAX === $storedSource->source_revision ) {
-				return $this->sourceConflictResult();
+			if ( ! $verified->isSuccessful() ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $verified;
 			}
-			$data['source']           = PackageSource::BRANCH->value;
-			$data['source_revision']  = $storedSource->source_revision + 1;
-			$where['source']          = PackageSource::BRANCH->value;
-			$where['source_revision'] = $storedSource->source_revision;
-			$result                   = $wpdb->update(
-				$tableName,
-				$data,
-				$where
-			);
-
-			return $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
+			if ( false === $wpdb->query( 'COMMIT' ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->postWriteVerificationFailure( $verified->getOperation() );
+			}
+			return $verified;
+		} catch ( Throwable ) {
+			$wpdb->query( 'ROLLBACK' );
+			return $this->failureResult( PackageStorageFailure::queryFailed() );
 		}
-
-		$insertData = array_merge(
-			array(
-				'package' => $model->package,
-				'type'    => $this->packageType(),
-			),
-			$data
-		);
-		$result     = $wpdb->insert(
-			$tableName,
-			$insertData
-		);
-
-		return $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
 	}
 
 	/** Store an installed package only when no management row exists yet. */
@@ -410,39 +442,72 @@ abstract class AbstractPackageRepository {
 		} catch ( InvalidArgumentException ) {
 			return $this->invalidPackageIdentityResult( PackageStorageOperation::INSERT );
 		}
-		try {
-			if ( array() !== $this->packageRows( $model->package ) ) {
-				return $this->adoptionConflict();
-			}
-		} catch ( PackageStorageFailure $failure ) {
-			return $this->failureResult( $failure );
+		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
+			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
 		}
-
-		$insertData = array_merge(
-			array(
-				'package' => $model->package,
-				'type'    => $this->packageType(),
-			),
-			$data
-		);
-		$result     = $wpdb->insert( ran_booster_table_name(), $insertData );
-		if ( false === $result || 0 === $result ) {
+		try {
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+				$model->provider,
+				$model->provider_repository_id,
+				$this->packageType(),
+				$model->package,
+				PackageSource::BRANCH,
+				true
+			);
+			if ( ! $assessment['allowed'] ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->repositorySourceResult( $assessment, PackageStorageOperation::INSERT );
+			}
 			try {
 				if ( array() !== $this->packageRows( $model->package ) ) {
+					$wpdb->query( 'ROLLBACK' );
 					return $this->adoptionConflict();
 				}
 			} catch ( PackageStorageFailure $failure ) {
-				return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+				$wpdb->query( 'ROLLBACK' );
+				return $this->failureResult( $failure );
 			}
 
-			return PackageMutationResult::failed(
-				PackageStorageOperation::INSERT,
-				'ran_booster_storage_write_failed',
-				__( 'Booster could not save the package management record. No success was reported.', 'ran-booster' )
+			$insertData = array_merge(
+				array(
+					'package' => $model->package,
+					'type'    => $this->packageType(),
+				),
+				$data
 			);
+			$result     = $wpdb->insert( ran_booster_table_name(), $insertData );
+			if ( false === $result || 0 === $result ) {
+				try {
+					if ( array() !== $this->packageRows( $model->package ) ) {
+						$wpdb->query( 'ROLLBACK' );
+						return $this->adoptionConflict();
+					}
+				} catch ( PackageStorageFailure ) {
+					$wpdb->query( 'ROLLBACK' );
+					return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+				}
+				$wpdb->query( 'ROLLBACK' );
+				return PackageMutationResult::failed(
+					PackageStorageOperation::INSERT,
+					'ran_booster_storage_write_failed',
+					__( 'Booster could not save the package management record. No success was reported.', 'ran-booster' )
+				);
+			}
+			$verified = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
+			if ( ! $verified->isSuccessful() ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $verified;
+			}
+			if ( false === $wpdb->query( 'COMMIT' ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+			}
+			return $verified;
+		} catch ( Throwable $exception ) {
+			$wpdb->query( 'ROLLBACK' );
+			throw $exception;
 		}
-
-		return $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
 	}
 
 	/**
@@ -474,43 +539,76 @@ abstract class AbstractPackageRepository {
 		} catch ( InvalidArgumentException ) {
 			return $this->invalidPackageIdentityResult( PackageStorageOperation::INSERT );
 		}
-		try {
-			if ( array() !== $this->packageRows( $model->package ) ) {
-				return $this->adoptionConflict();
-			}
-		} catch ( PackageStorageFailure $failure ) {
-			return $this->failureResult( $failure );
+		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
+			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
 		}
-
-		$insertData = array_merge(
-			array(
-				'package'               => $model->package,
-				'type'                  => $this->packageType(),
-				'source_previous'       => null,
-				'source_changed_at'     => current_time( 'mysql', true ),
-				'source_changed_by'     => $userId > 0 ? $userId : null,
-				'release_configuration' => $configuration->toJson(),
-			),
-			$data
-		);
-		$result     = $wpdb->insert( ran_booster_table_name(), $insertData );
-		if ( false === $result || 0 === $result ) {
+		try {
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+				$model->provider,
+				$model->provider_repository_id,
+				$this->packageType(),
+				$model->package,
+				PackageSource::RELEASE_ASSET,
+				true
+			);
+			if ( ! $assessment['allowed'] ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->repositorySourceResult( $assessment, PackageStorageOperation::INSERT );
+			}
 			try {
 				if ( array() !== $this->packageRows( $model->package ) ) {
+					$wpdb->query( 'ROLLBACK' );
 					return $this->adoptionConflict();
 				}
-			} catch ( PackageStorageFailure ) {
-				return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+			} catch ( PackageStorageFailure $failure ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->failureResult( $failure );
 			}
 
-			return PackageMutationResult::failed(
-				PackageStorageOperation::INSERT,
-				'ran_booster_storage_write_failed',
-				__( 'Booster could not save the release management record. The installed package state is uncertain.', 'ran-booster' )
+			$insertData = array_merge(
+				array(
+					'package'               => $model->package,
+					'type'                  => $this->packageType(),
+					'source_previous'       => null,
+					'source_changed_at'     => current_time( 'mysql', true ),
+					'source_changed_by'     => $userId > 0 ? $userId : null,
+					'release_configuration' => $configuration->toJson(),
+				),
+				$data
 			);
-		}
+			$result     = $wpdb->insert( ran_booster_table_name(), $insertData );
+			if ( false === $result || 0 === $result ) {
+				$wpdb->query( 'ROLLBACK' );
+				try {
+					if ( array() !== $this->packageRows( $model->package ) ) {
+						return $this->adoptionConflict();
+					}
+				} catch ( PackageStorageFailure ) {
+					return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+				}
 
-		return $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
+				return PackageMutationResult::failed(
+					PackageStorageOperation::INSERT,
+					'ran_booster_storage_write_failed',
+					__( 'Booster could not save the release management record. The installed package state is uncertain.', 'ran-booster' )
+				);
+			}
+
+			$verified = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
+			if ( ! $verified->isSuccessful() ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $verified;
+			}
+			if ( false === $wpdb->query( 'COMMIT' ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+			}
+			return $verified;
+		} catch ( Throwable $exception ) {
+			$wpdb->query( 'ROLLBACK' );
+			throw $exception;
+		}
 	}
 
 	/** @return array{0: PackageModel, 1: array<string, mixed>} */
@@ -555,6 +653,25 @@ abstract class AbstractPackageRepository {
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_adoption_conflict',
 			__( 'Booster found existing package management data. No package changes were made.', 'ran-booster' )
+		);
+	}
+
+	/**
+	 * @param array{code: string} $assessment
+	 */
+	private function repositorySourceResult( array $assessment, PackageStorageOperation $operation ): PackageMutationResult {
+		if ( 'repository_source_unavailable' === $assessment['code'] ) {
+			return PackageMutationResult::failed(
+				$operation,
+				$assessment['code'],
+				__( 'Booster could not determine the managed repository source state. No package changes were made.', 'ran-booster' )
+			);
+		}
+
+		return PackageMutationResult::conflict(
+			$operation,
+			$assessment['code'],
+			__( 'This repository already has incompatible managed package source records. No package changes were made.', 'ran-booster' )
 		);
 	}
 

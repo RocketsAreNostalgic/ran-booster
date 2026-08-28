@@ -267,7 +267,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		self::assertCount( 5, $result['rows'] );
 		self::assertSame( 'mixed', $result['rows']['101']['source_key'] );
-		self::assertSame( 'Mixed sources', $result['rows']['101']['source_label'] );
+		self::assertSame( 'Conflicting sources', $result['rows']['101']['source_label'] );
+		self::assertSame( 'Conflicting sources', $result['rows']['101']['statuses'][0]['label'] );
+		self::assertSame( 'warning', $result['rows']['101']['statuses'][0]['tone'] );
+		self::assertStringContainsString( 'Review the package settings', $result['rows']['101']['consequence'] );
 		self::assertSame( 'packages/plugin', $result['rows']['101']['package_summaries'][0]['subdirectory'] );
 		self::assertSame( array( 'owner/plugin.php', 'owner-theme' ), $result['rows']['101']['package_references'] );
 		self::assertSame( 'Automatic: 1', $result['rows']['101']['policies'][0]['label'] );

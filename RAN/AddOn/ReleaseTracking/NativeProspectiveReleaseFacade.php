@@ -27,6 +27,7 @@ use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\WordPress\CorePackageExecutor;
@@ -39,6 +40,7 @@ use Throwable;
  */
 final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	private readonly ProspectiveReleaseCandidateReader $candidateReader;
+	private RepositorySourceGuard $sourceGuard;
 
 	/** @var \Closure(string): bool */
 	private \Closure $canManage;
@@ -63,9 +65,11 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private ProviderRegistry $providers,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
-		?callable $currentUserId = null
+		?callable $currentUserId = null,
+		?RepositorySourceGuard $sourceGuard = null
 	) {
 		$this->candidateReader = new ProspectiveReleaseCandidateReader( $repositories, $providers );
+		$this->sourceGuard     = $sourceGuard ?? new RepositorySourceGuard();
 		$this->canManage       = null === $canManage
 			? static fn ( string $type ): bool => current_user_can( 'manage_options' )
 				&& current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' )
@@ -215,7 +219,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 		try {
 			PackageMutationGuard::assertFilesystemMutationAllowed();
-			$repository          = $this->resolveRepository( $repositoryRequest );
+			$repository = $this->resolveRepository( $repositoryRequest );
+			if ( ! $this->prospectiveReleaseSourceAvailable( $type, $repository ) ) {
+				return ProspectiveReleaseResult::failure( 'release_repository_conflict' );
+			}
 			$repositoryReference = $this->repositoryReference( $repository );
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'install_failed' );
@@ -268,8 +275,11 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		$finalizationFailed = false;
 
 		try {
-			$identifier    = $release->identifier( $type );
-			$repository    = $this->managedRepository( $repository );
+			$identifier = $release->identifier( $type );
+			$repository = $this->managedRepository( $repository );
+			if ( ! $this->releaseSourceAvailable( $type, $identifier, $repository ) ) {
+				return ProspectiveReleaseResult::failure( 'release_repository_conflict' );
+			}
 			$configuration = new ManagedReleaseConfiguration(
 				$release->packageRoot(),
 				$release->mainFile(),
@@ -277,7 +287,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			);
 			$userId        = ( $this->currentUserId )();
 			$lockToken     = $this->updaterLock->acquire();
-			$wasActive     = $this->isActive( $type, $identifier );
+			if ( ! $this->releaseSourceAvailable( $type, $identifier, $repository ) ) {
+				return ProspectiveReleaseResult::failure( 'release_repository_conflict' );
+			}
+			$wasActive = $this->isActive( $type, $identifier );
 			if ( $this->isInstalled( $type, $identifier )
 				|| $this->hasManagementRecord( $type, $identifier )
 				|| $wasActive ) {
@@ -468,6 +481,46 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		return 'plugin' === $type
 			? $this->plugins->hasManagementRecord( $identifier )
 			: $this->themes->hasManagementRecord( $identifier );
+	}
+
+	/** @param array<string, mixed> $repository */
+	private function prospectiveReleaseSourceAvailable( string $type, array $repository ): bool {
+		try {
+			$assessment = $this->sourceGuard->assess(
+				(string) ( $repository['provider'] ?? '' ),
+				(string) ( $repository['provider_repository_id'] ?? '' ),
+				'plugin' === $type ? 1 : 2,
+				'__ran_booster_prospective_release__',
+				PackageSource::RELEASE_ASSET
+			);
+
+			// A retry's package identifier is not trusted until the archive is
+			// verified. Permit that read for a sole same-type Release record;
+			// installExact must match its identifier before any filesystem work.
+			return $assessment['allowed'] || (
+				1 === $assessment['relationship_count']
+				&& 1 === $assessment['release_count']
+				&& ( 'plugin' === $type ? 1 : 2 ) === $assessment['owner_type']
+			);
+		} catch ( Throwable ) {
+			return false;
+		}
+	}
+
+	private function releaseSourceAvailable( string $type, string $identifier, ManagedRepository $repository ): bool {
+		try {
+			$assessment = $this->sourceGuard->assess(
+				$repository->provider->value,
+				$repository->reference->providerRepositoryId,
+				'plugin' === $type ? 1 : 2,
+				$identifier,
+				PackageSource::RELEASE_ASSET
+			);
+
+			return $assessment['allowed'];
+		} catch ( Throwable ) {
+			return false;
+		}
 	}
 
 	private function adoptRelease(

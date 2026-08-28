@@ -6,6 +6,7 @@ namespace Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
+require_once __DIR__ . '/../../Storage/StorageTestEnvironment.php';
 
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -54,6 +55,172 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array(), $tracking->calls );
 	}
 
+	#[DataProvider( 'releaseTrackDisclosurePackages' )]
+	public function testReleaseTrackIsAClosedNativeDisclosureWithTheSelectedSummary( string $source, string $type, string $channel, string $expectedSummary ): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( $source, $type, channel: $channel ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( $source, $type );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', $type, 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertMatchesRegularExpression(
+			'/<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section" data-ran-booster-package-disclosure>/',
+			$html
+		);
+		self::assertStringContainsString( '<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label">Release Track</h3>', $html );
+		self::assertMatchesRegularExpression(
+			'/<span class="ran-booster-advanced-source-summary__badge" data-ran-booster-release-track-summary>\s*' . $expectedSummary . '\s*<\\/span>/',
+			$html
+		);
+		self::assertStringContainsString( '<div class="ran-booster-settings-disclosure__body">', $html );
+		self::assertStringContainsString( '<form id="ran-booster-release-track-form"', $html );
+		if ( 'branch' === $source ) {
+			self::assertStringContainsString( 'form="ran-booster-release-track-form"', $html );
+		} else {
+			self::assertStringContainsString( 'name="action" value="ran_booster_release_change_channel"', $html );
+		}
+	}
+
+	/** @return array<string,array{string,string,string,string}> */
+	public static function releaseTrackDisclosurePackages(): array {
+		return array(
+			'plugin stable' => array( 'branch', 'plugin', 'stable', 'Stable' ),
+			'theme preview' => array( 'release_asset', 'theme', 'prerelease', 'Preview' ),
+		);
+	}
+
+	public function testSharedRepositoryNoticeListsOtherPackagesAndKeepsIdentityGreen(): void {
+		$controls = $this->conflictControls();
+		$package  = new PackageProjection();
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-release-gate-notice' ) );
+		self::assertStringContainsString( '<ul class="ul-disc">', $html );
+		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=nested%2Fnested.php', $html );
+		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=companion-theme', $html );
+		self::assertStringContainsString( '<h4>Repository shared</h4>', $html );
+		self::assertStringNotContainsString( '<h4>Ready for releases</h4>', $html );
+		self::assertStringContainsString( 'The installed package identity and Update URI match the configured repository.', $html );
+		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\/button>/', $html );
+		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
+		self::assertStringNotContainsString( 'Published release status needs attention.', $html );
+		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
+		preg_match( '/<ul class="ul-disc">(.*?)<\/ul>/s', $html, $list );
+		self::assertStringNotContainsString( 'example%2Fexample.php', $list[1] );
+		$choices = $controls->filterSourceChoices( array( 'release_asset' => array() ), 'edit', 'plugin', $package, $package->settingsUrl() );
+		self::assertFalse( $choices['release_asset']['disabled'] );
+	}
+
+	public function testConflictRemainsBlockedWhenListIsUnavailableAndDoesNotDuplicateTheResult(): void {
+		foreach ( array( false, true ) as $unavailable ) {
+			$controls = $this->conflictControls( $unavailable );
+			$package  = new PackageProjection();
+			$this->setConflictResult( 'release_repository_conflict' );
+			ob_start();
+			$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+			$html = (string) ob_get_clean();
+			self::assertSame( 1, substr_count( $html, 'Releases require exclusive use of this repository.' ) );
+			self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\/button>/', $html );
+			self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
+			self::assertStringNotContainsString( '<h4>Ready for releases</h4>', $html );
+		}
+	}
+
+	public function testConflictDoesNotSuppressAnUnrelatedStalePageNotice(): void {
+		$controls = $this->conflictControls();
+		$package  = new PackageProjection();
+		$this->setConflictResult( 'source_changed' );
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Package settings changed after this browser page was opened.', $html );
+		self::assertStringContainsString( 'Conflicting packages', $html );
+	}
+
+	public function testConflictResultHasActionableFallbackWithoutGenericDiagnostics(): void {
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->renderOperationNotice( 'release_repository_conflict', false );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Releases require exclusive use of this repository.', $html );
+		self::assertStringContainsString( 'their files can stay installed.', $html );
+		self::assertStringContainsString( 'notice-warning', $html );
+		self::assertStringNotContainsString( 'Published release status needs attention.', $html );
+		self::assertStringNotContainsString( '<details>', $html );
+	}
+
+	public function testConflictNamesAreEscapedAndLongListsLinkToExactRepositoryStatus(): void {
+		$package = new PackageProjection();
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->renderSettings(
+			$package,
+			ReleaseManagementFixture::status( failureCode: 'release_repository_conflict' ),
+			$package->settingsUrl(),
+			repositoryConflict: array(
+				array(
+					'name' => '<img src=x onerror=alert(1)>',
+					'url'  => $package->settingsUrl(),
+					'type' => 'plugin',
+				),
+			)
+		);
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '&lt;img src=x onerror=alert(1)&gt;', $html );
+		self::assertStringNotContainsString( '<img', $html );
+
+		$controls = $this->conflictControls( extraCount: 12 );
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $html, '>View all conflicting packages</a>' ) );
+		self::assertStringContainsString( 'tab=gh&amp;panel=repositories&amp;repository=101&amp;repository_view=status', $html );
+		self::assertStringNotContainsString( 'extra-11', $html );
+	}
+
+	private function conflictControls( bool $unavailable = false, int $extraCount = 0 ): \RAN\Admin\ReleaseManagement\ReleaseManagementControls {
+		$database = new \Tests\Support\RepositorySourceGuardDatabase();
+		foreach ( array( array( 1, 'example/example.php' ), array( 1, 'nested/nested.php' ), array( 2, 'companion-theme' ) ) as [ $type, $identifier ] ) {
+			$database->rows[] = (object) array(
+				'type'                   => $type,
+				'package'                => $identifier,
+				'source'                 => 'branch',
+				'provider'               => 'gh',
+				'provider_repository_id' => '101',
+			);
+		}
+		for ( $i = 0; $i < $extraCount; ++$i ) {
+			$database->rows[] = (object) array(
+				'type'                   => 2,
+				'package'                => 'extra-' . $i,
+				'source'                 => 'branch',
+				'provider'               => 'gh',
+				'provider_repository_id' => '101',
+			);
+		}
+		$database->last_error = $unavailable ? 'Read unavailable' : '';
+		return ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( failureCode: 'release_repository_conflict' ) ),
+			sourceGuard: new \RAN\Storage\RepositorySourceGuard( $database, $this->createStub( \RAN\Storage\Database::class ) )
+		);
+	}
+
+	private function setConflictResult( string $code ): void {
+		$payload = \RAN\Admin\ReleaseManagement\wp_json_encode( array( $code, false, 'plugin', 'example/example.php', 'stable' ) );
+		$_GET    = array(
+			'ran_booster_release_result'       => $code,
+			'ran_booster_release_success'      => '0',
+			'ran_booster_release_type'         => 'plugin',
+			'ran_booster_release_package'      => 'example/example.php',
+			'ran_booster_release_channel'      => 'stable',
+			'ran_booster_release_result_nonce' => 'nonce-for-ran-booster-result-' . hash( 'sha256', $payload ),
+		);
+	}
+
 	public function testPackageReleaseReadinessActionsRenderInsideTheExistingActionRow(): void {
 		\RAN\Admin\ReleaseManagement\add_action(
 			'ran_booster_admin_package_release_readiness_actions',
@@ -92,7 +259,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'ran-booster-settings-section ran-booster-release-track-section', $html );
+		self::assertStringContainsString( 'ran-booster-settings-disclosure ran-booster-release-track-section', $html );
 		self::assertStringContainsString( 'ran-booster-release-track-control is-disabled" disabled', $html );
 		self::assertSame( 2, substr_count( $html, 'class="button ran-booster-release-track-option"' ) );
 		self::assertStringContainsString( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds.', $html );
@@ -140,6 +307,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
 		self::assertStringNotContainsString( 'name="action" value="ran_booster_release_change_channel"', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
+		self::assertMatchesRegularExpression( '/data-ran-booster-release-track-summary>\s*Unknown\s*<\\/span>/', $html );
 		self::assertStringContainsString( 'data-ran-booster-release-gate-notice', $html );
 		self::assertStringContainsString( 'Published release status is temporarily unavailable. Try again.', $html );
 		self::assertStringNotContainsString( 'Published release controls are temporarily unavailable.', $html );
@@ -448,25 +616,36 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Return to Branch', $choice['release_asset']['description'] );
 	}
 
-	public function testNestedBranchReadinessExplainsThatBranchRemainsAvailable(): void {
+	#[DataProvider( 'nestedPackageTypes' )]
+	public function testNestedBranchReadinessExplainsThatBranchRemainsAvailable( string $type ): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
 			ReleaseManagementFixture::status(
 				'branch',
-				'plugin',
+				$type,
 				ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED
 			)
 		);
 		$controls = ReleaseManagementFixture::controls( $tracking );
-		$package  = new PackageProjection();
+		$package  = new PackageProjection( 'branch', $type );
 
 		ob_start();
-		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
-		$html = (string) ob_get_clean();
+		$controls->renderAdvancedSourceSection( 'edit', $type, 'release_asset', $package, $package->settingsUrl() );
+		$html                = (string) ob_get_clean();
+		$useReleasesPosition = strpos( $html, 'Use releases' );
+		$checklistPosition   = strpos( $html, 'Installed identity and Update URI' );
 
 		self::assertStringContainsString( 'data-ran-booster-release-gate-notice', $html );
 		self::assertStringContainsString( 'continue using its configured repository subdirectory with Branch deployments', $html );
 		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
 		self::assertStringContainsString( 'This package uses a repository subdirectory.', $html );
+		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\\/button>/', $html );
+		self::assertIsInt( $useReleasesPosition );
+		self::assertIsInt( $checklistPosition );
+		self::assertTrue( $useReleasesPosition < $checklistPosition );
+		self::assertSame( 1, preg_match_all( '/class="[^"]*\\bran-booster-source-transition\\b[^"]*"/', $html ) );
+		self::assertStringNotContainsString( 'Use branch', $html );
+		self::assertStringNotContainsString( 'Releases currently active.', $html );
+		self::assertStringNotContainsString( 'Branch cannot be selected', $html );
 		self::assertStringNotContainsString( 'Return to Branch', $html );
 		self::assertStringNotContainsString( 'Add this exact header', $html );
 		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
@@ -474,6 +653,14 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( '<strong>Update URI</strong>', $html );
 		self::assertStringContainsString( 'Recheck eligibility', $html );
 		self::assertStringContainsString( 'ran_booster_open_advanced=1', $html );
+	}
+
+	/** @return array<string,array{string}> */
+	public static function nestedPackageTypes(): array {
+		return array(
+			'plugin' => array( 'plugin' ),
+			'theme'  => array( 'theme' ),
+		);
 	}
 
 	public function testMissingUpdateUriStillOffersTheExactHeaderRemediation(): void {
@@ -560,8 +747,41 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Why this happened and how to fix it', $html );
 		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
 		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
-		self::assertStringContainsString( 'Use branch', $html );
+		$recoveryPosition  = strpos( $html, 'Use branch' );
+		$checklistPosition = strpos( $html, 'Installed identity and Update URI' );
+		self::assertSame( 1, substr_count( $html, 'Use branch' ) );
+		self::assertIsInt( $recoveryPosition );
+		self::assertIsInt( $checklistPosition );
+		self::assertTrue( $recoveryPosition < $checklistPosition );
+		self::assertSame( 1, preg_match_all( '/class="[^"]*\\bran-booster-source-transition\\b[^"]*"/', $html ) );
 		self::assertStringContainsString( 'class="button button-primary" aria-disabled="false">Use branch', $html );
+	}
+
+	public function testOrdinaryPublishedReleaseDoesNotOfferBranchRecovery(): void {
+		$controls = ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) )
+		);
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'Use branch', $html );
+	}
+
+	public function testPublishedReleaseBranchViewRetainsReturnToBranchRecovery(): void {
+		$controls = ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) )
+		);
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'branch', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Releases currently active.', $html );
+		self::assertStringContainsString( 'Use branch', $html );
 	}
 
 	public function testEligibleBranchTransitionAppearsAtTheTopAndSubmitsTheTrackForm(): void {

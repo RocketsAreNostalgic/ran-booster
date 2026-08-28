@@ -36,6 +36,10 @@ final class PackageSubdirectory {
 			throw self::invalid();
 		}
 
+		if ( str_ends_with( $value, '/' ) ) {
+			$value = substr( $value, 0, -1 );
+		}
+
 		$segments = explode( '/', $value );
 
 		foreach ( $segments as $segment ) {
@@ -70,7 +74,10 @@ final class PackageSubdirectory {
 	public static function normalizeSlug( mixed $value ): string {
 		$slug = self::normalize( $value );
 
-		if ( null === $slug || str_contains( $slug, '/' ) ) {
+		if ( null === $slug
+			|| ! is_string( $value )
+			|| str_ends_with( trim( $value ), '/' )
+			|| str_contains( $slug, '/' ) ) {
 			throw self::invalid();
 		}
 

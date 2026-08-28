@@ -24,7 +24,8 @@ final class ReleaseManagementDisplay {
 		string $selectedChannel = '',
 		array $nonceActions = array(),
 		bool $eligibilityRecheck = false,
-		string $operationNoticeHtml = ''
+		string $operationNoticeHtml = '',
+		array $repositoryConflict = array()
 	): void {
 		if ( ! $this->isProjection( $package ) ) {
 			return;
@@ -64,19 +65,23 @@ final class ReleaseManagementDisplay {
 			$trackNonceAction   = $nonceActions['change_channel'] ?? null;
 			$refreshNonceAction = $nonceActions['refresh'] ?? null;
 		}
-		$trackMode       = 'branch' === $source ? 'branch' : 'managed';
-		$trackDisabled   = null === $trackNonceAction;
-		$automaticPolicy = $statusAvailable && 'automatic' === $status->deploymentPolicy();
-		$recheckEnabled  = $statusAvailable && 'branch' === $source && null === $trackNonceAction;
-		$refreshEnabled  = null !== $refreshNonceAction;
-		$updatesEnabled  = $statusAvailable && ! $subdirectoryIncompatible;
-		$browserEnabled  = $statusAvailable
+		$trackMode         = 'branch' === $source ? 'branch' : 'managed';
+		$repositoryBlocked = $statusAvailable && in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true );
+		$trackDisabled     = null === $trackNonceAction || $repositoryBlocked;
+		$automaticPolicy   = $statusAvailable && 'automatic' === $status->deploymentPolicy();
+		$recheckEnabled    = $statusAvailable && 'branch' === $source && null === $trackNonceAction;
+		$refreshEnabled    = null !== $refreshNonceAction && ! $repositoryBlocked;
+		$updatesEnabled    = $statusAvailable && ! $subdirectoryIncompatible && ! $repositoryBlocked;
+		$browserEnabled    = $statusAvailable
 			&& 'release_asset' === $source
 			&& $eligibility->eligible()
 			&& '' === $status->failureCode()
 			&& '' !== ( $nonceActions['list_candidates'] ?? '' )
-			&& '' !== ( $nonceActions['inspect_candidate'] ?? '' );
-		$gateNotice      = ! $statusAvailable
+			&& '' !== ( $nonceActions['inspect_candidate'] ?? '' )
+			&& ! $repositoryBlocked;
+		$gateNotice        = $repositoryBlocked
+			? __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' )
+			: ( ! $statusAvailable
 			? __( 'Published release status is temporarily unavailable. Try again.', 'ran-booster' )
 			: ( ! $eligibility->eligible()
 				? ( 'branch' === $source && $this->requiresUpdateUriRemediation( $eligibility )
@@ -84,12 +89,24 @@ final class ReleaseManagementDisplay {
 					: $this->eligibilityMessage( $eligibility, $source ) )
 				: ( 'branch' === $source && $trackDisabled
 					? __( 'Published releases cannot be selected because source transition controls are temporarily unavailable.', 'ran-booster' )
-					: '' ) );
+					: '' ) ) );
 		?>
 		<section class="ran-booster-release-management" aria-labelledby="ran-booster-release-management-heading">
 			<header class="ran-booster-package-source-pane__header">
 				<?php if ( '' !== $gateNotice ) { ?>
-					<div class="notice notice-warning inline" data-ran-booster-release-gate-notice><p><?php echo esc_html( $gateNotice ); ?></p></div>
+					<div class="notice notice-warning inline" data-ran-booster-release-gate-notice><p><?php echo esc_html( $gateNotice ); ?></p>
+					<?php
+					if ( $repositoryBlocked && array() !== $repositoryConflict ) {
+						?>
+						<p><strong><?php esc_html_e( 'Conflicting packages', 'ran-booster' ); ?></strong></p><ul class="ul-disc">
+						<?php
+						foreach ( $repositoryConflict as $other ) {
+							?>
+						<li><a href="<?php echo esc_url( (string) ( $other['url'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $other['name'] ?? '' ) ); ?></a>
+							<?php
+							if ( empty( $other['view_all'] ) ) {
+								?>
+							(<?php echo esc_html( (string) ( $other['type'] ?? '' ) ); ?>)<?php } ?></li><?php } ?></ul><?php } ?></div>
 				<?php } ?>
 				<?php if ( '' !== $operationNoticeHtml ) { ?>
 					<div class="ran-booster-release-notices" data-ran-booster-release-notices>
@@ -107,6 +124,8 @@ final class ReleaseManagementDisplay {
 						<p><?php esc_html_e( 'Branch currently active.', 'ran-booster' ); ?></p>
 						<button type="submit" class="button button-primary" form="<?php echo esc_attr( $trackFormId ); ?>"<?php disabled( $trackDisabled ); ?> aria-disabled="<?php echo $trackDisabled ? 'true' : 'false'; ?>"><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
 					</div>
+				<?php } elseif ( $statusAvailable && 'release_asset' === $source && $subdirectoryIncompatible ) { ?>
+					<?php $this->renderReturnToBranch( $package, $nonceActions['return_to_branch'] ?? null, '', $automaticPolicy ); ?>
 				<?php } ?>
 				<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Release readiness', 'ran-booster' ); ?></h3>
 			</header>
@@ -118,9 +137,9 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 				<div class="ran-booster-readiness-panel__top">
 					<div>
-						<h4><?php echo esc_html( $statusAvailable && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ); ?></h4>
+					<h4><?php echo esc_html( $repositoryBlocked ? __( 'Repository shared', 'ran-booster' ) : ( $statusAvailable && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ) ); ?></h4>
 					</div>
-					<?php if ( ! $statusAvailable || ! $eligibility->eligible() ) { ?>
+					<?php if ( ! $statusAvailable || ! $eligibility->eligible() || $repositoryBlocked ) { ?>
 						<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Unavailable', 'ran-booster' ); ?></span>
 					<?php } ?>
 				</div>
@@ -142,14 +161,14 @@ final class ReleaseManagementDisplay {
 							<p><strong><?php esc_html_e( 'Add this exact header, deploy the corrected package, then check again:', 'ran-booster' ); ?></strong></p>
 							<p class="ran-booster-release-code"><code><?php echo esc_html( 'Update URI: ' . $expectedUpdateUri ); ?></code></p>
 						</div>
-					<?php } elseif ( $statusAvailable && 'release_asset' === $source && '' !== $status->failureCode() ) { ?>
+					<?php } elseif ( $statusAvailable && 'release_asset' === $source && '' !== $status->failureCode() && ! $repositoryBlocked ) { ?>
 						<div class="notice notice-warning inline">
 						<p><?php echo esc_html( $this->diagnosticMessage( $status->failureCode() ) ); ?></p>
 						<?php $this->renderFailureHelp( $status->failureCode() ); ?>
 					</div>
-					<?php } elseif ( $statusAvailable && 'release_asset' === $source && ! $browserEnabled ) { ?>
+					<?php } elseif ( $statusAvailable && 'release_asset' === $source && ! $browserEnabled && ! $repositoryBlocked ) { ?>
 						<div class="notice notice-warning inline"><p><?php esc_html_e( 'Published release browsing is unavailable until the current package status and controls are available.', 'ran-booster' ); ?></p></div>
-					<?php } elseif ( $statusAvailable && $trackDisabled && 'release_asset' === $source ) { ?>
+					<?php } elseif ( $statusAvailable && $trackDisabled && 'release_asset' === $source && ! $repositoryBlocked ) { ?>
 						<?php $this->renderControlsUnavailable(); ?>
 					<?php } ?>
 				</div>
@@ -185,9 +204,6 @@ final class ReleaseManagementDisplay {
 						<button type="submit" class="button button-primary"<?php disabled( ! $refreshEnabled ); ?> aria-disabled="<?php echo $refreshEnabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Check releases', 'ran-booster' ); ?></button>
 					</form>
 					<a class="button<?php echo $updatesEnabled ? '' : ' disabled'; ?>"<?php echo $updatesEnabled ? ' href="' . esc_url( admin_url( 'update-core.php' ) ) . '"' : ' aria-disabled="true" tabindex="-1"'; ?>><?php esc_html_e( 'Open WordPress updates', 'ran-booster' ); ?></a>
-					<?php if ( $statusAvailable && $subdirectoryIncompatible ) { ?>
-						<?php $this->renderReturnToBranch( $package, $nonceActions['return_to_branch'] ?? null, '', $automaticPolicy ); ?>
-					<?php } ?>
 					<?php if ( '' !== $expectedUpdateUri ) { ?>
 						<span class="ran-booster-readiness-actions__links">
 							<a href="<?php echo esc_url( $expectedUpdateUri ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open repository', 'ran-booster' ); ?></a>
@@ -199,15 +215,19 @@ final class ReleaseManagementDisplay {
 				</div>
 			</div>
 		</section>
-		<section class="ran-booster-settings-section ran-booster-release-track-section" aria-labelledby="ran-booster-release-track-heading">
-			<header class="ran-booster-settings-section__header">
-				<h3 id="ran-booster-release-track-heading"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
-			</header>
-			<div class="ran-booster-settings-section__body">
+		<?php $releaseTrackSummary = null === $selectedChannel ? __( 'Unknown', 'ran-booster' ) : $this->releaseTrackLabel( $selectedChannel ); ?>
+		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section" data-ran-booster-package-disclosure>
+			<summary>
+				<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
+				<small class="ran-booster-advanced-source-summary">
+					<span class="ran-booster-advanced-source-summary__badge" data-ran-booster-release-track-summary><?php echo esc_html( $releaseTrackSummary ); ?></span>
+				</small>
+			</summary>
+			<div class="ran-booster-settings-disclosure__body">
 				<?php $this->renderReleaseTrackSettings( $trackMode, $trackDisabled, $selectedChannel, $package, $trackNonceAction, $trackFormId, $automaticPolicy ); ?>
 				<?php $this->renderManagedCandidateBrowser( $status, $nonceActions, $browserEnabled ); ?>
 			</div>
-		</section>
+		</details>
 		<?php
 	}
 
@@ -300,7 +320,8 @@ final class ReleaseManagementDisplay {
 		array $nonceActions = array(),
 		array $prospective = array(),
 		bool $eligibilityRecheck = false,
-		string $operationNoticeHtml = ''
+		string $operationNoticeHtml = '',
+		array $repositoryConflict = array()
 	): void {
 		if ( ! in_array( $mode, array( 'create', 'edit' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
@@ -314,7 +335,7 @@ final class ReleaseManagementDisplay {
 			return;
 		}
 		if ( 'release_asset' === $selectedSource ) {
-			$this->renderSettings( $package, $status, $pageUrl, $selectedChannel, $nonceActions, $eligibilityRecheck, $operationNoticeHtml );
+			$this->renderSettings( $package, $status, $pageUrl, $selectedChannel, $nonceActions, $eligibilityRecheck, $operationNoticeHtml, $repositoryConflict );
 		} elseif ( 'branch' === $selectedSource && $this->isProjection( $package ) ) {
 			if ( 'release_asset' === $package->source() ) {
 				$this->renderReturnToBranch( $package, $nonceActions['return_to_branch'] ?? null, $operationNoticeHtml, null !== $status && 'automatic' === $status->deploymentPolicy() );
@@ -777,7 +798,7 @@ final class ReleaseManagementDisplay {
 		$message = $this->resultMessage( $code, $successful, $type, $identifier, $channel, $status );
 		$tone    = $successful
 			? 'notice-success'
-			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true )
+			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists' ), true )
 				? 'notice-warning'
 				: 'notice-error' );
 		?>
@@ -796,6 +817,8 @@ final class ReleaseManagementDisplay {
 		}
 
 		return match ( $code ) {
+			'release_repository_conflict',
+			'repository_release_owner_exists' => __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' ),
 			'installed' => __( 'The published release was installed and is now managed by Booster. WordPress activation was not changed.', 'ran-booster' ),
 			'release_enabled' => __( 'Release tracking enabled.', 'ran-booster' ),
 			'release_channel_changed' => __( 'Release track changed. The installed package was not changed and Automatic was reset to Manual.', 'ran-booster' ),
@@ -845,6 +868,8 @@ final class ReleaseManagementDisplay {
 
 	private function diagnosticMessage( string $code ): string {
 		return match ( $code ) {
+			'release_repository_conflict',
+			'repository_release_owner_exists' => __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' ),
 			'subdirectory_not_supported' => __( 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.', 'ran-booster' ),
 			'release_configuration_invalid',
 			'target_registration_failed' => __( 'This package uses retired published-release settings, so Booster could not start its release checker. Return it to Branch, then validate and switch it back to Published releases.', 'ran-booster' ),
@@ -875,13 +900,18 @@ final class ReleaseManagementDisplay {
 	}
 
 	private function isDiagnosticCode( string $code ): bool {
+		if ( in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true ) ) {
+			return false;
+		}
 		return str_starts_with( $code, 'package_' )
 			|| str_starts_with( $code, 'release_' )
-			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed' ), true );
+			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed', 'repository_release_owner_exists' ), true );
 	}
 
 	private function diagnosticAction( string $code ): string {
 		return match ( $code ) {
+			'release_repository_conflict',
+			'repository_release_owner_exists' => __( 'Stop managing the other packages in Booster before switching this package to releases. Their files can stay installed.', 'ran-booster' ),
 			'subdirectory_not_supported' => __( 'Return the package to Branch to keep its configured repository subdirectory.', 'ran-booster' ),
 			'release_unavailable' => __( 'Publish a release for the selected Stable or Preview track, then recheck eligibility.', 'ran-booster' ),
 			'package_update_uri_missing',

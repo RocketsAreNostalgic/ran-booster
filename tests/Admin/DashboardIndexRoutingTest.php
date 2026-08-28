@@ -629,7 +629,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'packages/plugin', $repository['package_summaries'][0]['subdirectory'] );
 		self::assertCount( 1, $data['managed_webhook_repositories']['repositories'] );
 		self::assertSame( 'branch', $data['managed_webhook_repositories']['repositories'][0]['source'] );
-		self::assertSame( 'Mixed sources', $data['repositoryTableRows'][0]['source_label'] );
+		self::assertSame( 'Conflicting sources', $data['repositoryTableRows'][0]['source_label'] );
 	}
 
 	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {

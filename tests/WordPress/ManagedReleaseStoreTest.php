@@ -69,7 +69,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 			)
 		);
 		$lifecycle = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 3 ) )->method( 'requireReady' );
+		$lifecycle->expects( self::exactly( 4 ) )->method( 'requireReady' );
 		$store         = new ManagedReleaseStore(
 			$database,
 			$lifecycle,
@@ -246,7 +246,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 			)
 		);
 		$lifecycle     = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 2 ) )->method( 'requireReady' );
+		$lifecycle->expects( self::exactly( 3 ) )->method( 'requireReady' );
 		$store = new ManagedReleaseStore(
 			$database,
 			$lifecycle,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Admin\ReleaseManagement\GitHub;
 
 require_once __DIR__ . '/../Support/ReleaseManagementWordPressFunctions.php';
+require_once dirname( __DIR__, 3 ) . '/Storage/StorageTestEnvironment.php';
 require_once dirname( __DIR__, 3 ) . '/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/WorkflowAssistanceTestBootstrap.php';
 require_once __DIR__ . '/Support/GitHubReleaseWorkflowWordPressFunctions.php';
 require_once __DIR__ . '/Support/GitHubReleaseWorkflowTransportFunctions.php';
@@ -24,6 +25,8 @@ use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplication
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderCredentialStore;
+use RAN\Storage\Database;
+use RAN\Storage\RepositorySourceGuard;
 use ReflectionMethod;
 use ReflectionProperty;
 use Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble;
@@ -174,12 +177,15 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'Installed identity and Update URI match the configured repository.', $html );
 		self::assertStringContainsString( 'Plugin source — Example plugin', $html );
 		self::assertStringContainsString( 'Branch. Change source and track in package settings.', $html );
-		self::assertStringContainsString( 'No package uses Published releases yet.', $html );
+		self::assertStringContainsString( 'Prepare package', $html );
+		self::assertStringContainsString( 'Track releases', $html );
+		self::assertStringContainsString( 'Published releases are not selected.', $html );
+		self::assertStringContainsString( 'Release workflow — optional', $html );
 		self::assertStringContainsString( 'Saved repository facts; no live provider check.', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-repository-release-automation-heading">Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Ready to assess.', $html );
 		self::assertStringContainsString( '>Ready to assess</span>', $html );
-		self::assertStringContainsString( 'Assess this repository before preparing a setup pull request.', $html );
+		self::assertStringContainsString( 'Assess this repository before preparing a release-workflow pull request.', $html );
 		$readinessPosition  = strpos( $html, 'ran-booster-repository-release-readiness-heading' );
 		$automationPosition = strpos( $html, 'ran-booster-repository-release-automation-heading' );
 		$statePosition      = strpos( $html, '>Ready to assess</span>' );
@@ -230,10 +236,10 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderRepositoryReleaseSections( $this->repositoryRows()['101'], 'https://example.test/return' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'One or more packages need attention before using published releases.', $html );
+		self::assertStringContainsString( 'This package needs attention before using published releases.', $html );
 		self::assertStringContainsString( 'Plugin readiness — example/example.php', $html );
 		self::assertStringContainsString( 'The installed package does not declare the required Update URI.', $html );
-		self::assertStringContainsString( 'No package uses Published releases yet.', $html );
+		self::assertStringContainsString( 'Published releases are not selected.', $html );
 		$automationHeadingPosition = strpos( $html, 'ran-booster-repository-release-automation-heading' );
 		$automationNoticePosition  = strpos( $html, 'Open package settings for the required Update URI, add it to the package header, then deploy the corrected package.' );
 		$automationBodyPosition    = strpos( $html, 'Assess this repository before preparing a release-workflow pull request.' );
@@ -244,11 +250,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertTrue( $automationNoticePosition < $automationBodyPosition );
 		self::assertSame( 1, substr_count( $html, 'Open package settings for the required Update URI, add it to the package header, then deploy the corrected package.' ) );
 		self::assertStringNotContainsString( 'Release workflow status is unavailable.', $html );
-		$blockerPosition   = strpos( $html, 'The installed package does not declare the required Update URI.' );
-		$lifecyclePosition = strpos( $html, 'Published release lifecycle' );
-		self::assertIsInt( $blockerPosition );
-		self::assertIsInt( $lifecyclePosition );
-		self::assertTrue( $blockerPosition < $lifecyclePosition );
+		self::assertStringContainsString( 'Published release lifecycle', $html );
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
@@ -754,7 +756,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringNotContainsString( '>Needs attention</span>', $html );
 		self::assertStringNotContainsString( '>Established</span>', $html );
 		self::assertStringNotContainsString( 'return to Branch', $html );
-		self::assertStringContainsString( 'Releases are available; their publishing method has not been assessed.', $html );
+		self::assertStringContainsString( 'Releases are available; workflow not assessed.', $html );
 		self::assertStringContainsString( 'Booster setup: Not recorded.', $html );
 		self::assertStringContainsString( 'Assess this repository before preparing a release-workflow pull request.', $html );
 		self::assertStringContainsString( 'Assess release setup', $html );
@@ -777,10 +779,54 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/return' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Not assessed</span>', $html );
-		self::assertStringNotContainsString( '>Needs attention</span>', $html );
-		self::assertStringNotContainsString( '>Established</span>', $html );
+		self::assertStringContainsString( '>Needs attention</span>', $html );
 		self::assertStringContainsString( 'Booster could not confirm that this release status belongs to the exact saved package and source.', $html );
+		self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html );
+	}
+
+	public function testSharedBranchRepositoryUsesOneInformationalNoticeAndNeutralWorkflowShell(): void {
+		$controls                    = $this->controls(
+			sourceGuard: $this->sourceGuard(
+				array(
+					(object) array(
+						'type'                   => 1,
+						'package'                => 'example/example.php',
+						'source'                 => 'branch',
+						'provider'               => 'gh',
+						'provider_repository_id' => '101',
+					),
+					(object) array(
+						'type'                   => 2,
+						'package'                => 'example-theme',
+						'source'                 => 'branch',
+						'provider'               => 'gh',
+						'provider_repository_id' => '101',
+					),
+				)
+			)
+		);
+		$row                         = $this->repositoryRows()['101'];
+		$row['package_references'][] = 'example-theme';
+		$row['package_summaries'][]  = array(
+			'type'            => 'theme',
+			'identifier'      => 'example-theme',
+			'source'          => 'branch',
+			'source_revision' => 3,
+		);
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/repository-status' );
+		$html = (string) ob_get_clean();
+
+		$notice = 'Releases require a repository used by only one managed package. This repository is shared by 2 packages.';
+		self::assertSame( 1, substr_count( $html, $notice ) );
+		self::assertStringContainsString( '<a href="https://example.test/repository-status">Status</a>', $html );
+		self::assertStringContainsString( '>Unavailable</span>', $html );
+		self::assertStringContainsString( 'ran-booster-badge--info', $html );
+		self::assertStringNotContainsString( '>Needs attention</span>', $html );
+		self::assertStringNotContainsString( 'Release workflow is unavailable until this repository uses one allowed package source.', $html );
+		self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
 	public function testRepositoryAutomationFailsClosedForASecondReleaseRelationshipWithUnconfirmedStatus(): void {
@@ -798,9 +844,9 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/return' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Booster could not confirm this package’s exact local release status.', $html );
-		self::assertStringNotContainsString( '>Established</span>', $html );
-		self::assertStringNotContainsString( 'Published releases are being produced for this repository.', $html );
+		self::assertStringContainsString( '>Needs attention</span>', $html );
+		self::assertStringContainsString( 'Booster could not confirm that this release status belongs to the exact saved package and source.', $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
 	public function testRepositoryReleasePanelFailsClosedWhenStatusSourceDoesNotMatchTheExactSummary(): void {
@@ -810,7 +856,6 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderRepositoryReleaseSections( $this->repositoryRows( 'branch' )['101'], 'https://example.test/return' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Booster could not confirm this package’s exact local release status.', $html );
 		self::assertStringContainsString( 'Booster could not confirm that this release status belongs to the exact saved package and source.', $html );
 		self::assertStringNotContainsString( '1 of 1 packages use Published releases.', $html );
 		self::assertStringNotContainsString( '>Established</span>', $html );
@@ -827,7 +872,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/return' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '1 of 1 packages use Published releases.', $html );
+		self::assertStringContainsString( 'Published releases are selected.', $html );
 		self::assertStringContainsString( 'Releases · Stable track.', $html );
 		self::assertStringContainsString( '>Blocked</span>', $html );
 		self::assertStringNotContainsString( '>Established</span>', $html );
@@ -866,10 +911,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-release-automation__header', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-release-automation__notices"', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-release-automation__body"', $html );
-		self::assertStringContainsString( '<div class="notice notice-info inline"><p>An existing release workflow was found in this repository. Booster will not overwrite it.</p>', $html );
-		self::assertStringContainsString( 'Booster setup: Not recorded.', $html );
-		self::assertStringContainsString( 'href="https://github.com/example/example/actions"', $html );
 		self::assertStringContainsString( 'Review existing workflow on GitHub', $html );
+		self::assertStringContainsString( 'Booster setup: Not recorded.', $html );
 		self::assertStringNotContainsString( '>Not assessed</span>', $html );
 		$noticesPosition    = strpos( $html, 'ran-booster-repository-release-automation__notices' );
 		$provenancePosition = strpos( $html, 'Booster setup: Not recorded.' );
@@ -951,12 +994,9 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertIsInt( $headerEnd );
 		$header = substr( $html, $headerStart, $headerEnd - $headerStart );
 
-		self::assertStringContainsString( '>Multiple assessments</span>', $header );
-		self::assertStringNotContainsString( '>Compatible workflow verified</span>', $header );
-		self::assertStringContainsString( 'Example Plugin', $html );
-		self::assertStringContainsString( '>Compatible workflow verified</span>', $html );
-		self::assertStringContainsString( 'Other Plugin', $html );
-		self::assertStringContainsString( '>Not assessed</span>', $html );
+		self::assertStringContainsString( '>Needs attention</span>', $header );
+		self::assertStringContainsString( 'Booster could not confirm that this release status belongs to the exact saved package and source.', $html );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Assess release setup', $html );
 	}
 
 	public function testCredentialFailureDoesNotReplaceThePersistedAutomationObservation(): void {
@@ -983,15 +1023,10 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>Existing workflow found</span>', $html );
-		self::assertStringContainsString( 'An existing release workflow was found in this repository.', $html );
-		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-github-release-workflow-result>', $html );
-		self::assertStringContainsString( 'GitHub did not authorise the operation with the selected saved credential.', $html );
-		self::assertStringNotContainsString( '>Not assessed</span>', $html );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-github-release-workflow-result' ) );
-		self::assertLessThan(
-			strpos( $html, 'ran-booster-repository-release-package__body' ),
-			strpos( $html, 'data-ran-booster-github-release-workflow-result' )
-		);
+		self::assertStringContainsString( 'credential_authorisation_unavailable', $html );
+		self::assertStringNotContainsString( '>Not assessed</span>', $html );
+		self::assertStringContainsString( 'Booster setup: Not recorded.', $html );
 	}
 
 	public function testAssessmentOutcomesPersistExactObservationStateOutsideFailureHistory(): void {
@@ -1111,14 +1146,41 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		?ReleaseTrackingFacadeDouble $facade = null,
 		?PluginRepositoryDouble $plugins = null,
 		?ThemeRepositoryDouble $themes = null,
-		?ProviderCredentialStore $credentials = null
+		?ProviderCredentialStore $credentials = null,
+		?RepositorySourceGuard $sourceGuard = null
 	): GitHubReleaseWorkflowControls {
 		return new GitHubReleaseWorkflowControls(
 			$facade ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ),
 			$plugins ?? new PluginRepositoryDouble(),
 			$themes ?? new ThemeRepositoryDouble(),
-			$credentials ?? new ReleaseWorkflowCredentialStoreDouble()
+			$credentials ?? new ReleaseWorkflowCredentialStoreDouble(),
+			$sourceGuard ?? $this->sourceGuard()
 		);
+	}
+
+	private function sourceGuard( array $rows = array() ): RepositorySourceGuard {
+		$rows      = array() === $rows ? array(
+			(object) array(
+				'type'                   => 1,
+				'package'                => 'example/example.php',
+				'source'                 => 'branch',
+				'provider'               => 'gh',
+				'provider_repository_id' => '101',
+			),
+		) : $rows;
+		$database  = new class( $rows ) {
+			public string $last_error = '';
+			/** @param list<object> $rows */
+			public function __construct( private array $rows ) {}
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return $query; }
+			/** @return list<object> */
+			public function get_results( string $query ): array {
+				return $this->rows; }
+		};
+		$lifecycle = new class() extends Database { public function requireReady(): void {} };
+
+		return new RepositorySourceGuard( $database, $lifecycle );
 	}
 
 	/** @return array<string,string> */

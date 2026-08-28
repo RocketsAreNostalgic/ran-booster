@@ -8,6 +8,8 @@ use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\PackageSource;
+use RAN\Storage\RepositorySourceGuard;
 use Throwable;
 
 /** @internal Fixed Core placement for repository release capabilities. */
@@ -26,18 +28,21 @@ final class ReleaseManagementControls {
 	private readonly ReleaseTrackingOperations $tracking;
 	private readonly ManagedReleaseBrowserOperations $managedBrowser;
 	private readonly ReleaseManagementDisplay $display;
+	private readonly RepositorySourceGuard $sourceGuard;
 
 	public function __construct(
 		ReleaseTrackingFacade $releases,
 		ProspectiveReleaseFacade $prospective,
 		callable $readCandidates,
-		ManagedReleaseBrowser $managedBrowser
+		ManagedReleaseBrowser $managedBrowser,
+		?RepositorySourceGuard $sourceGuard = null
 	) {
 		$this->display               = new ReleaseManagementDisplay();
 		$this->releases              = $releases;
 		$this->tracking              = new ReleaseTrackingOperations( $releases );
 		$this->managedBrowser        = new ManagedReleaseBrowserOperations( $managedBrowser, $releases );
 		$this->prospectiveOperations = new ProspectiveReleaseOperations( $prospective, $readCandidates );
+		$this->sourceGuard           = $sourceGuard ?? new RepositorySourceGuard();
 	}
 
 	public function register(): void {
@@ -188,9 +193,13 @@ final class ReleaseManagementControls {
 		}
 
 		$status              = null === $package ? null : $this->packageStatus( $package );
+		$repositoryConflict  = null === $package ? array() : $this->repositoryConflictPackages( $package, $status );
 		$nonces              = null === $package ? array() : $this->packageNonceActions( $package, $status );
 		$operationNoticeHtml = '';
-		if ( 'edit' === $mode && '' !== $code ) {
+		$duplicateConflict   = in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
+			&& null !== $status && in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
+			&& $releasePane;
+		if ( 'edit' === $mode && '' !== $code && ! $duplicateConflict ) {
 			ob_start();
 			$this->requestBoundary( fn () => $this->display->renderOperationNotice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
 			$operationNoticeHtml = (string) ob_get_clean();
@@ -199,7 +208,7 @@ final class ReleaseManagementControls {
 		$recheck     = isset( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI marker.
 			&& is_scalar( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			&& '1' === (string) $_GET['ran_booster_release_recheck']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$this->requestBoundary( fn () => $this->display->renderAdvancedSourceSection( $mode, $type, $selectedSource, $package, $status, $pageUrl, $result['channel'] ?? '', $nonces, $prospective, $recheck, $operationNoticeHtml ), null );
+		$this->requestBoundary( fn () => $this->display->renderAdvancedSourceSection( $mode, $type, $selectedSource, $package, $status, $pageUrl, $result['channel'] ?? '', $nonces, $prospective, $recheck, $operationNoticeHtml, $repositoryConflict ), null );
 		if ( $releasePane ) {
 			?>
 			</div>
@@ -665,6 +674,73 @@ final class ReleaseManagementControls {
 			},
 			null
 		);
+	}
+
+	/** @return list<array{name:string,url:string,type:string}> */
+	private function repositoryConflictPackages( object $package, ?ReleaseTrackingStatus $status ): array {
+		if ( null === $status || ! in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
+			|| ! is_callable( array( $package, 'providerCode' ) ) ) {
+			return array();
+		}
+		$provider = $package->providerCode();
+		$typeId   = 'plugin' === $status->type() ? 1 : ( 'theme' === $status->type() ? 2 : 0 );
+		if ( ! is_string( $provider ) || '' === $provider || 0 === $typeId ) {
+			return array();
+		}
+		$result = $this->requestBoundary(
+			fn (): array => $this->sourceGuard->assess( $provider, $status->providerRepositoryId(), $typeId, $status->identifier(), PackageSource::RELEASE_ASSET ),
+			array()
+		);
+		if ( ! in_array( $result['code'] ?? null, array( 'repository_source_conflict', 'repository_release_owner_exists' ), true ) || ! is_array( $result['other_packages'] ?? null ) ) {
+			return array();
+		}
+
+		$packages = array_map(
+			fn ( array $other ): array => array(
+				'name' => $this->conflictPackageName( (int) $other['type'], (string) $other['identifier'] ),
+				'url'  => admin_url( 'admin.php?page=ran-booster-' . ( 2 === $other['type'] ? 'themes' : 'plugins' ) . '&package=' . rawurlencode( (string) $other['identifier'] ) ),
+				'type' => 2 === $other['type'] ? 'theme' : 'plugin',
+			),
+			$result['other_packages']
+		);
+		if ( (int) ( $result['relationship_count'] ?? 0 ) > count( $packages ) + 1 ) {
+			$packages[] = array(
+				'name'     => __( 'View all conflicting packages', 'ran-booster' ),
+				'url'      => add_query_arg(
+					array(
+						'page'            => 'ran-booster',
+						'tab'             => $provider,
+						'panel'           => 'repositories',
+						'repository'      => $status->providerRepositoryId(),
+						'repository_view' => 'status',
+					),
+					admin_url( 'admin.php' )
+				),
+				'type'     => '',
+				'view_all' => true,
+			);
+		}
+
+		return $packages;
+	}
+
+	private function conflictPackageName( int $type, string $identifier ): string {
+		if ( 1 === $type && function_exists( 'get_plugins' ) ) {
+			$plugins = get_plugins();
+			$name    = is_array( $plugins ) ? $plugins[ $identifier ]['Name'] ?? null : null;
+			if ( is_string( $name ) && '' !== trim( $name ) && strlen( $name ) <= 255 ) {
+				return $name;
+			}
+		}
+		if ( 2 === $type && function_exists( 'wp_get_theme' ) ) {
+			$theme = wp_get_theme( $identifier );
+			$name  = is_object( $theme ) && is_callable( array( $theme, 'get' ) ) ? $theme->get( 'Name' ) : null;
+			if ( is_string( $name ) && '' !== trim( $name ) && strlen( $name ) <= 255 ) {
+				return $name;
+			}
+		}
+
+		return $identifier;
 	}
 
 	private function packageNonceAction( string $operation, object $package, string $channel = '' ): ?string {

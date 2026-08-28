@@ -13,12 +13,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 
 	public function testStatusRendersMixedPackagesAndIntegrationHistoryWithoutMutationAuthority(): void {
 		$row = array(
-			'repository'                => 'owner/shared',
-			'repository_url'            => 'https://github.com/owner/shared',
-			'source_label'              => 'Mixed sources',
-			'source_key'                => 'mixed',
-			'package_summaries_omitted' => 3,
-			'package_summaries'         => array(
+			'repository'        => 'owner/shared',
+			'repository_url'    => 'https://github.com/owner/shared',
+			'source_label'      => 'Conflicting sources',
+			'source_key'        => 'mixed',
+			'package_summaries' => array(
 				array(
 					'type'              => 'plugin',
 					'identifier'        => 'owner/plugin.php',
@@ -42,7 +41,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'deployment_policy' => 'manual',
 				),
 			),
-			'details'                   => array(
+			'details'           => array(
 				array(
 					'key'   => 'core:webhook-recorded-status',
 					'label' => 'Recorded hook',
@@ -65,14 +64,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Legacy',
 				),
 			),
-			'actions'                   => array(
-				array(
-					'key'      => 'fixture:provider-webhooks',
-					'label'    => 'Open fixture webhooks',
-					'type'     => 'link',
-					'url'      => 'https://example.test/provider-webhooks',
-					'external' => true,
-				),
+			'actions'           => array(
 				array(
 					'key'   => 'gh:release-automation-a',
 					'label' => 'Release automation: owner/plugin.php',
@@ -107,20 +99,20 @@ final class RepositoryDetailRendererTest extends TestCase {
 
 		self::assertFalse( $webhookRendered );
 		self::assertFalse( $releaseRendered );
-		self::assertStringContainsString( '2 packages shown; 3 more connected · Mixed sources', $html );
+		self::assertStringContainsString( '2 packages · Conflicting sources', $html );
+		self::assertStringContainsString( 'Conflicting sources.', $html );
+		self::assertStringContainsString( 'Review the package settings before using release workflow.', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
 		self::assertStringContainsString( '<dt>Releases</dt>', $html );
 		self::assertStringContainsString( '>Releases', $html );
 		self::assertStringContainsString( 'Ignores pushes', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
-		self::assertStringContainsString( '>Automatic<', $html );
-		self::assertStringContainsString( '>Manual<', $html );
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
-		self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
-		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
+		self::assertSame( 1, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
+		self::assertSame( 1, substr_count( $html, 'Active for one or more packages in this repository.' ) );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
 		self::assertStringContainsString( '1 package uses Branch', $html );
@@ -166,15 +158,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					),
 				),
 				'details'           => array(),
-				'actions'           => array(
-					array(
-						'key'      => 'fixture:provider-webhooks',
-						'label'    => 'Open fixture webhooks',
-						'type'     => 'link',
-						'url'      => 'https://example.test/provider-webhooks',
-						'external' => true,
-					),
-				),
+				'actions'           => array(),
 			),
 			'Bitbucket',
 			'https://example.test/repositories',
@@ -197,7 +181,6 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
 		self::assertStringContainsString( '>Set up webhook</button>', $html );
-		self::assertStringContainsString( 'Open fixture webhooks', $html );
 		self::assertStringContainsString( 'Management history', $html );
 		self::assertStringContainsString( 'Recorded hook status', $html );
 		self::assertStringContainsString( 'Managed hook not yet set', $html );

@@ -65,6 +65,20 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
+	public static function repositorySourceConflict( ?string $releaseOwner = null ): self {
+		return new self(
+			PackageStorageOperation::QUERY,
+			'ran_booster_repository_source_conflict',
+			null === $releaseOwner
+				? __( 'This repository is shared by managed packages. Releases require a repository used by only one managed package. Review the repository’s package settings before changing source.', 'ran-booster' )
+				: sprintf(
+					/* translators: %s: identifier of the existing Release package. */
+					__( 'This repository already supplies releases to %s. Additional packages cannot use it. To use this repository for multiple Branch packages, switch that package to Branch first.', 'ran-booster' ),
+					$releaseOwner
+				)
+		);
+	}
+
 	public static function fromMutationResult( PackageMutationResult $result ): self {
 		return new self(
 			$result->getOperation(),

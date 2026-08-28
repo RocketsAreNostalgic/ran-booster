@@ -102,7 +102,7 @@ const candidate = (releaseId, version, relationship, publishedAt) => ({
 	prerelease: false,
 });
 
-const createHarness = (responses) => {
+const createHarness = (responses, nativeOfferReleaseId = 'offer') => {
 	const nodes = new Map();
 	const browser = new Node('section');
 	browser.dataset = {
@@ -116,6 +116,7 @@ const createHarness = (responses) => {
 		ranBoosterManagedReleaseNativeUpdateUrl:
 			'/wp-admin/update.php?action=upgrade-plugin&plugin=example%2Fplugin.php&_wpnonce=upgrade',
 		ranBoosterManagedReleaseNativeUpdateVersion: '3.0.0',
+		ranBoosterManagedReleaseNativeUpdateReleaseId: nativeOfferReleaseId,
 	};
 	for (const name of [
 		'candidates',
@@ -369,7 +370,7 @@ test('managed browser enables the native Core update only for its exact newer in
 				version_relationship: 'newer',
 			},
 		},
-	]);
+	], 'new');
 	harness.initialize(harness.browser);
 	await flush();
 	await flush();

@@ -93,6 +93,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		candidate.version ===
 			managedBrowser.dataset
 				.ranBoosterManagedReleaseNativeUpdateVersion &&
+		String(candidate.release_id) ===
+			managedBrowser.dataset
+				.ranBoosterManagedReleaseNativeUpdateReleaseId &&
 		Boolean(managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl);
 	const request = async (operation, extra = {}) => {
 		const data = new FormData();
@@ -151,6 +154,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		}
 		const current = ++sequence;
 		clearError();
+		setListBusy(true);
 		setStatus(
 			'Inspecting published release…',
 			'Booster is validating the selected release without changing the installed package.'
@@ -167,8 +171,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('inspection_failed');
 			}
 			const relationship = response.data.version_relationship;
-			const nativeOffer = isNativeUpdateOffer(response.data);
-			let outcomeMessage = `Version ${response.data.version} is installed.`;
+			const nativeOffer = isNativeUpdateOffer({
+				...response.data,
+				release_id: selected.release_id,
+			});
+			let outcomeMessage = `Version ${response.data.version} matches the installed version.`;
 			let statusMessage = outcomeMessage;
 			if (relationship === 'newer') {
 				outcomeMessage = nativeOffer
@@ -177,6 +184,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				statusMessage = nativeOffer
 					? outcomeMessage
 					: `${outcomeMessage} Refresh releases before installing.`;
+			} else if (relationship === 'older') {
+				outcomeMessage = `Version ${response.data.version} is older than the installed version.`;
+				statusMessage = outcomeMessage;
 			}
 			setStatus('Release checked', statusMessage);
 			if (selectedOutcome) {
@@ -197,6 +207,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					'Published release could not be inspected',
 					'The saved package or release may have changed. Refresh and try again.'
 				);
+			}
+		} finally {
+			if (current === sequence) {
+				setListBusy(false);
 			}
 		}
 	};
@@ -360,8 +374,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				if (input) {
 					input.checked = true;
 				}
-				setListBusy(false);
-				inspect();
+				await inspect();
 			} else {
 				if (
 					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===

@@ -63,11 +63,12 @@ final class ProviderContractsTest extends TestCase {
 			'release_identity_verified',
 			'v2.0.0',
 			'2.0.0',
-			'2.0.0'
+			'2.0.0',
+			'42'
 		);
 		self::assertTrue( $status->active );
 		self::assertSame(
-			array( 'active', 'offeredVersion', 'versionRelationship', 'lastCheck', 'nextCheck', 'failureCode', 'candidateCode', 'candidateReleaseTag', 'candidateReleaseVersion', 'candidatePackageHeaderVersion' ),
+			array( 'active', 'offeredVersion', 'versionRelationship', 'lastCheck', 'nextCheck', 'failureCode', 'candidateCode', 'candidateReleaseTag', 'candidateReleaseVersion', 'candidatePackageHeaderVersion', 'candidateProviderReleaseId' ),
 			array_map(
 				static fn ( \ReflectionProperty $property ): string => $property->name,
 				( new \ReflectionClass( RepositoryReleaseNativeTargetStatus::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC )

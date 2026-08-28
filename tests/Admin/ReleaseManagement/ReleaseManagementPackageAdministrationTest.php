@@ -152,6 +152,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '>Install now</a>', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-version="1.2.0"', $html );
+		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-release-id=""', $html );
 		self::assertStringContainsString( 'button button-primary disabled ran-booster-managed-release-native-update', $html );
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringContainsString( 'action=upgrade-plugin', $html );

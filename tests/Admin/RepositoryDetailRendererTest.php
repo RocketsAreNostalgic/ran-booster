@@ -16,6 +16,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'repository'        => 'owner/shared',
 			'repository_url'    => 'https://github.com/owner/shared',
 			'source_label'      => 'Mixed sources',
+			'package_summaries_omitted' => 3,
 			'package_summaries' => array(
 				array(
 					'type'              => 'plugin',
@@ -78,12 +79,14 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertTrue( $webhookRendered );
-		self::assertStringContainsString( '2 packages · Mixed sources', $html );
+		self::assertStringContainsString( '2 packages shown; 3 more connected · Mixed sources', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
 		self::assertStringContainsString( 'Published releases', $html );
 		self::assertStringContainsString( 'Ignores pushes', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
+		self::assertStringContainsString( '>Automatic<', $html );
+		self::assertStringContainsString( '>Manual<', $html );
 		self::assertStringContainsString( 'Release automation', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );

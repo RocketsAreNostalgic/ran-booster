@@ -340,6 +340,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->cleanupCalls );
 	}
 
+	public function testRepositoryBranchCheckDoesNotClaimAnUninspectedSubdirectoryIsVerified(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProviderWithoutPathInspector();
+		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' ) )->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 0, $provider->pathCalls );
+	}
+
 	public function testRepositoryBranchCheckFailsClosedWhenCleanupFails(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider( cleanupFails: true );
@@ -2409,5 +2423,54 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 			throw new RuntimeException( 'Path check fixture failure.' );
 		}
 		return $this->pathExists;
+	}
+}
+
+final class DashboardBranchCheckProviderWithoutPathInspector implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
+
+	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+	public int $pathCalls = 0;
+
+	public function getMetadata(): ProviderMetadata {
+		return new ProviderMetadata(
+			ProviderCode::parse( 'gh' ),
+			'GitHub',
+			'https://example.test/',
+			'Owner'
+		);
+	}
+
+	public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+		unset( $request );
+		throw new RuntimeException( 'Repository resolution is not used by the branch check.' );
+	}
+
+	public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
+		unset( $request );
+		throw new RuntimeException( 'Repository browsing is not used by the branch check.' );
+	}
+
+	public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
+		return new PublicRepositoryBrowseMetadata( true );
+	}
+
+	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		unset( $request );
+		return new class() implements PreparedArchive {
+			public function getUrl(): string {
+				return 'https://example.test/archive.zip';
+			}
+
+			public function getResolvedRef(): string {
+				return str_repeat( 'a', 40 );
+			}
+
+			public function verifyCurrentHead(): void {
+			}
+
+			public function cleanup(): void {
+			}
+		};
 	}
 }

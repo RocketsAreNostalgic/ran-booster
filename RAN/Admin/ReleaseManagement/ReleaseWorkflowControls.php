@@ -2,75 +2,66 @@
 
 declare(strict_types=1);
 
-namespace RAN\Admin\ReleaseManagement\GitHub;
+namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Admin\ReleaseManagement\ReleaseTrackingOperations;
-use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryClient;
-use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
-use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SourceReadyAssessor;
-use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient;
-use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;
-use RAN\Logging\BoosterLogger;
 use RAN\PackageSource;
-use RAN\RepositoryProvider\ProviderCredentialStore;
+use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use Throwable;
 
-/** @internal GitHub-specific release workflow routes and presentation. */
-final class GitHubReleaseWorkflowControls {
-	private const RESULT_QUERY_KEY                      = 'ran_booster_github_release_workflow_result';
-	private const RESULT_SUCCESS_QUERY_KEY              = 'ran_booster_github_release_workflow_success';
-	private const RESULT_TYPE_QUERY_KEY                 = 'ran_booster_github_release_workflow_type';
-	private const RESULT_PACKAGE_QUERY_KEY              = 'ran_booster_github_release_workflow_package';
-	private const RESULT_REVISION_QUERY_KEY             = 'ran_booster_github_release_workflow_source_revision';
-	private const RESULT_NONCE_QUERY_KEY                = 'ran_booster_github_release_workflow_result_nonce';
-	private const RESULT_STAGE_QUERY_KEY                = 'ran_booster_github_release_workflow_failure_stage';
-	private const RESULT_DIAGNOSTIC_QUERY_KEY           = 'ran_booster_github_release_workflow_diagnostic';
-	private const RESULT_DIAGNOSTIC_AVAILABLE_QUERY_KEY = 'ran_booster_github_release_workflow_diagnostic_available';
-	private const RESULT_REFERENCE_QUERY_KEY            = 'ran_booster_github_release_workflow_reference';
+/** @internal Provider-neutral release workflow routes and presentation. */
+final class ReleaseWorkflowControls {
+	private const RESULT_QUERY_KEY                      = 'ran_booster_release_workflow_result';
+	private const RESULT_SUCCESS_QUERY_KEY              = 'ran_booster_release_workflow_success';
+	private const RESULT_TYPE_QUERY_KEY                 = 'ran_booster_release_workflow_type';
+	private const RESULT_PACKAGE_QUERY_KEY              = 'ran_booster_release_workflow_package';
+	private const RESULT_REVISION_QUERY_KEY             = 'ran_booster_release_workflow_source_revision';
+	private const RESULT_PROVIDER_QUERY_KEY             = 'ran_booster_release_workflow_provider';
+	private const RESULT_REPOSITORY_QUERY_KEY           = 'ran_booster_release_workflow_repository';
+	private const RESULT_NONCE_QUERY_KEY                = 'ran_booster_release_workflow_result_nonce';
+	private const RESULT_STAGE_QUERY_KEY                = 'ran_booster_release_workflow_failure_stage';
+	private const RESULT_DIAGNOSTIC_QUERY_KEY           = 'ran_booster_release_workflow_diagnostic';
+	private const RESULT_DIAGNOSTIC_AVAILABLE_QUERY_KEY = 'ran_booster_release_workflow_diagnostic_available';
+	private const RESULT_REFERENCE_QUERY_KEY            = 'ran_booster_release_workflow_reference';
 	private const FAILURE_DIAGNOSTIC_CODES              = array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
-	private const RESULT_NONCE_ACTION                   = 'ran-booster-github-release-workflow-result-';
-	private const PREVIEW_QUERY_KEY                     = 'ran_booster_github_release_workflow_preview';
-	private const CHANNEL_QUERY_KEY                     = 'ran_booster_github_release_workflow_channel';
+	private const RESULT_NONCE_ACTION                   = 'ran-booster-release-workflow-result-';
+	private const PREVIEW_QUERY_KEY                     = 'ran_booster_release_workflow_preview';
+	private const CHANNEL_QUERY_KEY                     = 'ran_booster_release_workflow_channel';
 
 	private readonly ReleaseTrackingOperations $tracking;
-	private readonly WorkflowApplicationCoordinator $applications;
-	private readonly SetupRecordStore $workflowRecords;
-	private readonly GitHubReleaseWorkflowDisplay $display;
+	private readonly ReleaseWorkflowDisplay $display;
 	private readonly RepositorySourceGuard $sourceGuard;
+	/** @var array<string,\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus|null> */
+	private array $workflowStatuses = array();
 
 	public function __construct(
 		private readonly ReleaseTrackingFacade $releases,
 		private readonly PluginRepository $plugins,
 		private readonly ThemeRepository $themes,
-		private readonly ProviderCredentialStore $credentials,
+		private readonly ProviderRegistry $providers,
 		?RepositorySourceGuard $sourceGuard = null
 	) {
-		$this->tracking        = new ReleaseTrackingOperations( $releases );
-		$this->workflowRecords = new SetupRecordStore();
-		$this->applications    = new WorkflowApplicationCoordinator( $releases, new GitHubRepositoryClient(), new TemplatePackRepositoryClient(), new SourceReadyAssessor(), $this->workflowRecords );
-		$this->display         = new GitHubReleaseWorkflowDisplay();
-		$this->sourceGuard     = $sourceGuard ?? new RepositorySourceGuard();
+		$this->tracking    = new ReleaseTrackingOperations( $releases );
+		$this->display     = new ReleaseWorkflowDisplay();
+		$this->sourceGuard = $sourceGuard ?? new RepositorySourceGuard();
 	}
 
 	public function register(): void {
 		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'keepReleaseSettingsDiscoverable' ), 20, 5 );
 		add_action( 'ran_booster_admin_package_release_readiness_actions', array( $this, 'renderPackageReleaseAutomationLink' ), 20, 2 );
 		add_filter( 'ran_booster_provider_repository_rows', array( $this, 'enrichRepositoryRows' ), 20, 4 );
-		add_action( 'ran_booster_admin_repository_release_sections', array( $this, 'renderRepositoryReleaseSections' ), 20, 2 );
-		add_action( 'admin_post_ran_booster_github_release_workflow_inspect', array( $this, 'handleWorkflowInspect' ) );
-		add_action( 'admin_post_ran_booster_github_release_workflow_setup', array( $this, 'handleWorkflowSetup' ) );
-		add_action( 'admin_post_ran_booster_github_release_workflow_outcome', array( $this, 'handleWorkflowOutcome' ) );
-		add_action( 'admin_post_ran_booster_github_release_workflow_update_inspect', array( $this, 'handleWorkflowUpdateInspect' ) );
-		add_action( 'admin_post_ran_booster_github_release_workflow_update_setup', array( $this, 'handleWorkflowUpdateSetup' ) );
+		add_action( 'admin_post_ran_booster_release_workflow', array( $this, 'handleWorkflow' ) );
 	}
 
 	/**
-	 * Keep GitHub's release-automation explanation reachable when Core disables the release transition.
+	 * Keep the provider release-workflow explanation reachable when Core disables the release transition.
 	 *
 	 * @param array<string, array<string, mixed>> $choices
 	 * @return array<string, array<string, mixed>>
@@ -84,7 +75,7 @@ final class GitHubReleaseWorkflowControls {
 	): array {
 		unset( $type, $pageUrl );
 		if ( 'edit' !== $mode || null === $package || ! isset( $choices['release_asset'] )
-			|| ! is_callable( array( $package, 'providerCode' ) ) || 'gh' !== (string) $package->providerCode() ) {
+			|| ! is_callable( array( $package, 'providerCode' ) ) || ! $this->releaseProviderSupported( (string) $package->providerCode() ) ) {
 			return $choices;
 		}
 
@@ -93,7 +84,7 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	/**
-	 * Add local GitHub release-automation status and navigation to managed repository rows.
+	 * Add local release-workflow status and navigation to managed repository rows.
 	 *
 	 * @param array<string, array<string, mixed>> $rows
 	 * @param array<string, array<string, mixed>> $repositoryProjections
@@ -101,7 +92,7 @@ final class GitHubReleaseWorkflowControls {
 	 */
 	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
 		unset( $repositoryProjections, $returnUrl );
-		if ( 'gh' !== $providerCode ) {
+		if ( null === $this->workflowProvider( $providerCode ) ) {
 			return $rows;
 		}
 
@@ -128,24 +119,30 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	public function renderPackageReleaseAutomationLink( object $package, ReleaseTrackingStatus $status ): void {
-		if ( ! is_callable( array( $package, 'providerCode' ) ) || 'gh' !== (string) $package->providerCode()
+		if ( ! is_callable( array( $package, 'providerCode' ) )
 			|| ! is_callable( array( $package, 'type' ) ) || ! is_callable( array( $package, 'identifier' ) )
 			|| ! is_callable( array( $package, 'sourceRevision' ) ) ) {
 			return;
 		}
-		if ( ! hash_equals( $status->type(), (string) $package->type() )
+		$providerCode = (string) $package->providerCode();
+		if ( null === $this->workflowProvider( $providerCode ) ) {
+			return;
+		}
+		if ( ! hash_equals( $providerCode, $this->workflowProviderCode( $status ) )
+			|| ! hash_equals( $status->type(), (string) $package->type() )
 			|| ! hash_equals( $status->identifier(), (string) $package->identifier() )
 			|| $status->sourceRevision() !== (int) $package->sourceRevision() ) {
 			return;
 		}
 
-		echo '<a href="' . esc_url( $this->repositoryReleaseUrl( $status->providerRepositoryId() ) ) . '">'
+		echo '<a href="' . esc_url( $this->repositoryReleaseUrl( $status->providerRepositoryId(), $providerCode ) ) . '">'
 			. esc_html__( 'Manage release workflow', 'ran-booster' ) . '</a>';
 	}
 
 	/** @param array<string,mixed> $row */
 	public function renderRepositoryReleaseSections( array $row, string $returnUrl ): void {
-		if ( 'gh' !== ( $row['provider_code'] ?? null ) || true === ( $row['historical'] ?? false ) ) {
+		$providerCode = is_string( $row['provider_code'] ?? null ) ? $row['provider_code'] : '';
+		if ( '' === $providerCode || true === ( $row['historical'] ?? false ) ) {
 			return;
 		}
 		$repositoryId     = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
@@ -155,7 +152,7 @@ final class GitHubReleaseWorkflowControls {
 		$type             = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
 		$identifier       = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
 		$revision         = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
-		$guard            = $this->repositorySourceGuard( $repositoryId, $type, $identifier, PackageSource::RELEASE_ASSET );
+		$guard            = $this->repositorySourceGuard( $providerCode, $repositoryId, $type, $identifier, PackageSource::RELEASE_ASSET );
 		$sharedBranch     = 0 === $guard['release_count'] && 1 < $guard['relationship_count'];
 		$conflicted       = ! $guard['allowed'] && ! $sharedBranch;
 		$single           = $guard['allowed'] && 1 === $guard['relationship_count'] && 1 === count( $summaries );
@@ -168,9 +165,11 @@ final class GitHubReleaseWorkflowControls {
 			&& is_object( $package )
 			&& is_callable( array( $package, 'getRepository' ) )
 			&& hash_equals( $repository, (string) $package->getRepository() );
-		$record           = $exact ? $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repositoryId ), null ) : null;
+		$workflowStatus   = $exact ? $this->workflowProviderStatus( $status ) : null;
 		$result           = $this->requestedResult();
 		$matchingResult   = $exact && is_array( $result )
+			&& hash_equals( $providerCode, (string) ( $result['provider'] ?? '' ) )
+			&& hash_equals( $repositoryId, (string) ( $result['repository'] ?? '' ) )
 			&& hash_equals( $type, (string) ( $result['type'] ?? '' ) )
 			&& hash_equals( $identifier, (string) ( $result['identifier'] ?? '' ) )
 			&& $revision === (int) ( $result['source_revision'] ?? 0 ) ? $result : null;
@@ -206,10 +205,10 @@ final class GitHubReleaseWorkflowControls {
 		$observation      = is_array( $view['assessment_observation'] ?? null ) ? $view['assessment_observation'] : null;
 		$observationKind  = is_array( $observation ) && is_string( $observation['kind'] ?? null ) ? $observation['kind'] : 'unassessed';
 		$automationState  = $this->repositoryReleaseAutomationState(
-			$exact && $this->recordMatchesStatus( $record, $status, $repository ) ? $identifier : '',
+			$exact && $this->recordMatchesStatus( $workflowStatus, $status ) ? $identifier : '',
 			$exact && $status->eligible() && 'branch' === $status->source(),
 			$exact && $this->publishedReleasesWorking( $status ),
-			$exact && null !== $record,
+			$workflowStatus?->recordOccupied() ?? false,
 			$observationKind,
 			$sharedBranch
 		);
@@ -218,8 +217,8 @@ final class GitHubReleaseWorkflowControls {
 			$automationNotice = true === ( $view['unavailable'] ?? false )
 				? $this->display->stateNotice( $view )
 				: '<div class="notice ' . esc_attr( $automationState['notice_tone'] ) . ' inline"><p>' . esc_html( $automationState['message'] ) . '</p>'
-					. ( 'existing_automation_detected' === $observationKind
-						? '<p><a href="' . esc_url( 'https://github.com/' . $repository . '/actions' ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review existing workflow on GitHub', 'ran-booster' ) . '</a></p>'
+					. ( 'existing_automation_detected' === $observationKind && '' !== ( $workflowStatus?->providerWorkflowUrl() ?? '' )
+						? '<p><a href="' . esc_url( $workflowStatus->providerWorkflowUrl() ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review existing workflow', 'ran-booster' ) . '</a></p>'
 						: '' ) . '</div>';
 		}
 		$workflowResultNotice = '';
@@ -252,8 +251,9 @@ final class GitHubReleaseWorkflowControls {
 				<?php } elseif ( $exact && ! $status->eligible() ) { ?>
 					<div class="notice notice-warning inline ran-booster-repository-release-section__notice"><p><?php echo esc_html( $this->repositoryPackageReadinessMessage( $status ) ); ?></p></div>
 				<?php } ?>
-				<?php $this->renderRepositoryReleaseLifecycle( $exact && $status->eligible(), $exact && 'release_asset' === $status->source(), $exact && $this->recordMatchesStatus( $record, $status, $repository ), $exact && $status->eligible() && 'branch' === $status->source(), $exact && $this->publishedReleasesWorking( $status ), $observationKind ); ?>
-				<?php $this->renderRepositoryReadiness( $repository, $guard['relationship_count'], $packageReadiness ); ?>
+				<?php $this->renderRepositoryReleaseLifecycle( $exact && $status->eligible(), $exact && 'release_asset' === $status->source(), $exact && $this->recordMatchesStatus( $workflowStatus, $status ), $exact && $status->eligible() && 'branch' === $status->source(), $exact && $this->publishedReleasesWorking( $status ), $observationKind, null !== $this->workflowProvider( $providerCode ) ); ?>
+				<?php $this->renderRepositoryReadiness( $repository, $guard['relationship_count'], $packageReadiness, $this->releaseProviderSupported( $providerCode ) ); ?>
+				<?php if ( null !== $this->workflowProvider( $providerCode ) || null !== $this->workflowCapability( $providerCode ) ) { ?>
 				<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">
 					<header class="ran-booster-readiness-panel__top ran-booster-repository-release-automation__header"><div><div class="ran-booster-release-automation-heading"><h4 id="ran-booster-repository-release-automation-heading"><?php echo esc_html__( 'Release workflow', 'ran-booster' ); ?></h4><span class="ran-booster-badge <?php echo esc_attr( $automationState['tone'] ); ?>"><?php echo esc_html( $automationState['label'] ); ?></span></div><p class="description"><?php echo esc_html( $automationState['provenance'] ); ?></p></div></header>
 					<?php if ( '' !== $automationNotice || '' !== $workflowResultNotice ) { ?>
@@ -264,17 +264,18 @@ final class GitHubReleaseWorkflowControls {
 					<?php } ?>
 					<div class="ran-booster-repository-release-automation__body"><?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Display projection escapes complete output. ?><?php echo $this->display->workflow( $view, false ); ?></div>
 				</section>
+				<?php } ?>
 			</div>
 		</section>
 		<?php
 	}
 
 	/** @return array{allowed:bool,code:string,relationship_count:int,release_count:int,owner_type:?int,owner_package:?string} */
-	private function repositorySourceGuard( string $repositoryId, string $type, string $identifier, PackageSource $source ): array {
+	private function repositorySourceGuard( string $providerCode, string $repositoryId, string $type, string $identifier, PackageSource $source ): array {
 		$typeId = 'plugin' === $type ? 1 : ( 'theme' === $type ? 2 : 0 );
 
 		return $this->requestBoundary(
-			fn (): array => $this->sourceGuard->assess( 'gh', $repositoryId, $typeId, $identifier, $source ),
+			fn (): array => $this->sourceGuard->assess( $providerCode, $repositoryId, $typeId, $identifier, $source ),
 			array(
 				'allowed'            => false,
 				'code'               => 'repository_source_unavailable',
@@ -286,7 +287,7 @@ final class GitHubReleaseWorkflowControls {
 		);
 	}
 
-	private function renderRepositoryReleaseLifecycle( bool $packageReady, bool $trackingReady, bool $workflowRecorded, bool $workflowReadyToAssess, bool $publishedReleasesWorking, string $observationKind ): void {
+	private function renderRepositoryReleaseLifecycle( bool $packageReady, bool $trackingReady, bool $workflowRecorded, bool $workflowReadyToAssess, bool $publishedReleasesWorking, string $observationKind, bool $workflowAvailable ): void {
 		$automationReady = $workflowRecorded || in_array( $observationKind, array( 'existing_automation_detected', 'booster_setup_verified' ), true );
 		$automationLabel = $workflowRecorded
 			? __( 'Setup pull request recorded; check its outcome.', 'ran-booster' )
@@ -311,12 +312,14 @@ final class GitHubReleaseWorkflowControls {
 				'message' => $trackingReady ? __( 'Published releases are selected.', 'ran-booster' ) : __( 'Published releases are not selected.', 'ran-booster' ),
 				'state'   => $trackingReady ? 'is-ok' : 'is-pending',
 			),
-			array(
+		);
+		if ( $workflowAvailable ) {
+			$items[] = array(
 				'label'   => __( 'Release workflow — optional', 'ran-booster' ),
 				'message' => $automationLabel,
 				'state'   => $automationReady ? 'is-ok' : ( $publishedReleasesWorking ? 'is-pending' : 'is-warning' ),
-			),
-		);
+			);
+		}
 		?>
 		<ol class="ran-booster-webhook-steps ran-booster-repository-webhook-lifecycle ran-booster-repository-release-lifecycle" aria-label="<?php echo esc_attr( __( 'Published release lifecycle', 'ran-booster' ) ); ?>">
 		<?php foreach ( $items as $number => $item ) { ?>
@@ -331,7 +334,7 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	/** @param list<array{name:string,type:string,eligible:bool,message:string,tracking:bool,channel:string,settings_url:string}> $packageReadiness */
-	private function renderRepositoryReadiness( string $repository, int $exactPackageRelationships, array $packageReadiness ): void {
+	private function renderRepositoryReadiness( string $repository, int $exactPackageRelationships, array $packageReadiness, bool $workflowAvailable ): void {
 		$relationshipReady   = '' !== $repository && 0 < $exactPackageRelationships;
 		$relationshipMessage = __( 'No exact package relationship is available for this saved repository.', 'ran-booster' );
 		if ( $relationshipReady ) {
@@ -351,10 +354,10 @@ final class GitHubReleaseWorkflowControls {
 			</div></div>
 			<div class="ran-booster-repository-release-readiness__body">
 				<ul class="ran-booster-readiness-list">
-					<li class="ran-booster-readiness-item is-ok">
+					<li class="ran-booster-readiness-item <?php echo $workflowAvailable ? 'is-ok' : 'is-pending'; ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php echo esc_html__( 'Provider capability', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html__( 'GitHub supports published releases.', 'ran-booster' ); ?></span>
+						<span><?php echo esc_html( $workflowAvailable ? __( 'This provider supports published releases.', 'ran-booster' ) : __( 'This provider does not implement all required release capabilities.', 'ran-booster' ) ); ?></span>
 					</li>
 					<li class="ran-booster-readiness-item <?php echo $relationshipReady ? 'is-ok' : 'is-warning'; ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
@@ -494,14 +497,6 @@ final class GitHubReleaseWorkflowControls {
 			&& '' === $status->failureCode();
 	}
 
-	private function githubActionsUrl( string $repository ): string {
-		if ( 1 !== preg_match( '#\A[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\z#D', $repository ) ) {
-			return '';
-		}
-		$parts = explode( '/', $repository, 2 );
-		return 'https://github.com/' . rawurlencode( $parts[0] ) . '/' . rawurlencode( $parts[1] ) . '/actions';
-	}
-
 	private function statusMatchesSummary( ReleaseTrackingStatus $status, string $type, string $identifier, string $source, int $revision, string $repositoryId ): bool {
 		return hash_equals( $type, $status->type() )
 			&& hash_equals( $identifier, $status->identifier() )
@@ -522,32 +517,11 @@ final class GitHubReleaseWorkflowControls {
 		};
 	}
 
-	public function handleWorkflowInspect(): never {
-		$this->handleWorkflow( 'inspect' );
-	}
-
-	public function handleWorkflowSetup(): never {
-		$this->handleWorkflow( 'setup' );
-	}
-
-	public function handleWorkflowOutcome(): never {
-		$this->handleWorkflow( 'outcome' );
-	}
-
-	public function handleWorkflowUpdateInspect(): never {
-		$this->handleWorkflow( 'update_inspect' );
-	}
-
-	public function handleWorkflowUpdateSetup(): never {
-		$this->handleWorkflow( 'update_setup' );
-	}
-
-
-	private function handleWorkflow( string $operation ): never {
+	public function handleWorkflow(): never {
 		// This controller validates the exact local authority and purpose nonce before reading request-only secrets.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$request = is_array( $_POST ) ? $_POST : array();
-		$this->redirectTo( $this->processWorkflowRequest( $operation, $request ) );
+		$this->redirectTo( $this->processWorkflowRequest( $request ) );
 	}
 
 	private function redirectTo( string $url ): never {
@@ -572,114 +546,107 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	/** @param array<string,mixed> $request */
-	public function processWorkflowRequest( string $operation, #[\SensitiveParameter] array $request ): string {
-		$type             = $this->workflowType( $request );
-		$identifier       = $this->workflowIdentifier( $request );
-		$revision         = $this->workflowRevision( $request );
-		$preview          = $this->workflowPreview( $request );
-		$nonce            = is_string( $request['_wpnonce'] ?? null ) ? wp_unslash( $request['_wpnonce'] ) : '';
-		$channel          = 'inspect' === $operation ? $this->releaseChannelFrom( $request ) : '';
-		$outcome          = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false );
-		$operations       = array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' );
-		$package          = null;
-		$status           = null;
-		$observationSaved = false;
-
-		if ( ! in_array( $operation, $operations, true ) || '' === $type || '' === $identifier || $revision < 1
-			|| null === $preview || '' === $nonce || ( 'inspect' === $operation && '' === $channel ) ) {
-			$outcome = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false, '', 'request_validation', 'malformed_request' );
-		} elseif ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
-			$outcome = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false, $preview, 'request_validation', 'permissions_unavailable' );
-		} else {
-			$package = $this->bundledGitHubPackage( $type, $identifier, $revision );
-			if ( ! is_object( $package ) ) {
-				$outcome = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false, $preview, 'request_validation', 'package_source_changed' );
-			} elseif ( null === $this->releases || null === $this->applications ) {
-					$outcome = $this->workflowResult( $type, $identifier, 'workflow_remote_unavailable', false );
-			} else {
-				$status = $this->requestBoundary( fn (): ?ReleaseTrackingStatus => $this->workflowStatus( $type, $identifier, $revision ), null );
-				if ( ! $status instanceof ReleaseTrackingStatus || ! $this->packageMatchesStatus( $package, $status ) ) {
-					$outcome = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false, $preview, 'request_validation', 'package_source_changed' );
-				} elseif ( ! $this->workflowSourceAllowed( $type, $identifier, $package ) ) {
-					$outcome = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false, $preview, 'request_validation', 'repository_release_owner_exists' );
-				} elseif ( 1 !== wp_verify_nonce( $nonce, $this->workflowNonceAction( $operation, $status, $preview ) ) ) {
-					$outcome = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false, $preview, 'request_validation', 'nonce_expired' );
-				} else {
-					// Saved credential secrets are deliberately unread until local authority is proven.
-					$credentialId       = is_string( $request['booster_credential_id'] ?? null ) ? wp_unslash( $request['booster_credential_id'] ) : '';
-					$write              = in_array( $operation, array( 'setup', 'update_setup' ), true );
-					$credentialRequired = $write || ! $this->anonymousWorkflowInspectionAllowed( $package );
-					$token              = $this->credentialToken( $credentialId, $credentialRequired );
-					$confirmation       = is_string( $request['confirm_repository'] ?? null ) ? wp_unslash( $request['confirm_repository'] ) : '';
-					$reference          = $this->failureReference();
-					$retry              = $this->workflowResult( $type, $identifier, 'workflow_remote_unavailable', false, $preview, 'unexpected', 'unexpected_runtime_failure', false, $reference );
-					if ( ( $credentialRequired || '' !== $credentialId ) && '' === $token ) {
-						$outcome = $this->workflowResult( $type, $identifier, 'workflow_unauthorised', false, $preview, 'credential_authorisation' );
-					} else {
-						if ( 'setup' === $operation ) {
-							$projection = $this->requestBoundary( fn (): ?array => $this->applications?->preview( $preview, $status ), null );
-							$channel    = is_array( $projection ) && is_string( $projection['preflight_channel'] ?? null )
-							? $this->releaseChannelFrom( array( 'release_channel' => $projection['preflight_channel'] ) ) : '';
-						}
-						$outcome = $this->requestBoundary(
-							fn (): array => match ( $operation ) {
-									'inspect' => $this->applications->inspect( $status, $channel, $this->workflowPreflightNonce( $request, $channel ), $token ),
-									'setup' => $this->applications->setup(
-										$status,
-										$preview,
-										$confirmation,
-										array(
-											'stable'     => $this->workflowPreflightNonce( $request, 'stable' ),
-											'prerelease' => $this->workflowPreflightNonce( $request, 'prerelease' ),
-										),
-										$token
-									),
-									'outcome' => $this->applications->outcome( $status, $token ),
-									'update_inspect' => $this->applications->inspectUpdate( $status, $token ),
-									'update_setup' => $this->applications->setupUpdate( $status, $preview, $confirmation, $token ),
-									},
-							$retry,
-							array(
-								'operation'      => $operation,
-								'outcome_code'   => $retry['code'],
-								'provider'       => 'gh',
-								'step'           => 'unexpected',
-								'package_slug'   => $status->identifier(),
-								'correlation_id' => $reference,
-							)
-						);
+	public function processWorkflowRequest( #[\SensitiveParameter] array $request ): string {
+		$operation    = is_string( $request['workflow_operation'] ?? null ) ? wp_unslash( $request['workflow_operation'] ) : '';
+		$providerCode = is_string( $request['expected_provider'] ?? null ) ? wp_unslash( $request['expected_provider'] ) : '';
+		$repositoryId = is_string( $request['expected_repository_id'] ?? null ) ? wp_unslash( $request['expected_repository_id'] ) : '';
+		$type         = $this->workflowType( $request );
+		$identifier   = $this->workflowIdentifier( $request );
+		$revision     = $this->workflowRevision( $request );
+		$previewKey   = $this->workflowPreview( $request );
+		$nonce        = is_string( $request['_wpnonce'] ?? null ) ? wp_unslash( $request['_wpnonce'] ) : '';
+		$channel      = 'inspect' === $operation ? $this->releaseChannelFrom( $request ) : '';
+		$outcome      = $this->workflowResult( $type, $identifier, 'workflow_invalid_request', false, '', 'request_validation', 'malformed_request' );
+		$exact        = false;
+		try {
+			do {
+				if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ), true )
+					|| '' === $type || '' === $identifier || $revision < 1 || null === $previewKey || '' === $nonce
+					|| '' === $providerCode || strlen( $providerCode ) > 32 || $providerCode !== sanitize_key( $providerCode )
+					|| '' === $repositoryId || strlen( $repositoryId ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId )
+					|| ( 'inspect' === $operation && '' === $channel ) ) {
+					break; }
+				if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
+					$outcome['diagnostic_code'] = 'permissions_unavailable';
+					break;
+				}
+				$package = $this->workflowPackage( $type, $identifier, $revision );
+				if ( null === $package || $providerCode !== (string) $package->getProviderCode() || $repositoryId !== $package->getProviderRepositoryId() ) {
+					$outcome['diagnostic_code'] = 'package_source_changed';
+					break;
+				}
+				$exact  = true;
+				$status = $this->workflowStatus( $type, $identifier, $revision );
+				if ( null === $status || ! $this->packageMatchesStatus( $package, $status ) ) {
+					$outcome['diagnostic_code'] = 'package_source_changed';
+					break;
+				}
+				if ( 1 !== wp_verify_nonce( $nonce, $this->workflowNonceAction( $operation, $status, $previewKey ) ) ) {
+					$outcome['diagnostic_code'] = 'nonce_expired';
+					break;
+				}
+				$provider = $this->workflowProvider( $providerCode );
+				if ( null === $provider ) {
+					$outcome['diagnostic_code'] = 'provider_unavailable';
+					break; }
+				if ( ! $this->workflowSourceAllowed( $type, $identifier, $package ) ) {
+					$outcome['diagnostic_code'] = 'repository_release_owner_exists';
+					break;
+				}
+				$write              = in_array( $operation, array( 'setup', 'update_setup' ), true );
+				$credentialId       = is_string( $request['booster_credential_id'] ?? null ) ? wp_unslash( $request['booster_credential_id'] ) : '';
+				$local              = $this->workflowProviderStatus( $status );
+				$credentialRequired = $write || ! $this->anonymousWorkflowInspectionAllowed( $package );
+				if ( null === $local || strlen( $credentialId ) > 191 || ( '' === $credentialId && $credentialRequired )
+					|| ( '' !== $credentialId && ! in_array( $credentialId, array_column( $local->credentialChoices(), 'id' ), true ) ) ) {
+					$outcome = $this->workflowResult( $type, $identifier, 'workflow_unauthorised', false, '', 'credential_authorisation', 'credential_authorisation_unavailable' );
+					break;
+				}
+				$confirmation = is_string( $request['confirm_repository'] ?? null ) ? wp_unslash( $request['confirm_repository'] ) : '';
+				if ( $write ) {
+					$preview = $provider->workflowPreview( $status, $previewKey );
+					if ( null === $preview || $preview->key() !== $previewKey || $preview->providerCode() !== $providerCode
+						|| $preview->repositoryId() !== $repositoryId || $preview->confirmation() !== $confirmation
+						|| $preview->kind() !== ( 'setup' === $operation ? 'bootstrap' : 'template_update' ) ) {
+						$outcome['diagnostic_code'] = 'package_source_changed';
+						break;
+					}
+					$channel = $preview->channel();
+				}
+				if ( in_array( $operation, array( 'outcome', 'update_inspect', 'update_setup' ), true ) && ! $local->recordExact() ) {
+					$outcome['diagnostic_code'] = 'package_source_changed';
+					break;
+				}
+				$preflight = null;
+				if ( in_array( $operation, array( 'inspect', 'setup' ), true ) ) {
+					$preflight = $this->releases->assessmentPreflight( $type, $identifier, $revision, $channel, $this->workflowPreflightNonce( $request, $channel ) );
+					if ( null === $preflight || ! in_array( $preflight->code(), array( 'ready', 'release_unavailable' ), true ) ) {
+						$outcome = $this->workflowResult( $type, $identifier, 'workflow_preflight_unavailable', false, $previewKey, 'release_preflight', null === $preflight ? 'preflight_contract_unavailable' : ( '' !== $preflight->reasonCode() ? $preflight->reasonCode() : 'provider_unavailable' ) );
+						break;
 					}
 				}
-			}
+				$result = match ( $operation ) {
+					'inspect' => $provider->workflowInspect( $status, $channel, $preflight, '' === $credentialId ? null : $credentialId ),
+					'setup' => $provider->workflowSetup( $status, $previewKey, $confirmation, $preflight, $credentialId ),
+					'outcome' => $provider->workflowOutcome( $status, '' === $credentialId ? null : $credentialId ),
+					'update_inspect' => $provider->workflowInspectUpdate( $status, '' === $credentialId ? null : $credentialId ),
+					'update_setup' => $provider->workflowSetupUpdate( $status, $previewKey, $confirmation, $credentialId ),
+				};
+				$outcome = $this->workflowResult( $type, $identifier, $result->workflowCode(), $result->successful(), $result->previewKey(), $result->failureStage(), $result->diagnosticCode(), '' !== $result->correlationReference(), $result->correlationReference() );
+			} while ( false );
+		} catch ( Throwable ) {
+			$outcome = $this->workflowResult( $type, $identifier, 'workflow_remote_unavailable', false, '', 'unexpected', 'unexpected_runtime_failure' );
 		}
-		if ( $status instanceof ReleaseTrackingStatus ) {
-			$observationSaved = $this->preserveWorkflowObservation( $status, $outcome );
+		if ( ! $outcome['successful'] && '' === $outcome['correlation_reference'] && '' !== $outcome['failure_stage'] ) {
+			$outcome = $this->preserveRequestFailure( $operation, $outcome, $providerCode );
 		}
-		if ( 'request_validation' === $outcome['failure_stage'] && ! $outcome['successful'] ) {
-			$outcome = $this->preserveRequestFailure( $operation, $outcome );
-		} elseif ( $status instanceof ReleaseTrackingStatus && ! $outcome['successful']
-			&& ! ( $observationSaved && 'workflow_release_automation_conflict' === $outcome['code'] )
-			&& is_string( $outcome['failure_stage'] ?? null )
-			&& in_array( $outcome['failure_stage'], array( 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
-			$outcome = $this->preserveWorkflowFailure( $operation, $status, $outcome );
-		}
-
-		$args = $this->resultQueryArguments( $outcome, $channel, $revision );
+		$this->workflowStatuses = array();
+		$args                   = $this->resultQueryArguments( $outcome, $channel, $revision, $providerCode, $repositoryId );
 		if ( '' !== $outcome['preview_key'] ) {
-			$args[ self::PREVIEW_QUERY_KEY ] = $outcome['preview_key'];
-		}
-		$repositoryId = is_object( $package ) && is_callable( array( $package, 'getProviderRepositoryId' ) )
-			? $package->getProviderRepositoryId() : '';
-		if ( is_string( $repositoryId ) && '' !== $repositoryId ) {
-			return add_query_arg( $args, $this->repositoryReleaseUrl( $repositoryId ) ) . '#ran-booster-repository-release-workflows';
-		}
-
-		$args['source_view']               = 'release_asset';
-		$args['ran_booster_open_advanced'] = '1';
-
-		return add_query_arg( $args, $this->returnUrl( $outcome['type'], $outcome['identifier'], true ) ) . '#ran-booster-advanced-source-settings';
+			$args[ self::PREVIEW_QUERY_KEY ] = $outcome['preview_key']; }
+		$url = $exact ? $this->repositoryReleaseUrl( $repositoryId, $providerCode ) : $this->returnUrl( $type, $identifier, true );
+		return add_query_arg( $args, $url ) . '#ran-booster-repository-release-workflows';
 	}
-
 	/** @param array<string, mixed> $request */
 	private function workflowType( array $request ): string {
 		$type = is_string( $request['expected_type'] ?? null ) ? sanitize_key( wp_unslash( $request['expected_type'] ) ) : '';
@@ -729,11 +696,14 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	private function workflowSourceAllowed( string $type, string $identifier, object $package ): bool {
-		if ( ! is_callable( array( $package, 'getProviderRepositoryId' ) ) || ! is_string( $package->getProviderRepositoryId() ) ) {
+		if ( ! is_callable( array( $package, 'getProviderCode' ) )
+			|| ! is_callable( array( $package, 'getProviderRepositoryId' ) )
+			|| ! is_string( $package->getProviderRepositoryId() ) ) {
 			return false;
 		}
 
 		return $this->repositorySourceGuard(
+			$package->getProviderCode(),
 			$package->getProviderRepositoryId(),
 			$type,
 			$identifier,
@@ -741,32 +711,12 @@ final class GitHubReleaseWorkflowControls {
 		)['allowed'];
 	}
 
-	private function credentialToken( string $credentialId, bool $required ): string {
-		if ( '' === $credentialId ) {
-			return '';
-		}
-
-		try {
-			$profile = $this->credentials->credentialProfiles()[ $credentialId ] ?? null;
-			if ( ! is_array( $profile ) || 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] ) || empty( $profile['configured'] ) ) {
-				return '';
-			}
-			$material = $this->credentials->credentialMaterial( $credentialId );
-			$secret   = is_array( $material ) && is_string( $material['secret'] ?? null ) ? trim( $material['secret'] ) : '';
-
-			return '' === $secret && $required ? '' : $secret;
-		} catch ( Throwable ) {
-			return '';
-		}
-	}
-
 	private function workflowNonceAction( string $operation, ReleaseTrackingStatus $status, string $preview = '' ): string {
-		return 'ran-booster-github-release-workflow-' . $operation . '-' . hash(
+		return 'ran-booster-release-workflow-' . $operation . '-' . hash(
 			'sha256',
-			implode( '|', array( $status->type(), $status->identifier(), $status->sourceRevision(), $status->providerRepositoryId(), $preview ) )
+			(string) wp_json_encode( array( $this->workflowProviderCode( $status ), $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision(), $preview ) )
 		);
 	}
-
 	/** @param array<string, mixed> $request */
 	private function workflowPreflightNonce( array $request, string $channel ): string {
 		$key = 'core_preflight_nonce_' . $channel;
@@ -791,94 +741,17 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	/** @param array{type:string,identifier:string,code:string,successful:bool,preview_key:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string} $outcome */
-	private function preserveWorkflowFailure( string $operation, ReleaseTrackingStatus $status, array $outcome ): array {
-		$stage      = $outcome['failure_stage'];
-		$diagnostic = $this->failureDiagnosticCode( $outcome['diagnostic_code'] ?? '', $stage );
-		$reference  = is_string( $outcome['correlation_reference'] ?? null ) && 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $outcome['correlation_reference'] )
-			? $outcome['correlation_reference'] : $this->failureReference();
-		$available  = BoosterLogger::log(
-			'GitHub release workflow failed',
-			array(
-				'provider'       => 'gh',
-				'operation'      => $operation,
-				'outcome_code'   => $outcome['code'],
-				'diagnostic_id'  => $diagnostic,
-				'step'           => $stage,
-				'package_slug'   => $status->identifier(),
-				'correlation_id' => $reference,
-			)
-		);
-		$failure    = array(
-			'operation'             => $operation,
-			'outcome_code'          => $outcome['code'],
-			'failure_stage'         => $stage,
-			'package_type'          => $status->type(),
-			'package_identifier'    => $status->identifier(),
-			'source_revision'       => $status->sourceRevision(),
-			'repository_id'         => $status->providerRepositoryId(),
-			'diagnostic_code'       => $diagnostic,
-			'diagnostic_available'  => $available,
-			'correlation_reference' => $reference,
-			'recorded_at'           => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
-		);
-		$this->workflowRecords->recordFailure( $failure );
-		$outcome['failure_stage']         = $stage;
-		$outcome['diagnostic_code']       = $diagnostic;
-		$outcome['diagnostic_available']  = $available;
-		$outcome['correlation_reference'] = $available ? $reference : '';
-		return $outcome;
-	}
-
-	/** @param array{type:string,identifier:string,code:string,successful:bool,preview_key:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string} $outcome */
-	private function preserveWorkflowObservation( ReleaseTrackingStatus $status, array $outcome ): bool {
-		$kind = match ( $outcome['code'] ) {
-			'workflow_release_automation_conflict' => 'existing_automation_detected',
-			'workflow_release_automation_present'  => 'booster_setup_verified',
-			'workflow_inspected'                   => 'no_recognisable_automation',
-			default                                => '',
-		};
-		if ( '' === $kind ) {
-			return false;
-		}
-
-		$saved = $this->workflowRecords->saveAssessmentObservation(
-			array(
-				'kind'               => $kind,
-				'repository_id'      => $status->providerRepositoryId(),
-				'package_type'       => $status->type(),
-				'package_identifier' => $status->identifier(),
-				'source_revision'    => $status->sourceRevision(),
-				'observed_at'        => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
-			)
-		);
-		if ( $saved ) {
-			BoosterLogger::log(
-				'GitHub release automation assessment recorded',
-				array(
-					'provider'     => 'gh',
-					'operation'    => 'inspect',
-					'outcome_code' => $outcome['code'],
-					'package_slug' => $status->identifier(),
-					'state'        => $kind,
-				)
-			);
-		}
-
-		return $saved;
-	}
-
-	/** @param array{type:string,identifier:string,code:string,successful:bool,preview_key:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string} $outcome */
-	private function preserveRequestFailure( string $operation, array $outcome ): array {
-		$diagnostic                       = $this->failureDiagnosticCode( $outcome['diagnostic_code'], 'request_validation' );
+	private function preserveRequestFailure( string $operation, array $outcome, string $providerCode ): array {
+		$diagnostic                       = $this->failureDiagnosticCode( $outcome['diagnostic_code'], $outcome['failure_stage'] );
 		$reference                        = $this->failureReference();
 		$available                        = BoosterLogger::log(
-			'GitHub release workflow request refused',
+			'Provider release workflow request refused',
 			array(
-				'provider'       => 'gh',
+				'provider'       => $providerCode,
 				'operation'      => in_array( $operation, array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ), true ) ? $operation : 'invalid',
 				'outcome_code'   => $outcome['code'],
 				'diagnostic_id'  => $diagnostic,
-				'step'           => 'request_validation',
+				'step'           => $outcome['failure_stage'],
 				'correlation_id' => $reference,
 			)
 		);
@@ -913,31 +786,16 @@ final class GitHubReleaseWorkflowControls {
 		}
 	}
 
-	private function bundledGitHubPackage( string $type, string $identifier, int $revision ): ?object {
-		try {
-			$package = 'plugin' === $type
-				? $this->plugins->boosterPluginFromFile( $identifier )
-				: $this->themes->boosterThemeFromStylesheet( $identifier );
-
-			return is_object( $package ) && is_callable( array( $package, 'getProviderRepositoryId' ) )
-				&& $revision === $package->getSourceRevision() && 'gh' === (string) $package->getProviderCode()
-				? $package
-				: null;
-		} catch ( Throwable ) {
-			return null;
-		}
+	private function workflowPackage( string $type, string $identifier, int $revision ): ?object {
+		$package = $this->localPackage( $type, $identifier );
+		return null !== $package && $revision === $package->getSourceRevision()
+			&& is_string( $package->getProviderRepositoryId() ) && '' !== $package->getProviderRepositoryId()
+			? $package : null;
 	}
-
 	private function packageMatchesStatus( object $package, ReleaseTrackingStatus $status ): bool {
-		try {
-			$repositoryId = $package->getProviderRepositoryId();
-
-			return is_string( $repositoryId ) && hash_equals( $repositoryId, $status->providerRepositoryId() );
-		} catch ( Throwable ) {
-			return false;
-		}
+		return $status->providerRepositoryId() === $package->getProviderRepositoryId()
+			&& $status->sourceRevision() === $package->getSourceRevision();
 	}
-
 	private function anonymousWorkflowInspectionAllowed( object $package ): bool {
 		return is_callable( array( $package, 'isPrivate' ) )
 			&& false === $this->requestBoundary( fn (): mixed => $package->isPrivate(), null );
@@ -957,11 +815,12 @@ final class GitHubReleaseWorkflowControls {
 			|| ! in_array( $summarySource, array( 'branch', 'release_asset' ), true ) || 1 > $summaryRevision ) {
 			return null;
 		}
-		$package    = $this->localPackage( $type, $reference );
-		$status     = null;
-		$repository = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
-		$locator    = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
-		$exact      = null !== $package && '' !== $repository
+		$package      = $this->localPackage( $type, $reference );
+		$status       = null;
+		$providerCode = is_string( $row['provider_code'] ?? null ) ? $row['provider_code'] : '';
+		$repository   = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+		$locator      = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$exact        = null !== $this->workflowProvider( $providerCode ) && null !== $package && '' !== $repository
 			&& is_callable( array( $package, 'getIdentifier' ) )
 			&& is_callable( array( $package, 'getProviderCode' ) )
 			&& is_callable( array( $package, 'getProviderRepositoryId' ) )
@@ -969,7 +828,7 @@ final class GitHubReleaseWorkflowControls {
 			&& is_callable( array( $package, 'getSourceRevision' ) )
 			&& is_string( $package->getIdentifier() )
 			&& hash_equals( $reference, $package->getIdentifier() )
-			&& 'gh' === (string) $package->getProviderCode()
+			&& hash_equals( $providerCode, (string) $package->getProviderCode() )
 			&& is_string( $package->getProviderRepositoryId() )
 			&& hash_equals( $repository, $package->getProviderRepositoryId() )
 			&& hash_equals( $locator, (string) $package->getRepository() )
@@ -990,15 +849,14 @@ final class GitHubReleaseWorkflowControls {
 		$value = __( 'Unavailable', 'ran-booster' );
 		$tone  = 'warning';
 		if ( $exact && $status instanceof ReleaseTrackingStatus ) {
-			$record   = $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repository ), null );
-			$occupied = $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repository ), true );
-			if ( $this->recordMatchesStatus( $record, $status, $locator ) ) {
+			$workflowStatus = $this->workflowProviderStatus( $status );
+			if ( $this->recordMatchesStatus( $workflowStatus, $status ) ) {
 				$value = __( 'Setup recorded', 'ran-booster' );
 				$tone  = 'pending';
 			} elseif ( $this->publishedReleasesWorking( $status ) ) {
 				$value = __( 'Published releases working', 'ran-booster' );
 				$tone  = 'ok';
-			} elseif ( ! $occupied && $status->eligible() ) {
+			} elseif ( ! ( $workflowStatus?->recordOccupied() ?? true ) && $status->eligible() ) {
 				$value = 'branch' === $status->source()
 					? __( 'Ready to assess', 'ran-booster' )
 					: __( 'Published releases selected', 'ran-booster' );
@@ -1006,7 +864,7 @@ final class GitHubReleaseWorkflowControls {
 			}
 		}
 
-		$settingsUrl = $this->repositoryReleaseUrl( $repository );
+		$settingsUrl = $this->repositoryReleaseUrl( $repository, $providerCode );
 		$label       = $multiple
 			? sprintf(
 				/* translators: %s is a managed plugin file or theme stylesheet. */
@@ -1021,14 +879,16 @@ final class GitHubReleaseWorkflowControls {
 				$this->boundedReference( $reference, 70 )
 			)
 			: __( 'Release workflow', 'ran-booster' );
-		$key = 'gh:release-automation-' . substr( hash( 'sha256', $type . '|' . $reference ), 0, 16 );
+		$key = 'core:release-workflow-' . substr( hash( 'sha256', $providerCode . '|' . $type . '|' . $reference ), 0, 16 );
 
 		return array(
 			'detail' => array(
-				'key'   => $key,
-				'label' => $detailLabel,
-				'value' => $value,
-				'tone'  => $tone,
+				'key'            => $key,
+				'label'          => $detailLabel,
+				'value'          => $value,
+				'tone'           => $tone,
+				'category'       => 'release_workflow',
+				'review_summary' => $exact && $status instanceof ReleaseTrackingStatus && null !== $this->workflowProviderStatus( $status ),
 			),
 			'action' => array(
 				'key'           => $key,
@@ -1053,30 +913,17 @@ final class GitHubReleaseWorkflowControls {
 		);
 	}
 
-	/** @param array<string, mixed>|null $record */
-	private function recordMatchesStatus( ?array $record, ReleaseTrackingStatus $status, string $repository ): bool {
-		return is_array( $record )
-			&& is_string( $record['repo_id'] ?? null )
-			&& hash_equals( $status->providerRepositoryId(), $record['repo_id'] )
-			&& is_string( $record['package_type'] ?? null )
-			&& hash_equals( $status->type(), $record['package_type'] )
-			&& is_string( $record['package_identifier'] ?? null )
-			&& hash_equals( $status->identifier(), $record['package_identifier'] )
-			&& is_string( $record['repository'] ?? null )
-			&& hash_equals( $repository, $record['repository'] )
-			&& $status->sourceRevision() === ( $record['source_revision'] ?? null );
+	private function recordMatchesStatus( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
+		return $record instanceof \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus
+			&& $record->recordExact()
+			&& hash_equals( $status->providerRepositoryId(), $record->repositoryId() )
+			&& hash_equals( $status->type(), $record->packageType() )
+			&& hash_equals( $status->identifier(), $record->packageIdentifier() )
+			&& $status->sourceRevision() === $record->sourceRevision();
 	}
 
-	/** @param array<string,int|string>|null $record */
-	private function recordMatchesPackageStatus( ?array $record, ReleaseTrackingStatus $status ): bool {
-		return is_array( $record )
-			&& is_string( $record['repo_id'] ?? null )
-			&& hash_equals( $status->providerRepositoryId(), $record['repo_id'] )
-			&& is_string( $record['package_type'] ?? null )
-			&& hash_equals( $status->type(), $record['package_type'] )
-			&& is_string( $record['package_identifier'] ?? null )
-			&& hash_equals( $status->identifier(), $record['package_identifier'] )
-			&& $status->sourceRevision() === ( $record['source_revision'] ?? null );
+	private function recordMatchesPackageStatus( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
+		return $this->recordMatchesStatus( $record, $status );
 	}
 
 	private function boundedReference( string $reference, int $maximum ): string {
@@ -1087,90 +934,105 @@ final class GitHubReleaseWorkflowControls {
 
 	/** @return array<string,mixed>|null */
 	private function workflowView( object $package, string $code, bool $successful, string $previewKey, string $channel, string $stage = '', string $reference = '' ): ?array {
-		if ( null === $this->applications || null === $this->workflowRecords
-			|| ! is_callable( array( $package, 'type' ) ) || ! is_callable( array( $package, 'identifier' ) )
-			|| ! is_callable( array( $package, 'sourceRevision' ) ) ) {
+		if ( ! is_callable( array( $package, 'type' ) ) || ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'sourceRevision' ) ) ) {
 			return null;
 		}
-		$type       = $package->type();
-		$identifier = $package->identifier();
-		$revision   = $package->sourceRevision();
-		if ( ! is_string( $type ) || ! is_string( $identifier ) || ! is_int( $revision ) ) {
-			return null;
-		}
-
-		return $this->workflowViewFor( $type, $identifier, $revision, $code, $successful, $previewKey, $channel, $stage, $reference );
+		return $this->workflowViewFor( $package->type(), $package->identifier(), $package->sourceRevision(), $code, $successful, $previewKey, $channel, $stage, reference: $reference );
 	}
-
 	/** @return array<string,mixed>|null */
 	private function workflowViewFor( string $type, string $identifier, int $revision, string $code, bool $successful, string $previewKey, string $channel, string $stage = '', string $diagnostic = '', bool $diagnosticAvailable = false, string $reference = '' ): ?array {
-		$package   = $this->bundledGitHubPackage( $type, $identifier, $revision );
-		$anonymous = is_object( $package ) && $this->anonymousWorkflowInspectionAllowed( $package );
-		$status    = $this->workflowDisplayStatus( $type, $identifier, $revision );
-		if ( null === $status ) {
-			return $this->unavailableWorkflowView( __( 'Booster could not confirm the local Published release readiness for this package. Try again after reviewing its settings.', 'ran-booster' ), anonymousInspection: $anonymous );
+		$status  = $this->workflowDisplayStatus( $type, $identifier, $revision );
+		$package = $this->workflowPackage( $type, $identifier, $revision );
+		if ( null === $status || null === $package || ! $this->packageMatchesStatus( $package, $status ) ) {
+			return $this->unavailableWorkflowView( __( 'Booster could not confirm this package. Reload its settings and try again.', 'ran-booster' ) );
 		}
-		if ( ! $status->eligible() ) {
-			return $this->unavailableWorkflowView( $this->workflowUnavailableReason( $status ), $code, $successful, 'blocked', $anonymous );
+		$providerCode = (string) $package->getProviderCode();
+		if ( null === $this->workflowCapability( $providerCode ) ) {
+			return null;
 		}
-		$channel = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : $status->channel();
-		$preview = '' === $previewKey ? null : $this->applications->preview( $previewKey, $status );
-		$record  = $this->workflowRecords->find( $status->providerRepositoryId() );
-		if ( null !== $record && ! $this->recordMatchesPackageStatus( $record, $status ) ) {
-			return $this->unavailableWorkflowView(
-				__( 'A local workflow record is occupied by a different package or revision. Review it before setup.', 'ran-booster' ),
-				$code,
-				$successful,
-				'blocked',
-				$anonymous
-			);
+		$provider  = $this->workflowProvider( $providerCode );
+		$state     = null === $provider ? null : $this->workflowProviderStatus( $status );
+		$anonymous = $this->anonymousWorkflowInspectionAllowed( $package );
+		$metadata  = $this->providers->metadata()[ $providerCode ] ?? null;
+		$extra     = array(
+			'provider_label'        => $metadata?->label ?? $providerCode,
+			'documentation_links'   => $state?->documentationLinks() ?? array(),
+			'provider_workflow_url' => $state?->providerWorkflowUrl() ?? '',
+			'write_guidance'        => $state?->writeGuidance() ?? '',
+		);
+		$reason    = null === $provider
+			? __( 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.', 'ran-booster' )
+			: ( null === $state ? __( 'The provider could not supply local workflow status. Retry after checking the provider plugin.', 'ran-booster' ) : '' );
+		if ( '' === $reason && ! $status->eligible() ) {
+			$reason = $this->workflowUnavailableReason( $status );
 		}
-		$legacy           = null === $record
-			? $this->workflowRecords->legacyEvidence( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) : null;
-		$failureHistory   = $this->workflowRecords->failureHistory( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() );
-		$observation      = $this->workflowRecords->assessmentObservation( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() );
-		$forms            = array();
-		$credentials      = $this->credentialChoices();
-		$anonymous        = is_object( $package ) && $this->packageMatchesStatus( $package, $status )
-			&& $this->anonymousWorkflowInspectionAllowed( $package );
-		$forms['inspect'] = $this->workflowForm( 'inspect', $status, '', '', $channel, $credentials, $anonymous );
-		if ( is_array( $forms['inspect'] ) && ( null !== $preview || null !== $record || 'workflow_release_automation_present' === $code ) ) {
-			$forms['inspect']['disabled'] = true;
+		if ( '' === $reason && ! $this->workflowSourceAllowed( $type, $identifier, $package ) ) {
+			$reason = __( 'Releases require a repository used by only one managed package. Review the repository package list.', 'ran-booster' );
+		}
+		if ( '' === $reason && $state->recordOccupied() && ! $state->recordExact() ) {
+			$reason = __( 'A workflow record belongs to a different package or revision. Review the recorded repository state before setup.', 'ran-booster' );
+		}
+		$credentials = $state?->credentialChoices() ?? array();
+		$channel     = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : $status->channel();
+		$preview     = null;
+		if ( '' === $reason && '' !== $previewKey ) {
+			$preview = $this->requestBoundary( fn () => $provider->workflowPreview( $status, $previewKey ), null );
+			if ( null !== $preview && ( $preview->key() !== $previewKey || $preview->providerCode() !== $providerCode || $preview->repositoryId() !== $status->providerRepositoryId() ) ) {
+				$preview = null;
+			}
+		}
+		$forms = array( 'inspect' => $this->workflowForm( 'inspect', $status, '', '', $channel, $credentials, $anonymous ) );
+		if ( '' !== $reason || null === $forms['inspect'] ) {
+			$forms                           = $this->unavailableWorkflowView( $reason, anonymousInspection: $anonymous )['forms'];
+			$forms['inspect']['credentials'] = $credentials;
 		}
 		if ( null !== $preview ) {
-			$operation           = 'template_update' === $preview['kind'] ? 'update_setup' : 'setup';
-			$forms[ $operation ] = $this->workflowForm(
-				$operation,
-				$status,
-				$previewKey,
-				$preview['repository'],
-				$preview['preflight_channel'],
-				$credentials,
-				$anonymous
-			);
+			$operation           = 'template_update' === $preview->kind() ? 'update_setup' : 'setup';
+			$forms[ $operation ] = $this->workflowForm( $operation, $status, $previewKey, $preview->confirmation(), $preview->channel(), $credentials, $anonymous );
 		}
-		if ( null !== $record ) {
+		if ( '' === $reason && true === $state?->recordExact() ) {
 			$forms['outcome']        = $this->workflowForm( 'outcome', $status, credentials: $credentials, anonymousInspection: $anonymous );
 			$forms['update_inspect'] = $this->workflowForm( 'update_inspect', $status, credentials: $credentials, anonymousInspection: $anonymous );
 		}
-
-		return array(
+		foreach ( $forms as &$form ) {
+			if ( is_array( $form ) ) {
+				$form['provider_label']  = $extra['provider_label'];
+				$form['write_guidance']  = $extra['write_guidance'];
+				$form['credentials_url'] = add_query_arg(
+					array(
+						'page' => 'ran-booster',
+						'tab'  => $providerCode,
+						'view' => 'credentials',
+					),
+					admin_url( 'admin.php' )
+				);
+			}
+		}
+		unset( $form );
+		return $extra + array(
 			'result_code'            => $code,
 			'result_successful'      => $successful,
 			'failure_stage'          => $stage,
 			'diagnostic_code'        => $diagnostic,
 			'diagnostic_available'   => $diagnosticAvailable,
 			'correlation_reference'  => $reference,
-			'preview'                => $preview,
-			'record'                 => $record,
-			'legacy'                 => $legacy,
-			'failure_history'        => $failureHistory,
-			'assessment_observation' => $observation,
-			'automation_state'       => null !== $record ? 'setup_recorded' : ( null !== $legacy ? 'blocked' : ( null !== $preview ? 'preview' : ( str_starts_with( $code, 'workflow_' ) && ! $successful ? 'needs_attention' : 'ready' ) ) ),
+			'unavailable'            => '' !== $reason,
+			'unavailable_reason'     => $reason,
+			'preview'                => null === $preview ? null : $preview->summary() + array(
+				'kind'    => $preview->kind(),
+				'changes' => $preview->changedPaths(),
+			),
+			'record'                 => true === $state?->recordExact() ? array( 'pull_request_url' => $state->pullRequestUrl() ) : null,
+			'legacy'                 => true === $state?->recordOccupied() && ! $state->recordExact() ? array( 'unsupported' => true ) : null,
+			'failure_history'        => $state?->failureHistory() ?? array(),
+			'assessment_observation' => null !== $state && '' !== $state->observationKind() ? array(
+				'kind'        => $state->observationKind(),
+				'recorded_at' => $state->observedAt(),
+			) : null,
+			'automation_state'       => '' !== $reason ? 'blocked' : ( true === $state?->recordExact() ? 'setup_recorded' : ( null !== $preview ? 'preview' : 'ready' ) ),
 			'forms'                  => array_filter( $forms, 'is_array' ),
 		);
 	}
-
 	/** @return array<string,mixed> */
 	private function unavailableWorkflowView( string $reason, string $code = '', bool $successful = false, string $automationState = 'blocked', bool $anonymousInspection = false ): array {
 		return array(
@@ -1187,15 +1049,14 @@ final class GitHubReleaseWorkflowControls {
 					'operation'            => 'inspect',
 					'action'               => admin_url( 'admin-post.php' ),
 					'fields'               => array(),
-					'credentials'          => $this->credentialChoices(),
+					'credentials'          => array(),
 					'anonymous_inspection' => $anonymousInspection,
-					'credentials_url'      => admin_url( 'admin.php?page=ran-booster&tab=gh&view=credentials' ),
+					'credentials_url'      => admin_url( 'admin.php?page=ran-booster' ),
 					'disabled'             => true,
 				),
 			),
 		);
 	}
-
 	/** Render-only identity check. POST requests continue through workflowStatus(). */
 	private function workflowDisplayStatus( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
 		$status = $this->releases?->status( $type, $identifier );
@@ -1242,7 +1103,10 @@ final class GitHubReleaseWorkflowControls {
 			$preflight = wp_create_nonce( $action );
 		}
 		$fields = array(
-			'action'                   => 'ran_booster_github_release_workflow_' . $operation,
+			'action'                   => 'ran_booster_release_workflow',
+			'workflow_operation'       => $operation,
+			'expected_provider'        => $this->workflowProviderCode( $status ),
+			'expected_repository_id'   => $status->providerRepositoryId(),
 			'_wpnonce'                 => wp_create_nonce( $this->workflowNonceAction( $operation, $status, $preview ) ),
 			'expected_type'            => $status->type(),
 			'expected_identifier'      => $status->identifier(),
@@ -1265,33 +1129,67 @@ final class GitHubReleaseWorkflowControls {
 			'confirm'              => $confirmation,
 			'credentials'          => $credentials,
 			'anonymous_inspection' => $anonymousInspection,
-			'credentials_url'      => admin_url( 'admin.php?page=ran-booster&tab=gh&view=credentials' ),
+			'credentials_url'      => add_query_arg(
+				array(
+					'page' => 'ran-booster',
+					'tab'  => $this->workflowProviderCode( $status ),
+					'view' => 'credentials',
+				),
+				admin_url( 'admin.php' )
+			),
 		);
 	}
 
 	/** @return list<array{id:string,label:string}> */
-	private function credentialChoices(): array {
+	private function workflowCapability( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
 		try {
-			$profiles = $this->credentials->credentialProfiles();
+			return $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagement::class );
 		} catch ( Throwable ) {
-			return array();
+			return null;
 		}
-		$choices = array();
-		foreach ( $profiles as $profile ) {
-			if ( ! is_array( $profile ) || 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] )
-				|| empty( $profile['configured'] ) || ! is_string( $profile['id'] ?? null ) || ! is_string( $profile['label'] ?? null ) || ! is_string( $profile['kind'] ?? null ) ) {
-				continue;
-			}
-			$choices[] = array(
-				'id'    => $profile['id'],
-				'label' => $profile['label'] . ' (' . $profile['kind'] . ')',
-			);
-		}
-
-		return $choices;
 	}
 
+	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
+		$provider = $this->workflowCapability( $providerCode );
+		return null !== $provider && 1 === $provider::RELEASE_WORKFLOW_API_VERSION && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
+	}
 
+	private function releaseProviderSupported( string $providerCode ): bool {
+		try {
+			$provider = $this->providers->get( $providerCode );
+			return $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseMetadata
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseCandidateListing
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseInspector
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseAcquirer
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+		} catch ( Throwable ) {
+			return false;
+		}
+	}
+
+	private function workflowProviderStatus( ReleaseTrackingStatus $status ): ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus {
+		$providerCode = $this->workflowProviderCode( $status );
+		$provider     = $this->workflowProvider( $providerCode );
+		if ( null === $provider ) {
+			return null;
+		}
+		$key = hash( 'sha256', (string) wp_json_encode( array( $providerCode, $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) ) );
+		if ( ! array_key_exists( $key, $this->workflowStatuses ) ) {
+			$value = $this->requestBoundary( fn () => $provider->workflowStatus( $status ), null );
+			if ( null !== $value && ( $value->providerCode() !== $providerCode
+				|| $value->repositoryId() !== $status->providerRepositoryId()
+				|| ( $value->recordExact() && ( $value->packageType() !== $status->type() || $value->packageIdentifier() !== $status->identifier() || $value->sourceRevision() !== $status->sourceRevision() ) ) ) ) {
+				$value = null;
+			}
+			$this->workflowStatuses[ $key ] = $value;
+		}
+		return $this->workflowStatuses[ $key ];
+	}
+
+	private function workflowProviderCode( ReleaseTrackingStatus $status ): string {
+		$package = $this->workflowPackage( $status->type(), $status->identifier(), $status->sourceRevision() );
+		return null !== $package && $this->packageMatchesStatus( $package, $status ) ? (string) $package->getProviderCode() : '';
+	}
 	/** @param array<string,string> $exceptionContext */
 	private function requestBoundary( callable $operation, mixed $failure, array $exceptionContext = array() ): mixed {
 		$bufferLevel = ob_get_level();
@@ -1307,7 +1205,7 @@ final class GitHubReleaseWorkflowControls {
 				ob_end_clean();
 			}
 			if ( array() !== $exceptionContext ) {
-				BoosterLogger::logException( 'GitHub release workflow request failed', $exception, $exceptionContext );
+				BoosterLogger::logException( 'Provider release workflow request failed', $exception, $exceptionContext );
 			}
 			return $failure;
 		}
@@ -1324,11 +1222,11 @@ final class GitHubReleaseWorkflowControls {
 		return add_query_arg( $args, admin_url( 'admin.php' ) );
 	}
 
-	private function repositoryReleaseUrl( string $repositoryId ): string {
+	private function repositoryReleaseUrl( string $repositoryId, string $providerCode = '' ): string {
 		return add_query_arg(
 			array(
 				'page'            => 'ran-booster',
-				'tab'             => 'gh',
+				'tab'             => $providerCode,
 				'panel'           => 'repositories',
 				'repository'      => $repositoryId,
 				'repository_view' => 'releases',
@@ -1336,12 +1234,11 @@ final class GitHubReleaseWorkflowControls {
 			admin_url( 'admin.php' )
 		);
 	}
-
 	/**
 	 * @param array{type:string,identifier:string,code:string,successful:bool,preview_key:string,failure_stage:string,diagnostic_code:string,diagnostic_available?:bool,correlation_reference:string} $outcome
 	 * @return array<string, string>
 	 */
-	private function resultQueryArguments( array $outcome, string $channel = '', int $sourceRevision = 0 ): array {
+	private function resultQueryArguments( array $outcome, string $channel = '', int $sourceRevision = 0, string $providerCode = '', string $repositoryId = '' ): array {
 		$type                                 = in_array( $outcome['type'], array( 'plugin', 'theme' ), true ) ? $outcome['type'] : 'plugin';
 		$identifier                           = strlen( $outcome['identifier'] ) <= 255 ? $outcome['identifier'] : '';
 		$code                                 = sanitize_key( $outcome['code'] );
@@ -1358,6 +1255,8 @@ final class GitHubReleaseWorkflowControls {
 			self::RESULT_TYPE_QUERY_KEY                 => $type,
 			self::RESULT_PACKAGE_QUERY_KEY              => $identifier,
 			self::RESULT_REVISION_QUERY_KEY             => (string) max( 0, $sourceRevision ),
+			self::RESULT_PROVIDER_QUERY_KEY             => $providerCode,
+			self::RESULT_REPOSITORY_QUERY_KEY           => $repositoryId,
 			self::RESULT_STAGE_QUERY_KEY                => $stage,
 			self::RESULT_DIAGNOSTIC_QUERY_KEY           => $diagnostic,
 			self::RESULT_DIAGNOSTIC_AVAILABLE_QUERY_KEY => $diagnosticAvailable ? '1' : '0',
@@ -1365,7 +1264,7 @@ final class GitHubReleaseWorkflowControls {
 		);
 		$args[ self::CHANNEL_QUERY_KEY ]      = $channel;
 		$args[ self::RESULT_NONCE_QUERY_KEY ] = wp_create_nonce(
-			$this->resultNonceAction( $code, $successful, $type, $identifier, max( 0, $sourceRevision ), $channel, $stage, $diagnostic, $diagnosticAvailable, $reference )
+			$this->resultNonceAction( $code, $successful, $type, $identifier, max( 0, $sourceRevision ), $channel, $stage, $diagnostic, $diagnosticAvailable, $reference, $providerCode, $repositoryId )
 		);
 
 		return $args;
@@ -1378,6 +1277,8 @@ final class GitHubReleaseWorkflowControls {
 		$rawType       = $_GET[ self::RESULT_TYPE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$rawIdentifier = $_GET[ self::RESULT_PACKAGE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$rawRevision   = $_GET[ self::RESULT_REVISION_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$rawProvider   = $_GET[ self::RESULT_PROVIDER_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$rawRepository = $_GET[ self::RESULT_REPOSITORY_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$rawChannel    = $_GET[ self::CHANNEL_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$rawStage      = $_GET[ self::RESULT_STAGE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$rawDiagnostic = $_GET[ self::RESULT_DIAGNOSTIC_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
@@ -1385,6 +1286,7 @@ final class GitHubReleaseWorkflowControls {
 		$rawReference  = $_GET[ self::RESULT_REFERENCE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$rawNonce      = $_GET[ self::RESULT_NONCE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification value for this PRG result.
 		if ( ! is_string( $rawCode ) || ! is_string( $rawSuccess ) || ! is_string( $rawType )
+			|| ! is_string( $rawProvider ) || ! is_string( $rawRepository )
 			|| ! is_string( $rawIdentifier ) || ! is_string( $rawRevision ) || ! is_string( $rawChannel ) || ! is_string( $rawStage ) || ! is_string( $rawDiagnostic ) || ! is_string( $rawAvailable ) || ! is_string( $rawReference ) || ! is_string( $rawNonce ) ) {
 			return null;
 		}
@@ -1394,6 +1296,8 @@ final class GitHubReleaseWorkflowControls {
 		$type       = wp_unslash( $rawType );
 		$identifier = wp_unslash( $rawIdentifier );
 		$revision   = wp_unslash( $rawRevision );
+		$provider   = wp_unslash( $rawProvider );
+		$repository = wp_unslash( $rawRepository );
 		$channel    = wp_unslash( $rawChannel );
 		$stage      = wp_unslash( $rawStage );
 		$diagnostic = wp_unslash( $rawDiagnostic );
@@ -1401,6 +1305,8 @@ final class GitHubReleaseWorkflowControls {
 		$reference  = wp_unslash( $rawReference );
 		$nonce      = wp_unslash( $rawNonce );
 		if ( $code !== sanitize_key( $code ) || '' === $code || strlen( $code ) > 64
+			|| $provider !== sanitize_key( $provider ) || strlen( $provider ) > 32
+			|| strlen( $repository ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $repository )
 			|| ! in_array( $success, array( '0', '1' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| $identifier !== sanitize_text_field( $identifier ) || strlen( $identifier ) > 255
@@ -1415,7 +1321,7 @@ final class GitHubReleaseWorkflowControls {
 
 		$successful          = '1' === $success;
 		$diagnosticAvailable = '1' === $available;
-		if ( 1 !== wp_verify_nonce( $nonce, $this->resultNonceAction( $code, $successful, $type, $identifier, (int) $revision, $channel, $stage, $diagnostic, $diagnosticAvailable, $reference ) ) ) {
+		if ( 1 !== wp_verify_nonce( $nonce, $this->resultNonceAction( $code, $successful, $type, $identifier, (int) $revision, $channel, $stage, $diagnostic, $diagnosticAvailable, $reference, $provider, $repository ) ) ) {
 			return null;
 		}
 
@@ -1425,6 +1331,8 @@ final class GitHubReleaseWorkflowControls {
 			'type'                  => $type,
 			'identifier'            => $identifier,
 			'source_revision'       => (int) $revision,
+			'provider'              => $provider,
+			'repository'            => $repository,
 			'channel'               => $channel,
 			'failure_stage'         => $stage,
 			'diagnostic_code'       => $diagnostic,
@@ -1433,8 +1341,8 @@ final class GitHubReleaseWorkflowControls {
 		);
 	}
 
-	private function resultNonceAction( string $code, bool $successful, string $type, string $identifier, int $sourceRevision, string $channel, string $stage = '', string $diagnostic = '', bool $diagnosticAvailable = false, string $reference = '' ): string {
-		$payload = wp_json_encode( array( $code, $successful, $type, $identifier, $sourceRevision, $channel, $stage, $diagnostic, $diagnosticAvailable, $reference ) );
+	private function resultNonceAction( string $code, bool $successful, string $type, string $identifier, int $sourceRevision, string $channel, string $stage = '', string $diagnostic = '', bool $diagnosticAvailable = false, string $reference = '', string $providerCode = '', string $repositoryId = '' ): string {
+		$payload = wp_json_encode( array( $code, $successful, $type, $identifier, $sourceRevision, $channel, $stage, $diagnostic, $diagnosticAvailable, $reference, $providerCode, $repositoryId ) );
 
 		return self::RESULT_NONCE_ACTION . hash( 'sha256', is_string( $payload ) ? $payload : '' );
 	}

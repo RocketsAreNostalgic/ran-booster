@@ -585,10 +585,17 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( '' !== $tone && ! in_array( $tone, $this->tones(), true ) ) {
 				throw new LogicException( 'Repository detail tones are invalid.' );
 			}
+			$category = $this->boundedString( $detail['category'] ?? '', 32, true );
+			if ( '' !== $category && ! in_array( $category, array( 'webhook', 'release_workflow' ), true ) ) {
+				throw new LogicException( 'Repository detail categories are invalid.' );
+			}
 			$this->boundedString( $detail['datetime'] ?? '', 64, true );
 			$this->boundedString( $detail['state'] ?? '', 64, true );
 			if ( isset( $detail['recorded'] ) && ! is_bool( $detail['recorded'] ) ) {
 				throw new LogicException( 'Repository detail recorded flags must be boolean.' );
+			}
+			if ( isset( $detail['review_summary'] ) && ! is_bool( $detail['review_summary'] ) ) {
+				throw new LogicException( 'Repository detail review summary flags must be boolean.' );
 			}
 		}
 	}
@@ -600,6 +607,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$releasePackages               = 0;
 		$releaseRepositories           = 0;
 		$releaseWorkflowsNeedingReview = 0;
+		$releaseWorkflowKeys           = array();
 		foreach ( $rows as $row ) {
 			$recorded = false;
 			$healthy  = false;
@@ -637,16 +645,22 @@ final class ProviderRepositoryRowsNormalizer {
 				$releasePackages += $releasePackagesInRepository;
 				++$releaseRepositories;
 			}
-			$providerReleaseDetailPrefix = is_string( $row['provider_code'] ?? null )
-				? $row['provider_code'] . ':release-automation-'
-				: '';
+			$exactLiveRelease = ! ( true === ( $row['historical'] ?? false ) )
+				&& 0 === (int) ( $row['package_summaries_omitted'] ?? 0 )
+				&& '' !== (string) ( $row['repository_id'] ?? '' );
 			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
 				if ( ! is_array( $detail )
-					|| '' === $providerReleaseDetailPrefix
-					|| ! str_starts_with( (string) ( $detail['key'] ?? '' ), $providerReleaseDetailPrefix )
+					|| ! $exactLiveRelease
+					|| 'release_workflow' !== ( $detail['category'] ?? null )
+					|| true !== ( $detail['review_summary'] ?? false )
 					|| ! in_array( $detail['tone'] ?? null, array( 'pending', 'warning' ), true ) ) {
 					continue;
 				}
+				$key = is_string( $detail['key'] ?? null ) ? $detail['key'] : '';
+				if ( '' === $key || isset( $releaseWorkflowKeys[ $key ] ) ) {
+					continue;
+				}
+				$releaseWorkflowKeys[ $key ] = true;
 				++$releaseWorkflowsNeedingReview;
 			}
 		}

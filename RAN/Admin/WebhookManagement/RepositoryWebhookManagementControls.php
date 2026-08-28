@@ -63,6 +63,11 @@ final class RepositoryWebhookManagementControls {
 		return $this->enabled && $this->controller->providerMetadata( $providerCode ) instanceof ProviderMetadata;
 	}
 
+	/** Whether a registered provider claims either webhook-management facet. */
+	public function hasManagementCapability( string $providerCode ): bool {
+		return $this->enabled && $this->claimedProviderMetadata( $providerCode ) instanceof ProviderMetadata;
+	}
+
 	/**
 	 * @param array<string, array<string, mixed>> $rows
 	 * @param array<string, array<string, mixed>> $repositoryProjections
@@ -113,6 +118,24 @@ final class RepositoryWebhookManagementControls {
 
 	/** Render the existing webhook setup disclosure on its repository-owned page. */
 	public function renderRepositoryWebhookSetup( string $providerCode, string $repositoryId, string $returnUrl, bool $hasBranchConsumer = true, string $repository = '' ): void {
+		$claimedMetadata = $this->claimedProviderMetadata( $providerCode );
+		if ( ! $this->supportsProvider( $providerCode ) && $claimedMetadata instanceof ProviderMetadata ) {
+			$this->renderRepositoryWebhookSection(
+				$this->incompleteCapabilityReadinessItems( $hasBranchConsumer ),
+				'',
+				$hasBranchConsumer,
+				array(
+					array(
+						'class'   => 'notice-warning',
+						/* translators: %s: provider name. */
+						'message' => sprintf( __( '%s webhook configuration is incomplete. Webhook setup is unavailable until the provider supplies its complete management capability.', 'ran-booster' ), $claimedMetadata->label ),
+					),
+				),
+				false
+			);
+
+			return;
+		}
 		$readinessItems = $this->repositoryWebhookReadinessItems( $providerCode, $repositoryId, $hasBranchConsumer );
 		$metadata       = $this->controller->providerMetadata( $providerCode );
 		$model          = $hasBranchConsumer ? $this->repositoryWebhookPanelModel( $providerCode, $repositoryId, $returnUrl ) : null;
@@ -212,7 +235,8 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** @param list<array{label:string,message:string,state:string}> $items @param list<array{class:string,message:string}> $notices */
-	private function renderRepositoryWebhookSection( array $items, string $panel, bool $hasBranchConsumer, array $notices ): void {
+	private function renderRepositoryWebhookSection( array $items, string $panel, bool $hasBranchConsumer, array $notices, bool $setupAvailable = true ): void {
+		$inactive = ! $hasBranchConsumer || ! $setupAvailable;
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
 			<header class="ran-booster-settings-section__header">
@@ -224,9 +248,9 @@ final class RepositoryWebhookManagementControls {
 						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
 					<?php } ?>
 				</div>
-				<?php $this->renderRepositoryWebhookLifecycle( $items, ! $hasBranchConsumer ); ?>
-				<?php $this->renderRepositoryWebhookReadiness( $items, ! $hasBranchConsumer ); ?>
-				<section class="ran-booster-readiness-panel ran-booster-repository-webhook-setup<?php echo $hasBranchConsumer ? '' : ' is-inactive'; ?>" aria-labelledby="ran-booster-repository-webhook-setup-heading"<?php echo $hasBranchConsumer ? '' : ' aria-disabled="true"'; ?>>
+				<?php $this->renderRepositoryWebhookLifecycle( $items, $inactive ); ?>
+				<?php $this->renderRepositoryWebhookReadiness( $items, $inactive ); ?>
+				<section class="ran-booster-readiness-panel ran-booster-repository-webhook-setup<?php echo $inactive ? ' is-inactive' : ''; ?>" aria-labelledby="ran-booster-repository-webhook-setup-heading"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
 					<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4><p><?php esc_html_e( 'Sets up this repository’s webhook. Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p></div></div>
 					<div class="ran-booster-repository-webhook-setup__body">
 						<?php $this->renderRepositoryWebhookSetupRegion( $panel ); ?>
@@ -235,6 +259,49 @@ final class RepositoryWebhookManagementControls {
 			</div>
 		</section>
 		<?php
+	}
+
+	/** @return list<array{label:string,message:string,state:string}> */
+	private function incompleteCapabilityReadinessItems( bool $hasBranchConsumer ): array {
+		return array(
+			array(
+				'label'   => __( 'Branch demand', 'ran-booster' ),
+				'message' => $hasBranchConsumer
+					? __( 'Branch packages can still be updated manually while webhook setup is unavailable.', 'ran-booster' )
+					: __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' ),
+				'state'   => 'is-pending',
+			),
+			array(
+				'label'   => __( 'Signing profile', 'ran-booster' ),
+				'message' => __( 'Provider configuration is incomplete, so Booster did not inspect signing-secret availability.', 'ran-booster' ),
+				'state'   => 'is-pending',
+			),
+			array(
+				'label'   => __( 'Provider receiver', 'ran-booster' ),
+				'message' => __( 'Provider configuration is incomplete, so Booster did not inspect receiver readiness.', 'ran-booster' ),
+				'state'   => 'is-pending',
+			),
+			array(
+				'label'   => __( 'Remote hook', 'ran-booster' ),
+				'message' => __( 'Provider configuration is incomplete, so Booster did not inspect remote webhook state.', 'ran-booster' ),
+				'state'   => 'is-pending',
+			),
+		);
+	}
+
+	private function claimedProviderMetadata( string $providerCode ): ?ProviderMetadata {
+		try {
+			$metadata = $this->providers->metadata()[ $providerCode ] ?? null;
+			$provider = $this->providers->get( $providerCode );
+		} catch ( \Throwable ) {
+			return null;
+		}
+
+		return $metadata instanceof ProviderMetadata
+			&& hash_equals( $providerCode, $metadata->code->value )
+			&& ( $provider instanceof \RAN\RepositoryProvider\RepositoryWebhookFitness || $provider instanceof \RAN\RepositoryProvider\RepositoryWebhookManagement )
+			? $metadata
+			: null;
 	}
 
 	/**

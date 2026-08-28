@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Admin;
 
+require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageViewWordPressFunctions.php';
 require_once __DIR__ . '/../Support/DocumentationHookWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
@@ -25,9 +26,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			self::assertSame( 'https://example.test/repositories', $returnUrl );
 			$key                       = (string) array_key_first( $rows );
 			$rows[ $key ]['details'][] = array(
-				'label' => 'Release automation',
-				'value' => 'Ready to assess',
-				'tone'  => 'ok',
+				'key'      => 'core:release-workflow:example/example.php',
+				'label'    => 'Release automation',
+				'value'    => 'Ready to assess',
+				'tone'     => 'ok',
+				'category' => 'release_workflow',
 			);
 			$rows[ $key ]['actions']['gh:release-automation'] = array(
 				'key'           => 'gh:release-automation',
@@ -155,6 +158,21 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'namespaced historical rows' );
+
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
+	}
+
+	public function testRejectsUnknownIntegrationDetailCategories(): void {
+		$presented                         = $this->baseRows();
+		$presented['repo-42']['details'][] = array(
+			'key'      => 'provider:unknown',
+			'label'    => 'Nicht klassifiziert',
+			'value'    => 'Unknown',
+			'category' => 'provider_specific',
+		);
+
+		$this->expectException( LogicException::class );
+		$this->expectExceptionMessage( 'detail categories are invalid' );
 
 		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
 	}
@@ -289,16 +307,27 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	public function testProjectPageBuildsExactRepositoryViewUrlsAndLocalReleaseSummary(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
 			$rows['101']['details'][] = array(
-				'key'   => 'gh:release-automation-aaaaaaaaaaaaaaaa',
-				'label' => 'Release automation',
-				'value' => 'Available from Branch',
-				'tone'  => 'pending',
+				'key'            => 'core:release-workflow:release/plugin.php',
+				'label'          => 'État du flux de publication',
+				'value'          => 'Available from Branch',
+				'tone'           => 'pending',
+				'category'       => 'release_workflow',
+				'review_summary' => true,
+			);
+			$rows['101']['details'][] = array(
+				'key'      => 'core:release-workflow:earlier-release/plugin.php',
+				'label'    => 'Historique',
+				'value'    => 'Earlier warning',
+				'tone'     => 'warning',
+				'category' => 'release_workflow',
 			);
 			$rows['202']['details'][] = array(
-				'key'   => 'gh:release-automation-bbbbbbbbbbbbbbbb',
-				'label' => 'Release automation',
-				'value' => 'Unavailable',
-				'tone'  => 'warning',
+				'key'            => 'core:release-workflow:branch/plugin.php',
+				'label'          => 'Flusso di rilascio',
+				'value'          => 'Unavailable',
+				'tone'           => 'warning',
+				'category'       => 'release_workflow',
+				'review_summary' => true,
 			);
 
 			return $rows;

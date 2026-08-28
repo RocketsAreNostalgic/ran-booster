@@ -96,7 +96,10 @@ signing secret.
 The fixed management placement also requires `WebhookNormalizer` on that same
 aggregate, proving that provider registration supplied the signing policy Core
 needs to create and retain webhook profiles. Operation facets without that
-policy receive no UI or route authority.
+policy receive no operation authority. Their setup component stays visible but
+disabled, with a provider-configuration notice. The registered base
+`RepositoryProvider` contract supplies Branch resolution and archive acquisition;
+the helper does not replace either capability.
 
 Immediately before each management call, Core invokes the matching read-only
 assessment with the same credential source. The provider must remotely compare
@@ -112,10 +115,57 @@ when both operation interfaces and `WebhookNormalizer` resolve to the same
 registered provider aggregate. The
 provider's bounded metadata supplies its code and label; the provider owns
 credential use, remote behavior and the bounded plain-text remediation returned
-by its operation result. Missing, partial or incompatible facets create no
-action, panel, documentation, asset or mutation authority. This placement is
+by its operation result. Absent helper capabilities omit their optional setup
+component. Partial or incompatible implementations retain disabled controls and
+a configuration notice, never operation authority. This placement is
 not a capability enumerator, generic form schema, callback registry or provider
 HTML seam.
+
+### Optional release workflow management
+
+`RepositoryReleaseWorkflowManagement` opts into the fixed workflow helper with
+`RELEASE_WORKFLOW_API_VERSION = 1`. The same registered provider must also
+implement all five release-consumption contracts: `RepositoryReleaseMetadata`,
+`RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
+`RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`.
+
+The dependencies are one-way. A provider may support releases without workflow
+setup, or Branch deployments without assisted webhooks. A Branch package may be
+assessed for release workflow setup before it switches to Releases. Package
+eligibility and repository exclusivity still apply; package source is not a
+substitute for provider capability.
+
+The interface exposes local `workflowStatus()` and validated `workflowPreview()`
+reads plus five operations: `workflowInspect()`, `workflowSetup()`,
+`workflowOutcome()`, `workflowInspectUpdate()` and `workflowSetupUpdate()`.
+Providers return bounded immutable status, preview and result values, not HTML,
+callbacks, clients or storage handles. Available releases, detected automation,
+verified configuration, recorded setup pull requests and latest outcomes remain
+separate evidence.
+
+Core admits one fixed workflow endpoint. It checks administrator permissions,
+provider dependencies, exact repository/package/source revision, repository
+admission, operation nonce, preview identity and credential-profile eligibility
+before calling the operation. Assessment and setup each receive fresh Core
+release preflight evidence for that exact target. Setup takes its channel from
+the provider's validated, current-user preview, never a submitted channel.
+
+Operations receive only a saved credential profile ID. The provider resolves
+secret material through its bound credential store after authorization. Public
+inspection may be anonymous; private inspection and write operations require
+an eligible saved credential. Neither credential IDs nor secrets belong in
+workflow records, previews or failure history.
+
+Core renders the shared component from local evidence only. Missing workflow
+capability omits its setup component and management links. An implemented helper
+with incomplete dependencies or unavailable state stays visible but disabled
+with an actionable notice; direct requests fail before secrets or remote work.
+Deployment tabs and independently supported release consumption remain usable.
+Remote inspection requires an explicit action. Outcomes return to the exact
+repository Releases tab, with diagnostics inside its notice area.
+
+This optional interface does not change Provider API 10 or its registration
+factory, and introduces no repository settings object or shared workflow storage.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to

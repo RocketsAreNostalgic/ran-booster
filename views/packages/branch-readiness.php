@@ -72,20 +72,16 @@ $repositoryStateClass             = match ( true ) {
 	null !== $repositoryBranchCheckOutcome   => 'is-warning',
 	default                                  => 'is-pending',
 };
-$setupSummary = match ( true ) {
-	$needsAttention => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
-	default         => __( 'Review the requirements below.', 'ran-booster' ),
-};
 if ( in_array( $repositoryBranchCheckOutcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {
 	$savedRepositoryLabel = __( 'is accessible with the saved repository settings.', 'ran-booster' );
 } elseif ( $repositoryBranchVerified ) {
-	$savedRepositoryLabel = __( 'was accessible when Booster last checked these saved settings.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'was accessible at the last check.', 'ran-booster' );
 } elseif ( 'provider_unavailable' === ( $repositoryBranchCheckOutcome ?? null ) ) {
-	$savedRepositoryLabel = __( 'is saved, but its provider is unavailable so repository access and this branch could not be verified.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'is saved, but the provider is unavailable.', 'ran-booster' );
 } elseif ( 'unable_to_check' === ( $repositoryBranchCheckOutcome ?? null ) ) {
-	$savedRepositoryLabel = __( 'is saved, but repository access and this branch could not be verified.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'is saved, but access could not be verified.', 'ran-booster' );
 } else {
-	$savedRepositoryLabel = __( 'is saved. The repository identity is available locally; repository access and this branch have not been checked.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'is saved. Access has not been checked.', 'ran-booster' );
 }
 $savedRepositoryMessage = $identityReady
 	? sprintf(
@@ -96,7 +92,7 @@ $savedRepositoryMessage = $identityReady
 	)
 	: __( 'The saved repository needs one stable provider identity.', 'ran-booster' );
 $savedSubdirectoryMessage = '' === $savedSubdirectoryValue
-	? __( 'Root is used; no repository subdirectory is configured.', 'ran-booster' )
+	? __( 'Repository root (no subdirectory).', 'ran-booster' )
 	: match ( $repositoryBranchCheckOutcome ?? null ) {
 		'verified' => sprintf(
 			/* translators: %s: configured repository subdirectory. */
@@ -135,7 +131,7 @@ $webhookStateClass      = match ( true ) {
 	default                 => 'is-warning',
 };
 $webhookMessage = match ( true ) {
-	$publishedReleaseSource => __( 'Pushes are ignored while this package uses Published releases.', 'ran-booster' ),
+	$publishedReleaseSource => __( 'Pushes are ignored while Releases is active.', 'ran-booster' ),
 	$automaticUpdatesReady  => __( 'Local webhook requirements are ready.', 'ran-booster' ),
 	default                 => __( 'Local webhook requirements need attention.', 'ran-booster' ),
 };

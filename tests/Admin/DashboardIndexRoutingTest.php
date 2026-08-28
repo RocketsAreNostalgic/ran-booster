@@ -1053,7 +1053,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'heading' => 'Branch deployments',
+				'heading' => 'Branch',
 				'badges'  => array(
 					array(
 						'label' => 'packages/example',
@@ -1063,6 +1063,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			),
 			$data['packageSource']['advanced_summary_projection']
 		);
+		self::assertSame( 'Releases', $data['packageSource']['choices']['release_asset']['heading'] );
 	}
 
 	public function testReleaseDeploymentHooksReceiveExactOuterCreateEditAndIndexArguments(): void {

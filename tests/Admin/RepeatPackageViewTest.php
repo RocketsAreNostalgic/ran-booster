@@ -89,7 +89,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertTrue( $operationPosition < $automationPosition );
 		self::assertTrue( $automationPosition < $linkPosition );
 		self::assertSame(
-			array( 'Repository configuration', 'Advanced settings', 'Package source', 'Branch readiness', 'Package operation' ),
+			array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation' ),
 			$this->h3Headings( $html ),
 			$packageView->getType()
 		);
@@ -114,7 +114,8 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $form );
 		self::assertStringContainsString( 'id="ran-booster-package-operation-heading"', $form );
 		self::assertMatchesRegularExpression( '/<button[^>]*data-ran-booster-source-choice="branch"/', $form );
-		self::assertStringContainsString( 'Choose or enter a repository above before configuring its package source.', $html );
+		self::assertStringContainsString( 'Choose a repository before configuring its update source.', $html );
+		self::assertStringContainsString( 'Choose an update source. Selecting it does not install the package.', $html );
 		self::assertMatchesRegularExpression(
 			'/name="ran_booster\\[install_another\\]" value="1"\\s*>Install and add another<\\/button>/',
 			$html
@@ -263,7 +264,7 @@ final class RepeatPackageViewTest extends TestCase {
 			);
 			self::assertStringNotContainsString( 'id="ran-booster-package-reinstall-heading"', $html );
 			self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $html );
-			self::assertStringContainsString( 'Deploy a saved repository branch manually or when a signed push webhook arrives.', $html );
+			self::assertStringContainsString( 'Deploy the saved branch manually or on a signed push.', $html );
 			self::assertStringContainsString(
 				'id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation',
 				$html
@@ -273,7 +274,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'id="ran-booster-advanced-source-settings"', $editForm );
 			self::assertStringNotContainsString( 'id="ran-booster-package-operation-heading"', $editForm );
 			self::assertSame(
-				array( 'Repository configuration', 'Advanced settings', 'Package source', 'Branch readiness', 'Package operation', 'Danger zone' ),
+				array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation', 'Danger zone' ),
 				$this->h3Headings( $html ),
 				$packageView->getType()
 			);
@@ -442,7 +443,7 @@ final class RepeatPackageViewTest extends TestCase {
 			foreach (
 				array(
 					'branch'        => 'Branch',
-					'release_asset' => 'Published releases',
+					'release_asset' => 'Releases',
 				) as $sourceKey => $heading
 			) {
 				$packageSourceChoices[ $sourceKey ] = array(
@@ -466,13 +467,15 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'https://example.test', $html, $packageView->getType() );
 			self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $packageView->getType() );
 			self::assertStringContainsString( '>Branch</strong>', $html, $packageView->getType() );
-			self::assertStringContainsString( '>Published releases</strong>', $html, $packageView->getType() );
+			self::assertStringContainsString( '>Releases</strong>', $html, $packageView->getType() );
+			self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $packageView->getType() );
+			self::assertStringContainsString( '<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title">Update source</h3>', $html, $packageView->getType() );
 			self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $packageView->getType() );
 			self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $packageView->getType() );
 			self::assertStringContainsString( ' nav-tab ', $html, $packageView->getType() );
 			self::assertSame( 1, substr_count( $html, 'nav-tab-active' ), $packageView->getType() );
-			self::assertStringContainsString( 'role="navigation" aria-label="Package source settings"', $html, $packageView->getType() );
-			self::assertStringContainsString( 'Opening a settings view does not change the current source.', $html, $packageView->getType() );
+			self::assertStringContainsString( 'role="navigation" aria-label="Update source settings"', $html, $packageView->getType() );
+			self::assertStringContainsString( 'Viewing settings does not change the update source.', $html, $packageView->getType() );
 			self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $packageView->getType() );
 			self::assertSame( 1, substr_count( $html, '>Active</span>' ), $packageView->getType() );
 			self::assertMatchesRegularExpression(
@@ -488,7 +491,7 @@ final class RepeatPackageViewTest extends TestCase {
 				$packageView->getType()
 			);
 			self::assertStringNotContainsString( 'Branch description', $html, $packageView->getType() );
-			self::assertStringNotContainsString( 'Published releases meta', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'Releases meta', $html, $packageView->getType() );
 			self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $packageView->getType() );
 			self::assertStringNotContainsString( 'ran-booster-source-choice__navigation-cue', $html, $packageView->getType() );
 			self::assertMatchesRegularExpression(
@@ -587,7 +590,8 @@ final class RepeatPackageViewTest extends TestCase {
 				1 === preg_match( '/id="ran-booster-repository-subdirectory"[^>]*disabled="disabled"/', $html ),
 				$packageView->getType()
 			);
-			self::assertStringContainsString( 'Branch readiness', $html, $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, '<h4 id="ran-booster-branch-readiness-heading">Branch readiness</h4>' ), $packageView->getType() );
+			self::assertStringContainsString( 'aria-labelledby="ran-booster-branch-readiness-heading"', $html, $packageView->getType() );
 			self::assertStringNotContainsString( 'Published releases remain the package source and settings are retained until returning.', $html, $packageView->getType() );
 			self::assertStringContainsString( 'class="screen-reader-text">' . ( $branchSettingsInactive ? 'Inactive Branch deployment settings' : 'Branch deployment settings' ) . '</legend>', $html, $packageView->getType() );
 			self::assertSame(
@@ -600,15 +604,12 @@ final class RepeatPackageViewTest extends TestCase {
 			$returnPosition       = strpos( $html, 'class="ran-booster-release-return"' );
 			$branchFieldsPosition = strpos( $html, '<fieldset class="ran-booster-branch-settings' );
 			$readinessPosition    = strpos( $html, 'id="ran-booster-branch-readiness"' );
-			$headerStartPosition  = false === $branchPanePosition ? false : strpos( $html, '<header class="ran-booster-package-source-pane__header">', $branchPanePosition );
 			self::assertIsInt( $branchPanePosition, $packageView->getType() );
 			self::assertIsInt( $returnPosition, $packageView->getType() );
 			self::assertIsInt( $branchFieldsPosition, $packageView->getType() );
 			self::assertIsInt( $readinessPosition, $packageView->getType() );
-			self::assertIsInt( $headerStartPosition, $packageView->getType() );
 			self::assertTrue( $branchPanePosition < $returnPosition, $packageView->getType() );
-			self::assertTrue( $returnPosition < $headerStartPosition, $packageView->getType() );
-			self::assertTrue( $headerStartPosition < $branchFieldsPosition, $packageView->getType() );
+			self::assertTrue( $returnPosition < $branchFieldsPosition, $packageView->getType() );
 			self::assertTrue( $branchFieldsPosition < $readinessPosition, $packageView->getType() );
 	}
 

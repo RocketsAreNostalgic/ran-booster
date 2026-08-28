@@ -104,11 +104,11 @@ final class ReleaseManagementDisplay {
 						</div>
 					<?php } ?>
 					<div class="ran-booster-source-transition">
-						<p><?php esc_html_e( 'Branch deployments currently active.', 'ran-booster' ); ?></p>
-						<button type="submit" class="button button-primary" form="<?php echo esc_attr( $trackFormId ); ?>"<?php disabled( $trackDisabled ); ?> aria-disabled="<?php echo $trackDisabled ? 'true' : 'false'; ?>"><?php esc_html_e( 'Use published releases', 'ran-booster' ); ?></button>
+						<p><?php esc_html_e( 'Branch currently active.', 'ran-booster' ); ?></p>
+						<button type="submit" class="button button-primary" form="<?php echo esc_attr( $trackFormId ); ?>"<?php disabled( $trackDisabled ); ?> aria-disabled="<?php echo $trackDisabled ? 'true' : 'false'; ?>"><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
 					</div>
 				<?php } ?>
-				<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Published release readiness', 'ran-booster' ); ?></h3>
+				<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Release readiness', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-readiness-panel">
 				<?php if ( $eligibilityRecheck ) { ?>
@@ -118,7 +118,7 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 				<div class="ran-booster-readiness-panel__top">
 					<div>
-						<h4><?php echo esc_html( $statusAvailable && $eligibility->eligible() ? __( 'Published release tracking is eligible', 'ran-booster' ) : __( 'Published releases are not eligible yet', 'ran-booster' ) ); ?></h4>
+						<h4><?php echo esc_html( $statusAvailable && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ); ?></h4>
 					</div>
 					<?php if ( ! $statusAvailable || ! $eligibility->eligible() ) { ?>
 						<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Unavailable', 'ran-booster' ); ?></span>
@@ -133,7 +133,7 @@ final class ReleaseManagementDisplay {
 					<li class="ran-booster-readiness-item <?php echo $statusAvailable && 'release_asset' === $source && '' === $status->failureCode() ? 'is-ok' : 'is-warning'; ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( ! $statusAvailable ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? $this->releaseStatusMessage( $status ) : __( 'Branch deployments are active; published releases have not been selected.', 'ran-booster' ) ) ); ?></span>
+						<span><?php echo esc_html( ! $statusAvailable ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? $this->releaseStatusMessage( $status ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
 					</li>
 				</ul>
 				<div class="ran-booster-release-notices" data-ran-booster-release-notices>
@@ -236,8 +236,8 @@ final class ReleaseManagementDisplay {
 		>
 			<div class="ran-booster-managed-release-browser__header">
 				<div>
-					<h4><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></h4>
-					<p><?php esc_html_e( 'Review the latest eligible release and the version installed on this site. WordPress Updates remains the installation route.', 'ran-booster' ); ?></p>
+					<h4><?php esc_html_e( 'Releases', 'ran-booster' ); ?></h4>
+					<p><?php esc_html_e( 'Review the latest eligible release and the installed version.', 'ran-booster' ); ?></p>
 				</div>
 				<button type="button" class="button" data-ran-booster-managed-release-retry<?php disabled( ! $enabled ); ?> aria-disabled="<?php echo $enabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Refresh releases', 'ran-booster' ); ?></button>
 			</div>
@@ -337,7 +337,7 @@ final class ReleaseManagementDisplay {
 				<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured trusted admin operation notice. ?>
 				<?php echo $operationNoticeHtml; ?>
 				<?php if ( ! $enabled ) { ?>
-					<div class="notice notice-warning inline"><p><?php esc_html_e( 'Branch deployments cannot be selected because source transition controls are temporarily unavailable. No package settings were changed.', 'ran-booster' ); ?></p></div>
+					<div class="notice notice-warning inline"><p><?php esc_html_e( 'Branch cannot be selected because source transition controls are temporarily unavailable. No package settings were changed.', 'ran-booster' ); ?></p></div>
 				<?php } ?>
 			</div>
 			<?php if ( $automaticPolicy ) { ?>
@@ -349,8 +349,8 @@ final class ReleaseManagementDisplay {
 				<?php if ( $enabled ) { ?>
 					<?php $this->adminPostFields( 'return_to_branch', $package, $nonceAction ); ?>
 				<?php } ?>
-				<p><?php esc_html_e( 'Published releases currently active.', 'ran-booster' ); ?></p>
-				<button type="submit" class="button button-primary"<?php disabled( ! $enabled ); ?> aria-disabled="<?php echo $enabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Use branch deployments', 'ran-booster' ); ?></button>
+				<p><?php esc_html_e( 'Releases currently active.', 'ran-booster' ); ?></p>
+				<button type="submit" class="button button-primary"<?php disabled( ! $enabled ); ?> aria-disabled="<?php echo $enabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Use branch', 'ran-booster' ); ?></button>
 			</form>
 		</div>
 		<?php
@@ -365,7 +365,7 @@ final class ReleaseManagementDisplay {
 	): string {
 		if ( 'create' === $mode ) {
 			return 'release_asset' === $selectedSource
-				? __( 'Published releases · Stable', 'ran-booster' )
+				? __( 'Releases · Stable', 'ran-booster' )
 				: $fallback;
 		}
 		if ( null === $package ) {
@@ -375,8 +375,8 @@ final class ReleaseManagementDisplay {
 			return $fallback;
 		}
 		return 'branch' === $status->source()
-			? __( 'Branch deployments · Active', 'ran-booster' )
-			: __( 'Published releases · Active', 'ran-booster' );
+			? __( 'Branch · Active', 'ran-booster' )
+			: __( 'Releases · Active', 'ran-booster' );
 	}
 
 	/**
@@ -407,14 +407,14 @@ final class ReleaseManagementDisplay {
 				);
 			}
 			return array(
-				'heading' => __( 'Branch deployments', 'ran-booster' ),
+				'heading' => __( 'Branch', 'ran-booster' ),
 				'badges'  => $badges,
 				'status'  => __( 'Active', 'ran-booster' ),
 			);
 		}
 
 		return array(
-			'heading' => __( 'Published releases', 'ran-booster' ),
+			'heading' => __( 'Releases', 'ran-booster' ),
 			'badges'  => array(
 				array(
 					'label' => 'prerelease' === $status->channel() ? __( 'Preview', 'ran-booster' ) : __( 'Stable', 'ran-booster' ),
@@ -547,7 +547,7 @@ final class ReleaseManagementDisplay {
 				<div>
 					<h4 data-ran-booster-release-status-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 					<p>
-						<span data-ran-booster-release-status-message><?php esc_html_e( 'Choose a repository above, then select Published releases to load eligible stable releases.', 'ran-booster' ); ?></span>
+						<span data-ran-booster-release-status-message><?php esc_html_e( 'Choose a repository above, then select Releases to load eligible stable releases.', 'ran-booster' ); ?></span>
 						<button type="button" class="button-link" data-ran-booster-release-switch-branch hidden><?php esc_html_e( 'Use Branch tracking instead', 'ran-booster' ); ?></button>
 					</p>
 				</div>

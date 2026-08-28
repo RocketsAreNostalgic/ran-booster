@@ -50,9 +50,19 @@ final class RepositoryDetailRendererTest extends TestCase {
 				),
 				array(
 					'key'   => 'gh:release-automation-a',
-					'label' => 'Release automation — owner/plugin.php',
+					'label' => 'Provider workflow detail',
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
+				),
+				array(
+					'key'   => 'provider:release-workflow',
+					'label' => 'Release workflow — owner/theme',
+					'value' => 'Configured',
+				),
+				array(
+					'key'   => 'provider:legacy-release-workflow',
+					'label' => 'Release automation — owner/legacy.php',
+					'value' => 'Legacy',
 				),
 			),
 			'actions'                   => array(
@@ -99,7 +109,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertFalse( $releaseRendered );
 		self::assertStringContainsString( '2 packages shown; 3 more connected · Mixed sources', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
-		self::assertStringContainsString( 'Published releases', $html );
+		self::assertStringContainsString( '<dt>Releases</dt>', $html );
+		self::assertStringContainsString( '>Releases', $html );
 		self::assertStringContainsString( 'Ignores pushes', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
@@ -114,8 +125,18 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
 		self::assertStringContainsString( '1 package uses Branch deployments', $html );
 		self::assertStringContainsString( '1 package tracks Published releases', $html );
-		self::assertStringContainsString( 'Release automation — owner/plugin.php', $html );
-		self::assertStringContainsString( '<h4>Release automation</h4>', $html );
+		self::assertStringContainsString( 'Provider workflow detail', $html );
+		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
+		self::assertStringContainsString( 'Release workflow — owner/theme', $html );
+		self::assertStringContainsString( 'Release automation — owner/legacy.php', $html );
+		$webhookHistoryPosition = strpos( $html, 'Configured at last check' );
+		$releaseHistoryPosition = strpos( $html, '<h4>Release workflow</h4>' );
+		self::assertIsInt( $webhookHistoryPosition );
+		self::assertIsInt( $releaseHistoryPosition );
+		self::assertTrue( $webhookHistoryPosition < $releaseHistoryPosition );
+		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Provider workflow detail' ) );
+		self::assertTrue( $releaseHistoryPosition < strpos( $html, 'Release workflow — owner/theme' ) );
+		self::assertTrue( $releaseHistoryPosition < strpos( $html, 'Release automation — owner/legacy.php' ) );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Provider receiver', $html );
@@ -240,7 +261,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-repository-view="releases" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
 		self::assertStringContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Packages using this repository', $html );
-		self::assertStringContainsString( '<h4>Release automation</h4>', $html );
+		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Configured', $html );
 	}
 
@@ -282,10 +303,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Release automation is unavailable for this repository provider.', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-release-heading">Release publishing</h3>', $html );
+		self::assertStringContainsString( 'Release workflow setup is unavailable for this repository provider.', $html );
 		self::assertStringContainsString( 'Open Theme settings', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
-		self::assertStringContainsString( 'Assess release automation', $html );
+		self::assertStringContainsString( 'Assess release setup', $html );
 	}
 
 	/** @return array<string, string> */

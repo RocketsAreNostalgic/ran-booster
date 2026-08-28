@@ -441,7 +441,7 @@ final class ProviderRepositoryRowsNormalizer {
 				'package_type_label'        => $typeLabel,
 				'source_key'                => $source,
 				'source_label'              => match ( $source ) {
-					'release_asset' => __( 'Published releases', 'ran-booster' ),
+					'release_asset' => __( 'Releases', 'ran-booster' ),
 					'mixed' => __( 'Mixed sources', 'ran-booster' ),
 					default => __( 'Branch', 'ran-booster' ),
 				},

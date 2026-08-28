@@ -375,7 +375,7 @@ $policyLabels = array(
 				default => __( 'Manual', 'ran-booster' ),
 			};
 			$managementLine = $releaseManaged
-				? __( 'Published releases', 'ran-booster' )
+				? __( 'Releases', 'ran-booster' )
 				: sprintf(
 					/* translators: %s is a branch name. */
 					__( 'Branch · %s', 'ran-booster' ),

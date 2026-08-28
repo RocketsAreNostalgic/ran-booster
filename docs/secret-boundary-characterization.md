@@ -183,9 +183,11 @@ operation checkpoint below.
 ### Fixed provider operation checkpoint
 
 Add-on API 15 replaces `withCredential()`, `provision()` and callback-based
-`reconfigure()` with explicit assess/setup/check/reconfigure/remove methods.
+`reconfigure()` with explicit `setup`, `check`, `reconfigure`, `remove` and
+`test` methods, with matching `assessSetup`, `assessCheck`,
+`assessReconfigure`, `assessRemove` and `assessTest` methods.
 Provider API 8 adds the exact optional
-`repository-webhook-management/2` fitness and management capabilities. A saved
+`repository-webhook-management/3` fitness and management capabilities. A saved
 PAT is resolved only by the matching provider through its bound credential
 store; a Core-held signing secret reaches only the provider's fixed setup or
 reconfigure call. The ordinary add-on receives neither plaintext value.

@@ -439,7 +439,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$redirect = $this->controller()->handleAdminPost(
 			$this->request(
 				array(
-					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234&unsafe=discarded',
+					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234&repository_view=branch&unsafe=discarded',
 				)
 			),
 			'valid'
@@ -449,6 +449,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'tab=gh', $redirect );
 		self::assertStringContainsString( 'panel=repositories', $redirect );
 		self::assertStringContainsString( 'repository=1234', $redirect );
+		self::assertStringContainsString( 'repository_view=branch', $redirect );
 		self::assertStringNotContainsString( 'unsafe=', $redirect );
 
 		$fallback = $this->controller()->handleAdminPost(

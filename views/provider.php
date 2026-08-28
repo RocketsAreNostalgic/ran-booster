@@ -161,7 +161,7 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 	<?php if ( $isRepositoryDetail ) { ?>
 		<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
 			<?php
-			$hasBranchConsumer = in_array( $selectedRepositoryRow['source_key'] ?? null, array( 'branch', 'mixed' ), true );
+			$hasBranchConsumer = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
 			$repositoryDetailRenderer->render(
 				$selectedRepositoryRow,
 				$provider['label'],
@@ -172,9 +172,10 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 				$repositoryView,
 				$repositoryViewUrls,
 				$repositoryViewRequestUrls,
-				null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
-					? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, $selectedRepositoryRow ): void {
-						$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+					null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
+					? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): void {
+						$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
+						$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 					}
 					: null,
 				static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {
@@ -360,7 +361,7 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 							<?php if ( '' !== $requestedRepositoryId ) { ?>
 								<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
 									<?php
-									$hasBranchConsumer = in_array( $selectedRepositoryRow['source_key'] ?? null, array( 'branch', 'mixed' ), true );
+									$hasBranchConsumer = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
 									$repositoryDetailRenderer->render(
 										$selectedRepositoryRow,
 										$provider['label'],
@@ -372,8 +373,9 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 										$repositoryViewUrls,
 										$repositoryViewRequestUrls,
 										null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
-										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, $selectedRepositoryRow ): void {
-											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $providerReturnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): void {
+											$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
+											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 										}
 											: null,
 										static function () use ( $selectedRepositoryRow, $providerReturnUrl ): void {

@@ -195,12 +195,13 @@ final class WebhookManagementController {
 		$tab     = is_string( $query['tab'] ?? null ) ? $query['tab'] : '';
 		$panel   = is_string( $query['panel'] ?? null ) ? $query['panel'] : '';
 		$target  = is_string( $query['repository'] ?? null ) ? $query['repository'] : '';
+		$view    = is_string( $query['repository_view'] ?? null ) ? $query['repository_view'] : '';
 		if ( 'ran-booster' === $page
 			&& hash_equals( $providerCode, $tab )
 			&& 'repositories' === $panel
 			&& '' !== $repositoryId
 			&& hash_equals( $repositoryId, $target ) ) {
-			return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) );
+			return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
 		}
 		if ( ! in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
 			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package ) ) {

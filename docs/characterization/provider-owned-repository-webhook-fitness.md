@@ -7,12 +7,16 @@ separate authorization.
 
 ## Core implementation checkpoint
 
-Core now publishes the exact `repository-webhook-management/2` fitness and
+Core now publishes the exact `repository-webhook-management/3` fitness and
 management capabilities, four bounded non-secret results/interfaces, and one
 private GitHub webhook client. The former callback result types, secret-bearing
 Webhook Assistance callbacks, Webhook Cleanup facade, marker and ready hook are
 absent. No persistence, schema, option, hook, background, JavaScript or CSS
 surface was added.
+
+The fixed action set is `setup`, `check`, `reconfigure`, `remove` and `test`;
+the read-only fitness facet mirrors it with `assessSetup`, `assessCheck`,
+`assessReconfigure`, `assessRemove` and `assessTest`.
 
 The management `check()` and `remove()` methods deliberately include Core's
 canonical callback URL. The earlier sketch omitted it, but hook ID alone cannot

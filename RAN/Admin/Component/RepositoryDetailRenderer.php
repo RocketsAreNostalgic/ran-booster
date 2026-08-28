@@ -103,8 +103,8 @@ final class RepositoryDetailRenderer {
 
 	/** @param array<string, mixed> $row */
 	private function renderReleaseAutomation( array $row ): void {
-		$details = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), static fn ( mixed $detail ): bool => is_array( $detail ) && str_starts_with( (string) ( $detail['key'] ?? '' ), 'gh:release-automation-' ) ) );
-		$actions = array_values( array_filter( is_array( $row['actions'] ?? null ) ? $row['actions'] : array(), static fn ( mixed $action ): bool => is_array( $action ) && str_starts_with( (string) ( $action['key'] ?? '' ), 'gh:release-automation-' ) ) );
+		$details = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), fn ( mixed $detail ): bool => is_array( $detail ) && $this->isReleaseAutomationEntry( $detail ) ) );
+		$actions = array_values( array_filter( is_array( $row['actions'] ?? null ) ? $row['actions'] : array(), fn ( mixed $action ): bool => is_array( $action ) && $this->isReleaseAutomationEntry( $action ) ) );
 		if ( array() === $details && array() === $actions ) {
 			return;
 		}
@@ -128,7 +128,7 @@ final class RepositoryDetailRenderer {
 
 	/** @param array<string, mixed> $row */
 	private function renderActivity( array $row, string $activityUrl ): void {
-		$details = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), static fn ( mixed $detail ): bool => is_array( $detail ) && ! str_starts_with( (string) ( $detail['key'] ?? '' ), 'gh:release-automation-' ) ) );
+		$details = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), fn ( mixed $detail ): bool => is_array( $detail ) && ! $this->isReleaseAutomationEntry( $detail ) ) );
 		?>
 		<section aria-labelledby="ran-booster-repository-activity-heading">
 			<h5 id="ran-booster-repository-activity-heading"><?php esc_html_e( 'Recorded webhook activity', 'ran-booster' ); ?></h5>
@@ -157,6 +157,13 @@ final class RepositoryDetailRenderer {
 			'manual'    => __( 'Manual', 'ran-booster' ),
 			default     => __( 'Disabled', 'ran-booster' ),
 		};
+	}
+
+	/** @param array<string, mixed> $entry */
+	private function isReleaseAutomationEntry( array $entry ): bool {
+		$key = $entry['key'] ?? null;
+
+		return is_string( $key ) && 1 === preg_match( '/\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $key );
 	}
 
 	/** @param list<array<string, mixed>> $packages */

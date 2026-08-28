@@ -519,10 +519,11 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, mixed> $request @return array<string, mixed>|null */
-	private function resolve( Dashboard $dashboard, array $request, ?string $trustedPublicLookupProfile = null ): ?array {
+	/** @param array{profile_id: string|null}|null $trustedPublicLookup */
+	private function resolve( Dashboard $dashboard, array $request, ?array $trustedPublicLookup = null ): ?array {
 		try {
-			if ( null !== $trustedPublicLookupProfile ) {
-				return $this->repositories?->resolveWithTrustedPublicLookupProfile( $request, $trustedPublicLookupProfile )
+			if ( null !== $trustedPublicLookup ) {
+				return $this->repositories?->resolveWithTrustedPublicLookupProfile( $request, $trustedPublicLookup['profile_id'] )
 					?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 			}
 
@@ -556,7 +557,8 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
-	private function trustedPublicLookupProfile( array $request, ?Package $package ): ?string {
+	/** @return array{profile_id: string|null}|null */
+	private function trustedPublicLookupProfile( array $request, ?Package $package ): ?array {
 		if ( ! $package instanceof Package
 			|| ! $this->enabled( $request, 'check_repository_branch_after_save' )
 			|| PackageSource::BRANCH !== $package->getSource()
@@ -573,7 +575,9 @@ final class PackageAdminController {
 				return null;
 			}
 
-			return $this->publicLookupProfiles?->get( $provider->getMetadata()->code->value );
+			return array(
+				'profile_id' => $this->publicLookupProfiles?->get( $provider->getMetadata()->code->value ),
+			);
 		} catch ( Throwable ) {
 			return null;
 		}

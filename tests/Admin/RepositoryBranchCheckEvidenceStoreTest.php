@@ -48,6 +48,17 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 	}
 
+	public function testEvidenceWrittenAfterProfileMutationRetainsTheOriginalProfileGeneration(): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$profile = $store->profileFingerprintFor( $package, 'profile-a' );
+
+		$store->bumpProfileGeneration( 'gh', 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', 'verified', $profile );
+
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+	}
+
 	public function testAnonymousAccessDoesNotCollideWithAProfileNamedAnonymous(): void {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );

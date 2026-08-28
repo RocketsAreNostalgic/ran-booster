@@ -508,9 +508,18 @@ class Dashboard {
 		if ( ! wp_verify_nonce( $nonce, $action ) ) {
 			return null;
 		}
+		$marker = 'ran_booster_branch_check_' . hash( 'sha256', get_current_user_id() . "\0" . $action . "\0" . $nonce );
+		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
+			$completed = get_transient( $marker );
+			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
+				return $completed;
+			}
+		}
 
-		$outcome = $this->providerSettings->checkPackageRepositoryBranch( $package );
-		$this->providerSettings->recordPackageRepositoryBranchCheck( $type, $package, $outcome );
+		$outcome = $this->providerSettings->checkPackageRepositoryBranch( $type, $package );
+		if ( function_exists( __NAMESPACE__ . '\\set_transient' ) || function_exists( 'set_transient' ) ) {
+			set_transient( $marker, $outcome, 3600 );
+		}
 		BoosterLogger::log(
 			'repository branch check completed',
 			array(

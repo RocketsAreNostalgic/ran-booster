@@ -11,6 +11,7 @@ final class DeploymentOutcomeMessage {
 		return match ( $code ) {
 			'deployed'                       => __( 'WordPress completed and Booster verified the package deployment.', 'ran-booster' ),
 			'no_change'                      => __( 'The requested package bytes were already installed.', 'ran-booster' ),
+			'already_managed'                => __( 'Booster already manages the installed package. Its existing package settings were left unchanged.', 'ran-booster' ),
 			'provider_failed'                => __( 'The repository provider could not prepare this deployment; no more specific reason was recorded.', 'ran-booster' ),
 			'provider_request_invalid'       => __( 'The repository or credential configuration is invalid. Review the managed package settings.', 'ran-booster' ),
 			'provider_credential_rejected'   => __( 'The repository provider rejected the selected credential. Replace or update it.', 'ran-booster' ),

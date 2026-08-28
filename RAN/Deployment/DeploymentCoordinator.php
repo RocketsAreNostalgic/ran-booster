@@ -304,7 +304,7 @@ class DeploymentCoordinator {
 				)
 			);
 		} catch ( ExistingManagedDestination ) {
-			$outcome = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_NO_CHANGE );
+			$outcome = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_ALREADY_MANAGED );
 			BoosterLogger::log(
 				'install skipped because the destination is already managed',
 				$context + array(
@@ -703,8 +703,11 @@ class DeploymentCoordinator {
 				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 				&& hash_equals( (string) $existing->getRepository(), $request->repository )
 				&& hash_equals( (string) $existing->getBranch(), $request->configuredBranch )
+				&& hash_equals( $existing->getCredentialId(), (string) $request->credentialId )
 				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
-				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug );
+				&& (bool) $existing->getPrivate() === $request->private
+				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug )
+				&& $existing->getDeploymentPolicy() === $request->deploymentPolicy;
 		} catch ( Throwable ) {
 			return false;
 		}

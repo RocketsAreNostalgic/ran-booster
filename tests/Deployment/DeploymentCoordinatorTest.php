@@ -314,7 +314,7 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertSame( 1, $this->plugins->stores );
 	}
 
-	public function testInstallWithAnExistingManagedTargetIsADurableNoChangeWithoutRemoteOrFilesystemWork(): void {
+	public function testInstallWithAnExistingManagedTargetIsADurableAlreadyManagedOutcomeWithoutRemoteOrFilesystemWork(): void {
 		$slug = 'ran-booster-existing-managed-install-fixture';
 		$this->createPluginDestination( $slug );
 		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
@@ -326,7 +326,7 @@ final class DeploymentCoordinatorTest extends TestCase {
 		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
 
 		self::assertSame( 'succeeded', $result['status'] );
-		self::assertSame( DeploymentOutcome::CODE_NO_CHANGE, $result['outcome_code'] );
+		self::assertSame( DeploymentOutcome::CODE_ALREADY_MANAGED, $result['outcome_code'] );
 		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
 		self::assertSame( 0, $this->provider->prepareCalls );
 		self::assertSame( 0, $this->preflight->calls );
@@ -356,8 +356,8 @@ final class DeploymentCoordinatorTest extends TestCase {
 		$slug                        = 'ran-booster-reconcile-fixture';
 		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
 		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
-		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main', true, 'existing-credential' ) );
-		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::MANUAL );
 		$this->plugins->byIdentifier->setSource( PackageSource::BRANCH, 9 );
 		$this->plugins->adoptionResult = PackageMutationResult::conflict(
 			PackageStorageOperation::INSERT,
@@ -372,6 +372,26 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $result['outcome_code'] );
 		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
 		self::assertSame( 1, $this->plugins->stores );
+	}
+
+	public function testInstallKeepsAnExistingManagementConflictWithDifferentAccessOrPolicyAsPersistenceUncertain(): void {
+		$slug                        = 'ran-booster-reconcile-access-fixture';
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main', true, 'other-credential' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$this->plugins->byIdentifier->setSource( PackageSource::BRANCH, 9 );
+		$this->plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$this->preflight->artifact = $this->artifact( '2.0.0' );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_PERSISTENCE_UNCERTAIN, $result['outcome_code'] );
 	}
 
 	public function testInstallKeepsAMismatchedExistingManagementConflictAsPersistenceUncertain(): void {

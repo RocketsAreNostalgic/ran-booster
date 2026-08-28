@@ -547,12 +547,12 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 4, $coordinator->calls );
 	}
 
-	public function testNoChangeInstallIsReportedAsAlreadyManaged(): void {
+	public function testAlreadyManagedInstallIsReportedAsAlreadyManaged(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'         => 'succeeded',
 			'correlation_id' => str_repeat( 'a', 32 ),
-			'outcome_code'   => 'no_change',
+			'outcome_code'   => 'already_managed',
 		);
 		$service             = $this->service(
 			new OperationPluginRepository( $this->plugin() ),
@@ -563,16 +563,16 @@ final class PackageOperationServiceTest extends TestCase {
 		$result = $service->execute( PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin' ) ) );
 
 		self::assertSame( 'already-managed', $result['status'] );
-		self::assertSame( 'no_change', $result['outcome_code'] );
+		self::assertSame( 'already_managed', $result['outcome_code'] );
 		self::assertInstanceOf( Package::class, $result['package'] );
 	}
 
-	public function testNoChangeInstallRedirectsToTheSignedAlreadyManagedWarning(): void {
+	public function testAlreadyManagedInstallRedirectsToTheSignedAlreadyManagedWarning(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'         => 'succeeded',
 			'correlation_id' => str_repeat( 'a', 32 ),
-			'outcome_code'   => 'no_change',
+			'outcome_code'   => 'already_managed',
 		);
 		$dashboard           = $this->dashboard( $coordinator );
 

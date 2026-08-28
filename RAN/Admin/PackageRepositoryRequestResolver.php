@@ -36,19 +36,19 @@ final readonly class PackageRepositoryRequestResolver {
 	 * @param array<string, mixed> $request Package form request.
 	 * @return array<string, mixed>
 	 */
-	public function resolveWithTrustedPublicLookupProfile( array $request, string $profileId ): array {
-		if ( 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $profileId ) ) {
+	public function resolveWithTrustedPublicLookupProfile( array $request, ?string $profileId ): array {
+		if ( null !== $profileId && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $profileId ) ) {
 			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
 		}
 
-		return $this->resolveRequest( $request, $profileId );
+		return $this->resolveRequest( $request, $profileId, true );
 	}
 
 	/**
 	 * @param array<string, mixed> $request Package form request.
 	 * @return array<string, mixed>
 	 */
-	private function resolveRequest( array $request, ?string $trustedPublicLookupId = null ): array {
+	private function resolveRequest( array $request, ?string $trustedPublicLookupId = null, bool $trustedPublicLookup = false ): array {
 		$providerInput = $request['provider'] ?? null;
 		if ( ! is_string( $providerInput ) ) {
 			throw new InvalidArgumentException( 'Choose a repository provider.' );
@@ -101,7 +101,7 @@ final readonly class PackageRepositoryRequestResolver {
 			}
 			$this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
 		}
-		if ( null !== $trustedPublicLookupId ) {
+		if ( $trustedPublicLookup ) {
 			$browser = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
 			if ( ! $browser->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
 				throw new InvalidArgumentException( 'A default public repository lookup profile is unavailable for this provider.' );
@@ -109,7 +109,9 @@ final readonly class PackageRepositoryRequestResolver {
 			$publicPicker = true;
 		}
 
-		$verificationCredentialId = $trustedPublicLookupId ?? ( '' !== $publicLookupId ? $publicLookupId : $credentialId );
+		$verificationCredentialId = $trustedPublicLookup
+			? $trustedPublicLookupId
+			: ( '' !== $publicLookupId ? $publicLookupId : $credentialId );
 		$repository               = $aggregate->resolveRepository(
 			new RepositoryLookupRequest(
 				wp_unslash( $repositoryInput ),

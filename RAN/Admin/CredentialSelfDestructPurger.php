@@ -16,7 +16,8 @@ final class CredentialSelfDestructPurger {
 	public function __construct(
 		private SecretsFile $secrets,
 		private CredentialExpiryObservationStore $observations,
-		private PublicRepositoryLookupProfileStore $publicLookupProfiles
+		private PublicRepositoryLookupProfileStore $publicLookupProfiles,
+		private RepositoryBranchCheckEvidenceStore $branchCheckEvidence
 	) {
 	}
 
@@ -26,8 +27,10 @@ final class CredentialSelfDestructPurger {
 			foreach ( $removed as $provider => $ids ) {
 				foreach ( $ids as $id ) {
 					$this->observations->clear( $provider, $id );
+					$this->branchCheckEvidence->bumpProfileGeneration( $provider, $id );
 					if ( $id === $this->publicLookupProfiles->get( $provider ) ) {
 						$this->publicLookupProfiles->set( $provider, null );
+						$this->branchCheckEvidence->bumpProviderGeneration( $provider );
 					}
 				}
 			}

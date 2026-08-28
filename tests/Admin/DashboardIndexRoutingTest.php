@@ -88,6 +88,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$GLOBALS['ran_booster_dashboard_test_development_modes'] = array();
 		$GLOBALS['ran_booster_dashboard_test_user_id']           = 7;
 		$GLOBALS['ran_booster_dashboard_test_user_meta']         = array();
+		$GLOBALS['ran_booster_dashboard_test_transients']        = array();
 		$GLOBALS['ran_booster_dashboard_test_actions']           = array();
 		$GLOBALS['ran_booster_dashboard_test_filters']           = array();
 		$GLOBALS['ran_booster_admin_view_actions']               = array();
@@ -104,6 +105,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$GLOBALS['ran_booster_dashboard_test_development_modes'],
 			$GLOBALS['ran_booster_dashboard_test_user_id'],
 			$GLOBALS['ran_booster_dashboard_test_user_meta'],
+			$GLOBALS['ran_booster_dashboard_test_transients'],
 			$GLOBALS['ran_booster_dashboard_test_actions'],
 			$GLOBALS['ran_booster_dashboard_test_filters'],
 			$GLOBALS['ran_booster_admin_view_actions'],
@@ -189,6 +191,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertNull( $provider->request?->expectedBranch );
 		self::assertFalse( $provider->request?->repository->private );
 		self::assertNull( $provider->request?->repository->credentialId );
+	}
+
+	public function testRepositoryBranchCheckConsumesItsOneTimeMarkerBeforeRepeatingRemoteWork(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider();
+		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$check     = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 1, $provider->prepareCalls );
 	}
 
 	public function testRepositoryBranchCheckIsCapturedAsSanitizedOperationalEvidence(): void {

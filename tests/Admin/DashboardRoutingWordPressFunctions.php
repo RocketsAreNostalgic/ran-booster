@@ -69,6 +69,17 @@ function get_current_user_id(): int {
 	return (int) ( $GLOBALS['ran_booster_dashboard_test_user_id'] ?? 1 );
 }
 
+function get_transient( string $key ): mixed {
+	return $GLOBALS['ran_booster_dashboard_test_transients'][ $key ] ?? false;
+}
+
+function set_transient( string $key, mixed $value, int $expiration ): bool {
+	unset( $expiration );
+	$GLOBALS['ran_booster_dashboard_test_transients'][ $key ] = $value;
+
+	return true;
+}
+
 function get_user_meta( int $userId, string $key, bool $single ): mixed {
 	unset( $single );
 

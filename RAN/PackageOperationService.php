@@ -79,7 +79,7 @@ final readonly class PackageOperationService {
 		}
 
 		$safe['package'] = $this->deployedPackage( $operation );
-		if ( 'install' === $operation->operation && DeploymentOutcome::CODE_NO_CHANGE === $outcomeCode ) {
+		if ( 'install' === $operation->operation && DeploymentOutcome::CODE_ALREADY_MANAGED === $outcomeCode ) {
 			$safe['status'] = 'already-managed';
 		}
 

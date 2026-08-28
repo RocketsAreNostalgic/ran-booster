@@ -203,6 +203,41 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( $expectedPublicOnly, $provider->requests[0]->publicOnly );
 	}
 
+	public function testEditSaveAndBranchCheckKeepsAnonymousPublicLookupDistinctFromSubmittedPackageAccess(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
+		$plugins   = new EditBoundaryPluginRepository( $package );
+		$themes    = new EditBoundaryThemeRepository( $package );
+		$provider  = new CapturingPublicLookupProvider();
+		$providers = new ProviderRegistry( array( $provider ) );
+		$request   = array(
+			'action'                             => 'edit-plugin',
+			'file'                               => 'fixture/fixture.php',
+			'provider'                           => 'gh',
+			'repository'                         => 'owner/replacement',
+			'credential_id'                      => 'deployment-profile',
+			'branch'                             => 'main',
+			'deployment_policy'                  => 'manual',
+			'check_repository_branch_after_save' => '1',
+		);
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'postPackageOperation' )
+			->willReturn( 'https://example.test/redirect' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: $plugins,
+			themes: $themes,
+			providers: $providers,
+			publicLookupProfiles: new InMemoryPublicRepositoryLookupProfileStore()
+		) )->manage( $dashboard, 'edit-plugin', $request, true );
+
+		self::assertSame( 'https://example.test/redirect', $result );
+		self::assertCount( 1, $provider->requests );
+		self::assertNull( $provider->requests[0]->credentialId );
+		self::assertTrue( $provider->requests[0]->publicOnly );
+	}
+
 	/** @return array<string, array{bool, string|null, bool}> */
 	public static function trustedPublicLookupPackages(): array {
 		return array(

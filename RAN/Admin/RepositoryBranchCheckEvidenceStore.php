@@ -40,7 +40,7 @@ class RepositoryBranchCheckEvidenceStore {
 	}
 
 	/** Record verified evidence or clear any earlier record after a failed check. */
-	public function record( string $type, Package $package, ?string $profileId, string $outcome ): void {
+	public function record( string $type, Package $package, ?string $profileId, string $outcome, ?string $profileFingerprint = null ): void {
 		$all = $this->all();
 		$key = $this->key( $type, $package );
 		if ( 'verified' !== $outcome ) {
@@ -54,12 +54,17 @@ class RepositoryBranchCheckEvidenceStore {
 			'outcome'    => 'verified',
 			'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
 			'target'     => $this->targetFingerprint( $package ),
-			'profile'    => $this->profileFingerprint( $package, $profileId ),
+			'profile'    => $profileFingerprint ?? $this->profileFingerprint( $package, $profileId ),
 		);
 		if ( count( $all['records'] ) > self::MAX_RECORDS ) {
 			array_shift( $all['records'] );
 		}
 		$this->persist( $all );
+	}
+
+	/** Capture the exact profile-generation state used by an explicit remote check. */
+	public function profileFingerprintFor( Package $package, ?string $profileId ): string {
+		return $this->profileFingerprint( $package, $profileId );
 	}
 
 	/** Invalidate checks that used a same-ID credential profile after replacement or deletion. */

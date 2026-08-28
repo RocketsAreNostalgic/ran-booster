@@ -273,10 +273,12 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
-	public function checkPackageRepositoryBranch( Package $package ): string {
+	public function checkPackageRepositoryBranch( string $type, Package $package ): string {
 		if ( PackageSource::BRANCH !== $package->getSource() ) {
 			return 'unable_to_check';
 		}
+		$profileId          = $this->effectiveBranchCheckProfile( $package );
+		$profileFingerprint = $this->branchCheckEvidence->profileFingerprintFor( $package, $profileId );
 
 		try {
 			$provider = $this->providers->get( (string) $package->getProviderCode() );
@@ -291,10 +293,10 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$repository = $package->getRepository()->reference;
 			if ( ! $repository->private ) {
-				$credentialId = null;
+				$credentialId = $profileId;
 				if ( $provider instanceof CredentialedPublicRepositoryBrowser
-					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
-					$credentialId = $this->publicLookupProfiles->get( $provider->getMetadata()->code->value );
+					&& ! $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
+					$credentialId = null;
 				}
 
 				$repository = new RepositoryReference(
@@ -326,17 +328,14 @@ final readonly class ProviderSettingsPresenter {
 			}
 		}
 
+		$this->branchCheckEvidence->record( $type, $package, $profileId, $result, $profileFingerprint );
+
 		return $result;
 	}
 
 	/** @return array{outcome: 'verified', checked_at: string}|null */
 	public function packageRepositoryBranchEvidence( string $type, Package $package ): ?array {
 		return $this->branchCheckEvidence->find( $type, $package, $this->effectiveBranchCheckProfile( $package ) );
-	}
-
-	/** Persist a completed explicit check; non-verified results clear stale proof. */
-	public function recordPackageRepositoryBranchCheck( string $type, Package $package, string $outcome ): void {
-		$this->branchCheckEvidence->record( $type, $package, $this->effectiveBranchCheckProfile( $package ), $outcome );
 	}
 
 	private function effectiveBranchCheckProfile( Package $package ): ?string {

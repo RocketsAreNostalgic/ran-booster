@@ -462,17 +462,17 @@
 			return messages.join(' ');
 		}
 
-		function consumeGitHubReleaseWorkflowResult() {
+		function consumeReleaseWorkflowResult() {
 			if (
 				document.querySelector(
-					'#wpbody-content [data-ran-booster-github-release-workflow-result]'
+					'#wpbody-content [data-ran-booster-release-workflow-result]'
 				) === null
 			) {
 				return;
 			}
 
 			const canonicalUrl = new URL(window.location.href);
-			'ran_booster_github_release_workflow_result ran_booster_github_release_workflow_success ran_booster_github_release_workflow_type ran_booster_github_release_workflow_package ran_booster_github_release_workflow_failure_stage ran_booster_github_release_workflow_diagnostic ran_booster_github_release_workflow_diagnostic_available ran_booster_github_release_workflow_reference ran_booster_github_release_workflow_channel ran_booster_github_release_workflow_preview ran_booster_github_release_workflow_result_nonce'
+			'ran_booster_release_workflow_result ran_booster_release_workflow_success ran_booster_release_workflow_type ran_booster_release_workflow_package ran_booster_release_workflow_failure_stage ran_booster_release_workflow_diagnostic ran_booster_release_workflow_diagnostic_available ran_booster_release_workflow_reference ran_booster_release_workflow_channel ran_booster_release_workflow_preview ran_booster_release_workflow_result_nonce ran_booster_release_workflow_source_revision ran_booster_release_workflow_provider ran_booster_release_workflow_repository'
 				.split(' ')
 				.forEach((key) => canonicalUrl.searchParams.delete(key));
 			const history = window.history;
@@ -502,7 +502,7 @@
 			true
 		);
 
-		consumeGitHubReleaseWorkflowResult();
+		consumeReleaseWorkflowResult();
 
 		document.addEventListener('click', function (event) {
 			const submitter = enhancedFormFrom(event.target);
@@ -547,7 +547,7 @@
 			}
 
 			restoreInteractionState();
-			consumeGitHubReleaseWorkflowResult();
+			consumeReleaseWorkflowResult();
 			const successMessage = consumeEnhancedSuccess();
 			if (successMessage) {
 				pendingInteractionState ||= {

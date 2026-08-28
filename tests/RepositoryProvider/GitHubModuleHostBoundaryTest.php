@@ -9,7 +9,6 @@ use PHPUnit\Framework\TestCase;
 final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	private const EXPLICIT_CORE_HOST_INTEGRATIONS = array(
-		'tests/Admin/ReleaseManagement/GitHub/GitHubReleaseWorkflowControlsTest.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',
 		'tests/Logging/GitHubDiagnosticsLoggingTest.php',
 		'tests/Portability/BlueprintRepositoryVerifierTest.php',
@@ -28,7 +27,6 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {
 		$allowed    = array(
-			'RAN/Admin/ReleaseManagement/GitHub/GitHubReleaseWorkflowControls.php' => 'use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;',
 			'RAN/BoosterServiceProvider.php'     => 'use RAN\Booster\GitHub\GitHubProvider;',
 			'RAN/Uninstall/LocalDataRemover.php' => 'use RAN\Booster\GitHub\GitHubProvider;',
 		);
@@ -61,6 +59,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		$paths = array(
 			$root . '/RAN/Dashboard.php',
 			$root . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php',
+			$root . '/RAN/Admin/Component/RepositoryDetailRenderer.php',
 			$root . '/RAN/WordPress/ManagedReleaseConfiguration.php',
 			$root . '/RAN/WordPress/ManagedReleaseStore.php',
 			$root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php',
@@ -76,7 +75,6 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			foreach ( $iterator as $file ) {
 				if ( $file->isFile()
 					&& 'php' === $file->getExtension()
-					&& ! str_contains( $file->getPathname(), '/RAN/Admin/ReleaseManagement/GitHub/' )
 				) {
 					$paths[] = $file->getPathname();
 				}

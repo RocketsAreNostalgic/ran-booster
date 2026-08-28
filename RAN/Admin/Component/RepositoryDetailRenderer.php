@@ -73,13 +73,13 @@ final class RepositoryDetailRenderer {
 						<?php if ( null !== $renderWebhookPanel ) { ?>
 							<?php $renderWebhookPanel(); ?>
 						<?php } else { ?>
-							<?php $this->renderUnavailableWebhookCards( $sourceKey ); ?>
+							<?php $this->renderUnavailableWebhookGuidance( $sourceKey ); ?>
 						<?php } ?>
 						<?php $this->renderProviderActions( $row ); ?>
 					<?php } elseif ( null !== $renderReleasePanel ) { ?>
 						<div id="ran-booster-repository-release-workflows"><?php $this->renderReleaseContent( $renderReleasePanel, $packages ); ?></div>
 					<?php } else { ?>
-						<div id="ran-booster-repository-release-workflows"><?php $this->renderUnavailableReleaseCards( $packages ); ?></div>
+						<div id="ran-booster-repository-release-workflows"><?php $this->renderUnavailableReleaseGuidance( $packages ); ?></div>
 					<?php } ?>
 				</main>
 
@@ -105,12 +105,12 @@ final class RepositoryDetailRenderer {
 			$output = '';
 		}
 		if ( '' !== trim( $output ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Provider owns escaping inside the bounded composition seam.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core owns escaping inside this bounded callback composition seam.
 			echo $output;
 			return;
 		}
 
-		$this->renderUnavailableReleaseCards( $packages );
+		$this->renderUnavailableReleaseGuidance( $packages );
 	}
 
 	/** @param array<string, mixed> $row @param list<array<string, mixed>> $packages */
@@ -155,7 +155,7 @@ final class RepositoryDetailRenderer {
 	}
 
 	/** @param list<array<string, mixed>> $packages */
-	private function renderUnavailableReleaseCards( array $packages ): void {
+	private function renderUnavailableReleaseGuidance( array $packages ): void {
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">
 			<header class="ran-booster-settings-section__header">
@@ -166,13 +166,12 @@ final class RepositoryDetailRenderer {
 				<?php foreach ( $packages as $package ) { ?>
 					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ __( 'Open %s settings', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
-				<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Assess release setup', 'ran-booster' ); ?></button></p>
 			</div>
 		</section>
 		<?php
 	}
 
-	private function renderUnavailableWebhookCards( string $source ): void {
+	private function renderUnavailableWebhookGuidance( string $source ): void {
 		$hasBranchConsumer = in_array( $source, array( 'branch', 'mixed' ), true );
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
@@ -182,12 +181,6 @@ final class RepositoryDetailRenderer {
 			</header>
 			<div class="ran-booster-settings-section__body">
 				<p><?php echo esc_html( $hasBranchConsumer ? __( 'Assisted webhook setup is unavailable for this provider.', 'ran-booster' ) : __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' ) ); ?></p>
-				<section class="ran-booster-repository-webhook-setup" aria-labelledby="ran-booster-repository-webhook-setup-heading">
-					<header class="ran-booster-repository-webhook-setup__header">
-						<h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4>
-					</header>
-					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button></p>
-				</section>
 			</div>
 		</section>
 		<?php
@@ -220,8 +213,8 @@ final class RepositoryDetailRenderer {
 	/** @param array<string, mixed> $row */
 	private function renderActivity( array $row, string $activityUrl ): void {
 		$details  = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), 'is_array' ) );
-		$webhooks = array_values( array_filter( $details, fn ( array $detail ): bool => ! $this->isReleaseDetail( $detail ) ) );
-		$releases = array_values( array_filter( $details, fn ( array $detail ): bool => $this->isReleaseDetail( $detail ) ) );
+		$webhooks = array_values( array_filter( $details, fn ( array $detail ): bool => 'webhook' === ( $detail['category'] ?? null ) ) );
+		$releases = array_values( array_filter( $details, fn ( array $detail ): bool => 'release_workflow' === ( $detail['category'] ?? null ) ) );
 		if ( array() === $webhooks ) {
 			$webhooks = array(
 				array(
@@ -274,7 +267,8 @@ final class RepositoryDetailRenderer {
 
 	/** @param array<string, mixed> $detail */
 	private function isReleaseDetail( array $detail ): bool {
-		return $this->isReleaseAutomationKey( $detail['key'] ?? null )
+		return 'release_workflow' === ( $detail['category'] ?? null )
+			|| $this->isReleaseAutomationKey( $detail['key'] ?? null )
 			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' )
 			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release workflow' );
 	}
@@ -285,7 +279,8 @@ final class RepositoryDetailRenderer {
 			array_filter(
 				is_array( $row['details'] ?? null ) ? $row['details'] : array(),
 				fn ( mixed $detail ): bool => is_array( $detail )
-					&& ( str_starts_with( (string) ( $detail['key'] ?? '' ), 'core:webhook-' )
+					&& ( in_array( $detail['category'] ?? null, array( 'webhook', 'release_workflow' ), true )
+						|| str_starts_with( (string) ( $detail['key'] ?? '' ), 'core:webhook-' )
 						|| $this->isReleaseAutomationKey( $detail['key'] ?? null ) )
 			)
 		);

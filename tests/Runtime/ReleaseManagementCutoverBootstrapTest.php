@@ -39,7 +39,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
 		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
 		$releaseControls      = strpos( $bootstrap, '$ran_booster_container->make( ReleaseManagementControls::class )->register();' );
-		$workflowControls     = strpos( $bootstrap, '$ran_booster_container->make( GitHubReleaseWorkflowControls::class )->register();' );
+		$workflowControls     = strpos( $bootstrap, '$ran_booster_container->make( ReleaseWorkflowControls::class )->register();' );
 		$runtimeInit          = strpos( $bootstrap, '$ran_booster_runtime->init()' );
 
 		self::assertIsInt( $providerRegistration );
@@ -58,11 +58,11 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		);
 		self::assertSame(
 			1,
-			preg_match_all( '/\$ran_booster_container->make\( GitHubReleaseWorkflowControls::class \)->register\(\);/', $bootstrap )
+			preg_match_all( '/\$ran_booster_container->make\( ReleaseWorkflowControls::class \)->register\(\);/', $bootstrap )
 		);
 		self::assertStringContainsString( 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )', $bootstrap );
 		self::assertMatchesRegularExpression(
-			'/GitHubReleaseWorkflowControls::class \)->register\(\);[\s\S]*?PHP_INT_MAX/',
+			'/ReleaseWorkflowControls::class \)->register\(\);[\s\S]*?PHP_INT_MAX/',
 			$bootstrap
 		);
 	}

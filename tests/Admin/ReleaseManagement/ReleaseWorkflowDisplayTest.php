@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement\GitHub;
+namespace Tests\Admin\ReleaseManagement;
 
-require_once __DIR__ . '/../Support/ReleaseManagementWordPressFunctions.php';
-require_once __DIR__ . '/Support/GitHubReleaseWorkflowWordPressFunctions.php';
+require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
+require_once __DIR__ . '/GitHub/Support/GitHubReleaseWorkflowWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
-use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowDisplay;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay;
 use ReflectionMethod;
 
-final class GitHubReleaseWorkflowDisplayTest extends TestCase {
+final class ReleaseWorkflowDisplayTest extends TestCase {
 	public function testSourceReadyRefusalsExplainWhatMustBeReviewedBeforeSetup(): void {
-		$display = new GitHubReleaseWorkflowDisplay();
+		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(
 			'workflow_release_path_conflict'    => 'One or more files Booster would manage already exist. Review and reconcile them before setting up a release workflow.',
 			'workflow_package_ambiguous'        => 'Booster could not identify exactly one WordPress package header. Resolve the ambiguity before setting up a release workflow.',
@@ -36,7 +36,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testExactCanonicalReleaseSetupNeedsNoSetupPullRequest(): void {
-		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_release_automation_present',
 				'result_successful' => true,
@@ -50,7 +50,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testExistingReleaseAutomationConflictIsAnInformationalObservation(): void {
-		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_release_automation_conflict',
 				'result_successful' => false,
@@ -67,7 +67,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testRateLimitIsAnAdvisoryRatherThanACredentialFailure(): void {
-		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_rate_limited',
 				'result_successful' => false,
@@ -76,12 +76,12 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '<div class="notice notice-warning inline"', $html );
-		self::assertStringContainsString( 'GitHub has temporarily rate-limited the release workflow request.', $html );
+		self::assertStringContainsString( 'The repository provider has temporarily rate-limited the release workflow request.', $html );
 		self::assertStringNotContainsString( 'selected saved credential', $html );
 	}
 
 	public function testRequestValidationFailureDetailsExplainTheSafeAction(): void {
-		$display = new GitHubReleaseWorkflowDisplay();
+		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(
 			'malformed_request'       => 'The request was incomplete or malformed. Reload the release workflow page and try again.',
 			'permissions_unavailable' => 'Your current account no longer has the permissions required to manage this package. Sign in with an administrator account and try again.',
@@ -97,7 +97,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 				)
 			);
 
-			self::assertStringContainsString( 'Booster stopped before contacting GitHub because this request no longer matched the current page or package.', $html, $diagnostic );
+			self::assertStringContainsString( 'Booster stopped before contacting the repository provider because this request no longer matched the current page or package.', $html, $diagnostic );
 			self::assertStringContainsString( '<details><summary>Failure details</summary>', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
@@ -105,7 +105,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testImmediateReleasePreflightFailureIsAnErrorNoticeWithAnInlineDiagnosticDisclosure(): void {
-		$display = new GitHubReleaseWorkflowDisplay();
+		$display = new ReleaseWorkflowDisplay();
 		$html    = $display->workflow(
 			array(
 				'result_code'           => 'workflow_preflight_unavailable',
@@ -119,7 +119,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $html );
-		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-github-release-workflow-result><p>', $html );
+		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-release-workflow-result><p>', $html );
 		self::assertStringContainsString( '<details><summary>Failure details</summary>', $html );
 		self::assertStringContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $html );
@@ -141,7 +141,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testImmediatePreflightContractFailureExplainsThatTheRequestStateMustBeReloaded(): void {
-		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_preflight_unavailable',
 				'result_successful' => false,
@@ -166,7 +166,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testDurablePublishedReleaseDocumentationLinksRenderInEveryWorkflowState(): void {
-		$display = new GitHubReleaseWorkflowDisplay();
+		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(
 			array( 'forms' => array( 'inspect' => $this->form( 'inspect' ) ) ),
 			array(
@@ -180,33 +180,38 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 				),
 			),
 		) as $view ) {
-			$html = $display->workflow( $view );
+			$view['documentation_links'] = array(
+				array(
+					'label' => 'Fixture provider releases',
+					'url'   => 'https://forge.example.test/docs/releases',
+				),
+			);
+			$html                        = $display->workflow( $view );
 			self::assertStringContainsString( 'Booster Releases docs', $html );
 			self::assertStringContainsString( 'admin.php?page=ran-booster&amp;tab=documentation#ran-booster-documentation-published-releases', $html );
-			self::assertStringContainsString( 'GitHub About releases', $html );
-			self::assertStringContainsString( 'https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases', $html );
-			self::assertStringContainsString( 'GitHub immutable releases', $html );
-			self::assertStringContainsString( 'https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases', $html );
+			self::assertStringContainsString( 'Fixture provider releases', $html );
+			self::assertStringContainsString( 'https://forge.example.test/docs/releases', $html );
+			self::assertStringNotContainsString( 'github.com', $html );
 		}
 	}
 
 	public function testPreviewAndFormValuesAreEscapedWithoutLeakingRawMarkup(): void {
-		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_inspected',
 				'result_successful' => true,
 				'preview'           => array(
-					'kind'                  => 'bootstrap',
-					'repository'            => 'owner/<script>alert(1)</script>',
-					'default_branch'        => 'main"><img src=x onerror=alert(1)>',
-					'base_sha'              => str_repeat( 'a', 40 ),
-					'pack_version'          => '1.2.3<script>',
-					'new_template_identity' => array( 'asset_sha256' => str_repeat( 'b', 64 ) ),
-					'changes'               => array(
+					'kind'            => 'bootstrap',
+					'repository'      => 'owner/<script>alert(1)</script>',
+					'default_branch'  => 'main"><img src=x onerror=alert(1)>',
+					'base_sha'        => str_repeat( 'a', 40 ),
+					'pack_version'    => '1.2.3<script>',
+					'template_digest' => str_repeat( 'b', 64 ),
+					'changes'         => array(
 						array(
 							'path'      => '<script>path</script>',
 							'operation' => 'added"><img src=x>',
-							'sha256'    => str_repeat( 'c', 64 ),
+							'digest'    => str_repeat( 'c', 64 ),
 						),
 					),
 				),
@@ -223,7 +228,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( '&lt;script&gt;path&lt;/script&gt;', $html );
 		self::assertStringContainsString( '&lt;script&gt;confirm&lt;/script&gt;', $html );
 		self::assertStringContainsString( 'data-ran-booster-package-success', $html );
-		self::assertStringContainsString( 'data-ran-booster-github-release-workflow-result', $html );
+		self::assertStringContainsString( 'data-ran-booster-release-workflow-result', $html );
 		self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $html );
 		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringContainsString( 'name="booster_credential_id"', $html );
@@ -232,15 +237,13 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testSchemaTwoRecordRendersOnlyCurrentOutcomeAndUpdateControls(): void {
-		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => '',
 				'result_successful' => false,
 				'preview'           => null,
 				'record'            => array(
-					'schema_version' => 2,
-					'repository'     => 'owner/example',
-					'pr_number'      => 17,
+					'pull_request_url' => 'https://forge.example.test/owner/example/pull/17',
 				),
 				'legacy'            => null,
 				'forms'             => array(
@@ -251,9 +254,9 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'https://github.com/owner/example/pull/17', $html );
-		self::assertStringContainsString( 'Review recorded setup pull request on GitHub', $html );
-		self::assertStringNotContainsString( 'Review recorded draft pull request on GitHub', $html );
+		self::assertStringContainsString( 'https://forge.example.test/owner/example/pull/17', $html );
+		self::assertStringContainsString( 'Review recorded setup pull request', $html );
+		self::assertStringNotContainsString( 'github.com', $html );
 		self::assertStringContainsString( 'Check pull request outcome', $html );
 		self::assertStringContainsString( 'Check for template updates', $html );
 		self::assertStringContainsString( 'Assess release setup', $html );
@@ -264,7 +267,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 
 	public function testUnavailableRetainsTheAssessmentInterfaceButDisablesItsControls(): void {
 		$reason = 'A temporary upstream limitation prevents direct assessment right now.';
-		$html   = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html   = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'unavailable'        => true,
 				'unavailable_reason' => $reason,
@@ -303,13 +306,13 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			),
 			'preview'             => array(
 				'preview' => array(
-					'kind'                  => 'bootstrap',
-					'repository'            => 'owner/example',
-					'default_branch'        => 'main',
-					'base_sha'              => str_repeat( 'a', 40 ),
-					'pack_version'          => '1.2.3',
-					'new_template_identity' => array( 'asset_sha256' => str_repeat( 'b', 64 ) ),
-					'changes'               => array(),
+					'kind'            => 'bootstrap',
+					'repository'      => 'owner/example',
+					'default_branch'  => 'main',
+					'base_sha'        => str_repeat( 'a', 40 ),
+					'pack_version'    => '1.2.3',
+					'template_digest' => str_repeat( 'b', 64 ),
+					'changes'         => array(),
 				),
 				'forms'   => array(
 					'inspect' => array_merge( $inspect, array( 'disabled' => true ) ),
@@ -318,8 +321,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			),
 			'recorded'            => array(
 				'record' => array(
-					'repository' => 'owner/example',
-					'pr_number'  => 17,
+					'pull_request_url' => 'https://forge.example.test/owner/example/pull/17',
 				),
 				'forms'  => array(
 					'inspect'        => array_merge( $inspect, array( 'disabled' => true ) ),
@@ -330,7 +332,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		foreach ( $states as $state => $view ) {
-			$html       = ( new GitHubReleaseWorkflowDisplay() )->workflow( $view );
+			$html       = ( new ReleaseWorkflowDisplay() )->workflow( $view );
 			$notice     = strpos( $html, 'ran-booster-release-workflow__notices' );
 			$intro      = strpos( $html, 'Assess this repository before preparing a release-workflow pull request.' );
 			$credential = strpos( $html, 'name="booster_credential_id"' );
@@ -348,7 +350,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testVerifiedReleaseDoesNotClaimWorkflowOperation(): void {
-		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'        => 'workflow_release_ready',
 				'result_successful'  => true,
@@ -363,7 +365,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Published releases are working, but Booster cannot tell whether a release workflow produced them.', $html );
 		self::assertStringContainsString(
 			'Published releases are available, but Booster cannot tell whether a release workflow produced them.',
-			( new GitHubReleaseWorkflowDisplay() )->workflow(
+			( new ReleaseWorkflowDisplay() )->workflow(
 				array(
 					'result_code'       => 'workflow_release_ready',
 					'result_successful' => true,
@@ -375,7 +377,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testLegacyAndUnknownEvidenceRemainDisplayOnlyAndEscaped(): void {
-		$display = new GitHubReleaseWorkflowDisplay();
+		$display = new ReleaseWorkflowDisplay();
 		$legacy  = $display->workflow(
 			array(
 				'legacy' => array(
@@ -386,9 +388,8 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 				),
 			)
 		);
-		self::assertStringContainsString( 'Legacy, unverified manual-reconciliation evidence.', $legacy );
-		self::assertStringContainsString( 'https://github.com/owner/example/pull/17', $legacy );
-		self::assertStringContainsString( '&lt;script&gt;branch&lt;/script&gt;', $legacy );
+		self::assertStringContainsString( 'An earlier workflow record does not match the current package.', $legacy );
+		self::assertStringNotContainsString( 'https://github.com/owner/example/pull/17', $legacy );
 		self::assertStringNotContainsString( '<script>', $legacy );
 		self::assertStringNotContainsString( '<form', $legacy );
 		self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $legacy );
@@ -403,13 +404,13 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 				),
 			)
 		);
-		self::assertStringContainsString( 'not authoritative for this package', $unknown );
+		self::assertStringContainsString( 'does not match the current package', $unknown );
 		self::assertStringNotContainsString( 'do-not-render', $unknown );
 		self::assertStringNotContainsString( '<form', $unknown );
 	}
 
 	public function testAllFiveFormKindsUseNewActionsAndExpectedCredentialRequirements(): void {
-		$display = new GitHubReleaseWorkflowDisplay();
+		$display = new ReleaseWorkflowDisplay();
 		$method  = new ReflectionMethod( $display, 'form' );
 		foreach ( array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ) as $operation ) {
 			$html = $method->invoke( $display, $this->form( $operation, str_contains( $operation, 'setup' ) ? 'owner/example' : '' ) );
@@ -417,7 +418,8 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			self::assertStringNotContainsString( 'data-ran-booster-relocate-rendered-error', $html, $operation );
 			self::assertStringNotContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $html, $operation );
 			self::assertStringContainsString( 'hx-post="/wp-admin/admin-post.php" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop"', $html, $operation );
-			self::assertStringContainsString( 'value="ran_booster_github_release_workflow_' . $operation . '"', $html, $operation );
+			self::assertStringContainsString( 'value="ran_booster_release_workflow"', $html, $operation );
+			self::assertStringContainsString( 'name="workflow_operation" value="' . $operation . '"', $html, $operation );
 			self::assertStringNotContainsString( 'release_deployments', $html, $operation );
 			self::assertStringNotContainsString( 'workflow_workflow', $html, $operation );
 			if ( in_array( $operation, array( 'setup', 'update_setup' ), true ) ) {
@@ -429,8 +431,8 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	}
 
 	public function testAdapterSourcesContainNoRetiredRoutesProductTextOrTextDomain(): void {
-		$root = dirname( __DIR__, 4 ) . '/RAN/Admin/ReleaseManagement/GitHub/';
-		foreach ( array( 'GitHubReleaseWorkflowControls.php', 'GitHubReleaseWorkflowDisplay.php' ) as $file ) {
+		$root = dirname( __DIR__, 3 ) . '/RAN/Admin/ReleaseManagement/';
+		foreach ( array( 'ReleaseWorkflowControls.php', 'ReleaseWorkflowDisplay.php' ) as $file ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local source boundary under test.
 			$source = file_get_contents( $root . $file );
 			self::assertIsString( $source );
@@ -451,9 +453,10 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			'operation'            => $operation,
 			'action'               => 'https://example.test/wp-admin/admin-post.php',
 			'fields'               => array(
-				'action'      => 'ran_booster_github_release_workflow_' . $operation,
-				'_wpnonce'    => 'nonce-for-' . $operation,
-				'hostile_key' => '"><script>hidden</script>',
+				'action'             => 'ran_booster_release_workflow',
+				'workflow_operation' => $operation,
+				'_wpnonce'           => 'nonce-for-' . $operation,
+				'hostile_key'        => '"><script>hidden</script>',
 			),
 			'confirm'              => $confirmation,
 			'credentials'          => array(

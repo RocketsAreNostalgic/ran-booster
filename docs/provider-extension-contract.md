@@ -81,10 +81,11 @@ capabilities and state.
 
 A provider may implement both `RepositoryWebhookFitness` and
 `RepositoryWebhookManagement` for the exact operation
-`repository-webhook-management/2`. These interfaces expose only the four
-closed actions `setup`, `check`, `reconfigure` and `remove`, with matching
-read-only `assess*` methods. There is no operation dispatcher, callable,
-provider client, transport or credential handle in the public contract.
+`repository-webhook-management/3`. These interfaces expose only the five
+closed actions `setup`, `check`, `reconfigure`, `remove` and `test`, with
+matching read-only `assessSetup`, `assessCheck`, `assessReconfigure`,
+`assessRemove` and `assessTest` methods. There is no operation dispatcher,
+callable, provider client, transport or credential handle in the public contract.
 
 Saved credential IDs are display-safe inputs. The provider resolves their
 plaintext only through its already-bound `ProviderCredentialStore` and only

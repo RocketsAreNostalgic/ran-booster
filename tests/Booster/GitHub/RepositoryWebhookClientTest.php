@@ -446,6 +446,33 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertSame( 'unverified', $result->toArray()['delivery'] );
 	}
 
+	public function testPingDoesNotTreatARedirectedDeliveryAsVerified(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, array() ),
+				$this->response( 204, array() ),
+				$this->response(
+					200,
+					array(
+						array(
+							'id'          => 11,
+							'event'       => 'ping',
+							'status_code' => 302,
+						),
+					)
+				),
+			)
+		);
+
+		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertFalse( $result->succeeded() );
+		self::assertSame( 'ping_delivery_failed', $result->code() );
+		self::assertSame( 'unverified', $result->toArray()['delivery'] );
+	}
+
 	public function testPingRefusesAMismatchedRecordedHookBeforeAnyPingRequest(): void {
 		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://other.example/hook' ) ) ) );
 

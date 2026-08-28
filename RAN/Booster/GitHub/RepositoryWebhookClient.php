@@ -5,7 +5,7 @@ namespace RAN\Booster\GitHub;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 use RuntimeException;
-/** Fixed-origin GitHub client for repository-webhook-management/2. */
+/** Fixed-origin GitHub client for repository-webhook-management/3. */
 final class RepositoryWebhookClient {
 	private const ORIGIN          = 'https://api.github.com';
 	private const CALL_TIMEOUT    = 8.0;
@@ -136,7 +136,7 @@ final class RepositoryWebhookClient {
 				return $this->uncertain( 'delivery_inventory_invalid', $hookId );
 			}
 			if ( is_array( $delivery ) && null !== $delivery['status_code'] ) {
-				return $this->result( 200 <= $delivery['status_code'] && 400 > $delivery['status_code'] ? 'succeeded' : 'failed', 200 <= $delivery['status_code'] && 400 > $delivery['status_code'] ? 'ping_verified' : 'ping_delivery_failed', $hookId, $configuration, 200 <= $delivery['status_code'] && 400 > $delivery['status_code'] ? 'verified' : 'unverified', 200 <= $delivery['status_code'] && 400 > $delivery['status_code'] ? 'GitHub recorded a successful ping delivery for the exact hook.' : 'GitHub recorded a failed ping delivery for the exact hook; inspect provider delivery details.' );
+				return $this->result( 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'succeeded' : 'failed', 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'ping_verified' : 'ping_delivery_failed', $hookId, $configuration, 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'verified' : 'unverified', 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'GitHub recorded a successful ping delivery for the exact hook.' : 'GitHub recorded a failed ping delivery for the exact hook; inspect provider delivery details.' );
 			}
 		}
 

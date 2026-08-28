@@ -32,6 +32,7 @@ final class RepositoryDetailRenderer {
 		$source     = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
 		$sourceKey  = is_string( $row['source_key'] ?? null ) ? $row['source_key'] : '';
 		$packages   = $this->packages( $row );
+		$omitted    = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
 		$activeView = in_array( $activeView, array( 'status', 'branch', 'releases' ), true ) ? $activeView : 'status';
 		?>
 		<div class="ran-booster-repository-detail">
@@ -40,7 +41,7 @@ final class RepositoryDetailRenderer {
 				<div>
 					<p class="ran-booster-eyebrow"><?php echo esc_html( $providerLabel ); ?></p>
 					<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title"><?php echo esc_html( $repository ); ?></h2>
-					<p><?php echo esc_html( $this->summary( $packages, $source ) ); ?></p>
+					<p><?php echo esc_html( $this->summary( $packages, $source, $omitted ) ); ?></p>
 				</div>
 				<?php if ( is_string( $row['repository_url'] ?? null ) && '' !== $row['repository_url'] ) { ?>
 					<a class="button" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $providerLabel ) ); ?></a>
@@ -74,6 +75,7 @@ final class RepositoryDetailRenderer {
 						<?php } else { ?>
 							<?php $this->renderUnavailableWebhookCards( $sourceKey ); ?>
 						<?php } ?>
+						<?php $this->renderProviderActions( $row ); ?>
 					<?php } elseif ( null !== $renderReleasePanel ) { ?>
 						<div id="ran-booster-repository-release-workflows"><?php $this->renderReleaseContent( $renderReleasePanel, $packages ); ?></div>
 					<?php } else { ?>
@@ -206,7 +208,7 @@ final class RepositoryDetailRenderer {
 			if ( $release ) {
 				?>
 				<br><span class="description"><?php esc_html_e( 'Ignores pushes', 'ran-booster' ); ?></span><?php } ?></td>
-			<td><?php echo esc_html( ucfirst( $package['deployment_policy'] ) ); ?></td>
+			<td><?php echo esc_html( $this->policyLabel( $package['deployment_policy'] ?? null ) ); ?></td>
 			<td><a href="<?php echo esc_url( $package['settings_url'] ); ?>"><?php echo esc_html( 'plugin' === $package['type'] ? __( 'Plugin settings', 'ran-booster' ) : __( 'Theme settings', 'ran-booster' ) ); ?></a></td>
 		</tr>
 		<?php
@@ -269,7 +271,7 @@ final class RepositoryDetailRenderer {
 
 	/** @param array<string, mixed> $detail */
 	private function isReleaseDetail( array $detail ): bool {
-		return str_starts_with( (string) ( $detail['key'] ?? '' ), 'gh:release-automation-' )
+		return $this->isReleaseAutomationKey( $detail['key'] ?? null )
 			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' );
 	}
 
@@ -278,9 +280,9 @@ final class RepositoryDetailRenderer {
 		return array_values(
 			array_filter(
 				is_array( $row['details'] ?? null ) ? $row['details'] : array(),
-				static fn ( mixed $detail ): bool => is_array( $detail )
+				fn ( mixed $detail ): bool => is_array( $detail )
 					&& ( str_starts_with( (string) ( $detail['key'] ?? '' ), 'core:webhook-' )
-						|| str_starts_with( (string) ( $detail['key'] ?? '' ), 'gh:release-automation-' ) )
+						|| $this->isReleaseAutomationKey( $detail['key'] ?? null ) )
 			)
 		);
 	}
@@ -291,12 +293,69 @@ final class RepositoryDetailRenderer {
 	}
 
 	/** @param list<array<string, mixed>> $packages */
-	private function summary( array $packages, string $source ): string {
+	private function summary( array $packages, string $source, int $omitted ): string {
+		if ( 0 < $omitted ) {
+			return sprintf(
+				/* translators: 1: shown package count, 2: omitted package count, 3: repository source summary. */
+				__( '%1$d packages shown; %2$d more connected · %3$s', 'ran-booster' ),
+				count( $packages ),
+				$omitted,
+				$source
+			);
+		}
+
 		return sprintf(
 			/* translators: 1: number of packages, 2: repository source summary. */
 			_n( '%1$d package · %2$s', '%1$d packages · %2$s', count( $packages ), 'ran-booster' ),
 			count( $packages ),
 			$source
 		);
+	}
+
+	private function policyLabel( mixed $policy ): string {
+		return match ( $policy ) {
+			'automatic' => __( 'Automatic', 'ran-booster' ),
+			'manual'    => __( 'Manual', 'ran-booster' ),
+			default     => __( 'Disabled', 'ran-booster' ),
+		};
+	}
+
+	private function isReleaseAutomationKey( mixed $key ): bool {
+		return is_string( $key ) && 1 === preg_match( '/\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $key );
+	}
+
+	/** @param array<string, mixed> $row */
+	private function renderProviderActions( array $row ): void {
+		$actions = array_values(
+			array_filter(
+				is_array( $row['actions'] ?? null ) ? $row['actions'] : array(),
+				fn ( mixed $action ): bool => is_array( $action ) && ! $this->isReleaseAutomationKey( $action['key'] ?? null ) && ! $this->isPackageOrManagementAction( $action['key'] ?? null )
+			)
+		);
+		if ( array() === $actions ) {
+			return;
+		}
+		?>
+		<div class="ran-booster-repository-detail__actions">
+		<?php foreach ( $actions as $action ) { ?>
+			<?php if ( 'post' === ( $action['type'] ?? null ) ) { ?>
+				<form method="post" action="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>">
+				<?php foreach ( is_array( $action['hidden'] ?? null ) ? $action['hidden'] : array() as $name => $value ) { ?>
+					<input type="hidden" name="<?php echo esc_attr( (string) $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
+				<?php } ?>
+					<button type="submit" class="button"<?php disabled( true === ( $action['disabled'] ?? false ) ); ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
+				</form>
+			<?php } elseif ( true === ( $action['disabled'] ?? false ) ) { ?>
+				<button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
+			<?php } elseif ( 'link' === ( $action['type'] ?? null ) ) { ?>
+				<a class="button" href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></a>
+			<?php } ?>
+		<?php } ?>
+		</div>
+		<?php
+	}
+
+	private function isPackageOrManagementAction( mixed $key ): bool {
+		return is_string( $key ) && ( 'core:webhook-management' === $key || str_starts_with( $key, 'core:package-' ) );
 	}
 }

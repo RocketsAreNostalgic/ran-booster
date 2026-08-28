@@ -434,6 +434,25 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 (() => {
 	'use strict';
 
+	const updateReleaseTrackSummary = (event) => {
+		if (!event.target?.matches('[data-ran-booster-release-channel]')) {
+			return;
+		}
+		const disclosure = event.target.closest(
+			'#ran-booster-release-track-settings'
+		);
+		const summary = disclosure?.querySelector(
+			'[data-ran-booster-release-track-summary]'
+		);
+		const label = event.target.closest('label');
+		const labelText = label?.querySelector('span');
+		if (summary && labelText) {
+			summary.textContent = labelText.textContent;
+		}
+	};
+
+	document.addEventListener('change', updateReleaseTrackSummary);
+
 	const initializeManagedReleaseBrowserAfterSwap = (event) => {
 		if (event.detail?.target?.id !== 'wpbody-content') {
 			return;

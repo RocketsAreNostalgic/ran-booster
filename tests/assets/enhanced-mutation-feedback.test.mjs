@@ -469,10 +469,10 @@ test('an external enhanced submitter does not continue with a native form submis
 
 test('enhanced mutations preserve viewport and package disclosure states', () => {
 	for (const open of [
-		[false, false],
-		[true, true],
-		[true, false],
-		[false, true],
+		[false, false, false],
+		[true, true, true],
+		[true, false, true],
+		[false, true, false],
 	]) {
 		const state = fixture();
 		const init = loadFunction('initEnhancedMutationFeedback', {
@@ -481,6 +481,7 @@ test('enhanced mutations preserve viewport and package disclosure states', () =>
 		});
 		const ids = [
 			'ran-booster-advanced-source-settings',
+			'ran-booster-release-track-settings',
 			'ran-booster-package-danger-zone',
 		];
 		const replacementDetails = open.map((value, index) => ({

@@ -253,6 +253,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$locator         = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
 			$source          = is_string( $repository['source'] ?? null ) ? $repository['source'] : 'branch';
 			$isRelease       = 'release_asset' === $source;
+			$sourceConflict  = 'mixed' === $source;
 			$hasBranch       = in_array( $source, array( 'branch', 'mixed' ), true );
 			$isMixed         = 'mixed' === $source;
 			$historical      = ! empty( $repository['historical'] ) || '' === trim( $managedId );
@@ -339,6 +340,13 @@ final class ProviderRepositoryRowsNormalizer {
 					'tone'  => 'error',
 					'id'    => $reasonId,
 				); }
+			if ( $sourceConflict ) {
+				$statuses[] = array(
+					'label' => __( 'Conflicting sources', 'ran-booster' ),
+					'tone'  => 'warning',
+					'id'    => $reasonId . '-source-conflict',
+				);
+			}
 			$statuses[] = array(
 				'label' => match ( $coverage ) {
 				'repository' => __( 'Repository secret', 'ran-booster' ), 'shared' => $sharedSecretLabel, 'none' => __( 'No secret', 'ran-booster' ), default => __( 'Secret coverage unavailable', 'ran-booster' ) },
@@ -366,6 +374,7 @@ final class ProviderRepositoryRowsNormalizer {
 				'repository' => __( 'Repository secret', 'ran-booster' ), 'shared' => $sharedSecretLabel, 'none' => __( 'No secret', 'ran-booster' ), 'not_applicable' => '', default => __( 'Secret coverage unavailable', 'ran-booster' ) };
 			$managementTone = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'ok' : 'warning';
 			$consequence    = match ( true ) {
+				$sourceConflict => __( 'Conflicting sources. Review the package settings before using release workflow.', 'ran-booster' ),
 				$isRelease && array() !== $branchConsumers => __( 'This package ignores pushes. Branch-managed packages in this repository still use webhook setup.', 'ran-booster' ),
 				$isRelease && in_array( $coverage, array( 'repository', 'shared' ), true ) => __( 'This package ignores pushes. Local signing setup is retained for an easier return to Branch.', 'ran-booster' ),
 				$isRelease => __( 'Pushes are ignored.', 'ran-booster' ),
@@ -381,7 +390,7 @@ final class ProviderRepositoryRowsNormalizer {
 				$managementLabel  = __( 'Published release', 'ran-booster' );
 				$managementDetail = __( 'Push-to-Deploy unavailable', 'ran-booster' );
 				$managementTone   = 'info'; }
-			$releaseReasonId = $isRelease && '' !== $consequence ? $reasonId . '-release-source' : '';
+			$releaseReasonId = ( $isRelease || $sourceConflict ) && '' !== $consequence ? $reasonId . '-release-source' : '';
 			$describedBy     = array_filter( array( $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $siteReady && ! $isRelease ? $reasonId . '-site' : '' ) );
 			$actions         = null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode ) && $hasBranch && ! $historical
 				? $this->webhookManagementAction( $locator, $describedBy )
@@ -441,8 +450,8 @@ final class ProviderRepositoryRowsNormalizer {
 				'package_type_label'        => $typeLabel,
 				'source_key'                => $source,
 				'source_label'              => match ( $source ) {
+					'mixed' => __( 'Conflicting sources', 'ran-booster' ),
 					'release_asset' => __( 'Releases', 'ran-booster' ),
-					'mixed' => __( 'Mixed sources', 'ran-booster' ),
 					default => __( 'Branch', 'ran-booster' ),
 				},
 				'management_label'          => $managementLabel,

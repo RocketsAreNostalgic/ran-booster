@@ -799,7 +799,7 @@ final class PortabilityControllerTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'Booster recorded an unavailable deployment outcome.', $result['message'] );
+		self::assertSame( 'Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats.', $result['message'] );
 		self::assertStringNotContainsString( 'secret-canary', $result['message'] );
 	}
 

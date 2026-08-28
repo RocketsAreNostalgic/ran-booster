@@ -46,8 +46,10 @@ namespace Tests\AddOn;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 	use RAN\Storage\PackageMutationResult;
-	use RAN\Storage\PackageStorageOperation;
-	use RAN\Storage\PluginRepository;
+use RAN\Storage\PackageStorageOperation;
+use RAN\Storage\Database;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
 	use RAN\Storage\ThemeRepository;
 	use RAN\WordPress\CorePackageExecutionResult;
 	use RAN\WordPress\CorePackageExecutionFailure;
@@ -69,8 +71,9 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	private const FINGERPRINT = 'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-	private ?string $artifactPath                              = null;
-	private ?ProspectiveRepositoryReleaseArtifact $acquisition = null;
+	private ?string $artifactPath                                = null;
+	private ?ProspectiveRepositoryReleaseArtifact $acquisition   = null;
+	private ?ProspectiveSourceGuardDatabase $sourceGuardDatabase = null;
 
 	protected function setUp(): void {
 		ReleaseCandidatePreflight::reset();
@@ -82,6 +85,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		ProspectiveRepositoryProvider::$inspectionInput  = array();
 		ProspectiveRepositoryProvider::$acquisitionInput = array();
 		ProspectiveRepositoryProvider::$acquisition      = null;
+		$this->sourceGuardDatabase                       = null;
 
 		$GLOBALS['ran_booster_prospective_options']              = array();
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
@@ -165,6 +169,47 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		$this->expectException( \InvalidArgumentException::class );
 		$facade->nonceAction( 'discover', 'plugin' );
+	}
+
+	public function testExistingReleaseOwnerStopsProspectiveAcquisitionBeforeFilesystemMutation(): void {
+		$database = new class() {
+			public string $last_error = '';
+
+			public function prepare( string $query, mixed ...$arguments ): string {
+				unset( $arguments );
+
+				return $query;
+			}
+
+			/** @return list<object> */
+			public function get_results( string $query ): array {
+				unset( $query );
+
+				return array(
+					(object) array(
+						'type'                   => 2,
+						'package'                => 'existing-theme',
+						'source'                 => PackageSource::RELEASE_ASSET->value,
+						'provider'               => 'gh',
+						'provider_repository_id' => '123456789',
+					),
+				);
+			}
+		};
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$facade   = $this->facade(
+			$plugins,
+			$executor,
+			sourceGuard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
+		);
+
+		$result = $facade->install( 'plugin', $this->repositoryRequest(), 42, 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+
+		self::assertSame( 'release_repository_conflict', $result->code() );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
+		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, $plugins->adoptionCalls );
 	}
 
 	public function testUnsupportedProviderFailsBeforeRepositoryResolutionOrPreflight(): void {
@@ -1316,7 +1361,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		ProspectiveExecutor $executor,
 		int $userId = 7,
 		?ProspectiveUpdaterLock $updaterLock = null,
-		RepositoryProvider|iterable|null $provider = null
+		RepositoryProvider|iterable|null $provider = null,
+		?RepositorySourceGuard $sourceGuard = null
 	): NativeProspectiveReleaseFacade {
 		$providers         = null === $provider
 			? array( new ProspectiveRepositoryProvider() )
@@ -1324,6 +1370,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$registry          = new ProviderRegistry( $providers );
 		$resolver          = new PackageRepositoryRequestResolver( $registry );
 		$executor->plugins = $plugins;
+		$sourceGuard     ??= $this->sourceGuard();
 
 		return new NativeProspectiveReleaseFacade(
 			$resolver,
@@ -1335,8 +1382,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			static fn ( string $type ): bool => 'plugin' === $type,
 			static fn ( string $nonce, string $action ): bool => 'valid-nonce' === $nonce
 					&& str_starts_with( $action, 'ran-booster-prospective-release-' ),
-			static fn (): int => $userId
+			static fn (): int => $userId,
+			$sourceGuard
 		);
+	}
+
+	private function sourceGuard(): RepositorySourceGuard {
+		$this->sourceGuardDatabase ??= new ProspectiveSourceGuardDatabase();
+
+		return new RepositorySourceGuard( $this->sourceGuardDatabase, $this->createStub( Database::class ) );
 	}
 
 	/** @return array<string, string> */
@@ -1983,6 +2037,26 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 		}
 
 		return $this->releaseResult;
+	}
+}
+
+final class ProspectiveSourceGuardDatabase {
+	public string $last_error = '';
+
+	/** @var list<object> */
+	public array $rows = array();
+
+	public function prepare( string $query, mixed ...$arguments ): string {
+		unset( $arguments );
+
+		return $query;
+	}
+
+	/** @return list<object> */
+	public function get_results( string $query ): array {
+		unset( $query );
+
+		return $this->rows;
 	}
 }
 

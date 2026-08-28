@@ -57,7 +57,7 @@ final class RepositoryDetailRenderer {
 					$url        = is_string( $viewUrls[ $view ] ?? null ) ? $viewUrls[ $view ] : $listUrl;
 					$requestUrl = is_string( $viewRequestUrls[ $view ] ?? null ) ? $viewRequestUrls[ $view ] : $url;
 					$hasSource  = ( 'branch' === $view && in_array( $sourceKey, array( 'branch', 'mixed' ), true ) )
-						|| ( 'releases' === $view && in_array( $sourceKey, array( 'release_asset', 'mixed' ), true ) );
+						|| ( 'releases' === $view && 'release_asset' === $sourceKey );
 					?>
 					<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $requestUrl ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $activeView === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $hasSource ) { ?>
 						<span class="ran-booster-provider-task-tab__source-indicator" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Active for one or more packages in this repository.', 'ran-booster' ); ?></span>
@@ -118,6 +118,9 @@ final class RepositoryDetailRenderer {
 		$branchCount  = count( array_filter( $packages, static fn ( array $package ): bool => 'branch' === ( $package['source'] ?? null ) ) );
 		$releaseCount = count( $packages ) - $branchCount;
 		?>
+		<?php if ( 'mixed' === ( $row['source_key'] ?? null ) ) { ?>
+			<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'Conflicting sources.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Review the package settings before using release workflow.', 'ran-booster' ); ?></p></div>
+		<?php } ?>
 		<section class="ran-booster-settings-section" aria-labelledby="ran-booster-repository-packages-heading">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-packages-heading"><?php esc_html_e( 'Packages using this repository', 'ran-booster' ); ?></h3>

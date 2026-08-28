@@ -12,13 +12,29 @@ final class ManagedReleaseStoreDatabase {
 	public array $updates = array();
 
 	/** @param array<string, mixed> $row */
-	public function __construct( public array $row ) {
+	public function __construct( array $row ) {
+		$this->row = array_merge(
+			array(
+				'provider'               => 'gh',
+				'provider_repository_id' => 'fixture-repository',
+			),
+			$row
+		);
 	}
+
+	/** @var array<string, mixed> */
+	public array $row;
 
 	public function prepare( string $query, mixed ...$arguments ): string {
 		unset( $arguments );
 
 		return $query;
+	}
+
+	public function query( string $query ): int {
+		unset( $query );
+
+		return 1;
 	}
 
 	/** @return list<object> */

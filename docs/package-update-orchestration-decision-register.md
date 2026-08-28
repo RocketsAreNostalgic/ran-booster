@@ -75,6 +75,8 @@ Release Deployments `main` at `986b8aa`, and updater `main` at `2d9300c`.
 | PU-032 | Deferred             | Requiring GitHub immutable releases for all eligible or unattended updates in this P0                     | The current Release Please profile publishes before uploading assets, while immutable publication requires the assets to be attached before publication. Reading `immutable` from the API is also not cryptographic attestation verification.                                                                               | Retain the platform-reported immutable flag as normalized evidence without enforcement; prove draft → attach → publish separately before a future add-on policy requires it.                                                                                                                                                                                                                                                                                   | The workflow lifecycle is updated and exercised across supported public/private repositories, and automatic-policy UX defines mutable-release handling.                                                                                      |
 | PU-033 | NO-GO                | Speculative Core services, DTOs, registries, facades or state justified by future release extensibility   | Core is carried by every installation, while the current product serves a single developer/small agency and has no present consumer for a general assurance framework. Future possibility does not repay permanent production LoC, concepts, API and maintenance cost.                                                      | Delete/reuse first. Keep GitHub-specific behavior in Release Deployments or a future optional add-on. The live updater composition proves the assurance checker can register directly with the selected updater runtime, so Core receives zero assurance production/API surface.                                                                                                                                                                               | A named current Core-owned safety or released-compatibility invariant remains after smaller alternatives are exhausted, its exact production-line/type/public-seam/state delta is recorded, and the owner approves it before implementation. |
 | PU-034 | Approved exception   | Letting Release Deployments infer release readiness from branch status, duplicate the release verifier, temporarily switch package source, or inspect releases with its separate request-only setup credential | Branch status intentionally has no release result, duplicating verification creates two artifact authorities, a temporary source change is a mutation rather than inspection, and the setup credential is not Core's stored package credential. The Phase 3 implementation proved that these smaller-looking alternatives either could not answer the question or crossed an existing authority boundary. | Add-on API 12 adds one read-only `ReleaseTrackingFacade::preflight()` operation and a channel-bound use of the existing nonce action. It accepts only the current eligible branch-managed plugin or theme at the exact source revision and reuses enablement's forced verifier. Failed authorization or binding returns `null`; verifier outcomes use the existing bounded result. The approved Core production delta is +66 net lines, one public method and one optional nonce argument, with zero new concrete types, services, DTOs, registries, storage fields, locks, credentials, provider clients or mutation paths. | A smaller implementation deletes the same authority ambiguity without duplicating verification or weakening exact capability, nonce, package, revision and channel binding; or the assisted workflow consumer is removed and the public operation has no remaining supported caller. |
+| PU-035 | Current product policy | Allowing Branch companions alongside a Release package on the same site and repository | Although technically possible, mixed ownership adds supported combinations, ambiguous controls and a larger support/test burden. | One repository supplies multiple Branch packages or one Release package, never both. Reinforce existing operation and transactional storage boundaries with one shared admission helper; retain ordinary Return to Branch recovery. | Demonstrated demand justifies Branch companions beside at most one Release package, including the extra UI and support coverage. |
+| PU-036 | Deliberate non-goal | One repository release serving several managed packages | Asset-to-package mapping, coordinated versioning and additional packaging conventions would expand the release contract and support surface. | Keep workflow-independent consumption of one compatible uploaded package ZIP. Booster workflow setup is optional; users may publish manually or with their own automation. | A separate explicit product decision approves a multi-package artifact and ownership contract; relaxing PU-035 alone is not sufficient. |
 
 PU-014 remains the historical reason Core must not simply omit its target
 registration. Its reconsideration trigger is satisfied by updater
@@ -83,6 +85,77 @@ registration. Its reconsideration trigger is satisfied by updater
 runtime selection and the prospective API while native self-update discovery
 is disabled. Core pinned that immutable release and passed its release gates;
 the later `v1.5.0-beta.10` retains the same contract.
+
+## 2026-08-28 repository exclusivity and multi-package releases
+
+### PU-035: one repository, one deployment model
+
+On one WordPress site, an exact provider code and stable repository ID may
+supply multiple managed Branch packages, or one managed Release package—never
+both. The count includes plugins and themes, inactive packages and Disabled
+update policies. Folders inside a repository and unmanaged WordPress
+installations do not create managed relationships. A sole root package may
+switch between Branch and Releases; existing subdirectory restrictions still
+apply.
+
+This supersedes the earlier repository-management proposal allowing Branch
+companions alongside one Release owner. That proposal separated remote
+repository identity from local installation destinations; that reasoning was
+not a filesystem error. The narrower policy deliberately reduces the number
+of supported combinations, makes the two modes easier to explain, and limits
+the support and test burden. It does not claim those combinations are
+technically impossible.
+
+`RepositorySourceGuard` applies the rule to existing package records. Normal
+installation, adoption, imports, repository edits, prospective Release
+installation and source switching use the same decision. Admission happens
+before installation and is rechecked under the existing updater lock before
+filesystem mutation or a source change. Persistence checks the relationship
+and writes it within the existing InnoDB transaction and locking-read pattern,
+retaining exact package and source-revision checks. UI projections and Release
+workflow admission reuse the same rule. Native Release registration and
+download authority must not admit a conflicting group or retain its stale
+offers.
+
+No repository-mode record, ownership table, schema migration, second lock,
+repair state or background reconciliation is needed. The records already
+describe the relationship; an atomic admission decision protects it. A generic
+policy framework would add concepts without another current policy consumer.
+Missing or ambiguous identity fails closed rather than inventing an owner.
+
+Existing conflicts preserve package files and records. Affected Release
+updates and workflow operations pause, while existing Branch deployments
+remain available. Administrators use the existing **Return to Branch** action
+on each Release package; a return remains permitted even if other conflicting
+Release rows remain. The ordinary rule is reevaluated after each explicit
+change. Booster neither chooses a winner nor silently repairs the records.
+
+**Reasonable future relaxation:** allow Branch companions alongside at most
+one Release package if user demand warrants the extra support coverage. That
+would relax the shared predicate and update tests, documentation and
+mixed-repository presentation. It would not require a data migration or
+removal of concurrency protection. No feature flag or preparatory extension
+mechanism is part of the current decision.
+
+### PU-036: multiple Release packages are a separate non-goal
+
+A repository release serving several managed packages is not a planned
+extension of PU-035. Booster does not want to own the additional asset mapping,
+version coordination and multi-package conventions that such a contract
+would require supporting.
+
+The current model lets users publish manually or through their own automation;
+Booster's workflow setup remains optional. This independence is bounded by the
+supported artifact contract: exactly one uploaded ZIP, the appropriate
+WordPress plugin or theme structure and Update URI, and repository identity
+and integrity verification. It does not mean any archive or release layout is
+accepted; PU-027 records the artifact requirements.
+
+WordPress can install separate package ZIPs. Nor does every conceivable
+multi-package design require a particular producer workflow. The decision is
+to avoid expanding Booster's consumer contract and support surface, not to
+assert a WordPress limitation. Reopening it requires a separate explicit
+product decision, not merely relaxing repository exclusivity.
 
 ## 2026-07-31 exact-release Reinstall re-evaluation
 

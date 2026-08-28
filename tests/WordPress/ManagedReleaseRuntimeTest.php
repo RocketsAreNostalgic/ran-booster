@@ -41,6 +41,8 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\Database;
+use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\ManagedReleaseConfiguration;
@@ -51,6 +53,9 @@ use RAN\WordPress\WordPressUpdaterLock;
 use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class ManagedReleaseRuntimeTest extends TestCase {
+
+	/** @var array<string, object> Exact persistent rows represented by this test's packages. */
+	private array $repositoryRows = array();
 
 	private const NATIVE_PLUGIN = 'example/example.php';
 	private const NATIVE_EXTRA  = array(
@@ -120,14 +125,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore();
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
 			new RuntimeUpdaterLock(),
 			$this->releaseMetadataRegistry( 'vendor-fixture', 'https://vendor.example/' )
 		);
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -142,7 +147,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertTrue( $status->eligible() );
 		self::assertSame( 'https://vendor.example/owner/example', $status->eligibility()->expectedUpdateUri() );
 
-		$unsupported = new NativeReleaseTrackingFacade(
+		$unsupported = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -155,7 +160,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			ReleaseTrackingEligibility::UNSUPPORTED_PROVIDER,
 			$unsupported->status( 'plugin', 'example/example.php' )->eligibility()->code()
 		);
-		$metadataOnly = new NativeReleaseTrackingFacade(
+		$metadataOnly = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -196,19 +201,38 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'installed-example',
 			DeploymentPolicy::MANUAL,
 			true,
-			'profile_1'
+			'profile_1',
+			'gh',
+			PackageSource::RELEASE_ASSET,
+			1,
+			null,
+			'plugin-repository'
 		);
 		$disabled = $this->package(
 			'plugin',
 			'disabled/disabled.php',
 			'disabled',
-			DeploymentPolicy::DISABLED
+			DeploymentPolicy::DISABLED,
+			false,
+			'',
+			'gh',
+			PackageSource::RELEASE_ASSET,
+			1,
+			null,
+			'disabled-repository'
 		);
 		$theme    = $this->package(
 			'theme',
 			'example-theme',
 			'example-theme',
-			DeploymentPolicy::AUTOMATIC
+			DeploymentPolicy::AUTOMATIC,
+			false,
+			'',
+			'gh',
+			PackageSource::RELEASE_ASSET,
+			1,
+			null,
+			'theme-repository'
 		);
 		$store    = new RuntimeReleaseStore(
 			array(
@@ -242,7 +266,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 			return new RuntimeUpdaterFacade();
 		};
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -283,8 +307,54 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 4, $preDownload[0]['acceptedArgs'] );
 	}
 
-	public function testRegistrarContinuesWithThemesWhenPluginRepositoryReadFails(): void {
-		$theme   = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
+	public function testRegistrarQuarantinesEveryLegacyReleaseTargetForOneRepository(): void {
+		$plugin  = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::DISABLED );
+		$theme   = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::DISABLED );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $plugin ) );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$store     = new RuntimeReleaseStore(
+			array(
+				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
+				"theme\0example-theme"        => new ManagedReleaseConfiguration( 'example-theme', 'style.css', 'prerelease' ),
+			)
+		);
+		$targets   = array();
+		$registrar = $this->registrar(
+			$plugins,
+			$themes,
+			$store,
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(
+				targetFactory: static function ( mixed ...$options ) use ( &$targets ): object {
+					$targets[] = $options;
+
+					return new RuntimeUpdaterFacade();
+				}
+			)
+		);
+
+		$registrar->register();
+
+		self::assertSame( array(), $targets );
+		self::assertNull( $registrar->target( 'plugin', 'example/example.php' ) );
+		self::assertNull( $registrar->target( 'theme', 'example-theme' ) );
+		self::assertSame( 'repository_release_owner_exists', $registrar->failureCode( 'plugin', 'example/example.php' ) );
+		self::assertSame( 'repository_release_owner_exists', $registrar->failureCode( 'theme', 'example-theme' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testRegistrarKeepsFencesAndQuarantinesConflictsWhenPluginRepositoryReadFails(): void {
+		$theme = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
+		$this->package(
+			'plugin',
+			'branch/branch.php',
+			'branch',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'allDeploymentPlugins' )->willThrowException( new \RuntimeException( 'read failed' ) );
 		$themes = $this->createStub( ThemeRepository::class );
@@ -294,7 +364,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				"theme\0example-theme" => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
 			)
 		);
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -306,8 +376,87 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$registrar->register();
 
-		self::assertNotNull( $registrar->target( 'theme', 'example-theme' ) );
+		self::assertNull( $registrar->target( 'theme', 'example-theme' ) );
 		self::assertSame( 'repository_read_failed', $registrar->failureCode( 'plugin', 'unavailable/unavailable.php' ) );
+		self::assertSame( 'repository_release_owner_exists', $registrar->failureCode( 'theme', 'example-theme' ) );
+		self::assertCount( 5, $GLOBALS['ran_booster_runtime_actions'] );
+		self::assertSame(
+			array(
+				'upgrader_pre_download',
+				'upgrader_pre_install',
+				'site_transient_update_plugins',
+				'site_transient_update_themes',
+				'upgrader_process_complete',
+			),
+			array_column( $GLOBALS['ran_booster_runtime_actions'], 'hook' )
+		);
+		$offers   = (object) array(
+			'response' => array(
+				'example-theme'         => (object) array(),
+				'unmanaged-other-theme' => (object) array(),
+			),
+		);
+		$filtered = $registrar->suppressUnauthorizedThemeOffers( $offers );
+		self::assertArrayNotHasKey( 'example-theme', $filtered->response );
+		self::assertArrayHasKey( 'unmanaged-other-theme', $filtered->response );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testRegistrarQuarantinesOnlyThePackageWhoseRepositorySourceReadFails(): void {
+		$available   = $this->package( 'plugin', 'available/available.php', 'available', DeploymentPolicy::MANUAL );
+		$unavailable = $this->package(
+			'plugin',
+			'unavailable/unavailable.php',
+			'unavailable',
+			DeploymentPolicy::MANUAL,
+			providerRepositoryId: 'unavailable'
+		);
+		$plugins     = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				'available/available.php'     => $available,
+				'unavailable/unavailable.php' => $unavailable,
+			)
+		);
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$database  = new class() {
+			public string $last_error = '';
+
+			public function prepare( string $query, mixed ...$arguments ): array {
+				return $arguments;
+			}
+
+			public function get_results( array $arguments ): array {
+				if ( 'unavailable' === $arguments[2] ) {
+					throw new \RuntimeException( 'repository source unavailable' );
+				}
+
+				return array();
+			}
+		};
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			new RuntimeReleaseStore(
+				array(
+					"plugin\0available/available.php"     => new ManagedReleaseConfiguration( 'available', 'available.php' ),
+					"plugin\0unavailable/unavailable.php" => new ManagedReleaseConfiguration( 'unavailable', 'unavailable.php' ),
+				)
+			),
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(
+				targetFactory: static fn ( mixed ...$options ): object => new RuntimeUpdaterFacade( $options )
+			),
+			new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
+		);
+
+		$registrar->register();
+
+		self::assertInstanceOf( RepositoryReleaseNativeTarget::class, $registrar->target( 'plugin', 'available/available.php' ) );
+		self::assertNull( $registrar->target( 'plugin', 'unavailable/unavailable.php' ) );
+		self::assertSame( 'repository_source_unavailable', $registrar->failureCode( 'plugin', 'unavailable/unavailable.php' ) );
 	}
 
 	public function testRegistrarIsolatesAnInvalidTarget(): void {
@@ -328,7 +477,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				"plugin\0invalid/invalid.php" => new ManagedReleaseConfiguration( 'invalid', 'invalid.php' ),
 			)
 		);
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -358,7 +507,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'example-theme',
 			'example-theme',
 			DeploymentPolicy::MANUAL,
-			subdirectory: 'themes/example'
+			subdirectory: 'themes/example',
+			repositoryId: 'nested-theme-repository'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
@@ -366,7 +516,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
 		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(
@@ -399,7 +549,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
 		$target = new RuntimeUpdaterFacade();
 		$target->failRegistration();
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(
@@ -514,7 +664,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
 		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(
@@ -571,6 +721,23 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, self::NATIVE_EXTRA ) );
 	}
 
+	public function testRegisteredReleaseTargetFailsClosedWhenABranchCompanionIsRecorded(): void {
+		$release       = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		[ $registrar ] = $this->nativePluginRegistrar( $release );
+		$this->package(
+			'theme',
+			'branch-theme',
+			'branch-theme',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+
+		$this->assertNativeAuthorityError(
+			$registrar->authorizeNativeDownload( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA )
+		);
+		$this->assertNativeAuthorityError( $registrar->fenceNativeMutation( false, self::NATIVE_EXTRA ) );
+	}
+
 	public function testBranchManagedTargetNeverEntersNativeReleaseMutationFence(): void {
 		$branch               = $this->package(
 			'plugin',
@@ -613,7 +780,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
 		$themes->method( 'boosterThemeFromStylesheet' )->willThrowException( new ThemeNotFound() );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(),
@@ -641,7 +808,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
 		$plugins->method( 'boosterPluginFromFile' )->willThrowException( new \RuntimeException( 'read failed' ) );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
 			new RuntimeReleaseStore(),
@@ -728,7 +895,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
 		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(
@@ -759,7 +926,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $branch ) );
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(),
@@ -781,7 +948,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$unavailable = $this->createStub( PluginRepository::class );
 		$unavailable->method( 'allDeploymentPlugins' )->willThrowException( new \RuntimeException( 'read failed' ) );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$unavailable,
 			$themes,
 			new RuntimeReleaseStore(),
@@ -818,7 +985,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(
@@ -862,7 +1029,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(
@@ -1054,7 +1221,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore();
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -1065,7 +1232,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$expectedAction = 'ran-booster-release-tracking-enable-plugin-example/example.php-1';
 
 		$lock   = new RuntimeUpdaterLock();
-		$facade = new NativeReleaseTrackingFacade(
+		$facade = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -1130,7 +1297,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'example-theme',
 			'example-theme',
 			DeploymentPolicy::MANUAL,
-			source: PackageSource::BRANCH
+			source: PackageSource::BRANCH,
+			repositoryId: 'theme-preflight-repository'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
@@ -1182,11 +1350,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				);
 			}
 		);
-		$facade        = new NativeReleaseTrackingFacade(
+		$facade        = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar(
+			$this->registrar(
 				$plugins,
 				$themes,
 				$store,
@@ -1241,6 +1409,155 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
+	public function testEnableRefusesARepositoryAlreadyOwnedByAnotherBranchPackage(): void {
+		$root    = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		$nested  = $this->package(
+			'plugin',
+			'other/other.php',
+			'other',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH,
+			subdirectory: 'packages/other'
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $root );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				'example/example.php' => $root,
+				'other/other.php'     => $nested,
+			)
+		);
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$store         = new RuntimeReleaseStore();
+		$lock          = new RuntimeUpdaterLock();
+		$providerCalls = 0;
+		$providers     = $this->releaseMetadataRegistry(
+			list: static function () use ( &$providerCalls ): never {
+				++$providerCalls;
+				throw new \RuntimeException( 'Provider preflight must not run for a repository conflict.' );
+			}
+		);
+		$facade        = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+
+		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		$status = $facade->status( 'plugin', 'example/example.php' );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'release_repository_conflict', $result->code() );
+		self::assertSame( 'release_repository_conflict', $status->failureCode() );
+		self::assertSame( 0, $providerCalls );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( 0, $lock->acquires );
+		self::assertSame( PackageSource::BRANCH, $root->getSource() );
+		self::assertSame( 1, $root->getSourceRevision() );
+	}
+
+	public function testEnableTreatsMissingRepositoryIdentityAndGuardReadFailureAsUnavailable(): void {
+		foreach ( array( 'missing identity', 'unavailable guard' ) as $case ) {
+			$package = $this->package(
+				'plugin',
+				'example/example.php',
+				'example',
+				DeploymentPolicy::MANUAL,
+				source: PackageSource::BRANCH,
+				providerRepositoryId: 'missing identity' === $case ? '' : null
+			);
+			if ( 'unavailable guard' === $case ) {
+				$this->repositoryRows["plugin\0example/example.php"]->source = 'unknown';
+			}
+			$plugins = $this->createStub( PluginRepository::class );
+			$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+			$themes = $this->createStub( ThemeRepository::class );
+			$store  = new RuntimeReleaseStore();
+			$lock   = new RuntimeUpdaterLock();
+			$facade = $this->facade(
+				$plugins,
+				$themes,
+				$store,
+				$this->registrar( $plugins, $themes, $store, $lock, $this->releaseMetadataRegistry() ),
+				$lock,
+				$this->releaseMetadataRegistry(),
+				static fn (): bool => true,
+				static fn (): bool => true,
+				metadataEligible: static fn (): bool => true
+			);
+
+			$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+
+			self::assertSame( 'release_unavailable', $result->code(), $case );
+			self::assertSame( array(), $store->transitions, $case );
+			self::assertSame( 0, $lock->acquires, $case );
+		}
+	}
+
+	public function testEnableReportsAConflictThatAppearsUnderTheUpdaterLock(): void {
+		$root    = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		$reads   = 0;
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
+			function () use ( $root, &$reads ): Package {
+				if ( 1 === ++$reads ) {
+					return $root;
+				}
+				$this->repositoryRows["plugin\0other/other.php"] = (object) array(
+					'type'                   => '1',
+					'package'                => 'other/other.php',
+					'source'                 => PackageSource::BRANCH->value,
+					'provider'               => 'gh',
+					'provider_repository_id' => '123456789',
+				);
+
+				return $root;
+			}
+		);
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore();
+		$lock      = new RuntimeUpdaterLock();
+		$providers = $this->releaseMetadataRegistry();
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadataEligible: static fn (): bool => true
+		);
+
+		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+
+		self::assertSame( 'release_repository_conflict', $result->code() );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( 1, $lock->acquires );
+		self::assertSame( PackageSource::BRANCH, $root->getSource() );
+		self::assertSame( 1, $root->getSourceRevision() );
+	}
+
 	public function testManagedReleaseReadsUseTheConfiguredPublicLookupProfileWithoutReplacingPackageCredentials(): void {
 		$packages = array(
 			'public'         => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL ),
@@ -1292,11 +1609,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return new RepositoryReleaseInspection( $releaseId, $tag, '2.0.0', str_repeat( 'a', 40 ), 'example', 'example.php', 'v1:' . str_repeat( 'b', 64 ) );
 			}
 		);
-		$facade             = new NativeReleaseTrackingFacade(
+		$facade             = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers ),
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
 			$lock,
 			$providers,
 			static fn (): bool => true,
@@ -1502,11 +1819,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				);
 			}
 		);
-		$facade          = new NativeReleaseTrackingFacade(
+		$facade          = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar(
+			$this->registrar(
 				$plugins,
 				$themes,
 				$store,
@@ -1618,11 +1935,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$lock      = new RuntimeUpdaterLock();
 		$providers = new ProviderRegistry( array( $provider ) );
 		$providers->seal();
-		$facade = new NativeReleaseTrackingFacade(
+		$facade = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar(
+			$this->registrar(
 				$plugins,
 				$themes,
 				$store,
@@ -1661,11 +1978,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$listCalls = 0;
 		$store     = new RuntimeReleaseStore();
 		$lock      = new RuntimeUpdaterLock();
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar(
+			$this->registrar(
 				$plugins,
 				$themes,
 				$store,
@@ -1709,7 +2026,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$themes         = $this->createStub( ThemeRepository::class );
 		$store          = new RuntimeReleaseStore();
-		$registrar      = new ManagedReleaseTargetRegistrar(
+		$registrar      = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -1717,7 +2034,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$this->releaseMetadataRegistry( collision: true )
 		);
 		$expectedAction = 'ran-booster-release-tracking-enable-plugin-example/example.php-1';
-		$facade         = new NativeReleaseTrackingFacade(
+		$facade         = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -1750,14 +2067,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$store     = new RuntimeReleaseStore();
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
 			$store,
 			new RuntimeUpdaterLock(),
 			$this->releaseMetadataRegistry()
 		);
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
 			$store,
@@ -1803,11 +2120,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return new RepositoryReleaseCandidateList( array() );
 			}
 		);
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, new RuntimeUpdaterLock(), $providers ),
+			$this->registrar( $plugins, $themes, $store, new RuntimeUpdaterLock(), $providers ),
 			new RuntimeUpdaterLock(),
 			$providers,
 			static fn (): bool => true,
@@ -1845,11 +2162,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return new RepositoryReleaseCandidateList( array() );
 			}
 		);
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, new RuntimeUpdaterLock(), $providers ),
+			$this->registrar( $plugins, $themes, $store, new RuntimeUpdaterLock(), $providers ),
 			new RuntimeUpdaterLock(),
 			$providers,
 			static fn (): bool => true,
@@ -1882,11 +2199,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$lock      = new RuntimeUpdaterLock();
 		$providers = $this->releaseMetadataRegistry();
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers ),
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
 			$lock,
 			$providers,
 			static fn (): bool => true,
@@ -1923,7 +2240,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				"theme\0example-theme" => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
 			)
 		);
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -1945,7 +2262,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$registrar->register();
 		$refreshes = array();
 		$lock      = new RuntimeUpdaterLock();
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -1992,14 +2309,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				throw new InvalidArgumentException( 'Retired release configuration.' );
 			}
 		};
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
 			new RuntimeUpdaterLock(),
 			$this->releaseMetadataRegistry()
 		);
-		$facade    = new NativeReleaseTrackingFacade(
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -2028,7 +2345,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$themes         = $this->createStub( ThemeRepository::class );
 		$store          = new RuntimeReleaseStore();
-		$registrar      = new ManagedReleaseTargetRegistrar(
+		$registrar      = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -2044,7 +2361,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return new RepositoryReleaseCandidateList( array() );
 			}
 		);
-		$facade         = new NativeReleaseTrackingFacade(
+		$facade         = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -2109,7 +2426,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
 			)
 		);
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -2131,7 +2448,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			)
 		);
 		$registrar->register();
-		$facade = new NativeReleaseTrackingFacade(
+		$facade = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -2169,7 +2486,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
 			)
 		);
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -2182,7 +2499,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$registrar->target( 'plugin', 'example/example.php' )?->failRefresh();
 		$invalidated = array();
 		$lock        = new RuntimeUpdaterLock();
-		$facade      = new NativeReleaseTrackingFacade(
+		$facade      = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -2229,7 +2546,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				),
 			)
 		);
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -2242,7 +2559,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$invalidated   = array();
 		$expectedNonce = 'ran-booster-release-tracking-change_channel-plugin-example/example.php-1';
 		$lock          = new RuntimeUpdaterLock();
-		$facade        = new NativeReleaseTrackingFacade(
+		$facade        = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -2353,14 +2670,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$lock        = new RuntimeUpdaterLock();
 		$invalidated = array();
-		$registrar   = new ManagedReleaseTargetRegistrar(
+		$registrar   = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
 			$lock,
 			$this->releaseMetadataRegistry()
 		);
-		$facade      = new NativeReleaseTrackingFacade(
+		$facade      = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -2399,11 +2716,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes  = $this->createStub( ThemeRepository::class );
 		$store   = new RuntimeReleaseStore();
 
-		return new NativeReleaseTrackingFacade(
+		return $this->facade(
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar(
+			$this->registrar(
 				$plugins,
 				$themes,
 				$store,
@@ -2480,7 +2797,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
 		$lock      = new RuntimeUpdaterLock();
 		$facade    = new RuntimeUpdaterFacade();
-		$registrar = new ManagedReleaseTargetRegistrar(
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			new RuntimeReleaseStore(
@@ -2507,6 +2824,29 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'ran_booster_native_update_authority_changed', $result->get_error_code() );
 	}
 
+	private function registrar( mixed ...$arguments ): ManagedReleaseTargetRegistrar {
+		return new ManagedReleaseTargetRegistrar( ...array_merge( $arguments, array( 'sourceGuard' => $this->repositoryGuard() ) ) );
+	}
+
+	private function facade( mixed ...$arguments ): NativeReleaseTrackingFacade {
+		return new NativeReleaseTrackingFacade( ...array_merge( $arguments, array( 'sourceGuard' => $this->repositoryGuard() ) ) );
+	}
+
+	private function repositoryGuard(): RepositorySourceGuard {
+		$database = new class( fn (): array => $this->repositoryRows ) {
+			public string $last_error = '';
+			public function __construct( private \Closure $rows ) {}
+			public function prepare( string $query, mixed ...$arguments ): array {
+				return $arguments;
+			}
+			public function get_results( array $arguments ): array {
+				return array_values( array_filter( ( $this->rows )(), static fn ( object $row ): bool => $row->provider === $arguments[1] && $row->provider_repository_id === $arguments[2] ) );
+			}
+		};
+
+		return new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+	}
+
 	private function package(
 		string $type,
 		string $identifier,
@@ -2517,7 +2857,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		string $provider = 'gh',
 		PackageSource $source = PackageSource::RELEASE_ASSET,
 		int $sourceRevision = 1,
-		?string $subdirectory = null
+		?string $subdirectory = null,
+		string $repositoryId = '123456789',
+		?string $providerRepositoryId = null
 	): Package {
 		$package = $this->createStub( Package::class );
 		$package->method( 'getIdentifier' )->willReturn( $identifier );
@@ -2527,14 +2869,20 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$package->method( 'getSourceRevision' )->willReturn( $sourceRevision );
 		$package->method( 'getProviderCode' )->willReturn( $provider );
 		$package->method( 'getRepository' )->willReturn(
-			new ManagedRepository( $provider, 'owner/example', '123456789', 'main', $private, $credentialId )
+			new ManagedRepository( $provider, 'owner/example', $repositoryId, 'main', $private, $credentialId )
 		);
-		$package->method( 'getProviderRepositoryId' )->willReturn( '123456789' );
+		$package->method( 'getProviderRepositoryId' )->willReturn( $providerRepositoryId ?? $repositoryId );
 		$package->method( 'getCredentialId' )->willReturn( $credentialId );
 		$package->method( 'getPrivate' )->willReturn( $private );
 		$package->method( 'getVersion' )->willReturn( '1.0.0' );
 		$package->method( 'getSubdirectory' )->willReturn( $subdirectory );
-		unset( $type );
+		$this->repositoryRows[ $type . "\0" . $identifier ] = (object) array(
+			'type'                   => 'plugin' === $type ? '1' : '2',
+			'package'                => $identifier,
+			'source'                 => $source->value,
+			'provider'               => $provider,
+			'provider_repository_id' => $repositoryId,
+		);
 
 		return $package;
 	}

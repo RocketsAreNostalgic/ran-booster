@@ -22,6 +22,7 @@ use RAN\RepositoryProvider\UnknownProvider;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
@@ -56,6 +57,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** @var \Closure(string): ?string */
 	private \Closure $publicLookupProfile;
 	private WordPressUpdaterLock $updaterLock;
+	private RepositorySourceGuard $sourceGuard;
 
 	/**
 	 * @param callable(string): bool|null         $canManage
@@ -77,9 +79,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $refreshNative = null,
 		?callable $metadataEligible = null,
 		?callable $invalidateNative = null,
-		?callable $publicLookupProfile = null
+		?callable $publicLookupProfile = null,
+		?RepositorySourceGuard $sourceGuard = null
 	) {
 		$this->updaterLock                   = $updaterLock;
+		$this->sourceGuard                   = $sourceGuard ?? new RepositorySourceGuard();
 		$this->canManage                     = null === $canManage
 			? static fn ( string $type ): bool => current_user_can( 'manage_options' )
 				&& current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' )
@@ -147,6 +151,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		$incompatible  = ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $eligibility->code();
 		$configuration = null;
 		$failureCode   = $incompatible ? ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED : '';
+		if ( ! $incompatible
+			&& PackageSource::BRANCH === $package->getSource()
+			&& false === $this->releaseSourceAvailable( $type, $package ) ) {
+			$failureCode = 'release_repository_conflict';
+		}
 		if ( PackageSource::RELEASE_ASSET === $package->getSource() ) {
 			try {
 				$configuration = $this->store->configuration( $type, $identifier );
@@ -268,7 +277,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 
 		try {
-			$package     = $this->package( $type, $identifier );
+			$package = $this->package( $type, $identifier );
+			if ( true !== $this->releaseSourceAvailable( $type, $package ) ) {
+				return null;
+			}
 			$eligibility = $this->eligibility( $type, $identifier, $package );
 			if ( ! in_array( $package->getSource(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true )
 				|| $expectedSourceRevision !== $package->getSourceRevision()
@@ -448,7 +460,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return ReleaseTrackingResult::failed( 'forbidden', 'Release tracking could not be enabled.' );
 		}
 		try {
-			$package     = $this->package( $type, $identifier );
+			$package      = $this->package( $type, $identifier );
+			$availability = $this->releaseSourceAvailable( $type, $package );
+			if ( false === $availability ) {
+				return ReleaseTrackingResult::failed( 'release_repository_conflict', 'Published releases require exclusive use of this provider repository.' );
+			}
+			if ( null === $availability ) {
+				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
+			}
 			$eligibility = $this->eligibility( $type, $identifier, $package );
 			if ( ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $eligibility->code() ) {
 				return $this->subdirectoryNotSupported();
@@ -485,10 +504,24 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$channel
 			);
 			$incompatible  = false;
+			$conflict      = false;
+			$unavailable   = false;
 			$changed       = $this->mutateWithUpdaterLock(
-				function () use ( $type, $identifier, $expectedSourceRevision, $configuration, &$incompatible ): bool {
-					if ( ! $this->releaseSourceSupported( $this->package( $type, $identifier ) ) ) {
+				function () use ( $type, $identifier, $expectedSourceRevision, $configuration, &$incompatible, &$conflict, &$unavailable ): bool {
+					$package = $this->package( $type, $identifier );
+					if ( ! $this->releaseSourceSupported( $package ) ) {
 						$incompatible = true;
+
+						return false;
+					}
+					$availability = $this->releaseSourceAvailable( $type, $package );
+					if ( false === $availability ) {
+						$conflict = true;
+
+						return false;
+					}
+					if ( null === $availability ) {
+						$unavailable = true;
 
 						return false;
 					}
@@ -516,6 +549,22 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			if ( $incompatible ) {
 				return $this->subdirectoryNotSupported();
+			}
+			if ( $unavailable ) {
+				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
+			}
+			if ( $conflict ) {
+				return ReleaseTrackingResult::failed( 'release_repository_conflict', 'Published releases require exclusive use of this provider repository.' );
+			}
+
+			if ( ! $changed ) {
+				$availability = $this->releaseSourceAvailable( $type, $this->package( $type, $identifier ) );
+				if ( false === $availability ) {
+					return ReleaseTrackingResult::failed( 'release_repository_conflict', 'Published releases require exclusive use of this provider repository.' );
+				}
+				if ( null === $availability ) {
+					return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
+				}
 			}
 
 			return $changed
@@ -815,6 +864,26 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	private function releaseSourceSupported( Package $package ): bool {
 		return null === $package->getSubdirectory();
+	}
+
+	private function releaseSourceAvailable( string $type, Package $package ): ?bool {
+		try {
+			$assessment = $this->sourceGuard->assess(
+				(string) $package->getProviderCode(),
+				(string) $package->getProviderRepositoryId(),
+				'plugin' === $type ? 1 : 2,
+				(string) $package->getIdentifier(),
+				PackageSource::RELEASE_ASSET
+			);
+
+			if ( $assessment['allowed'] ) {
+				return true;
+			}
+
+			return 'repository_source_unavailable' === $assessment['code'] ? null : false;
+		} catch ( Throwable ) {
+			return null;
+		}
 	}
 
 	private function subdirectoryNotSupported(): ReleaseTrackingResult {

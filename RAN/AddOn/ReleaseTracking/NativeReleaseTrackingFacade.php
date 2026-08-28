@@ -204,7 +204,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$this->diagnosticTime( $targetStatus?->lastCheck ),
 			$this->diagnosticTime( $targetStatus?->nextCheck ),
 			$failureCode,
-			$configuration?->channel() ?? 'stable'
+			$configuration?->channel() ?? 'stable',
+			$targetStatus?->candidateProviderReleaseId ?? ''
 		);
 	}
 

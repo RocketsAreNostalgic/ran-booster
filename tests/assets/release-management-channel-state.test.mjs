@@ -135,7 +135,7 @@ test('Core source events drive release discovery without duplicating tab state',
 test('a configured subdirectory makes Published releases unavailable and keeps Branch usable', () => {
 	assert.match(
 		declaration('hasSubdirectory'),
-		/\[name="ran_booster\[subdirectory\]"\][\s\S]*\.value\.trim\(\)/
+		/\[name="ran_booster\[subdirectory\]"\][\s\S]*\.value\?\.trim\(\)/
 	);
 	assert.match(
 		declaration('setChoiceState'),
@@ -172,6 +172,7 @@ test('a configured subdirectory makes Published releases unavailable and keeps B
 		hasSubdirectory({ querySelector: () => ({ value: '   ' }) })(),
 		false
 	);
+	assert.equal(hasSubdirectory({ querySelector: () => null })(), false);
 });
 
 test('an active Published releases choice returns to Branch when a subdirectory appears', () => {

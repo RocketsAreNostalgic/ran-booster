@@ -17,7 +17,7 @@ $packageFieldForm = isset( $packageFieldForm ) && is_string( $packageFieldForm )
 		<th scope="row"><label for="ran-booster-repository-subdirectory"><?php esc_html_e( 'Repository subdirectory', 'ran-booster' ); ?></label></th>
 		<td>
 <?php } ?>
-		<input id="ran-booster-repository-subdirectory" name="ran_booster[subdirectory]" type="text" class="regular-text" placeholder="expample/plugin" value="<?php echo esc_attr( $subdirectoryValue ); ?>"<?php echo '' !== $packageFieldForm ? ' form="' . esc_attr( $packageFieldForm ) . '"' : ''; ?> <?php disabled( $branchReadOnly ); ?>>
+		<input id="ran-booster-repository-subdirectory" name="ran_booster[subdirectory]" type="text" class="regular-text" placeholder="example/plugin" value="<?php echo esc_attr( $subdirectoryValue ); ?>"<?php echo '' !== $packageFieldForm ? ' form="' . esc_attr( $packageFieldForm ) . '"' : ''; ?> <?php disabled( $branchReadOnly ); ?>>
 		<?php /* translators: %s: package type, such as plugin or theme. */ ?>
 		<p class="description"><?php printf( esc_html__( 'Only when the %s lives below the repository root.', 'ran-booster' ), esc_html( $packageView->getType() ) ); ?></p>
 <?php if ( $packageFieldGrid ) { ?>

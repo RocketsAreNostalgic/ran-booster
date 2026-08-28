@@ -30,6 +30,7 @@ $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayo
 			?>
 			</select>
 			<p class="description"><?php esc_html_e( 'Private repos require a PAT with appropriate access.', 'ran-booster' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Only install provider integrations you trust: an active provider can read its saved credentials. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
 <?php if ( $packageFieldGrid ) { ?>
 	</div>
 <?php } else { ?>

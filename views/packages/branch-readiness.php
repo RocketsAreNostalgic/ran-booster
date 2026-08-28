@@ -152,7 +152,7 @@ $subdirectoryStateClass = match ( $repositoryBranchCheckOutcome ?? null ) {
 		<div class="ran-booster-readiness-panel">
 			<div class="ran-booster-readiness-panel__top">
 				<div>
-					<h4><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ); ?></h4>
+					<h4 id="ran-booster-branch-readiness-heading"><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ); ?></h4>
 					<p><?php echo esc_html( $setupSummary ); ?></p>
 				</div>
 				<?php if ( $needsAttention ) { ?>

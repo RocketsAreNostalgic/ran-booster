@@ -325,6 +325,8 @@ final readonly class ProviderSettingsPresenter {
 					} catch ( Throwable ) {
 						$result = 'subdirectory_unverified';
 					}
+				} elseif ( is_string( $subdirectory ) && '' !== $subdirectory ) {
+					$result = 'subdirectory_unverified';
 				} else {
 					$result = 'verified';
 				}

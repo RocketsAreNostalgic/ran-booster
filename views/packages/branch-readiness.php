@@ -27,8 +27,9 @@ $providerSettingsUrl           = add_query_arg(
 	),
 	$providerBaseUrl
 );
-$checkBaseUrl                  = add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl );
-$checkReturnUrl                = $checkBaseUrl . '#ran-booster-branch-readiness';
+$checkReturnUrl                = $isPackageEdit
+	? add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl ) . '#ran-booster-branch-readiness'
+	: '';
 $siteReadiness                 = is_array( $packageBranchReadiness['site'] ?? null )
 	? $packageBranchReadiness['site']
 	: null;
@@ -196,7 +197,8 @@ $webhookActionLabel = $publishedReleaseSource
 						hidden
 					<?php } ?>
 				><p><?php echo esc_html( $repositoryBranchCheckMessage ?? '' ); ?></p></div>
-				<button
+				<?php if ( $isPackageEdit ) { ?>
+					<button
 					type="submit"
 					name="ran_booster[check_repository_branch_after_save]"
 					value="1"
@@ -213,12 +215,17 @@ $webhookActionLabel = $publishedReleaseSource
 					hx-sync="this:drop"
 					hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
 					<?php disabled( isset( $packageMutationAvailable ) && false === $packageMutationAvailable ); ?>
-				><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
-				<?php if ( $repositoryDetailAvailable ) { ?>
-					<a class="button" href="<?php echo esc_url( $providerSettingsUrl ); ?>"><?php echo esc_html( $webhookActionLabel ); ?></a>
-				<?php } else { ?>
-					<button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $webhookActionLabel ); ?></button>
+					><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
 				<?php } ?>
+				<a
+					class="button<?php echo $repositoryDetailAvailable ? '' : ' disabled'; ?>"
+					<?php if ( $repositoryDetailAvailable ) { ?>
+						href="<?php echo esc_url( $providerSettingsUrl ); ?>"
+					<?php } else { ?>
+						aria-disabled="true"
+						tabindex="-1"
+					<?php } ?>
+				><?php echo esc_html( $webhookActionLabel ); ?></a>
 			</div>
 		</div>
 	</div>

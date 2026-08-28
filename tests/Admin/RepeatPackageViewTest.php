@@ -116,6 +116,8 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<button[^>]*data-ran-booster-source-choice="branch"/', $form );
 		self::assertStringContainsString( 'Choose a repository before configuring its update source.', $html );
 		self::assertStringContainsString( 'Choose an update source. Selecting it does not install the package.', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
+		self::assertStringNotContainsString( 'Save settings and check', $html );
 		self::assertMatchesRegularExpression(
 			'/name="ran_booster\\[install_another\\]" value="1"\\s*>Install and add another<\\/button>/',
 			$html
@@ -125,6 +127,39 @@ final class RepeatPackageViewTest extends TestCase {
 			strpos( $html, 'Install ' . $packageView->getType() )
 		);
 		self::assertSame( 1, substr_count( $html, 'name="ran_booster[install_another]"' ) );
+	}
+
+	#[DataProvider( 'createViewMatrix' )]
+	public function testCreateViewDoesNotTriggerWarningsWhenPromotedToExceptions(
+		PackagePagePresenter $packageView,
+		bool $explicitProvider,
+		bool $openRepositoryPicker
+	): void {
+		$packageProviderSettings = $this->providerSettings( true );
+		$bufferLevel             = ob_get_level();
+
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes render warnings to exceptions.
+		set_error_handler(
+			static function ( int $severity, string $message, string $file, int $line ): never {
+				throw new \ErrorException( $message, 0, $severity, $file, $line );
+			}
+		);
+		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+
+		try {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+			$html = (string) ob_get_clean();
+		} finally {
+			while ( ob_get_level() > $bufferLevel ) {
+				ob_end_clean();
+			}
+
+			restore_error_handler();
+		}
+
+		self::assertStringContainsString( 'ran-booster-package-settings--create', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 	}
 
 	/** @return list<array{PackagePagePresenter, string, bool}> */

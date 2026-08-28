@@ -18,6 +18,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable = true;
 		$branchValue              = 'main';
 		$deploymentPolicy         = DeploymentPolicy::AUTOMATIC->value;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
@@ -92,6 +93,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable = true;
 		$branchValue              = 'main';
 		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
@@ -121,6 +123,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
 		$savedSubdirectoryValue   = 'packages/example';
 		$packageMutationAvailable = true;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
@@ -163,6 +166,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable = true;
 		$branchValue              = 'main';
 		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
@@ -201,6 +205,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable = true;
 		$branchValue              = 'test';
 		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
@@ -232,6 +237,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable = true;
 		$branchValue              = 'main';
 		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$isPackageEdit            = true;
 		$releaseManaged           = true;
 		$packageCurrentSource     = 'release_asset';
 		$packageSourceView        = 'branch';
@@ -260,6 +266,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerRepositoryId     = '1315521150';
 		$repositoryValue          = 'owner/booster-fixture-plugin';
 		$releaseManaged           = false;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
@@ -289,6 +296,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerRepositoryId     = '1315521150';
 		$repositoryValue          = 'owner/booster-fixture-plugin';
 		$releaseManaged           = false;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
@@ -316,6 +324,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable     = true;
 		$branchValue                  = 'test';
 		$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
+		$isPackageEdit                = true;
 		$repositoryBranchCheckOutcome = $outcome;
 		$packageBranchReadiness       = array(
 			'site'       => array(
@@ -357,6 +366,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable = true;
 		$branchValue              = 'main';
 		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
 			'webhook_settings_url' => 'https://bitbucket.org/workspace/example/admin/webhooks',
 			'site'                 => array(
@@ -412,6 +422,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable = true;
 		$branchValue              = 'main';
 		$deploymentPolicy         = DeploymentPolicy::AUTOMATIC->value;
+		$isPackageEdit            = true;
 		$packageBranchReadiness   = null;
 
 		ob_start();
@@ -429,6 +440,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable     = true;
 		$branchValue                  = 'main';
 		$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
+		$isPackageEdit                = true;
 		$savedSubdirectoryValue       = '';
 		$packageBranchReadiness       = array(
 			'site'       => array(
@@ -464,6 +476,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$providerWebhookAvailable     = true;
 		$branchValue                  = 'main';
 		$deploymentPolicy             = DeploymentPolicy::AUTOMATIC->value;
+		$isPackageEdit                = true;
 		$packageBranchReadiness       = null;
 		$repositoryBranchCheckOutcome = 'unable_to_check';
 

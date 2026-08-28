@@ -1357,6 +1357,67 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'package-profile', $packages['branch_explicit']->getRepository()->reference->credentialId );
 	}
 
+	public function testEnablePreflightDoesNotSubstituteThePublicLookupProfileForTheSavedPackageCredential(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			private: true,
+			credentialId: 'package-profile',
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes     = $this->createStub( ThemeRepository::class );
+		$store      = new RuntimeReleaseStore();
+		$lock       = new RuntimeUpdaterLock();
+		$references = array();
+		$providers  = $this->releaseMetadataRegistry(
+			list: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references ): RepositoryReleaseCandidateList {
+				unset( $type, $channel );
+				$references[] = $repository;
+				if ( 'package-profile' === $repository->credentialId ) {
+					throw new RepositoryReleaseReadUnavailable( 'The package credential cannot read this repository.' );
+				}
+
+				return new RepositoryReleaseCandidateList( array() );
+			}
+		);
+		$facade     = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => hash_equals( $action, $nonce ),
+			metadataEligible: static fn (): bool => true,
+			publicLookupProfile: static fn (): string => 'public-profile'
+		);
+
+		$preflightNonce = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+		$preflight      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $preflightNonce );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
+		self::assertSame(
+			array( 'package-profile', 'public-profile' ),
+			array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references )
+		);
+
+		$references  = array();
+		$enableNonce = $facade->nonceAction( 'enable', 'plugin', 'example/example.php', 1 );
+		$result      = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', $enableNonce );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
+		self::assertSame(
+			array( 'package-profile' ),
+			array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references )
+		);
+		self::assertSame( array(), $store->transitions );
+	}
+
 	public function testProviderPreflightFailsClosedAcrossIdentityChannelAndOperationalBoundaries(): void {
 		$package = $this->package(
 			'plugin',

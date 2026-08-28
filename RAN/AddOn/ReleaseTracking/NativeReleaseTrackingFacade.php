@@ -431,7 +431,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$expectedSourceRevision,
 				$channel,
 				$package,
-				$eligibility
+				$eligibility,
+				false
 			);
 			if ( null === $preflight ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
@@ -826,7 +827,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		int $expectedSourceRevision,
 		string $channel,
 		Package $package,
-		ReleaseTrackingEligibility $eligibility
+		ReleaseTrackingEligibility $eligibility,
+		bool $allowPublicLookupProfile = true
 	): ?ReleaseTrackingPreflight {
 		if ( PackageSource::BRANCH !== $package->getSource()
 			|| $expectedSourceRevision !== $package->getSourceRevision()
@@ -839,7 +841,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$package,
 			$eligibility->packageRoot(),
 			$this->headerFile( $type, $identifier ),
-			$channel
+			$channel,
+			$allowPublicLookupProfile
 		);
 	}
 
@@ -848,7 +851,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		Package $package,
 		string $packageRoot,
 		string $headerFile,
-		string $channel
+		string $channel,
+		bool $allowPublicLookupProfile = true
 	): ReleaseTrackingPreflight {
 		$providerCode = $package->getProviderCode();
 		if ( null === $providerCode ) {
@@ -857,10 +861,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 		try {
 			$this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );
-			$listing   = $this->providers->requireCapability( $providerCode, RepositoryReleaseCandidateListing::class );
-			$inspector = $this->providers->requireCapability( $providerCode, RepositoryReleaseInspector::class );
-			$metadata  = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );
-			foreach ( $this->releaseBrowserRepositories( $package ) as $repository ) {
+			$listing      = $this->providers->requireCapability( $providerCode, RepositoryReleaseCandidateListing::class );
+			$inspector    = $this->providers->requireCapability( $providerCode, RepositoryReleaseInspector::class );
+			$metadata     = $this->providers->requireCapability( $providerCode, RepositoryReleaseMetadata::class );
+			$repositories = $allowPublicLookupProfile
+				? $this->releaseBrowserRepositories( $package )
+				: array( $package->getRepository()->reference );
+			foreach ( $repositories as $repository ) {
 				try {
 					return $this->repositoryPreflight( $type, $repository, $packageRoot, $headerFile, $channel, $package, $listing, $inspector, $metadata );
 				} catch ( RepositoryReleaseReadUnavailable ) {

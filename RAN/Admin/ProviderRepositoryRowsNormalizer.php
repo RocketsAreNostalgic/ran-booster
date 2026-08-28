@@ -220,6 +220,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$source          = is_string( $repository['source'] ?? null ) ? $repository['source'] : 'branch';
 			$isRelease       = 'release_asset' === $source;
 			$hasBranch       = in_array( $source, array( 'branch', 'mixed' ), true );
+			$isMixed         = 'mixed' === $source;
 			$historical      = ! empty( $repository['historical'] ) || '' === trim( $managedId );
 			$retained        = $isRelease && is_array( $repository['retained_webhook'] ?? null ) ? $repository['retained_webhook'] : array();
 			$branchConsumers = array_values( array_filter( $retained['branch_package_references'] ?? array(), 'is_string' ) );
@@ -239,8 +240,12 @@ final class ProviderRepositoryRowsNormalizer {
 			$coverage                = $isRelease
 				? ( is_string( $retained['local_secret_coverage'] ?? null ) ? $retained['local_secret_coverage'] : 'unknown' )
 				: ( is_string( $readinessRow['local_secret_coverage'] ?? null ) ? $readinessRow['local_secret_coverage'] : 'unknown' );
-			$policies                = is_array( $readinessRow['deployment_policies'] ?? null ) ? $readinessRow['deployment_policies'] : ( is_array( $repository['deployment_policies'] ?? null ) ? $repository['deployment_policies'] : array() );
-			$references              = is_array( $readinessRow['package_references'] ?? null ) ? $readinessRow['package_references'] : ( is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array() );
+			$repositoryPolicies      = is_array( $repository['deployment_policies'] ?? null ) ? $repository['deployment_policies'] : array();
+			$repositoryReferences    = is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array();
+			$readinessPolicies       = is_array( $readinessRow['deployment_policies'] ?? null ) ? $readinessRow['deployment_policies'] : null;
+			$readinessReferences     = is_array( $readinessRow['package_references'] ?? null ) ? $readinessRow['package_references'] : null;
+			$policies                = $isMixed ? $repositoryPolicies : ( $readinessPolicies ?? $repositoryPolicies );
+			$references              = $isMixed ? $repositoryReferences : ( $readinessReferences ?? $repositoryReferences );
 			$references              = array_values( array_filter( $references, 'is_string' ) );
 			$branchReferences        = is_array( $repository['branch_package_references'] ?? null )
 				? array_values( array_filter( $repository['branch_package_references'], 'is_string' ) )

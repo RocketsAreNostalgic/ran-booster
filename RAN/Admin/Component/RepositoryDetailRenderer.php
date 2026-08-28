@@ -69,10 +69,33 @@ final class RepositoryDetailRenderer {
 					<p class="description"><?php esc_html_e( 'No eligible Branch package uses this repository. Published-release packages ignore pushes, so webhook operations are unavailable.', 'ran-booster' ); ?></p>
 					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				<?php } ?>
+				<?php $this->renderProviderActions( $row ); ?>
 			</section>
 
 			<?php $this->renderReleaseAutomation( $row ); ?>
 			<?php $this->renderActivity( $row, $activityUrl ); ?>
+		</div>
+		<?php
+	}
+
+	/** @param array<string, mixed> $row */
+	private function renderProviderActions( array $row ): void {
+		$actions = array_values(
+			array_filter(
+				is_array( $row['actions'] ?? null ) ? $row['actions'] : array(),
+				fn ( mixed $action ): bool => is_array( $action ) && ! $this->isReleaseAutomationEntry( $action ) && ! $this->isPackageOrManagementAction( $action )
+			)
+		);
+		if ( array() === $actions ) {
+			return;
+		}
+		?>
+		<div class="ran-booster-repository-detail__actions">
+		<?php
+		foreach ( $actions as $action ) {
+			$this->renderAction( $action );
+		}
+		?>
 		</div>
 		<?php
 	}
@@ -164,6 +187,39 @@ final class RepositoryDetailRenderer {
 		$key = $entry['key'] ?? null;
 
 		return is_string( $key ) && 1 === preg_match( '/\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $key );
+	}
+
+	/** @param array<string, mixed> $action */
+	private function isPackageOrManagementAction( array $action ): bool {
+		$key = $action['key'] ?? null;
+
+		return is_string( $key ) && ( 'core:webhook-management' === $key || str_starts_with( $key, 'core:package-' ) );
+	}
+
+	/** @param array<string, mixed> $action */
+	private function renderAction( array $action ): void {
+		$disabled    = true === ( $action['disabled'] ?? false );
+		$describedBy = is_string( $action['described_by'] ?? null ) ? $action['described_by'] : '';
+		if ( 'post' === ( $action['type'] ?? null ) ) {
+			?>
+			<form method="post" action="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>">
+			<?php foreach ( is_array( $action['hidden'] ?? null ) ? $action['hidden'] : array() as $name => $value ) { ?>
+				<input type="hidden" name="<?php echo esc_attr( (string) $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
+			<?php } ?>
+				<button type="submit" class="button"<?php disabled( $disabled ); ?><?php echo '' !== $describedBy ? ' aria-describedby="' . esc_attr( $describedBy ) . '"' : ''; ?>><?php echo esc_html( (string) $action['label'] ); ?></button>
+			</form>
+			<?php
+			return;
+		}
+		if ( $disabled ) {
+			?>
+			<button type="button" class="button" disabled aria-disabled="true"<?php echo '' !== $describedBy ? ' aria-describedby="' . esc_attr( $describedBy ) . '"' : ''; ?>><?php echo esc_html( (string) $action['label'] ); ?></button>
+			<?php
+			return;
+		}
+		?>
+		<a class="button" href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $describedBy ? ' aria-describedby="' . esc_attr( $describedBy ) . '"' : ''; ?>><?php echo esc_html( (string) $action['label'] ); ?></a>
+		<?php
 	}
 
 	/** @param list<array<string, mixed>> $packages */

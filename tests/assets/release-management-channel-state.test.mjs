@@ -54,7 +54,19 @@ test('client hydration normalizes the release source label', () => {
 	);
 	assert.match(
 		declaration('setChoiceState'),
-		/setText\(choiceHeading, 'Published releases'\);/
+		/setText\(choiceHeading, 'Releases'\);/
+	);
+	assert.match(
+		declaration('setChoiceState'),
+		/`Releases unavailable: \$\{description\}`[\s\S]*: 'Releases'/
+	);
+	assert.match(
+		declaration('updateAdvancedSummary'),
+		/advancedSummary\.textContent = `Releases · \$\{/
+	);
+	assert.match(
+		declaration('showIdle'),
+		/Select Releases to load stable and preview candidates\.[\s\S]*Select Releases to load eligible stable candidates\./
 	);
 });
 

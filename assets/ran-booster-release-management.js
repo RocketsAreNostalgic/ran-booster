@@ -574,7 +574,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			return;
 		}
 		if (releaseSelected) {
-			advancedSummary.textContent = `Published releases · ${
+			advancedSummary.textContent = `Releases · ${
 				includesPrereleases() ? 'Preview' : 'Stable'
 			}`;
 			return;
@@ -648,15 +648,13 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		releaseChoice.setAttribute('title', disabled ? description : '');
 		releaseChoice.setAttribute(
 			'aria-label',
-			disabled
-				? `Published releases unavailable: ${description}`
-				: 'Published releases'
+			disabled ? `Releases unavailable: ${description}` : 'Releases'
 		);
 		releaseChoice.setAttribute(
 			'aria-busy',
 			state === 'checking' ? 'true' : 'false'
 		);
-		setText(choiceHeading, 'Published releases');
+		setText(choiceHeading, 'Releases');
 		setText(choiceDescription, description);
 		setText(choiceMeta, meta);
 	};
@@ -671,8 +669,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setStatus(
 			'Release candidates appear here',
 			includesPrereleases()
-				? 'Select Published releases to load stable and preview candidates.'
-				: 'Select Published releases to load eligible stable candidates.'
+				? 'Select Releases to load stable and preview candidates.'
+				: 'Select Releases to load eligible stable candidates.'
 		);
 		setHidden(candidates, true);
 		setHidden(details, true);

@@ -171,7 +171,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->renderRepositoryWebhookSetup( 'fixture-provider', '1234', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Repository webhook', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );
 		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section"', $html );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section"' ) );
@@ -325,7 +325,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$inactive = (string) ob_get_clean();
 
 		self::assertSame( $this->repositoryWebhookShellStructure( $active ), $this->repositoryWebhookShellStructure( $inactive ) );
-		foreach ( array( 'Repository webhook', 'Repository webhook lifecycle', 'Webhook readiness', 'Webhook setup', 'Set up webhook', 'Test webhook' ) as $label ) {
+		foreach ( array( 'Push-to-deploy', 'Repository webhook lifecycle', 'Webhook readiness', 'Webhook setup', 'Set up webhook', 'Test webhook' ) as $label ) {
 			self::assertStringContainsString( $label, $active );
 			self::assertStringContainsString( $label, $inactive );
 		}

@@ -259,7 +259,7 @@ before deleting an unused local secret, and preserve owner-shared secrets or
 other profiles that still serve branch packages. GitHub webhook management can
 remove an identified hook through its verified Remove workflow. For other
 providers, remove the hook in the provider UI, then use the provider screen's
-**Manage secrets** action to remove only an unused local secret.
+**Manage signing secrets** action to remove only an unused local secret.
 
 ## Request-wide bootstrap characterization
 

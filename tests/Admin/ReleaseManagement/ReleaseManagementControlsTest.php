@@ -80,7 +80,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		);
 
 		self::assertSame( array( 'release_asset' ), array_keys( $hydrated ) );
-		self::assertSame( 'Published releases', $hydrated['release_asset']['heading'] );
+		self::assertSame( 'Releases', $hydrated['release_asset']['heading'] );
 		self::assertTrue( $hydrated['release_asset']['hydrated'] );
 		self::assertTrue( $hydrated['release_asset']['client_hydratable'] );
 		self::assertStringNotContainsString(
@@ -128,7 +128,10 @@ final class ReleaseManagementControlsTest extends TestCase {
 		( $sections[0]['content'] )();
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Published releases', $sections[0]['summary'] );
+		self::assertSame( 'ran-booster-documentation-published-releases', $sections[0]['id'] );
+		self::assertSame( 'Releases', $sections[0]['summary'] );
+		self::assertStringContainsString( 'choose Releases, review Release readiness, then choose Use releases', $html );
+		self::assertStringContainsString( 'Use Check releases on the managed Plugins or Themes screen', $html );
 		self::assertStringNotContainsString( 'Release Deployments', $html );
 		self::assertStringNotContainsString( 'ran-booster-release-deployments', $html );
 		self::assertStringNotContainsString( 'add-on', strtolower( $html ) );
@@ -144,12 +147,12 @@ final class ReleaseManagementControlsTest extends TestCase {
 		$package  = new PackageProjection( 'branch' );
 
 		self::assertSame(
-			'Published releases · Active',
-			$controls->filterAdvancedSourceSummary( 'Branch deployments', 'edit', 'plugin', 'branch', $package )
+			'Releases · Active',
+			$controls->filterAdvancedSourceSummary( 'Branch', 'edit', 'plugin', 'branch', $package )
 		);
 		self::assertSame(
-			'Published releases · Active',
-			$controls->filterAdvancedSourceSummary( 'Branch deployments', 'edit', 'plugin', 'release_asset', $package )
+			'Releases · Active',
+			$controls->filterAdvancedSourceSummary( 'Branch', 'edit', 'plugin', 'release_asset', $package )
 		);
 
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch' ) );
@@ -157,12 +160,12 @@ final class ReleaseManagementControlsTest extends TestCase {
 		$package  = new PackageProjection( 'release_asset' );
 
 		self::assertSame(
-			'Branch deployments · Active',
-			$controls->filterAdvancedSourceSummary( 'Published releases', 'edit', 'plugin', 'branch', $package )
+			'Branch · Active',
+			$controls->filterAdvancedSourceSummary( 'Releases', 'edit', 'plugin', 'branch', $package )
 		);
 		self::assertSame(
-			'Branch deployments · Active',
-			$controls->filterAdvancedSourceSummary( 'Published releases', 'edit', 'plugin', 'release_asset', $package )
+			'Branch · Active',
+			$controls->filterAdvancedSourceSummary( 'Releases', 'edit', 'plugin', 'release_asset', $package )
 		);
 	}
 
@@ -170,9 +173,9 @@ final class ReleaseManagementControlsTest extends TestCase {
 		$controls = ReleaseManagementFixture::controls();
 
 		self::assertSame(
-			'Published releases · Stable',
+			'Releases · Stable',
 			$controls->filterAdvancedSourceSummary(
-				'Branch deployments',
+				'Branch',
 				'create',
 				'plugin',
 				'release_asset',
@@ -192,7 +195,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 
 		$result = $controls->filterAdvancedSourceSummaryProjection(
 			array(
-				'heading' => 'Branch deployments',
+				'heading' => 'Branch',
 				'badges'  => array(
 					array( 'label' => 'Stable' ),
 				),
@@ -205,7 +208,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'heading' => 'Published releases',
+				'heading' => 'Releases',
 				'badges'  => array(
 					array(
 						'label' => 'Preview',
@@ -227,7 +230,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 
 		$result = $controls->filterAdvancedSourceSummaryProjection(
 			array(
-				'heading' => 'Published releases',
+				'heading' => 'Releases',
 				'badges'  => array(
 					array( 'label' => 'Stable' ),
 					array( 'label' => 'Active' ),
@@ -241,7 +244,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'heading' => 'Branch deployments',
+				'heading' => 'Branch',
 				'badges'  => array(
 					array(
 						'label' => 'src/plugins',
@@ -270,7 +273,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local fallback-view conformance read.
 		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/views/packages/source-choices.php' );
 		self::assertIsString( $fallback );
-		self::assertStringContainsString( 'Published releases', $fallback );
+		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $fallback );
 		self::assertStringContainsString( 'Provider capability required', $fallback );
 		self::assertStringNotContainsString( 'Release Deployments add-on', $fallback );
 		self::assertStringNotContainsString( 'Subscriber feature', $fallback );

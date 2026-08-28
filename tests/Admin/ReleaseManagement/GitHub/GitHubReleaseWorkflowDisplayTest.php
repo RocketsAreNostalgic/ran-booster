@@ -15,13 +15,13 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 	public function testSourceReadyRefusalsExplainWhatMustBeReviewedBeforeSetup(): void {
 		$display = new GitHubReleaseWorkflowDisplay();
 		foreach ( array(
-			'workflow_release_path_conflict'    => 'One or more files Booster would manage already exist. Review and reconcile them before setting up release automation.',
-			'workflow_package_ambiguous'        => 'Booster could not identify exactly one WordPress package header. Resolve the ambiguity before setting up release automation.',
-			'workflow_version_mismatch'         => 'The installed version does not match the repository package header. Reconcile the versions before setting up release automation.',
-			'workflow_version_contract_custom'  => 'Booster found version sources it cannot safely update. Review and reconcile the version contract before setting up release automation.',
-			'workflow_runtime_paths_unknown'    => 'Booster could not safely determine the package runtime files. Review and reconcile the package layout before setting up release automation.',
-			'workflow_prettier_contract_custom' => 'Booster found a Prettier ignore contract it cannot safely change. Review and reconcile it before setting up release automation.',
-			'workflow_repository_unsupported'   => 'This repository does not match the supported WordPress release configuration. Review and reconcile it before setting up release automation.',
+			'workflow_release_path_conflict'    => 'One or more files Booster would manage already exist. Review and reconcile them before setting up a release workflow.',
+			'workflow_package_ambiguous'        => 'Booster could not identify exactly one WordPress package header. Resolve the ambiguity before setting up a release workflow.',
+			'workflow_version_mismatch'         => 'The installed version does not match the repository package header. Reconcile the versions before setting up a release workflow.',
+			'workflow_version_contract_custom'  => 'Booster found version sources it cannot safely update. Review and reconcile the version contract before setting up a release workflow.',
+			'workflow_runtime_paths_unknown'    => 'Booster could not safely determine the package runtime files. Review and reconcile the package layout before setting up a release workflow.',
+			'workflow_prettier_contract_custom' => 'Booster found a Prettier ignore contract it cannot safely change. Review and reconcile it before setting up a release workflow.',
+			'workflow_repository_unsupported'   => 'This repository does not match the supported WordPress release configuration. Review and reconcile it before setting up a release workflow.',
 		) as $code => $message ) {
 			$html = $display->workflow(
 				array(
@@ -31,7 +31,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			);
 
 			self::assertStringContainsString( $message, $html, $code );
-			self::assertStringNotContainsString( 'The release automation request was refused, changed or expired.', $html, $code );
+			self::assertStringNotContainsString( 'The release workflow request was refused, changed or expired.', $html, $code );
 		}
 	}
 
@@ -60,7 +60,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '<div class="notice notice-info inline"', $html );
-		self::assertStringContainsString( 'Existing release automation found. Booster will not overwrite it. Review it before using Booster setup.', $html );
+		self::assertStringContainsString( 'An existing release workflow was found. Booster will not overwrite it. Review it before using Booster setup.', $html );
 		self::assertStringNotContainsString( 'Failure details', $html );
 		self::assertStringNotContainsString( 'Diagnostic code:', $html );
 		self::assertStringNotContainsString( 'Competing release automation', $html );
@@ -76,17 +76,17 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '<div class="notice notice-warning inline"', $html );
-		self::assertStringContainsString( 'GitHub has temporarily rate-limited the release automation request.', $html );
+		self::assertStringContainsString( 'GitHub has temporarily rate-limited the release workflow request.', $html );
 		self::assertStringNotContainsString( 'selected saved credential', $html );
 	}
 
 	public function testRequestValidationFailureDetailsExplainTheSafeAction(): void {
 		$display = new GitHubReleaseWorkflowDisplay();
 		foreach ( array(
-			'malformed_request'       => 'The request was incomplete or malformed. Reload the release automation page and try again.',
+			'malformed_request'       => 'The request was incomplete or malformed. Reload the release workflow page and try again.',
 			'permissions_unavailable' => 'Your current account no longer has the permissions required to manage this package. Sign in with an administrator account and try again.',
 			'package_source_changed'  => 'The saved package or source changed before Booster could act. Reload the current package state and assess it again.',
-			'nonce_expired'           => 'This form has expired. Reload the release automation page and try again.',
+			'nonce_expired'           => 'This form has expired. Reload the release workflow page and try again.',
 		) as $diagnostic => $message ) {
 			$html = $display->workflow(
 				array(
@@ -181,7 +181,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			),
 		) as $view ) {
 			$html = $display->workflow( $view );
-			self::assertStringContainsString( 'Booster Published releases docs', $html );
+			self::assertStringContainsString( 'Booster Releases docs', $html );
 			self::assertStringContainsString( 'admin.php?page=ran-booster&amp;tab=documentation#ran-booster-documentation-published-releases', $html );
 			self::assertStringContainsString( 'GitHub About releases', $html );
 			self::assertStringContainsString( 'https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases', $html );
@@ -274,7 +274,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'Booster can assess this repository and prepare one atomic draft pull request.', $html );
+		self::assertStringContainsString( 'Assess this repository before preparing a release-workflow pull request.', $html );
 		self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $html );
 		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringContainsString( $reason, $html );
@@ -282,7 +282,7 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'name="booster_credential_id"', $html );
 		self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html );
 		self::assertStringContainsString( '>Manage credentials</a>', $html );
-		self::assertStringContainsString( 'This public repository can be inspected anonymously, or with a saved credential for steadier API limits.', $html );
+		self::assertStringContainsString( 'Inspect anonymously, or use a saved credential to avoid anonymous API limits.', $html );
 		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
 		self::assertStringNotContainsString( 'Set up release automation', $html );
 		self::assertStringNotContainsString( 'type="password"', $html );
@@ -332,10 +332,10 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		foreach ( $states as $state => $view ) {
 			$html       = ( new GitHubReleaseWorkflowDisplay() )->workflow( $view );
 			$notice     = strpos( $html, 'ran-booster-release-workflow__notices' );
-			$intro      = strpos( $html, 'Booster can assess this repository and prepare one atomic draft pull request.' );
+			$intro      = strpos( $html, 'Assess this repository before preparing a release-workflow pull request.' );
 			$credential = strpos( $html, 'name="booster_credential_id"' );
 			$assess     = strpos( $html, 'Assess release setup' );
-			$docs       = strpos( $html, 'Booster Published releases docs' );
+			$docs       = strpos( $html, 'Booster Releases docs' );
 
 			self::assertSame( 1, substr_count( $html, 'ran-booster-release-workflow__notices' ), $state );
 			self::assertIsInt( $notice, $state );

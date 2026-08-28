@@ -716,7 +716,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'id="ran-booster-repository-integrations-heading"' ), strpos( $html, 'id="ran-booster-webhook-secrets-heading"' ) );
 		self::assertSame( 0, substr_count( $html, 'Manage signing secrets' ) );
 		self::assertStringContainsString( 'id="ran-booster-repository-integrations-heading" class="ran-booster-section__title">Repository integrations</h3>', $html );
-		self::assertStringContainsString( 'Review site delivery readiness, repositories connected to managed packages, Published release automation, and the shared webhook receiver.', $html );
+		self::assertStringContainsString( 'Manage repositories, webhooks and release workflows.', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-summary--pending' ) );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-dot is-pending' ) );
 		self::assertStringNotContainsString( 'ran-booster-status-summary--attention', $html );
@@ -807,7 +807,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryBranchHtml = (string) ob_get_clean();
-		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryBranchHtml );
+		self::assertStringContainsString( '>Push-to-deploy</h3>', $repositoryBranchHtml );
 
 		$requestedRepositoryId = 'stale-repository';
 		$providerViewData      = $this->providerViewData( get_defined_vars() );
@@ -892,8 +892,8 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'ran-booster-repository-record--release', $html );
-		self::assertStringContainsString( 'Theme · Published releases · 1 package', $html );
-		self::assertStringContainsString( 'Published releases', $html );
+		self::assertStringContainsString( 'Theme · Releases · 1 package', $html );
+		self::assertStringContainsString( 'Releases', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--info">Push-to-Deploy unavailable</span>', $html );
 		self::assertStringContainsString( 'Local signing setup is retained for an easier return to Branch.', $html );
 		self::assertSame( 0, substr_count( $html, 'disabled aria-disabled="true"' ) );

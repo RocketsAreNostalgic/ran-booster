@@ -58,7 +58,7 @@ final class PackageControlContractTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $source );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $source );
 		self::assertStringContainsString( 'type="button"', $source );
-		self::assertStringContainsString( 'Published releases', $source );
+		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $source );
 		self::assertStringContainsString( 'Provider capability required', $source );
 		self::assertStringNotContainsString( 'Subscriber', $source );
 		self::assertStringNotContainsString( 'Release Deployments', $source );

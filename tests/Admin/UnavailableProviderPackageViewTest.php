@@ -411,7 +411,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Published releases', $html );
+		self::assertStringContainsString( 'Releases', $html );
 		self::assertStringContainsString( 'ran-booster-package-row__update-state is-automatic', $html );
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringNotContainsString( 'Published releases · WordPress automatic updates', $html );

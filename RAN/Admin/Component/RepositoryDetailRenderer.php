@@ -51,8 +51,8 @@ final class RepositoryDetailRenderer {
 				<?php
 				foreach ( array(
 					'status'   => __( 'Status', 'ran-booster' ),
-					'branch'   => __( 'Branch deployments', 'ran-booster' ),
-					'releases' => __( 'Published releases', 'ran-booster' ),
+					'branch'   => __( 'Branch', 'ran-booster' ),
+					'releases' => __( 'Releases', 'ran-booster' ),
 				) as $view => $label ) {
 					$url        = is_string( $viewUrls[ $view ] ?? null ) ? $viewUrls[ $view ] : $listUrl;
 					$requestUrl = is_string( $viewRequestUrls[ $view ] ?? null ) ? $viewRequestUrls[ $view ] : $url;
@@ -141,7 +141,7 @@ final class RepositoryDetailRenderer {
 			<div class="ran-booster-settings-section__body">
 				<dl class="ran-booster-repository-detail__facts">
 					<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Branch packages. */ _n( '%d package uses Branch deployments', '%d packages use Branch deployments', $branchCount, 'ran-booster' ), $branchCount ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Published releases', '%d packages track Published releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Published releases', '%d packages track Published releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
 					<?php foreach ( $this->integrationDetails( $row ) as $detail ) { ?>
 						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) ( $detail['value'] ?? '' ) ); ?></dd></div>
 					<?php } ?>
@@ -156,14 +156,14 @@ final class RepositoryDetailRenderer {
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">
 			<header class="ran-booster-settings-section__header">
-				<h3 id="ran-booster-repository-release-heading"><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></h3>
+				<h3 id="ran-booster-repository-release-heading"><?php esc_html_e( 'Release publishing', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<p><?php esc_html_e( 'Release automation is unavailable for this repository provider. Package release settings remain available.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Release workflow setup is unavailable for this repository provider. Package release settings remain available.', 'ran-booster' ); ?></p>
 				<?php foreach ( $packages as $package ) { ?>
 					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ __( 'Open %s settings', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
-				<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Assess release automation', 'ran-booster' ); ?></button></p>
+				<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Assess release setup', 'ran-booster' ); ?></button></p>
 			</div>
 		</section>
 		<?php
@@ -174,7 +174,7 @@ final class RepositoryDetailRenderer {
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
 			<header class="ran-booster-settings-section__header">
-				<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Repository webhook', 'ran-booster' ); ?></h3>
+				<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Local readiness and the last recorded remote state.', 'ran-booster' ); ?></p>
 			</header>
 			<div class="ran-booster-settings-section__body">
@@ -193,7 +193,7 @@ final class RepositoryDetailRenderer {
 	/** @param array<string, mixed> $package */
 	private function renderPackage( array $package ): void {
 		$release = 'release_asset' === $package['source'];
-		$source  = $release ? __( 'Published releases', 'ran-booster' ) : __( 'Branch', 'ran-booster' );
+		$source  = $release ? __( 'Releases', 'ran-booster' ) : __( 'Branch', 'ran-booster' );
 		if ( ! $release && '' !== $package['branch'] ) {
 			$source .= ' · ' . $package['branch'];
 		}
@@ -249,7 +249,7 @@ final class RepositoryDetailRenderer {
 			<h4><?php esc_html_e( 'Webhook', 'ran-booster' ); ?></h4>
 			<?php $this->renderFacts( $webhooks ); ?>
 			<?php if ( array() !== $releases ) { ?>
-				<h4><?php esc_html_e( 'Release automation', 'ran-booster' ); ?></h4>
+				<h4><?php esc_html_e( 'Release workflow', 'ran-booster' ); ?></h4>
 				<?php $this->renderFacts( $releases ); ?>
 			<?php } ?>
 			<p><a href="<?php echo esc_url( $activityUrl ); ?>"><?php esc_html_e( 'View repository activity', 'ran-booster' ); ?></a></p>
@@ -271,8 +271,15 @@ final class RepositoryDetailRenderer {
 
 	/** @param array<string, mixed> $detail */
 	private function isReleaseDetail( array $detail ): bool {
+<<<<<<< HEAD
 		return $this->isReleaseAutomationKey( $detail['key'] ?? null )
-			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' );
+			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' )
+			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release workflow' );
+=======
+		return str_starts_with( (string) ( $detail['key'] ?? '' ), 'gh:release-automation-' )
+			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' )
+			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release workflow' );
+>>>>>>> 7aaa741 (refactor(admin): clarify branch and release terminology)
 	}
 
 	/** @param array<string, mixed> $row @return list<array<string, mixed>> */

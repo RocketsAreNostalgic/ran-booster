@@ -35,7 +35,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<summary>\s*GitHub credentials and access\s*<\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<summary>\s*Bitbucket credentials and access\s*<\/summary>/', $html );
 		self::assertStringContainsString( '<summary>Installing and managing packages</summary>', $html );
-		self::assertStringContainsString( '<summary>Push-to-Deploy</summary>', $html );
+		self::assertStringContainsString( '<summary>Push-to-deploy</summary>', $html );
 		self::assertStringContainsString( 'id="ran-booster-push-to-deploy"', $html );
 		self::assertStringContainsString( 'configured separately on every target site', $html );
 		self::assertStringContainsString( 'HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection', $html );
@@ -52,7 +52,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'Remove the remote provider webhook first, then remove only a local signing secret that is no longer used', $html );
 		self::assertStringContainsString( 'Never remove an owner-shared secret merely because one package changed source', $html );
 		self::assertStringContainsString( 'the verified Remove action can remove the remote hook', $html );
-		self::assertStringContainsString( 'then use Manage secrets to remove an unused local secret', $html );
+		self::assertStringContainsString( 'then use Manage signing secrets to remove an unused local secret', $html );
 		self::assertStringContainsString( 'GitHub webhook settings', $html );
 		self::assertStringContainsString( 'Bitbucket webhook settings', $html );
 		self::assertStringContainsString( '<summary>Move packages between sites</summary>', $html );

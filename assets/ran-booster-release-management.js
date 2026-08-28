@@ -220,6 +220,12 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		clearError();
 		setListBusy(true);
 		disableNativeUpdate();
+		if (candidateList) {
+			candidateList.replaceChildren();
+		}
+		if (candidates) {
+			candidates.hidden = true;
+		}
 		setStatus(
 			'Checking published releases…',
 			'Reading eligible candidates for this managed package.'

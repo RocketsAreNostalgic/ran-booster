@@ -243,6 +243,15 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			true,
 			array(
 				'by_id'         => array(
+					'101' => array(
+						'repository_id'       => '101',
+						'package_references'  => array( 'owner/plugin.php' ),
+						'deployment_policies' => array(
+							'automatic' => 1,
+							'manual'    => 0,
+							'disabled'  => 0,
+						),
+					),
 					'404' => array(
 						'repository_id' => '404',
 						'reason_codes'  => array( 'repository_identity_conflict' ),
@@ -260,6 +269,9 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'mixed', $result['rows']['101']['source_key'] );
 		self::assertSame( 'Mixed sources', $result['rows']['101']['source_label'] );
 		self::assertSame( 'packages/plugin', $result['rows']['101']['package_summaries'][0]['subdirectory'] );
+		self::assertSame( array( 'owner/plugin.php', 'owner-theme' ), $result['rows']['101']['package_references'] );
+		self::assertSame( 'Automatic: 1', $result['rows']['101']['policies'][0]['label'] );
+		self::assertSame( 'Manual: 1', $result['rows']['101']['policies'][1]['label'] );
 		self::assertSame( array( 'owner/plugin.php' ), $capturedProjections['101']['package_references'] );
 		self::assertTrue( $result['rows']['101']['has_branch_consumer'] );
 		self::assertArrayNotHasKey( '202', $capturedProjections );

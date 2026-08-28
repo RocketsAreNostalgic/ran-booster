@@ -13,11 +13,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 
 	public function testItRendersMixedPackagesWithoutRepositoryMutationAuthority(): void {
 		$row = array(
-			'repository'        => 'owner/shared',
-			'repository_url'    => 'https://github.com/owner/shared',
-			'source_label'      => 'Mixed sources',
+			'repository'                => 'owner/shared',
+			'repository_url'            => 'https://github.com/owner/shared',
+			'source_label'              => 'Mixed sources',
 			'package_summaries_omitted' => 3,
-			'package_summaries' => array(
+			'package_summaries'         => array(
 				array(
 					'type'              => 'plugin',
 					'identifier'        => 'owner/plugin.php',
@@ -41,7 +41,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'deployment_policy' => 'manual',
 				),
 			),
-			'details'           => array(
+			'details'                   => array(
 				array(
 					'key'   => 'core:webhook-recorded-status',
 					'label' => 'Recorded hook',
@@ -54,7 +54,16 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'tone'  => 'ok',
 				),
 			),
-			'actions'           => array(
+			'actions'                   => array(
+				array(
+					'key'          => 'fixture:provider-webhooks',
+					'label'        => 'Open fixture webhooks',
+					'type'         => 'link',
+					'url'          => 'https://example.test/provider-webhooks',
+					'disabled'     => false,
+					'external'     => true,
+					'described_by' => '',
+				),
 				array(
 					'key'   => 'fixture:release-automation-a',
 					'label' => 'Release automation: owner/plugin.php',
@@ -89,6 +98,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( '>Automatic<', $html );
 		self::assertStringContainsString( '>Manual<', $html );
 		self::assertStringContainsString( 'Release automation', $html );
+		self::assertStringContainsString( 'Open fixture webhooks', $html );
+		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 	}

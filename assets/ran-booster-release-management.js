@@ -108,7 +108,7 @@
 		Boolean(
 			form
 				.querySelector('[name="ran_booster[subdirectory]"]')
-				?.value.trim()
+				?.value?.trim()
 		);
 
 	const updateAdvancedSummary = () => {

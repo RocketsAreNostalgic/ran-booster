@@ -325,6 +325,34 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( '#ran-booster-', $redirect );
 	}
 
+	public function testRepositoryInitiatedOperationReturnsToItsExactRepositoryRoute(): void {
+		$redirect = $this->controller()->handleAdminPost(
+			$this->request(
+				array(
+					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234&unsafe=discarded',
+				)
+			),
+			'valid'
+		);
+
+		self::assertStringContainsString( 'page=ran-booster', $redirect );
+		self::assertStringContainsString( 'tab=gh', $redirect );
+		self::assertStringContainsString( 'panel=repositories', $redirect );
+		self::assertStringContainsString( 'repository=1234', $redirect );
+		self::assertStringNotContainsString( 'unsafe=', $redirect );
+
+		$fallback = $this->controller()->handleAdminPost(
+			$this->request(
+				array(
+					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=other',
+				)
+			),
+			'valid'
+		);
+		self::assertStringContainsString( 'repository=1234', $fallback );
+		self::assertStringNotContainsString( 'repository=other', $fallback );
+	}
+
 	public function testCompleteNonGitHubProviderUsesTheSamePlacementAndOperationPath(): void {
 		$providerCode  = 'fixture-provider';
 		$providerLabel = 'Fixture Forge';

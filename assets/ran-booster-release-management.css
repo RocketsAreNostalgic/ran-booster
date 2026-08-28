@@ -56,7 +56,7 @@
 	gap: var(--ran-booster-space-10);
 	align-items: center;
 	min-block-size: 36px;
-	margin-block-start: var(--ran-booster-space-8) 0;
+	margin-block: var(--ran-booster-space-8) 0;
 	padding: var(--ran-booster-space-5) var(--ran-booster-space-8);
 	border-block-end: 1px solid var(--ran-booster-border);
 }

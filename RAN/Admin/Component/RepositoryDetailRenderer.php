@@ -23,6 +23,7 @@ final class RepositoryDetailRenderer {
 		$repository = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
 		$source     = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
 		$packages   = $this->packages( $row );
+		$omitted    = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
 		?>
 		<div class="ran-booster-repository-detail">
 			<p class="ran-booster-repository-detail__back"><a href="<?php echo esc_url( $listUrl ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
@@ -30,7 +31,7 @@ final class RepositoryDetailRenderer {
 				<div>
 					<p class="ran-booster-eyebrow"><?php echo esc_html( $providerLabel ); ?></p>
 					<h4><?php echo esc_html( $repository ); ?></h4>
-					<p><?php echo esc_html( $this->summary( $packages, $source ) ); ?></p>
+					<p><?php echo esc_html( $this->summary( $packages, $source, $omitted ) ); ?></p>
 				</div>
 				<?php if ( is_string( $row['repository_url'] ?? null ) && '' !== $row['repository_url'] ) { ?>
 					<a class="button" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $providerLabel ) ); ?></a>
@@ -94,7 +95,7 @@ final class RepositoryDetailRenderer {
 			if ( $release ) {
 				?>
 				<br><span class="description"><?php esc_html_e( 'Ignores pushes', 'ran-booster' ); ?></span><?php } ?></td>
-			<td><?php echo esc_html( ucfirst( $package['deployment_policy'] ) ); ?></td>
+			<td><?php echo esc_html( $this->policyLabel( $package['deployment_policy'] ) ); ?></td>
 			<td><a href="<?php echo esc_url( $package['settings_url'] ); ?>"><?php echo esc_html( 'plugin' === $package['type'] ? __( 'Plugin settings', 'ran-booster' ) : __( 'Theme settings', 'ran-booster' ) ); ?></a></td>
 		</tr>
 		<?php
@@ -150,8 +151,26 @@ final class RepositoryDetailRenderer {
 		return array_values( array_filter( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array(), static fn ( mixed $package ): bool => is_array( $package ) ) );
 	}
 
+	private function policyLabel( mixed $policy ): string {
+		return match ( $policy ) {
+			'automatic' => __( 'Automatic', 'ran-booster' ),
+			'manual'    => __( 'Manual', 'ran-booster' ),
+			default     => __( 'Disabled', 'ran-booster' ),
+		};
+	}
+
 	/** @param list<array<string, mixed>> $packages */
-	private function summary( array $packages, string $source ): string {
+	private function summary( array $packages, string $source, int $omitted ): string {
+		if ( 0 < $omitted ) {
+			return sprintf(
+				/* translators: 1: shown package count, 2: omitted package count, 3: repository source summary. */
+				__( '%1$d packages shown; %2$d more connected · %3$s', 'ran-booster' ),
+				count( $packages ),
+				$omitted,
+				$source
+			);
+		}
+
 		return sprintf(
 			/* translators: 1: number of packages, 2: repository source summary. */
 			_n( '%1$d package · %2$s', '%1$d packages · %2$s', count( $packages ), 'ran-booster' ),

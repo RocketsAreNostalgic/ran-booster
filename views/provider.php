@@ -316,13 +316,7 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 							<?php if ( '' !== $requestedRepositoryId ) { ?>
 								<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
 									<?php
-									$hasBranchConsumer = false;
-									foreach ( $selectedRepositoryRow['package_summaries'] as $packageSummary ) {
-										if ( is_array( $packageSummary ) && 'branch' === ( $packageSummary['source'] ?? null ) ) {
-											$hasBranchConsumer = true;
-											break;
-										}
-									}
+									$hasBranchConsumer = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
 									$repositoryDetailRenderer->render(
 										$selectedRepositoryRow,
 										$provider['label'],

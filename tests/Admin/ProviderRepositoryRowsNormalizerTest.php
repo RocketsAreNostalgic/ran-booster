@@ -261,6 +261,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'Mixed sources', $result['rows']['101']['source_label'] );
 		self::assertSame( 'packages/plugin', $result['rows']['101']['package_summaries'][0]['subdirectory'] );
 		self::assertSame( array( 'owner/plugin.php' ), $capturedProjections['101']['package_references'] );
+		self::assertTrue( $result['rows']['101']['has_branch_consumer'] );
 		self::assertArrayNotHasKey( '202', $capturedProjections );
 		self::assertFalse( $result['rows']['303']['historical'] );
 		self::assertTrue( $result['rows'][ 'repository:' . hash( 'sha256', 'gh|owner/unresolved|branch' ) ]['historical'] );

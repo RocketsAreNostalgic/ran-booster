@@ -414,6 +414,7 @@ final class ProviderRepositoryRowsNormalizer {
 				'types'                     => array_values( $types ),
 				'policies'                  => $policyBadges,
 				'package_references'        => $references,
+				'has_branch_consumer'       => array() !== $branchReferences,
 				'package_summaries'         => $packageSummaries,
 				'package_summaries_omitted' => $packageSummariesOmitted,
 				'statuses'                  => $statuses,

@@ -48,6 +48,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Configured at last check',
 				),
 				array(
+					'key'   => 'fixture:release-automation-owner-plugin',
 					'label' => 'Release automation — owner/plugin.php',
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
@@ -55,7 +56,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 			),
 			'actions'           => array(
 				array(
-					'key'   => 'gh:release-automation-a',
+					'key'   => 'fixture:release-automation-a',
 					'label' => 'Release automation: owner/plugin.php',
 					'url'   => 'https://example.test/plugins?source_view=release_asset',
 				),

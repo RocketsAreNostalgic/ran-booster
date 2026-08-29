@@ -1274,7 +1274,7 @@ final class GitHubReleaseWorkflowControls {
 			'unsupported_provider' => __( 'This repository provider cannot use published-release tracking.', 'ran-booster' ),
 			'invalid_repository' => __( 'The saved repository needs attention before a release workflow can be assessed.', 'ran-booster' ),
 			'invalid_package_identity' => __( 'The installed package identity must match the configured repository.', 'ran-booster' ),
-			'subdirectory_not_supported' => __( 'Published releases require this package at the repository root; continue using Branch deployments for a repository subdirectory.', 'ran-booster' ),
+			'subdirectory_not_supported' => __( 'Published releases require this package at the repository root; continue using Branch for a repository subdirectory.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already has its own release updater, so Booster cannot manage published releases as well.', 'ran-booster' ),
 			default => __( 'Resolve Release readiness before assessing a workflow.', 'ran-booster' ),
 		};

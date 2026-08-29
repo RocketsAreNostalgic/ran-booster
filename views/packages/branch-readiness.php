@@ -20,8 +20,9 @@ $repositoryId                  = '' !== $readinessRepositoryId
 $providerSettingsUrl           = add_query_arg(
 	array_filter(
 		array(
-			'panel'      => 'repositories',
-			'repository' => $repositoryId,
+			'panel'           => 'repositories',
+			'repository'      => $repositoryId,
+			'repository_view' => 'branch',
 		),
 		static fn ( string $value ): bool => '' !== $value
 	),
@@ -136,9 +137,7 @@ $webhookMessage = match ( true ) {
 	$automaticUpdatesReady  => __( 'Local webhook requirements are ready.', 'ran-booster' ),
 	default                 => __( 'Local webhook requirements need attention.', 'ran-booster' ),
 };
-$webhookActionLabel = $publishedReleaseSource
-	? __( 'View repository webhook status', 'ran-booster' )
-	: __( 'Review repository webhook settings', 'ran-booster' );
+$webhookActionLabel = __( 'Manage webhooks', 'ran-booster' );
 
 ?>
 <section id="ran-booster-branch-readiness" class="ran-booster-package-source-readiness" aria-labelledby="ran-booster-branch-readiness-heading">
@@ -146,8 +145,7 @@ $webhookActionLabel = $publishedReleaseSource
 		<div class="ran-booster-readiness-panel">
 			<div class="ran-booster-readiness-panel__top">
 				<div>
-					<h4 id="ran-booster-branch-readiness-heading"><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ); ?></h4>
-					<p><?php echo esc_html( $setupSummary ); ?></p>
+					<h4 id="ran-booster-branch-readiness-heading"><?php esc_html_e( 'Branch readiness', 'ran-booster' ); ?></h4>
 				</div>
 				<?php if ( $needsAttention ) { ?>
 					<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></span>

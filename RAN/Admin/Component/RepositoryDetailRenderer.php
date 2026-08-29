@@ -140,8 +140,8 @@ final class RepositoryDetailRenderer {
 			</header>
 			<div class="ran-booster-settings-section__body">
 				<dl class="ran-booster-repository-detail__facts">
-					<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Branch packages. */ _n( '%d package uses Branch deployments', '%d packages use Branch deployments', $branchCount, 'ran-booster' ), $branchCount ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Published releases', '%d packages track Published releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Branch packages. */ _n( '%d package uses Branch', '%d packages use Branch', $branchCount, 'ran-booster' ), $branchCount ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Releases', '%d packages track Releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
 					<?php foreach ( $this->integrationDetails( $row ) as $detail ) { ?>
 						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) ( $detail['value'] ?? '' ) ); ?></dd></div>
 					<?php } ?>
@@ -271,15 +271,9 @@ final class RepositoryDetailRenderer {
 
 	/** @param array<string, mixed> $detail */
 	private function isReleaseDetail( array $detail ): bool {
-<<<<<<< HEAD
 		return $this->isReleaseAutomationKey( $detail['key'] ?? null )
 			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' )
 			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release workflow' );
-=======
-		return str_starts_with( (string) ( $detail['key'] ?? '' ), 'gh:release-automation-' )
-			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' )
-			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release workflow' );
->>>>>>> 7aaa741 (refactor(admin): clarify branch and release terminology)
 	}
 
 	/** @param array<string, mixed> $row @return list<array<string, mixed>> */

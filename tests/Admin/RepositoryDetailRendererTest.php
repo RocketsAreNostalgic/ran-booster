@@ -123,8 +123,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
-		self::assertStringContainsString( '1 package uses Branch deployments', $html );
-		self::assertStringContainsString( '1 package tracks Published releases', $html );
+		self::assertStringContainsString( '1 package uses Branch', $html );
+		self::assertStringContainsString( '1 package tracks Releases', $html );
 		self::assertStringContainsString( 'Provider workflow detail', $html );
 		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Release workflow — owner/theme', $html );

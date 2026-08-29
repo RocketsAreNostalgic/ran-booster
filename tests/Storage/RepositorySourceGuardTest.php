@@ -97,6 +97,15 @@ final class RepositorySourceGuardTest extends TestCase {
 		}
 	}
 
+	public function testAssessmentQueriesOpaqueRepositoryIdsWithBinaryComparison(): void {
+		$database = new RepositorySourceGuardDatabase();
+		$guard    = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+
+		$guard->assess( 'gh', 'Repository_ID', 1, 'self/self.php', PackageSource::BRANCH );
+
+		self::assertStringContainsString( 'BINARY provider_repository_id = BINARY %s', $database->preparedQuery );
+	}
+
 	public function testConflictProjectionListsOtherPackagesOnlyAndIsBounded(): void {
 		$rows = array(
 			(object) array(

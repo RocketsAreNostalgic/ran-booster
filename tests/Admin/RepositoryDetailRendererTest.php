@@ -43,10 +43,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 			),
 			'details'           => array(
 				array(
-					'key'      => 'core:webhook-recorded-status',
-					'label'    => 'Recorded hook',
-					'value'    => 'Configured at last check',
-					'category' => 'webhook',
+					'key'   => 'core:webhook-recorded-status',
+					'label' => 'Recorded hook',
+					'value' => 'Configured at last check',
 				),
 				array(
 					'key'      => 'gh:release-automation-a',

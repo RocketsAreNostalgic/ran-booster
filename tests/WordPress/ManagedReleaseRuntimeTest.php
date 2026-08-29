@@ -1719,7 +1719,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return new RepositoryReleaseCandidateList( array() );
 			}
 		);
-		$facade     = new NativeReleaseTrackingFacade(
+		$facade     = $this->facade(
 			$plugins,
 			$themes,
 			$store,

@@ -8,12 +8,14 @@ namespace Tests\Support;
 final class RepositorySourceGuardDatabase {
 
 	/** @var list<object> */
-	public array $rows        = array();
-	public string $last_error = '';
-	public int $reads         = 0;
+	public array $rows           = array();
+	public string $last_error    = '';
+	public int $reads            = 0;
+	public string $preparedQuery = '';
 
 	/** @return list<mixed> */
 	public function prepare( string $query, mixed ...$arguments ): array {
+		$this->preparedQuery = $query;
 		return $arguments;
 	}
 

@@ -13,13 +13,15 @@ use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
 
 [$fixture_action, $run, $root_dir, $nested_dir, $archive] = array_pad( $args, 5, '' );
+$protected = getenv( 'RAN_BOOSTER_PROTECTED_ROOT' );
+$protected = is_string( $protected ) && '' !== trim( $protected ) ? realpath( $protected ) : false;
 if ( ! in_array( $fixture_action, array( 'run', 'cleanup' ), true ) || preg_match( '/\Afixture-[a-f0-9]{16}\z/D', $run ) !== 1 ) {
 	throw new RuntimeException( 'Invalid fixture proof arguments.' );
 }
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' )
 	|| ! is_file( ABSPATH . '.ran-booster-disposable-test-site' )
 	|| 'RAN Booster disposable test site' !== trim( (string) file_get_contents( ABSPATH . '.ran-booster-disposable-test-site' ) )
-	|| realpath( ABSPATH ) === realpath( '/Users/anachronistic/Local Sites/pns-stageing/app/public' )
+	|| ( false !== $protected && realpath( ABSPATH ) === $protected )
 	|| is_link( WP_PLUGIN_DIR ) || is_link( WP_CONTENT_DIR ) ) {
 	throw new RuntimeException( 'The exact disposable WordPress site is required.' );
 }

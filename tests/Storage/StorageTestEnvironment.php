@@ -397,6 +397,18 @@ namespace Tests\Storage {
 			$rows = array_filter(
 				$this->rows,
 				function ( array $row ) use ( $query ): bool {
+					if ( preg_match( "/provider = '([^']+)'/", $query, $providerMatches ) === 1
+						&& (string) ( $row['provider'] ?? '' ) !== stripslashes( $providerMatches[1] )
+					) {
+						return false;
+					}
+
+					if ( preg_match( "/BINARY provider_repository_id = BINARY '([^']+)'/", $query, $repositoryIdMatches ) === 1
+						&& (string) ( $row['provider_repository_id'] ?? '' ) !== stripslashes( $repositoryIdMatches[1] )
+					) {
+						return false;
+					}
+
 					if ( preg_match( '/type = (\d+)/', $query, $typeMatches ) === 1
 						&& (int) ( $row['type'] ?? 0 ) !== (int) $typeMatches[1]
 					) {

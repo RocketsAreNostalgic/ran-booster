@@ -25,11 +25,13 @@ $package     = 'exclusivity-root-' . $run_id . '/exclusivity-root.php';
 $theme_dir   = WP_CONTENT_DIR . '/themes/exclusivity-theme-' . $run_id;
 $theme       = 'exclusivity-theme-' . $run_id;
 $table       = ran_booster_table_name();
+$protected   = getenv( 'RAN_BOOSTER_PROTECTED_ROOT' );
+$protected   = is_string( $protected ) && '' !== trim( $protected ) ? realpath( $protected ) : false;
 
 if ( 'setup' === $action ) {
 	if ( ! is_file( ABSPATH . '.ran-booster-disposable-test-site' )
 		|| 'RAN Booster disposable test site' !== trim( (string) file_get_contents( ABSPATH . '.ran-booster-disposable-test-site' ) )
-		|| realpath( ABSPATH ) === realpath( '/Users/anachronistic/Local Sites/pns-stageing/app/public' )
+		|| ( false !== $protected && realpath( ABSPATH ) === $protected )
 		|| is_link( WP_PLUGIN_DIR ) || is_link( WP_CONTENT_DIR ) ) {
 		throw new RuntimeException( 'The exact disposable-site marker and paths were not verified.' );
 	}

@@ -478,7 +478,10 @@ class DeploymentArchivePreflight {
 	}
 
 	private function assertEntryCount( int $entries ): void {
-		if ( $entries < 1 || $entries > self::MAX_ENTRIES ) {
+		if ( 0 === $entries ) {
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID, 'The deployment archive does not contain a package.' );
+		}
+		if ( $entries > self::MAX_ENTRIES ) {
 			$this->fail( DeploymentOutcome::CODE_ARCHIVE_ENTRY_LIMIT, 'The deployment archive exceeds the entry-count limit.' );
 		}
 	}

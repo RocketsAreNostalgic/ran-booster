@@ -450,6 +450,15 @@ final class DeploymentArchivePreflightTest extends TestCase {
 		}
 	}
 
+	public function testZeroArchiveEntriesAreClassifiedAsAnInvalidLayout(): void {
+		try {
+			( new ReflectionMethod( new DeploymentArchivePreflight(), 'assertEntryCount' ) )->invoke( new DeploymentArchivePreflight(), 0 );
+			self::fail( 'Zero-entry archives must be rejected.' );
+		} catch ( DeploymentCheckFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID, $failure->outcomeCode );
+		}
+	}
+
 	public function testPreparedArtifactDetectsPermissionDrift(): void {
 		$path = tempnam( DeploymentArchivePreflightTestEnvironment::temporaryRoot(), 'artifact-' );
 		self::assertIsString( $path );

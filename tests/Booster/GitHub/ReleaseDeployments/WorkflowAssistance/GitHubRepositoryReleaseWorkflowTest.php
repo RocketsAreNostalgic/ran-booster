@@ -55,6 +55,27 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		self::assertSame( array(), $credentials->materialReads );
 	}
 
+	public function testCredentialChoiceLabelIsUtf8SafeAndBoundedToStatusContract(): void {
+		$credentials           = new WorkflowCredentialStore();
+		$credentials->profiles = array(
+			'eligible' => array(
+				'id'         => 'eligible',
+				'label'      => str_repeat( 'あ', 100 ),
+				'kind'       => 'classic',
+				'source'     => 'file',
+				'immutable'  => false,
+				'configured' => true,
+			),
+		);
+		$status                = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+
+		$choice = $this->workflow( $credentials )->status( $status )->credentialChoices()[0];
+
+		self::assertLessThanOrEqual( 255, strlen( $choice['label'] ) );
+		self::assertSame( 1, preg_match( '//u', $choice['label'] ) );
+		self::assertStringEndsWith( ' (classic)', $choice['label'] );
+	}
+
 	public function testPreflightAndIneligibleSavedCredentialAreRejectedBeforeMaterialRead(): void {
 		$credentials = new WorkflowCredentialStore();
 		$workflow    = $this->workflow( $credentials );

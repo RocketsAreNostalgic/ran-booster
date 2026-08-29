@@ -37,7 +37,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 	public int $statusReads      = 0;
 	public bool $throwOnWorkflow = false;
 
-	public function __construct( private readonly string $code = 'fixture', private readonly string $repositoryId = '101', private readonly ?RepositoryReleaseWorkflowPreview $preview = null, private readonly ?RepositoryReleaseWorkflowStatus $status = null ) {}
+	public function __construct( private readonly string $code = 'fixture', private readonly string $repositoryId = '101', private readonly ?RepositoryReleaseWorkflowPreview $preview = null, private readonly ?RepositoryReleaseWorkflowStatus $status = null, private readonly ?RepositoryReleaseWorkflowResult $workflowResult = null ) {}
 
 	public function getMetadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( $this->code ), 'Workflow fixture', 'https://fixture.example/', 'Owner' ); }
@@ -131,7 +131,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 			'operation'     => $operation,
 			'credential_id' => $credentialId,
 		) + $detail;
-		return new RepositoryReleaseWorkflowResult( 'workflow_' . $operation . '_complete', true ); }
+		return $this->workflowResult ?? new RepositoryReleaseWorkflowResult( 'workflow_' . $operation . '_complete', true ); }
 	private function throwIfNeeded(): void {
 		if ( $this->throwOnWorkflow ) {
 			throw new RuntimeException( 'Workflow provider failure.' ); } }

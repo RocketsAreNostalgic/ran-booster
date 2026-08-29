@@ -22,8 +22,9 @@ require_once __DIR__ . '/StorageTestEnvironment.php';
 final class PackageProviderIdentityTest extends RANBoosterTestCase {
 
 	protected function setUp(): void {
-		global $wpdb;
+		global $ran_booster_storage_test_options, $wpdb;
 
+		$ran_booster_storage_test_options = array();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused WordPress database test double.
 		$wpdb = new StorageTestWpdb();
 	}

@@ -308,6 +308,96 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'setup', $provider->calls[1]['operation'] );
 	}
 
+	public function testSamePackageIdentityCanReconcileAnOccupiedWorkflowRecordAfterTheSourceRevisionAdvances(): void {
+		$record   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+			'fixture',
+			'101',
+			false,
+			true,
+			'https://fixture.example/pull/1',
+			'plugin',
+			'example/example.php',
+			2,
+			credentialChoices: array(
+				array(
+					'id'    => 'credential_1',
+					'label' => 'Fixture credential',
+				),
+			)
+		);
+		$provider = new RepositoryReleaseWorkflowProviderDouble( status: $record );
+
+		$this->controls( provider: $provider )->processWorkflowRequest( $this->request( 'outcome' ) );
+
+		self::assertSame( array( 'outcome' ), array_column( $provider->calls, 'operation' ) );
+	}
+
+	public function testDifferentPackageIdentityCannotReconcileAnOccupiedWorkflowRecord(): void {
+		$record   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+			'fixture',
+			'101',
+			false,
+			true,
+			'https://fixture.example/pull/1',
+			'plugin',
+			'other/other.php',
+			2,
+			credentialChoices: array(
+				array(
+					'id'    => 'credential_1',
+					'label' => 'Fixture credential',
+				),
+			)
+		);
+		$provider = new RepositoryReleaseWorkflowProviderDouble( status: $record );
+
+		$this->controls( provider: $provider )->processWorkflowRequest( $this->request( 'outcome' ) );
+
+		self::assertSame( array(), $provider->calls );
+	}
+
+	public function testSignedWorkflowResultPreservesProviderMessageAndRemediationForDisplay(): void {
+		$provider = new RepositoryReleaseWorkflowProviderDouble(
+			workflowResult: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult(
+				'workflow_partial',
+				false,
+				failureStage: 'repository_mutation',
+				diagnosticCode: 'repository_mutation_unverified',
+				message: 'Provider-specific workflow message.',
+				remediation: 'Provider-specific remediation.'
+			)
+		);
+		$url      = $this->controls( provider: $provider )->processWorkflowRequest( $this->request( 'inspect' ) );
+		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Exercises the signed PRG result parser.
+
+		$requestedResult = new \ReflectionMethod( ReleaseWorkflowControls::class, 'requestedResult' );
+		$result          = $requestedResult->invoke( $this->controls( provider: $provider ) );
+
+		self::assertSame( 'Provider-specific workflow message.', $result['message'] );
+		self::assertSame( 'Provider-specific remediation.', $result['remediation'] );
+
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowControls::class, 'workflowViewFor' );
+		$view            = $workflowViewFor->invoke(
+			$this->controls( provider: $provider ),
+			'plugin',
+			'example/example.php',
+			3,
+			$result['code'],
+			$result['successful'],
+			'',
+			$result['channel'],
+			$result['failure_stage'],
+			$result['diagnostic_code'],
+			$result['diagnostic_available'],
+			$result['correlation_reference'],
+			$result['message'],
+			$result['remediation']
+		);
+
+		self::assertSame( 'Provider-specific workflow message.', $view['result_message'] );
+		self::assertSame( 'Provider-specific remediation.', $view['result_remediation'] );
+	}
+
 	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true ): ReleaseWorkflowControls {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
 		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $this->sourceGuard() );

@@ -196,10 +196,21 @@ final class GitHubRepositoryReleaseWorkflow {
 			if ( is_array( $profile ) && 'file' === ( $profile['source'] ?? null ) && empty( $profile['immutable'] ) && ! empty( $profile['configured'] ) && is_string( $profile['id'] ?? null ) && is_string( $profile['label'] ?? null ) && is_string( $profile['kind'] ?? null ) ) {
 				$choices[] = array(
 					'id'    => $profile['id'],
-					'label' => $profile['label'] . ' (' . $profile['kind'] . ')',
+					'label' => $this->credentialLabel( $profile['label'], $profile['kind'] ),
 				);
 			}
 		} return array_slice( $choices, 0, 16 ); }
+	private function credentialLabel( string $label, string $kind ): string {
+		$suffix = $this->utf8Prefix( ' (' . $kind . ')', 255 );
+		return $this->utf8Prefix( $label, 255 - strlen( $suffix ) ) . $suffix;
+	}
+	private function utf8Prefix( string $value, int $maximumBytes ): string {
+		$value = substr( $value, 0, max( 0, $maximumBytes ) );
+		while ( '' !== $value && 1 !== preg_match( '//u', $value ) ) {
+			$value = substr( $value, 0, -1 );
+		}
+		return $value;
+	}
 	private function repositoryLocator( ?array $record ): string {
 		return is_array( $record ) && is_string( $record['repository'] ?? null ) ? $record['repository'] : ''; }
 	private function workflowUrl( ReleaseTrackingStatus $status ): string {

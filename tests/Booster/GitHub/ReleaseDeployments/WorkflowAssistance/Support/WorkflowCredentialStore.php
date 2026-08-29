@@ -9,14 +9,31 @@ use RAN\RepositoryProvider\ProviderCredentialStore;
 final class WorkflowCredentialStore implements ProviderCredentialStore {
 	public int $profileReads = 0;
 
+	/** @var array<string,array{id:string,label:string,kind:string,source:string,immutable:bool,configured:bool}>|null */
+	public ?array $profiles = null;
+
 	/** @var list<string|null> */
 	public array $materialReads = array();
 
 	public function credentialProfiles(): array {
 		++$this->profileReads;
-		return array(
-			'eligible' => array( 'id' => 'eligible', 'label' => 'Repository access', 'kind' => 'classic', 'source' => 'file', 'immutable' => false, 'configured' => true ),
-			'constant' => array( 'id' => 'constant', 'label' => 'Constant', 'kind' => 'classic', 'source' => 'constant', 'immutable' => true, 'configured' => true ),
+		return $this->profiles ?? array(
+			'eligible' => array(
+				'id'         => 'eligible',
+				'label'      => 'Repository access',
+				'kind'       => 'classic',
+				'source'     => 'file',
+				'immutable'  => false,
+				'configured' => true,
+			),
+			'constant' => array(
+				'id'         => 'constant',
+				'label'      => 'Constant',
+				'kind'       => 'classic',
+				'source'     => 'constant',
+				'immutable'  => true,
+				'configured' => true,
+			),
 		);
 	}
 

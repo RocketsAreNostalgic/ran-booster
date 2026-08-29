@@ -42,7 +42,7 @@ final class RepositorySourceGuard {
 		}
 		$this->lifecycle?->requireReady();
 		$query = $this->database->prepare(
-			'SELECT type, package, source, provider, provider_repository_id FROM %i WHERE provider = %s AND provider_repository_id = %s' . ( $lock ? ' FOR UPDATE' : '' ),
+			'SELECT type, package, source, provider, provider_repository_id FROM %i WHERE provider = %s AND BINARY provider_repository_id = BINARY %s' . ( $lock ? ' FOR UPDATE' : '' ),
 			ran_booster_table_name(),
 			$provider,
 			$providerRepositoryId

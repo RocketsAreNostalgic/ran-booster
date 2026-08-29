@@ -386,7 +386,7 @@ final class DeploymentCoordinatorTest extends TestCase {
 			'ran_booster_storage_adoption_conflict',
 			'Booster found existing package management data. No package changes were made.'
 		);
-		$this->preflight->artifact = $this->artifact( '2.0.0' );
+		$this->preflight->artifact     = $this->artifact( '2.0.0' );
 
 		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
 

@@ -150,7 +150,7 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 
 	/** @param array<string, mixed> $validation */
 	private function candidateReleaseId( array $validation ): string {
-		$identity = $validation['identity'] ?? null;
+		$identity  = $validation['identity'] ?? null;
 		$releaseId = is_array( $identity ) ? $identity['release_id'] ?? null : null;
 
 		return is_int( $releaseId ) && $releaseId > 0 ? (string) $releaseId : '';

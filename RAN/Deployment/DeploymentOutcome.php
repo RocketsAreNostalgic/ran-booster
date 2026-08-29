@@ -12,7 +12,7 @@ final readonly class DeploymentOutcome {
 
 	public const CODE_DEPLOYED                       = 'deployed';
 	public const CODE_NO_CHANGE                      = 'no_change';
-	public const CODE_ALREADY_MANAGED                 = 'already_managed';
+	public const CODE_ALREADY_MANAGED                = 'already_managed';
 	public const CODE_PROVIDER_FAILED                = 'provider_failed';
 	public const CODE_PROVIDER_REQUEST_INVALID       = 'provider_request_invalid';
 	public const CODE_PROVIDER_CREDENTIAL_REJECTED   = 'provider_credential_rejected';
@@ -43,7 +43,7 @@ final readonly class DeploymentOutcome {
 	private const STATES = array(
 		self::CODE_DEPLOYED                       => DeploymentState::SUCCEEDED,
 		self::CODE_NO_CHANGE                      => DeploymentState::SUCCEEDED,
-		self::CODE_ALREADY_MANAGED                 => DeploymentState::SUCCEEDED,
+		self::CODE_ALREADY_MANAGED                => DeploymentState::SUCCEEDED,
 		self::CODE_PROVIDER_FAILED                => DeploymentState::FAILED,
 		self::CODE_PROVIDER_REQUEST_INVALID       => DeploymentState::FAILED,
 		self::CODE_PROVIDER_CREDENTIAL_REJECTED   => DeploymentState::FAILED,

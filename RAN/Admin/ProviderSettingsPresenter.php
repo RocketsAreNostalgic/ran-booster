@@ -28,6 +28,7 @@ use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Storage\CredentialUsageReader;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use Throwable;
 
@@ -42,6 +43,7 @@ final readonly class ProviderSettingsPresenter {
 	private CredentialExpiryObservationStore $expiryObservations;
 	private CredentialExpiryReminder $expiryReminders;
 	private RepositoryBranchCheckEvidenceStore $branchCheckEvidence;
+	private WordPressUpdaterLock $branchCheckLock;
 
 	public function __construct(
 		private ProviderRegistry $providers,
@@ -53,7 +55,8 @@ final readonly class ProviderSettingsPresenter {
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null,
 		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
-		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?WordPressUpdaterLock $branchCheckLock = null
 	) {
 		$this->publicLookupProfiles = $publicLookupProfiles ?? new PublicRepositoryLookupProfileStore();
 		$this->expiryObservations   = $expiryObservations ?? new CredentialExpiryObservationStore();
@@ -63,6 +66,7 @@ final readonly class ProviderSettingsPresenter {
 			$this->expiryObservations
 		);
 		$this->branchCheckEvidence  = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->branchCheckLock      = $branchCheckLock ?? new WordPressUpdaterLock();
 	}
 
 	/**
@@ -278,6 +282,19 @@ final readonly class ProviderSettingsPresenter {
 		if ( PackageSource::BRANCH !== $package->getSource() ) {
 			return 'unable_to_check';
 		}
+		try {
+			return $this->branchCheckLock->run(
+				fn (): string => $this->checkPackageRepositoryBranchWhileLocked( $type, $package ),
+				'Another package operation is in progress.',
+				'The package operation lock could not be released.'
+			);
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+	}
+
+	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
+	private function checkPackageRepositoryBranchWhileLocked( string $type, Package $package ): string {
 		$profileId          = $this->effectiveBranchCheckProfile( $package );
 		$profileFingerprint = $this->branchCheckEvidence->profileFingerprintFor( $package, $profileId );
 

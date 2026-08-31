@@ -214,6 +214,28 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->prepareCalls );
 	}
 
+	public function testRepositoryBranchCheckHoldsTheSharedUpdaterLockDuringProviderAccess(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider                   = new DashboardBranchCheckProvider();
+		$lock                       = new DashboardBranchCheckUpdaterLock();
+		$dashboard                  = $this->dashboard(
+			$this->throwingSecrets(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			branchCheckLock: $lock
+		);
+		$provider->onProviderAccess = static fn () => $lock->recordProviderAccess();
+		$package                    = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$check                      = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET                       = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( array( 'acquire', 'release:branch-check-lock' ), $lock->events );
+		self::assertTrue( $lock->wasHeldDuring( 'provider_access' ) );
+	}
+
 	public function testRepositoryBranchCheckDoesNotReuseVerifiedMarkerAfterItsExactEvidenceIsCleared(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
@@ -2181,9 +2203,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		bool $providerCredentials = false,
 		?ProviderRegistry $providers = null,
 		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
-		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?WordPressUpdaterLock $branchCheckLock = null
 	): RoutingDashboard {
 		$providers        = $providers ?? $this->providers( $providerCredentials );
+		$branchCheckLock  = $branchCheckLock ?? new DashboardBranchCheckUpdaterLock();
 		$pluginRepository = $plugins ?? new class() extends PluginRepository {
 
 			public function __construct() {
@@ -2216,7 +2240,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$pluginRepository,
 			new Booster(),
 			$themeRepository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, null, $branchCheckEvidence ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, null, $branchCheckEvidence, $branchCheckLock ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),
@@ -2509,6 +2533,8 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	public int $pathCalls           = 0;
 	public ?ArchiveRequest $request = null;
 	public ?string $path            = null;
+	/** @var \Closure(): void|null */
+	public ?\Closure $onProviderAccess = null;
 
 	public function __construct(
 		public readonly bool $cleanupFails = false,
@@ -2541,6 +2567,9 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	}
 
 	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		if ( null !== $this->onProviderAccess ) {
+			( $this->onProviderAccess )();
+		}
 		++$this->prepareCalls;
 		$this->request = $request;
 
@@ -2627,6 +2656,36 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 			public function cleanup(): void {
 			}
 		};
+	}
+}
+
+final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
+
+	/** @var list<string> */
+	public array $events             = array();
+	private bool $held               = false;
+	private bool $providerAccessHeld = false;
+
+	public function acquire(): string {
+		$this->events[] = 'acquire';
+		$this->held     = true;
+
+		return 'branch-check-lock';
+	}
+
+	public function release( string $token ): bool {
+		$this->events[] = 'release:' . $token;
+		$this->held     = false;
+
+		return 'branch-check-lock' === $token;
+	}
+
+	public function recordProviderAccess(): void {
+		$this->providerAccessHeld = $this->held;
+	}
+
+	public function wasHeldDuring( string $event ): bool {
+		return 'provider_access' === $event && $this->providerAccessHeld;
 	}
 }
 

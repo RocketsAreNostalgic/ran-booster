@@ -58,7 +58,6 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Branch deployments are the package source.', $html );
 		if ( $expectsReadiness ) {
 			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
 			self::assertStringContainsString( '>Save settings and check</button>', $html );

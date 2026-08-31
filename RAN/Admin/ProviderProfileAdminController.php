@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\Dashboard;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\{Admin\ProviderAdminMetadata, CredentialedPublicRepositoryBrowser, CredentialValidator, InvalidCredentialInput, InvalidWebhookInput, ProviderCode, ProviderRegistry, UnsupportedProviderCapability, WebhookNormalizer};
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
@@ -350,14 +351,27 @@ class ProviderProfileAdminController {
 				if ( ! $this->secrets->deleteCredential( $provider, $id ) || isset( $this->secrets->credentialProfiles( $provider )[ $id ] ) ) {
 					throw new CredentialRequestException( 'Booster could not verify that the repository credential was removed.' );
 				}
-				$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
-				if ( $clearedDefault ) {
-					$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
-				}
 				if ( $clearedDefault ) {
 					$this->publicLookupProfiles->set( $provider->value, null );
 				}
 				$this->expiryObservations->clear( $provider->value, $id );
+				try {
+					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
+					if ( $clearedDefault ) {
+						$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
+					}
+				} catch ( \Throwable $failure ) {
+					BoosterLogger::logException(
+						'repository branch evidence invalidation failed after credential removal',
+						$failure,
+						array(
+							'source'    => 'admin',
+							'operation' => 'delete-access-profile',
+							'step'      => 'branch_check_evidence_invalidation',
+							'provider'  => $provider->value,
+						)
+					);
+				}
 				return $clearedDefault
 					? 'Repository credential removed. Public repository lookup now uses anonymous access.'
 					: 'Repository credential removed.';

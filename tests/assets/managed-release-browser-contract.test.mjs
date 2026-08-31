@@ -73,6 +73,9 @@ class Node {
 		);
 	}
 	querySelector(selector) {
+		if (!/^input\[data-release-id="[^"]*"\]$/.test(selector)) {
+			throw new SyntaxError('Invalid CSS selector');
+		}
 		const releaseId = selector.match(
 			/^input\[data-release-id="(.+)"\]$/
 		)?.[1];
@@ -295,6 +298,94 @@ test('managed browser selects and inspects the newest current candidate, preserv
 			.get('retry')
 			.classList.contains('ran-booster-update-is-active'),
 		false
+	);
+});
+
+test('managed browser preserves provider candidate order without a native update offer', async () => {
+	const providerFirst = candidate(
+		'provider-first',
+		'3.0.0',
+		'newer',
+		'2026-08-01T00:00:00Z'
+	);
+	const laterTimestamp = candidate(
+		'later-timestamp',
+		'3.1.0',
+		'newer',
+		'2026-08-02T00:00:00Z'
+	);
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [providerFirst, laterTimestamp],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '3.0.0',
+				tag: 'v3.0.0',
+				installed_version: '2.0.0',
+				version_relationship: 'newer',
+			},
+		},
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(harness.requests[1].get('release_id'), 'provider-first');
+	assert.equal(
+		descendants(harness.nodes.get('candidate-list')).find(
+			(node) => node.tagName === 'input' && node.checked
+		).dataset.releaseId,
+		'provider-first'
+	);
+});
+
+test('managed browser supports opaque release IDs without selector interpolation', async () => {
+	const opaqueId = 'release"opaque';
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate(
+						opaqueId,
+						'3.0.0',
+						'newer',
+						'2026-08-03T00:00:00Z'
+					),
+				],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '3.0.0',
+				tag: 'v3.0.0',
+				installed_version: '2.0.0',
+				version_relationship: 'newer',
+			},
+		},
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(harness.requests[1].get('release_id'), opaqueId);
+	assert.equal(
+		descendants(harness.nodes.get('candidate-list')).find(
+			(node) => node.tagName === 'input' && node.checked
+		).dataset.releaseId,
+		opaqueId
 	);
 });
 

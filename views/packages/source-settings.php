@@ -39,7 +39,9 @@ ob_start();
 				<?php require __DIR__ . '/fields/branch.php'; ?>
 				<?php require __DIR__ . '/fields/subdirectory.php'; ?>
 			</div>
-			<?php require __DIR__ . '/branch-readiness.php'; ?>
+			<?php if ( $isPackageEdit ) { ?>
+				<?php require __DIR__ . '/branch-readiness.php'; ?>
+			<?php } ?>
 		</fieldset>
 		<?php if ( $isPackageEdit && $releaseManaged && 'branch' === $packageSourceView ) { ?>
 			<?php foreach ( $packageAdvancedSections as $packageAdvancedSection ) { ?>

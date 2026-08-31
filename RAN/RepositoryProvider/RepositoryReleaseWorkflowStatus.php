@@ -10,6 +10,9 @@ use InvalidArgumentException;
 final readonly class RepositoryReleaseWorkflowStatus {
 	/** @param list<array{operation:string,outcome_code:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,recorded_at:string}> $failureHistory @param list<array{id:string,label:string}> $credentialChoices @param list<array{label:string,url:string}> $documentationLinks */
 	public function __construct( private string $providerCode, private string $repositoryId, private bool $recordExact, private bool $recordOccupied, private string $pullRequestUrl = '', private string $packageType = '', private string $packageIdentifier = '', private int $sourceRevision = 0, private string $recordOperation = '', private string $observationKind = '', private string $observedAt = '', private array $failureHistory = array(), private array $credentialChoices = array(), private array $documentationLinks = array(), private string $providerWorkflowUrl = '', private string $writeGuidance = '' ) {
+		if ( $this->recordExact && ! $this->recordOccupied ) {
+			throw new InvalidArgumentException( 'An exact release workflow record must occupy the repository.' );
+		}
 		if ( ! $this->text( $this->providerCode, 32 ) || ! $this->text( $this->repositoryId, 191 ) || ! $this->url( $this->pullRequestUrl, true )
 			|| ! in_array( $this->packageType, array( '', 'plugin', 'theme' ), true ) || ! $this->text( $this->packageIdentifier, 255, true ) || $this->sourceRevision < 0
 			|| ! in_array( $this->recordOperation, array( '', 'bootstrap', 'template_update' ), true ) || ! in_array( $this->observationKind, array( '', 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true )

@@ -71,7 +71,7 @@ final class DeploymentOutcomeMessage {
 			'archive_entry_limit'            => __( 'The package archive contains too many entries. Reduce the archive contents, rebuild it, and retry.', 'ran-booster' ),
 			'archive_encrypted'              => __( 'The package archive is encrypted and cannot be installed. Publish an unencrypted ZIP archive, then retry.', 'ran-booster' ),
 			'archive_entry_unsupported'      => __( 'The package archive contains a link or device entry. Rebuild the archive with only regular files and directories, then retry.', 'ran-booster' ),
-			'archive_cleanup_failed'         => __( 'Booster could not clean a temporary archive safely. Check server temporary-file access, then retry.', 'ran-booster' ),
+			'archive_cleanup_failed'         => __( 'Booster could not safely clean up a temporary archive or provider authentication. Check server temporary-file access and the repository provider integration, then retry.', 'ran-booster' ),
 			'deployment_snapshot_changed'    => __( 'The package changed while Booster prepared the deployment. Review the current package source, then start a new deployment.', 'ran-booster' ),
 			'deployment_destination_exists'  => __( 'The package destination already exists and cannot be replaced safely. Link the installed plugin or theme in Booster if it is correct; otherwise inspect it and Activity before retrying.', 'ran-booster' ),
 			'deployment_self_update_blocked' => __( 'Booster cannot update itself during this deployment. Update Booster separately before retrying the managed package.', 'ran-booster' ),

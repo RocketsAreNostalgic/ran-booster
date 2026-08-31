@@ -50,6 +50,12 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		);
 	}
 
+	public function testStatusRejectsAnExactRecordThatDoesNotOccupyTheRepository(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new RepositoryReleaseWorkflowStatus( 'gh', '101', true, false );
+	}
+
 	public function testResultRejectsHtmlAndPreviewRejectsUnexpectedRecordKeys(): void {
 		$this->expectException( InvalidArgumentException::class );
 		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', false, message: '<em>Unsafe</em>' );

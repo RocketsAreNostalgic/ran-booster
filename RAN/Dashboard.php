@@ -219,7 +219,7 @@ class Dashboard {
 			$data['providerListState'] = $this->requestedProviderListState();
 
 			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
-			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement ) );
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement, $this->releaseWorkflow ) );
 			$data                                    = array_merge( $data, $this->providerSettings->buildProfileListProjection( $data ) );
 			$data['webhookManagement']               = $this->webhookManagement;
 			$data['releaseWorkflow']                 = $this->releaseWorkflow;

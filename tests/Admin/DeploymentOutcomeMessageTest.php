@@ -89,7 +89,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'archive_entry_limit'               => 'Reduce the archive contents',
 			'archive_encrypted'                 => 'Publish an unencrypted ZIP archive',
 			'archive_entry_unsupported'         => 'only regular files and directories',
-			'archive_cleanup_failed'            => 'Check server temporary-file access',
+			'archive_cleanup_failed'            => 'temporary-file access and the repository provider integration',
 			'deployment_snapshot_changed'       => 'Review the current package source',
 			'deployment_destination_exists'     => 'Link the installed plugin or theme',
 			'deployment_self_update_blocked'    => 'Update Booster separately',

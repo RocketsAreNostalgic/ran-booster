@@ -32,7 +32,7 @@ final class ReleaseWorkflowControls {
 	private const RESULT_REFERENCE_QUERY_KEY            = 'ran_booster_release_workflow_reference';
 	private const RESULT_MESSAGE_QUERY_KEY              = 'ran_booster_release_workflow_message';
 	private const RESULT_REMEDIATION_QUERY_KEY          = 'ran_booster_release_workflow_remediation';
-	private const FAILURE_DIAGNOSTIC_CODES              = array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
+	private const FAILURE_DIAGNOSTIC_CODES              = array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'repository_source_unavailable', 'repository_release_owner_exists', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
 	private const RESULT_NONCE_ACTION                   = 'ran-booster-release-workflow-result-';
 	private const PREVIEW_QUERY_KEY                     = 'ran_booster_release_workflow_preview';
 	private const CHANNEL_QUERY_KEY                     = 'ran_booster_release_workflow_channel';
@@ -58,7 +58,6 @@ final class ReleaseWorkflowControls {
 	public function register(): void {
 		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'keepReleaseSettingsDiscoverable' ), 20, 5 );
 		add_action( 'ran_booster_admin_package_release_readiness_actions', array( $this, 'renderPackageReleaseAutomationLink' ), 20, 2 );
-		add_filter( 'ran_booster_provider_repository_rows', array( $this, 'enrichRepositoryRows' ), 20, 4 );
 		add_action( 'admin_post_ran_booster_release_workflow', array( $this, 'handleWorkflow' ) );
 	}
 
@@ -599,8 +598,9 @@ final class ReleaseWorkflowControls {
 				if ( null === $provider ) {
 					$outcome['diagnostic_code'] = 'provider_unavailable';
 					break; }
-				if ( ! $this->workflowSourceAllowed( $type, $identifier, $package ) ) {
-					$outcome['diagnostic_code'] = 'repository_release_owner_exists';
+				$sourceGuard = $this->workflowSourceGuard( $type, $identifier, $package );
+				if ( ! $sourceGuard['allowed'] ) {
+					$outcome['diagnostic_code'] = $sourceGuard['code'];
 					break;
 				}
 				$write              = in_array( $operation, array( 'setup', 'update_setup' ), true );
@@ -705,11 +705,19 @@ final class ReleaseWorkflowControls {
 		return $status;
 	}
 
-	private function workflowSourceAllowed( string $type, string $identifier, object $package ): bool {
+	/** @return array{allowed:bool,code:string,relationship_count:int,release_count:int,owner_type:?int,owner_package:?string} */
+	private function workflowSourceGuard( string $type, string $identifier, object $package ): array {
 		if ( ! is_callable( array( $package, 'getProviderCode' ) )
 			|| ! is_callable( array( $package, 'getProviderRepositoryId' ) )
 			|| ! is_string( $package->getProviderRepositoryId() ) ) {
-			return false;
+			return array(
+				'allowed'            => false,
+				'code'               => 'repository_source_unavailable',
+				'relationship_count' => 0,
+				'release_count'      => 0,
+				'owner_type'         => null,
+				'owner_package'      => null,
+			);
 		}
 
 		return $this->repositorySourceGuard(
@@ -718,7 +726,7 @@ final class ReleaseWorkflowControls {
 			$type,
 			$identifier,
 			PackageSource::RELEASE_ASSET
-		)['allowed'];
+		);
 	}
 
 	private function workflowNonceAction( string $operation, ReleaseTrackingStatus $status, string $preview = '' ): string {
@@ -983,7 +991,7 @@ final class ReleaseWorkflowControls {
 		if ( '' === $reason && ! $status->eligible() ) {
 			$reason = $this->workflowUnavailableReason( $status );
 		}
-		if ( '' === $reason && ! $this->workflowSourceAllowed( $type, $identifier, $package ) ) {
+		if ( '' === $reason && ! $this->workflowSourceGuard( $type, $identifier, $package )['allowed'] ) {
 			$reason = __( 'Releases require a repository used by only one managed package. Review the repository package list.', 'ran-booster' );
 		}
 		if ( '' === $reason && $state->recordOccupied() && ! $this->recordMatchesPackageStatus( $state, $status ) ) {
@@ -1170,7 +1178,7 @@ final class ReleaseWorkflowControls {
 
 	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
 		$provider = $this->workflowCapability( $providerCode );
-		return null !== $provider && 1 === $provider::RELEASE_WORKFLOW_API_VERSION && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
+		return null !== $provider && 1 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( $this->providers->metadata()[ $providerCode ]?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
 	}
 
 	private function releaseProviderSupported( string $providerCode ): bool {

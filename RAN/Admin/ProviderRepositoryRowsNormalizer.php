@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 
 /**
  * Builds and protects Core-owned provider repository rows.
@@ -15,7 +16,7 @@ final class ProviderRepositoryRowsNormalizer {
 	// Placeholder meanings are fixed by the named projection fields below.
 	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
 	/** Build the managed-repository projection consumed by the provider page. */
-	public function projectPage( array $data, ?RepositoryWebhookManagementControls $webhookManagement = null ): array {
+	public function projectPage( array $data, ?RepositoryWebhookManagementControls $webhookManagement = null, ?ReleaseWorkflowControls $releaseWorkflow = null ): array {
 		$provider      = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$providerCode  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
 		$providerLabel = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
@@ -60,7 +61,8 @@ final class ProviderRepositoryRowsNormalizer {
 			$webhookManagement,
 			is_string( $data['requestedRepositoryId'] ?? null ) ? $data['requestedRepositoryId'] : '',
 			$providerUrl,
-			$taskUrls['repositories']
+			$taskUrls['repositories'],
+			$releaseWorkflow
 		);
 		$repositorySummary         = $this->repositorySummary( $model['rows'] );
 		$repositoryView            = in_array( $data['repositoryView'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repositoryView'] : 'status';
@@ -231,7 +233,8 @@ final class ProviderRepositoryRowsNormalizer {
 		?RepositoryWebhookManagementControls $webhookManagement,
 		string $requestedId,
 		callable $providerUrl,
-		string $listUrl
+		string $listUrl,
+		?ReleaseWorkflowControls $releaseWorkflow = null
 	): array {
 		$returnUrl   = '' === $requestedId ? $listUrl : $providerUrl(
 			array(
@@ -496,17 +499,20 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$presented = null !== $webhookManagement
+		$coreRows  = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
+		$coreRows  = null !== $releaseWorkflow
+			? $releaseWorkflow->enrichRepositoryRows( $coreRows, $providerCode, $projections, $returnUrl )
+			: $coreRows;
 		$presented = apply_filters(
 			'ran_booster_provider_repository_rows',
-			$presented,
+			$coreRows,
 			$providerCode,
 			$projections,
 			$returnUrl
 		);
-		$rows      = $this->normalize( $rows, $presented, $providerCode );
+		$rows      = $this->normalize( $coreRows, $presented, $providerCode );
 		$selected  = null;
 		foreach ( $rows as $row ) {
 			if ( '' !== $requestedId && false === ( $row['historical'] ?? false ) && $requestedId === ( $row['repository_id'] ?? null ) ) {

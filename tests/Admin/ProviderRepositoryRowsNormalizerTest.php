@@ -204,6 +204,24 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
 	}
 
+	public function testRejectsRemovalOfCoreIntegrationDetails(): void {
+		$coreRows                         = $this->baseRows();
+		$coreRows['repo-42']['details'][] = array(
+			'key'      => 'core:release-workflow:example/example.php',
+			'label'    => 'Release workflow',
+			'value'    => 'Ready to assess',
+			'tone'     => 'pending',
+			'category' => 'release_workflow',
+		);
+		$presented                        = $coreRows;
+		array_pop( $presented['repo-42']['details'] );
+
+		$this->expectException( LogicException::class );
+		$this->expectExceptionMessage( 'may append but not replace Core details' );
+
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $coreRows, $presented, 'gh' );
+	}
+
 	public function testRejectsNonHistoricalOrWrongProviderAppends(): void {
 		$presented                      = $this->baseRows();
 		$presented['fixture:extra-row'] = array(

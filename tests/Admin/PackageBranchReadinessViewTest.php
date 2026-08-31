@@ -197,8 +197,13 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Webhook cleanup', $html );
-		self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
-		self::assertStringNotContainsString( '>Save settings and check</button>', $html );
+		self::assertStringContainsString( 'ran-booster-branch-settings is-inactive', $html );
+		self::assertStringContainsString( 'disabled="disabled"', $html );
+		self::assertStringContainsString( 'Published releases remain the package source and settings are retained until returning.', $html );
+		self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
+		self::assertStringContainsString( 'Branch pushes are ignored', $html );
+		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
+		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}
 
 	#[DataProvider( 'subdirectoryChecklistProvider' )]

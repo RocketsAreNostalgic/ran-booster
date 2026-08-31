@@ -578,7 +578,11 @@ final class RepeatPackageViewTest extends TestCase {
 				$packageView->getType()
 			);
 			self::assertMatchesRegularExpression( '/ran-booster-branch-settings is-inactive[^>]*disabled="disabled"[^>]*aria-disabled="true"/', $html, $packageView->getType() );
-			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html, $packageView->getType() );
+			self::assertSame(
+				1,
+				substr_count( $html, 'id="ran-booster-branch-readiness"' ),
+				$packageView->getType()
+			);
 			self::assertTrue(
 				strpos( $html, 'id="ran-booster-branch-readiness"' ) < strpos( $html, 'class="ran-booster-release-return"' ),
 				$packageView->getType()

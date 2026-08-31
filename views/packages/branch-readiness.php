@@ -49,7 +49,11 @@ $identityReady                 = $savedIdentityReady || ( null !== $repositoryRe
 $repositoryDetailAvailable     = '' !== $repositoryId && $identityReady;
 $secretCoverage                = (string) ( $repositoryReadiness['local_secret_coverage'] ?? 'unknown' );
 $secretReady                   = in_array( $secretCoverage, array( 'repository', 'shared' ), true );
-$needsAttention                = \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deploymentPolicy
+$publishedReleaseSource        = true === ( $releaseManaged ?? false )
+	|| 'release_asset' === ( $packageCurrentSource ?? null )
+	|| 'release_asset' === ( $packageSourceView ?? null );
+$needsAttention                = ! $publishedReleaseSource
+	&& \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deploymentPolicy
 	&& ( ! $receiverReady || ! $identityReady || ! $secretReady );
 $repositoryBranchCheckEvidence = is_array( $repositoryBranchCheckEvidence ?? null )
 	? $repositoryBranchCheckEvidence
@@ -124,10 +128,8 @@ $subdirectoryStateClass = '' === $savedSubdirectoryValue
 		'subdirectory_unavailable', 'subdirectory_unverified' => 'is-warning',
 		default => 'is-pending',
 	};
-$publishedReleaseSource = 'release_asset' === ( $packageCurrentSource ?? null )
-	|| 'release_asset' === ( $packageSourceView ?? null );
-$automaticUpdatesReady  = $receiverReady && $identityReady && $secretReady;
-$webhookStateClass      = match ( true ) {
+$automaticUpdatesReady = $receiverReady && $identityReady && $secretReady;
+$webhookStateClass     = match ( true ) {
 	$publishedReleaseSource => 'is-pending',
 	$automaticUpdatesReady  => 'is-ok',
 	default                 => 'is-warning',

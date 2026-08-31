@@ -976,7 +976,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'This package ignores pushes.', $withoutEvidence );
 		self::assertStringContainsString( 'Pushes are ignored.', $withoutEvidence );
 		self::assertStringContainsString( 'id="ran-booster-provider-readiness-reason-0-release-source"', $withoutEvidence );
-		self::assertStringContainsString( 'Published release', $withoutEvidence );
+		self::assertStringContainsString( 'Theme · Releases · 1 package', $withoutEvidence );
 		self::assertStringContainsString( 'Push-to-Deploy unavailable', $withoutEvidence );
 		self::assertStringNotContainsString( 'Fixture webhooks', $withoutEvidence );
 		self::assertStringContainsString( 'Manage repository', $withoutEvidence );
@@ -1411,6 +1411,30 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 			'repositories' => array(),
 		);
+		$provider_repositories                = array(
+			'repositories' => array(
+				array(
+					'target'                    => 'workspace/partial',
+					'repository_id'             => 'partial-1',
+					'source'                    => 'mixed',
+					'package_references'        => array( 'branch/package.php', 'release/package.php' ),
+					'package_summaries'         => array(
+						array(
+							'type'              => 'plugin',
+							'identifier'        => 'branch/package.php',
+							'display_name'      => 'Branch package',
+							'settings_url'      => 'https://example.test/branch-package',
+							'source'            => 'branch',
+							'source_revision'   => 1,
+							'branch'            => 'main',
+							'subdirectory'      => '',
+							'deployment_policy' => 'manual',
+						),
+					),
+					'package_summaries_omitted' => 1,
+				),
+			),
+		);
 
 		$providerTask     = 'status';
 		$providerViewData = $this->providerViewData( get_defined_vars() );
@@ -1441,6 +1465,7 @@ final class TroubleshootingViewTest extends TestCase {
 			$statusHtml
 		);
 		self::assertStringContainsString( '<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title">Status</h4>', $statusHtml );
+		self::assertStringContainsString( 'At least 1 package across 1 repository · exact totals unavailable while a repository inventory is incomplete', $statusHtml );
 		self::assertStringNotContainsString( 'id="ran-booster-webhook-instructions-heading"', $statusHtml );
 
 		$providerTask     = 'setup';
@@ -1470,8 +1495,11 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'enable Automatic from package settings', $setupHtml );
 		self::assertStringNotContainsString( 'GitHub', $setupHtml );
 
-		$providerTask     = 'repositories';
-		$providerViewData = $this->providerViewData( get_defined_vars() );
+		$providerTask          = 'repositories';
+		$provider_repositories = array(
+			'repositories' => array(),
+		);
+		$providerViewData      = $this->providerViewData( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $providerViewData );
 		ob_start();

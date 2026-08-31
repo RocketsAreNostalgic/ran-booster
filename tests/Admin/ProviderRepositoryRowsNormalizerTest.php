@@ -135,6 +135,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$row    = $result['selected'];
 
 		self::assertIsArray( $row );
+		self::assertSame( 'Releases', $row['management_label'] );
 		$action = $row['actions']['core:webhook-cleanup-review'];
 		self::assertStringContainsString( 'panel=repositories', $action['url'] );
 		self::assertStringContainsString( 'repository=101', $action['url'] );
@@ -463,6 +464,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 							'target'                    => 'owner/partial',
 							'repository_id'             => '404',
 							'source'                    => 'release_asset',
+							'package_references'        => array( 'partial/first.php', 'partial/second.php' ),
 							'package_summaries_omitted' => 1,
 							'package_summaries'         => array( $this->summary( 'plugin', 'partial/plugin.php', 'Partial', 'release_asset', '', '', 'manual' ) ),
 						),
@@ -474,8 +476,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'releases', $result['repositoryView'] );
 		self::assertStringContainsString( 'panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repositoryViewUrls']['status'] ) );
 		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
-		self::assertSame( 1, $result['repositoryIntegrationSummary']['release_packages'] );
-		self::assertSame( 1, $result['repositoryIntegrationSummary']['release_repositories'] );
+		self::assertSame( 3, $result['repositoryIntegrationSummary']['release_packages'] );
+		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_repositories'] );
+		self::assertFalse( $result['repositoryIntegrationSummary']['release_totals_incomplete'] );
+		self::assertTrue( $result['repositoryIntegrationSummary']['release_workflows_inventory_incomplete'] );
 		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
 	}
 

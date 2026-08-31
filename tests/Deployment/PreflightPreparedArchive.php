@@ -8,7 +8,7 @@ use RAN\RepositoryProvider\PreparedArchive;
 
 final class PreflightPreparedArchive implements PreparedArchive {
 
-	public int $cleanupCalls = 0;
+	public int $cleanupCalls  = 0;
 	public bool $cleanupFails = false;
 
 	public function __construct( private readonly string $resolvedRef = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' ) {

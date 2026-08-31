@@ -45,6 +45,8 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'downgrade_blocked'                 => 'Restore a full-site backup',
 			'lock_unavailable'                  => 'Wait for it to finish',
 			'policy_blocked'                    => 'Review the package Updates settings',
+			'repository_source_conflict'        => 'Review the repository package settings',
+			'repository_source_unavailable'     => 'Check package storage',
 			'stale_event'                       => 'Refresh the package source',
 			'upgrader_failed'                   => 'Check Activity',
 			'activation_failed'                 => 'Check the plugin\'s current activation state',

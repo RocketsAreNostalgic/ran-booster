@@ -742,7 +742,7 @@ test('an opted-in mutation moves its rendered failure disclosure into the global
 				};
 			}
 
-		return selector === 'details' ? failureDetails : null;
+			return selector === 'details' ? failureDetails : null;
 		},
 	};
 	const failureDetails = { tagName: 'DETAILS' };

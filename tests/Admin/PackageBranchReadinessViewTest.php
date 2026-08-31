@@ -232,8 +232,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Inactive Branch deployment settings', $html );
-		self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
-		self::assertStringNotContainsString( '>Save settings and check</button>', $html );
+		self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
+		self::assertStringContainsString( 'Pushes are ignored while this package uses Published releases.', $html );
+		self::assertStringNotContainsString( '>Needs attention</span>', $html );
+		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}
 
 	#[DataProvider( 'subdirectoryChecklistProvider' )]

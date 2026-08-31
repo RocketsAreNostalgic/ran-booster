@@ -222,6 +222,13 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
 			->method( 'postPackageOperation' )
+			->with(
+				'edit-plugin',
+				self::callback(
+					static fn ( array $resolved ): bool => 'deployment-profile' === $resolved['credential_id']
+						&& ! array_key_exists( 'public_lookup_profile_id', $resolved )
+				)
+			)
 			->willReturn( 'https://example.test/redirect' );
 
 		$result = ( new PackageAdminController(

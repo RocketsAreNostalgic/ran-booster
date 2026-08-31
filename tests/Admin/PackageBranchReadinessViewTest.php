@@ -261,6 +261,26 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'Local signing-secret status is unavailable', $html );
 	}
 
+	public function testVerifiedAutomaticRepositoryBranchCheckShowsVerifiedSavedRepositoryRowWhileKeepingLocalRequirementsWarning(): void {
+		$providerCode                 = 'gh';
+		$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable     = true;
+		$branchValue                  = 'main';
+		$deploymentPolicy             = DeploymentPolicy::AUTOMATIC->value;
+		$repositoryBranchCheckOutcome = 'verified';
+		$packageBranchReadiness       = null;
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Automatic branch deployment setup needs attention', $html );
+		self::assertStringContainsString( 'ran-booster-badge--error', $html );
+		self::assertStringContainsString( '<li class="ran-booster-readiness-item is-ok">', $html );
+		self::assertStringContainsString( '<strong>Saved repository</strong>', $html );
+		self::assertStringContainsString( 'The branch <code>main</code> is accessible with the saved repository settings.', $html );
+	}
+
 	public function testVerifiedRepositoryBranchCheckUsesOnlyTheGreenRepositoryRow(): void {
 		$providerCode                 = 'gh';
 		$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme';

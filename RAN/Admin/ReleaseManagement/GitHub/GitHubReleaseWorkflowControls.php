@@ -1092,6 +1092,7 @@ final class GitHubReleaseWorkflowControls {
 		return array(
 			'detail' => array(
 				'key'   => $key,
+				'kind'  => 'release_workflow',
 				'label' => $detailLabel,
 				'value' => $value,
 				'tone'  => $tone,

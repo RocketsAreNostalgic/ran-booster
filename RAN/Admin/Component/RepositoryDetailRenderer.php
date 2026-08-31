@@ -293,9 +293,8 @@ final class RepositoryDetailRenderer {
 
 	/** @param array<string, mixed> $detail */
 	private function isReleaseDetail( array $detail ): bool {
-		return $this->isReleaseAutomationKey( $detail['key'] ?? null )
-			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' )
-			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release workflow' );
+		return 'release_workflow' === ( $detail['kind'] ?? null )
+			|| $this->isReleaseAutomationKey( $detail['key'] ?? null );
 	}
 
 	/** @param array<string, mixed> $row @return list<array<string, mixed>> */

@@ -580,6 +580,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$this->boundedString( $detail['key'] ?? '', 96, true );
 			$this->boundedString( $detail['label'] ?? null, 96, false );
 			$this->boundedString( $detail['value'] ?? null, 255, true );
+			$this->boundedString( $detail['kind'] ?? '', 64, true );
 			$tone = $this->boundedString( $detail['tone'] ?? '', 16, true );
 			if ( '' !== $tone && ! in_array( $tone, $this->tones(), true ) ) {
 				throw new LogicException( 'Repository detail tones are invalid.' );

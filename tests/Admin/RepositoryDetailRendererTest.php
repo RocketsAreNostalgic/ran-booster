@@ -55,8 +55,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'tone'  => 'ok',
 				),
 				array(
-					'key'   => 'provider:release-workflow',
-					'label' => 'Release workflow — owner/theme',
+					'key'   => 'provider:custom-workflow-observation',
+					'kind'  => 'release_workflow',
+					'label' => 'Flux de publication — owner/theme',
 					'value' => 'Configured',
 				),
 				array(
@@ -127,16 +128,18 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( '1 package tracks Releases', $html );
 		self::assertStringContainsString( 'Provider workflow detail', $html );
 		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
-		self::assertStringContainsString( 'Release workflow — owner/theme', $html );
+		self::assertStringContainsString( 'Flux de publication — owner/theme', $html );
 		self::assertStringContainsString( 'Release automation — owner/legacy.php', $html );
 		$webhookHistoryPosition = strpos( $html, 'Configured at last check' );
 		$releaseHistoryPosition = strpos( $html, '<h4>Release workflow</h4>' );
+		$legacyHistoryPosition  = strpos( $html, 'Release automation — owner/legacy.php' );
 		self::assertIsInt( $webhookHistoryPosition );
 		self::assertIsInt( $releaseHistoryPosition );
+		self::assertIsInt( $legacyHistoryPosition );
 		self::assertTrue( $webhookHistoryPosition < $releaseHistoryPosition );
 		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Provider workflow detail' ) );
-		self::assertTrue( $releaseHistoryPosition < strpos( $html, 'Release workflow — owner/theme' ) );
-		self::assertTrue( $releaseHistoryPosition < strpos( $html, 'Release automation — owner/legacy.php' ) );
+		self::assertTrue( $releaseHistoryPosition < strpos( $html, 'Flux de publication — owner/theme' ) );
+		self::assertTrue( $legacyHistoryPosition < $releaseHistoryPosition );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Provider receiver', $html );

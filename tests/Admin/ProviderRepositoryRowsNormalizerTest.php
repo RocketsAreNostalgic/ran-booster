@@ -27,6 +27,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			$rows[ $key ]['details'][] = array(
 				'label' => 'Release automation',
 				'value' => 'Ready to assess',
+				'kind'  => 'release_workflow',
 				'tone'  => 'ok',
 			);
 			$rows[ $key ]['actions']['gh:release-automation'] = array(
@@ -92,6 +93,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$row    = array_values( $result['rows'] )[0];
 
 		self::assertSame( 'Ready to assess', $row['details'][0]['value'] );
+		self::assertSame( 'release_workflow', $row['details'][0]['kind'] );
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 

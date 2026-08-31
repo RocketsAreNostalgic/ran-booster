@@ -318,6 +318,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 
 		self::assertCount( 20, $projected['101']['details'] );
 		self::assertSame( array_column( $rows['101']['details'], 'key' ), array_column( array_slice( $projected['101']['details'], 0, 4 ), 'key' ) );
+		self::assertSame( 'release_workflow', $projected['101']['details'][4]['kind'] );
 		self::assertCount( 17, $projected['101']['actions'] );
 		self::assertSame(
 			array_map(

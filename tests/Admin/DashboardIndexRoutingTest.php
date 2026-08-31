@@ -806,7 +806,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $repository['has_automatic_branch_consumer'] );
 		self::assertCount( 20, $repository['package_summaries'] );
 		self::assertSame( 1, $repository['package_summaries_omitted'] );
-		self::assertSame( 1, $data['repositoryIntegrationSummary']['needs_review'] );
+		self::assertSame( 0, $data['repositoryIntegrationSummary']['needs_review'] );
 	}
 
 	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {

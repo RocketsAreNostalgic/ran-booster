@@ -1011,6 +1011,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'eligible'              => false,
 		);
 		$requestedRepositoryId                           = 'repo-42';
+		$repositoryView                                  = 'branch';
 		$providerViewData                                = $this->providerViewData( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $providerViewData );
@@ -1018,7 +1019,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryHtml = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h5>', $repositoryHtml );
+		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryHtml );
 		self::assertStringContainsString( 'Repository webhook management is unavailable until this site can receive provider deliveries.', $repositoryHtml );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Manage repository webhook</button>', $repositoryHtml );
 	}

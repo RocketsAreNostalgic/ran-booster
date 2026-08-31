@@ -285,10 +285,13 @@ class DeploymentCoordinator {
 			$failureCode = DeploymentOutcome::CODE_POLICY_BLOCKED;
 			$this->assertFrozenTarget( $attempt );
 			BoosterLogger::log( 'target snapshot re-verified post-lock', $context + array( 'step' => 'target_reverified' ) );
+			$failureCode = DeploymentOutcome::CODE_PROVIDER_FAILED;
 			$archive->verifyCurrentHead();
 			BoosterLogger::log( 'provider head verified', $context + array( 'step' => 'provider_head_verified' ) );
+			$failureCode = DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED;
 			$artifact->assertUnchanged();
 			BoosterLogger::log( 'artifact integrity re-verified', $context + array( 'step' => 'artifact_verified' ) );
+			$failureCode = DeploymentOutcome::CODE_POLICY_BLOCKED;
 			if ( file_exists( $this->maintenancePath ) ) {
 				$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_MAINTENANCE_ACTIVE, 'WordPress maintenance mode is already active.' );
 			}

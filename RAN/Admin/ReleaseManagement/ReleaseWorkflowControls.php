@@ -102,17 +102,23 @@ final class ReleaseWorkflowControls {
 			if ( ! is_array( $row ) || true === ( $row['historical'] ?? false ) ) {
 				continue;
 			}
-			$summaries = is_array( $row['package_summaries'] ?? null )
+			$rowDetails     = is_array( $row['details'] ?? null ) ? $row['details'] : array();
+			$availableSlots = 20 - count( $rowDetails );
+			$summaries      = is_array( $row['package_summaries'] ?? null )
 				? array_values( array_filter( $row['package_summaries'], 'is_array' ) )
 				: array();
-			$multiple  = 1 < count( $summaries );
+			$multiple       = 1 < count( $summaries );
 			foreach ( $summaries as $summary ) {
 				$projection = $this->repositoryReleaseAutomationProjection( $row, $summary, $multiple );
 				if ( null === $projection ) {
 					continue;
 				}
+				if ( 0 >= $availableSlots ) {
+					continue;
+				}
 				$row['details'][]                               = $projection['detail'];
 				$row['actions'][ $projection['action']['key'] ] = $projection['action'];
+				--$availableSlots;
 			}
 		}
 		unset( $row );

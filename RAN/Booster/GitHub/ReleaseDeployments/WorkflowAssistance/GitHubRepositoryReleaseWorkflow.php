@@ -19,6 +19,9 @@ final class GitHubRepositoryReleaseWorkflow {
 	public function status( ReleaseTrackingStatus $status ): RepositoryReleaseWorkflowStatus {
 		$record      = $this->records->find( $status->providerRepositoryId() );
 		$exact       = null !== $record && $status->type() === $record['package_type'] && $status->identifier() === $record['package_identifier'] && $status->sourceRevision() === $record['source_revision'];
+		$type        = null === $record ? $status->type() : $record['package_type'];
+		$identifier  = null === $record ? $status->identifier() : $record['package_identifier'];
+		$revision    = null === $record ? $status->sourceRevision() : $record['source_revision'];
 		$observation = $this->records->assessmentObservation( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() );
 		$history     = array_map( static fn ( array $entry ): array => array_intersect_key( $entry, array_flip( array( 'operation', 'outcome_code', 'failure_stage', 'diagnostic_code', 'diagnostic_available', 'correlation_reference', 'recorded_at' ) ) ), $this->records->failureHistory( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) );
 		return new RepositoryReleaseWorkflowStatus(
@@ -27,9 +30,9 @@ final class GitHubRepositoryReleaseWorkflow {
 			$exact,
 			$this->records->occupied( $status->providerRepositoryId() ),
 			$exact ? 'https://github.com/' . $record['repository'] . '/pull/' . $record['pr_number'] : '',
-			$status->type(),
-			$status->identifier(),
-			$status->sourceRevision(),
+			$type,
+			$identifier,
+			$revision,
 			$exact ? $record['operation'] : '',
 			is_array( $observation ) ? $observation['kind'] : '',
 			is_array( $observation ) ? $observation['observed_at'] : '',

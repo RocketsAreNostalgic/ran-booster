@@ -165,6 +165,41 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', $html );
 	}
 
+	public function testResultNoticeUsesProviderMessagesOnlyWhenNonEmptyAndFallsBackOtherwise(): void {
+		$display = new ReleaseWorkflowDisplay();
+		$custom  = $display->resultNotice(
+			array(
+				'result_code'        => 'workflow_preflight_unavailable',
+				'result_successful'  => false,
+				'failure_stage'      => 'release_preflight',
+				'diagnostic_code'    => 'provider_unavailable',
+				'result_message'     => 'Provider-specific success text.',
+				'result_remediation' => 'Provider-specific remediation text.',
+			)
+		);
+
+		self::assertStringContainsString( 'Provider-specific success text.', $custom );
+		self::assertStringContainsString( 'Provider-specific remediation text.', $custom );
+		self::assertStringNotContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $custom );
+		self::assertStringNotContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $custom );
+
+		$fallback = $display->resultNotice(
+			array(
+				'result_code'        => 'workflow_preflight_unavailable',
+				'result_successful'  => false,
+				'failure_stage'      => 'release_preflight',
+				'diagnostic_code'    => 'provider_unavailable',
+				'result_message'     => '',
+				'result_remediation' => '',
+			)
+		);
+
+		self::assertStringContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $fallback );
+		self::assertStringContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $fallback );
+		self::assertStringNotContainsString( 'Provider-specific success text.', $fallback );
+		self::assertStringNotContainsString( 'Provider-specific remediation text.', $fallback );
+	}
+
 	public function testDurablePublishedReleaseDocumentationLinksRenderInEveryWorkflowState(): void {
 		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(

@@ -1039,6 +1039,94 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, $lock->releaseCalls );
 	}
 
+	public function testConflictDiscoveredAfterLockAcquisitionReturnsCleanupFailureWhenLockReleaseFails(): void {
+		$plugins             = new ProspectivePluginRepository();
+		$executor            = new ProspectiveExecutor();
+		$lock                = new ProspectiveUpdaterLock();
+		$lock->releaseResult = false;
+		$database            = new SequencedSourceGuardDatabase(
+			array(
+				array(),
+				array(),
+				array(
+					(object) array(
+						'type'                   => 2,
+						'package'                => 'other/other.php',
+						'source'                 => PackageSource::RELEASE_ASSET->value,
+						'provider'               => 'gh',
+						'provider_repository_id' => '123456789',
+					),
+				),
+			)
+		);
+		$sourceGuard         = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->setReadyRelease();
+		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+
+		$result = $facade->install(
+			'plugin',
+			$this->repositoryRequest(),
+			42,
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'installation_cleanup_failed', $result->code() );
+		self::assertSame( array(), $result->data() );
+		self::assertSame( 1, $lock->acquireCalls );
+		self::assertSame( 1, $lock->releaseCalls );
+		self::assertSame( 3, $database->reads );
+		self::assertSame( 1, $this->acquisition?->discardCalls );
+	}
+
+	public function testConflictDiscoveredBeforeLockAcquisitionReturnsCleanupFailureWhenDiscardFails(): void {
+		$plugins     = new ProspectivePluginRepository();
+		$executor    = new ProspectiveExecutor();
+		$database    = new SequencedSourceGuardDatabase(
+			array(
+				array(),
+				array(
+					(object) array(
+						'type'                   => 2,
+						'package'                => 'other/other.php',
+						'source'                 => PackageSource::RELEASE_ASSET->value,
+						'provider'               => 'gh',
+						'provider_repository_id' => '123456789',
+					),
+				),
+			)
+		);
+		$lock        = new ProspectiveUpdaterLock();
+		$sourceGuard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->setReadyRelease();
+		self::assertNotNull( $this->acquisition );
+		$this->acquisition->discardResult = false;
+		$facade                           = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+
+		$result = $facade->install(
+			'plugin',
+			$this->repositoryRequest(),
+			42,
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'installation_cleanup_failed', $result->code() );
+		self::assertSame( array(), $result->data() );
+		self::assertSame( 0, $lock->acquireCalls );
+		self::assertSame( 0, $lock->releaseCalls );
+		self::assertSame( 0, $this->acquisition?->handoffCalls );
+		self::assertSame( 1, $this->acquisition?->discardCalls );
+		self::assertSame( 2, $database->reads );
+		self::assertSame( 0, $executor->installCalls );
+	}
+
 	public function testUnrelatedConcurrentActivationDoesNotBlockAdoption(): void {
 		$plugins             = new ProspectivePluginRepository();
 		$executor            = new ProspectiveExecutor();
@@ -2037,6 +2125,31 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 		}
 
 		return $this->releaseResult;
+	}
+}
+
+final class SequencedSourceGuardDatabase {
+	/** @param list<list<object>> $rowsByRead */
+	public function __construct( public array $rowsByRead ) {
+	}
+
+	public int $reads            = 0;
+	public string $preparedQuery = '';
+
+	public function prepare( string $query, mixed ...$arguments ): string {
+		unset( $arguments );
+		$this->preparedQuery = $query;
+
+		return $query;
+	}
+
+	/** @return list<object> */
+	public function get_results( string $query ): array {
+		unset( $query );
+		$read = $this->rowsByRead[ $this->reads ] ?? array();
+		++$this->reads;
+
+		return $read;
 	}
 }
 

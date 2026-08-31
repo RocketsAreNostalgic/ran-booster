@@ -131,7 +131,7 @@ final class WebhookOperationCoordinator {
 			),
 			'reconfigure' => 'succeeded' === $state && $this->successfulCode( $outcome['code'] ),
 			'remove' => $result->confirmsAbsence() && 'removed' === $outcome['code'],
-			'test' => 'succeeded' === $state && 'ping_verified' === $outcome['code'],
+			'test' => false,
 		};
 		$inlineSafe = match ( $operation ) {
 			'check', 'remove', 'test' => $successful || 'failed' === $state,
@@ -287,7 +287,8 @@ final class WebhookOperationCoordinator {
 			return $code;
 		}
 
-		$status = 'ping_verified' === $code ? 'configured' : 'needs_verification';
+		$status = 'needs_verification';
+		$code   = 'ping_verified' === $code ? 'ping_requested' : $code;
 
 		return $this->writeResultCode(
 			$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, $status, $observed ), $record ),
@@ -347,7 +348,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	private function successfulCode( string $code ): bool {
-		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed', 'ping_verified' ), true );
+		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
 	}
 
 	private function safeCode( mixed $code, string $fallback ): string {

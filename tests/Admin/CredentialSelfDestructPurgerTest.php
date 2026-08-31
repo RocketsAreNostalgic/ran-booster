@@ -32,6 +32,21 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 		self::assertSame( array( 'gh' ), $evidence->providers );
 		self::assertNull( $profiles->get( 'gh' ) );
 	}
+
+	public function testPurgingAnExpiredDefaultCredentialStillClearsItsDefaultWhenEvidenceInvalidationFails(): void {
+		$profiles           = new PurgerLookupProfiles();
+		$profiles->profiles = array( 'gh' => 'expired-profile' );
+		$purger             = new CredentialSelfDestructPurger(
+			new PurgerSecretsFile( array( 'gh' => array( 'expired-profile' ) ) ),
+			new PurgerObservations(),
+			$profiles,
+			new ThrowingPurgerEvidenceStore()
+		);
+
+		$purger->purge();
+
+		self::assertNull( $profiles->get( 'gh' ) );
+	}
 }
 
 final class PurgerSecretsFile extends SecretsFile {
@@ -84,5 +99,16 @@ final class PurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	public function bumpProviderGeneration( string $provider ): void {
 		$this->providers[] = $provider;
+	}
+}
+
+final class ThrowingPurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+
+	public function bumpProfileGeneration( string $provider, string $profileId ): void {
+		throw new \RuntimeException( 'evidence unavailable' );
+	}
+
+	public function bumpProviderGeneration( string $provider ): void {
+		throw new \RuntimeException( 'evidence unavailable' );
 	}
 }

@@ -853,6 +853,27 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setHidden(candidates, true);
 	};
 
+	const showCandidateUnavailable = (code) => {
+		selectedRelease = null;
+		setChoiceState(
+			'unavailable',
+			code === 'release_invalid'
+				? 'The selected release is not an eligible WordPress package. Choose another release.'
+				: 'The selected release could not be checked. Choose another release or retry.',
+			'Choose another'
+		);
+		setStatus(
+			'Published release could not be used',
+			code === 'release_invalid'
+				? 'The selected release did not pass the package checks. Earlier releases remain available.'
+				: 'The selected release could not be checked. Earlier releases remain available.',
+			{ retry: true }
+		);
+		setHidden(install, true);
+		setHidden(details, true);
+		setHidden(candidates, false);
+	};
+
 	const showCandidates = (data) => {
 		const releases = Array.isArray(data.candidates)
 			? data.candidates
@@ -1027,12 +1048,12 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (response.successful && response.code === 'release_ready') {
 				showReady(response.data);
 			} else {
-				showUnavailable(response.code);
+				showCandidateUnavailable(response.code);
 			}
 		} catch {
 			if (sequence === requestSequence) {
 				setChecking(false);
-				showUnavailable('unable_to_check');
+				showCandidateUnavailable('unable_to_check');
 			}
 		}
 	};

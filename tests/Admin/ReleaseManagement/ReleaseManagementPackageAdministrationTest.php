@@ -274,7 +274,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		}
 	}
 
-	public function testManagedBrowserPreviewShowsOnlyPrereleases(): void {
+	public function testManagedBrowserPreviewPreservesStableAndPrereleaseCandidates(): void {
 		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'prerelease' ) );
 		$tracking->candidateList = new RepositoryReleaseCandidateList(
 			array(
@@ -289,11 +289,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertTrue( $list['successful'] );
 		self::assertSame( 'release_candidates_available', $list['code'] );
-		self::assertSame( array( 'v1.2.0-rc.1', 'v1.2.0-beta.1' ), array_column( $list['data']['candidates'], 'tag' ) );
-		self::assertSame( array( true, true ), array_column( $list['data']['candidates'], 'prerelease' ) );
+		self::assertSame( array( 'v1.2.0', 'v1.2.0-rc.1', 'v1.2.0-beta.1' ), array_column( $list['data']['candidates'], 'tag' ) );
+		self::assertSame( array( false, true, true ), array_column( $list['data']['candidates'], 'prerelease' ) );
 	}
 
-	public function testManagedBrowserPreviewTreatsAnAllStableListAsNoReleases(): void {
+	public function testManagedBrowserPreviewRetainsAnAllStableList(): void {
 		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'prerelease' ) );
 		$tracking->candidateList = new RepositoryReleaseCandidateList(
 			array(
@@ -306,9 +306,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$list = $controls->processManagedBrowserRequest( 'list_candidates', $this->managedRequest( 'list_candidates', 'prerelease' ) );
 
 		self::assertTrue( $list['successful'] );
-		self::assertSame( 'no_releases', $list['code'] );
+		self::assertSame( 'release_candidates_available', $list['code'] );
 		self::assertSame( 'prerelease', $list['data']['channel'] );
-		self::assertSame( array(), $list['data']['candidates'] );
+		self::assertSame( array( 'v1.2.0', 'v1.1.0' ), array_column( $list['data']['candidates'], 'tag' ) );
 	}
 
 	/** @return array<string,string> */

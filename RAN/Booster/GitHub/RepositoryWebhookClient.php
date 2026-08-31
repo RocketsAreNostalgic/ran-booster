@@ -117,30 +117,12 @@ final class RepositoryWebhookClient {
 		if ( in_array( 'mismatched', $configuration, true ) ) {
 			return $this->result( 'failed', 'hook_ownership_mismatch', $hookId, $configuration, 'unknown', 'The recorded hook does not match this site. Reconfigure it before testing.' );
 		}
-		$baselineResponse = $this->request( 'GET', $this->deliveriesPath( $repository, $hookId ), $token, null, self::LIST_PAGE_BYTES, $deadline );
-		$baseline         = 200 === $baselineResponse['status'] ? $this->deliveryIds( $baselineResponse['body'] ) : null;
-		if ( null === $baseline ) {
-			return $this->uncertain( 'delivery_inventory_unavailable', $hookId );
-		}
 		$ping = $this->request( 'POST', $this->hookPath( $repository, $hookId ) . '/pings', $token, array(), 0, $deadline );
-		if ( 204 !== $ping['status'] ) {
+		if ( 200 > $ping['status'] || 300 <= $ping['status'] ) {
 			return $this->mutationFailure( $ping['status'], 'ping_request_failed', $hookId );
 		}
-		for ( $attempt = 0; $attempt < 4; ++$attempt ) {
-			if ( 0 < $attempt ) {
-				usleep( 250000 );
-			}
-			$response = $this->request( 'GET', $this->deliveriesPath( $repository, $hookId ), $token, null, self::LIST_PAGE_BYTES, $deadline );
-			$delivery = 200 === $response['status'] ? $this->newPingDelivery( $response['body'], $baseline ) : null;
-			if ( false === $delivery ) {
-				return $this->uncertain( 'delivery_inventory_invalid', $hookId );
-			}
-			if ( is_array( $delivery ) && null !== $delivery['status_code'] ) {
-				return $this->result( 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'succeeded' : 'failed', 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'ping_verified' : 'ping_delivery_failed', $hookId, $configuration, 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'verified' : 'unverified', 200 <= $delivery['status_code'] && 300 > $delivery['status_code'] ? 'GitHub recorded a successful ping delivery for the exact hook.' : 'GitHub recorded a failed ping delivery for the exact hook; inspect provider delivery details.' );
-			}
-		}
 
-		return $this->result( 'succeeded', 'ping_requested', $hookId, $configuration, 'unknown', 'GitHub accepted the ping request, but no new ping delivery was observed before the bounded check ended.' );
+		return $this->result( 'succeeded', 'ping_requested', $hookId, $configuration, 'unknown', 'GitHub accepted the ping request. Only an authenticated inbound delivery can verify the signing secret.' );
 	}
 	public function reconfigure( string $repository, string $hookId, string $callbackUrl, #[\SensitiveParameter] string $token, #[\SensitiveParameter] string $secret ): RepositoryWebhookOperationResult {
 		$deadline   = microtime( true ) + self::TOTAL_TIMEOUT;

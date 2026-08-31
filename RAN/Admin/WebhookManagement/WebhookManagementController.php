@@ -87,15 +87,16 @@ final class WebhookManagementController {
 		}
 		$resultCode = $result['code'];
 
-		$safeRepositoryId = strlen( $repositoryId ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ? $repositoryId : '';
-		$returnUrl        = $this->safeReturnUrl( $this->stringValue( $request, 'return_url' ), $providerCode, $safeRepositoryId );
+		$safeRepositoryId   = strlen( $repositoryId ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ? $repositoryId : '';
+		$returnUrl          = $this->safeReturnUrl( $this->stringValue( $request, 'return_url' ), $providerCode, $safeRepositoryId );
+		$interactionRequest = $this->interactionRequest( $returnUrl );
 		if ( null !== $this->adminInteraction
+			&& null !== $interactionRequest
 			&& $metadata instanceof ProviderMetadata
 			&& true === $result['inline_safe'] ) {
-			$request = $this->interactionRequest( $returnUrl );
 			$outcome = true === $result['successful']
-				? AdminInteractionOutcome::success( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) )
-				: AdminInteractionOutcome::validationFailure( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) );
+				? AdminInteractionOutcome::success( $interactionRequest, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) )
+				: AdminInteractionOutcome::validationFailure( $interactionRequest, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) );
 			$this->adminInteraction->respond( $outcome );
 		}
 
@@ -173,7 +174,14 @@ final class WebhookManagementController {
 			: null;
 	}
 
-	private function interactionRequest( string $returnUrl ): AdminInteractionRequest {
+	private function interactionRequest( string $returnUrl ): ?AdminInteractionRequest {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The URL has already been reconstructed by safeReturnUrl().
+		$query = parse_url( $returnUrl, PHP_URL_QUERY );
+		parse_str( is_string( $query ) ? $query : '', $arguments );
+		if ( 'ran-booster' !== ( $arguments['page'] ?? '' ) ) {
+			return null;
+		}
+
 		return AdminInteractionRequest::providerRepositories(
 			'repository-webhook-management:manage-webhook',
 			$returnUrl,

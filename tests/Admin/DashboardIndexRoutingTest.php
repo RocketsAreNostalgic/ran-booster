@@ -211,6 +211,25 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->prepareCalls );
 	}
 
+	public function testRepositoryBranchCheckMapsAdvisoryEvidenceWriteFailureWithoutCrashingSettings(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider();
+		$dashboard = $this->dashboard(
+			$this->throwingSecrets(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			branchCheckEvidence: new ThrowingDashboardBranchCheckEvidenceStore()
+		);
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$check     = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 1, $provider->prepareCalls );
+	}
+
 	public function testRepositoryBranchCheckDoesNotReuseItsMarkerAfterCredentialOrDefaultAccessGenerationChanges(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider         = new DashboardBranchCheckProvider();
@@ -2838,5 +2857,12 @@ final class DashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvide
 
 	protected function releaseMutationLock(): bool {
 		return true;
+	}
+}
+
+final class ThrowingDashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+
+	public function record( string $type, \RAN\Package $package, ?string $profileId, string $outcome, ?string $profileFingerprint = null ): void {
+		throw new RuntimeException( 'evidence unavailable' );
 	}
 }

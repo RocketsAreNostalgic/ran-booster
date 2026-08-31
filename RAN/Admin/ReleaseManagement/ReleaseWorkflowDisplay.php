@@ -86,10 +86,15 @@ final class ReleaseWorkflowDisplay {
 		};
 		$html        = '<div class="notice ' . esc_attr( $noticeTone ) . ' inline"'
 			. ( $successful ? ' data-ran-booster-package-success' : '' )
-			. ' data-ran-booster-release-workflow-result><p>' . esc_html( $view['result_message'] ?? $this->workflowMessage( $code ) ) . '</p>';
+			. ' data-ran-booster-release-workflow-result><p>' . esc_html(
+				is_string( $view['result_message'] ?? null ) && '' !== $view['result_message']
+				? $view['result_message']
+				: $this->workflowMessage( $code )
+			) . '</p>';
 		$observation = in_array( $code, array( 'workflow_release_automation_conflict', 'workflow_release_automation_present', 'workflow_inspected' ), true );
 		if ( ! $successful && ! $observation && in_array( $stage, array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
-			$html .= '<details><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><p>' . esc_html( $view['result_remediation'] ?? $this->failureDiagnosticMessage( $diagnostic, $stage ) ) . '</p>';
+			$remediation = is_string( $view['result_remediation'] ?? null ) && '' !== $view['result_remediation'] ? $view['result_remediation'] : $this->failureDiagnosticMessage( $diagnostic, $stage );
+			$html       .= '<details><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><p>' . esc_html( $remediation ) . '</p>';
 			if ( $this->validDiagnosticCode( $diagnostic ) ) {
 				$html .= '<p>' . esc_html__( 'Diagnostic code:', 'ran-booster' ) . ' <code>' . esc_html( $diagnostic ) . '</code></p>';
 			}

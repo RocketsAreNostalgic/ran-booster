@@ -58,7 +58,7 @@ final class DeploymentOutcomeMessage {
 			'deployment_disk_space_low'      => __( 'The site does not have enough disk space for the deployment. Free sufficient space safely, then retry.', 'ran-booster' ),
 			'archive_temporary_file_failed'  => __( 'WordPress could not create a temporary archive file. Check the server temporary directory and available disk space, then retry.', 'ran-booster' ),
 			'archive_integrity_failed'       => __( 'The downloaded ZIP could not pass its integrity check. Check the download and local temporary-file storage, then retry.', 'ran-booster' ),
-			'archive_download_failed'        => __( 'Booster could not download the package archive. Check the repository source and server network access, then retry.', 'ran-booster' ),
+			'archive_download_failed'        => __( 'Booster could not download the package archive. Check the repository source, local temporary-file storage permissions, available disk space, and server network access, then retry.', 'ran-booster' ),
 			'archive_url_invalid'            => __( 'The package archive URL is invalid. Correct the release source or repository configuration, then retry.', 'ran-booster' ),
 			'archive_revision_invalid'       => __( 'The requested archive revision is invalid. Choose an available repository revision, then retry.', 'ran-booster' ),
 			'archive_zip_invalid'            => __( 'The downloaded package is not a valid ZIP archive. Publish a valid ZIP archive, then retry.', 'ran-booster' ),

@@ -667,6 +667,37 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
 	}
 
+	public function testProviderTransientFailureDuringHeadVerificationMapsToProviderUnavailableWithoutMutation(): void {
+		$attempt                      = $this->claimedUpdate();
+		$this->preflight->artifact    = $this->artifact( '2.0.0' );
+		$this->provider->beforeVerify = static function (): void {
+			throw new RuntimeException( 'transient failure', 503 );
+		};
+
+		$outcome = $this->coordinator->executeClaimed( $attempt );
+
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $outcome->getCode() );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 0, $this->executor->calls );
+	}
+
+	public function testArtifactIntegrityFailureBeforeMutationMapsToArchiveIntegrityFailedWithoutMutation(): void {
+		$attempt                       = $this->claimedUpdate();
+		$artifact                      = $this->artifact( '2.0.0' );
+		$this->preflight->artifact     = $artifact;
+		$this->preflight->beforeReturn = static function () use ( $artifact ): void {
+			$cleaned = new \ReflectionProperty( $artifact, 'cleaned' );
+			$cleaned->setAccessible( true );
+			$cleaned->setValue( $artifact, true );
+		};
+
+		$outcome = $this->coordinator->executeClaimed( $attempt );
+
+		self::assertSame( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, $outcome->getCode() );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 0, $this->executor->calls );
+	}
+
 	public function testWpPusherActivatedAfterPreflightFailsBeforeMutationFence(): void {
 		$attempt                      = $this->claimedUpdate();
 		$this->preflight->artifact    = $this->artifact( '2.0.0' );

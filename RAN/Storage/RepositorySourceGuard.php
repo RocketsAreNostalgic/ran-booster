@@ -139,12 +139,16 @@ final class RepositorySourceGuard {
 	}
 
 	public function assertAllowed( string $provider, string $repositoryId, int $type, string $identifier, PackageSource $source ): void {
+		if ( ! self::identityIsValid( $provider, $repositoryId, $type, $identifier ) ) {
+			throw PackageStorageFailure::invalidProviderIdentity();
+		}
+
 		$result = $this->assess( $provider, $repositoryId, $type, $identifier, $source );
 		if ( $result['allowed'] ) {
 			return;
 		}
 		if ( 'repository_source_unavailable' === $result['code'] ) {
-			throw PackageStorageFailure::invalidProviderIdentity();
+			throw PackageStorageFailure::queryFailed();
 		}
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The validated package identifier is rendered through the dashboard escape boundary.

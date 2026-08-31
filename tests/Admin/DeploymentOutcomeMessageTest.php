@@ -76,7 +76,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'deployment_disk_space_low'         => 'Free sufficient space safely',
 			'archive_temporary_file_failed'     => 'Check the server temporary directory',
 			'archive_integrity_failed'          => 'download and local temporary-file storage',
-			'archive_download_failed'           => 'Check the repository source',
+			'archive_download_failed'           => 'local temporary-file storage',
 			'archive_url_invalid'               => 'Correct the release source or repository configuration',
 			'archive_revision_invalid'          => 'Choose an available repository revision',
 			'archive_zip_invalid'               => 'Publish a valid ZIP archive',

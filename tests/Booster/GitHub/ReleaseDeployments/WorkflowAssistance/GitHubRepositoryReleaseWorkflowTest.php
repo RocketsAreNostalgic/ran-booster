@@ -44,6 +44,32 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_release_deployments_test_options'] );
 	}
 
+	public function testStatusUsesStoredRecordIdentityWhenRecordOccupiesRepository(): void {
+		$records = new SetupRecordStore();
+		self::assertTrue(
+			$records->save(
+				$this->record(
+					array(
+						'repo_id'            => '101',
+						'package_type'       => 'theme',
+						'package_identifier' => 'foreign-plugin/foreign-plugin.php',
+						'source_revision'    => 5,
+					)
+				)
+			)
+		);
+
+		$workflow = $this->workflow( new WorkflowCredentialStore() );
+		$status   = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$result   = $workflow->status( $status );
+
+		self::assertSame( 'theme', $result->packageType() );
+		self::assertSame( 'foreign-plugin/foreign-plugin.php', $result->packageIdentifier() );
+		self::assertSame( 5, $result->sourceRevision() );
+		self::assertFalse( $result->recordExact() );
+		self::assertTrue( $result->recordOccupied() );
+	}
+
 	public function testInvalidUpdateLifecycleRequestsDoNotReadCredentialMaterial(): void {
 		$credentials = new WorkflowCredentialStore();
 		$workflow    = $this->workflow( $credentials );
@@ -98,5 +124,41 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		$transport   = new D23ApplicationTransport();
 		$coordinator = new WorkflowApplicationCoordinator( new GitHubRepositoryClient( $transport ), new TemplatePackRepositoryClient( $transport ), new SourceReadyAssessor(), $records );
 		return new GitHubRepositoryReleaseWorkflow( $credentials, $coordinator, $records );
+	}
+
+	private function record( array $overrides = array() ): array {
+		return array_replace(
+			array(
+				'schema_version'        => 2,
+				'operation'             => 'bootstrap',
+				'repo_id'               => '101',
+				'repository'            => 'RocketsAreNostalgic/example-plugin',
+				'package_type'          => 'plugin',
+				'package_identifier'    => 'example-plugin/example-plugin.php',
+				'source_revision'       => 3,
+				'default_branch'        => 'main',
+				'base_sha'              => str_repeat( 'a', 40 ),
+				'setup_branch'          => 'ran-booster/release-setup-v2-aaaaaaaaaaaa-deadbeef',
+				'head_sha'              => str_repeat( 'b', 40 ),
+				'pr_number'             => 42,
+				'profile_id'            => 'source-ready-wordpress-plugin/2',
+				'template_repo_name'    => 'RocketsAreNostalgic/ran-booster-release-bootstrap-templates',
+				'template_repo_id'      => '1322743261',
+				'template_release_id'   => 41,
+				'template_tag'          => 'v1.2.3',
+				'template_commit'       => str_repeat( 'c', 40 ),
+				'template_asset_id'     => 73,
+				'template_asset_name'   => 'ran-booster-release-bootstrap-templates.zip',
+				'template_asset_size'   => 1000,
+				'template_asset_digest' => str_repeat( 'd', 64 ),
+				'manifest_digest'       => str_repeat( 'e', 64 ),
+				'receipt_digest'        => str_repeat( 'f', 64 ),
+				'consumer_api'          => 2,
+				'pack_version'          => '1.2.3',
+				'bundle_hash'           => str_repeat( '1', 64 ),
+				'changed_path_hash'     => str_repeat( '2', 64 ),
+			),
+			$overrides
+		);
 	}
 }

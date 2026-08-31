@@ -181,6 +181,139 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( $action['key'], $rows['101']['details'][0]['key'] );
 	}
 
+	public function testReleaseWorkflowRepositoryEnrichmentHonoursRemainingRowCapacityForFullRows(): void {
+		$rows          = $this->controls()->enrichRepositoryRows(
+			array(
+				'101' => array(
+					'provider_code'     => 'fixture',
+					'repository_id'     => '101',
+					'repository'        => 'example/example',
+					'historical'        => false,
+					'package_summaries' => array(
+						array(
+							'type'            => 'plugin',
+							'identifier'      => 'example/example.php',
+							'source'          => 'branch',
+							'source_revision' => 3,
+						),
+					),
+					'details'           => array_fill(
+						0,
+						20,
+						array(
+							'key'   => 'core-existing-detail',
+							'label' => 'Existing',
+							'value' => 'safe',
+							'tone'  => 'success',
+						)
+					),
+					'actions'           => array(
+						'core:existing' => array(
+							'key'           => 'core:existing',
+							'label'         => 'Existing action',
+							'type'          => 'link',
+							'url'           => 'https://example.test',
+							'hidden'        => array(),
+							'disabled'      => false,
+							'external'      => false,
+							'described_by'  => '',
+							'screen_reader' => 'existing',
+						),
+					),
+				),
+			),
+			'fixture',
+			array(),
+			'https://example.test/repositories'
+		);
+		$resultDetails = $rows['101']['details'] ?? array();
+
+		self::assertCount( 20, $resultDetails );
+		self::assertArrayHasKey( 'core:existing', $rows['101']['actions'] );
+		self::assertCount( 1, $rows['101']['actions'] );
+		self::assertSame(
+			array_fill(
+				0,
+				20,
+				array(
+					'key'   => 'core-existing-detail',
+					'label' => 'Existing',
+					'value' => 'safe',
+					'tone'  => 'success',
+				)
+			),
+			$resultDetails
+		);
+	}
+
+	public function testReleaseWorkflowRepositoryEnrichmentAddsOneRowWhenOneSlotRemains(): void {
+		$rowSummary    = array(
+			'type'            => 'plugin',
+			'identifier'      => 'example/example.php',
+			'source'          => 'branch',
+			'source_revision' => 3,
+		);
+		$rows          = $this->controls()->enrichRepositoryRows(
+			array(
+				'101' => array(
+					'provider_code'     => 'fixture',
+					'repository_id'     => '101',
+					'repository'        => 'example/example',
+					'historical'        => false,
+					'package_summaries' => array( $rowSummary, $rowSummary ),
+					'details'           => array_fill(
+						0,
+						19,
+						array(
+							'key'   => 'core-existing-detail',
+							'label' => 'Existing',
+							'value' => 'safe',
+							'tone'  => 'success',
+						)
+					),
+					'actions'           => array(
+						'core:existing' => array(
+							'key'           => 'core:existing',
+							'label'         => 'Existing action',
+							'type'          => 'link',
+							'url'           => 'https://example.test',
+							'hidden'        => array(),
+							'disabled'      => false,
+							'external'      => false,
+							'described_by'  => '',
+							'screen_reader' => 'existing',
+						),
+					),
+				),
+			),
+			'fixture',
+			array(),
+			'https://example.test/repositories'
+		);
+		$resultDetails = $rows['101']['details'] ?? array();
+
+		self::assertCount( 20, $resultDetails );
+		self::assertCount( 2, $rows['101']['actions'] );
+		self::assertSame(
+			1,
+			count(
+				array_filter(
+					$rows['101']['actions'],
+					static fn ( array $action ): bool => str_starts_with( (string) ( $action['key'] ?? '' ), 'core:release-workflow-' )
+				)
+			)
+		);
+		self::assertSame(
+			1,
+			count(
+				array_filter(
+					$resultDetails,
+					static fn ( array $detail ): bool => str_starts_with( (string) ( $detail['key'] ?? '' ), 'core:release-workflow-' )
+				)
+			)
+		);
+	}
+
 	public function testOptionalPackageHelperRendersNothingForMissingOrIncompleteWorkflowProviders(): void {
 		$package = new class() {
 			public function providerCode(): string {

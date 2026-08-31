@@ -97,6 +97,52 @@ final class RepositorySourceGuardTest extends TestCase {
 		}
 	}
 
+	public function testAssertAllowedRejectsInvalidArgumentsAsInvalidProviderIdentity(): void {
+		$guard = new RepositorySourceGuard( new RepositorySourceGuardDatabase(), $this->createStub( Database::class ) );
+
+		try {
+			$guard->assertAllowed( '', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+			self::fail( 'Expected invalid provider identity to throw storage invalid identity.' );
+		} catch ( PackageStorageFailure $failure ) {
+			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->getDiagnosticId() );
+		}
+	}
+
+	public function testAssertAllowedTreatsDatabaseReadFailureAsQueryFailure(): void {
+		$database             = new RepositorySourceGuardDatabase();
+		$database->last_error = 'database down';
+
+		$guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+
+		try {
+			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+			self::fail( 'Expected query failures to throw a storage query failure.' );
+		} catch ( PackageStorageFailure $failure ) {
+			self::assertSame( 'ran_booster_storage_query_failed', $failure->getDiagnosticId() );
+		}
+	}
+
+	public function testAssertAllowedTreatsMalformedRowsAsQueryFailure(): void {
+		$database       = new RepositorySourceGuardDatabase();
+		$database->rows = array(
+			(object) array(
+				'type'                   => 1,
+				'package'                => 'self/self.php',
+				'source'                 => 'not-a-source-shape',
+				'provider'               => 'gh',
+				'provider_repository_id' => 'R_1',
+			),
+		);
+		$guard          = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+
+		try {
+			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+			self::fail( 'Expected malformed source rows to throw query failure.' );
+		} catch ( PackageStorageFailure $failure ) {
+			self::assertSame( 'ran_booster_storage_query_failed', $failure->getDiagnosticId() );
+		}
+	}
+
 	public function testAssessmentQueriesOpaqueRepositoryIdsWithBinaryComparison(): void {
 		$database = new RepositorySourceGuardDatabase();
 		$guard    = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );

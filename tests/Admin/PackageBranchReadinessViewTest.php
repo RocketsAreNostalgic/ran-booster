@@ -8,6 +8,7 @@ require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentPolicy;
 
 final class PackageBranchReadinessViewTest extends TestCase {
@@ -139,6 +140,65 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-package-mutation', $html );
 		self::assertStringNotContainsString( 'remote webhook is configured', strtolower( $html ) );
 		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
+	}
+
+	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
+		$packageMutationAvailable = true;
+		$packageSourceChoices     = array(
+			'branch' => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy a saved repository branch.',
+				'meta'              => 'Included with Booster',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+				'disabled'          => false,
+				'hydrated'          => true,
+				'client_hydratable' => false,
+			),
+		);
+		$packageSourceMode        = 'edit';
+		$packageFieldLayout       = 'grid';
+		$packageSourceView        = 'branch';
+		$showBranchSettings       = true;
+		$releaseManaged           = true;
+		$branchReadOnly           = true;
+		$branchValue              = 'main';
+		$subdirectoryValue        = '';
+		$packageAdvancedSections  = array();
+		$packageAdvancedSummary   = 'Published releases · Active';
+		$packageAdvancedOpen      = false;
+		$packageRepositoryReady   = true;
+		$packageSource            = array();
+		$packageView              = new class() {
+			public function getType(): string {
+				return 'plugin';
+			}
+		};
+		$packageWebhookCleanup    = array(
+			'context' => new WebhookCleanupContext(
+				'plugin',
+				'example/example.php',
+				'gh',
+				'101',
+				'example/example',
+				'repository',
+				true,
+				true,
+				array(),
+				'https://example.test/webhooks',
+				'https://example.test/secrets',
+				'https://example.test/docs',
+				'https://example.test/settings'
+			),
+			'actions' => array(),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Webhook cleanup', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
+		self::assertStringNotContainsString( '>Save settings and check</button>', $html );
 	}
 
 	#[DataProvider( 'subdirectoryChecklistProvider' )]

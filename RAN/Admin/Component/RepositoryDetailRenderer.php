@@ -69,12 +69,38 @@ final class RepositoryDetailRenderer {
 					<p class="description"><?php esc_html_e( 'No eligible Branch package uses this repository. Published-release packages ignore pushes, so webhook operations are unavailable.', 'ran-booster' ); ?></p>
 					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				<?php } ?>
+				<?php $this->renderStatusLinks( $row ); ?>
 				<?php $this->renderProviderActions( $row ); ?>
 			</section>
 
 			<?php $this->renderReleaseAutomation( $row ); ?>
 			<?php $this->renderActivity( $row, $activityUrl ); ?>
 		</div>
+		<?php
+	}
+
+	/** @param array<string, mixed> $row */
+	private function renderStatusLinks( array $row ): void {
+		$links = array_values(
+			array_filter(
+				is_array( $row['status_links'] ?? null ) ? $row['status_links'] : array(),
+				static fn ( mixed $link ): bool => is_array( $link )
+					&& is_string( $link['label'] ?? null ) && '' !== $link['label']
+					&& is_string( $link['url'] ?? null ) && '' !== $link['url']
+			)
+		);
+		if ( array() === $links ) {
+			return;
+		}
+		?>
+		<p class="ran-booster-repository-detail__status-links">
+		<?php foreach ( $links as $index => $link ) { ?>
+			<?php if ( 0 < $index ) { ?>
+				<span aria-hidden="true">·</span>
+			<?php } ?>
+			<a href="<?php echo esc_url( (string) $link['url'] ); ?>"><?php echo esc_html( (string) $link['label'] ); ?></a>
+		<?php } ?>
+		</p>
 		<?php
 	}
 

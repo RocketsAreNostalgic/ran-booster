@@ -497,7 +497,13 @@ final class ProviderRepositoryRowsNormalizer {
 			$reference = $references[0] ?? '';
 			$isPlugin  = is_string( $reference ) && str_ends_with( strtolower( $reference ), '.php' );
 			if ( is_string( $reference ) && '' !== $reference && ( $isPlugin || 1 === preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) ) {
-				$url = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) . '&webhook_cleanup=1#ran-booster-webhook-cleanup' );
+				$url = add_query_arg(
+					array(
+						'source_view'     => 'branch',
+						'webhook_cleanup' => 1,
+					),
+					admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) )
+				) . '#ran-booster-webhook-cleanup';
 			}
 			$key             = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'core:webhook-cleanup-review' : 'core:provider-webhooks';
 			$actions[ $key ] = array(

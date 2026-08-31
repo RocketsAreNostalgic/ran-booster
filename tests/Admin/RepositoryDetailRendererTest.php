@@ -54,6 +54,15 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'tone'  => 'ok',
 				),
 			),
+			'status_links'              => array(
+				array(
+					'label'  => 'Manage signing secrets',
+					'url'    => 'https://example.test/signing-secrets',
+					'modal'  => 'webhook',
+					'scope'  => 'repository',
+					'target' => 'owner/shared',
+				),
+			),
 			'actions'                   => array(
 				array(
 					'key'          => 'fixture:provider-webhooks',
@@ -106,6 +115,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'name="action" value="release_automation_fixture"', $html );
 		self::assertStringContainsString( 'aria-describedby="release-automation-help"', $html );
 		self::assertStringContainsString( 'Open fixture webhooks', $html );
+		self::assertStringContainsString( 'Manage signing secrets', $html );
+		self::assertStringContainsString( 'href="https://example.test/signing-secrets"', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );

@@ -870,14 +870,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const showCandidates = (data) => {
 		const releases = Array.isArray(data.candidates)
-			? data.candidates
-					.slice()
-					.sort(
-						(left, right) =>
-							Date.parse(right.published_at) -
-							Date.parse(left.published_at)
-					)
-					.slice(0, 8)
+			? data.candidates.slice(0, 8)
 			: [];
 		if (!candidateList || releases.length === 0) {
 			showUnavailable('no_releases');

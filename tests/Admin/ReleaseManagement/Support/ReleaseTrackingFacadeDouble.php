@@ -33,6 +33,9 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public ?ReleaseTrackingPreflight $candidateInspection = null;
 
+	/** @var null|callable():void */
+	public $afterCandidateList = null;
+
 	public function __construct( private ReleaseTrackingStatus $releaseStatus ) {
 	}
 
@@ -81,8 +84,15 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public function listCandidates( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ?RepositoryReleaseCandidateList {
 		$this->calls[] = array( 'list_candidates', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
+		if ( is_callable( $this->afterCandidateList ) ) {
+			( $this->afterCandidateList )();
+		}
 
 		return $this->candidateList;
+	}
+
+	public function setStatus( ReleaseTrackingStatus $status ): void {
+		$this->releaseStatus = $status;
 	}
 
 	public function inspectCandidate( string $type, string $identifier, int $expectedSourceRevision, string $releaseId, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight {

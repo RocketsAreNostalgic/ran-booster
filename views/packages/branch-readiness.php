@@ -71,8 +71,14 @@ if ( ! $receiverReady ) {
 		$receiverActionLabel = __( 'Review WordPress URLs', 'ran-booster' );
 	}
 }
-$needsAttention                = \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deploymentPolicy
+$needsAttention = \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deploymentPolicy
 	&& ( ! $receiverReady || ! $identityReady || ! $secretReady );
+
+$repositoryBranchCheckOutcome = isset( $repositoryBranchCheckOutcome ) && is_string( $repositoryBranchCheckOutcome )
+	&& in_array( $repositoryBranchCheckOutcome, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true )
+	? $repositoryBranchCheckOutcome
+	: null;
+
 $repositoryBranchCheckEvidence = is_array( $repositoryBranchCheckEvidence ?? null )
 	? $repositoryBranchCheckEvidence
 	: null;

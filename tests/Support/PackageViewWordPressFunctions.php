@@ -150,6 +150,12 @@ if ( ! function_exists( 'network_admin_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'rest_url' ) ) {
+	function rest_url( string $path = '' ): string {
+		return 'https://example.test/wp-json/' . ltrim( $path, '/' );
+	}
+}
+
 if ( ! function_exists( 'is_multisite' ) ) {
 	function is_multisite(): bool {
 		return true === ( $GLOBALS['ran_booster_package_view_multisite'] ?? false );

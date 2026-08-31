@@ -221,6 +221,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$row    = $result['selected'];
 
 		self::assertIsArray( $row );
+		self::assertSame( 'Releases', $row['management_label'] );
 		$action = $row['actions']['core:webhook-cleanup-review'];
 		self::assertStringContainsString( 'panel=repositories', $action['url'] );
 		self::assertStringContainsString( 'repository=101', $action['url'] );

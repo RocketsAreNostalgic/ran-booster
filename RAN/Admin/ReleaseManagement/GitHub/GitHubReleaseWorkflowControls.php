@@ -158,7 +158,7 @@ final class GitHubReleaseWorkflowControls {
 		$summaries                    = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
 		$packageSummariesOmitted      = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
 		$packageInventoryIncomplete   = 0 < $packageSummariesOmitted;
-		$inventoryUnavailableMessage  = __( 'The full managed-package inventory for this repository is not available. Reload the repository before assessing or setting up release automation.', 'ran-booster' );
+		$inventoryUnavailableMessage  = __( 'The full managed-package inventory for this repository is not available. Reload the repository before assessing or setting up the release workflow.', 'ran-booster' );
 		$packagesForReleaseAutomation = array();
 		$exactPackageRelationships    = 0;
 		$record                       = $packageInventoryIncomplete ? null : $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repositoryId ), null );

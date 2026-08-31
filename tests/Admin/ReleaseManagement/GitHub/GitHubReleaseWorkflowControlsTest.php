@@ -905,7 +905,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>Inventory incomplete</span>', $html );
-		self::assertStringContainsString( 'The full managed-package inventory for this repository is not available. Reload the repository before assessing or setting up release automation.', $html );
+		self::assertStringContainsString( 'The full managed-package inventory for this repository is not available. Reload the repository before assessing or setting up the release workflow.', $html );
 		self::assertStringContainsString( 'The complete managed-package inventory is unavailable.', $html );
 		self::assertStringNotContainsString( '1 of 1 packages use Published releases.', $html );
 		self::assertStringNotContainsString( 'Published releases are working. Booster has not assessed how this repository produces them.', $html );

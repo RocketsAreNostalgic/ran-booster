@@ -379,7 +379,7 @@ final class ProviderRepositoryRowsNormalizer {
 				default => __( 'Only Automatic packages can respond to signed pushes.', 'ran-booster' ),
 			};
 			if ( $isRelease ) {
-				$managementLabel  = __( 'Published release', 'ran-booster' );
+				$managementLabel  = __( 'Releases', 'ran-booster' );
 				$managementDetail = __( 'Push-to-Deploy unavailable', 'ran-booster' );
 				$managementTone   = 'info'; }
 			if ( $inventoryIncomplete ) {

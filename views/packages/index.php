@@ -125,7 +125,7 @@ $policyLabels = array(
 			<select id="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-source-filter" name="source">
 				<option value=""><?php esc_html_e( 'All sources', 'ran-booster' ); ?></option>
 				<option value="branch" <?php selected( 'branch', $packageListState['source'] ); ?>><?php esc_html_e( 'Branch', 'ran-booster' ); ?></option>
-				<option value="release_asset" <?php selected( 'release_asset', $packageListState['source'] ); ?>><?php esc_html_e( 'Published release', 'ran-booster' ); ?></option>
+				<option value="release_asset" <?php selected( 'release_asset', $packageListState['source'] ); ?>><?php esc_html_e( 'Releases', 'ran-booster' ); ?></option>
 			</select>
 			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-policy-filter"><?php esc_html_e( 'Filter by updates', 'ran-booster' ); ?></label>
 			<select id="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-policy-filter" name="policy">
@@ -305,7 +305,7 @@ $policyLabels = array(
 			}
 			$providerLabel = ! $providerUnavailable ? (string) $packageProvider['label'] : $providerCode;
 			$sourceLabel   = $releaseManaged
-				? __( 'Published release', 'ran-booster' )
+				? __( 'Releases', 'ran-booster' )
 				: sprintf(
 					/* translators: %s is a branch name. */
 					__( 'Branch: %s', 'ran-booster' ),

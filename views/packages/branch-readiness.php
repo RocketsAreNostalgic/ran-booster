@@ -2,14 +2,14 @@
 
 defined( 'WPINC' ) || die;
 
-$providerBaseUrl      = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
-$repositoryReadiness  = is_array( $packageBranchReadiness['repository'] ?? null )
+$providerBaseUrl        = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
+$repositoryReadiness    = is_array( $packageBranchReadiness['repository'] ?? null )
 	? $packageBranchReadiness['repository']
 	: null;
-$repositoryId         = is_string( $repositoryReadiness['repository_id'] ?? null )
+$repositoryId           = is_string( $repositoryReadiness['repository_id'] ?? null )
 	? trim( $repositoryReadiness['repository_id'] )
 	: '';
-$providerSettingsUrl  = add_query_arg(
+$providerSettingsUrl    = add_query_arg(
 	array_filter(
 		array(
 			'panel'      => 'repositories',
@@ -19,22 +19,22 @@ $providerSettingsUrl  = add_query_arg(
 	),
 	$providerBaseUrl
 );
-$providerSettingsUrl .= '#ran-booster-managed-webhook-repositories-heading';
-$activityUrl          = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
-$setupUrl             = admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' );
-$checkBaseUrl         = add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl );
-$checkReturnUrl       = $checkBaseUrl . '#ran-booster-branch-readiness';
-$siteReadiness        = is_array( $packageBranchReadiness['site'] ?? null )
+$providerSettingsUrl   .= '#ran-booster-managed-webhook-repositories-heading';
+$activityUrl            = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
+$setupUrl               = admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' );
+$checkBaseUrl           = add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl );
+$checkReturnUrl         = $checkBaseUrl . '#ran-booster-branch-readiness';
+$siteReadiness          = is_array( $packageBranchReadiness['site'] ?? null )
 	? $packageBranchReadiness['site']
 	: null;
-$siteReasons          = is_array( $siteReadiness['reason_codes'] ?? null )
+$siteReasons            = is_array( $siteReadiness['reason_codes'] ?? null )
 	? $siteReadiness['reason_codes']
 	: array();
-$receiverReady        = 'ready' === ( $siteReadiness['status'] ?? null );
-$repositoryReasons    = is_array( $repositoryReadiness['reason_codes'] ?? null )
+$receiverReady          = 'ready' === ( $siteReadiness['status'] ?? null );
+$repositoryReasons      = is_array( $repositoryReadiness['reason_codes'] ?? null )
 	? $repositoryReadiness['reason_codes']
 	: array();
-$identityReady        = null !== $repositoryReadiness
+$identityReady          = null !== $repositoryReadiness
 	&& array() === array_intersect(
 		array( 'repository_locator_invalid', 'repository_identity_unavailable', 'repository_identity_conflict' ),
 		$repositoryReasons
@@ -42,10 +42,10 @@ $identityReady        = null !== $repositoryReadiness
 $publishedReleaseSource = true === ( $releaseManaged ?? false )
 	|| 'release_asset' === ( $packageCurrentSource ?? null )
 	|| 'release_asset' === ( $packageSourceView ?? null );
-$providerWebhookUrl      = trim( (string) ( $packageBranchReadiness['webhook_settings_url'] ?? '' ) );
-$secretCoverage       = (string) ( $repositoryReadiness['local_secret_coverage'] ?? 'unknown' );
-$secretReady          = in_array( $secretCoverage, array( 'repository', 'shared' ), true );
-$secretLabel          = match ( $secretCoverage ) {
+$providerWebhookUrl     = trim( (string) ( $packageBranchReadiness['webhook_settings_url'] ?? '' ) );
+$secretCoverage         = (string) ( $repositoryReadiness['local_secret_coverage'] ?? 'unknown' );
+$secretReady            = in_array( $secretCoverage, array( 'repository', 'shared' ), true );
+$secretLabel            = match ( $secretCoverage ) {
 	'repository' => __( 'A repository-specific signing secret is saved.', 'ran-booster' ),
 	'shared' => __( 'A shared owner signing secret covers this repository.', 'ran-booster' ),
 	'none' => __( 'No matching local signing secret is saved.', 'ran-booster' ),

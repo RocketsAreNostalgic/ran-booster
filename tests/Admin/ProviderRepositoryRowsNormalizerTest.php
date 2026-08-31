@@ -95,6 +95,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$row    = array_values( $result['rows'] )[0];
 
 		self::assertSame( 'Ready to assess', $row['details'][0]['value'] );
+		self::assertSame( 'release_workflow', $row['details'][0]['category'] );
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 

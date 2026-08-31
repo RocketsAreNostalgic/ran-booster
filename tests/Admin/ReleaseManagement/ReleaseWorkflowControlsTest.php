@@ -179,6 +179,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 		self::assertMatchesRegularExpression( '/\Acore:release-workflow-[a-f0-9]{16}\z/', $action['key'] );
 		self::assertSame( $action['key'], $rows['101']['details'][0]['key'] );
+		self::assertSame( 'release_workflow', $rows['101']['details'][0]['category'] );
 	}
 
 	public function testReleaseWorkflowRepositoryEnrichmentHonoursRemainingRowCapacityForFullRows(): void {

@@ -2,10 +2,10 @@
 
 Date: August 27, 2026.
 
-Rollback checkpoint: `0585f3c89a8559abf34150e994ff96f742d6eea6`
-(`fix(admin): checkpoint repository integration rehearsal`). It contains the
-52 previously modified files. Composer and PNPM checks passed; the worktree
-was clean before this terminology work began.
+Reachable rollback checkpoint: `e1364c9608017c0bea0351fc098eee2f79f1087e`
+(`fix(admin): checkpoint repository integration rehearsal`). Checkpoint-relative
+check results and worktree state are not claimed here because the earlier
+checkpoint object is no longer reachable.
 
 ## Purpose
 
@@ -55,7 +55,7 @@ Do not replace every occurrence of "automation," "branch," or "release."
 
 ## Audit findings
 
-The audit inspected the live checkpoint's owning renderers and their tests.
+The audit inspected the reachable checkpoint's owning renderers and their tests.
 Paths below identify the implementation, not additional sources of policy.
 
 | Finding | Owning code | Required change |
@@ -90,8 +90,8 @@ tabs are views, not an exclusive repository-wide mode selector.
 ### 0. Rollback checkpoint — complete
 
 Commit the accumulated rehearsal changes before editing terminology. Do not
-mix those changes into the naming diff. Checkpoint and checks are recorded
-above. This checkpoint is not PR approval or release approval.
+mix those changes into the naming diff. The checkpoint is recorded above. This
+checkpoint is not PR approval or release approval.
 
 ### 1. Source vocabulary — implemented and verified locally
 
@@ -110,10 +110,9 @@ Reuse existing renderers; a terminology service or global replacement script
 would add complexity or erase meaningful distinctions.
 
 Result: nine production files contain literal-only replacements; nine test
-files update expectations and add four net assertion lines. A PHP-token
-comparison against the checkpoint confirmed that production token streams
-are unchanged apart from string contents. The terminology changes and this
-audit remain uncommitted, separate from the rollback checkpoint.
+files update expectations and add four net assertion lines. The historical
+checkpoint-relative token comparison is not reproduced here because the
+original checkpoint object is unreachable.
 
 ### 2. Repository feature vocabulary — implemented and verified locally
 
@@ -128,9 +127,10 @@ Do not change diagnostic codes, operation names, evidence schemas or remote
 behavior to achieve a wording change.
 
 Implementation boundary: preserve the Core-owned classification of recorded
-release history while recognizing the new label. One additional label
-predicate is sufficient; no new registry or migration is needed. Projected
-growth: one production line, zero concrete types, public seams or state fields.
+release history using the normalized detail key or `release_workflow` kind.
+Labels, including translations, do not classify history. No registry or
+migration is needed. Projected growth: one production line, zero concrete
+types, public seams or state fields.
 
 ### 3. Repeated copy and hierarchy — implemented and verified locally
 
@@ -278,12 +278,9 @@ disposable activation check as passed.
 - The blocked workflow keeps its credential selector, assessment action,
   provenance line and documentation links. The Update URI remedy now points
   to package settings, where the exact header is actually displayed.
-- PHP token comparison found no structural changes outside the reviewed
-  history-label predicate, duplicate Branch heading removal and unused summary
-  removal. JavaScript changes only source labels and their accessible text.
-- Production delta against the checkpoint: 15 files, +121/-130 lines (net -9).
-  Tests: 14 files, +157/-116 lines (net +41). Existing Markdown guides:
-  two files, +2/-2 lines, plus this new audit and implementation record.
+- Checkpoint-relative token and line-count comparisons are not reproduced here
+  because the original checkpoint object is unreachable. JavaScript changes
+  only source labels and their accessible text.
   No concrete types, public seams or persistent fields were added.
 - README, stylesheets, dependencies, source/policy behavior and remote state
   are unchanged. No live save, source switch, workflow assessment, activation,
@@ -292,9 +289,9 @@ disposable activation check as passed.
   Narrow-viewport and JavaScript-disabled browser sessions were not run;
   responsive/navigation asset contracts and ordinary URL loads passed.
 
-All implementation slices are complete. The changes remain uncommitted on
-`bnjmnrsh/pns-rehearsal`; the rollback checkpoint is unchanged. Next: owner
-wording review before committing this terminology pass.
+All implementation slices are complete. The rollback checkpoint remains
+separate from this terminology pass. Next: owner wording review before
+committing this terminology pass.
 
 ## Copy reductions
 

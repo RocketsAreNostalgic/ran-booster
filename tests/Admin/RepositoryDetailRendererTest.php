@@ -48,16 +48,16 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Configured at last check',
 				),
 				array(
-					'key'      => 'gh:release-automation-a',
-					'label'    => 'État du flux de publication',
-					'value'    => 'Ready to assess',
-					'tone'     => 'ok',
-					'category' => 'release_workflow',
+					'key'   => 'gh:release-automation-a',
+					'label' => 'État du flux de publication',
+					'value' => 'Ready to assess',
+					'tone'  => 'ok',
 				),
 				array(
-					'key'   => 'provider:release-workflow',
-					'label' => 'Release workflow — owner/theme',
-					'value' => 'Configured',
+					'key'      => 'provider:custom-workflow-observation',
+					'category' => 'release_workflow',
+					'label'    => 'Flux de publication — owner/theme',
+					'value'    => 'Configured',
 				),
 				array(
 					'key'   => 'provider:legacy-release-workflow',
@@ -120,14 +120,18 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( '1 package tracks Releases', $html );
 		self::assertStringContainsString( 'État du flux de publication', $html );
 		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
-		self::assertStringNotContainsString( 'Release workflow — owner/theme', $html );
-		self::assertStringNotContainsString( 'Release automation — owner/legacy.php', $html );
+		self::assertStringContainsString( 'Flux de publication — owner/theme', $html );
+		self::assertStringContainsString( 'Release automation — owner/legacy.php', $html );
 		$webhookHistoryPosition = strpos( $html, 'Configured at last check' );
 		$releaseHistoryPosition = strpos( $html, '<h4>Release workflow</h4>' );
+		$legacyHistoryPosition  = strpos( $html, 'Release automation — owner/legacy.php' );
 		self::assertIsInt( $webhookHistoryPosition );
 		self::assertIsInt( $releaseHistoryPosition );
+		self::assertIsInt( $legacyHistoryPosition );
 		self::assertTrue( $webhookHistoryPosition < $releaseHistoryPosition );
 		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'État du flux de publication' ) );
+		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Flux de publication — owner/theme' ) );
+		self::assertTrue( $legacyHistoryPosition < $releaseHistoryPosition );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Provider receiver', $html );

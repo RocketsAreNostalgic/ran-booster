@@ -236,8 +236,8 @@ final class RepositoryDetailRenderer {
 	/** @param array<string, mixed> $row */
 	private function renderActivity( array $row, string $activityUrl ): void {
 		$details  = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), 'is_array' ) );
-		$webhooks = array_values( array_filter( $details, fn ( array $detail ): bool => 'webhook' === ( $detail['category'] ?? null ) ) );
-		$releases = array_values( array_filter( $details, fn ( array $detail ): bool => 'release_workflow' === ( $detail['category'] ?? null ) ) );
+		$webhooks = array_values( array_filter( $details, fn ( array $detail ): bool => ! $this->isReleaseDetail( $detail ) ) );
+		$releases = array_values( array_filter( $details, fn ( array $detail ): bool => $this->isReleaseDetail( $detail ) ) );
 		if ( array() === $webhooks ) {
 			$webhooks = array(
 				array(
@@ -291,9 +291,7 @@ final class RepositoryDetailRenderer {
 	/** @param array<string, mixed> $detail */
 	private function isReleaseDetail( array $detail ): bool {
 		return 'release_workflow' === ( $detail['category'] ?? null )
-			|| $this->isReleaseAutomationKey( $detail['key'] ?? null )
-			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release automation' )
-			|| str_starts_with( (string) ( $detail['label'] ?? '' ), 'Release workflow' );
+			|| $this->isReleaseAutomationKey( $detail['key'] ?? null );
 	}
 
 	/** @param array<string, mixed> $row @return list<array<string, mixed>> */

@@ -39,8 +39,10 @@ $identityReady        = null !== $repositoryReadiness
 		array( 'repository_locator_invalid', 'repository_identity_unavailable', 'repository_identity_conflict' ),
 		$repositoryReasons
 	);
-$publishedReleaseSource = isset( $releaseManaged ) && true === $releaseManaged;
-$providerWebhookUrl   = trim( (string) ( $packageBranchReadiness['webhook_settings_url'] ?? '' ) );
+$publishedReleaseSource = true === ( $releaseManaged ?? false )
+	|| 'release_asset' === ( $packageCurrentSource ?? null )
+	|| 'release_asset' === ( $packageSourceView ?? null );
+$providerWebhookUrl      = trim( (string) ( $packageBranchReadiness['webhook_settings_url'] ?? '' ) );
 $secretCoverage       = (string) ( $repositoryReadiness['local_secret_coverage'] ?? 'unknown' );
 $secretReady          = in_array( $secretCoverage, array( 'repository', 'shared' ), true );
 $secretLabel          = match ( $secretCoverage ) {
@@ -104,8 +106,7 @@ $repositoryStateClass             = match ( true ) {
 	default                                  => 'is-pending',
 };
 $setupSummary = match ( true ) {
-	$needsAttention       => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
-	$publishedReleaseSource => __( 'Published releases remain the package source. Branch pushes are ignored; local webhook configuration stays active for manual deployments.', 'ran-booster' ),
+	$needsAttention => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
 	default         => __( 'Review the requirements below.', 'ran-booster' ),
 };
 if ( in_array( $repositoryBranchCheckOutcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {

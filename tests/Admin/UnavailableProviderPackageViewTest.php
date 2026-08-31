@@ -337,15 +337,15 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'panel=repositories&amp;repository=stable-provider-id&amp;repository_view=branch', $html );
-		self::assertStringContainsString( '>Manage webhooks</a>', $html );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=stable-provider-id', $html );
+		self::assertStringContainsString( '>View repository webhook status</a>', $html );
 
 		$packageSource['selected'] = PackageSource::RELEASE_ASSET->value;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$releaseView = (string) ob_get_clean();
 		self::assertStringNotContainsString( 'Webhook setup', $releaseView );
-		self::assertStringContainsString( '>Manage webhooks</a>', $releaseView );
+		self::assertStringContainsString( '>View repository webhook status</a>', $releaseView );
 	}
 
 	public function testReleaseManagedListUsesTheExistingDeploymentPositionAndReadOnlySummary(): void {

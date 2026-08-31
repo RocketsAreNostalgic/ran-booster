@@ -121,7 +121,7 @@ final class WebhookOperationCoordinator {
 			'check'       => $this->outcome( $this->recordCheck( $record, $credentialId, $state, $code, $observed, $target->endpoint(), $delivery, $configuration ) ),
 			'reconfigure' => $this->recordReconfigure( $record, $target, $result, $credentialId, $state, $code, $observed, $delivery ),
 			'remove'      => $this->outcome( $this->recordRemove( $record, $result, $state, $code, $observed ) ),
-			'test'        => $this->outcome( $this->recordTest( $record, $credentialId, $state, $code, $observed ) ),
+			'test'        => $this->outcome( $this->recordTest( $record, $credentialId, $state, $code, $observed, $delivery, $configuration ) ),
 		};
 
 		$successful = match ( $operation ) {
@@ -282,7 +282,20 @@ final class WebhookOperationCoordinator {
 		return $code;
 	}
 
-	private function recordTest( InstallationRecord $record, string $managementCredentialId, string $state, string $code, string $observed ): string {
+	/** @param array<string, mixed> $configuration */
+	private function recordTest( InstallationRecord $record, string $managementCredentialId, string $state, string $code, string $observed, string $delivery, array $configuration ): string {
+		if ( 'succeeded' === $state && 'absent' === $delivery ) {
+			return $this->writeResultCode(
+				$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, 'remote_missing', $observed ), $record ),
+				'remote_missing'
+			);
+		}
+		if ( 'succeeded' === $state && in_array( 'mismatched', $configuration, true ) ) {
+			return $this->writeResultCode(
+				$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, 'configuration_drift', $observed ), $record ),
+				'configuration_drift'
+			);
+		}
 		if ( ! ( ( 'succeeded' === $state && in_array( $code, array( 'ping_requested', 'ping_verified' ), true ) ) || ( 'failed' === $state && 'ping_delivery_failed' === $code ) ) ) {
 			return $code;
 		}

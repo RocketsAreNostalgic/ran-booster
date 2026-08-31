@@ -402,7 +402,7 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertSame( 1, $this->plugins->stores );
 	}
 
-	public function testInstallWithAnExistingManagedTargetIsADurableAlreadyManagedOutcomeWithoutRemoteOrFilesystemWork(): void {
+	public function testInstallWithAnExistingManagedTargetIsADurableAlreadyManagedOutcomeAfterFinalLockRevalidation(): void {
 		$slug = 'ran-booster-existing-managed-install-fixture';
 		$this->createPluginDestination( $slug );
 		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
@@ -410,16 +410,54 @@ final class DeploymentCoordinatorTest extends TestCase {
 		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'different-branch', true, 'different-credential' ) );
 		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::DISABLED );
 		$this->plugins->byIdentifier->setSource( PackageSource::RELEASE_ASSET, 9 );
+		$this->preflight->artifact = $this->artifact( '2.0.0' );
 
 		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
 
 		self::assertSame( 'succeeded', $result['status'] );
 		self::assertSame( DeploymentOutcome::CODE_ALREADY_MANAGED, $result['outcome_code'] );
 		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
-		self::assertSame( 0, $this->provider->prepareCalls );
-		self::assertSame( 0, $this->preflight->calls );
+		self::assertSame( 1, $this->provider->prepareCalls );
+		self::assertSame( 1, $this->preflight->calls );
 		self::assertSame( 0, $this->executor->calls );
 		self::assertSame( 0, $this->plugins->stores );
+	}
+
+	public function testInstallRechecksAnExistingManagedTargetAfterConcurrentRemovalTakesTheUpdaterLock(): void {
+		$slug = 'ran-booster-removal-race-install-fixture';
+		$path = WP_PLUGIN_DIR . '/' . $slug;
+		$this->createPluginDestination( $slug );
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::MANUAL );
+		$this->preflight->artifact         = $this->artifact( '2.0.0' );
+		$this->coordinator                 = new LockHookDeploymentCoordinator(
+			$this->attempts,
+			$this->plugins,
+			$this->themes,
+			$this->providers,
+			$this->preflight,
+			$this->executor,
+			new WordPressWorkerWakeup( $this->attempts ),
+			sys_get_temp_dir() . '/ran-booster-coordinator-maintenance',
+			new WordPressUpdaterLock(),
+			$this->failureEmail,
+			new RepositorySourceGuard( $this->sourceDatabase, $this->createStub( Database::class ) )
+		);
+		$this->coordinator->beforeCoreLock = function () use ( $path ): void {
+			$this->plugins->byIdentifier = null;
+			rmdir( $path );
+		};
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'succeeded', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $result['outcome_code'] );
+		self::assertSame( 1, $this->provider->prepareCalls );
+		self::assertSame( 1, $this->preflight->calls );
+		self::assertSame( 1, $this->executor->calls );
+		self::assertSame( 1, $this->plugins->stores );
 	}
 
 	public function testInstallWithAnExistingMismatchedManagedTargetStaysPolicyBlocked(): void {
@@ -1307,6 +1345,19 @@ final class CoordinatorFailureEmail extends BackgroundDeploymentFailureEmail {
 		$this->attempts[] = $attempt;
 
 		return true;
+	}
+}
+
+final class LockHookDeploymentCoordinator extends DeploymentCoordinator {
+	/** @var null|callable(): void */
+	public $beforeCoreLock = null;
+
+	protected function acquireCoreLock(): string {
+		if ( null !== $this->beforeCoreLock ) {
+			( $this->beforeCoreLock )();
+		}
+
+		return parent::acquireCoreLock();
 	}
 }
 // phpcs:enable Generic.Files.OneObjectStructurePerFile

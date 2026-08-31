@@ -254,7 +254,7 @@ class DeploymentCoordinator {
 		try {
 			BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 			PackageMutationGuard::assertFilesystemMutationAllowed();
-			$baseline = $this->assertFrozenTargetOutcome( $attempt );
+			$baseline = $this->assertFrozenTargetOutcome( $attempt, true );
 			BoosterLogger::log( 'target snapshot verified', $context + array( 'step' => 'target_verified' ) );
 			$baselineState = null === $baseline ? null : $this->packageRuntimeState( $baseline );
 			$failureCode   = DeploymentOutcome::CODE_PROVIDER_FAILED;
@@ -538,7 +538,7 @@ class DeploymentCoordinator {
 	}
 
 	/** Return the current installed package for an update, or null for a new install. */
-	private function assertFrozenTarget( DeploymentAttempt $attempt ): ?Package {
+	private function assertFrozenTarget( DeploymentAttempt $attempt, bool $deferMatchingManagedDestination = false ): ?Package {
 		$data          = $attempt->safeData();
 		$request       = $attempt->getRequest();
 		$packageSource = $data['package_source'] ?? null;
@@ -551,6 +551,9 @@ class DeploymentCoordinator {
 			}
 			if ( $this->destinationExists( (string) $data['package_type'], $request->packageSlug ) ) {
 				if ( $this->existingManagementMatchesInstallTarget( $attempt ) ) {
+					if ( $deferMatchingManagedDestination ) {
+						return null;
+					}
 					throw new ExistingManagedDestination();
 				}
 				$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_DESTINATION_EXISTS, 'The package destination already exists.' );
@@ -568,9 +571,9 @@ class DeploymentCoordinator {
 	}
 
 	/** Classify source-guard persistence failures before the generic policy fence. */
-	private function assertFrozenTargetOutcome( DeploymentAttempt $attempt ): ?Package {
+	private function assertFrozenTargetOutcome( DeploymentAttempt $attempt, bool $deferMatchingManagedDestination = false ): ?Package {
 		try {
-			return $this->assertFrozenTarget( $attempt );
+			return $this->assertFrozenTarget( $attempt, $deferMatchingManagedDestination );
 		} catch ( PackageStorageFailure $failure ) {
 			if ( 'ran_booster_repository_source_conflict' === $failure->getDiagnosticId() ) {
 				$this->fail( DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT, 'The repository source conflicts with an existing managed package.' );

@@ -235,7 +235,15 @@ class ProviderProfileAdminController {
 			function () use ( $provider, $id, $secret, $label, $kind, $configuration, $selfDestruct, $manualExpirySubmitted, $manualExpiry, $manualExpiryIsProviderFallback ): string {
 				$existingProfile = null === $id ? null : ( $this->secrets->credentialProfiles( $provider )[ $id ] ?? null );
 				$isReplacement   = is_array( $existingProfile ) && '' !== $secret;
-				$savedId         = $this->secrets->saveCredential(
+				$accessChanged   = is_array( $existingProfile )
+					&& ( $isReplacement
+						|| $kind !== ( $existingProfile['kind'] ?? null )
+						|| ! is_array( $existingProfile['configuration'] ?? null )
+						|| $configuration !== $existingProfile['configuration'] );
+				if ( $accessChanged && null !== $id ) {
+					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
+				}
+				$savedId      = $this->secrets->saveCredential(
 					$provider,
 					$id,
 					array(
@@ -248,7 +256,7 @@ class ProviderProfileAdminController {
 					$secret,
 					true
 				);
-				$savedProfile    = $this->secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
+				$savedProfile = $this->secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
 				if ( ! is_array( $savedProfile )
 					|| $label !== ( $savedProfile['label'] ?? null )
 					|| $kind !== ( $savedProfile['kind'] ?? null )
@@ -258,9 +266,6 @@ class ProviderProfileAdminController {
 					|| ( $selfDestruct ? $manualExpiry : null ) !== ( $savedProfile['destroy_on'] ?? null )
 					|| empty( $savedProfile['configured'] ) ) {
 					throw new CredentialRequestException( 'Booster could not verify that the repository credential was saved.' );
-				}
-				if ( $isReplacement ) {
-					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $savedId );
 				}
 				if ( $isReplacement ) {
 					$this->expiryObservations->clear( $provider->value, $savedId );

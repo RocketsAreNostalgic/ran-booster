@@ -215,15 +215,11 @@ $webhookActionLabel = __( 'Manage webhooks', 'ran-booster' );
 					<?php disabled( isset( $packageMutationAvailable ) && false === $packageMutationAvailable ); ?>
 					><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
 				<?php } ?>
-				<a
-					class="button<?php echo $repositoryDetailAvailable ? '' : ' disabled'; ?>"
-					<?php if ( $repositoryDetailAvailable ) { ?>
-						href="<?php echo esc_url( $providerSettingsUrl ); ?>"
-					<?php } else { ?>
-						aria-disabled="true"
-						tabindex="-1"
-					<?php } ?>
-				><?php echo esc_html( $webhookActionLabel ); ?></a>
+				<?php if ( $repositoryDetailAvailable ) { ?>
+					<a class="button" href="<?php echo esc_url( $providerSettingsUrl ); ?>"><?php echo esc_html( $webhookActionLabel ); ?></a>
+				<?php } else { ?>
+					<button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $webhookActionLabel ); ?></button>
+				<?php } ?>
 			</div>
 		</div>
 	</div>

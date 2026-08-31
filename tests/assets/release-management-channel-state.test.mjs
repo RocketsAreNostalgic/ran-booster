@@ -146,7 +146,7 @@ test('loading state is carried by the stable release pane instead of a spinner',
 	assert.match(declaration('setChoiceState'), /ran-booster-update-is-active/);
 });
 
-test('loading candidates auto-selects the newest release and uses the shared disclosure treatment', () => {
+test('loading candidates preserves provider order and uses the shared disclosure treatment', () => {
 	let inspectCalls = 0;
 	const candidateList = {
 		children: [],
@@ -248,8 +248,8 @@ test('loading candidates auto-selects the newest release and uses the shared dis
 	});
 
 	assert.equal(inspectCalls, 1);
-	assert.equal(harness.state().selectedRelease.id, 9);
-	assert.equal(harness.state().selectedRelease.tag, 'v1.2.0');
+	assert.equal(harness.state().selectedRelease.id, 8);
+	assert.equal(harness.state().selectedRelease.tag, 'v1.1.0');
 	assert.equal(harness.state().selectedRelease.channel, 'stable');
 	assert.equal(candidateList.children.length, 2);
 	assert.equal(candidateList.children[0].children[0].checked, true);

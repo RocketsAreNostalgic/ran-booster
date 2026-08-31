@@ -116,7 +116,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			$target  = $this->currentTarget( $providerCode, $repositoryId, true );
 			$choices = array();
 			foreach ( null === $target ? array() : $this->secrets->webhookProfiles( $providerCode ) as $profileId => $profile ) {
-				if ( ! is_string( $profileId ) || ! $this->validWebhookProfileId( $profileId ) || ! is_array( $profile ) || ! $this->appliesTo( $target, $profile ) || ! is_string( $profile['label'] ?? null ) ) {
+				if ( ! is_string( $profileId ) || ! $this->validWebhookProfileId( $profileId ) || ! is_array( $profile ) || 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] ) || ! $this->appliesTo( $target, $profile ) || ! is_string( $profile['label'] ?? null ) ) {
 					continue;
 				}
 				$choices[] = array(
@@ -483,7 +483,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	/** @return array{WebhookProfileMetadata,string}|null */
 	private function selectProfile( AssistanceTarget $target, string $profileId ): ?array {
 		$materials = $this->secrets->webhookMaterials( $target->providerCode() );
-		if ( isset( $materials[ $profileId ] ) && $this->appliesTo( $target, $materials[ $profileId ] ) ) {
+		if ( isset( $materials[ $profileId ] ) && 'file' === ( $materials[ $profileId ]['source'] ?? null ) && empty( $materials[ $profileId ]['immutable'] ) && $this->appliesTo( $target, $materials[ $profileId ] ) ) {
 			return $this->profileRecordFromMaterial( $target->providerCode(), $profileId, $materials[ $profileId ] );
 		}
 

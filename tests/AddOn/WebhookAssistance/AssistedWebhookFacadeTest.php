@@ -97,12 +97,15 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( array(), $secrets->profiles );
 	}
 
-	public function testSetupCanSelectAnApplicableConstantSigningProfileWithoutCreatingAnother(): void {
+	public function testSetupRejectsAConstantSigningProfileWhileKeepingItAvailableForInboundVerification(): void {
 		$secrets                        = new FixedFacadeSecretsFile();
-		$secrets->profiles['constant']  = $secrets->profile( 'constant', 1, 'constant-secret' ) + array(
-			'label'     => 'Deployment signing secret',
-			'source'    => 'constant',
-			'immutable' => true,
+		$secrets->profiles['constant']  = array_merge(
+			$secrets->profile( 'constant', 1, 'constant-secret' ),
+			array(
+				'label'     => 'Deployment signing secret',
+				'source'    => 'constant',
+				'immutable' => true,
+			)
 		);
 		$secrets->materials['constant'] = $secrets->profiles['constant'];
 		$provider                       = new FixedWebhookProvider();
@@ -110,19 +113,10 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		$target                         = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 
-		self::assertSame(
-			array(
-				array(
-					'id'    => 'constant',
-					'label' => 'Deployment signing secret',
-					'scope' => 'repository',
-				),
-			),
-			$facade->webhookProfileChoices( 'gh', '101' )
-		);
+		self::assertSame( array(), $facade->webhookProfileChoices( 'gh', '101' ) );
 		$result = $facade->setup( $target, 'profile_1', 'good', 'constant' );
-		self::assertTrue( $result->succeeded(), $result->code() );
-		self::assertSame( 'constant-secret', $provider->signingSecret );
+		self::assertSame( 'operation_unauthorized', $result->code() );
+		self::assertSame( '', $provider->signingSecret );
 		self::assertCount( 1, $secrets->profiles );
 	}
 

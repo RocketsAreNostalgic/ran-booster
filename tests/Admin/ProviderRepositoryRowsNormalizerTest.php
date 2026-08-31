@@ -99,6 +99,48 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 
+	public function testReleaseWebhookCleanupLinkSelectsTheRetainedBranchPane(): void {
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+			array(
+				array(
+					'target'              => 'example/example',
+					'repository_id'       => '101',
+					'source'              => 'release_asset',
+					'package_references'  => array( 'example/example.php' ),
+					'deployment_policies' => array(
+						'automatic' => 0,
+						'manual'    => 1,
+						'disabled'  => 0,
+					),
+					'automatic_count'     => 0,
+					'repository_url'      => 'https://github.com/example/example',
+					'retained_webhook'    => array( 'local_secret_coverage' => 'repository' ),
+				),
+			),
+			'gh',
+			'GitHub',
+			'GitHub webhooks',
+			'GitHub secret',
+			'https://example.test/webhooks/gh',
+			true,
+			array(
+				'by_id'         => array(),
+				'by_repository' => array(),
+			),
+			null,
+			'101',
+			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
+			'https://example.test/repositories'
+		);
+		$row    = $result['selected'];
+
+		self::assertIsArray( $row );
+		$action = $row['actions']['core:webhook-cleanup-review'];
+		self::assertStringContainsString( 'source_view=branch', $action['url'] );
+		self::assertStringContainsString( 'webhook_cleanup=1', $action['url'] );
+		self::assertStringEndsWith( '#ran-booster-webhook-cleanup', $action['url'] );
+	}
+
 	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {
 		$base                              = $this->baseRows();
 		$presented                         = $base;
@@ -130,6 +172,19 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertCount( 2, $rows['repo-42']['details'] );
 		self::assertTrue( $rows['fixture:historical:abc123']['historical'] );
 		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
+	}
+
+	public function testPreservesUnknownAddOnDetailKindMetadata(): void {
+		$base                         = $this->baseRows();
+		$base['repo-42']['details'][] = array(
+			'label' => 'Add-on detail',
+			'value' => 'Observed',
+			'kind'  => array( 'unbounded' => str_repeat( 'x', 128 ) ),
+		);
+
+		$rows = ( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $base, 'gh' );
+
+		self::assertSame( array( 'unbounded' => str_repeat( 'x', 128 ) ), $rows['repo-42']['details'][1]['kind'] );
 	}
 
 	public function testRequiresEveryCoreRow(): void {

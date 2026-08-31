@@ -8,6 +8,7 @@ require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentPolicy;
 
 final class PackageBranchReadinessViewTest extends TestCase {
@@ -172,9 +173,68 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '/<a\s+class="button disabled"\s+aria-disabled="true"\s+tabindex="-1"\s*>Manage webhooks<\\/a>/', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 		self::assertStringNotContainsString( 'href=', $html );
 		self::assertStringNotContainsString( 'panel=repositories', $html );
+	}
+
+	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
+		$packageMutationAvailable = true;
+		$packageSourceChoices     = array(
+			'branch' => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy a saved repository branch.',
+				'meta'              => 'Included with Booster',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+				'disabled'          => false,
+				'hydrated'          => true,
+				'client_hydratable' => false,
+			),
+		);
+		$packageSourceMode        = 'edit';
+		$packageFieldLayout       = 'grid';
+		$packageSourceView        = 'branch';
+		$showBranchSettings       = true;
+		$releaseManaged           = true;
+		$branchReadOnly           = true;
+		$branchValue              = 'main';
+		$subdirectoryValue        = '';
+		$packageAdvancedSections  = array();
+		$packageAdvancedSummary   = 'Published releases · Active';
+		$packageAdvancedOpen      = false;
+		$packageRepositoryReady   = true;
+		$packageSource            = array();
+		$packageView              = new class() {
+			public function getType(): string {
+				return 'plugin';
+			}
+		};
+		$packageWebhookCleanup    = array(
+			'context' => new WebhookCleanupContext(
+				'plugin',
+				'example/example.php',
+				'gh',
+				'101',
+				'example/example',
+				'repository',
+				true,
+				true,
+				array(),
+				'https://example.test/webhooks',
+				'https://example.test/secrets',
+				'https://example.test/docs',
+				'https://example.test/settings'
+			),
+			'actions' => array(),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Inactive Branch deployment settings', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
+		self::assertStringNotContainsString( '>Save settings and check</button>', $html );
 	}
 
 	#[DataProvider( 'subdirectoryChecklistProvider' )]
@@ -377,7 +437,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( 'panel=repositories', $html );
-		self::assertMatchesRegularExpression( '/<a\s+class="button disabled"\s+aria-disabled="true"\s+tabindex="-1"\s*>Manage webhooks<\\/a>/', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
 	#[DataProvider( 'repositoryBranchCheckOutcomeProvider' )]
@@ -451,7 +511,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 		self::assertStringContainsString( 'Webhook health', $html );
-		self::assertMatchesRegularExpression( '/<a\s+class="button disabled"\s+aria-disabled="true"\s+tabindex="-1"\s*>Manage webhooks<\\/a>/', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 		self::assertStringNotContainsString( '<a href=', $html );
 		self::assertStringNotContainsString( 'Review Booster diagnostics', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );

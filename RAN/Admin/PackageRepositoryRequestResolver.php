@@ -139,7 +139,7 @@ final readonly class PackageRepositoryRequestResolver {
 		$request['provider_repository_identity_source'] = 'resolved';
 		$request['repository_default_branch']           = $repository->defaultBranch;
 		$request['private']                             = $repository->private ? '1' : '0';
-		$request['credential_id']                       = null !== $trustedPublicLookupId
+		$request['credential_id']                       = $trustedPublicLookup
 			? $credentialId
 			: ( $publicPicker ? '' : $repository->credentialId ?? '' );
 		$request['branch']                              = '' === $branch ? $repository->defaultBranch : $branch;

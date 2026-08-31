@@ -226,6 +226,41 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 	}
 
+	public function testIncompletePackageInventoryUsesTheReleaseSetupLabel(): void {
+		$releaseRendered = false;
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'                => 'owner/partial-releases',
+				'source_label'              => 'Published releases',
+				'source_key'                => 'release_asset',
+				'package_summaries_omitted' => 1,
+				'package_summaries'         => array(),
+				'details'                   => array(),
+				'actions'                   => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'releases',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			static function () use ( &$releaseRendered ): void {
+				$releaseRendered = true;
+				echo '<div data-test-release></div>';
+			}
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertFalse( $releaseRendered );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringNotContainsString( 'Assess release automation', $html );
+		self::assertStringNotContainsString( 'data-test-release', $html );
+	}
+
 	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {
 		$row             = array(
 			'repository'        => 'owner/releases',
@@ -325,6 +360,51 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Release workflow setup is unavailable for this repository provider.', $html );
 		self::assertStringContainsString( 'Open Theme settings', $html );
 		self::assertStringNotContainsString( 'Assess release setup', $html );
+	}
+
+	public function testProviderActionsPreserveNormalizedDescriptions(): void {
+		$row = array(
+			'repository'        => 'owner/branch',
+			'source_label'      => 'Branch',
+			'source_key'        => 'branch',
+			'package_summaries' => array(),
+			'details'           => array(),
+			'actions'           => array(
+				array(
+					'key'          => 'fixture:post',
+					'label'        => 'Post',
+					'type'         => 'post',
+					'url'          => 'https://example.test/wp-admin/admin-post.php',
+					'hidden'       => array(
+						'action'   => 'fixture_action',
+						'_wpnonce' => 'nonce',
+					),
+					'described_by' => 'post-help',
+				),
+				array(
+					'key'          => 'fixture:disabled',
+					'label'        => 'Disabled',
+					'type'         => 'link',
+					'url'          => '',
+					'disabled'     => true,
+					'described_by' => 'disabled-help',
+				),
+				array(
+					'key'          => 'fixture:link',
+					'label'        => 'Link',
+					'type'         => 'link',
+					'url'          => 'https://example.test/link',
+					'described_by' => 'link-help',
+				),
+			),
+		);
+		ob_start();
+		( new RepositoryDetailRenderer() )->render( $row, 'Fixture', 'https://example.test/repositories', 'https://example.test/activity', true, '', 'branch', $this->viewUrls(), $this->viewRequestUrls(), null, null );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'aria-describedby="post-help"', $html );
+		self::assertStringContainsString( 'aria-describedby="disabled-help"', $html );
+		self::assertStringContainsString( 'aria-describedby="link-help"', $html );
 	}
 
 	/** @return array<string, string> */

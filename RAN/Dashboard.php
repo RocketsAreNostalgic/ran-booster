@@ -616,7 +616,7 @@ class Dashboard {
 			? sanitize_key( wp_unslash( $_GET['ran_booster_open_advanced'] ) )
 			: '';
 
-		return '1' === $value;
+		return '1' === $value || '' !== $this->requestedPackageSourceView();
 	}
 
 	private function renderPackageCreate( PackagePagePresenter $packageView ): mixed {

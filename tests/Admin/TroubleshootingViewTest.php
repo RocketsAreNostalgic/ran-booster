@@ -982,6 +982,31 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( '>Manage webhook</button>', $html );
 		self::assertStringNotContainsString( 'aria-describedby="ran-booster-provider-readiness-reason-0 ran-booster-provider-readiness-reason-0-site"', $html );
 		self::assertStringNotContainsString( 'assisted_repository=repo-42', $html );
+
+		$webhook_assistance_readiness['repositories'][0] = array(
+			'provider_code'         => 'gh',
+			'repository_id'         => 'repo-42',
+			'repository'            => 'owner/example',
+			'package_references'    => array( 'plugin/example.php' ),
+			'deployment_policies'   => array(
+				'automatic' => 1,
+				'manual'    => 0,
+				'disabled'  => 0,
+			),
+			'local_secret_coverage' => 'shared',
+			'eligible'              => false,
+		);
+		$requestedRepositoryId                           = 'repo-42';
+		$providerViewData                                = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$repositoryHtml = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Repository webhook</h5>', $repositoryHtml );
+		self::assertStringContainsString( 'Repository webhook management is unavailable until this site can receive provider deliveries.', $repositoryHtml );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Manage repository webhook</button>', $repositoryHtml );
 	}
 
 	public function testProviderSettingsShowsOnlyPathlessRecoveryGuidanceWhenStorageIsUnavailable(): void {

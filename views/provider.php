@@ -316,20 +316,29 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 							<?php if ( '' !== $requestedRepositoryId ) { ?>
 								<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
 									<?php
-									$hasBranchConsumer = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
-									$repositoryDetailRenderer->render(
-										$selectedRepositoryRow,
-										$provider['label'],
-										$repositoryListUrl,
-										$activityUrl,
-										$webhookAssistanceSiteReady,
-										$webhookAssistanceSiteReady ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhookSiteReasons ),
-										$hasBranchConsumer && null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
-											? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl ): void {
-												$webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
-											}
-											: null
-									);
+										$hasBranchConsumer  = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
+										$renderWebhookPanel = null;
+									if ( $hasBranchConsumer && ! $webhookAssistanceSiteReady ) {
+										$renderWebhookPanel = static function (): void {
+											?>
+												<p class="description"><?php esc_html_e( 'Repository webhook management is unavailable until this site can receive provider deliveries.', 'ran-booster' ); ?></p>
+												<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
+												<?php
+										};
+									} elseif ( $hasBranchConsumer && null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] ) ) {
+										$renderWebhookPanel = static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl ): void {
+											$webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
+										};
+									}
+										$repositoryDetailRenderer->render(
+											$selectedRepositoryRow,
+											$provider['label'],
+											$repositoryListUrl,
+											$activityUrl,
+											$webhookAssistanceSiteReady,
+											$webhookAssistanceSiteReady ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhookSiteReasons ),
+											$renderWebhookPanel
+										);
 									?>
 								<?php } else { ?>
 									<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>

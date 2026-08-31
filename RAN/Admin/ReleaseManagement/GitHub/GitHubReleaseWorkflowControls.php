@@ -98,14 +98,20 @@ final class GitHubReleaseWorkflowControls {
 				? array_values( array_filter( $row['package_summaries'], 'is_array' ) )
 				: array();
 			$multiple  = 1 < count( $summaries );
+			$details   = is_array( $row['details'] ?? null ) ? $row['details'] : array();
+			$remaining = max( 0, 20 - count( $details ) );
 			foreach ( $summaries as $summary ) {
 				$projection = $this->repositoryReleaseAutomationProjection( $row, $summary, $multiple );
 				if ( null === $projection ) {
 					continue;
 				}
-				$row['details'][]                               = $projection['detail'];
+				if ( 0 < $remaining ) {
+					$details[] = $projection['detail'];
+					--$remaining;
+				}
 				$row['actions'][ $projection['action']['key'] ] = $projection['action'];
 			}
+			$row['details'] = $details;
 		}
 		unset( $row );
 
@@ -364,7 +370,7 @@ final class GitHubReleaseWorkflowControls {
 			&& 'gh' === (string) $package->getProviderCode()
 			&& is_string( $package->getProviderRepositoryId() )
 			&& hash_equals( $repository, $package->getProviderRepositoryId() )
-			&& hash_equals( $locator, (string) $package->getRepository() )
+			&& 0 === strcasecmp( $locator, (string) $package->getRepository() )
 			&& $summaryRevision === $package->getSourceRevision();
 		if ( $exact ) {
 			$status = $this->requestBoundary(

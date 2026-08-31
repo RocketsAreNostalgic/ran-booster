@@ -395,36 +395,37 @@ final class ProviderRepositoryRowsNormalizer {
 				)
 				: '';
 			$rows[ $rowKey ] = array(
-				'key'                       => $rowKey,
-				'provider_code'             => $providerCode,
-				'repository_id'             => $repositoryId,
-				'historical'                => $historical,
-				'provider_label'            => $providerLabel,
-				'repository'                => $locator,
-				'repository_url'            => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
-				'detail_url'                => $detailUrl,
-				'review_url'                => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
-				'package_type_label'        => $typeLabel,
-				'source_key'                => $source,
-				'source_label'              => match ( $source ) {
+				'key'                           => $rowKey,
+				'provider_code'                 => $providerCode,
+				'repository_id'                 => $repositoryId,
+				'historical'                    => $historical,
+				'provider_label'                => $providerLabel,
+				'repository'                    => $locator,
+				'repository_url'                => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
+				'detail_url'                    => $detailUrl,
+				'review_url'                    => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
+				'package_type_label'            => $typeLabel,
+				'source_key'                    => $source,
+				'source_label'                  => match ( $source ) {
 					'release_asset' => __( 'Published releases', 'ran-booster' ),
 					'mixed' => __( 'Mixed sources', 'ran-booster' ),
 					default => __( 'Branch', 'ran-booster' ),
 				},
-				'management_label'          => $managementLabel,
-				'management_detail'         => $managementDetail,
-				'management_tone'           => $managementTone,
-				'consequence'               => $consequence,
-				'consequence_id'            => $releaseReasonId,
-				'types'                     => array_values( $types ),
-				'policies'                  => $policyBadges,
-				'package_references'        => $references,
-				'has_branch_consumer'       => array() !== $branchReferences,
-				'package_summaries'         => $packageSummaries,
-				'package_summaries_omitted' => $packageSummariesOmitted,
-				'statuses'                  => $statuses,
-				'status_links'              => null === $secretLink ? array() : array( $secretLink ),
-				'actions'                   => $actions,
+				'management_label'              => $managementLabel,
+				'management_detail'             => $managementDetail,
+				'management_tone'               => $managementTone,
+				'consequence'                   => $consequence,
+				'consequence_id'                => $releaseReasonId,
+				'types'                         => array_values( $types ),
+				'policies'                      => $policyBadges,
+				'package_references'            => $references,
+				'has_branch_consumer'           => array() !== $branchReferences,
+				'has_automatic_branch_consumer' => true === ( $repository['has_automatic_branch_consumer'] ?? false ),
+				'package_summaries'             => $packageSummaries,
+				'package_summaries_omitted'     => $packageSummariesOmitted,
+				'statuses'                      => $statuses,
+				'status_links'                  => null === $secretLink ? array() : array( $secretLink ),
+				'actions'                       => $actions,
 			);
 			if ( $hasBranch && ! $historical ) {
 				$projections[ $rowKey ] = array(
@@ -587,13 +588,7 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( $recorded ) {
 				++$recordedHooks;
 			}
-			$automaticBranch = false;
-			foreach ( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array() as $summary ) {
-				if ( is_array( $summary ) && 'branch' === ( $summary['source'] ?? null ) && 'automatic' === ( $summary['deployment_policy'] ?? null ) ) {
-					$automaticBranch = true;
-					break;
-				}
-			}
+			$automaticBranch = true === ( $row['has_automatic_branch_consumer'] ?? false );
 			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
 				++$needsReview;
 			}

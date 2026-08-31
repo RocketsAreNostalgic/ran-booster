@@ -308,7 +308,8 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function testPackageInitiatedOperationReturnsToTheAllowlistedPackageSettingsRoute(): void {
-		$redirect = $this->controller()->handleAdminPost(
+		$interaction = new CapturingAdminInteractionFacade();
+		$redirect    = $this->controller( adminInteraction: $interaction )->handleAdminPost(
 			$this->request(
 				array(
 					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&unsafe=discarded',
@@ -323,6 +324,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'unsafe=', $redirect );
 		self::assertStringNotContainsString( 'panel=repositories', $redirect );
 		self::assertStringNotContainsString( '#ran-booster-', $redirect );
+		self::assertNull( $interaction->outcome, 'Package settings use the ordinary redirect because the provider repository HTMX target is absent.' );
 	}
 
 	public function testRepositoryInitiatedOperationReturnsToItsExactRepositoryRoute(): void {

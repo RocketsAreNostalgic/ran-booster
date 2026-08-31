@@ -50,6 +50,7 @@ use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
 use RAN\RepositoryProvider\RepositoryBrowseRequest;
 use RAN\RepositoryProvider\RepositoryBrowseResult;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
 use RAN\Storage\Database;
@@ -620,6 +621,54 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'Mixed sources', $data['repositoryTableRows'][0]['source_label'] );
 	}
 
+	public function testProviderRepositoryProjectionKeepsWebhookSettingsUrlWhenReleasePrecedesBranch(): void {
+		$_GET            = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$releasePackages = array();
+		for ( $index = 1; $index <= 20; ++$index ) {
+			$releasePackages[] = $this->managedPackage(
+				'release-shared-' . $index . '.php',
+				'Release Shared ' . $index,
+				'repo-shared',
+				\RAN\PackageSource::RELEASE_ASSET,
+				'bb',
+				repository: 'workspace/shared'
+			);
+		}
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( $releasePackages );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn(
+			array(
+				$this->managedPackage(
+					'branch-shared',
+					'Branch Shared',
+					'repo-shared',
+					policy: \RAN\Deployment\DeploymentPolicy::AUTOMATIC,
+					provider: 'bb',
+					repository: 'workspace/shared'
+				),
+			)
+		);
+
+		$data       = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			themes: $themes,
+			providerCredentials: true
+		)->getIndex()['data'];
+		$repository = $data['provider_repositories']['repositories'][0];
+
+		self::assertSame( 'mixed', $repository['source'] );
+		self::assertSame( 'https://example.test/workspace/shared/settings/hooks', $repository['webhook_settings_url'] );
+		self::assertTrue( $repository['has_automatic_branch_consumer'] );
+		self::assertCount( 20, $repository['package_summaries'] );
+		self::assertSame( 1, $repository['package_summaries_omitted'] );
+		self::assertSame( 1, $data['repositoryIntegrationSummary']['needs_review'] );
+	}
+
 	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {
 		$_GET    = array(
 			'tab'   => 'bb',
@@ -1002,7 +1051,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			);
 			$data      = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
 
-			self::assertFalse( $data['packageSource']['advanced_open'], $type );
+			self::assertTrue( $data['packageSource']['advanced_open'], $type );
 			self::assertSame( array( '<section>Advanced source settings</section>' ), $data['packageSource']['advanced_sections'], $type );
 			self::assertArrayNotHasKey( 'sections', $data['packageSource'], $type );
 		}
@@ -2257,7 +2306,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	private function provider( ProviderCode $code, string $label, bool $withCredentials = false ): RepositoryProvider {
-		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, \RAN\RepositoryProvider\WebhookNormalizer {
+		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, \RAN\RepositoryProvider\WebhookNormalizer {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -2300,6 +2349,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function normalizeWebhook( \RAN\RepositoryProvider\WebhookRequest $request ): \RAN\RepositoryProvider\WebhookEnvelope {
 				unset( $request );
 				return \RAN\RepositoryProvider\WebhookEnvelope::ignored();
+			}
+
+			public function repositoryWebhookSettingsUrl( string $locator ): string {
+				return 'https://example.test/' . trim( $locator, '/' ) . '/settings/hooks';
 			}
 		};
 	}

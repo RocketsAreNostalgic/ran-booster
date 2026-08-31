@@ -795,23 +795,24 @@ final readonly class ProviderSettingsPresenter {
 			}
 			if ( ! isset( $repositories[ $key ] ) ) {
 				$repositories[ $key ] = array(
-					'target'                    => $target,
-					'repository_id'             => $repositoryId,
-					'sources'                   => array( $source->value => true ),
-					'historical'                => '' === $repositoryId || $identityConflict,
-					'identity_conflict'         => $identityConflict,
-					'package_count'             => 0,
-					'automatic_count'           => 0,
-					'package_references'        => array(),
-					'branch_package_references' => array(),
-					'package_summaries'         => array(),
-					'deployment_policies'       => array(
+					'target'                        => $target,
+					'repository_id'                 => $repositoryId,
+					'sources'                       => array( $source->value => true ),
+					'historical'                    => '' === $repositoryId || $identityConflict,
+					'identity_conflict'             => $identityConflict,
+					'package_count'                 => 0,
+					'automatic_count'               => 0,
+					'has_automatic_branch_consumer' => false,
+					'package_references'            => array(),
+					'branch_package_references'     => array(),
+					'package_summaries'             => array(),
+					'deployment_policies'           => array(
 						'automatic' => 0,
 						'manual'    => 0,
 						'disabled'  => 0,
 					),
-					'repository_url'            => $identityConflict ? null : $this->repositoryUrl( $repositoryProvider, $target ),
-					'webhook_settings_url'      => PackageSource::BRANCH === $source && ! $identityConflict
+					'repository_url'                => $identityConflict ? null : $this->repositoryUrl( $repositoryProvider, $target ),
+					'webhook_settings_url'          => PackageSource::BRANCH === $source && ! $identityConflict
 						? $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target )
 						: null,
 				);
@@ -821,6 +822,8 @@ final readonly class ProviderSettingsPresenter {
 				$repositories[ $key ]['identity_conflict']    = true;
 				$repositories[ $key ]['repository_url']       = null;
 				$repositories[ $key ]['webhook_settings_url'] = null;
+			} elseif ( PackageSource::BRANCH === $source && null === $repositories[ $key ]['webhook_settings_url'] ) {
+				$repositories[ $key ]['webhook_settings_url'] = $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target );
 			}
 
 			$repositories[ $key ]['sources'][ $source->value ] = true;
@@ -828,6 +831,9 @@ final readonly class ProviderSettingsPresenter {
 			$repositories[ $key ]['package_references'][] = (string) $package->getIdentifier();
 			if ( PackageSource::BRANCH === $source ) {
 				$repositories[ $key ]['branch_package_references'][] = (string) $package->getIdentifier();
+				if ( 'automatic' === $package->getDeploymentPolicy()->value ) {
+					$repositories[ $key ]['has_automatic_branch_consumer'] = true;
+				}
 			}
 			if ( self::MAX_REPOSITORY_PACKAGE_SUMMARIES > count( $repositories[ $key ]['package_summaries'] ) ) {
 				$repositories[ $key ]['package_summaries'][] = $this->packageSummary( $package, $source, $entry['type'] );

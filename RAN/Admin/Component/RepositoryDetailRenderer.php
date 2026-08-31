@@ -176,7 +176,7 @@ final class RepositoryDetailRenderer {
 	}
 
 	private function renderIncompleteWorkflowControls( string $view, int $omitted ): void {
-		$label = 'branch' === $view ? __( 'Manage webhook', 'ran-booster' ) : __( 'Assess release automation', 'ran-booster' );
+		$label = 'branch' === $view ? __( 'Manage webhook', 'ran-booster' ) : __( 'Assess release setup', 'ran-booster' );
 		?>
 		<section class="ran-booster-settings-section" aria-labelledby="ran-booster-repository-incomplete-inventory-heading">
 			<header class="ran-booster-settings-section__header"><h3 id="ran-booster-repository-incomplete-inventory-heading"><?php esc_html_e( 'Package inventory incomplete', 'ran-booster' ); ?></h3></header>

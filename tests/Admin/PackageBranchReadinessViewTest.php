@@ -122,7 +122,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Booster Activity', $html );
 		self::assertStringNotContainsString( 'ran-booster-readiness-actions__links', $html );
 		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
-		self::assertStringContainsString( '>Review repository webhook settings</a>', $html );
+		self::assertStringContainsString( '>Manage webhooks</a>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42&amp;repository_view=branch"', $html );
 		self::assertStringNotContainsString( 'repository=repo-42#', $html );
 		$checkPosition  = strpos( $html, '>Save settings and check</button>' );
@@ -173,7 +173,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '/<a\s+class="button disabled"\s+aria-disabled="true"\s+tabindex="-1"\s*>Manage webhooks<\\/a>/', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 		self::assertStringNotContainsString( 'href=', $html );
 		self::assertStringNotContainsString( 'panel=repositories', $html );
 	}
@@ -437,7 +437,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( 'panel=repositories', $html );
-		self::assertMatchesRegularExpression( '/<a\s+class="button disabled"\s+aria-disabled="true"\s+tabindex="-1"\s*>Manage webhooks<\\/a>/', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
 	#[DataProvider( 'repositoryBranchCheckOutcomeProvider' )]
@@ -511,7 +511,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 		self::assertStringContainsString( 'Webhook health', $html );
-		self::assertMatchesRegularExpression( '/<a\s+class="button disabled"\s+aria-disabled="true"\s+tabindex="-1"\s*>Manage webhooks<\\/a>/', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 		self::assertStringNotContainsString( '<a href=', $html );
 		self::assertStringNotContainsString( 'Review Booster diagnostics', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );

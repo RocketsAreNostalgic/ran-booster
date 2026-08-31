@@ -172,6 +172,19 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
 	}
 
+	public function testPreservesUnknownAddOnDetailKindMetadata(): void {
+		$base                         = $this->baseRows();
+		$base['repo-42']['details'][] = array(
+			'label' => 'Add-on detail',
+			'value' => 'Observed',
+			'kind'  => array( 'unbounded' => str_repeat( 'x', 128 ) ),
+		);
+
+		$rows = ( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $base, 'gh' );
+
+		self::assertSame( array( 'unbounded' => str_repeat( 'x', 128 ) ), $rows['repo-42']['details'][1]['kind'] );
+	}
+
 	public function testRequiresEveryCoreRow(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'preserve every Core repository row' );

@@ -245,6 +245,41 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 	}
 
+	public function testIncompletePackageInventoryUsesTheReleaseSetupLabel(): void {
+		$releaseRendered = false;
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'                => 'owner/partial-releases',
+				'source_label'              => 'Published releases',
+				'source_key'                => 'release_asset',
+				'package_summaries_omitted' => 1,
+				'package_summaries'         => array(),
+				'details'                   => array(),
+				'actions'                   => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'releases',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			static function () use ( &$releaseRendered ): void {
+				$releaseRendered = true;
+				echo '<div data-test-release></div>';
+			}
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertFalse( $releaseRendered );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringNotContainsString( 'Assess release automation', $html );
+		self::assertStringNotContainsString( 'data-test-release', $html );
+	}
+
 	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {
 		$row             = array(
 			'repository'        => 'owner/releases',

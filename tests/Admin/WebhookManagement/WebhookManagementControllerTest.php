@@ -328,6 +328,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'name="booster_credential_id" required>', $html );
 		self::assertStringContainsString( 'name="webhook_profile_id"', $html );
 		self::assertStringContainsString( 'name="webhook_profile_id" required>', $html );
+		self::assertStringContainsString( 'Temporary (fine-grained)', $html );
 		self::assertStringContainsString( '<option value="" selected disabled>Choose a signing secret</option>', $html );
 		self::assertStringContainsString( '<option value="create_repository_secret">Create a repository signing secret</option>', $html );
 		self::assertStringContainsString( 'Create a repository signing secret', $html );
@@ -1422,10 +1423,9 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	public function credentialChoices( string $providerCode ): array {
 		return hash_equals( $this->targetResult->providerCode(), $providerCode ) ? array(
 			array(
-				'id'         => 'credential_1',
-				'label'      => 'Temporary',
-				'kind'       => 'fine-grained',
-				'destroy_on' => null,
+				'id'    => 'credential_1',
+				'label' => 'Temporary',
+				'kind'  => 'fine-grained',
 			),
 		) : array();
 	}

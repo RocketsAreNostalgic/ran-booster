@@ -433,7 +433,7 @@ final class ProviderRepositoryRowsNormalizer {
 				)
 				: '';
 			if ( ! $inventoryIncomplete && ! $historical ) {
-				$this->appendRepositoryActions( $actions, $repository, $isRelease, $coverage, $providerWebhookSettingsLabel, $reasonId, $locator, $detailUrl );
+				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $reasonId, $locator, $detailUrl );
 			}
 			$rows[ $rowKey ] = array(
 				'key'                           => $rowKey,
@@ -531,8 +531,8 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/** @param array<string,array<string,mixed>> $actions @param array<string,mixed> $repository */
-	private function appendRepositoryActions( array &$actions, array $repository, bool $isRelease, string $coverage, string $providerLabel, string $reasonId, string $locator, string $detailUrl ): void {
+	/** @param array<string,array<string,mixed>> $actions @param array<string,mixed> $repository @param list<string> $references */
+	private function appendRepositoryActions( array &$actions, array $repository, array $references, bool $isRelease, string $coverage, string $providerLabel, string $reasonId, string $locator, string $detailUrl ): void {
 		if ( $isRelease ) {
 			$url             = '' === $detailUrl ? '' : add_query_arg( 'repository_view', 'branch', $detailUrl ) . '#ran-booster-repository-webhook-setup-heading';
 			$key             = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'core:webhook-cleanup-review' : 'core:provider-webhooks';

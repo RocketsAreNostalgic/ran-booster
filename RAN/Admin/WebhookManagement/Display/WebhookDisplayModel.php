@@ -401,13 +401,17 @@ final class WebhookDisplayModel {
 		}
 		$normalized = array();
 		foreach ( $choices as $choice ) {
-			if ( ! is_array( $choice ) || ! is_string( $choice['id'] ?? null ) || ! is_string( $choice['label'] ?? null ) || ! is_string( $choice['kind'] ?? null ) || ( null !== ( $choice['destroy_on'] ?? null ) && ! is_string( $choice['destroy_on'] ) ) ) {
+			if ( ! is_array( $choice ) || ! is_string( $choice['id'] ?? null ) || ! is_string( $choice['label'] ?? null ) || ! is_string( $choice['kind'] ?? null ) ) {
+				continue;
+			}
+			$destroyOn = $choice['destroy_on'] ?? null;
+			if ( null !== $destroyOn && ! is_string( $destroyOn ) ) {
 				continue;
 			}
 			$label = $choice['label'] . ' (' . $choice['kind'] . ')';
-			if ( is_string( $choice['destroy_on'] ) ) {
+			if ( is_string( $destroyOn ) ) {
 				/* translators: %s: credential removal date. */
-				$label .= ' · ' . sprintf( __( 'removes after %s', 'ran-booster' ), $choice['destroy_on'] );
+				$label .= ' · ' . sprintf( __( 'removes after %s', 'ran-booster' ), $destroyOn );
 			}
 			$normalized[] = array(
 				'id'    => $choice['id'],

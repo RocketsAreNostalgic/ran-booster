@@ -102,18 +102,21 @@ final class GitHubRepositoryReleaseWorkflow {
 		if ( ! $this->coordinator->hasCurrentRecord( $status ) ) {
 			return $this->persist( 'outcome', $status, $this->invalidRequest( $status ) );
 		}
-		return $this->persist( 'outcome', $status, $this->coordinator->outcome( $status, $this->credential( $credentialId, true ) ) ); }
+		$token = $this->credential( $credentialId, true );
+		return $this->persist( 'outcome', $status, $this->selectedCredentialUnavailable( $credentialId, $token ) ? $this->unauthorised( $status ) : $this->coordinator->outcome( $status, $token ) ); }
 	public function inspectUpdate( ReleaseTrackingStatus $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		if ( ! $this->coordinator->hasCurrentRecord( $status ) ) {
 			return $this->persist( 'update_inspect', $status, $this->invalidRequest( $status ) );
 		}
-		return $this->persist( 'update_inspect', $status, $this->coordinator->inspectUpdate( $status, $this->credential( $credentialId, true ) ) ); }
+		$token = $this->credential( $credentialId, true );
+		return $this->persist( 'update_inspect', $status, $this->selectedCredentialUnavailable( $credentialId, $token ) ? $this->unauthorised( $status ) : $this->coordinator->inspectUpdate( $status, $token ) ); }
 	public function setupUpdate( ReleaseTrackingStatus $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		$preview = $this->coordinator->preview( $key, $status );
 		if ( ! $this->coordinator->hasCurrentRecord( $status ) || null === $preview || 'template_update' !== $preview['kind'] ) {
 			return $this->persist( 'update_setup', $status, $this->invalidRequest( $status, $key ) );
 		}
-		return $this->persist( 'update_setup', $status, $this->coordinator->setupUpdate( $status, $key, $confirmation, $this->credential( $credentialId, true ) ) ); }
+		$token = $this->credential( $credentialId, true );
+		return $this->persist( 'update_setup', $status, '' === $token ? $this->unauthorised( $status, $key ) : $this->coordinator->setupUpdate( $status, $key, $confirmation, $token ) ); }
 
 	private function persist( string $operation, ReleaseTrackingStatus $status, array $outcome ): RepositoryReleaseWorkflowResult {
 		$observation = match ( $outcome['code'] ) {
@@ -189,6 +192,8 @@ final class GitHubRepositoryReleaseWorkflow {
 			return '' === $secret && $required ? '' : $secret;
 		} catch ( Throwable ) {
 			return ''; } }
+	private function selectedCredentialUnavailable( ?string $id, string $token ): bool {
+		return null !== $id && '' !== $id && '' === $token; }
 	private function credentialChoices(): array {
 		try {
 			$profiles = $this->credentials->credentialProfiles();

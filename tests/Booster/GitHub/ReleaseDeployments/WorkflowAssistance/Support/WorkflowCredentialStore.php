@@ -15,6 +15,9 @@ final class WorkflowCredentialStore implements ProviderCredentialStore {
 	/** @var list<string|null> */
 	public array $materialReads = array();
 
+	/** @var array{secret:string}|null */
+	public ?array $eligibleMaterial = array( 'secret' => 'test-token' );
+
 	public function credentialProfiles(): array {
 		++$this->profileReads;
 		return $this->profiles ?? array(
@@ -39,7 +42,7 @@ final class WorkflowCredentialStore implements ProviderCredentialStore {
 
 	public function credentialMaterial( ?string $id = null ): ?array {
 		$this->materialReads[] = $id;
-		return 'eligible' === $id ? array( 'secret' => 'test-token' ) : null;
+		return 'eligible' === $id ? $this->eligibleMaterial : null;
 	}
 
 	public function hasWebhookProfile(): bool {

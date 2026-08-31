@@ -493,7 +493,7 @@ final class ReleaseManagementDisplay {
 		$preview     = 'prerelease' === $selectedChannel;
 		$nextChannel = $preview ? 'stable' : 'prerelease';
 		$description = $customDescription ?? ( $managed
-			? __( 'Preview shows published alpha, beta and release-candidate builds only; they may be unstable. Switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade the package.', 'ran-booster' )
+			? __( 'Preview includes published alpha, beta, release-candidate, and stable releases; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade.', 'ran-booster' )
 			: ( 'branch' === $mode
 				? __( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds. Drafts remain excluded.', 'ran-booster' )
 					: __( 'Stable follows final published releases. Preview also includes prereleases.', 'ran-booster' ) ) );
@@ -521,6 +521,24 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 			</div>
 			<p id="<?php echo esc_attr( $descriptionId ); ?>" class="description"><?php echo esc_html( $description ); ?></p>
+		</fieldset>
+		<?php
+	}
+
+	private function renderIneligibleReleaseTrack( string $selectedChannel ): void {
+		?>
+		<fieldset class="ran-booster-release-track-control is-disabled" disabled>
+			<legend class="screen-reader-text"><?php esc_html_e( 'Release track', 'ran-booster' ); ?></legend>
+			<div class="button-group ran-booster-release-track-options">
+				<?php foreach ( array( 'stable', 'prerelease' ) as $channel ) { ?>
+					<label class="button ran-booster-release-track-option">
+						<input type="radio" class="screen-reader-text" name="release_channel" value="<?php echo esc_attr( $channel ); ?>"<?php checked( $channel === $selectedChannel ); ?>>
+						<span><?php echo esc_html( $this->releaseTrackLabel( $channel ) ); ?></span>
+					</label>
+				<?php } ?>
+			</div>
+			<p class="description"><?php esc_html_e( 'Stable follows final published releases. Preview also includes prereleases.', 'ran-booster' ); ?></p>
+			<div class="notice notice-warning inline ran-booster-release-track-notice"><p><?php esc_html_e( 'Complete the eligibility requirements above before choosing a release track.', 'ran-booster' ); ?></p></div>
 		</fieldset>
 		<?php
 	}

@@ -231,8 +231,8 @@ disposable activation check as passed.
 ### Slice 2 verification — August 27, 2026
 
 - Focused repository/workflow/webhook views: 68 tests, 827 assertions; one
-  existing warning. Stable keys, old labels and new labels remain grouped as
-  release history, separately from webhook history.
+  existing warning. Stable keys and the `release_workflow` kind keep release
+  history separate from webhook history; old and new labels are display-only.
 - Full `composer check`: passed, including PHPCS and PHPStan. Core PHPUnit:
   2,651 tests, 17,990 assertions, three existing warnings and two skips.
   Isolated GitHub tests: 345 tests, 2,086 assertions and two skips.

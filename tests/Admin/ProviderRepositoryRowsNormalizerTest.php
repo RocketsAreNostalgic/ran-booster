@@ -99,7 +99,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 
-	public function testReleaseWebhookCleanupLinkSelectsTheRetainedBranchPane(): void {
+	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {
 		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
 			array(
 				array(
@@ -136,9 +136,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		self::assertIsArray( $row );
 		$action = $row['actions']['core:webhook-cleanup-review'];
-		self::assertStringContainsString( 'source_view=branch', $action['url'] );
-		self::assertStringContainsString( 'webhook_cleanup=1', $action['url'] );
-		self::assertStringEndsWith( '#ran-booster-webhook-cleanup', $action['url'] );
+		self::assertStringContainsString( 'panel=repositories', $action['url'] );
+		self::assertStringContainsString( 'repository=101', $action['url'] );
+		self::assertStringContainsString( 'repository_view=branch', $action['url'] );
+		self::assertStringEndsWith( '#ran-booster-repository-webhook-setup-heading', $action['url'] );
 	}
 
 	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {
@@ -365,6 +366,25 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertStringContainsString( 'Review the package settings', $result['rows']['101']['consequence'] );
 		self::assertSame( 'packages/plugin', $result['rows']['101']['package_summaries'][0]['subdirectory'] );
 		self::assertSame( array( 'owner/plugin.php', 'owner-theme' ), $result['rows']['101']['package_references'] );
+		self::assertSame(
+			array(
+				array(
+					'label'         => 'Plugin settings',
+					'screen_reader' => 'owner/plugin.php',
+				),
+				array(
+					'label'         => 'Theme settings',
+					'screen_reader' => 'owner-theme',
+				),
+			),
+			array_map(
+				static fn ( array $action ): array => array(
+					'label'         => $action['label'],
+					'screen_reader' => $action['screen_reader'],
+				),
+				array_values( $result['rows']['101']['actions'] )
+			)
+		);
 		self::assertSame( 'Automatic: 1', $result['rows']['101']['policies'][0]['label'] );
 		self::assertSame( 'Manual: 1', $result['rows']['101']['policies'][1]['label'] );
 		self::assertSame( array( 'owner/plugin.php' ), $capturedProjections['101']['package_references'] );

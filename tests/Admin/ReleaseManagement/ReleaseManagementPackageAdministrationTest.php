@@ -307,6 +307,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Current release track', $html );
 		self::assertStringContainsString( 'name="release_channel" value="prerelease"', $html );
 		self::assertStringContainsString( 'aria-label="Switch to Preview releases"', $html );
+		self::assertStringContainsString( 'Preview includes published alpha, beta, release-candidate, and stable releases; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade.', $html );
 		self::assertStringNotContainsString( 'type="hidden" name="release_channel"', $html );
 		self::assertStringNotContainsString( 'Use published releases', $html );
 	}

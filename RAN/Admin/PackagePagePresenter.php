@@ -119,14 +119,12 @@ final class PackagePagePresenter {
 		Package $package,
 		array $packageProviderSettings,
 		?array $packageBranchReadiness,
-		?array $webhookRetention,
 		string $requestedSourceView,
 		bool $openAdvanced = false
 	): array {
 		return array(
 			'packageProviderSettings' => $packageProviderSettings,
 			'packageBranchReadiness'  => $packageBranchReadiness,
-			'packageWebhookCleanup'   => $this->webhookCleanup( $package, $webhookRetention ),
 			'package'                 => $package,
 			'packageView'             => $this,
 			'packageExtensionPanels'  => $this->extensionPanels( $package ),
@@ -653,66 +651,6 @@ final class PackagePagePresenter {
 		}
 
 		return $normalized;
-	}
-
-	/** @return array{context: WebhookCleanupContext, actions: list<string>}|null */
-	private function webhookCleanup( Package $package, ?array $retention ): ?array {
-		if ( null === $retention ) {
-			return null;
-		}
-
-		try {
-			$adminUrl = $this->getAdminUrl();
-			$context  = new WebhookCleanupContext(
-				$this->type,
-				(string) $package->getIdentifier(),
-				(string) $retention['provider_code'],
-				(string) $retention['repository_id'],
-				(string) $retention['repository'],
-				(string) $retention['local_secret_coverage'],
-				true === $retention['available'],
-				true === $retention['branch_evidence_available'],
-				$retention['branch_package_references'],
-				(string) $retention['provider_webhooks_url'],
-				add_query_arg(
-					array(
-						'page' => 'ran-booster',
-						'tab'  => (string) $retention['provider_code'],
-						'view' => 'secrets',
-					),
-					$adminUrl
-				),
-				add_query_arg(
-					array(
-						'page' => 'ran-booster',
-						'tab'  => 'documentation',
-					),
-					$adminUrl
-				) . '#ran-booster-webhook-cleanup',
-				$this->projection( $package )->settingsUrl()
-			);
-		} catch ( Throwable $failure ) {
-			$this->logFailure( 'package webhook cleanup context unavailable', 'package_webhook_cleanup_context', $failure );
-
-			return null;
-		}
-
-		$bufferLevel = ob_get_level();
-		ob_start();
-		try {
-			do_action( 'ran_booster_admin_package_webhook_cleanup_actions', $context );
-			$content = (string) ob_get_clean();
-			$actions = '' === trim( $content ) ? array() : array( $content );
-		} catch ( Throwable $failure ) {
-			$this->cleanBuffer( $bufferLevel );
-			$actions = array();
-			$this->logFailure( 'package webhook cleanup action unavailable', 'package_webhook_cleanup_action', $failure );
-		}
-
-		return array(
-			'context' => $context,
-			'actions' => $actions,
-		);
 	}
 
 	private function projection( Package $package ): AdminPackageProjection {

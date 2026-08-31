@@ -320,7 +320,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		);
 
 		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
-		self::assertSame( null, $wpdb->updates[0][2]['subdirectory'] );
+		self::assertSame( array(), $wpdb->updates );
 		self::assertSame( 'packages/example', $wpdb->rows[0]['subdirectory'] );
 	}
 

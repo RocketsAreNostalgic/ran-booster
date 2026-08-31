@@ -64,6 +64,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'label' => 'Release automation — owner/legacy.php',
 					'value' => 'Legacy',
 				),
+				array(
+					'key'   => 'fixture:repository-access',
+					'label' => 'Provider access',
+					'value' => 'Configured',
+				),
 			),
 			'actions'           => array(
 				array(
@@ -131,12 +136,15 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertTrue( $webhookHistoryPosition < $releaseHistoryPosition );
 		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'État du flux de publication' ) );
 		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Flux de publication — owner/theme' ) );
-		self::assertTrue( $legacyHistoryPosition < $releaseHistoryPosition );
+		self::assertTrue( $releaseHistoryPosition < $legacyHistoryPosition );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Provider receiver', $html );
 		self::assertStringNotContainsString( 'Receiver ready.', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
+		self::assertStringContainsString( 'Repository details', $html );
+		self::assertStringContainsString( 'Provider access', $html );
+		self::assertLessThan( strpos( $html, 'Provider access' ), strpos( $html, 'Repository details' ) );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 	}
 

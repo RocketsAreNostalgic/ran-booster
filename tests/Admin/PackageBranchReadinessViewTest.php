@@ -84,6 +84,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$deploymentPolicy         = DeploymentPolicy::AUTOMATIC->value;
 		$isPackageEdit            = true;
 		$packageBranchReadiness   = array(
+			'retained'             => false,
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
 				'status'       => 'ready',
@@ -178,7 +179,9 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'panel=repositories', $html );
 	}
 
-	public function testReleaseManagedBranchPaneRetainsDisabledReadinessAndCleanupControls(): void {
+	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$packageMutationAvailable = true;
 		$packageSourceChoices     = array(
 			'branch' => array(
@@ -227,6 +230,18 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			),
 			'actions' => array(),
 		);
+		$packageBranchReadiness   = array(
+			'retained'   => true,
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'repository_id'         => '101',
+				'reason_codes'          => array(),
+				'local_secret_coverage' => 'repository',
+			),
+		);
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
@@ -235,6 +250,9 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'Inactive Branch deployment settings', $html );
 		self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
 		self::assertStringContainsString( 'Pushes are ignored while Releases is active.', $html );
+		self::assertSame( 1, substr_count( $html, '<h4 id="ran-booster-branch-readiness-heading">Branch readiness</h4>' ) );
+		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
+		self::assertStringContainsString( 'The site exposes a structurally valid HTTPS webhook endpoint.', $html );
 		self::assertStringNotContainsString( '>Needs attention</span>', $html );
 		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}

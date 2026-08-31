@@ -93,6 +93,9 @@ final class RepositoryDetailRenderer {
 					<?php $this->renderActivity( $row, $activityUrl ); ?>
 				</aside>
 			</div>
+			<?php if ( 'status' === $activeView ) { ?>
+				<?php $this->renderProviderDetails( $row ); ?>
+			<?php } ?>
 		</div>
 		<?php
 	}
@@ -239,7 +242,7 @@ final class RepositoryDetailRenderer {
 	/** @param array<string, mixed> $row */
 	private function renderActivity( array $row, string $activityUrl ): void {
 		$details  = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), 'is_array' ) );
-		$webhooks = array_values( array_filter( $details, fn ( array $detail ): bool => ! $this->isReleaseDetail( $detail ) ) );
+		$webhooks = array_values( array_filter( $details, fn ( array $detail ): bool => $this->isWebhookActivityEntry( $detail ) ) );
 		$releases = array_values( array_filter( $details, fn ( array $detail ): bool => $this->isReleaseDetail( $detail ) ) );
 		if ( array() === $webhooks ) {
 			$webhooks = array(
@@ -295,6 +298,34 @@ final class RepositoryDetailRenderer {
 	private function isReleaseDetail( array $detail ): bool {
 		return 'release_workflow' === ( $detail['category'] ?? null )
 			|| $this->isReleaseAutomationKey( $detail['key'] ?? null );
+	}
+
+	/** @param array<string, mixed> $row */
+	private function renderProviderDetails( array $row ): void {
+		$details = array_values(
+			array_filter(
+				is_array( $row['details'] ?? null ) ? $row['details'] : array(),
+				fn ( mixed $detail ): bool => is_array( $detail )
+					&& ! $this->isReleaseDetail( $detail )
+					&& ! $this->isWebhookActivityEntry( $detail )
+			)
+		);
+		if ( array() === $details ) {
+			return;
+		}
+		?>
+		<section class="ran-booster-settings-section" aria-labelledby="ran-booster-repository-details-heading">
+			<header class="ran-booster-settings-section__header"><h3 id="ran-booster-repository-details-heading"><?php esc_html_e( 'Repository details', 'ran-booster' ); ?></h3></header>
+			<div class="ran-booster-settings-section__body"><?php $this->renderFacts( $details ); ?></div>
+		</section>
+		<?php
+	}
+
+	/** @param array<string, mixed> $entry */
+	private function isWebhookActivityEntry( array $entry ): bool {
+		$key = $entry['key'] ?? null;
+
+		return is_string( $key ) && str_starts_with( $key, 'core:webhook-' );
 	}
 
 	/** @param array<string, mixed> $row @return list<array<string, mixed>> */

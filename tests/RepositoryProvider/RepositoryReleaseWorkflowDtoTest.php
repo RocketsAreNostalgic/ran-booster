@@ -55,6 +55,25 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', false, message: '<em>Unsafe</em>' );
 	}
 
+	/** @dataProvider invalidUtf8ProviderText */
+	public function testResultRejectsMalformedUtf8ProviderText( string $field ): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new RepositoryReleaseWorkflowResult(
+			'workflow_invalid_request',
+			false,
+			...array( $field => "\xC3\x28" )
+		);
+	}
+
+	/** @return array<string, array{string}> */
+	public static function invalidUtf8ProviderText(): array {
+		return array(
+			'message'     => array( 'message' ),
+			'remediation' => array( 'remediation' ),
+		);
+	}
+
 	public function testPreviewRejectsUnexpectedChangedPathFields(): void {
 		$this->expectException( InvalidArgumentException::class );
 		new RepositoryReleaseWorkflowPreview(

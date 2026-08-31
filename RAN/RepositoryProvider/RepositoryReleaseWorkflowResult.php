@@ -45,6 +45,6 @@ final readonly class RepositoryReleaseWorkflowResult {
 		return $this->remediation; }
 
 	private function text( string $value, int $limit ): bool {
-		return strlen( $value ) <= $limit && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value );
+		return strlen( $value ) <= $limit && 1 === preg_match( '//u', $value ) && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value );
 	}
 }

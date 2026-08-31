@@ -235,7 +235,12 @@ class ProviderProfileAdminController {
 			function () use ( $provider, $id, $secret, $label, $kind, $configuration, $selfDestruct, $manualExpirySubmitted, $manualExpiry, $manualExpiryIsProviderFallback ): string {
 				$existingProfile = null === $id ? null : ( $this->secrets->credentialProfiles( $provider )[ $id ] ?? null );
 				$isReplacement   = is_array( $existingProfile ) && '' !== $secret;
-				if ( $isReplacement && null !== $id ) {
+				$accessChanged   = is_array( $existingProfile )
+					&& ( $isReplacement
+						|| $kind !== ( $existingProfile['kind'] ?? null )
+						|| ! is_array( $existingProfile['configuration'] ?? null )
+						|| $configuration !== $existingProfile['configuration'] );
+				if ( $accessChanged && null !== $id ) {
 					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
 				}
 				$savedId      = $this->secrets->saveCredential(

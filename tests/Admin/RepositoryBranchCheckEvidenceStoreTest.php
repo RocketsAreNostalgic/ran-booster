@@ -36,6 +36,22 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		self::assertSame( array(), $store->records['records'] );
 	}
 
+	public function testClearInvalidatesAnInFlightCheckBeforeItCanRecordStaleEvidence(): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$stale   = $store->profileFingerprintFor( $package, 'profile-a' );
+
+		$store->clear( 'plugin', $package );
+		$store->record( 'plugin', $package, 'profile-a', 'verified', $stale );
+
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+
+		$fresh = $store->profileFingerprintFor( $package, 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', 'verified', $fresh );
+
+		self::assertSame( 'verified', $store->find( 'plugin', $package, 'profile-a' )['outcome'] );
+	}
+
 	public function testChangedSourceRevisionAndProviderGenerationInvalidateEvidence(): void {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );

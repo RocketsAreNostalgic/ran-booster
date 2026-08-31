@@ -628,6 +628,75 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertSame( $secretBefore, $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['secret'] );
 	}
 
+	public function testCredentialConfigurationChangeInvalidatesEvidenceBeforeSaving(): void {
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$evidence             = new ReplacementAwareBranchCheckEvidenceStore(
+			function (): bool {
+				return 'changed' === ( $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['configuration']['tenant'] ?? null );
+			}
+		);
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Existing credential',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'changed' ),
+			'secret'        => '',
+		);
+
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				branchCheckEvidence: $evidence
+			)
+		);
+
+		self::assertSame( 'success', $response->kind );
+		self::assertSame( array( 'fixture:credential_existing' ), $evidence->invalidatedProfiles );
+		self::assertFalse( $evidence->replacementWasPersisted );
+		self::assertSame( 'changed', $this->secrets->credentialProfiles( 'fixture' )['credential_existing']['configuration']['tenant'] );
+	}
+
+	public function testCredentialConfigurationChangeDoesNotPersistWhenEvidenceInvalidationFails(): void {
+		$interaction   = new CapturingProviderProfileInteraction();
+		$dashboard     = $this->createMock( Dashboard::class );
+		$profileBefore = $this->secrets->credentialProfiles( 'fixture' )['credential_existing'];
+		$secretBefore  = $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['secret'];
+		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Existing credential',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'changed' ),
+			'secret'        => '',
+		);
+
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				branchCheckEvidence: new ThrowingBranchCheckEvidenceStore()
+			)
+		);
+
+		self::assertSame( 'unexpected_failure', $response->kind );
+		self::assertSame( $profileBefore, $this->secrets->credentialProfiles( 'fixture' )['credential_existing'] );
+		self::assertSame( $secretBefore, $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['secret'] );
+	}
+
 	public function testCredentialDeletionInvalidatesEvidenceOnlyAfterRemovingSecretMaterial(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );

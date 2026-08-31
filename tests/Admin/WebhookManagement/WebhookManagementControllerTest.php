@@ -144,6 +144,17 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][5]['value'] );
 		self::assertSame( 'Current local warning', $result['1234']['details'][2]['label'] );
+		self::assertSame(
+			array(
+				'core:webhook-recorded-status',
+				'core:webhook-observation',
+				'core:webhook-current-local-warning',
+				'core:webhook-management-credential',
+				'core:webhook-signing-secret',
+				'core:webhook-last-checked',
+			),
+			array_column( $result['1234']['details'], 'key' )
+		);
 		self::assertSame( 'Recorded signing secret profile wh_0123456789abcdef01234567 is unavailable.', $result['1234']['details'][4]['value'] );
 	}
 
@@ -187,6 +198,16 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
+		self::assertSame(
+			array(
+				'core:webhook-recorded-status',
+				'core:webhook-observation',
+				'core:webhook-management-credential',
+				'core:webhook-signing-secret',
+				'core:webhook-last-checked',
+			),
+			array_column( $result['1234']['details'], 'key' )
+		);
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( 'Last managed with saved credential profile credential_1; current availability was not checked.', $result['1234']['details'][2]['value'] );
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][4]['value'] );

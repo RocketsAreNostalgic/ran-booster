@@ -277,6 +277,70 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertCount( 0, $provider->requests );
 	}
 
+	public function testEditSaveAndBranchCheckRefusesPublicPackageWhenProviderCannotMakeTrustedPublicLookup(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
+		$plugins   = new EditBoundaryPluginRepository( $package );
+		$themes    = new EditBoundaryThemeRepository( $package );
+		$provider  = new CapturingRepositoryProvider();
+		$providers = new ProviderRegistry( array( $provider ) );
+		$request   = array(
+			'action'                             => 'edit-plugin',
+			'file'                               => 'fixture/fixture.php',
+			'provider'                           => 'gh',
+			'repository'                         => 'owner/replacement',
+			'credential_id'                      => 'deployment-profile',
+			'branch'                             => 'main',
+			'deployment_policy'                  => 'manual',
+			'check_repository_branch_after_save' => '1',
+		);
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: $plugins,
+			themes: $themes,
+			providers: $providers,
+			publicLookupProfiles: new InMemoryPublicRepositoryLookupProfileStore()
+		) )->manage( $dashboard, 'edit-plugin', $request, true );
+
+		self::assertFalse( $result );
+		self::assertSame( array(), $provider->requests );
+	}
+
+	public function testEditSaveAndBranchCheckRefusesPublicPackageWhenProviderDisallowsDefaultPublicProfile(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
+		$plugins   = new EditBoundaryPluginRepository( $package );
+		$themes    = new EditBoundaryThemeRepository( $package );
+		$provider  = new CapturingPublicLookupProvider( false );
+		$providers = new ProviderRegistry( array( $provider ) );
+		$request   = array(
+			'action'                             => 'edit-plugin',
+			'file'                               => 'fixture/fixture.php',
+			'provider'                           => 'gh',
+			'repository'                         => 'owner/replacement',
+			'credential_id'                      => 'deployment-profile',
+			'branch'                             => 'main',
+			'deployment_policy'                  => 'manual',
+			'check_repository_branch_after_save' => '1',
+		);
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: $plugins,
+			themes: $themes,
+			providers: $providers,
+			publicLookupProfiles: new InMemoryPublicRepositoryLookupProfileStore()
+		) )->manage( $dashboard, 'edit-plugin', $request, true );
+
+		self::assertFalse( $result );
+		self::assertSame( array(), $provider->requests );
+	}
+
 	/** @return array<string, array{bool, string|null, bool}> */
 	public static function trustedPublicLookupPackages(): array {
 		return array(
@@ -355,12 +419,15 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 	/** @var list<RepositoryLookupRequest> */
 	public array $requests = array();
 
+	public function __construct( private readonly bool $supportsDefaultPublicProfile = true ) {
+	}
+
 	public function getMetadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' );
 	}
 
 	public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
-		return new PublicRepositoryBrowseMetadata( true );
+		return new PublicRepositoryBrowseMetadata( $this->supportsDefaultPublicProfile );
 	}
 
 	public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
@@ -377,6 +444,37 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 			'replacement',
 			'repository-id',
 			false,
+			'main',
+			$request->credentialId
+		);
+	}
+
+	public function prepareArchive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+		unset( $request );
+		throw new \RuntimeException( 'Archive preparation is not used by this test.' );
+	}
+}
+
+final class CapturingRepositoryProvider implements RepositoryProvider {
+
+	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+	/** @var list<RepositoryLookupRequest> */
+	public array $requests = array();
+
+	public function getMetadata(): ProviderMetadata {
+		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' );
+	}
+
+	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		$this->requests[] = $request;
+
+		return new RepositoryDescriptor(
+			ProviderCode::parse( 'gh' ),
+			$request->locator,
+			'replacement',
+			'repository-id',
+			true,
 			'main',
 			$request->credentialId
 		);

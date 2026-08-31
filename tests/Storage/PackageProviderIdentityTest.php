@@ -10,6 +10,7 @@ use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\AbstractPackageRepository;
+use RAN\Storage\Database;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageMutationStatus;
 use RAN\Storage\PackageStorageFailure;
@@ -431,7 +432,12 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 	}
 
 	private function storage(): AbstractPackageRepository {
-		return new class() extends AbstractPackageRepository {
+		$lifecycle = new class() extends Database {
+			public function requireReady(): void {
+			}
+		};
+
+		return new class( $lifecycle ) extends AbstractPackageRepository {
 
 			public function storeForTest( Package $package ): PackageMutationResult {
 				return $this->storePackage( $package );

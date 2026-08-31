@@ -259,6 +259,21 @@ test('loading candidates auto-selects the newest release and uses the shared dis
 	);
 });
 
+test('a failed selected release preserves earlier candidates', () => {
+	assert.match(
+		declaration('inspectRelease'),
+		/showCandidateUnavailable\(response\.code\)/
+	);
+	assert.match(
+		declaration('showCandidateUnavailable'),
+		/setHidden\(candidates, false\)/
+	);
+	assert.doesNotMatch(
+		declaration('showCandidateUnavailable'),
+		/replaceChildren/
+	);
+});
+
 test('final install submits the shared Core create form', () => {
 	const installRelease = declaration('installRelease');
 

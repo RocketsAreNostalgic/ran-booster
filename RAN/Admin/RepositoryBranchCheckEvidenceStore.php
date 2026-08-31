@@ -41,64 +41,73 @@ class RepositoryBranchCheckEvidenceStore {
 
 	/** Record verified evidence or clear any earlier record after a failed check. */
 	public function record( string $type, Package $package, ?string $profileId, string $outcome, ?string $profileFingerprint = null ): void {
-		$all = $this->all();
-		$key = $this->key( $type, $package );
-		if ( 'verified' !== $outcome ) {
-			unset( $all['records'][ $key ] );
-			$this->persist( $all );
-			return;
-		}
+		$this->mutate(
+			function ( array $all ) use ( $type, $package, $profileId, $outcome, $profileFingerprint ): array {
+				$key = $this->key( $type, $package );
+				unset( $all['records'][ $key ] );
+				if ( 'verified' === $outcome ) {
+					$all['records'][ $key ] = array(
+						'outcome'    => 'verified',
+						'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
+						'target'     => $this->targetFingerprint( $package ),
+						'profile'    => $profileFingerprint ?? $this->profileFingerprint( $package, $profileId ),
+					);
+					if ( count( $all['records'] ) > self::MAX_RECORDS ) {
+						array_shift( $all['records'] );
+					}
+				}
 
-		unset( $all['records'][ $key ] );
-		$all['records'][ $key ] = array(
-			'outcome'    => 'verified',
-			'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
-			'target'     => $this->targetFingerprint( $package ),
-			'profile'    => $profileFingerprint ?? $this->profileFingerprint( $package, $profileId ),
+				return $all;
+			}
 		);
-		if ( count( $all['records'] ) > self::MAX_RECORDS ) {
-			array_shift( $all['records'] );
-		}
-		$this->persist( $all );
 	}
 
-	/** Capture the exact profile-generation state used by an explicit remote check. */
+	/** Capture the exact credential-generation state used by an explicit remote check. */
 	public function profileFingerprintFor( Package $package, ?string $profileId ): string {
 		return $this->profileFingerprint( $package, $profileId );
 	}
 
-	/** Invalidate checks that used a same-ID credential profile after replacement or deletion. */
+	/** Invalidate earlier checks after a credential profile is replaced or deleted. */
 	public function bumpProfileGeneration( string $provider, string $profileId ): void {
 		$this->requireProvider( $provider );
 		$this->requireProfileId( $profileId );
-		$all                                = $this->all();
-		$key                                = $provider . ':' . $profileId;
-		$all['profile_generations'][ $key ] = (int) ( $all['profile_generations'][ $key ] ?? 0 ) + 1;
-		$this->persist( $all );
+		$this->bumpGeneration();
 	}
 
 	/** Invalidate public checks when the provider default changes. */
 	public function bumpProviderGeneration( string $provider ): void {
 		$this->requireProvider( $provider );
-		$all                                      = $this->all();
-		$all['provider_generations'][ $provider ] = (int) ( $all['provider_generations'][ $provider ] ?? 0 ) + 1;
-		$this->persist( $all );
+		$this->bumpGeneration();
 	}
 
-	/** @return array{records: array<string, array<string, string>>, profile_generations: array<string, int>, provider_generations: array<string, int>} */
+	private function bumpGeneration(): void {
+		$this->mutate(
+			static function ( array $all ): array {
+				if ( $all['generation'] >= PHP_INT_MAX ) {
+					$all['records']    = array();
+					$all['generation'] = 1;
+
+					return $all;
+				}
+				++$all['generation'];
+
+				return $all;
+			}
+		);
+	}
+
+	/** @return array{records: array<string, array<string, string>>, generation: int} */
 	protected function readOption(): array {
 		if ( ! function_exists( 'get_option' ) ) {
 			return array(
-				'records'              => array(),
-				'profile_generations'  => array(),
-				'provider_generations' => array(),
+				'records'    => array(),
+				'generation' => 0,
 			);
 		}
 		$value = get_option( self::OPTION_NAME, array() );
 		return is_array( $value ) ? $value : array(
-			'records'              => array(),
-			'profile_generations'  => array(),
-			'provider_generations' => array(),
+			'records'    => array(),
+			'generation' => 0,
 		);
 	}
 
@@ -107,13 +116,12 @@ class RepositoryBranchCheckEvidenceStore {
 		return ! function_exists( 'update_option' ) || update_option( self::OPTION_NAME, $records, false );
 	}
 
-	/** @return array{records: array<string, array<string, string>>, profile_generations: array<string, int>, provider_generations: array<string, int>} */
+	/** @return array{records: array<string, array<string, string>>, generation: int} */
 	private function all(): array {
 		$value = $this->readOption();
 		return array(
-			'records'              => is_array( $value['records'] ?? null ) ? $value['records'] : array(),
-			'profile_generations'  => is_array( $value['profile_generations'] ?? null ) ? $value['profile_generations'] : array(),
-			'provider_generations' => is_array( $value['provider_generations'] ?? null ) ? $value['provider_generations'] : array(),
+			'records'    => is_array( $value['records'] ?? null ) ? $value['records'] : array(),
+			'generation' => is_int( $value['generation'] ?? null ) && $value['generation'] >= 0 ? $value['generation'] : 0,
 		);
 	}
 
@@ -126,6 +134,50 @@ class RepositoryBranchCheckEvidenceStore {
 		) {
 			throw new RuntimeException( 'Booster could not save repository branch check evidence.' );
 		}
+	}
+
+	/** @param callable(array<string, mixed>): array<string, mixed> $mutation */
+	private function mutate( callable $mutation ): void {
+		if ( ! $this->acquireMutationLock() ) {
+			throw new RuntimeException( 'Booster could not coordinate repository branch check evidence.' );
+		}
+
+		try {
+			$this->persist( $mutation( $this->all() ) );
+		} finally {
+			if ( ! $this->releaseMutationLock() ) {
+				throw new RuntimeException( 'Booster could not release the repository branch check evidence lock.' );
+			}
+		}
+	}
+
+	protected function acquireMutationLock(): bool {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_var' ) || ! method_exists( $wpdb, 'prepare' ) ) {
+			return true;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory lock serializes one option mutation.
+		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', self::mutationLockName() ) );
+
+		return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
+	}
+
+	protected function releaseMutationLock(): bool {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_var' ) || ! method_exists( $wpdb, 'prepare' ) ) {
+			return true;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory lock has no persistent cacheable state.
+		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::mutationLockName() ) );
+
+		return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
+	}
+
+	private static function mutationLockName(): string {
+		global $wpdb;
+		$options = is_object( $wpdb ) && isset( $wpdb->options ) ? (string) $wpdb->options : 'tests';
+
+		return 'ran_booster_branch_evidence_' . substr( hash( 'sha256', $options ), 0, 32 );
 	}
 
 	private function key( string $type, Package $package ): string {
@@ -157,11 +209,10 @@ class RepositoryBranchCheckEvidenceStore {
 	}
 
 	private function profileFingerprint( Package $package, ?string $profileId ): string {
-		$provider             = (string) $package->getProviderCode();
-		$anonymous            = null === $profileId || '' === $profileId;
-		$profile              = $anonymous ? 'anonymous:' : 'profile:' . $profileId;
-		$profileGenerationKey = $anonymous ? null : $provider . ':' . $profileId;
-		$all                  = $this->all();
+		$provider  = (string) $package->getProviderCode();
+		$anonymous = null === $profileId || '' === $profileId;
+		$profile   = $anonymous ? 'anonymous:' : 'profile:' . $profileId;
+		$all       = $this->all();
 		return hash(
 			'sha256',
 			implode(
@@ -169,8 +220,7 @@ class RepositoryBranchCheckEvidenceStore {
 				array(
 					$provider,
 					$profile,
-					(string) ( $all['provider_generations'][ $provider ] ?? 0 ),
-					(string) ( null === $profileGenerationKey ? 0 : ( $all['profile_generations'][ $profileGenerationKey ] ?? 0 ) ),
+					(string) $all['generation'],
 				)
 			)
 		);

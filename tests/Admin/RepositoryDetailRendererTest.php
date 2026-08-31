@@ -189,6 +189,39 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 
+	public function testIncompletePackageInventoryDisablesRepositoryWorkflowControls(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'                => 'owner/partial',
+				'source_label'              => 'Branch',
+				'source_key'                => 'branch',
+				'package_summaries_omitted' => 1,
+				'package_summaries'         => array(),
+				'details'                   => array(),
+				'actions'                   => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			static function (): void {
+				echo '<div data-test-webhook></div>';
+			},
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Package inventory incomplete', $html );
+		self::assertStringContainsString( 'Refresh repository inventory before using repository-wide workflow controls.', $html );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Manage webhook</button>', $html );
+		self::assertStringNotContainsString( 'data-test-webhook', $html );
+	}
+
 	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {
 		$row             = array(
 			'repository'        => 'owner/releases',

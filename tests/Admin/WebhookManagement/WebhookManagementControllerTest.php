@@ -418,7 +418,8 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function testPackageInitiatedOperationReturnsToTheAllowlistedPackageSettingsRoute(): void {
-		$redirect = $this->controller()->handleAdminPost(
+		$interaction = new CapturingAdminInteractionFacade();
+		$redirect    = $this->controller( adminInteraction: $interaction )->handleAdminPost(
 			$this->request(
 				array(
 					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&unsafe=discarded',
@@ -433,6 +434,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'unsafe=', $redirect );
 		self::assertStringNotContainsString( 'panel=repositories', $redirect );
 		self::assertStringNotContainsString( '#ran-booster-', $redirect );
+		self::assertNull( $interaction->outcome, 'Package settings use the ordinary redirect because the provider repository HTMX target is absent.' );
 	}
 
 	public function testRepositoryInitiatedOperationReturnsToItsExactRepositoryRoute(): void {
@@ -713,7 +715,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
 	}
 
-	public function testVerifiedPingRecordsWorkingWebhookAndSubmittedManagementCredential(): void {
+	public function testLegacyVerifiedPingStaysNeedsVerificationAndIsPresentedAsPending(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult( 'succeeded', 'ping_verified', '77' );
 		$store           = new OperationStoreFixture();
@@ -724,9 +726,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( array( array( 'test', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutationCalls );
-		self::assertSame( 'configured', $store->record?->status() );
+		self::assertSame( 'needs_verification', $store->record?->status() );
 		self::assertSame( 'credential_1', $store->record?->managementCredentialId() );
-		self::assertStringContainsString( 'webhook_management_result=ping_verified', $redirect );
+		self::assertStringContainsString( 'webhook_management_result=ping_requested', $redirect );
 	}
 
 	public function testAcceptedPingWithoutReadbackStaysPendingAndRendersAWarning(): void {
@@ -747,7 +749,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->renderPanel( $gateway, $store );
 
 		self::assertStringContainsString( 'notice notice-warning inline ran-booster-repository-webhook-management__notice', $html );
-		self::assertStringContainsString( 'did not observe a new delivery', $html );
+		self::assertStringContainsString( 'does not prove an authenticated inbound delivery', $html );
 	}
 
 	public function testFailedPingRecordsUnverifiedStateAndDoesNotClaimSuccess(): void {

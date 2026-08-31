@@ -285,9 +285,9 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$provider = $this->providers->get( (string) $package->getProviderCode() );
 		} catch ( UnknownProvider ) {
-			return 'provider_unavailable';
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'provider_unavailable', $profileFingerprint );
 		} catch ( Throwable ) {
-			return 'unable_to_check';
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'unable_to_check', $profileFingerprint );
 		}
 
 		$archive = null;
@@ -295,11 +295,10 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$repository = $package->getRepository()->reference;
 			if ( ! $repository->private ) {
-				$credentialId = $profileId;
-				if ( $provider instanceof CredentialedPublicRepositoryBrowser
-					&& ! $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
-					$credentialId = null;
-				}
+				$credentialId = $provider instanceof CredentialedPublicRepositoryBrowser
+					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile
+						? $profileId
+						: null;
 
 				$repository = new RepositoryReference(
 					$repository->locator,
@@ -345,9 +344,34 @@ final readonly class ProviderSettingsPresenter {
 			}
 		}
 
-		$this->branchCheckEvidence->record( $type, $package, $profileId, $result, $profileFingerprint );
+		return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, $result, $profileFingerprint );
+	}
 
-		return $result;
+	/** @param 'verified'|'unable_to_check'|'provider_unavailable' $outcome */
+	private function recordPackageRepositoryBranchCheck(
+		string $type,
+		Package $package,
+		?string $profileId,
+		string $outcome,
+		string $profileFingerprint
+	): string {
+		try {
+			$this->branchCheckEvidence->record( $type, $package, $profileId, $outcome, $profileFingerprint );
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+
+		return $outcome;
+	}
+
+	/**
+	 * Returns the current non-secret access state for a one-time branch-check result.
+	 *
+	 * The dashboard may cache that result briefly, but credential replacement and
+	 * default public-profile changes must require a fresh remote check.
+	 */
+	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
+		return $this->branchCheckEvidence->profileFingerprintFor( $package, $this->effectiveBranchCheckProfile( $package ) );
 	}
 
 	/** @return array{outcome: 'verified', checked_at: string}|null */
@@ -795,23 +819,24 @@ final readonly class ProviderSettingsPresenter {
 			}
 			if ( ! isset( $repositories[ $key ] ) ) {
 				$repositories[ $key ] = array(
-					'target'                    => $target,
-					'repository_id'             => $repositoryId,
-					'sources'                   => array( $source->value => true ),
-					'historical'                => '' === $repositoryId || $identityConflict,
-					'identity_conflict'         => $identityConflict,
-					'package_count'             => 0,
-					'automatic_count'           => 0,
-					'package_references'        => array(),
-					'branch_package_references' => array(),
-					'package_summaries'         => array(),
-					'deployment_policies'       => array(
+					'target'                        => $target,
+					'repository_id'                 => $repositoryId,
+					'sources'                       => array( $source->value => true ),
+					'historical'                    => '' === $repositoryId || $identityConflict,
+					'identity_conflict'             => $identityConflict,
+					'package_count'                 => 0,
+					'automatic_count'               => 0,
+					'has_automatic_branch_consumer' => false,
+					'package_references'            => array(),
+					'branch_package_references'     => array(),
+					'package_summaries'             => array(),
+					'deployment_policies'           => array(
 						'automatic' => 0,
 						'manual'    => 0,
 						'disabled'  => 0,
 					),
-					'repository_url'            => $identityConflict ? null : $this->repositoryUrl( $repositoryProvider, $target ),
-					'webhook_settings_url'      => PackageSource::BRANCH === $source && ! $identityConflict
+					'repository_url'                => $identityConflict ? null : $this->repositoryUrl( $repositoryProvider, $target ),
+					'webhook_settings_url'          => PackageSource::BRANCH === $source && ! $identityConflict
 						? $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target )
 						: null,
 				);
@@ -821,6 +846,8 @@ final readonly class ProviderSettingsPresenter {
 				$repositories[ $key ]['identity_conflict']    = true;
 				$repositories[ $key ]['repository_url']       = null;
 				$repositories[ $key ]['webhook_settings_url'] = null;
+			} elseif ( PackageSource::BRANCH === $source && null === $repositories[ $key ]['webhook_settings_url'] ) {
+				$repositories[ $key ]['webhook_settings_url'] = $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target );
 			}
 
 			$repositories[ $key ]['sources'][ $source->value ] = true;
@@ -828,6 +855,9 @@ final readonly class ProviderSettingsPresenter {
 			$repositories[ $key ]['package_references'][] = (string) $package->getIdentifier();
 			if ( PackageSource::BRANCH === $source ) {
 				$repositories[ $key ]['branch_package_references'][] = (string) $package->getIdentifier();
+				if ( 'automatic' === $package->getDeploymentPolicy()->value ) {
+					$repositories[ $key ]['has_automatic_branch_consumer'] = true;
+				}
 			}
 			if ( self::MAX_REPOSITORY_PACKAGE_SUMMARIES > count( $repositories[ $key ]['package_summaries'] ) ) {
 				$repositories[ $key ]['package_summaries'][] = $this->packageSummary( $package, $source, $entry['type'] );

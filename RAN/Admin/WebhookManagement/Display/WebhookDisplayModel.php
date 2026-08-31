@@ -296,8 +296,7 @@ final class WebhookDisplayModel {
 		}
 
 		return match ( $code ) {
-			'ping_requested' => 'GitHub accepted the ping request for the recorded hook, but Booster did not observe a new delivery before the bounded check ended. Signed delivery remains unverified.',
-			'ping_verified' => 'GitHub recorded a successful ping delivery for the exact recorded hook and this site callback. Booster verified the signed ping.',
+			'ping_requested', 'ping_verified' => 'GitHub accepted the ping request for the recorded hook. This does not prove an authenticated inbound delivery or verify the signing secret; recorded status remains needs verification.',
 			'ping_delivery_failed' => 'GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the provider delivery details.',
 			'configured_pending_delivery' => 'Webhook management configured the remote hook. Signed delivery verification is still pending.',
 			'verified' => 'Webhook management confirmed the recorded remote configuration. Correlate provider delivery history with the Provider request ID in Booster Activity before treating signed delivery as established.',
@@ -332,11 +331,11 @@ final class WebhookDisplayModel {
 	}
 
 	public function isSuccessfulResult( string $code ): bool {
-		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed', 'ping_verified' ), true );
+		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
 	}
 
 	private function resultNoticeClass( string $code ): string {
-		return 'ping_requested' === $code
+		return in_array( $code, array( 'ping_requested', 'ping_verified' ), true )
 			? 'notice-warning'
 			: ( $this->isSuccessfulResult( $code ) ? 'notice-success' : 'notice-error' );
 	}

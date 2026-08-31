@@ -27,7 +27,6 @@ final class RepositoryDetailRenderer {
 		?callable $renderWebhookPanel,
 		?callable $renderReleasePanel
 	): void {
-		unset( $receiverReady, $receiverMessage );
 		$repository = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
 		$source     = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
 		$sourceKey  = is_string( $row['source_key'] ?? null ) ? $row['source_key'] : '';
@@ -69,13 +68,17 @@ final class RepositoryDetailRenderer {
 				<main class="ran-booster-repository-detail__main">
 					<?php if ( 'status' === $activeView ) { ?>
 						<?php $this->renderStatus( $row, $packages ); ?>
+					<?php } elseif ( 'branch' === $activeView && 0 < $omitted ) { ?>
+						<?php $this->renderIncompleteWorkflowControls( 'branch', $omitted ); ?>
 					<?php } elseif ( 'branch' === $activeView ) { ?>
 						<?php if ( null !== $renderWebhookPanel ) { ?>
 							<?php $renderWebhookPanel(); ?>
 						<?php } else { ?>
-							<?php $this->renderUnavailableWebhookGuidance( $sourceKey ); ?>
+							<?php $this->renderUnavailableWebhookGuidance( $sourceKey, $receiverReady ); ?>
 						<?php } ?>
 						<?php $this->renderProviderActions( $row ); ?>
+					<?php } elseif ( 0 < $omitted ) { ?>
+						<?php $this->renderIncompleteWorkflowControls( 'releases', $omitted ); ?>
 					<?php } elseif ( null !== $renderReleasePanel ) { ?>
 						<div id="ran-booster-repository-release-workflows"><?php $this->renderReleaseContent( $renderReleasePanel, $packages ); ?></div>
 					<?php } else { ?>
@@ -171,8 +174,25 @@ final class RepositoryDetailRenderer {
 		<?php
 	}
 
-	private function renderUnavailableWebhookGuidance( string $source ): void {
+	private function renderIncompleteWorkflowControls( string $view, int $omitted ): void {
+		$label = 'branch' === $view ? __( 'Manage webhook', 'ran-booster' ) : __( 'Assess release automation', 'ran-booster' );
+		?>
+		<section class="ran-booster-settings-section" aria-labelledby="ran-booster-repository-incomplete-inventory-heading">
+			<header class="ran-booster-settings-section__header"><h3 id="ran-booster-repository-incomplete-inventory-heading"><?php esc_html_e( 'Package inventory incomplete', 'ran-booster' ); ?></h3></header>
+			<div class="ran-booster-settings-section__body">
+				<?php /* translators: %d is the number of package summaries omitted from repository inventory. */ ?>
+				<p><?php echo esc_html( sprintf( __( '%d connected package is not shown. Refresh repository inventory before using repository-wide workflow controls.', 'ran-booster' ), $omitted ) ); ?></p>
+				<p><button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $label ); ?></button></p>
+			</div>
+		</section>
+		<?php
+	}
+
+	private function renderUnavailableWebhookGuidance( string $source, bool $receiverReady ): void {
 		$hasBranchConsumer = in_array( $source, array( 'branch', 'mixed' ), true );
+		$message           = $hasBranchConsumer && ! $receiverReady
+			? __( 'Repository webhook management is unavailable until this site can receive provider deliveries.', 'ran-booster' )
+			: ( $hasBranchConsumer ? __( 'Assisted webhook setup is unavailable for this provider.', 'ran-booster' ) : __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' ) );
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
 			<header class="ran-booster-settings-section__header">
@@ -180,7 +200,10 @@ final class RepositoryDetailRenderer {
 				<p class="description"><?php esc_html_e( 'Local readiness and the last recorded remote state.', 'ran-booster' ); ?></p>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<p><?php echo esc_html( $hasBranchConsumer ? __( 'Assisted webhook setup is unavailable for this provider.', 'ran-booster' ) : __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' ) ); ?></p>
+				<p><?php echo esc_html( $message ); ?></p>
+				<?php if ( $hasBranchConsumer && ! $receiverReady ) { ?>
+					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
+				<?php } ?>
 			</div>
 		</section>
 		<?php

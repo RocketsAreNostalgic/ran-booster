@@ -26,9 +26,7 @@ final class ManagedReleaseBrowserOperations {
 		if ( null === $candidates ) {
 			return $this->outcome( 'unable_to_check' );
 		}
-		$eligibleCandidates = 'prerelease' === $channel
-			? array_values( array_filter( $candidates->candidates, static fn ( RepositoryReleaseCandidate $candidate ): bool => $candidate->prerelease ) )
-			: $candidates->candidates;
+		$eligibleCandidates = $candidates->candidates;
 		if ( array() === $eligibleCandidates ) {
 			return $this->outcome(
 				'no_releases',

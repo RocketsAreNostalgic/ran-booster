@@ -89,6 +89,7 @@ function fixture() {
 		{ id: 'ran-booster-advanced-source-settings', open: false },
 		{ id: 'ran-booster-package-danger-zone', open: false },
 	];
+	let renderedBranchCheckErrors = [];
 	let renderedErrors = [];
 	const errorAttributes = new Map();
 	const formAttributes = new Map();
@@ -294,6 +295,12 @@ function fixture() {
 			}
 			if (
 				selector ===
+				'#wpbody-content [data-ran-booster-repository-branch-check]'
+			) {
+				return renderedBranchCheckErrors;
+			}
+			if (
+				selector ===
 				'#wpbody-content .notice-error, #wpbody-content .error'
 			) {
 				return [error, ...renderedErrors];
@@ -356,6 +363,9 @@ function fixture() {
 		},
 		setRenderedErrors(errors) {
 			renderedErrors = errors;
+		},
+		setRenderedBranchCheckErrors(errors) {
+			renderedBranchCheckErrors = errors;
 		},
 		swapTarget,
 		sourceLink,
@@ -677,6 +687,36 @@ test('a package failure focuses and announces its rendered notice without copyin
 	]);
 });
 
+test('a branch check leaves an unrelated persistent error untouched', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	state.error.textContent = '';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-relocate-rendered-error';
+	let persistentErrorRemoved = false;
+	const persistentError = {
+		hidden: false,
+		remove() {
+			persistentErrorRemoved = true;
+		},
+		textContent: 'An unrelated persistent error.',
+	};
+	state.setRenderedErrors([persistentError]);
+
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+
+	assert.equal(persistentErrorRemoved, false);
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.error.textContent, '');
+});
+
 test('an opted-in mutation moves its rendered failure disclosure into the global error banner', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
@@ -702,11 +742,11 @@ test('an opted-in mutation moves its rendered failure disclosure into the global
 				};
 			}
 
-			return selector === 'details' ? failureDetails : null;
+		return selector === 'details' ? failureDetails : null;
 		},
 	};
 	const failureDetails = { tagName: 'DETAILS' };
-	state.setRenderedErrors([renderedNotice]);
+	state.setRenderedBranchCheckErrors([renderedNotice]);
 
 	init();
 	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });

@@ -843,7 +843,7 @@ final class ReleaseWorkflowControls {
 			&& hash_equals( $providerCode, (string) $package->getProviderCode() )
 			&& is_string( $package->getProviderRepositoryId() )
 			&& hash_equals( $repository, $package->getProviderRepositoryId() )
-			&& hash_equals( $locator, (string) $package->getRepository() )
+			&& 0 === strcasecmp( $locator, (string) $package->getRepository() )
 			&& $summaryRevision === $package->getSourceRevision();
 		if ( $exact ) {
 			$status = $this->requestBoundary(

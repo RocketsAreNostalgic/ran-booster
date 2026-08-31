@@ -234,17 +234,20 @@
 
 		function renderedFailureNotice(form) {
 			const region = errorRegion(form);
-			return Array.from(
-				document.querySelectorAll(
-					'#wpbody-content .notice-error, #wpbody-content .error'
-				)
-			).find(function (candidate) {
-				return (
-					candidate !== region &&
-					candidate.hidden !== true &&
-					(candidate.textContent || '').trim() !== ''
-				);
-			});
+			const selector = form?.hasAttribute?.(
+				'data-ran-booster-relocate-rendered-error'
+			)
+				? '#wpbody-content [data-ran-booster-repository-branch-check]'
+				: '#wpbody-content .notice-error, #wpbody-content .error';
+			return Array.from(document.querySelectorAll(selector)).find(
+				function (candidate) {
+					return (
+						candidate !== region &&
+						candidate.hidden !== true &&
+						(candidate.textContent || '').trim() !== ''
+					);
+				}
+			);
 		}
 
 		function renderedFailureMessage(notice) {

@@ -385,6 +385,65 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
 	}
 
+	public function testRepositorySummaryUsesAutomaticBranchAggregateBeyondPackageSummaryCap(): void {
+		$summaries = array();
+		for ( $index = 1; $index <= 20; ++$index ) {
+			$summaries[] = $this->summary( 'plugin', 'owner/manual-' . $index . '.php', 'Manual ' . $index, 'branch', 'main', '', 'manual' );
+		}
+
+		$result = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+			array(
+				'provider'                     => array(
+					'code'           => 'gh',
+					'label'          => 'GitHub',
+					'owner_label'    => 'Owner',
+					'capabilities'   => array( 'webhooks' => true ),
+					'webhook_scopes' => array( array( 'code' => 'repository' ) ),
+				),
+				'providerTask'                 => 'repositories',
+				'provider_repositories'        => array(
+					'available'    => true,
+					'repositories' => array(
+						array(
+							'target'                    => 'owner/capped',
+							'repository_id'             => 'capped-42',
+							'source'                    => 'branch',
+							'package_references'        => array( 'owner/manual-1.php' ),
+							'branch_package_references' => array( 'owner/manual-1.php' ),
+							'has_automatic_branch_consumer' => true,
+							'deployment_policies'       => array(
+								'automatic' => 1,
+								'manual'    => 20,
+								'disabled'  => 0,
+							),
+							'package_summaries'         => $summaries,
+							'package_summaries_omitted' => 1,
+						),
+					),
+				),
+				'managed_webhook_repositories' => array(
+					'available'    => true,
+					'repositories' => array(),
+				),
+				'webhook_assistance_readiness' => array(
+					'site'         => array(
+						'status'       => 'ready',
+						'reason_codes' => array(),
+						'callback_url' => 'https://example.test/webhook',
+					),
+					'repositories' => array(),
+				),
+			)
+		);
+
+		self::assertCount( 20, $result['repositoryTableRows'][0]['package_summaries'] );
+		self::assertSame( 1, $result['repositoryTableRows'][0]['package_summaries_omitted'] );
+		self::assertFalse( $result['repositoryTableRows'][0]['has_automatic_branch_consumer'] );
+		self::assertSame( 'Package inventory incomplete', $result['repositoryTableRows'][0]['management_label'] );
+		self::assertSame( array(), $result['repositoryTableRows'][0]['actions'] );
+		self::assertSame( 0, $result['repositoryIntegrationSummary']['needs_review'] );
+	}
+
 	public function testRejectsProviderRewriteOfImmutablePackageSummaries(): void {
 		$base                                 = $this->baseRows();
 		$base['repo-42']['package_summaries'] = array( $this->summary( 'plugin', 'example/example.php', 'Example', 'branch', 'main', '', 'manual' ) );

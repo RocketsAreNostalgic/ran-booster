@@ -288,6 +288,42 @@ test('managed browser selects and inspects the newest current candidate, preserv
 	);
 });
 
+test('managed browser keeps the initial candidate inspection busy after its synchronous change event', async () => {
+	const inspection = deferred();
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate('same', '2.0.0', 'same', '2026-08-03T00:00:00Z'),
+				],
+			},
+		},
+		inspection.promise,
+	]);
+
+	harness.initialize(harness.browser);
+	await flush();
+
+	assert.equal(harness.browser.getAttribute('aria-busy'), 'true');
+	assert.equal(harness.nodes.get('retry').disabled, true);
+
+	inspection.resolve({
+		successful: true,
+		code: 'release_ready',
+		data: {
+			version: '2.0.0',
+			tag: 'v2.0.0',
+			installed_version: '2.0.0',
+			version_relationship: 'same',
+		},
+	});
+	await flush();
+	await flush();
+});
+
 test('managed browser preserves provider candidate order without a native update offer', async () => {
 	const providerFirst = candidate(
 		'provider-first',

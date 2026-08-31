@@ -42,6 +42,7 @@ $identityReady          = null !== $repositoryReadiness
 $publishedReleaseSource = true === ( $releaseManaged ?? false )
 	|| 'release_asset' === ( $packageCurrentSource ?? null )
 	|| 'release_asset' === ( $packageSourceView ?? null );
+$retainedReadiness      = true === ( $packageBranchReadiness['retained'] ?? false );
 $providerWebhookUrl     = trim( (string) ( $packageBranchReadiness['webhook_settings_url'] ?? '' ) );
 $secretCoverage         = (string) ( $repositoryReadiness['local_secret_coverage'] ?? 'unknown' );
 $secretReady            = in_array( $secretCoverage, array( 'repository', 'shared' ), true );
@@ -106,6 +107,7 @@ $repositoryStateClass             = match ( true ) {
 	default                                  => 'is-pending',
 };
 $setupSummary = match ( true ) {
+	$publishedReleaseSource && $retainedReadiness => __( 'Published releases are active. These saved Branch facts are retained and read-only until returning.', 'ran-booster' ),
 	$needsAttention => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
 	default         => __( 'Review the requirements below.', 'ran-booster' ),
 };
@@ -162,7 +164,7 @@ $subdirectoryStateClass = match ( $repositoryBranchCheckOutcome ?? null ) {
 		<div class="ran-booster-readiness-panel">
 			<div class="ran-booster-readiness-panel__top">
 				<div>
-					<h4 id="ran-booster-branch-readiness-heading"><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ); ?></h4>
+					<h4 id="ran-booster-branch-readiness-heading"><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : ( $retainedReadiness ? __( 'Retained Branch setup', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ) ); ?></h4>
 					<p><?php echo esc_html( $setupSummary ); ?></p>
 				</div>
 				<?php if ( $needsAttention ) { ?>

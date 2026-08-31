@@ -14,6 +14,7 @@ use RAN\Admin\AdminAddOnTab;
 use RAN\Admin\BulkPackageAction;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\AdminTabRegistry;
+use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\ProviderDocumentationPresenter;
@@ -1372,6 +1373,102 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['packageSource']['unavailable'] );
 	}
 
+	public function testReleasePackageRetainsCurrentBranchReadinessWithoutProviderOperations(): void {
+		$package  = $this->managedPackage(
+			'release/release.php',
+			'Release Package',
+			'101',
+			\RAN\PackageSource::RELEASE_ASSET,
+			'gh',
+			\RAN\Deployment\DeploymentPolicy::MANUAL,
+			'owner/repository'
+		);
+		$plugins  = new class( $package ) extends PluginRepository {
+			public function __construct( private Package $package ) {
+			}
+
+			public function boosterPluginFromFile( $file ) {
+				return 'release/release.php' === $file ? $this->package : null;
+			}
+
+			public function allBoosterPlugins(): array {
+				return array( $this->package );
+			}
+
+			public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+				return array( $this->package );
+			}
+		};
+		$themes   = new class() extends ThemeRepository {
+			public function __construct() {
+			}
+
+			public function allBoosterThemes(): array {
+				return array();
+			}
+
+			public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+				return array();
+			}
+		};
+		$secrets  = new class() extends SecretsFile {
+			public function __construct() {
+				parent::__construct( '/unused/test-secrets.php', array() );
+			}
+
+			public function assertManagedStorageReady(): void {
+			}
+
+			public function webhookProfiles( ProviderCode|string $provider ): array {
+				return array(
+					'webhook-profile' => array(
+						'scope'        => 'repository',
+						'target'       => 'owner/repository',
+						'authority_id' => '101',
+						'configured'   => true,
+					),
+				);
+			}
+		};
+		$provider = $this->createMockForIntersectionOfInterfaces(
+			array(
+				RepositoryProvider::class,
+				ProviderCredentialPolicySupplier::class,
+				\RAN\RepositoryProvider\WebhookNormalizer::class,
+			)
+		);
+		$provider->method( 'getMetadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
+		$policies = ShippedSecretPolicyCatalog::create();
+		$provider->method( 'getCredentialPolicy' )->willReturn( $policies->credentialPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->method( 'getWebhookPolicy' )->willReturn( $policies->webhookPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->expects( self::never() )->method( 'resolveRepository' );
+		$provider->expects( self::never() )->method( 'prepareArchive' );
+		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
+		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
+		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->toArray()['site']['status'] );
+		$dashboard = $this->dashboard(
+			$secrets,
+			plugins: $plugins,
+			themes: $themes,
+			database: new ReadyDashboardDatabase(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			webhookAssistance: $evaluator
+		);
+		$_GET      = array(
+			'package'     => 'release/release.php',
+			'source_view' => 'branch',
+		);
+
+		$readiness = $dashboard->getPlugins()['data']['packageBranchReadiness'];
+
+		self::assertIsArray( $readiness );
+		self::assertArrayHasKey( 'retained', $readiness );
+		self::assertTrue( $readiness['retained'] );
+		self::assertSame( 'ready', $readiness['site']['status'] );
+		self::assertSame( '101', $readiness['repository']['repository_id'] );
+		self::assertSame( 'repository', $readiness['repository']['local_secret_coverage'] );
+	}
+
 	public function testTroubleshootingResultsRenderOnlyInTheSameDashboardRequest(): void {
 		$_GET['tab'] = 'troubleshooting';
 		$secrets     = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
@@ -2357,7 +2454,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		bool $providerCredentials = false,
 		?ProviderRegistry $providers = null,
 		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
-		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?WebhookAssistanceReadinessEvaluator $webhookAssistance = null
 	): RoutingDashboard {
 		$providers        = $providers ?? $this->providers( $providerCredentials );
 		$pluginRepository = $plugins ?? new class() extends PluginRepository {
@@ -2392,7 +2490,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$pluginRepository,
 			new Booster(),
 			$themeRepository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, null, $branchCheckEvidence ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, $webhookAssistance, $branchCheckEvidence ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),

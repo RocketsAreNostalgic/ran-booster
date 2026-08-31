@@ -74,6 +74,7 @@ final class RepositoryDetailRenderer {
 			</section>
 
 			<?php $this->renderReleaseAutomation( $row ); ?>
+			<?php $this->renderProviderDetails( $row ); ?>
 			<?php $this->renderActivity( $row, $activityUrl ); ?>
 		</div>
 		<?php
@@ -178,8 +179,26 @@ final class RepositoryDetailRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
+	private function renderProviderDetails( array $row ): void {
+		$details = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), fn ( mixed $detail ): bool => is_array( $detail ) && ! $this->isReleaseAutomationEntry( $detail ) && ! $this->isWebhookActivityEntry( $detail ) ) );
+		if ( array() === $details ) {
+			return;
+		}
+		?>
+		<section aria-labelledby="ran-booster-repository-details-heading">
+			<h5 id="ran-booster-repository-details-heading"><?php esc_html_e( 'Repository details', 'ran-booster' ); ?></h5>
+			<dl class="ran-booster-repository-detail__facts">
+			<?php foreach ( $details as $detail ) { ?>
+				<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) ( $detail['value'] ?? '' ) ); ?></dd></div>
+			<?php } ?>
+			</dl>
+		</section>
+		<?php
+	}
+
+	/** @param array<string, mixed> $row */
 	private function renderActivity( array $row, string $activityUrl ): void {
-		$details = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), fn ( mixed $detail ): bool => is_array( $detail ) && ! $this->isReleaseAutomationEntry( $detail ) ) );
+		$details = array_values( array_filter( is_array( $row['details'] ?? null ) ? $row['details'] : array(), fn ( mixed $detail ): bool => is_array( $detail ) && $this->isWebhookActivityEntry( $detail ) ) );
 		?>
 		<section aria-labelledby="ran-booster-repository-activity-heading">
 			<h5 id="ran-booster-repository-activity-heading"><?php esc_html_e( 'Recorded webhook activity', 'ran-booster' ); ?></h5>
@@ -215,6 +234,13 @@ final class RepositoryDetailRenderer {
 		$key = $entry['key'] ?? null;
 
 		return is_string( $key ) && 1 === preg_match( '/\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $key );
+	}
+
+	/** @param array<string, mixed> $entry */
+	private function isWebhookActivityEntry( array $entry ): bool {
+		$key = $entry['key'] ?? null;
+
+		return is_string( $key ) && str_starts_with( $key, 'core:webhook-' );
 	}
 
 	/** @param array<string, mixed> $action */

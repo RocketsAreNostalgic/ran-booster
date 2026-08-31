@@ -53,6 +53,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
 				),
+				array(
+					'key'   => 'fixture:repository-access',
+					'label' => 'Provider access',
+					'value' => 'Configured',
+				),
 			),
 			'status_links'              => array(
 				array(
@@ -119,6 +124,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'href="https://example.test/signing-secrets"', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
+		self::assertStringContainsString( 'Repository details', $html );
+		self::assertStringContainsString( 'Provider access', $html );
+		self::assertLessThan( strpos( $html, 'Recorded webhook activity' ), strpos( $html, 'Provider access' ) );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 	}
 

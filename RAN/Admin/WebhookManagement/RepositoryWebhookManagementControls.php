@@ -97,8 +97,9 @@ final class RepositoryWebhookManagementControls {
 		}
 
 		$formAttributes = '';
+		$open           = null !== $context['result'] || null !== $context['recovery'] || null !== $context['remediation'];
 		?>
-		<details class="ran-booster-package-disclosure ran-booster-package-webhook-setup" data-ran-booster-package-webhook-setup>
+		<details class="ran-booster-package-disclosure ran-booster-package-webhook-setup" data-ran-booster-package-webhook-setup<?php echo $open ? ' open' : ''; ?>>
 			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
 			<div class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body">
 				<p><?php esc_html_e( 'Set up or check this repository webhook. This does not enable Automatic updates; choose that separately in Package operation. Enhanced operations return to these package settings.', 'ran-booster' ); ?></p>

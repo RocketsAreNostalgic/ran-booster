@@ -510,7 +510,7 @@ final class ReleaseManagementDisplay {
 					<?php } ?>
 				<?php } ?>
 			</div>
-			<p class="description"><?php esc_html_e( 'Preview shows published alpha, beta and release-candidate builds only; they may be unstable. Switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade the package.', 'ran-booster' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Preview includes published alpha, beta, release-candidate, and stable releases; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade.', 'ran-booster' ); ?></p>
 		</fieldset>
 		<?php
 	}

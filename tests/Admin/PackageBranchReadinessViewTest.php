@@ -168,6 +168,21 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$packageAdvancedOpen      = false;
 		$packageRepositoryReady   = true;
 		$packageSource            = array();
+		$packageBranchReadiness   = array(
+			'retained'             => true,
+			'webhook_settings_url' => 'https://github.com/example/example/settings/hooks',
+			'site'                 => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+				'callback_url' => 'https://site.example/wp-json/ran-booster/v1/webhooks/gh',
+			),
+			'repository'           => array(
+				'repository_id'         => '101',
+				'repository'            => 'example/example',
+				'reason_codes'          => array(),
+				'local_secret_coverage' => 'repository',
+			),
+		);
 		$packageView              = new class() {
 			public function getType(): string {
 				return 'plugin';
@@ -201,6 +216,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'disabled="disabled"', $html );
 		self::assertStringContainsString( 'Published releases remain the package source and settings are retained until returning.', $html );
 		self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
+		self::assertStringContainsString( 'Retained Branch setup', $html );
+		self::assertStringContainsString( 'Published releases are active. These saved Branch facts are retained and read-only until returning.', $html );
+		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
+		self::assertStringContainsString( 'The site exposes a structurally valid HTTPS webhook endpoint.', $html );
 		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
 		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}

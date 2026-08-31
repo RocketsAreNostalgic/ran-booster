@@ -32,13 +32,18 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	public function resetWordPress(): void {
 		ReleaseManagementFixture::resetWordPress(); }
 
-	public function testRegistersOneNeutralPostRouteWithoutAddingCoreRowsToThePublicExtensionFilter(): void {
+	public function testRegistersNeutralReleaseRoutesWithoutAddingCoreRowsToThePublicExtensionFilter(): void {
 		$controls = $this->controls();
 		$controls->register();
 
 		self::assertArrayHasKey( 'ran_booster_admin_package_source_choices', $GLOBALS['ran_booster_release_management_test_filters'] );
 		self::assertArrayNotHasKey( 'ran_booster_provider_repository_rows', $GLOBALS['ran_booster_release_management_test_filters'] );
 		self::assertArrayHasKey( 'ran_booster_admin_package_release_readiness_actions', $GLOBALS['ran_booster_release_management_test_actions'] );
+		self::assertArrayHasKey( 'ran_booster_admin_repository_release_sections', $GLOBALS['ran_booster_release_management_test_actions'] );
+		self::assertSame(
+			array( $controls, 'renderRepositoryReleaseSections' ),
+			$GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_repository_release_sections'][0]['callback']
+		);
 		self::assertArrayHasKey( 'admin_post_ran_booster_release_workflow', $GLOBALS['ran_booster_release_management_test_actions'] );
 		self::assertCount( 1, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'] );
 	}

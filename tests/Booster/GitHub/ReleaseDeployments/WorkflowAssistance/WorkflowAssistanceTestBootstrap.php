@@ -26,6 +26,47 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_json_encode' ) ) {
 	}
 }
 
+function template_pack_repository_actions_reset(): void {
+	$GLOBALS['ran_booster_template_pack_repository_actions'] = array();
+}
+
+/** @return list<array{hook:string, callback:callable, priority:int, accepted_args:int}> */
+function template_pack_repository_actions( string $hook ): array {
+	return array_values(
+		array_filter(
+			$GLOBALS['ran_booster_template_pack_repository_actions'] ?? array(),
+			static fn ( array $record ): bool => $hook === $record['hook']
+		)
+	);
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\add_action' ) ) {
+	function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+		$GLOBALS['ran_booster_template_pack_repository_actions'][] = array(
+			'hook'          => $hook,
+			'callback'      => $callback,
+			'priority'      => $priority,
+			'accepted_args' => $acceptedArgs,
+		);
+
+		return true;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\remove_action' ) ) {
+	function remove_action( string $hook, callable $callback, int $priority = 10 ): bool {
+		foreach ( $GLOBALS['ran_booster_template_pack_repository_actions'] ?? array() as $index => $record ) {
+			if ( $hook === $record['hook'] && $callback === $record['callback'] && $priority === $record['priority'] ) {
+				unset( $GLOBALS['ran_booster_template_pack_repository_actions'][ $index ] );
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\wp_remote_retrieve_response_code' ) ) {
 	/** @param array<string,mixed> $response */
 	function wp_remote_retrieve_response_code( array $response ): int {

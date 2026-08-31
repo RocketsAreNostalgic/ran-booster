@@ -172,17 +172,16 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 				$repositoryView,
 				$repositoryViewUrls,
 				$repositoryViewRequestUrls,
-				null !== $webhookManagement && $webhookManagement->hasManagementCapability( $provider['code'] )
+				null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
 					? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): void {
 						$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
 						$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 					}
 					: null,
-				isset( $releaseWorkflow )
-					? static function () use ( $releaseWorkflow, $selectedRepositoryRow, $providerReturnUrl ): void {
-						$releaseWorkflow->renderRepositoryReleaseSections( $selectedRepositoryRow, $providerReturnUrl );
-					}
-					: null
+				static function () use ( $selectedRepositoryRow, $providerReturnUrl, $repositoryViewUrls ): void {
+					$returnUrl = is_string( $repositoryViewUrls['releases'] ?? null ) ? $repositoryViewUrls['releases'] : $providerReturnUrl;
+					do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $returnUrl );
+				}
 			);
 			?>
 		<?php } else { ?>
@@ -374,17 +373,16 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 										$repositoryView,
 										$repositoryViewUrls,
 										$repositoryViewRequestUrls,
-										null !== $webhookManagement && $webhookManagement->hasManagementCapability( $provider['code'] )
+										null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
 										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): void {
 											$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
 											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 										}
 											: null,
-										isset( $releaseWorkflow )
-											? static function () use ( $releaseWorkflow, $selectedRepositoryRow, $providerReturnUrl ): void {
-												$releaseWorkflow->renderRepositoryReleaseSections( $selectedRepositoryRow, $providerReturnUrl );
-											}
-											: null
+										static function () use ( $selectedRepositoryRow, $providerReturnUrl, $repositoryViewUrls ): void {
+											$returnUrl = is_string( $repositoryViewUrls['releases'] ?? null ) ? $repositoryViewUrls['releases'] : $providerReturnUrl;
+											do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $returnUrl );
+										}
 									);
 									?>
 								<?php } else { ?>

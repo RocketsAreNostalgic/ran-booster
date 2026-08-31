@@ -58,6 +58,7 @@ final class ReleaseWorkflowControls {
 	public function register(): void {
 		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'keepReleaseSettingsDiscoverable' ), 20, 5 );
 		add_action( 'ran_booster_admin_package_release_readiness_actions', array( $this, 'renderPackageReleaseAutomationLink' ), 20, 2 );
+		add_action( 'ran_booster_admin_repository_release_sections', array( $this, 'renderRepositoryReleaseSections' ), 20, 2 );
 		add_action( 'admin_post_ran_booster_release_workflow', array( $this, 'handleWorkflow' ) );
 	}
 

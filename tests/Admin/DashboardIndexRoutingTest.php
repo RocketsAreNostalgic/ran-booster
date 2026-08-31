@@ -759,6 +759,48 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-provider__footer', $html );
 	}
 
+	public function testRepositoryReleaseCallbackUsesTheExactPublishedReleasesReturnUrl(): void {
+		$_GET    = array(
+			'tab'             => 'bb',
+			'panel'           => 'repositories',
+			'repository'      => 'repo-route',
+			'repository_view' => 'releases',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				'plugin/route.php' => $this->managedPackage(
+					'plugin/route.php',
+					'Route Plugin',
+					'repo-route',
+					\RAN\PackageSource::RELEASE_ASSET,
+					'bb',
+					repository: 'workspace/route'
+				),
+			)
+		);
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		$releaseReturnUrl = '';
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_repository_release_sections'][] = static function ( array $row, string $returnUrl ) use ( &$releaseReturnUrl ): void {
+			unset( $row );
+			$releaseReturnUrl = $returnUrl;
+		};
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed route model is rendered through the production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		ob_end_clean();
+
+		self::assertSame( 'releases', $data['repositoryView'] );
+		self::assertStringContainsString( 'repository=repo-route', $releaseReturnUrl );
+		self::assertStringContainsString( 'repository_view=releases', $releaseReturnUrl );
+	}
+
 	public function testProviderRepositoryProjectionUnifiesPackageTypesAndSourcesByStableIdentity(): void {
 		$_GET    = array(
 			'tab'   => 'bb',

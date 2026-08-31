@@ -210,6 +210,33 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->prepareCalls );
 	}
 
+	public function testRepositoryBranchCheckDoesNotReuseItsMarkerAfterCredentialOrDefaultAccessGenerationChanges(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider         = new DashboardBranchCheckProvider();
+		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
+		$lookup->profiles = array( 'gh' => 'public-profile' );
+		$evidence         = new DashboardBranchCheckEvidenceStore();
+		$dashboard        = $this->dashboard(
+			$this->throwingSecrets(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			publicLookupProfiles: $lookup,
+			branchCheckEvidence: $evidence
+		);
+		$package          = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$check            = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET             = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		$evidence->bumpProfileGeneration( 'gh', 'public-profile' );
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		$evidence->bumpProviderGeneration( 'gh' );
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 3, $provider->prepareCalls );
+	}
+
 	public function testRepositoryBranchCheckIsCapturedAsSanitizedOperationalEvidence(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$directory = sys_get_temp_dir() . '/ran-booster-branch-check-' . bin2hex( random_bytes( 6 ) );

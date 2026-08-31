@@ -334,6 +334,16 @@ final readonly class ProviderSettingsPresenter {
 		return $result;
 	}
 
+	/**
+	 * Returns the current non-secret access state for a one-time branch-check result.
+	 *
+	 * The dashboard may cache that result briefly, but credential replacement and
+	 * default public-profile changes must require a fresh remote check.
+	 */
+	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
+		return $this->branchCheckEvidence->profileFingerprintFor( $package, $this->effectiveBranchCheckProfile( $package ) );
+	}
+
 	/** @return array{outcome: 'verified', checked_at: string}|null */
 	public function packageRepositoryBranchEvidence( string $type, Package $package ): ?array {
 		return $this->branchCheckEvidence->find( $type, $package, $this->effectiveBranchCheckProfile( $package ) );

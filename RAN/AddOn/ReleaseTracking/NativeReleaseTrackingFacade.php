@@ -151,10 +151,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		$incompatible  = ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $eligibility->code();
 		$configuration = null;
 		$failureCode   = $incompatible ? ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED : '';
-		if ( ! $incompatible
-			&& PackageSource::BRANCH === $package->getSource()
-			&& false === $this->releaseSourceAvailable( $type, $package ) ) {
-			$failureCode = 'release_repository_conflict';
+		if ( ! $incompatible && PackageSource::BRANCH === $package->getSource() ) {
+			$availability = $this->releaseSourceAvailable( $type, $package );
+			if ( false === $availability ) {
+				$failureCode = 'release_repository_conflict';
+			} elseif ( null === $availability ) {
+				$failureCode = 'release_unavailable';
+			}
 		}
 		if ( PackageSource::RELEASE_ASSET === $package->getSource() ) {
 			try {

@@ -220,8 +220,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		try {
 			PackageMutationGuard::assertFilesystemMutationAllowed();
 			$repository = $this->resolveRepository( $repositoryRequest );
-			if ( ! $this->prospectiveReleaseSourceAvailable( $type, $repository ) ) {
-				return ProspectiveReleaseResult::failure( 'release_repository_conflict' );
+			$availability = $this->prospectiveReleaseSourceAvailable( $type, $repository );
+			if ( true !== $availability ) {
+				return ProspectiveReleaseResult::failure(
+					false === $availability
+						? 'release_repository_conflict'
+						: 'release_unavailable'
+				);
 			}
 			$repositoryReference = $this->repositoryReference( $repository );
 		} catch ( Throwable ) {
@@ -278,8 +283,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$identifier = $release->identifier( $type );
 			$repository = $this->managedRepository( $repository );
 			do {
-				if ( ! $this->releaseSourceAvailable( $type, $identifier, $repository ) ) {
-					$outcome = ProspectiveReleaseResult::failure( 'release_repository_conflict' );
+				$availability = $this->releaseSourceAvailable( $type, $identifier, $repository );
+				if ( true !== $availability ) {
+					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
 					break;
 				}
 				$configuration = new ManagedReleaseConfiguration(
@@ -289,8 +295,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				);
 				$userId        = ( $this->currentUserId )();
 				$lockToken     = $this->updaterLock->acquire();
-				if ( ! $this->releaseSourceAvailable( $type, $identifier, $repository ) ) {
-					$outcome = ProspectiveReleaseResult::failure( 'release_repository_conflict' );
+				$availability = $this->releaseSourceAvailable( $type, $identifier, $repository );
+				if ( true !== $availability ) {
+					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
 					break;
 				}
 				$wasActive = $this->isActive( $type, $identifier );
@@ -488,7 +495,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	/** @param array<string, mixed> $repository */
-	private function prospectiveReleaseSourceAvailable( string $type, array $repository ): bool {
+	private function prospectiveReleaseSourceAvailable( string $type, array $repository ): ?bool {
 		try {
 			$assessment = $this->sourceGuard->assess(
 				(string) ( $repository['provider'] ?? '' ),
@@ -501,17 +508,21 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			// A retry's package identifier is not trusted until the archive is
 			// verified. Permit that read for a sole same-type Release record;
 			// installExact must match its identifier before any filesystem work.
-			return $assessment['allowed'] || (
+			if ( $assessment['allowed'] || (
 				1 === $assessment['relationship_count']
 				&& 1 === $assessment['release_count']
 				&& ( 'plugin' === $type ? 1 : 2 ) === $assessment['owner_type']
-			);
+			) ) {
+				return true;
+			}
+
+			return 'repository_source_unavailable' === $assessment['code'] ? null : false;
 		} catch ( Throwable ) {
-			return false;
+			return null;
 		}
 	}
 
-	private function releaseSourceAvailable( string $type, string $identifier, ManagedRepository $repository ): bool {
+	private function releaseSourceAvailable( string $type, string $identifier, ManagedRepository $repository ): ?bool {
 		try {
 			$assessment = $this->sourceGuard->assess(
 				$repository->provider->value,
@@ -521,9 +532,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				PackageSource::RELEASE_ASSET
 			);
 
-			return $assessment['allowed'];
+			if ( $assessment['allowed'] ) {
+				return true;
+			}
+
+			return 'repository_source_unavailable' === $assessment['code'] ? null : false;
 		} catch ( Throwable ) {
-			return false;
+			return null;
 		}
 	}
 

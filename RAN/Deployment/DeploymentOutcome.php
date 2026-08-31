@@ -28,6 +28,8 @@ final readonly class DeploymentOutcome {
 	public const CODE_DOWNGRADE_BLOCKED                 = 'downgrade_blocked';
 	public const CODE_LOCK_UNAVAILABLE                  = 'lock_unavailable';
 	public const CODE_POLICY_BLOCKED                    = 'policy_blocked';
+	public const CODE_REPOSITORY_SOURCE_CONFLICT        = 'repository_source_conflict';
+	public const CODE_REPOSITORY_SOURCE_UNAVAILABLE     = 'repository_source_unavailable';
 	public const CODE_STALE_EVENT                       = 'stale_event';
 	public const CODE_UPGRADER_FAILED                   = 'upgrader_failed';
 	public const CODE_ACTIVATION_FAILED                 = 'activation_failed';
@@ -97,6 +99,8 @@ final readonly class DeploymentOutcome {
 		self::CODE_DOWNGRADE_BLOCKED                 => DeploymentState::FAILED,
 		self::CODE_LOCK_UNAVAILABLE                  => DeploymentState::FAILED,
 		self::CODE_POLICY_BLOCKED                    => DeploymentState::FAILED,
+		self::CODE_REPOSITORY_SOURCE_CONFLICT        => DeploymentState::FAILED,
+		self::CODE_REPOSITORY_SOURCE_UNAVAILABLE     => DeploymentState::FAILED,
 		self::CODE_STALE_EVENT                       => DeploymentState::FAILED,
 		self::CODE_UPGRADER_FAILED                   => DeploymentState::FAILED,
 		self::CODE_ACTIVATION_FAILED                 => DeploymentState::FAILED,

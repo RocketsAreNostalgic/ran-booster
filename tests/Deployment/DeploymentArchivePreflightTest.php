@@ -91,6 +91,22 @@ final class DeploymentArchivePreflightTest extends TestCase {
 		$artifact->assertUnchanged();
 	}
 
+	public function testProviderCleanupFailureRemovesThePreparedTemporaryArtifact(): void {
+		$this->zip( array( 'bundle/example.php' => self::VALID_PLUGIN ) );
+		$archive               = new PreflightPreparedArchive();
+		$archive->cleanupFails = true;
+
+		try {
+			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), $archive, 'example/example.php' );
+			self::fail( 'Provider cleanup failure must fail the preflight.' );
+		} catch ( DeploymentCheckFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, $failure->outcomeCode );
+		}
+
+		self::assertSame( 1, $archive->cleanupCalls );
+		$this->assertNoPreparedArtifactsRemain();
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPreflightLoadsTheWordPressFilesystemApiOutsideAdmin(): void {

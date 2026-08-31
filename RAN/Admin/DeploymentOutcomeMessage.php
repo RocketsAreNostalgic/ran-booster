@@ -27,6 +27,8 @@ final class DeploymentOutcomeMessage {
 			'downgrade_blocked'              => __( 'Booster blocked an older branch package before changing files. Restore a full-site backup or use a publisher-provided down-migration for intentional recovery.', 'ran-booster' ),
 			'lock_unavailable'               => __( 'Another deployment is using the WordPress package lock. Wait for it to finish, check Activity for a pending recovery, then retry.', 'ran-booster' ),
 			'policy_blocked'                 => __( 'A package update policy blocked this deployment. Review the package Updates settings and WordPress file modification configuration, then retry.', 'ran-booster' ),
+			'repository_source_conflict'     => __( 'This repository conflicts with another managed package source. Review the repository package settings before retrying.', 'ran-booster' ),
+			'repository_source_unavailable'  => __( 'Booster could not safely read the repository source relationship. Check package storage and retry.', 'ran-booster' ),
 			'stale_event'                    => __( 'The requested repository reference is no longer current. Refresh the package source or start a new deployment from the current reference.', 'ran-booster' ),
 			'upgrader_failed'                => __( 'WordPress could not complete the package update; the earlier package should remain intact. Check Activity and WordPress update health, then retry.', 'ran-booster' ),
 			'activation_failed'              => __( 'WordPress could not restore the plugin activation state. Check the plugin\'s current activation state and its error log, then retry.', 'ran-booster' ),

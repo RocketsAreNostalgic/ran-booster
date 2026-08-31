@@ -254,7 +254,7 @@ class DeploymentCoordinator {
 		try {
 			BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 			PackageMutationGuard::assertFilesystemMutationAllowed();
-			$baseline = $this->assertFrozenTarget( $attempt );
+			$baseline = $this->assertFrozenTargetOutcome( $attempt );
 			BoosterLogger::log( 'target snapshot verified', $context + array( 'step' => 'target_verified' ) );
 			$baselineState = null === $baseline ? null : $this->packageRuntimeState( $baseline );
 			$failureCode   = DeploymentOutcome::CODE_PROVIDER_FAILED;
@@ -283,7 +283,7 @@ class DeploymentCoordinator {
 			BoosterLogger::log( 'core lock acquired', $context + array( 'step' => 'core_lock_acquired' ) );
 
 			$failureCode = DeploymentOutcome::CODE_POLICY_BLOCKED;
-			$this->assertFrozenTarget( $attempt );
+			$this->assertFrozenTargetOutcome( $attempt );
 			BoosterLogger::log( 'target snapshot re-verified post-lock', $context + array( 'step' => 'target_reverified' ) );
 			$failureCode = DeploymentOutcome::CODE_PROVIDER_FAILED;
 			$archive->verifyCurrentHead();
@@ -565,6 +565,19 @@ class DeploymentCoordinator {
 		$this->assertPackageSnapshot( $package, $data, $request );
 
 		return $package;
+	}
+
+	/** Classify source-guard persistence failures before the generic policy fence. */
+	private function assertFrozenTargetOutcome( DeploymentAttempt $attempt ): ?Package {
+		try {
+			return $this->assertFrozenTarget( $attempt );
+		} catch ( PackageStorageFailure $failure ) {
+			if ( 'ran_booster_repository_source_conflict' === $failure->getDiagnosticId() ) {
+				$this->fail( DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT, 'The repository source conflicts with an existing managed package.' );
+			}
+
+			$this->fail( DeploymentOutcome::CODE_REPOSITORY_SOURCE_UNAVAILABLE, 'The repository source relationship could not be read safely.' );
+		}
 	}
 
 	private function existingManagementMatchesInstallTarget( DeploymentAttempt $attempt ): bool {

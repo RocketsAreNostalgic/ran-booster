@@ -212,6 +212,38 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $plugins->adoptionCalls );
 	}
 
+	public function testUnavailableRepositoryRelationshipStopsProspectiveAcquisitionBeforeFilesystemMutation(): void {
+		$database = new class() {
+			public string $last_error = 'read failed';
+
+			public function prepare( string $query, mixed ...$arguments ): string {
+				unset( $arguments );
+
+				return $query;
+			}
+
+			/** @return list<object> */
+			public function get_results( string $query ): array {
+				unset( $query );
+
+				return array();
+			}
+		};
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$facade   = $this->facade(
+			$plugins,
+			$executor,
+			sourceGuard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
+		);
+
+		$result = $facade->install( 'plugin', $this->repositoryRequest(), 42, 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+
+		self::assertSame( 'release_unavailable', $result->code() );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
+		self::assertSame( 0, $executor->installCalls );
+	}
+
 	public function testUnsupportedProviderFailsBeforeRepositoryResolutionOrPreflight(): void {
 		$plugins    = new ProspectivePluginRepository();
 		$executor   = new ProspectiveExecutor();
@@ -1124,6 +1156,39 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $this->acquisition?->handoffCalls );
 		self::assertSame( 1, $this->acquisition?->discardCalls );
 		self::assertSame( 2, $database->reads );
+		self::assertSame( 0, $executor->installCalls );
+	}
+
+	public function testUnavailableRelationshipBeforeLockAcquisitionStopsWithoutMutation(): void {
+		$plugins     = new ProspectivePluginRepository();
+		$executor    = new ProspectiveExecutor();
+		$database    = new SequencedSourceGuardDatabase( array( array(), array( (object) array() ) ) );
+		$lock        = new ProspectiveUpdaterLock();
+		$sourceGuard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->setReadyRelease();
+		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+
+		$result = $facade->install( 'plugin', $this->repositoryRequest(), 42, 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+
+		self::assertSame( 'release_unavailable', $result->code() );
+		self::assertSame( 0, $lock->acquireCalls );
+		self::assertSame( 0, $executor->installCalls );
+	}
+
+	public function testUnavailableRelationshipAfterLockAcquisitionStopsWithoutMutation(): void {
+		$plugins     = new ProspectivePluginRepository();
+		$executor    = new ProspectiveExecutor();
+		$database    = new SequencedSourceGuardDatabase( array( array(), array(), array( (object) array() ) ) );
+		$lock        = new ProspectiveUpdaterLock();
+		$sourceGuard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->setReadyRelease();
+		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+
+		$result = $facade->install( 'plugin', $this->repositoryRequest(), 42, 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+
+		self::assertSame( 'release_unavailable', $result->code() );
+		self::assertSame( 1, $lock->acquireCalls );
+		self::assertSame( 1, $lock->releaseCalls );
 		self::assertSame( 0, $executor->installCalls );
 	}
 

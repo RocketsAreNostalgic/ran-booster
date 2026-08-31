@@ -363,7 +363,7 @@ final class DeploymentCoordinatorTest extends TestCase {
 			);
 		};
 		$result                        = $this->coordinator->executeManual( $this->installCommand( 'plugin', 'new-branch' ) );
-		self::assertSame( DeploymentOutcome::CODE_POLICY_BLOCKED, $result['outcome_code'] );
+		self::assertSame( DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT, $result['outcome_code'] );
 		self::assertSame( 0, $this->executor->calls );
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->database->optionRows );
 	}

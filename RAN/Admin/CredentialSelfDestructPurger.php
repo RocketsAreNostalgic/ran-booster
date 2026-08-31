@@ -27,10 +27,20 @@ final class CredentialSelfDestructPurger {
 			foreach ( $removed as $provider => $ids ) {
 				foreach ( $ids as $id ) {
 					$this->observations->clear( $provider, $id );
-					$this->branchCheckEvidence->bumpProfileGeneration( $provider, $id );
+					try {
+						$this->branchCheckEvidence->bumpProfileGeneration( $provider, $id );
+					} catch ( \Throwable $failure ) {
+						unset( $failure );
+						// Evidence is advisory. Continue clearing an expired default profile.
+					}
 					if ( $id === $this->publicLookupProfiles->get( $provider ) ) {
 						$this->publicLookupProfiles->set( $provider, null );
-						$this->branchCheckEvidence->bumpProviderGeneration( $provider );
+						try {
+							$this->branchCheckEvidence->bumpProviderGeneration( $provider );
+						} catch ( \Throwable $failure ) {
+							unset( $failure );
+							// Expiry cleanup remains useful even if advisory evidence is unavailable.
+						}
 					}
 				}
 			}

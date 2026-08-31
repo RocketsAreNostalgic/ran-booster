@@ -508,7 +508,11 @@ class Dashboard {
 		if ( ! wp_verify_nonce( $nonce, $action ) ) {
 			return null;
 		}
-		$marker = 'ran_booster_branch_check_' . hash( 'sha256', get_current_user_id() . "\0" . $action . "\0" . $nonce );
+		$marker = 'ran_booster_branch_check_' . hash(
+			'sha256',
+			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0"
+			. $this->providerSettings->packageRepositoryBranchCheckAccessFingerprint( $package )
+		);
 		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
 			$completed = get_transient( $marker );
 			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true ) ) {

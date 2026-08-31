@@ -12,6 +12,70 @@ use RAN\Deployment\DeploymentPolicy;
 
 final class PackageBranchReadinessViewTest extends TestCase {
 
+	#[DataProvider( 'sourceSettingsModeProvider' )]
+	public function testSourceSettingsOnlyRenderBranchReadinessForSavedPackages( string $packageSourceMode, bool $expectsReadiness ): void {
+		$packageMutationAvailable = true;
+		$packageSourceChoices     = array(
+			'branch' => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy a saved repository branch.',
+				'meta'              => 'Included with Booster',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+				'disabled'          => false,
+				'hydrated'          => true,
+				'client_hydratable' => false,
+			),
+		);
+		$packageFieldForm         = 'edit' === $packageSourceMode ? 'ran-booster-package-edit-form' : '';
+		$packageFieldLayout       = 'grid';
+		$packageSourceView        = 'branch';
+		$showBranchSettings       = true;
+		$releaseManaged           = false;
+		$branchReadOnly           = false;
+		$branchValue              = 'main';
+		$subdirectoryValue        = '';
+		$packageAdvancedSections  = array();
+		$packageAdvancedSummary   = 'Branch · provider default';
+		$packageAdvancedOpen      = false;
+		$packageRepositoryReady   = true;
+		$packageSource            = array();
+		$packageView              = new class() {
+			public function getType(): string {
+				return 'plugin';
+			}
+		};
+
+		if ( $expectsReadiness ) {
+			$providerCode                 = 'gh';
+			$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+			$providerWebhookAvailable     = true;
+			$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
+			$packageBranchReadiness       = null;
+			$repositoryBranchCheckOutcome = null;
+		}
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Branch deployments are the package source.', $html );
+		if ( $expectsReadiness ) {
+			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
+			self::assertStringContainsString( '>Save settings and check</button>', $html );
+		} else {
+			self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
+			self::assertStringNotContainsString( '>Save settings and check</button>', $html );
+		}
+	}
+
+	/** @return array<string, array{string, bool}> */
+	public static function sourceSettingsModeProvider(): array {
+		return array(
+			'new package'   => array( 'create', false ),
+			'saved package' => array( 'edit', true ),
+		);
+	}
+
 	public function testViewReportsBoundedLocalEvidenceWithoutClaimingRemoteWebhookState(): void {
 		$providerCode             = 'gh';
 		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';

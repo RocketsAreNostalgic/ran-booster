@@ -894,6 +894,25 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Review package release settings', $html );
 	}
 
+	public function testRepositoryReleasePanelDisablesWorkflowWhenThePackageInventoryIsIncomplete(): void {
+		$controls                         = $this->controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
+		$row                              = $this->repositoryRows( 'release_asset' )['101'];
+		$row['package_summaries_omitted'] = 1;
+		$row['package_summaries'][0]['settings_url'] = 'https://example.test/plugin-settings';
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/return?repository_view=releases' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Inventory incomplete</span>', $html );
+		self::assertStringContainsString( 'The full managed-package inventory for this repository is not available. Reload the repository before assessing or setting up release automation.', $html );
+		self::assertStringContainsString( 'The complete managed-package inventory is unavailable.', $html );
+		self::assertStringNotContainsString( '1 of 1 packages use Published releases.', $html );
+		self::assertStringNotContainsString( 'Published releases are working. Booster has not assessed how this repository produces them.', $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringNotContainsString( 'Open draft pull request</button>', $html );
+	}
+
 	public function testRepositoryReleasePanelKeepsAnExactAutomationObservationAfterALaterFailure(): void {
 		self::assertTrue(
 			( new SetupRecordStore() )->saveAssessmentObservation(

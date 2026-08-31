@@ -17,6 +17,7 @@ final class TemplatePackRepositoryClient {
 	private const JSON_BODY_LIMIT  = 262144;
 	private const ASSET_BODY_LIMIT = 2097152;
 	private const ASSET_NAME       = 'ran-booster-release-bootstrap-templates.zip';
+	private const REDIRECT_HOOK    = 'requests-requests.before_redirect';
 
 	/** @var Closure(string,string,array<string,mixed>):mixed */
 	private Closure $send;
@@ -367,10 +368,30 @@ final class TemplatePackRepositoryClient {
 		if ( '' !== $token ) {
 			$args['headers']['Authorization'] = 'Bearer ' . $token;
 		}
+		$redirectScrubber = null;
+		if ( $redirects > 0 && '' !== $token ) {
+			$origin           = self::API_ROOT . $path;
+			$redirectScrubber = static function ( mixed &$location, array &$headers, mixed $data, mixed $options, mixed $original ) use ( $origin ): void {
+				if ( ! is_object( $original ) || ! isset( $original->url ) || $origin !== $original->url ) {
+					return;
+				}
+
+				foreach ( array_keys( $headers ) as $name ) {
+					if ( 'authorization' === strtolower( (string) $name ) ) {
+						unset( $headers[ $name ] );
+					}
+				}
+			};
+			add_action( self::REDIRECT_HOOK, $redirectScrubber, 10, 5 );
+		}
 		try {
 			$response = ( $this->send )( 'GET', self::API_ROOT . $path, $args );
 		} catch ( Throwable ) {
 			return $this->error( 'template_pack_unavailable' );
+		} finally {
+			if ( null !== $redirectScrubber ) {
+				remove_action( self::REDIRECT_HOOK, $redirectScrubber, 10 );
+			}
 		}
 		if ( ! is_array( $response ) ) {
 			return $this->error( 'template_pack_unavailable' );

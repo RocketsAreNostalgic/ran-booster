@@ -353,7 +353,32 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$inspect                       = $controls->processManagedBrowserRequest( 'inspect_candidate', $inspectRequest );
 		self::assertTrue( $inspect['successful'] );
 		self::assertSame( '1.0.0', $inspect['data']['installed_version'] );
+		self::assertSame(
+			array(
+				'available'  => false,
+				'release_id' => '',
+				'version'    => '1.1.0',
+			),
+			$inspect['data']['native_offer']
+		);
 		self::assertSame( array( 'inspect_candidate', 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce-for-release-tracking-inspect_candidate-plugin-example/example.php-3-stable' ), $tracking->calls[1] );
+	}
+
+	public function testManagedBrowserRemainsAvailableWhenNativeUpdaterStatusCannotBeRead(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( 'release_asset', failureCode: 'release_runtime_unavailable' )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'This server cannot currently run the published-release validator.', $html );
+		self::assertStringContainsString( 'data-ran-booster-managed-release-browser', $html );
+		self::assertStringContainsString( 'Refresh releases', $html );
+		self::assertStringContainsString( 'aria-disabled="true"', $html );
 	}
 
 	public function testManagedBrowserRendersADisabledNativeCoreUpdateBoundToTheCurrentOffer(): void {

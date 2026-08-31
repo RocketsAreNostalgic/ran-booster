@@ -896,6 +896,36 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'could not confirm that the remote webhook operation succeeded', $html );
 	}
 
+	public function testPackageRemediationCarriesItsSignedProviderAndRepositoryIdentity(): void {
+		$remediation     = 'Inspect the provider audit trail before retrying this operation.';
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operationResult( 'ambiguous', 'fixture_reconfigure_uncertain', '77', remediation: $remediation );
+		$store           = new OperationStoreFixture();
+		$store->record   = $this->record( endpoint: 'https://hooks.example.test/previous' );
+		$controller      = $this->controller( gateway: $gateway, store: $store, adminInteraction: new CapturingAdminInteractionFacade() );
+
+		$redirect = $controller->handleAdminPost(
+			$this->request(
+				array(
+					'repository_webhook_management_operation' => 'reconfigure',
+					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php',
+				)
+			),
+			'valid'
+		);
+
+		self::assertStringContainsString( 'webhook_management_provider=gh', $redirect );
+		self::assertStringContainsString( 'webhook_management_repository=1234', $redirect );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local signed redirect into display-only query state.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
+		$html = $this->renderPanel( $gateway, $store );
+
+		self::assertStringContainsString( $remediation, $html );
+		$_GET['webhook_management_repository'] = 'other';
+		$html                                  = $this->renderPanel( $gateway, $store );
+		self::assertStringNotContainsString( $remediation, $html );
+	}
+
 	public function testAuthoritativeCheckMismatchPersistsDriftAndOffersReconfigure(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult(

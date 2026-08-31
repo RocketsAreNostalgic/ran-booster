@@ -387,6 +387,11 @@ test('managed browser enables the native Core update only for its exact newer in
 					tag: 'v3.0.0',
 					installed_version: '2.0.0',
 					version_relationship: 'newer',
+					native_offer: {
+						available: true,
+						release_id: 'new',
+						version: '3.0.0',
+					},
 				},
 			},
 		],
@@ -539,6 +544,53 @@ test('managed browser leaves the native Core update disabled when a same-version
 			},
 		},
 	]);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'true'
+	);
+	assert.equal(harness.nodes.get('native-update').getAttribute('href'), null);
+});
+
+test('managed browser keeps native Core update disabled when the offer changes after inspection', async () => {
+	const harness = createHarness(
+		[
+			{
+				successful: true,
+				code: 'release_candidates_available',
+				data: {
+					installed_version: '2.0.0',
+					candidates: [
+						candidate(
+							'offer',
+							'3.0.0',
+							'newer',
+							'2026-08-03T00:00:00Z'
+						),
+					],
+				},
+			},
+			{
+				successful: true,
+				code: 'release_ready',
+				data: {
+					version: '3.0.0',
+					tag: 'v3.0.0',
+					installed_version: '2.0.0',
+					version_relationship: 'newer',
+					native_offer: {
+						available: true,
+						release_id: 'replacement',
+						version: '3.1.0',
+					},
+				},
+			},
+		],
+		'offer'
+	);
 	harness.initialize(harness.browser);
 	await flush();
 	await flush();

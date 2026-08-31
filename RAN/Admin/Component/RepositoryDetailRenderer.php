@@ -178,6 +178,7 @@ final class RepositoryDetailRenderer {
 		<section class="ran-booster-settings-section" aria-labelledby="ran-booster-repository-incomplete-inventory-heading">
 			<header class="ran-booster-settings-section__header"><h3 id="ran-booster-repository-incomplete-inventory-heading"><?php esc_html_e( 'Package inventory incomplete', 'ran-booster' ); ?></h3></header>
 			<div class="ran-booster-settings-section__body">
+				<?php /* translators: %d is the number of package summaries omitted from repository inventory. */ ?>
 				<p><?php echo esc_html( sprintf( __( '%d connected package is not shown. Refresh repository inventory before using repository-wide workflow controls.', 'ran-booster' ), $omitted ) ); ?></p>
 				<p><button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $label ); ?></button></p>
 			</div>

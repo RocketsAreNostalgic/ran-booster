@@ -172,6 +172,7 @@ final class RepeatPackageViewTest extends TestCase {
 		return array(
 			array( PackagePagePresenter::plugin(), true, false ),
 			array( PackagePagePresenter::theme(), false, false ),
+			array( PackagePagePresenter::plugin(), false, true ),
 			array( PackagePagePresenter::plugin(), false, false ),
 			array( PackagePagePresenter::theme(), true, true ),
 		);
@@ -192,18 +193,30 @@ final class RepeatPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		$baseUrl     = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
-		$expectedUrl = $baseUrl
+		$baseUrl            = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
+		$expectedInstallUrl = $baseUrl
 			. '?page=' . $packageView->getCreatePageSlug()
 			. '&amp;provider=gh&amp;open_picker=1';
+		$expectedBackUrl    = $baseUrl . '?page=' . $packageView->getPageSlug();
+		$installAnotherLink = '<a class="button" href="' . $expectedInstallUrl . '">Install another ' . $packageView->getType() . '</a>';
+		$backLink           = '<a class="button" href="' . $expectedBackUrl . '">Back to Managed ' . $packageView->getPluralLabel() . '</a>';
 
-		self::assertStringContainsString(
-			'<a href="' . $expectedUrl . '">Install another ' . $packageView->getType() . '</a>',
-			$html
-		);
+		self::assertStringNotContainsString( 'ran-booster-package-settings__install-another', $html );
+		self::assertStringNotContainsString( '>Cancel</a>', $html );
 		self::assertStringNotContainsString( 'class="ran-booster-package-settings__intro"', $html );
 		self::assertStringNotContainsString( 'WordPress disabled', $html );
 		self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Branch · main</p>', $html );
+		$saveActions = $this->actionGroupByClass( $html, 'ran-booster-package-settings__save-actions' );
+		self::assertStringContainsString( $installAnotherLink, $saveActions );
+		self::assertStringContainsString( $backLink, $saveActions );
+		$savePosition           = strpos( $saveActions, 'data-ran-booster-package-settings-save' );
+		$installAnotherPosition = strpos( $saveActions, $installAnotherLink );
+		$backPosition           = strpos( $saveActions, $backLink );
+		self::assertIsInt( $savePosition );
+		self::assertIsInt( $installAnotherPosition );
+		self::assertIsInt( $backPosition );
+		self::assertLessThan( $installAnotherPosition, $savePosition );
+		self::assertLessThan( $backPosition, $installAnotherPosition );
 		if ( ! $providerAvailable ) {
 			self::assertStringContainsString( '<strong>Provider unavailable.</strong>', $html );
 			self::assertMatchesRegularExpression(
@@ -300,6 +313,28 @@ final class RepeatPackageViewTest extends TestCase {
 				: 'Active, parent and depended-on themes are protected.',
 			$dangerZone
 		);
+	}
+
+	public function testUnavailablePackageSourceKeepsNavigationActionsWithoutSave(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
+			$package                 = $this->package( $packageView );
+			$packageProviderSettings = $this->providerSettings( true );
+			$packageSource           = array( 'unavailable' => true );
+
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			$html = (string) ob_get_clean();
+
+			$baseUrl            = 'https://example.test/wp-admin/admin.php';
+			$installAnotherLink = '<a class="button" href="' . $baseUrl . '?page=' . $packageView->getCreatePageSlug() . '&amp;provider=gh&amp;open_picker=1">Install another ' . $packageView->getType() . '</a>';
+			$backLink           = '<a class="button" href="' . $baseUrl . '?page=' . $packageView->getPageSlug() . '">Back to Managed ' . $packageView->getPluralLabel() . '</a>';
+			$actions            = $this->actionGroupByClass( $html, 'ran-booster-settings-actions' );
+
+			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $packageView->getType() );
+			self::assertStringContainsString( $installAnotherLink, $actions, $packageView->getType() );
+			self::assertStringContainsString( $backLink, $actions, $packageView->getType() );
+			self::assertLessThan( strpos( $actions, $backLink ), strpos( $actions, $installAnotherLink ), $packageView->getType() );
+		}
 	}
 
 	public function testSubmittedRemovalActionsReopenDangerZoneForNativeFailures(): void {
@@ -520,6 +555,13 @@ final class RepeatPackageViewTest extends TestCase {
 	private function formByClass( string $html, string $class ): string {
 		self::assertMatchesRegularExpression( '/<form[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*".*?<\/form>/s', $html );
 		preg_match( '/<form[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*".*?<\/form>/s', $html, $matches );
+
+		return $matches[0];
+	}
+
+	private function actionGroupByClass( string $html, string $class ): string {
+		self::assertMatchesRegularExpression( '/<div[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html );
+		preg_match( '/<div[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html, $matches );
 
 		return $matches[0];
 	}

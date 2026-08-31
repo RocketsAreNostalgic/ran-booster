@@ -97,6 +97,48 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 
+	public function testReleaseWebhookCleanupLinkSelectsTheRetainedBranchPane(): void {
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+			array(
+				array(
+					'target'              => 'example/example',
+					'repository_id'       => '101',
+					'source'              => 'release_asset',
+					'package_references'  => array( 'example/example.php' ),
+					'deployment_policies' => array(
+						'automatic' => 0,
+						'manual'    => 1,
+						'disabled'  => 0,
+					),
+					'automatic_count'     => 0,
+					'repository_url'      => 'https://github.com/example/example',
+					'retained_webhook'    => array( 'local_secret_coverage' => 'repository' ),
+				),
+			),
+			'gh',
+			'GitHub',
+			'GitHub webhooks',
+			'GitHub secret',
+			'https://example.test/webhooks/gh',
+			true,
+			array(
+				'by_id'         => array(),
+				'by_repository' => array(),
+			),
+			null,
+			'101',
+			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
+			'https://example.test/repositories'
+		);
+		$row    = $result['selected'];
+
+		self::assertIsArray( $row );
+		$action = $row['actions']['core:webhook-cleanup-review'];
+		self::assertStringContainsString( 'source_view=branch', $action['url'] );
+		self::assertStringContainsString( 'webhook_cleanup=1', $action['url'] );
+		self::assertStringEndsWith( '#ran-booster-webhook-cleanup', $action['url'] );
+	}
+
 	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {
 		$base                              = $this->baseRows();
 		$presented                         = $base;

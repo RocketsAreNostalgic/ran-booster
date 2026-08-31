@@ -26,6 +26,10 @@ final class ManagedReleaseBrowserOperations {
 		if ( null === $candidates ) {
 			return $this->outcome( 'unable_to_check' );
 		}
+		$status = $this->releases->status( $type, $identifier );
+		if ( $revision !== $status->sourceRevision() || 'release_asset' !== $status->source() ) {
+			return $this->outcome( 'source_changed' );
+		}
 		$eligibleCandidates = $candidates->candidates;
 		if ( array() === $eligibleCandidates ) {
 			return $this->outcome(

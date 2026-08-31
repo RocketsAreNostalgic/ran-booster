@@ -346,6 +346,51 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Assess release setup', $html );
 	}
 
+	public function testProviderActionsPreserveNormalizedDescriptions(): void {
+		$row = array(
+			'repository'        => 'owner/branch',
+			'source_label'      => 'Branch',
+			'source_key'        => 'branch',
+			'package_summaries' => array(),
+			'details'           => array(),
+			'actions'           => array(
+				array(
+					'key'          => 'fixture:post',
+					'label'        => 'Post',
+					'type'         => 'post',
+					'url'          => 'https://example.test/wp-admin/admin-post.php',
+					'hidden'       => array(
+						'action'   => 'fixture_action',
+						'_wpnonce' => 'nonce',
+					),
+					'described_by' => 'post-help',
+				),
+				array(
+					'key'          => 'fixture:disabled',
+					'label'        => 'Disabled',
+					'type'         => 'link',
+					'url'          => '',
+					'disabled'     => true,
+					'described_by' => 'disabled-help',
+				),
+				array(
+					'key'          => 'fixture:link',
+					'label'        => 'Link',
+					'type'         => 'link',
+					'url'          => 'https://example.test/link',
+					'described_by' => 'link-help',
+				),
+			),
+		);
+		ob_start();
+		( new RepositoryDetailRenderer() )->render( $row, 'Fixture', 'https://example.test/repositories', 'https://example.test/activity', true, '', 'branch', $this->viewUrls(), $this->viewRequestUrls(), null, null );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'aria-describedby="post-help"', $html );
+		self::assertStringContainsString( 'aria-describedby="disabled-help"', $html );
+		self::assertStringContainsString( 'aria-describedby="link-help"', $html );
+	}
+
 	/** @return array<string, string> */
 	private function viewUrls(): array {
 		return array(

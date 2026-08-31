@@ -37,7 +37,7 @@ final class WorkflowApplicationCoordinator {
 			return $this->result( $status, 'preflight_unavailable', false, '', 'release_preflight', $reason );
 		}
 		if ( ! $this->acceptsBootstrapPreflight( $preflight->code() ) ) {
-			return $this->result( $status, $preflight->code(), 'ready' === $preflight->code() );
+			return $this->result( $status, $preflight->code(), 'ready' === $preflight->code(), '', 'release_preflight', $this->preflightDiagnostic( $preflight->code(), $preflight->reasonCode() ) );
 		}
 		$remote = $this->bootstrapBundle( $status, $token, null, true );
 		if ( 'ok' !== $remote['code'] ) {
@@ -69,7 +69,7 @@ final class WorkflowApplicationCoordinator {
 			return $this->result( $status, 'preflight_unavailable', false, $key, 'release_preflight', $reason );
 		}
 		if ( ! $this->acceptsBootstrapPreflight( $preflight->code() ) ) {
-			return $this->result( $status, 'target_changed', false, $key );
+			return $this->result( $status, 'target_changed', false, $key, 'release_preflight', $this->preflightDiagnostic( $preflight->code(), $preflight->reasonCode() ) );
 		}
 		$latest = $this->templates->discover( $token );
 		$exact  = 'ok' === $latest['code'] && $latest['pack']->identity() === $preview['new_template_identity']
@@ -110,6 +110,14 @@ final class WorkflowApplicationCoordinator {
 
 	private function acceptsBootstrapPreflight( string $code ): bool {
 		return in_array( $code, array( 'ready', 'release_unavailable' ), true );
+	}
+
+	private function preflightDiagnostic( string $code, string $reason ): string {
+		if ( in_array( $reason, self::PREFLIGHT_REASON_CODES, true ) ) {
+			return $reason;
+		}
+
+		return in_array( $code, self::PREFLIGHT_REASON_CODES, true ) ? $code : 'preflight_contract_unavailable';
 	}
 
 	public function setupUpdate( ReleaseTrackingStatus $status, string $key, string $confirmation, string $token ): array {

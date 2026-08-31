@@ -8,6 +8,7 @@ require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentPolicy;
 
 final class PackageBranchReadinessViewTest extends TestCase {
@@ -121,7 +122,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Booster Activity', $html );
 		self::assertStringNotContainsString( 'ran-booster-readiness-actions__links', $html );
 		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
-		self::assertStringContainsString( '>Manage webhooks</a>', $html );
+		self::assertStringContainsString( '>Review repository webhook settings</a>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42&amp;repository_view=branch"', $html );
 		self::assertStringNotContainsString( 'repository=repo-42#', $html );
 		$checkPosition  = strpos( $html, '>Save settings and check</button>' );
@@ -175,6 +176,65 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<a\s+class="button disabled"\s+aria-disabled="true"\s+tabindex="-1"\s*>Manage webhooks<\\/a>/', $html );
 		self::assertStringNotContainsString( 'href=', $html );
 		self::assertStringNotContainsString( 'panel=repositories', $html );
+	}
+
+	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
+		$packageMutationAvailable = true;
+		$packageSourceChoices     = array(
+			'branch' => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy a saved repository branch.',
+				'meta'              => 'Included with Booster',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+				'disabled'          => false,
+				'hydrated'          => true,
+				'client_hydratable' => false,
+			),
+		);
+		$packageSourceMode        = 'edit';
+		$packageFieldLayout       = 'grid';
+		$packageSourceView        = 'branch';
+		$showBranchSettings       = true;
+		$releaseManaged           = true;
+		$branchReadOnly           = true;
+		$branchValue              = 'main';
+		$subdirectoryValue        = '';
+		$packageAdvancedSections  = array();
+		$packageAdvancedSummary   = 'Published releases · Active';
+		$packageAdvancedOpen      = false;
+		$packageRepositoryReady   = true;
+		$packageSource            = array();
+		$packageView              = new class() {
+			public function getType(): string {
+				return 'plugin';
+			}
+		};
+		$packageWebhookCleanup    = array(
+			'context' => new WebhookCleanupContext(
+				'plugin',
+				'example/example.php',
+				'gh',
+				'101',
+				'example/example',
+				'repository',
+				true,
+				true,
+				array(),
+				'https://example.test/webhooks',
+				'https://example.test/secrets',
+				'https://example.test/docs',
+				'https://example.test/settings'
+			),
+			'actions' => array(),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Inactive Branch deployment settings', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
+		self::assertStringNotContainsString( '>Save settings and check</button>', $html );
 	}
 
 	#[DataProvider( 'subdirectoryChecklistProvider' )]

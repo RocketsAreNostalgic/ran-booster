@@ -46,6 +46,8 @@ final class RepositoryDetailRenderer {
 					<a class="button" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $providerLabel ) ); ?></a>
 				<?php } ?>
 			</header>
+			<p class="ran-booster-provider-task-progress" data-ran-booster-provider-task-progress role="status" aria-live="polite" hidden><span class="spinner is-active" aria-hidden="true"></span><span><?php esc_html_e( 'Loading repository details…', 'ran-booster' ); ?></span></p>
+			<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div>
 			<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-push-url="true" hx-history="false" hx-sync="this:replace">
 				<?php
 				foreach ( array(
@@ -68,6 +70,7 @@ final class RepositoryDetailRenderer {
 				<main class="ran-booster-repository-detail__main">
 					<?php if ( 'status' === $activeView ) { ?>
 						<?php $this->renderStatus( $row, $packages ); ?>
+						<?php $this->renderStatusLinks( $row ); ?>
 					<?php } elseif ( 'branch' === $activeView && 0 < $omitted ) { ?>
 						<?php $this->renderIncompleteWorkflowControls( 'branch', $omitted ); ?>
 					<?php } elseif ( 'branch' === $activeView ) { ?>
@@ -347,6 +350,32 @@ final class RepositoryDetailRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
+	private function renderStatusLinks( array $row ): void {
+		$links = array_values(
+			array_filter(
+				is_array( $row['status_links'] ?? null ) ? $row['status_links'] : array(),
+				static fn ( mixed $link ): bool => is_array( $link )
+					&& is_string( $link['label'] ?? null ) && '' !== $link['label']
+					&& is_string( $link['url'] ?? null ) && '' !== $link['url']
+			)
+		);
+		if ( array() === $links ) {
+			return;
+		}
+		?>
+		<p class="ran-booster-repository-detail__status-links">
+		<?php foreach ( $links as $index => $link ) { ?>
+			<?php
+			if ( 0 < $index ) {
+				?>
+				<span aria-hidden="true">·</span><?php } ?>
+			<a href="<?php echo esc_url( (string) $link['url'] ); ?>"><?php echo esc_html( (string) $link['label'] ); ?></a>
+		<?php } ?>
+		</p>
+		<?php
+	}
+
+	/** @param array<string, mixed> $row */
 	private function renderProviderActions( array $row ): void {
 		$actions = array_values(
 			array_filter(
@@ -360,17 +389,18 @@ final class RepositoryDetailRenderer {
 		?>
 		<div class="ran-booster-repository-detail__actions">
 		<?php foreach ( $actions as $action ) { ?>
+			<?php $describedBy = is_string( $action['described_by'] ?? null ) ? $action['described_by'] : ''; ?>
 			<?php if ( 'post' === ( $action['type'] ?? null ) ) { ?>
 				<form method="post" action="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>">
 				<?php foreach ( is_array( $action['hidden'] ?? null ) ? $action['hidden'] : array() as $name => $value ) { ?>
 					<input type="hidden" name="<?php echo esc_attr( (string) $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 				<?php } ?>
-					<button type="submit" class="button"<?php disabled( true === ( $action['disabled'] ?? false ) ); ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
+					<button type="submit" class="button"<?php disabled( true === ( $action['disabled'] ?? false ) ); ?><?php echo '' !== $describedBy ? ' aria-describedby="' . esc_attr( $describedBy ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
 				</form>
 			<?php } elseif ( true === ( $action['disabled'] ?? false ) ) { ?>
-				<button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
+				<button type="button" class="button" disabled aria-disabled="true"<?php echo '' !== $describedBy ? ' aria-describedby="' . esc_attr( $describedBy ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
 			<?php } elseif ( 'link' === ( $action['type'] ?? null ) ) { ?>
-				<a class="button" href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></a>
+				<a class="button" href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $describedBy ? ' aria-describedby="' . esc_attr( $describedBy ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></a>
 			<?php } ?>
 		<?php } ?>
 		</div>

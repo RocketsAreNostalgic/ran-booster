@@ -65,14 +65,14 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$status                    = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
 		$facade->preflightResponse = new ReleaseTrackingPreflight( 'invalid_release_assets', 'example-plugin', reasonCode: 'invalid_release' );
 
-		$inspection = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$inspection = $coordinator->inspect( $status, 'stable', $facade->preflightResponse, 'token' );
 		self::assertSame( 'release_preflight', $inspection['failure_stage'] );
 		self::assertSame( 'invalid_release', $inspection['diagnostic_code'] );
 
 		$facade->preflightResponse = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin' );
-		$preview                   = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$preview                   = $coordinator->inspect( $status, 'stable', $facade->preflightResponse, 'token' );
 		$facade->preflightResponse = new ReleaseTrackingPreflight( 'invalid_release_assets', 'example-plugin', reasonCode: 'invalid_release' );
-		$setup                     = $coordinator->setup( $status, $preview['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+		$setup                     = $coordinator->setup( $status, $preview['preview_key'], 'owner/example-plugin', $facade->preflightResponse, 'token' );
 		self::assertSame( 'release_preflight', $setup['failure_stage'] );
 		self::assertSame( 'invalid_release', $setup['diagnostic_code'] );
 	}

@@ -630,6 +630,36 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertTrue( $evidence->replacementWasPersisted );
 	}
 
+	public function testCredentialDeletionClearsTheDeletedDefaultEvenWhenEvidenceInvalidationFails(): void {
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$lookup               = new InMemoryPublicRepositoryLookupProfileStore();
+		$lookup->profiles     = array( 'fixture' => 'credential_existing' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'   => 'delete-access-profile',
+			'provider' => 'fixture',
+			'id'       => 'credential_existing',
+		);
+
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				$lookup,
+				branchCheckEvidence: new ThrowingBranchCheckEvidenceStore()
+			)
+		);
+
+		self::assertSame( 'success', $response->kind );
+		self::assertSame( 'Repository credential removed. Public repository lookup now uses anonymous access.', $response->feedbackMessage );
+		self::assertArrayNotHasKey( 'credential_existing', $this->secrets->credentialProfiles( 'fixture' ) );
+		self::assertSame( array(), $lookup->profiles );
+	}
+
 	public function testAccessProfileLockContentionFailsBeforeCredentialDeletion(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
@@ -1048,6 +1078,14 @@ final class ReplacementAwareBranchCheckEvidenceStore extends RepositoryBranchChe
 	public function bumpProfileGeneration( string $provider, string $profileId ): void {
 		$this->replacementWasPersisted = ( $this->replacementMaterialWasPersisted )();
 		$this->invalidatedProfiles[]   = $provider . ':' . $profileId;
+	}
+}
+
+final class ThrowingBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+
+	public function bumpProfileGeneration( string $provider, string $profileId ): void {
+		unset( $provider, $profileId );
+		throw new \RuntimeException( 'Fixture evidence invalidation failed.' );
 	}
 }
 

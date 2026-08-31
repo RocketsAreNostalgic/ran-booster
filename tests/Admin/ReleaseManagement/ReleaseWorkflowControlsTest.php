@@ -61,6 +61,32 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		}
 	}
 
+	public function testWorkflowResultFallsBackToThePackageReleaseAssetSettingsWhenTheRepositoryCannotBeResolved(): void {
+		$request                           = $this->request( 'inspect' );
+		$request['expected_repository_id'] = 'missing-repository';
+		$url                               = $this->controls()->processWorkflowRequest( $request );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $query );
+
+		self::assertSame( 'ran-booster-plugins', $query['page'] );
+		self::assertSame( 'example/example.php', $query['package'] );
+		self::assertSame( 'release_asset', $query['source_view'] );
+		self::assertSame( '1', $query['ran_booster_open_advanced'] );
+		self::assertArrayNotHasKey( 'repository_view', $query );
+		self::assertSame( 'ran-booster-advanced-source-settings', \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_FRAGMENT ) );
+	}
+
+	public function testWorkflowResultReturnsToTheExactRepositoryReleaseView(): void {
+		$url = $this->controls()->processWorkflowRequest( $this->request( 'inspect' ) );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $query );
+
+		self::assertSame( 'repositories', $query['panel'] );
+		self::assertSame( '101', $query['repository'] );
+		self::assertSame( 'releases', $query['repository_view'] );
+		self::assertArrayNotHasKey( 'source_view', $query );
+		self::assertArrayNotHasKey( 'ran_booster_open_advanced', $query );
+		self::assertSame( 'ran-booster-repository-release-workflows', \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_FRAGMENT ) );
+	}
+
 	public function testMissingAggregateAndWrongAuthorityFailClosedWithoutProviderCalls(): void {
 		$provider = new RepositoryReleaseWorkflowProviderDouble();
 		$url      = $this->controls( provider: $provider, registered: false )->processWorkflowRequest( $this->request( 'inspect' ) );

@@ -655,8 +655,14 @@ final class ReleaseWorkflowControls {
 		$args                   = $this->resultQueryArguments( $outcome, $channel, $revision, $providerCode, $repositoryId );
 		if ( '' !== $outcome['preview_key'] ) {
 			$args[ self::PREVIEW_QUERY_KEY ] = $outcome['preview_key']; }
-		$url = $exact ? $this->repositoryReleaseUrl( $repositoryId, $providerCode ) : $this->returnUrl( $type, $identifier, true );
-		return add_query_arg( $args, $url ) . '#ran-booster-repository-release-workflows';
+		if ( $exact ) {
+			return add_query_arg( $args, $this->repositoryReleaseUrl( $repositoryId, $providerCode ) ) . '#ran-booster-repository-release-workflows';
+		}
+
+		$args['source_view']               = 'release_asset';
+		$args['ran_booster_open_advanced'] = '1';
+
+		return add_query_arg( $args, $this->returnUrl( $type, $identifier, true ) ) . '#ran-booster-advanced-source-settings';
 	}
 	/** @param array<string, mixed> $request */
 	private function workflowType( array $request ): string {

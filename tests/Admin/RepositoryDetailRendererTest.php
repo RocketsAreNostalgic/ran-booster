@@ -54,6 +54,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
 				),
+				array(
+					'key'   => 'fixture:repository-access',
+					'label' => 'Provider access',
+					'value' => 'Configured',
+				),
 			),
 			'actions'                   => array(
 				array(
@@ -121,6 +126,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Provider receiver', $html );
 		self::assertStringNotContainsString( 'Receiver ready.', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
+		self::assertStringContainsString( 'Repository details', $html );
+		self::assertStringContainsString( 'Provider access', $html );
+		self::assertLessThan( strpos( $html, 'Provider access' ), strpos( $html, 'Repository details' ) );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 	}
 

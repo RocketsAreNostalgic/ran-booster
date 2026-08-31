@@ -188,6 +188,14 @@ them:
   stable or prerelease channel. The provider owns remote calls and credential
   use; the facet grants no download, inspection, installation or mutation
   authority.
+
+  When an otherwise eligible release read cannot complete with the supplied
+  access profile because of credential/access denial, rate limiting, or a
+  transport failure, throw
+  `RAN\RepositoryProvider\RepositoryReleaseReadUnavailable`. Core can then
+  make its one allowed public-lookup retry for a public repository. Do not throw
+  it for an empty release list, an invalid release, or package incompatibility;
+  do not retry or choose another credential inside the provider.
 - `RAN\RepositoryProvider\RepositoryReleaseInspector` for inspecting one exact
   release and returning bounded, path-free evidence. The provider owns archive
   acquisition, verification and disposal; the facet grants no installation,

@@ -83,6 +83,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$branchValue              = 'main';
 		$deploymentPolicy         = DeploymentPolicy::AUTOMATIC->value;
 		$packageBranchReadiness   = array(
+			'retained'             => false,
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
 				'status'       => 'ready',
@@ -226,6 +227,18 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			),
 			'actions' => array(),
 		);
+		$packageBranchReadiness   = array(
+			'retained'   => true,
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'repository_id'         => '101',
+				'reason_codes'          => array(),
+				'local_secret_coverage' => 'repository',
+			),
+		);
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
@@ -234,6 +247,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'Inactive Branch deployment settings', $html );
 		self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
 		self::assertStringContainsString( 'Pushes are ignored while this package uses Published releases.', $html );
+		self::assertStringContainsString( 'Retained Branch setup', $html );
+		self::assertStringContainsString( 'Published releases are active. These saved Branch facts are retained and read-only until returning.', $html );
+		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
+		self::assertStringContainsString( 'The site exposes a structurally valid HTTPS webhook endpoint.', $html );
 		self::assertStringNotContainsString( '>Needs attention</span>', $html );
 		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}

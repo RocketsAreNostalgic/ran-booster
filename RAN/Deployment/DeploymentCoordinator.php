@@ -250,7 +250,7 @@ class DeploymentCoordinator {
 		try {
 			BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 			PackageMutationGuard::assertFilesystemMutationAllowed();
-			$baseline = $this->assertFrozenTarget( $attempt );
+			$baseline = $this->assertFrozenTarget( $attempt, true );
 			BoosterLogger::log( 'target snapshot verified', $context + array( 'step' => 'target_verified' ) );
 			$baselineState = null === $baseline ? null : $this->packageRuntimeState( $baseline );
 			$failureCode   = DeploymentOutcome::CODE_PROVIDER_FAILED;
@@ -521,7 +521,7 @@ class DeploymentCoordinator {
 	}
 
 	/** Return the current installed package for an update, or null for a new install. */
-	private function assertFrozenTarget( DeploymentAttempt $attempt ): ?Package {
+	private function assertFrozenTarget( DeploymentAttempt $attempt, bool $deferMatchingManagedDestination = false ): ?Package {
 		$data          = $attempt->safeData();
 		$request       = $attempt->getRequest();
 		$packageSource = $data['package_source'] ?? null;
@@ -534,6 +534,9 @@ class DeploymentCoordinator {
 			}
 			if ( $this->destinationExists( (string) $data['package_type'], $request->packageSlug ) ) {
 				if ( $this->existingManagementMatchesInstallTarget( $attempt ) ) {
+					if ( $deferMatchingManagedDestination ) {
+						return null;
+					}
 					throw new ExistingManagedDestination();
 				}
 				throw new RuntimeException( 'The package destination already exists.' );

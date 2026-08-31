@@ -189,7 +189,21 @@ abstract class AbstractPackageRepository {
 			'source_revision' => $expectedSource->source_revision,
 		);
 		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source ) {
-			$where['subdirectory'] = null;
+			try {
+				$rows = $this->packageRows( $model->package );
+				if ( 1 !== count( $rows )
+					|| null !== PackageSubdirectory::normalize( $this->valueFromRow( $rows[0], 'subdirectory' ) ) ) {
+					return $this->sourceConflictResult();
+				}
+			} catch ( InvalidArgumentException ) {
+				return $this->sourceConflictResult();
+			} catch ( PackageStorageFailure $failure ) {
+				return $this->failureResult( $failure );
+			}
+
+			// Preserve the stored root representation in the CAS predicate. Legacy
+			// records may use either NULL or an empty string for the repository root.
+			$where['subdirectory'] = $this->valueFromRow( $rows[0], 'subdirectory' );
 		}
 		$result = $wpdb->update(
 			ran_booster_table_name(),

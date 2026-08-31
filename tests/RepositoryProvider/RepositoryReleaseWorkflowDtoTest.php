@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\RepositoryProvider;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
@@ -61,7 +62,7 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', false, message: '<em>Unsafe</em>' );
 	}
 
-	/** @dataProvider invalidResultFailureStageProvider */
+	#[DataProvider( 'invalidResultFailureStageProvider' )]
 	public function testResultRejectsFailureStagesOutsideCoreDisplayContract( bool $successful, string $failureStage ): void {
 		$this->expectException( InvalidArgumentException::class );
 
@@ -76,7 +77,7 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		);
 	}
 
-	/** @dataProvider invalidUtf8ProviderText */
+	#[DataProvider( 'invalidUtf8ProviderText' )]
 	public function testResultRejectsMalformedUtf8ProviderText( string $field ): void {
 		$this->expectException( InvalidArgumentException::class );
 

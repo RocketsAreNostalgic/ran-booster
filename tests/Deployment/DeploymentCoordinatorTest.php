@@ -725,7 +725,6 @@ final class DeploymentCoordinatorTest extends TestCase {
 		$this->preflight->artifact     = $artifact;
 		$this->preflight->beforeReturn = static function () use ( $artifact ): void {
 			$cleaned = new \ReflectionProperty( $artifact, 'cleaned' );
-			$cleaned->setAccessible( true );
 			$cleaned->setValue( $artifact, true );
 		};
 

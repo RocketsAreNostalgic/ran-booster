@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Storage;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\PackageSource;
 use RAN\Storage\Database;
@@ -15,7 +16,7 @@ require_once __DIR__ . '/StorageTestEnvironment.php';
 
 final class RepositorySourceGuardTest extends TestCase {
 
-	/** @dataProvider truthMatrix */
+	#[DataProvider( 'truthMatrix' )]
 	public function testAssessRowsEnforcesTheExactRepositorySourceShape( array $rows, PackageSource $proposed, bool $allowed, string $code, int $releaseCount ): void {
 		$result = RepositorySourceGuard::assessRows( $rows, 'gh', 'R_1', 1, 'self/self.php', $proposed );
 

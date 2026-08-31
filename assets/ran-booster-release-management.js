@@ -105,6 +105,12 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			managedBrowser.dataset
 				.ranBoosterManagedReleaseNativeUpdateReleaseId &&
 		Boolean(managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl);
+	const isCurrentNativeUpdateOffer = (candidate, nativeOffer) =>
+		nativeOffer?.available === true &&
+		candidate.version_relationship === 'newer' &&
+		candidate.version === nativeOffer.version &&
+		String(candidate.release_id) === String(nativeOffer.release_id) &&
+		Boolean(managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl);
 	const request = async (operation, extra = {}) => {
 		const data = new FormData();
 		data.append(
@@ -179,10 +185,13 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('inspection_failed');
 			}
 			const relationship = response.data.version_relationship;
-			const nativeOffer = isNativeUpdateOffer({
-				...response.data,
-				release_id: selected.release_id,
-			});
+			const nativeOffer = isCurrentNativeUpdateOffer(
+				{
+					...response.data,
+					release_id: selected.release_id,
+				},
+				response.data.native_offer
+			);
 			let outcomeMessage = `Version ${response.data.version} matches the installed version.`;
 			let statusMessage = outcomeMessage;
 			if (relationship === 'newer') {
@@ -202,7 +211,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				selectedOutcome.hidden = relationship !== 'newer';
 			}
 			if (nativeOffer) {
-				enableNativeUpdate(response.data.version);
+				enableNativeUpdate(response.data.native_offer.version);
 			} else {
 				disableNativeUpdate();
 			}

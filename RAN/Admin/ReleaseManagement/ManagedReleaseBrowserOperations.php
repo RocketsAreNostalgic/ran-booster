@@ -76,6 +76,11 @@ final class ManagedReleaseBrowserOperations {
 				'details_url'          => $inspection->releaseUrl(),
 				'installed_version'    => $status->installedVersion(),
 				'version_relationship' => $inspection->versionRelationship(),
+				'native_offer'         => array(
+					'available'  => $status->updateAvailable(),
+					'release_id' => $status->nativeOfferReleaseId(),
+					'version'    => $status->latestVersion(),
+				),
 			)
 		);
 	}

@@ -73,7 +73,6 @@ final class ReleaseManagementDisplay {
 		$browserEnabled  = $statusAvailable
 			&& 'release_asset' === $source
 			&& $eligibility->eligible()
-			&& '' === $status->failureCode()
 			&& '' !== ( $nonceActions['list_candidates'] ?? '' )
 			&& '' !== ( $nonceActions['inspect_candidate'] ?? '' );
 		$gateNotice      = ! $statusAvailable

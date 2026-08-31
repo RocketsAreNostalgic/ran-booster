@@ -87,7 +87,8 @@ final class GitHubRepositoryReleaseWorkflow {
 	public function inspect( ReleaseTrackingStatus $status, string $channel, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		if ( ! $this->bootstrapPreflight( $preflight ) ) {
 			return $this->persist( 'inspect', $status, $this->preflightResult( $status, $preflight ) ); }
-		return $this->persist( 'inspect', $status, $this->coordinator->inspect( $status, $channel, $preflight, $this->credential( $credentialId, false ) ) );
+		$token = $this->credential( $credentialId, false );
+		return $this->persist( 'inspect', $status, $this->selectedCredentialUnavailable( $credentialId, $token ) ? $this->unauthorised( $status ) : $this->coordinator->inspect( $status, $channel, $preflight, $token ) );
 	}
 	public function setup( ReleaseTrackingStatus $status, string $key, string $confirmation, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		if ( ! $this->bootstrapPreflight( $preflight ) ) {

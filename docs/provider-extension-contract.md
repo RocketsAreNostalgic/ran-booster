@@ -143,6 +143,13 @@ callbacks, clients or storage handles. Available releases, detected automation,
 verified configuration, recorded setup pull requests and latest outcomes remain
 separate evidence.
 
+`RepositoryReleaseWorkflowResult::failureStage()` is a closed, Core-owned
+display category, never a provider-defined value. Successful results must use
+an empty failure stage. A failed result may use an empty stage or only
+`credential_authorisation`, `release_preflight`, `repository_snapshot`,
+`template_pack`, `preview_storage`, `repository_mutation`,
+`local_persistence` or `unexpected`.
+
 Core admits one fixed workflow endpoint. It checks administrator permissions,
 provider dependencies, exact repository/package/source revision, repository
 admission, operation nonce, preview identity and credential-profile eligibility

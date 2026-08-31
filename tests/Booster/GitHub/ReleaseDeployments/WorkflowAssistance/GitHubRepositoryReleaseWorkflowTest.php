@@ -90,9 +90,10 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		self::assertTrue( $records->save( $this->record() ) );
 		$workflow = $this->workflow( $credentials, $records, $transport );
 
+		self::assertSame( 'workflow_unauthorised', $workflow->inspect( $status, 'stable', new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin' ), 'eligible' )->workflowCode() );
 		self::assertSame( 'workflow_unauthorised', $workflow->outcome( $status, 'eligible' )->workflowCode() );
 		self::assertSame( 'workflow_unauthorised', $workflow->inspectUpdate( $status, 'eligible' )->workflowCode() );
-		self::assertSame( array( 'eligible', 'eligible' ), $credentials->materialReads );
+		self::assertSame( array( 'eligible', 'eligible', 'eligible' ), $credentials->materialReads );
 		self::assertSame( array(), $transport->requests );
 	}
 

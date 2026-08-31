@@ -21,6 +21,8 @@ final readonly class RepositoryReleaseWorkflowResult {
 		if ( 1 !== preg_match( '/\Aworkflow_[a-z0-9_]{1,55}\z/D', $this->workflowCode )
 			|| ( '' !== $this->previewKey && 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $this->previewKey ) )
 			|| ( '' !== $this->correlationReference && 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $this->correlationReference ) )
+			|| ( $this->successful && '' !== $this->failureStage )
+			|| ( '' !== $this->failureStage && ! in_array( $this->failureStage, array( 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) )
 			|| ! $this->text( $this->failureStage, 64 ) || ! $this->text( $this->diagnosticCode, 96 )
 			|| ! $this->text( $this->message, 512 ) || ! $this->text( $this->remediation, 512 ) ) {
 			throw new InvalidArgumentException( 'Release workflow result is invalid.' );

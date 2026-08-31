@@ -61,6 +61,21 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', false, message: '<em>Unsafe</em>' );
 	}
 
+	/** @dataProvider invalidResultFailureStageProvider */
+	public function testResultRejectsFailureStagesOutsideCoreDisplayContract( bool $successful, string $failureStage ): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', $successful, failureStage: $failureStage );
+	}
+
+	/** @return array<string, array{bool, string}> */
+	public static function invalidResultFailureStageProvider(): array {
+		return array(
+			'success-stage' => array( true, 'repository_snapshot' ),
+			'unknown-stage' => array( false, 'provider_transport' ),
+		);
+	}
+
 	/** @dataProvider invalidUtf8ProviderText */
 	public function testResultRejectsMalformedUtf8ProviderText( string $field ): void {
 		$this->expectException( InvalidArgumentException::class );

@@ -219,7 +219,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 		try {
 			PackageMutationGuard::assertFilesystemMutationAllowed();
-			$repository = $this->resolveRepository( $repositoryRequest );
+			$repository   = $this->resolveRepository( $repositoryRequest );
 			$availability = $this->prospectiveReleaseSourceAvailable( $type, $repository );
 			if ( true !== $availability ) {
 				return ProspectiveReleaseResult::failure(
@@ -295,7 +295,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				);
 				$userId        = ( $this->currentUserId )();
 				$lockToken     = $this->updaterLock->acquire();
-				$availability = $this->releaseSourceAvailable( $type, $identifier, $repository );
+				$availability  = $this->releaseSourceAvailable( $type, $identifier, $repository );
 				if ( true !== $availability ) {
 					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
 					break;

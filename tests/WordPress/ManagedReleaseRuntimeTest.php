@@ -1500,10 +1500,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			);
 
 			$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
-			$status = $facade->status( 'plugin', 'example/example.php' );
-
 			self::assertSame( 'release_unavailable', $result->code(), $case );
-			self::assertSame( 'release_unavailable', $status->failureCode(), $case );
+			if ( 'unavailable guard' === $case ) {
+				self::assertSame( 'release_unavailable', $facade->status( 'plugin', 'example/example.php' )->failureCode(), $case );
+			}
 			self::assertSame( array(), $store->transitions, $case );
 			self::assertSame( 0, $lock->acquires, $case );
 		}

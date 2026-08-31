@@ -284,13 +284,13 @@ final class WebhookOperationCoordinator {
 
 	/** @param array<string, mixed> $configuration */
 	private function recordTest( InstallationRecord $record, string $managementCredentialId, string $state, string $code, string $observed, string $delivery, array $configuration ): string {
-		if ( 'succeeded' === $state && 'absent' === $delivery ) {
+		if ( 'absent' === $delivery ) {
 			return $this->writeResultCode(
 				$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, 'remote_missing', $observed ), $record ),
 				'remote_missing'
 			);
 		}
-		if ( 'succeeded' === $state && in_array( 'mismatched', $configuration, true ) ) {
+		if ( in_array( 'mismatched', $configuration, true ) ) {
 			return $this->writeResultCode(
 				$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, 'configuration_drift', $observed ), $record ),
 				'configuration_drift'

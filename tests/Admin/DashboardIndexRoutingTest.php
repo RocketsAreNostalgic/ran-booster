@@ -1500,7 +1500,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 			array(
 				'packageProviderSettings',
 				'packageBranchReadiness',
-				'packageWebhookCleanup',
 				'package',
 				'packageView',
 				'packageExtensionPanels',

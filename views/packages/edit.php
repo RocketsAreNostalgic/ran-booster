@@ -101,9 +101,6 @@ $repositoryBranchCheckOutcome = isset( $repositoryBranchCheckOutcome ) && is_str
 	&& in_array( $repositoryBranchCheckOutcome, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true )
 	? $repositoryBranchCheckOutcome
 	: null;
-$packageWebhookCleanup        = isset( $packageWebhookCleanup ) && is_array( $packageWebhookCleanup )
-	? $packageWebhookCleanup
-	: null;
 $packageSourceChoices         = is_array( $packageSource['choices'] ?? null ) ? $packageSource['choices'] : array();
 $packageAdvancedSections      = is_array( $packageSource['advanced_sections'] ?? null ) ? $packageSource['advanced_sections'] : array();
 $packageAdvancedSummary       = is_string( $packageSource['advanced_summary'] ?? null )

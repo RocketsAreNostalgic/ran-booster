@@ -1019,7 +1019,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryHtml = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryHtml );
+		self::assertStringContainsString( '>Push-to-deploy</h3>', $repositoryHtml );
 		self::assertStringContainsString( 'Repository webhook management is unavailable until this site can receive provider deliveries.', $repositoryHtml );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Manage repository webhook</button>', $repositoryHtml );
 	}

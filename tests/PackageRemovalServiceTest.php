@@ -116,7 +116,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
-	public function testFailedUnlinkPreservesBranchEvidence(): void {
+	public function testFailedUnlinkInvalidatesBranchEvidence(): void {
 		$fixture                         = $this->fixture();
 		$evidence                        = new RemovalBranchCheckEvidenceStore();
 		$fixture->plugins->unlinkFailure = true;
@@ -132,9 +132,33 @@ final class PackageRemovalServiceTest extends TestCase {
 
 		try {
 			$service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) );
-			self::fail( 'Failed unlink should not clear branch check evidence.' );
+			self::fail( 'Failed unlink should preserve the invalidated branch evidence state.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertSame( 'Fixture unlink failed.', $failure->getMessage() );
+		}
+		self::assertFalse( $fixture->plugins->unlinked );
+		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
+	}
+
+	public function testFailedBranchEvidenceClearLeavesPackageManagementAndEvidenceUntouched(): void {
+		$fixture              = $this->fixture();
+		$evidence             = new RemovalBranchCheckEvidenceStore();
+		$evidence->clearFails = true;
+		$service              = new PackageRemovalService(
+			$fixture->plugins,
+			$fixture->themes,
+			$fixture->gateway,
+			null,
+			new RemovalUpdaterLock(),
+			$evidence
+		);
+		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
+
+		try {
+			$service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) );
+			self::fail( 'Failed branch evidence clear should not unlink the package.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Fixture evidence clear failed.', $failure->getMessage() );
 		}
 		self::assertFalse( $fixture->plugins->unlinked );
 		self::assertNotNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );

@@ -104,6 +104,28 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
+	public function testRepositorySourceDiagnosticsRemainActionableInWorkflowFailureDetails(): void {
+		$display = new ReleaseWorkflowDisplay();
+		foreach ( array(
+			'repository_source_conflict'      => 'Another managed package now uses this repository. Review the repository package list, then change or remove the conflicting relationship before retrying.',
+			'repository_source_unavailable'   => 'Booster could not safely read the repository source relationship. Check package storage and retry.',
+			'repository_release_owner_exists' => 'Another managed package already uses this repository for releases. Return that package to Branch deployments or stop managing it before retrying.',
+		) as $diagnostic => $message ) {
+			$html = $display->workflow(
+				array(
+					'result_code'       => 'workflow_invalid_request',
+					'result_successful' => false,
+					'failure_stage'     => 'request_validation',
+					'diagnostic_code'   => $diagnostic,
+				)
+			);
+
+			self::assertStringContainsString( '<details><summary>Failure details</summary>', $html, $diagnostic );
+			self::assertStringContainsString( $message, $html, $diagnostic );
+			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
+		}
+	}
+
 	public function testImmediateReleasePreflightFailureIsAnErrorNoticeWithAnInlineDiagnosticDisclosure(): void {
 		$display = new ReleaseWorkflowDisplay();
 		$html    = $display->workflow(

@@ -32,7 +32,7 @@ final class ReleaseWorkflowControls {
 	private const RESULT_REFERENCE_QUERY_KEY            = 'ran_booster_release_workflow_reference';
 	private const RESULT_MESSAGE_QUERY_KEY              = 'ran_booster_release_workflow_message';
 	private const RESULT_REMEDIATION_QUERY_KEY          = 'ran_booster_release_workflow_remediation';
-	private const FAILURE_DIAGNOSTIC_CODES              = array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'repository_source_unavailable', 'repository_release_owner_exists', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
+	private const FAILURE_DIAGNOSTIC_CODES              = array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'repository_source_conflict', 'repository_source_unavailable', 'repository_release_owner_exists', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
 	private const RESULT_NONCE_ACTION                   = 'ran-booster-release-workflow-result-';
 	private const PREVIEW_QUERY_KEY                     = 'ran_booster_release_workflow_preview';
 	private const CHANNEL_QUERY_KEY                     = 'ran_booster_release_workflow_channel';
@@ -869,10 +869,17 @@ final class ReleaseWorkflowControls {
 		$value = __( 'Unavailable', 'ran-booster' );
 		$tone  = 'warning';
 		if ( $exact && $status instanceof ReleaseTrackingStatus ) {
-			$workflowStatus = $this->workflowProviderStatus( $status );
+			$workflowStatus  = $this->workflowProviderStatus( $status );
+			$observationKind = $workflowStatus?->observationKind() ?? '';
 			if ( $this->recordMatchesStatus( $workflowStatus, $status ) ) {
 				$value = __( 'Setup recorded', 'ran-booster' );
 				$tone  = 'pending';
+			} elseif ( 'existing_automation_detected' === $observationKind ) {
+				$value = __( 'Existing workflow found', 'ran-booster' );
+				$tone  = 'info';
+			} elseif ( 'booster_setup_verified' === $observationKind ) {
+				$value = __( 'Compatible workflow verified', 'ran-booster' );
+				$tone  = 'ok';
 			} elseif ( $this->publishedReleasesWorking( $status ) ) {
 				$value = __( 'Published releases working', 'ran-booster' );
 				$tone  = 'ok';

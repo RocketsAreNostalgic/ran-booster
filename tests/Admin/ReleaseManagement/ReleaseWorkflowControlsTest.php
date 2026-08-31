@@ -220,6 +220,44 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'release_workflow', $rows['101']['details'][0]['category'] );
 	}
 
+	public function testRepositoryProjectionUsesTheSameBenignExistingWorkflowObservationAsTheRepositoryPanel(): void {
+		$status   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+			'fixture',
+			'101',
+			false,
+			false,
+			observationKind: 'existing_automation_detected',
+			observedAt: '2026-08-31T12:00:00Z'
+		);
+		$controls = $this->controls( provider: new RepositoryReleaseWorkflowProviderDouble( status: $status ) );
+		$rows     = $controls->enrichRepositoryRows(
+			array(
+				'101' => array(
+					'provider_code'     => 'fixture',
+					'repository_id'     => '101',
+					'repository'        => 'example/example',
+					'historical'        => false,
+					'package_summaries' => array(
+						array(
+							'type'            => 'plugin',
+							'identifier'      => 'example/example.php',
+							'source'          => 'branch',
+							'source_revision' => 3,
+						),
+					),
+					'details'           => array(),
+					'actions'           => array(),
+				),
+			),
+			'fixture',
+			array(),
+			'https://example.test/repositories'
+		);
+
+		self::assertSame( 'Existing workflow found', $rows['101']['details'][0]['value'] );
+		self::assertSame( 'info', $rows['101']['details'][0]['tone'] );
+	}
+
 	public function testReleaseWorkflowRepositoryEnrichmentHonoursRemainingRowCapacityForFullRows(): void {
 		$rows          = $this->controls()->enrichRepositoryRows(
 			array(

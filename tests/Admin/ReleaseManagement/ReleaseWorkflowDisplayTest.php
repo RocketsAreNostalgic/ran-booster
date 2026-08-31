@@ -126,6 +126,20 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
+	public function testInvalidPackageCompatibilityDiagnosticExplainsHowToCorrectTheRelease(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
+			array(
+				'result_code'       => 'workflow_preflight_unavailable',
+				'result_successful' => false,
+				'failure_stage'     => 'release_preflight',
+				'diagnostic_code'   => 'package_compatibility_invalid',
+			)
+		);
+
+		self::assertStringContainsString( 'Correct the package Requires PHP or Requires at least header, publish a compatible release ZIP, then assess it again.', $html );
+		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
+	}
+
 	public function testImmediateReleasePreflightFailureIsAnErrorNoticeWithAnInlineDiagnosticDisclosure(): void {
 		$display = new ReleaseWorkflowDisplay();
 		$html    = $display->workflow(

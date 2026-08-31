@@ -201,6 +201,42 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 
+	public function testBranchViewDoesNotRenderCoreReleaseWorkflowActions(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/branch',
+				'source_label'      => 'Branch',
+				'source_key'        => 'branch',
+				'package_summaries' => array(),
+				'details'           => array(),
+				'actions'           => array(
+					array(
+						'key'      => 'core:release-workflow-deadbeefdeadbeef',
+						'label'    => 'Assess release setup',
+						'type'     => 'link',
+						'url'      => 'https://example.test/releases',
+						'disabled' => false,
+					),
+				),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( '>Assess release setup</a>', $html );
+		self::assertStringNotContainsString( 'https://example.test/releases', $html );
+	}
+
 	public function testIncompletePackageInventoryDisablesRepositoryWorkflowControls(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(

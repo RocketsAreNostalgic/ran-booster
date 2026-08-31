@@ -370,6 +370,7 @@ abstract class AbstractPackageRepository {
 
 		global $wpdb;
 
+		$this->requireStorageSupport( PackageStorageOperation::INSERT );
 		try {
 			[$model, $data] = $this->packageRecord( $package );
 		} catch ( InvalidArgumentException ) {
@@ -446,6 +447,7 @@ abstract class AbstractPackageRepository {
 
 		global $wpdb;
 
+		$this->requireStorageSupport( PackageStorageOperation::INSERT );
 		if ( PackageSource::BRANCH !== $package->getSource()
 			|| 1 !== $package->getSourceRevision() ) {
 			return $this->sourceConflictResult();

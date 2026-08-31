@@ -70,11 +70,19 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			self::assertSame( 'ran_booster_storage_database_unsupported', $failure->getDiagnosticId() );
 		}
 
-		try {
-			$storage->editForTest( 'example/example.php', $this->editInput() );
-			self::fail( 'Unsupported package writes must fail closed.' );
-		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_database_unsupported', $failure->getDiagnosticId() );
+		foreach ( array(
+			array( PackageStorageOperation::UPDATE, fn (): PackageMutationResult => $storage->editForTest( 'example/example.php', $this->editInput() ) ),
+			array( PackageStorageOperation::INSERT, fn (): PackageMutationResult => $storage->storeForTest( $this->package() ) ),
+			array( PackageStorageOperation::INSERT, fn (): PackageMutationResult => $storage->adoptForTest( $this->package() ) ),
+		) as $case ) {
+			[ $operation, $write ] = $case;
+			try {
+				$write();
+				self::fail( 'Unsupported package writes must fail closed.' );
+			} catch ( PackageStorageFailure $failure ) {
+				self::assertSame( 'ran_booster_storage_database_unsupported', $failure->getDiagnosticId() );
+				self::assertSame( $operation, $failure->getOperation() );
+			}
 		}
 
 		self::assertSame( array(), $wpdb->queries );
@@ -100,6 +108,8 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		foreach ( array(
 			static fn () => $storage->allForTest(),
 			fn () => $storage->editForTest( 'example/example.php', $this->editInput() ),
+			fn () => $storage->storeForTest( $this->package() ),
+			fn () => $storage->adoptForTest( $this->package() ),
 		) as $operation ) {
 			try {
 				$operation();

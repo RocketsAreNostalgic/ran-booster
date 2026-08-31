@@ -75,6 +75,31 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'ran-booster-advanced-source-settings', \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_FRAGMENT ) );
 	}
 
+	public function testFallbackPackageSettingsRenderTheSignedWorkflowResultWithoutWorkflowControls(): void {
+		$request                           = $this->request( 'inspect' );
+		$request['expected_repository_id'] = 'missing-repository';
+		$url                               = $this->controls()->processWorkflowRequest( $request );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exercises a URL signed by the immediately preceding control call.
+
+		$package = new class() {
+			public function providerCode(): string {
+				return 'fixture'; }
+			public function type(): string {
+				return 'plugin'; }
+			public function identifier(): string {
+				return 'example/example.php'; }
+			public function sourceRevision(): int {
+				return 3; }
+		};
+		ob_start();
+		$this->controls()->renderPackageReleaseAutomationLink( $package, ReleaseManagementFixture::status() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-release-workflow-result', $html );
+		self::assertStringContainsString( 'Booster stopped before contacting the repository provider', $html );
+		self::assertStringNotContainsString( '<form', $html );
+	}
+
 	public function testWorkflowResultReturnsToTheExactRepositoryReleaseView(): void {
 		$url = $this->controls()->processWorkflowRequest( $this->request( 'inspect' ) );
 		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $query );

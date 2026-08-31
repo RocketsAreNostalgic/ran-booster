@@ -132,6 +132,7 @@ final class ReleaseWorkflowControls {
 			|| ! is_callable( array( $package, 'sourceRevision' ) ) ) {
 			return;
 		}
+		$this->renderPackageWorkflowResult( $package );
 		$providerCode = (string) $package->providerCode();
 		if ( null === $this->workflowProvider( $providerCode ) ) {
 			return;
@@ -145,6 +146,31 @@ final class ReleaseWorkflowControls {
 
 		echo '<a href="' . esc_url( $this->repositoryReleaseUrl( $status->providerRepositoryId(), $providerCode ) ) . '">'
 			. esc_html__( 'Manage release workflow', 'ran-booster' ) . '</a>';
+	}
+
+	/** Render a signed request result on the package-settings fallback surface. */
+	private function renderPackageWorkflowResult( object $package ): void {
+		$result = $this->requestedResult();
+		if ( ! is_array( $result )
+			|| ! $this->resultMatchesCurrentScreen( $result )
+			|| ! hash_equals( $result['type'], (string) $package->type() )
+			|| ! hash_equals( $result['identifier'], (string) $package->identifier() ) ) {
+			return;
+		}
+
+		$notice = $this->display->resultNotice(
+			array(
+				'result_code'           => $result['code'],
+				'result_successful'     => $result['successful'],
+				'failure_stage'         => $result['failure_stage'],
+				'diagnostic_code'       => $result['diagnostic_code'],
+				'diagnostic_available'  => $result['diagnostic_available'],
+				'correlation_reference' => $result['correlation_reference'],
+				'result_message'        => $result['message'],
+				'result_remediation'    => $result['remediation'],
+			)
+		);
+		echo $notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed Core display renders a signed, bounded result projection.
 	}
 
 	/** @param array<string,mixed> $row */

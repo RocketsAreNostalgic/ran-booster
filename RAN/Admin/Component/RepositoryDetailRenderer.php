@@ -375,7 +375,10 @@ final class RepositoryDetailRenderer {
 	}
 
 	private function isReleaseAutomationKey( mixed $key ): bool {
-		return is_string( $key ) && 1 === preg_match( '/\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $key );
+		return is_string( $key ) && (
+			str_starts_with( $key, 'core:release-workflow-' )
+			|| 1 === preg_match( '/\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $key )
+		);
 	}
 
 	/** @param array<string, mixed> $row */

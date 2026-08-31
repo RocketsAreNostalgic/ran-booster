@@ -143,8 +143,10 @@ final class RepositoryDetailRenderer {
 			<div class="ran-booster-repository-detail__actions">
 			<?php
 			foreach ( $actions as $action ) {
-				?>
-				<a class="button" href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></a><?php } ?></div>
+				$this->renderAction( $action );
+			}
+			?>
+			</div>
 		</section>
 		<?php
 	}

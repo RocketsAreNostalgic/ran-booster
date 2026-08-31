@@ -233,7 +233,7 @@ final class ReleaseManagementDisplay {
 				<?php } else { ?>
 					<?php $this->renderIneligibleReleaseTrack( $selectedChannel ); ?>
 				<?php } ?>
-				<?php if ( 'release_asset' === $status->source() && $eligibility->eligible() && '' === $status->failureCode() ) { ?>
+				<?php if ( 'release_asset' === $status->source() && $eligibility->eligible() ) { ?>
 					<?php $this->renderManagedCandidateBrowser( $status, $nonceActions ); ?>
 				<?php } ?>
 			</div>

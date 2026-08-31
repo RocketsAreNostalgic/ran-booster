@@ -65,9 +65,13 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'described_by' => '',
 				),
 				array(
-					'key'   => 'fixture:release-automation-a',
-					'label' => 'Release automation: owner/plugin.php',
-					'url'   => 'https://example.test/plugins?source_view=release_asset',
+					'key'          => 'fixture:release-automation-a',
+					'label'        => 'Release automation: owner/plugin.php',
+					'type'         => 'post',
+					'url'          => 'https://example.test/plugins?source_view=release_asset',
+					'hidden'       => array( 'action' => 'release_automation_fixture' ),
+					'disabled'     => false,
+					'described_by' => 'release-automation-help',
 				),
 			),
 		);
@@ -98,6 +102,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( '>Automatic<', $html );
 		self::assertStringContainsString( '>Manual<', $html );
 		self::assertStringContainsString( 'Release automation', $html );
+		self::assertStringContainsString( '<form method="post" action="https://example.test/plugins?source_view=release_asset">', $html );
+		self::assertStringContainsString( 'name="action" value="release_automation_fixture"', $html );
+		self::assertStringContainsString( 'aria-describedby="release-automation-help"', $html );
 		self::assertStringContainsString( 'Open fixture webhooks', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );

@@ -113,6 +113,8 @@ final class WebhookManagementController {
 		}
 		if ( null !== $remediation ) {
 			$args['webhook_management_remediation']    = $remediation;
+			$args['webhook_management_provider']       = $providerCode;
+			$args['webhook_management_repository']     = $safeRepositoryId;
 			$args['_ran_booster_webhook_result_nonce'] = ( $this->createNonce )( $this->resultNonceAction( $providerCode, $safeRepositoryId, $resultCode, $remediation ) );
 		}
 
@@ -146,10 +148,14 @@ final class WebhookManagementController {
 			: null;
 		$hookId        = $safeReference( $query['recovery_hook'] ?? null );
 		$profileId     = $safeReference( $query['recovery_profile'] ?? null );
-		$providerCode  = $this->stringValue( $query, 'tab' );
-		$repositoryId  = $this->stringValue( $query, 'repository' );
-		$remediation   = $this->safeRemediation( $query['webhook_management_remediation'] ?? null );
-		$resultNonce   = $this->stringValue( $query, '_ran_booster_webhook_result_nonce' );
+		$providerCode  = $this->stringValue( $query, 'webhook_management_provider' );
+		$repositoryId  = $this->stringValue( $query, 'webhook_management_repository' );
+		if ( '' === $providerCode || '' === $repositoryId ) {
+			$providerCode = $this->stringValue( $query, 'tab' );
+			$repositoryId = $this->stringValue( $query, 'repository' );
+		}
+		$remediation = $this->safeRemediation( $query['webhook_management_remediation'] ?? null );
+		$resultNonce = $this->stringValue( $query, '_ran_booster_webhook_result_nonce' );
 		if ( null === $remediation
 			|| '' === $code
 			|| ! ( $this->verifyNonce )( $resultNonce, $this->resultNonceAction( $providerCode, $repositoryId, $code, $remediation ) ) ) {

@@ -81,6 +81,40 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		self::assertSame( array(), $credentials->materialReads );
 	}
 
+	public function testUnavailableSelectedCredentialRefusesCurrentReadOperationsBeforeTransport(): void {
+		$credentials                   = new WorkflowCredentialStore();
+		$credentials->eligibleMaterial = null;
+		$records                       = new SetupRecordStore();
+		$transport                     = new D23ApplicationTransport();
+		$status                        = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		self::assertTrue( $records->save( $this->record() ) );
+		$workflow = $this->workflow( $credentials, $records, $transport );
+
+		self::assertSame( 'workflow_unauthorised', $workflow->outcome( $status, 'eligible' )->workflowCode() );
+		self::assertSame( 'workflow_unauthorised', $workflow->inspectUpdate( $status, 'eligible' )->workflowCode() );
+		self::assertSame( array( 'eligible', 'eligible' ), $credentials->materialReads );
+		self::assertSame( array(), $transport->requests );
+	}
+
+	public function testUnavailableSelectedCredentialClassifiesUpdateSetupAsUnauthorised(): void {
+		$credentials = new WorkflowCredentialStore();
+		$records     = new SetupRecordStore();
+		$transport   = new D23ApplicationTransport();
+		$status      = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$workflow    = $this->workflow( $credentials, $records, $transport );
+		$preflight   = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin' );
+		$preview     = $workflow->inspect( $status, 'stable', $preflight, 'eligible' );
+		self::assertTrue( $workflow->setup( $status, $preview->previewKey(), 'owner/example-plugin', $preflight, 'eligible' )->successful() );
+		$transport->mergePull();
+		$transport->offerTemplateUpdate();
+		$update = $workflow->inspectUpdate( $status, 'eligible' );
+		self::assertTrue( $update->successful() );
+
+		$credentials->eligibleMaterial = null;
+
+		self::assertSame( 'workflow_unauthorised', $workflow->setupUpdate( $status, $update->previewKey(), 'owner/example-plugin', 'eligible' )->workflowCode() );
+	}
+
 	public function testCredentialChoiceLabelIsUtf8SafeAndBoundedToStatusContract(): void {
 		$credentials           = new WorkflowCredentialStore();
 		$credentials->profiles = array(
@@ -119,9 +153,9 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		self::assertSame( array(), $credentials->materialReads );
 	}
 
-	private function workflow( WorkflowCredentialStore $credentials ): GitHubRepositoryReleaseWorkflow {
-		$records     = new SetupRecordStore();
-		$transport   = new D23ApplicationTransport();
+	private function workflow( WorkflowCredentialStore $credentials, ?SetupRecordStore $records = null, ?D23ApplicationTransport $transport = null ): GitHubRepositoryReleaseWorkflow {
+		$records   ??= new SetupRecordStore();
+		$transport ??= new D23ApplicationTransport();
 		$coordinator = new WorkflowApplicationCoordinator( new GitHubRepositoryClient( $transport ), new TemplatePackRepositoryClient( $transport ), new SourceReadyAssessor(), $records );
 		return new GitHubRepositoryReleaseWorkflow( $credentials, $coordinator, $records );
 	}

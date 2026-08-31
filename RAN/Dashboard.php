@@ -520,7 +520,9 @@ class Dashboard {
 		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
 			$completed = get_transient( $marker );
 			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
-				return $completed;
+				if ( 'verified' !== $completed || null !== $this->providerSettings->packageRepositoryBranchEvidence( $type, $package ) ) {
+					return $completed;
+				}
 			}
 		}
 

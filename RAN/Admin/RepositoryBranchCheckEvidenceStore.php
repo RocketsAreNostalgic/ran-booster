@@ -67,6 +67,13 @@ class RepositoryBranchCheckEvidenceStore {
 		$this->mutate(
 			function ( array $all ) use ( $type, $package ): array {
 				unset( $all['records'][ $this->key( $type, $package ) ] );
+				if ( $all['generation'] >= PHP_INT_MAX ) {
+					$all['records']    = array();
+					$all['generation'] = 1;
+
+					return $all;
+				}
+				++$all['generation'];
 
 				return $all;
 			}

@@ -47,7 +47,7 @@ ob_start();
 				<?php require __DIR__ . '/fields/branch.php'; ?>
 				<?php require __DIR__ . '/fields/subdirectory.php'; ?>
 			</div>
-			<?php if ( $isPackageEdit ) { ?>
+			<?php if ( $isPackageEdit && ! $releaseManaged ) { ?>
 				<?php require __DIR__ . '/branch-readiness.php'; ?>
 			<?php } ?>
 		</fieldset>

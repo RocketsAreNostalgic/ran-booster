@@ -192,6 +192,24 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array( 'inspect_candidate', 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce-for-release-tracking-inspect_candidate-plugin-example/example.php-3-stable' ), $tracking->calls[1] );
 	}
 
+	public function testManagedCandidateListingRejectsASourceChangeDuringProviderRead(): void {
+		$tracking                     = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->candidateList      = new RepositoryReleaseCandidateList(
+			array( new RepositoryReleaseCandidate( '42', 'v1.2.0', '1.2.0', false, '2026-08-20T09:00:00Z', array( 'example.zip' ) ) )
+		);
+		$tracking->afterCandidateList = static function () use ( $tracking ): void {
+			$tracking->setStatus( ReleaseManagementFixture::status( 'branch' ) );
+		};
+		$controls                     = ReleaseManagementFixture::controls( $tracking );
+
+		$result = $controls->processManagedBrowserRequest( 'list_candidates', $this->managedRequest( 'list_candidates' ) );
+
+		self::assertFalse( $result['successful'] );
+		self::assertSame( 'source_changed', $result['code'] );
+		self::assertSame( array(), $result['data'] );
+		self::assertSame( 2, $tracking->statusReads );
+	}
+
 	public function testManagedBrowserRemainsAvailableWhenNativeUpdaterStatusCannotBeRead(): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
 			ReleaseManagementFixture::status( 'release_asset', failureCode: 'release_runtime_unavailable' )

@@ -68,6 +68,7 @@ final class RepositoryDetailRenderer {
 				<main class="ran-booster-repository-detail__main">
 					<?php if ( 'status' === $activeView ) { ?>
 						<?php $this->renderStatus( $row, $packages ); ?>
+						<?php $this->renderStatusLinks( $row ); ?>
 					<?php } elseif ( 'branch' === $activeView && 0 < $omitted ) { ?>
 						<?php $this->renderIncompleteWorkflowControls( 'branch', $omitted ); ?>
 					<?php } elseif ( 'branch' === $activeView ) { ?>
@@ -344,6 +345,29 @@ final class RepositoryDetailRenderer {
 
 	private function isReleaseAutomationKey( mixed $key ): bool {
 		return is_string( $key ) && 1 === preg_match( '/\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $key );
+	}
+
+	/** @param array<string, mixed> $row */
+	private function renderStatusLinks( array $row ): void {
+		$links = array_values(
+			array_filter(
+				is_array( $row['status_links'] ?? null ) ? $row['status_links'] : array(),
+				static fn ( mixed $link ): bool => is_array( $link )
+					&& is_string( $link['label'] ?? null ) && '' !== $link['label']
+					&& is_string( $link['url'] ?? null ) && '' !== $link['url']
+			)
+		);
+		if ( array() === $links ) {
+			return;
+		}
+		?>
+		<p class="ran-booster-repository-detail__status-links">
+		<?php foreach ( $links as $index => $link ) { ?>
+			<?php if ( 0 < $index ) { ?><span aria-hidden="true">·</span><?php } ?>
+			<a href="<?php echo esc_url( (string) $link['url'] ); ?>"><?php echo esc_html( (string) $link['label'] ); ?></a>
+		<?php } ?>
+		</p>
+		<?php
 	}
 
 	/** @param array<string, mixed> $row */

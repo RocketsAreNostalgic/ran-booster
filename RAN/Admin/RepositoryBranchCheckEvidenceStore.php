@@ -62,6 +62,17 @@ class RepositoryBranchCheckEvidenceStore {
 		);
 	}
 
+	/** Clear evidence when this managed package lifecycle ends. */
+	public function clear( string $type, Package $package ): void {
+		$this->mutate(
+			function ( array $all ) use ( $type, $package ): array {
+				unset( $all['records'][ $this->key( $type, $package ) ] );
+
+				return $all;
+			}
+		);
+	}
+
 	/** Capture the exact credential-generation state used by an explicit remote check. */
 	public function profileFingerprintFor( Package $package, ?string $profileId ): string {
 		return $this->profileFingerprint( $package, $profileId );

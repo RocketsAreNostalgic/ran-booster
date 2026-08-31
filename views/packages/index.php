@@ -121,9 +121,9 @@ $policyLabels = array(
 					<option value="<?php echo esc_attr( $providerOption['code'] ); ?>" <?php selected( $providerOption['code'], $packageListState['provider'] ); ?>><?php echo esc_html( $providerOption['label'] ); ?></option>
 				<?php } ?>
 			</select>
-			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-source-filter"><?php esc_html_e( 'Filter by package source', 'ran-booster' ); ?></label>
+			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-source-filter"><?php esc_html_e( 'Filter by update source', 'ran-booster' ); ?></label>
 			<select id="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-source-filter" name="source">
-				<option value=""><?php esc_html_e( 'All sources', 'ran-booster' ); ?></option>
+				<option value=""><?php esc_html_e( 'All update sources', 'ran-booster' ); ?></option>
 				<option value="branch" <?php selected( 'branch', $packageListState['source'] ); ?>><?php esc_html_e( 'Branch', 'ran-booster' ); ?></option>
 				<option value="release_asset" <?php selected( 'release_asset', $packageListState['source'] ); ?>><?php esc_html_e( 'Releases', 'ran-booster' ); ?></option>
 			</select>

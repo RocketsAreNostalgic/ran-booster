@@ -237,11 +237,11 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 			<section class="ran-booster-settings-section" aria-labelledby="ran-booster-package-source-unavailable-heading">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-package-source-unavailable-heading" class="ran-booster-section__title"><?php esc_html_e( 'Update source unavailable', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php esc_html_e( 'The package remains linked, but its update-source controls require an add-on that is not currently available.', 'ran-booster' ); ?></p>
+					<p class="ran-booster-section__description"><?php esc_html_e( 'The package remains linked, but its update source controls require an add-on that is not currently available.', 'ran-booster' ); ?></p>
 				</header>
 				<div class="ran-booster-settings-section__body">
 					<div class="notice notice-warning inline">
-						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the update-source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
+						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
 					</div>
 					<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
 						<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>

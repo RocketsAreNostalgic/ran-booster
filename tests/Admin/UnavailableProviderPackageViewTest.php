@@ -412,6 +412,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Releases', $html );
+		self::assertStringContainsString( 'Filter by update source', $html );
+		self::assertStringContainsString( 'All update sources', $html );
 		self::assertMatchesRegularExpression( '/<option value="release_asset"\s*>Releases<\/option>/', $html );
 		self::assertStringContainsString( 'ran-booster-package-row__update-state is-automatic', $html );
 		self::assertStringContainsString( '>Automatic</span>', $html );

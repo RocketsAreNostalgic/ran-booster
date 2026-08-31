@@ -284,11 +284,9 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$provider = $this->providers->get( (string) $package->getProviderCode() );
 		} catch ( UnknownProvider ) {
-			$this->branchCheckEvidence->record( $type, $package, $profileId, 'provider_unavailable', $profileFingerprint );
-			return 'provider_unavailable';
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'provider_unavailable', $profileFingerprint );
 		} catch ( Throwable ) {
-			$this->branchCheckEvidence->record( $type, $package, $profileId, 'unable_to_check', $profileFingerprint );
-			return 'unable_to_check';
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'unable_to_check', $profileFingerprint );
 		}
 
 		$archive = null;
@@ -345,9 +343,24 @@ final readonly class ProviderSettingsPresenter {
 			}
 		}
 
-		$this->branchCheckEvidence->record( $type, $package, $profileId, $result, $profileFingerprint );
+		return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, $result, $profileFingerprint );
+	}
 
-		return $result;
+	/** @param 'verified'|'unable_to_check'|'provider_unavailable' $outcome */
+	private function recordPackageRepositoryBranchCheck(
+		string $type,
+		Package $package,
+		?string $profileId,
+		string $outcome,
+		string $profileFingerprint
+	): string {
+		try {
+			$this->branchCheckEvidence->record( $type, $package, $profileId, $outcome, $profileFingerprint );
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+
+		return $outcome;
 	}
 
 	/**

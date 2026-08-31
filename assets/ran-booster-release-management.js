@@ -245,14 +245,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				return;
 			}
 			const releases = Array.isArray(response.data?.candidates)
-				? response.data.candidates
-						.slice()
-						.sort(
-							(left, right) =>
-								Date.parse(right.published_at) -
-								Date.parse(left.published_at)
-						)
-						.slice(0, 8)
+				? response.data.candidates.slice(0, 8)
 				: [];
 			if (
 				!response.successful ||
@@ -333,7 +326,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					),
 					outcome
 				);
-				candidateElements.set(candidate, { outcome });
+				candidateElements.set(candidate, { input, outcome });
 				target.append(label);
 			};
 			visible.forEach((candidate) =>
@@ -378,14 +371,12 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (inspectable.length > 0) {
 				setStatus(
 					'Release candidates loaded',
-					`${releases.length} eligible release${releases.length === 1 ? '' : 's'} found. Inspecting the newest available release.`
+					`${releases.length} eligible release${releases.length === 1 ? '' : 's'} found. Inspecting the preferred available release.`
 				);
 				selected = nativeOffer || inspectable[0];
-				selectedOutcome =
-					candidateElements.get(selected)?.outcome || null;
-				const input = candidateList.querySelector(
-					`input[data-release-id="${selected.release_id}"]`
-				);
+				const selectedCandidate = candidateElements.get(selected);
+				selectedOutcome = selectedCandidate?.outcome || null;
+				const input = selectedCandidate?.input;
 				if (input) {
 					input.checked = true;
 				}

@@ -312,7 +312,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$redirect    = $this->controller( adminInteraction: $interaction )->handleAdminPost(
 			$this->request(
 				array(
-					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&unsafe=discarded',
+					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&source_view=branch&ran_booster_open_advanced=1&unsafe=discarded',
 				)
 			),
 			'valid'
@@ -320,6 +320,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'page=ran-booster-plugins', $redirect );
 		self::assertStringContainsString( 'package=example%2Fexample.php', $redirect );
+		self::assertStringContainsString( 'source_view=branch', $redirect );
+		self::assertStringContainsString( 'ran_booster_open_advanced=1', $redirect );
 		self::assertStringContainsString( 'webhook_management_result=', $redirect );
 		self::assertStringNotContainsString( 'unsafe=', $redirect );
 		self::assertStringNotContainsString( 'panel=repositories', $redirect );

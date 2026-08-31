@@ -24,7 +24,7 @@ final readonly class RepositoryReleaseWorkflowResult {
 			|| ( $this->successful && '' !== $this->failureStage )
 			|| ( '' !== $this->failureStage && ! in_array( $this->failureStage, array( 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) )
 			|| ! $this->text( $this->failureStage, 64 ) || ! $this->text( $this->diagnosticCode, 96 )
-			|| ! $this->text( $this->message, 512 ) || ! $this->text( $this->remediation, 512 ) ) {
+			|| ! $this->optionalText( $this->message, 512 ) || ! $this->optionalText( $this->remediation, 512 ) ) {
 			throw new InvalidArgumentException( 'Release workflow result is invalid.' );
 		}
 	}
@@ -48,5 +48,9 @@ final readonly class RepositoryReleaseWorkflowResult {
 
 	private function text( string $value, int $limit ): bool {
 		return strlen( $value ) <= $limit && 1 === preg_match( '//u', $value ) && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value );
+	}
+
+	private function optionalText( string $value, int $limit ): bool {
+		return ( '' === $value || '' !== trim( $value ) ) && $this->text( $value, $limit );
 	}
 }

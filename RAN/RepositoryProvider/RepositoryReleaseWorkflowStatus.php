@@ -16,7 +16,7 @@ final readonly class RepositoryReleaseWorkflowStatus {
 		if ( ! $this->text( $this->providerCode, 32 ) || ! $this->text( $this->repositoryId, 191 ) || ! $this->url( $this->pullRequestUrl, true )
 			|| ! in_array( $this->packageType, array( '', 'plugin', 'theme' ), true ) || ! $this->text( $this->packageIdentifier, 255, true ) || $this->sourceRevision < 0
 			|| ! in_array( $this->recordOperation, array( '', 'bootstrap', 'template_update' ), true ) || ! in_array( $this->observationKind, array( '', 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true )
-			|| ! $this->timestamp( $this->observedAt, true ) || count( $this->failureHistory ) > 12 || count( $this->credentialChoices ) > 16 || count( $this->documentationLinks ) > 16 || ! $this->url( $this->providerWorkflowUrl, true ) || ! $this->text( $this->writeGuidance, 512, true ) ) {
+			|| ! $this->timestamp( $this->observedAt, true ) || count( $this->failureHistory ) > 12 || count( $this->credentialChoices ) > 16 || count( $this->documentationLinks ) > 16 || ! $this->url( $this->providerWorkflowUrl, true ) || ! $this->optionalText( $this->writeGuidance, 512 ) ) {
 			throw new InvalidArgumentException( 'Release workflow status is invalid.' ); }
 		foreach ( $this->credentialChoices as $choice ) {
 			if ( ! is_array( $choice ) || array_keys( $choice ) !== array( 'id', 'label' ) || ! is_string( $choice['id'] ) || ! $this->text( $choice['id'], 191 ) || ! is_string( $choice['label'] ) || ! $this->text( $choice['label'], 255 ) ) {
@@ -74,6 +74,8 @@ final readonly class RepositoryReleaseWorkflowStatus {
 		return $this->writeGuidance; }
 	private function text( string $value, int $limit, bool $empty = false ): bool {
 		return ( $empty || '' !== trim( $value ) ) && strlen( $value ) <= $limit && 1 === preg_match( '//u', $value ) && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value ); }
+	private function optionalText( string $value, int $limit ): bool {
+		return '' === $value || $this->text( $value, $limit ); }
 	private function timestamp( string $value, bool $empty = false ): bool {
 		return ( $empty && '' === $value ) || 1 === preg_match( '/\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\z/D', $value ); }
 	private function url( string $value, bool $empty = false ): bool {

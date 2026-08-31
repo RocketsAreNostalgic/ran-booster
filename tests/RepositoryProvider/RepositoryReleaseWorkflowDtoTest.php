@@ -96,6 +96,31 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		);
 	}
 
+	#[DataProvider( 'whitespaceOnlyResultCopy' )]
+	public function testResultRejectsWhitespaceOnlyOptionalProviderCopy( string $field ): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new RepositoryReleaseWorkflowResult(
+			'workflow_invalid_request',
+			false,
+			...array( $field => " \t " )
+		);
+	}
+
+	/** @return array<string, array{string}> */
+	public static function whitespaceOnlyResultCopy(): array {
+		return array(
+			'message'     => array( 'message' ),
+			'remediation' => array( 'remediation' ),
+		);
+	}
+
+	public function testStatusRejectsWhitespaceOnlyOptionalWriteGuidance(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new RepositoryReleaseWorkflowStatus( 'gh', '101', false, false, writeGuidance: " \t " );
+	}
+
 	public function testPreviewRejectsUnexpectedChangedPathFields(): void {
 		$this->expectException( InvalidArgumentException::class );
 		new RepositoryReleaseWorkflowPreview(

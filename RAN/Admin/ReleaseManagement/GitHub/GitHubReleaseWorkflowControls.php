@@ -154,10 +154,13 @@ final class GitHubReleaseWorkflowControls {
 		$repository                   = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
 		$existingAutomationUrl        = $this->githubActionsUrl( $repository );
 		$summaries                    = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
+		$packageSummariesOmitted      = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
+		$packageInventoryIncomplete   = 0 < $packageSummariesOmitted;
+		$inventoryUnavailableMessage  = __( 'The full managed-package inventory for this repository is not available. Reload the repository before assessing or setting up release automation.', 'ran-booster' );
 		$packagesForReleaseAutomation = array();
 		$exactPackageRelationships    = 0;
-		$record                       = $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repositoryId ), null );
-		$recordOccupied               = $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repositoryId ), true );
+		$record                       = $packageInventoryIncomplete ? null : $this->requestBoundary( fn (): ?array => $this->workflowRecords->find( $repositoryId ), null );
+		$recordOccupied               = $packageInventoryIncomplete ? false : $this->requestBoundary( fn (): bool => $this->workflowRecords->occupied( $repositoryId ), true );
 		$workflowOwner                = '';
 		$workflowReadyToAssess        = false;
 		$exactReleaseRelationships    = 0;
@@ -170,7 +173,7 @@ final class GitHubReleaseWorkflowControls {
 		$workflowResultNotice         = '';
 		$workflowUnavailableNotice    = '';
 		$result                       = $this->requestedResult();
-		foreach ( $summaries as $summary ) {
+		foreach ( $packageInventoryIncomplete ? array() : $summaries as $summary ) {
 			$type          = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
 			$identifier    = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
 			$summarySource = is_string( $summary['source'] ?? null ) ? $summary['source'] : '';
@@ -296,20 +299,40 @@ final class GitHubReleaseWorkflowControls {
 		$singlePackageSettings     = 1 === $exactPackageRelationships && 1 === count( $packageReadiness )
 			? $packageReadiness[0]
 			: null;
-		$automationState           = $this->repositoryReleaseAutomationState(
-			$workflowOwner,
-			$workflowReadyToAssess,
-			$publishedReleasesWorking,
-			$recordOccupied,
-			$automationObservationKind
-		);
-		$automationNotice          = '' !== $workflowUnavailableNotice
+		$automationState           = $packageInventoryIncomplete
+			? array(
+				'label'       => __( 'Inventory incomplete', 'ran-booster' ),
+				'tone'        => 'ran-booster-badge--warning',
+				'message'     => $inventoryUnavailableMessage,
+				'notice_tone' => 'notice-warning',
+				'provenance'  => __( 'Booster setup: Not assessed.', 'ran-booster' ),
+			)
+			: $this->repositoryReleaseAutomationState(
+				$workflowOwner,
+				$workflowReadyToAssess,
+				$publishedReleasesWorking,
+				$recordOccupied,
+				$automationObservationKind
+			);
+		$automationNotice          = $packageInventoryIncomplete
+			? '<div class="notice notice-warning inline"><p>' . esc_html( $inventoryUnavailableMessage ) . '</p></div>'
+			: ( '' !== $workflowUnavailableNotice
 			? $workflowUnavailableNotice
 			: '<div class="notice ' . esc_attr( $automationState['notice_tone'] ) . ' inline"><p>' . esc_html( $automationState['message'] ) . '</p>'
 				. ( 'existing_automation_detected' === $automationObservationKind && '' !== $existingAutomationUrl
 					? '<p><a href="' . esc_url( $existingAutomationUrl ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review existing automation on GitHub', 'ran-booster' ) . '</a></p>'
 					: '' )
-				. '</div>';
+				. '</div>' );
+		if ( $packageInventoryIncomplete ) {
+			$packagesForReleaseAutomation[] = array(
+				'name'           => '',
+				'settings_url'   => '',
+				'summary'        => '',
+				'needs_settings' => true,
+				'observation'    => 'unassessed',
+				'view'           => $this->unavailableWorkflowView( $inventoryUnavailableMessage ),
+			);
+		}
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">
 			<header class="ran-booster-settings-section__header ran-booster-repository-release-section__header">
@@ -322,8 +345,8 @@ final class GitHubReleaseWorkflowControls {
 				<?php if ( '' !== $releaseBlocker ) { ?>
 					<div class="notice notice-warning inline ran-booster-repository-release-section__notice"><p><?php echo esc_html( $releaseBlocker ); ?></p></div>
 				<?php } ?>
-				<?php $this->renderRepositoryReleaseLifecycle( $exactPackageRelationships, $packageReady, $releaseTrackingPackages, $workflowOwner, $workflowReadyToAssess, $publishedReleasesWorking, $automationObservationKind ); ?>
-				<?php $this->renderRepositoryReadiness( $repository, $exactPackageRelationships, $packageReadiness ); ?>
+				<?php $this->renderRepositoryReleaseLifecycle( $exactPackageRelationships, $packageReady, $releaseTrackingPackages, $workflowOwner, $workflowReadyToAssess, $publishedReleasesWorking, $automationObservationKind, ! $packageInventoryIncomplete ); ?>
+				<?php $this->renderRepositoryReadiness( $repository, $exactPackageRelationships, $packageReadiness, ! $packageInventoryIncomplete ); ?>
 				<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">
 					<header class="ran-booster-readiness-panel__top ran-booster-repository-release-automation__header"><div>
 						<div class="ran-booster-release-automation-heading"><h4 id="ran-booster-repository-release-automation-heading"><?php echo esc_html__( 'Release automation', 'ran-booster' ); ?></h4><span class="ran-booster-badge <?php echo esc_attr( $automationState['tone'] ); ?>"><?php echo esc_html( $automationState['label'] ); ?></span></div>
@@ -363,7 +386,38 @@ final class GitHubReleaseWorkflowControls {
 		<?php
 	}
 
-	private function renderRepositoryReleaseLifecycle( int $exactPackageRelationships, bool $packageReady, int $releaseTrackingPackages, string $workflowOwner, bool $workflowReadyToAssess, bool $publishedReleasesWorking, string $observationKind ): void {
+	private function renderRepositoryReleaseLifecycle( int $exactPackageRelationships, bool $packageReady, int $releaseTrackingPackages, string $workflowOwner, bool $workflowReadyToAssess, bool $publishedReleasesWorking, string $observationKind, bool $packageInventoryComplete = true ): void {
+		if ( ! $packageInventoryComplete ) {
+			$items = array(
+				array(
+					'label'   => __( 'Prepare packages', 'ran-booster' ),
+					'message' => __( 'The complete managed-package inventory is unavailable.', 'ran-booster' ),
+					'state'   => 'is-warning',
+				),
+				array(
+					'label'   => __( 'Track published releases', 'ran-booster' ),
+					'message' => __( 'Unavailable until the complete package inventory is available.', 'ran-booster' ),
+					'state'   => 'is-warning',
+				),
+				array(
+					'label'   => __( 'Automate releases (optional)', 'ran-booster' ),
+					'message' => __( 'Unavailable until the complete package inventory is available.', 'ran-booster' ),
+					'state'   => 'is-warning',
+				),
+			);
+			?>
+			<ol class="ran-booster-webhook-steps ran-booster-repository-webhook-lifecycle ran-booster-repository-release-lifecycle" aria-label="<?php echo esc_attr( __( 'Published release lifecycle', 'ran-booster' ) ); ?>">
+			<?php foreach ( $items as $number => $item ) { ?>
+				<li class="ran-booster-webhook-step <?php echo esc_attr( $item['state'] ); ?>">
+					<span aria-hidden="true"><?php echo esc_html( (string) ( $number + 1 ) ); ?></span>
+					<strong><?php echo esc_html( $item['label'] ); ?></strong>
+					<p><?php echo esc_html( $item['message'] ); ?></p>
+				</li>
+			<?php } ?>
+			</ol>
+			<?php
+			return;
+		}
 		$trackingReady = 0 < $releaseTrackingPackages && $releaseTrackingPackages === $exactPackageRelationships;
 		$trackingLabel = 0 < $releaseTrackingPackages
 			? sprintf(
@@ -417,9 +471,11 @@ final class GitHubReleaseWorkflowControls {
 	}
 
 	/** @param list<array{name:string,type:string,eligible:bool,message:string,tracking:bool,channel:string,settings_url:string}> $packageReadiness */
-	private function renderRepositoryReadiness( string $repository, int $exactPackageRelationships, array $packageReadiness ): void {
-		$relationshipReady   = '' !== $repository && 0 < $exactPackageRelationships;
-		$relationshipMessage = __( 'No exact package relationship is available for this saved repository.', 'ran-booster' );
+	private function renderRepositoryReadiness( string $repository, int $exactPackageRelationships, array $packageReadiness, bool $packageInventoryComplete = true ): void {
+		$relationshipReady   = $packageInventoryComplete && '' !== $repository && 0 < $exactPackageRelationships;
+		$relationshipMessage = $packageInventoryComplete
+			? __( 'No exact package relationship is available for this saved repository.', 'ran-booster' )
+			: __( 'The complete managed-package inventory is unavailable. Reload the repository before using release controls.', 'ran-booster' );
 		if ( $relationshipReady ) {
 			/* translators: 1: package relationship count, 2: repository name. */
 			$relationshipFormat  = _n( '%1$d exact package relationship is recorded for %2$s.', '%1$d exact package relationships are recorded for %2$s.', $exactPackageRelationships, 'ran-booster' );

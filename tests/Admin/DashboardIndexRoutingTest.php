@@ -702,9 +702,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testProviderRouteRendersANormalizedRepositorySelection(): void {
 		$_GET    = array(
-			'tab'        => 'bb',
-			'panel'      => 'repositories',
-			'repository' => 'repo-route',
+			'tab'             => 'bb',
+			'panel'           => 'repositories',
+			'repository'      => 'repo-route',
+			'repository_view' => 'releases',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'allDeploymentPlugins' )->willReturn(
@@ -738,16 +739,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'repo-route', $data['selectedRepositoryRow']['repository_id'] );
 		self::assertSame( 'attention', $data['webhookSummary']['tone'] );
 		self::assertStringContainsString( 'Automatic branch deployments require local signing material', $data['webhookSummary']['description'] );
+		$releaseReturnUrl = '';
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_repository_release_sections'][] = static function ( array $row, string $returnUrl ) use ( &$releaseReturnUrl ): void {
+			unset( $row );
+			$releaseReturnUrl = $returnUrl;
+		};
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed route model is rendered through the production view.
 		extract( $data );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Integration status', $html );
-		self::assertStringContainsString( 'data-ran-booster-repository-view="branch"', $html );
+		self::assertStringContainsString( 'Published releases', $html );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="releases"', $html );
 		self::assertStringContainsString( 'Back to repositories', $html );
-		self::assertStringContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( 'ran-booster-repository-detail__layout', $html );
 		self::assertStringContainsString( 'ran-booster-repository-detail__sidebar', $html );
 		self::assertStringContainsString( 'Management history', $html );
@@ -757,6 +762,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'Public repository lookup', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-task="status"', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider__footer', $html );
+		self::assertStringContainsString( 'repository_view=releases', $releaseReturnUrl );
 	}
 
 	public function testProviderRepositoryProjectionUnifiesPackageTypesAndSourcesByStableIdentity(): void {

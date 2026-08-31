@@ -184,11 +184,11 @@ final readonly class PackageRemovalService {
 	}
 
 	private function unlink( string $type, string $identifier, Package $package ): void {
-		$this->branchCheckEvidence?->clear( $type, $package );
 		$result = 'plugin' === $type
 			? $this->plugins->unlink( $identifier )
 			: $this->themes->unlink( $identifier );
 		$result->requireSuccess();
+		$this->branchCheckEvidence?->clear( $type, $package );
 	}
 
 	private function isInstalled( string $type, string $identifier ): bool {

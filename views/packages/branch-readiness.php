@@ -90,8 +90,8 @@ $repositoryBranchCheckMessage  = match ( $repositoryBranchCheckOutcome ?? null )
 };
 $repositoryBranchCheckNoticeClass = null !== $repositoryBranchCheckMessage ? 'notice-warning' : 'notice-error';
 $repositoryStateClass             = match ( true ) {
-	! $identityReady                         => 'is-warning',
 	$repositoryBranchVerified                => 'is-ok',
+	! $identityReady                         => 'is-warning',
 	null !== $repositoryBranchCheckOutcome   => 'is-warning',
 	default                                  => 'is-pending',
 };
@@ -110,7 +110,7 @@ if ( in_array( $repositoryBranchCheckOutcome ?? null, array( 'verified', 'subdir
 } else {
 	$savedRepositoryLabel = __( 'is saved. The repository identity is available locally; repository access and this branch have not been checked.', 'ran-booster' );
 }
-$savedRepositoryMessage = $identityReady
+$savedRepositoryMessage = ( $identityReady || $repositoryBranchVerified )
 	? sprintf(
 		/* translators: 1: branch name, 2: repository check status. */
 		__( 'The branch <code>%1$s</code> %2$s', 'ran-booster' ),

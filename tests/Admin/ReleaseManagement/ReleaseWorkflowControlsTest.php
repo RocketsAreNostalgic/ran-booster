@@ -174,11 +174,19 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	}
 
 	public function testUnavailableRepositorySourceKeepsItsDiagnosticCode(): void {
-		$url = $this->controls( sourceGuard: $this->unavailableSourceGuard() )->processWorkflowRequest( $this->request( 'inspect' ) );
+		$controls = $this->controls( sourceGuard: $this->unavailableSourceGuard() );
+		$url      = $controls->processWorkflowRequest( $this->request( 'inspect' ) );
 
 		self::assertStringContainsString( 'workflow_invalid_request', $url );
 		self::assertStringContainsString( 'repository_source_unavailable', $url );
 		self::assertStringNotContainsString( 'repository_release_owner_exists', $url );
+
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowControls::class, 'workflowViewFor' );
+		$view            = $workflowViewFor->invoke( $controls, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+
+		self::assertTrue( $view['unavailable'] );
+		self::assertSame( 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.', $view['unavailable_reason'] );
+		self::assertTrue( $view['forms']['inspect']['disabled'] );
 	}
 
 	public function testReleaseWorkflowRepositoryActionUsesTheCoreNamespacedActionContract(): void {
@@ -560,6 +568,30 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 		self::assertSame( 'Provider-specific workflow message.', $view['result_message'] );
 		self::assertSame( 'Provider-specific remediation.', $view['result_remediation'] );
+	}
+
+	public function testEmptyProviderWriteGuidanceUsesTheCoreFallback(): void {
+		$status   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+			'fixture',
+			'101',
+			false,
+			false,
+			credentialChoices: array(
+				array(
+					'id'    => 'credential_1',
+					'label' => 'Fixture credential',
+				),
+			)
+		);
+		$controls = $this->controls( provider: new RepositoryReleaseWorkflowProviderDouble( status: $status ) );
+
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowControls::class, 'workflowViewFor' );
+		$view            = $workflowViewFor->invoke( $controls, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+
+		self::assertSame(
+			'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.',
+			$view['forms']['inspect']['write_guidance']
+		);
 	}
 
 	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowControls {

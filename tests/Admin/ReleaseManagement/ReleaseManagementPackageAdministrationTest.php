@@ -115,6 +115,27 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertFalse( $choices['release_asset']['disabled'] );
 	}
 
+	public function testUnavailableRepositoryStorageDisablesManagedReleaseActionsWithoutRenderingAConflictList(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( 'release_asset', failureCode: 'repository_source_unavailable' )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<h4>Storage unavailable</h4>', $html );
+		self::assertStringContainsString( 'Booster could not safely read this package&#039;s repository storage. Check package storage and retry.', $html );
+		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
+		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Check releases<\/button>/', $html );
+		self::assertStringContainsString( '<a class="button disabled" aria-disabled="true" tabindex="-1">Open WordPress updates</a>', $html );
+		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
+		self::assertStringNotContainsString( 'Conflicting packages', $html );
+		self::assertStringNotContainsString( '<ul class="ul-disc">', $html );
+	}
+
 	public function testConflictRemainsBlockedWhenListIsUnavailableAndDoesNotDuplicateTheResult(): void {
 		foreach ( array( false, true ) as $unavailable ) {
 			$controls = $this->conflictControls( $unavailable );

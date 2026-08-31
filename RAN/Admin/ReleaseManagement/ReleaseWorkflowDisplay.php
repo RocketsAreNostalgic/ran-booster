@@ -37,8 +37,11 @@ final class ReleaseWorkflowDisplay {
 			$key     = 'template_update' === ( $preview['kind'] ?? null ) ? 'update_setup' : 'setup';
 			$detail  = $this->preview( $preview );
 			$detail .= $this->form( is_array( $forms[ $key ] ?? null ) ? $forms[ $key ] : array() );
-		} elseif ( null !== $record && is_string( $record['pull_request_url'] ?? null ) && '' !== $record['pull_request_url'] ) {
-			$detail  = '<hr><p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . '</a></p>';
+		} elseif ( null !== $record ) {
+			$detail = '<hr>';
+			if ( is_string( $record['pull_request_url'] ?? null ) && '' !== $record['pull_request_url'] ) {
+				$detail .= '<p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . '</a></p>';
+			}
 			$detail .= $this->form( is_array( $forms['outcome'] ?? null ) ? $forms['outcome'] : array() );
 			$detail .= $this->form( is_array( $forms['update_inspect'] ?? null ) ? $forms['update_inspect'] : array() );
 		} elseif ( null !== $legacy ) {

@@ -300,6 +300,23 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( '<details', $html );
 	}
 
+	public function testRecordedWorkflowKeepsOutcomeAndUpdateControlsWhenItsPullRequestUrlIsUnavailable(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
+			array(
+				'record' => array( 'pull_request_url' => '' ),
+				'forms'  => array(
+					'inspect'        => array_merge( $this->form( 'inspect' ), array( 'disabled' => true ) ),
+					'outcome'        => $this->form( 'outcome' ),
+					'update_inspect' => $this->form( 'update_inspect' ),
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'Check pull request outcome', $html );
+		self::assertStringContainsString( 'Check for template updates', $html );
+		self::assertStringNotContainsString( 'Review recorded setup pull request', $html );
+	}
+
 	public function testUnavailableRetainsTheAssessmentInterfaceButDisablesItsControls(): void {
 		$reason = 'A temporary upstream limitation prevents direct assessment right now.';
 		$html   = ( new ReleaseWorkflowDisplay() )->workflow(

@@ -65,37 +65,43 @@ final class ReleaseManagementDisplay {
 			$trackNonceAction   = $nonceActions['change_channel'] ?? null;
 			$refreshNonceAction = $nonceActions['refresh'] ?? null;
 		}
-		$trackMode         = 'branch' === $source ? 'branch' : 'managed';
-		$repositoryBlocked = $statusAvailable && in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true );
-		$trackDisabled     = null === $trackNonceAction || $repositoryBlocked;
-		$automaticPolicy   = $statusAvailable && 'automatic' === $status->deploymentPolicy();
-		$recheckEnabled    = $statusAvailable && 'branch' === $source && null === $trackNonceAction;
-		$refreshEnabled    = null !== $refreshNonceAction && ! $repositoryBlocked;
-		$updatesEnabled    = $statusAvailable && ! $subdirectoryIncompatible && ! $repositoryBlocked;
-		$browserEnabled    = $statusAvailable
+		$trackMode               = 'branch' === $source ? 'branch' : 'managed';
+		$failureCode             = $statusAvailable ? $status->failureCode() : '';
+		$repositoryConflictCode  = $statusAvailable && in_array( $failureCode, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true );
+		$repositorySourceBlocked = $statusAvailable && 'repository_source_unavailable' === $failureCode;
+		$repositoryBlocked       = $repositoryConflictCode || $repositorySourceBlocked;
+		$trackDisabled           = null === $trackNonceAction || $repositoryBlocked;
+		$repositoryStatusHeading = $repositorySourceBlocked ? __( 'Storage unavailable', 'ran-booster' ) : __( 'Repository shared', 'ran-booster' );
+		$automaticPolicy         = $statusAvailable && 'automatic' === $status->deploymentPolicy();
+		$recheckEnabled          = $statusAvailable && 'branch' === $source && null === $trackNonceAction;
+		$refreshEnabled          = null !== $refreshNonceAction && ! $repositoryBlocked;
+		$updatesEnabled          = $statusAvailable && ! $subdirectoryIncompatible && ! $repositoryBlocked;
+		$browserEnabled          = $statusAvailable
 			&& 'release_asset' === $source
 			&& $eligibility->eligible()
 			&& '' !== ( $nonceActions['list_candidates'] ?? '' )
 			&& '' !== ( $nonceActions['inspect_candidate'] ?? '' )
 			&& ! $repositoryBlocked;
-		$gateNotice        = $repositoryBlocked
+		$gateNotice              = $repositoryConflictCode
 			? __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' )
-			: ( ! $statusAvailable
-			? __( 'Published release status is temporarily unavailable. Try again.', 'ran-booster' )
-			: ( ! $eligibility->eligible()
-				? ( 'branch' === $source && $this->requiresUpdateUriRemediation( $eligibility )
-					? __( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', 'ran-booster' )
-					: $this->eligibilityMessage( $eligibility, $source ) )
-				: ( 'branch' === $source && $trackDisabled
-					? __( 'Published releases cannot be selected because source transition controls are temporarily unavailable.', 'ran-booster' )
-					: '' ) ) );
+			: ( $repositorySourceBlocked
+				? __( 'Booster could not safely read this package\'s repository storage. Check package storage and retry.', 'ran-booster' )
+				: ( ! $statusAvailable
+					? __( 'Published release status is temporarily unavailable. Try again.', 'ran-booster' )
+					: ( ! $eligibility->eligible()
+						? ( 'branch' === $source && $this->requiresUpdateUriRemediation( $eligibility )
+							? __( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', 'ran-booster' )
+							: $this->eligibilityMessage( $eligibility, $source ) )
+						: ( 'branch' === $source && $trackDisabled
+							? __( 'Published releases cannot be selected because source transition controls are temporarily unavailable.', 'ran-booster' )
+							: '' ) ) ) );
 		?>
 		<section class="ran-booster-release-management" aria-labelledby="ran-booster-release-management-heading">
 			<header class="ran-booster-package-source-pane__header">
 				<?php if ( '' !== $gateNotice ) { ?>
 					<div class="notice notice-warning inline" data-ran-booster-release-gate-notice><p><?php echo esc_html( $gateNotice ); ?></p>
 					<?php
-					if ( $repositoryBlocked && array() !== $repositoryConflict ) {
+					if ( $repositoryConflictCode && array() !== $repositoryConflict ) {
 						?>
 						<p><strong><?php esc_html_e( 'Conflicting packages', 'ran-booster' ); ?></strong></p><ul class="ul-disc">
 						<?php
@@ -136,7 +142,7 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 				<div class="ran-booster-readiness-panel__top">
 					<div>
-					<h4><?php echo esc_html( $repositoryBlocked ? __( 'Repository shared', 'ran-booster' ) : ( $statusAvailable && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ) ); ?></h4>
+						<h4><?php echo esc_html( $repositoryBlocked ? $repositoryStatusHeading : ( $statusAvailable && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ) ); ?></h4>
 					</div>
 					<?php if ( ! $statusAvailable || ! $eligibility->eligible() || $repositoryBlocked ) { ?>
 						<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Unavailable', 'ran-booster' ); ?></span>

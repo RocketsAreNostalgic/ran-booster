@@ -975,24 +975,31 @@ final class ReleaseWorkflowControls {
 		if ( null === $this->workflowCapability( $providerCode ) ) {
 			return null;
 		}
-		$provider  = $this->workflowProvider( $providerCode );
-		$state     = null === $provider ? null : $this->workflowProviderStatus( $status );
-		$anonymous = $this->anonymousWorkflowInspectionAllowed( $package );
-		$metadata  = $this->providers->metadata()[ $providerCode ] ?? null;
-		$extra     = array(
+		$provider      = $this->workflowProvider( $providerCode );
+		$state         = null === $provider ? null : $this->workflowProviderStatus( $status );
+		$anonymous     = $this->anonymousWorkflowInspectionAllowed( $package );
+		$sourceGuard   = $this->workflowSourceGuard( $type, $identifier, $package );
+		$metadata      = $this->providers->metadata()[ $providerCode ] ?? null;
+		$writeGuidance = $state?->writeGuidance() ?? '';
+		if ( '' === trim( $writeGuidance ) ) {
+			$writeGuidance = __( 'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.', 'ran-booster' );
+		}
+		$extra  = array(
 			'provider_label'        => $metadata?->label ?? $providerCode,
 			'documentation_links'   => $state?->documentationLinks() ?? array(),
 			'provider_workflow_url' => $state?->providerWorkflowUrl() ?? '',
-			'write_guidance'        => $state?->writeGuidance() ?? '',
+			'write_guidance'        => $writeGuidance,
 		);
-		$reason    = null === $provider
+		$reason = null === $provider
 			? __( 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.', 'ran-booster' )
 			: ( null === $state ? __( 'The provider could not supply local workflow status. Retry after checking the provider plugin.', 'ran-booster' ) : '' );
 		if ( '' === $reason && ! $status->eligible() ) {
 			$reason = $this->workflowUnavailableReason( $status );
 		}
-		if ( '' === $reason && ! $this->workflowSourceGuard( $type, $identifier, $package )['allowed'] ) {
-			$reason = __( 'Releases require a repository used by only one managed package. Review the repository package list.', 'ran-booster' );
+		if ( '' === $reason && ! $sourceGuard['allowed'] ) {
+			$reason = 'repository_source_unavailable' === ( $sourceGuard['code'] ?? '' )
+				? __( 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.', 'ran-booster' )
+				: __( 'Releases require a repository used by only one managed package. Review the repository package list.', 'ran-booster' );
 		}
 		if ( '' === $reason && $state->recordOccupied() && ! $this->recordMatchesPackageStatus( $state, $status ) ) {
 			$reason = __( 'A workflow record belongs to a different package. Review the recorded repository state before setup.', 'ran-booster' );

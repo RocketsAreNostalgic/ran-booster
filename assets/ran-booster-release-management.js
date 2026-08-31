@@ -924,15 +924,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 			candidateList.append(disclosure);
 		}
-		const firstCandidate = candidateInputs[0];
-		if (firstCandidate) {
-			firstCandidate.checked = true;
-			const event =
-				typeof Event === 'function'
-					? new Event('change', { bubbles: true })
-					: { type: 'change' };
-			firstCandidate.dispatchEvent(event);
-		}
 		setChoiceState(
 			'available',
 			`${releases.length} eligible published release${releases.length === 1 ? '' : 's'} found.`,
@@ -944,6 +935,15 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			{ screenReaderOnly: true }
 		);
 		setHidden(candidates, false);
+		const firstCandidate = candidateInputs[0];
+		if (firstCandidate) {
+			firstCandidate.checked = true;
+			const event =
+				typeof Event === 'function'
+					? new Event('change', { bubbles: true })
+					: { type: 'change' };
+			firstCandidate.dispatchEvent(event);
+		}
 	};
 
 	const listCandidates = async () => {

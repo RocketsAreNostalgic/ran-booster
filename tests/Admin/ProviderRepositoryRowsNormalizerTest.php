@@ -97,7 +97,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 
-	public function testReleaseWebhookCleanupLinkSelectsTheRetainedBranchPane(): void {
+	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {
 		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
 			array(
 				array(
@@ -134,9 +134,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		self::assertIsArray( $row );
 		$action = $row['actions']['core:webhook-cleanup-review'];
-		self::assertStringContainsString( 'source_view=branch', $action['url'] );
-		self::assertStringContainsString( 'webhook_cleanup=1', $action['url'] );
-		self::assertStringEndsWith( '#ran-booster-webhook-cleanup', $action['url'] );
+		self::assertStringContainsString( 'panel=repositories', $action['url'] );
+		self::assertStringContainsString( 'repository=101', $action['url'] );
+		self::assertStringContainsString( 'repository_view=branch', $action['url'] );
+		self::assertStringEndsWith( '#ran-booster-repository-webhook-setup-heading', $action['url'] );
 	}
 
 	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {

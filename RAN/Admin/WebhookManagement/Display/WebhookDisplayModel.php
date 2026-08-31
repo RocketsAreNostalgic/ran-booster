@@ -521,6 +521,7 @@ final class WebhookDisplayModel {
 				'state'    => $statusCode,
 			),
 			array(
+				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
 				'value' => null === $history ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
@@ -529,6 +530,7 @@ final class WebhookDisplayModel {
 
 		if ( null !== $history && $statusCode !== $history['recorded_status'] ) {
 			$details[] = array(
+				'key'   => 'core:webhook-current-local-warning',
 				'label' => __( 'Current local warning', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $statusCode ),
 				'tone'  => $this->historicalStatusTone( $statusCode ),
@@ -539,14 +541,17 @@ final class WebhookDisplayModel {
 			$details,
 			array(
 				array(
+					'key'   => 'core:webhook-management-credential',
 					'label' => __( 'Management credential', 'ran-booster' ),
 					'value' => null === $record ? __( 'Webhook has not been managed yet', 'ran-booster' ) : $this->managementCredentialLabel( $record ),
 				),
 				array(
+					'key'   => 'core:webhook-signing-secret',
 					'label' => __( 'Recorded signing secret', 'ran-booster' ),
 					'value' => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->recordedProfileLabel( $statusCode, $record ),
 				),
 				array(
+					'key'      => 'core:webhook-last-checked',
 					'label'    => __( 'Last checked', 'ran-booster' ),
 					'value'    => null === $history ? __( 'Never', 'ran-booster' ) : $history['checked_at'],
 					'datetime' => null === $history ? '' : $history['checked_at'],
@@ -561,16 +566,19 @@ final class WebhookDisplayModel {
 
 		return array(
 			array(
+				'key'   => 'core:webhook-recorded-status',
 				'label' => __( 'Recorded hook status', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $history['recorded_status'] ),
 				'tone'  => $this->historicalStatusTone( $history['recorded_status'] ),
 			),
 			array(
+				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
 				'value' => __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
 			),
 			array(
+				'key'   => 'core:webhook-management-credential',
 				'label' => __( 'Management credential', 'ran-booster' ),
 				'value' => sprintf(
 					/* translators: %s: saved credential profile ID. */
@@ -579,6 +587,7 @@ final class WebhookDisplayModel {
 				),
 			),
 			array(
+				'key'   => 'core:webhook-signing-secret',
 				'label' => __( 'Recorded signing secret', 'ran-booster' ),
 				'value' => sprintf(
 					/* translators: %s: signing secret profile ID. */
@@ -587,6 +596,7 @@ final class WebhookDisplayModel {
 				),
 			),
 			array(
+				'key'      => 'core:webhook-last-checked',
 				'label'    => __( 'Last checked', 'ran-booster' ),
 				'value'    => $history['checked_at'],
 				'datetime' => $history['checked_at'],

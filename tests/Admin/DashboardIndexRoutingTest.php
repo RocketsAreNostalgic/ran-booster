@@ -14,6 +14,7 @@ use RAN\Admin\AdminAddOnTab;
 use RAN\Admin\BulkPackageAction;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\AdminTabRegistry;
+use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\ProviderDocumentationPresenter;
@@ -213,6 +214,28 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 1, $provider->prepareCalls );
+	}
+
+	public function testRepositoryBranchCheckHoldsTheSharedUpdaterLockDuringProviderAccess(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider                   = new DashboardBranchCheckProvider();
+		$lock                       = new DashboardBranchCheckUpdaterLock();
+		$dashboard                  = $this->dashboard(
+			$this->throwingSecrets(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			branchCheckLock: $lock
+		);
+		$provider->onProviderAccess = static fn () => $lock->recordProviderAccess();
+		$package                    = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$check                      = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET                       = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( array( 'acquire', 'release:branch-check-lock' ), $lock->events );
+		self::assertTrue( $lock->wasHeldDuring( 'provider_access' ) );
 	}
 
 	public function testRepositoryBranchCheckDoesNotReuseVerifiedMarkerAfterItsExactEvidenceIsCleared(): void {
@@ -1385,6 +1408,102 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['packageSource']['unavailable'] );
 	}
 
+	public function testReleasePackageRetainsCurrentBranchReadinessWithoutProviderOperations(): void {
+		$package  = $this->managedPackage(
+			'release/release.php',
+			'Release Package',
+			'101',
+			\RAN\PackageSource::RELEASE_ASSET,
+			'gh',
+			\RAN\Deployment\DeploymentPolicy::MANUAL,
+			'owner/repository'
+		);
+		$plugins  = new class( $package ) extends PluginRepository {
+			public function __construct( private Package $package ) {
+			}
+
+			public function boosterPluginFromFile( $file ) {
+				return 'release/release.php' === $file ? $this->package : null;
+			}
+
+			public function allBoosterPlugins(): array {
+				return array( $this->package );
+			}
+
+			public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+				return array( $this->package );
+			}
+		};
+		$themes   = new class() extends ThemeRepository {
+			public function __construct() {
+			}
+
+			public function allBoosterThemes(): array {
+				return array();
+			}
+
+			public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+				return array();
+			}
+		};
+		$secrets  = new class() extends SecretsFile {
+			public function __construct() {
+				parent::__construct( '/unused/test-secrets.php', array() );
+			}
+
+			public function assertManagedStorageReady(): void {
+			}
+
+			public function webhookProfiles( ProviderCode|string $provider ): array {
+				return array(
+					'webhook-profile' => array(
+						'scope'        => 'repository',
+						'target'       => 'owner/repository',
+						'authority_id' => '101',
+						'configured'   => true,
+					),
+				);
+			}
+		};
+		$provider = $this->createMockForIntersectionOfInterfaces(
+			array(
+				RepositoryProvider::class,
+				ProviderCredentialPolicySupplier::class,
+				\RAN\RepositoryProvider\WebhookNormalizer::class,
+			)
+		);
+		$provider->method( 'getMetadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
+		$policies = ShippedSecretPolicyCatalog::create();
+		$provider->method( 'getCredentialPolicy' )->willReturn( $policies->credentialPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->method( 'getWebhookPolicy' )->willReturn( $policies->webhookPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->expects( self::never() )->method( 'resolveRepository' );
+		$provider->expects( self::never() )->method( 'prepareArchive' );
+		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
+		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
+		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->toArray()['site']['status'] );
+		$dashboard = $this->dashboard(
+			$secrets,
+			plugins: $plugins,
+			themes: $themes,
+			database: new ReadyDashboardDatabase(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			webhookAssistance: $evaluator
+		);
+		$_GET      = array(
+			'package'     => 'release/release.php',
+			'source_view' => 'branch',
+		);
+
+		$readiness = $dashboard->getPlugins()['data']['packageBranchReadiness'];
+
+		self::assertIsArray( $readiness );
+		self::assertArrayHasKey( 'retained', $readiness );
+		self::assertTrue( $readiness['retained'] );
+		self::assertSame( 'ready', $readiness['site']['status'] );
+		self::assertSame( '101', $readiness['repository']['repository_id'] );
+		self::assertSame( 'repository', $readiness['repository']['local_secret_coverage'] );
+	}
+
 	public function testTroubleshootingResultsRenderOnlyInTheSameDashboardRequest(): void {
 		$_GET['tab'] = 'troubleshooting';
 		$secrets     = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
@@ -1501,7 +1620,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 			array(
 				'packageProviderSettings',
 				'packageBranchReadiness',
-				'packageWebhookCleanup',
 				'package',
 				'packageView',
 				'packageExtensionPanels',
@@ -2370,9 +2488,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		bool $providerCredentials = false,
 		?ProviderRegistry $providers = null,
 		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
-		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
+		?WordPressUpdaterLock $branchCheckLock = null
 	): RoutingDashboard {
 		$providers        = $providers ?? $this->providers( $providerCredentials );
+		$branchCheckLock  = $branchCheckLock ?? new DashboardBranchCheckUpdaterLock();
 		$pluginRepository = $plugins ?? new class() extends PluginRepository {
 
 			public function __construct() {
@@ -2405,7 +2526,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$pluginRepository,
 			new Booster(),
 			$themeRepository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, null, $branchCheckEvidence ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, $webhookAssistance, $branchCheckEvidence, $branchCheckLock ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),
@@ -2702,6 +2823,8 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	public int $pathCalls           = 0;
 	public ?ArchiveRequest $request = null;
 	public ?string $path            = null;
+	/** @var \Closure(): void|null */
+	public ?\Closure $onProviderAccess = null;
 
 	public function __construct(
 		public readonly bool $cleanupFails = false,
@@ -2734,6 +2857,9 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	}
 
 	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		if ( null !== $this->onProviderAccess ) {
+			( $this->onProviderAccess )();
+		}
 		++$this->prepareCalls;
 		$this->request = $request;
 
@@ -2820,6 +2946,36 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 			public function cleanup(): void {
 			}
 		};
+	}
+}
+
+final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
+
+	/** @var list<string> */
+	public array $events             = array();
+	private bool $held               = false;
+	private bool $providerAccessHeld = false;
+
+	public function acquire(): string {
+		$this->events[] = 'acquire';
+		$this->held     = true;
+
+		return 'branch-check-lock';
+	}
+
+	public function release( string $token ): bool {
+		$this->events[] = 'release:' . $token;
+		$this->held     = false;
+
+		return 'branch-check-lock' === $token;
+	}
+
+	public function recordProviderAccess(): void {
+		$this->providerAccessHeld = $this->held;
+	}
+
+	public function wasHeldDuring( string $event ): bool {
+		return 'provider_access' === $event && $this->providerAccessHeld;
 	}
 }
 

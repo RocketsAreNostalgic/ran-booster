@@ -37,6 +37,7 @@ use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
 use RAN\Admin\BackgroundDeploymentFailureMonitor;
 use RAN\Admin\ManagedPluginFailureRows;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\Booster\GitHub\GitHubProvider;
@@ -261,7 +262,11 @@ final class BoosterServiceProvider {
 			$container->make( AdminInteractionFacade::class ),
 			$container->make( ProviderRegistry::class ),
 			(string) $runtime->boosterPath,
-			(string) $runtime->boosterUrl
+			(string) $runtime->boosterUrl,
+			new ManagedPackageWebhookAuthorityResolver(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class )
+			)
 		);
 		$container->bind( RepositoryWebhookManagementControls::class, $webhookControls );
 		$expiryReminders = new CredentialExpiryReminder(

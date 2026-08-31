@@ -144,6 +144,17 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][5]['value'] );
 		self::assertSame( 'Current local warning', $result['1234']['details'][2]['label'] );
+		self::assertSame(
+			array(
+				'core:webhook-recorded-status',
+				'core:webhook-observation',
+				'core:webhook-current-local-warning',
+				'core:webhook-management-credential',
+				'core:webhook-signing-secret',
+				'core:webhook-last-checked',
+			),
+			array_column( $result['1234']['details'], 'key' )
+		);
 		self::assertSame( 'Recorded signing secret profile wh_0123456789abcdef01234567 is unavailable.', $result['1234']['details'][4]['value'] );
 	}
 
@@ -187,6 +198,16 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
+		self::assertSame(
+			array(
+				'core:webhook-recorded-status',
+				'core:webhook-observation',
+				'core:webhook-management-credential',
+				'core:webhook-signing-secret',
+				'core:webhook-last-checked',
+			),
+			array_column( $result['1234']['details'], 'key' )
+		);
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( 'Last managed with saved credential profile credential_1; current availability was not checked.', $result['1234']['details'][2]['value'] );
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][4]['value'] );
@@ -784,9 +805,20 @@ final class WebhookManagementControllerTest extends TestCase {
 		}
 	}
 
-	public function testFailedPingRecordsUnverifiedStateAndDoesNotClaimSuccess(): void {
+	public function testFailedPingRecordsAuthoritativeAbsenceAndConfigurationDrift(): void {
 		$gateway         = $this->gateway();
-		$gateway->result = $this->operationResult( 'failed', 'ping_delivery_failed', '77' );
+		$gateway->result = $this->operationResult(
+			'failed',
+			'ping_delivery_failed',
+			'77',
+			true,
+			array(
+				'endpoint'     => 'mismatched',
+				'events'       => 'matched',
+				'content_type' => 'matched',
+				'active'       => 'matched',
+			)
+		);
 		$store           = new OperationStoreFixture();
 		$store->record   = $this->record( status: 'configured' );
 		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
@@ -794,8 +826,18 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'needs_verification', $store->record?->status() );
-		self::assertStringContainsString( 'webhook_management_result=ping_delivery_failed', $redirect );
+		self::assertSame( 'configuration_drift', $store->record?->status() );
+		self::assertStringContainsString( 'webhook_management_result=configuration_drift', $redirect );
+
+		$gateway->result = $this->operationResult( 'failed', 'ping_delivery_failed', '77', delivery: 'absent' );
+		$store->record   = $this->record( status: 'configured' );
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
+			'valid'
+		);
+
+		self::assertSame( 'remote_missing', $store->record?->status() );
+		self::assertStringContainsString( 'webhook_management_result=remote_missing', $redirect );
 	}
 
 	public function testAmbiguousRemovalRetainsRecoveryEvidenceAndNeverRetries(): void {
@@ -1178,8 +1220,8 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	/** @param array<string, string>|null $configuration */
-	private function operationResult( string $state = 'succeeded', string $code = 'configured_pending_delivery', ?string $hookId = '77', bool $withProfile = true, ?array $configuration = null, string $providerCode = 'gh', string $remediation = 'Review the bounded operation result.' ): RepositoryWebhookOperationResult {
-		$delivery = match ( $code ) {
+	private function operationResult( string $state = 'succeeded', string $code = 'configured_pending_delivery', ?string $hookId = '77', bool $withProfile = true, ?array $configuration = null, string $providerCode = 'gh', string $remediation = 'Review the bounded operation result.', ?string $delivery = null ): RepositoryWebhookOperationResult {
+		$delivery ??= match ( $code ) {
 			'verified', 'ping_verified' => 'verified',
 			'ping_delivery_failed' => 'unverified',
 			'ping_requested' => 'unknown',

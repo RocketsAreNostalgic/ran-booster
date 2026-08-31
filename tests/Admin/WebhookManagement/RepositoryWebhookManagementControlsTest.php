@@ -9,8 +9,14 @@ use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
+use RAN\Admin\AdminPackageProjection;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\Package;
+use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\ThemeRepository;
 use Tests\Support\AbsentWebhookManagementCapabilityProvider;
 use Tests\Support\CompleteWebhookManagementCapabilityProvider;
 use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
@@ -47,7 +53,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_filters'] )
 		);
 		self::assertSame(
-			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts' ),
+			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts', 'ran_booster_admin_package_advanced_source_sections' ),
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_actions'] )
 		);
 		foreach ( array_merge( $GLOBALS['ran_booster_repository_webhook_management_actions'], $GLOBALS['ran_booster_repository_webhook_management_filters'] ) as $registrations ) {
@@ -278,6 +284,55 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Test webhook</button>', $html );
 		self::assertStringContainsString( 'Manage credentials</a>', $html );
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
+	}
+
+	public function testPackageWebhookDisclosureOpensForAnOperationResultAndRecoveryContext(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$_GET    = array(
+			'webhook_management_result' => 'operation_failed',
+			'recovery_hook'             => '77',
+			'recovery_profile'          => 'profile_123',
+		);
+		$package = $this->createMock( Package::class );
+		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'getProviderCode' )->willReturn( 'fixture-provider' );
+		$package->method( 'getProviderRepositoryId' )->willReturn( '1234' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::once() )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn(
+			new AssistanceTarget(
+				'fixture-provider',
+				'1234',
+				'owner/example',
+				'Example',
+				array( 'example/example.php' ),
+				array(
+					'automatic' => 0,
+					'manual'    => 1,
+					'disabled'  => 0,
+				),
+				'https://example.test/webhook'
+			)
+		);
+		$facade->expects( self::once() )->method( 'credentialChoices' )->with( 'fixture-provider' )->willReturn( array() );
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			new ManagedPackageWebhookAuthorityResolver( $plugins, $this->createMock( ThemeRepository::class ) )
+		);
+		$controls->register();
+
+		ob_start();
+		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-package-webhook-setup open', $html );
+		self::assertStringContainsString( 'could not confirm the operation outcome', $html );
+		self::assertStringContainsString( 'returned recovery references', strtolower( $html ) );
 	}
 
 	public function testRepositoryWebhookShellKeepsItsChildZonesAndControlLabelsAcrossActiveAndInactiveStates(): void {

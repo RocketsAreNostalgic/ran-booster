@@ -393,9 +393,6 @@ final class ProviderRepositoryRowsNormalizer {
 			$actions         = ! $inventoryIncomplete && null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode ) && $hasBranch && ! $historical
 				? $this->webhookManagementAction( $locator, $describedBy )
 				: array();
-			if ( ! $inventoryIncomplete && ! $historical ) {
-				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $reasonId, $locator );
-			}
 			$secretTarget    = 'shared' === $coverage ? (string) strtok( $locator, '/' ) : $locator;
 			$secretLink      = 'none' === $coverage ? array(
 				'label'  => __( 'Add repository secret', 'ran-booster' ),
@@ -435,6 +432,9 @@ final class ProviderRepositoryRowsNormalizer {
 					)
 				)
 				: '';
+			if ( ! $inventoryIncomplete && ! $historical ) {
+				$this->appendRepositoryActions( $actions, $repository, $isRelease, $coverage, $providerWebhookSettingsLabel, $reasonId, $locator, $detailUrl );
+			}
 			$rows[ $rowKey ] = array(
 				'key'                           => $rowKey,
 				'provider_code'                 => $providerCode,
@@ -531,21 +531,10 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/** @param array<string,array<string,mixed>> $actions @param array<string,mixed> $repository @param list<string> $references */
-	private function appendRepositoryActions( array &$actions, array $repository, array $references, bool $isRelease, string $coverage, string $providerLabel, string $reasonId, string $locator ): void {
+	/** @param array<string,array<string,mixed>> $actions @param array<string,mixed> $repository */
+	private function appendRepositoryActions( array &$actions, array $repository, bool $isRelease, string $coverage, string $providerLabel, string $reasonId, string $locator, string $detailUrl ): void {
 		if ( $isRelease ) {
-			$url       = '';
-			$reference = $references[0] ?? '';
-			$isPlugin  = is_string( $reference ) && str_ends_with( strtolower( $reference ), '.php' );
-			if ( is_string( $reference ) && '' !== $reference && ( $isPlugin || 1 === preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) ) {
-				$url = add_query_arg(
-					array(
-						'source_view'     => 'branch',
-						'webhook_cleanup' => 1,
-					),
-					admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) )
-				) . '#ran-booster-webhook-cleanup';
-			}
+			$url             = '' === $detailUrl ? '' : add_query_arg( 'repository_view', 'branch', $detailUrl ) . '#ran-booster-repository-webhook-setup-heading';
 			$key             = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'core:webhook-cleanup-review' : 'core:provider-webhooks';
 			$actions[ $key ] = array(
 				'key'           => $key,

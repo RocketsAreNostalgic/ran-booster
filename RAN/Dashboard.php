@@ -466,7 +466,6 @@ class Dashboard {
 					$package,
 					$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
 					$this->providerSettings->buildPackageBranchReadiness( $package ),
-					$this->providerSettings->buildPackageWebhookRetention( $package ),
 					$this->requestedPackageSourceView(),
 					$this->requestedAdvancedSettingsOpen()
 				);

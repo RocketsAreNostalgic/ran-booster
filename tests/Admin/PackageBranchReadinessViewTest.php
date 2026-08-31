@@ -234,7 +234,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Inactive Branch deployment settings', $html );
 		self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
-		self::assertStringContainsString( 'Pushes are ignored while this package uses Published releases.', $html );
+		self::assertStringContainsString( 'Pushes are ignored while Releases is active.', $html );
 		self::assertStringNotContainsString( '>Needs attention</span>', $html );
 		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}

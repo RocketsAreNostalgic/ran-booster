@@ -918,7 +918,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'This package ignores pushes.', $withoutEvidence );
 		self::assertStringContainsString( 'Pushes are ignored.', $withoutEvidence );
 		self::assertStringContainsString( 'id="ran-booster-provider-readiness-reason-0-release-source"', $withoutEvidence );
-		self::assertStringContainsString( 'Published release', $withoutEvidence );
+		self::assertStringContainsString( 'Theme · Releases · 1 package', $withoutEvidence );
 		self::assertStringContainsString( 'Push-to-Deploy unavailable', $withoutEvidence );
 		self::assertStringNotContainsString( 'Fixture webhooks', $withoutEvidence );
 		self::assertStringContainsString( 'Manage repository', $withoutEvidence );

@@ -234,10 +234,7 @@ class ProviderProfileAdminController {
 			function () use ( $provider, $id, $secret, $label, $kind, $configuration, $selfDestruct, $manualExpirySubmitted, $manualExpiry, $manualExpiryIsProviderFallback ): string {
 				$existingProfile = null === $id ? null : ( $this->secrets->credentialProfiles( $provider )[ $id ] ?? null );
 				$isReplacement   = is_array( $existingProfile ) && '' !== $secret;
-				if ( $isReplacement && null !== $id ) {
-					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
-				}
-				$savedId      = $this->secrets->saveCredential(
+				$savedId         = $this->secrets->saveCredential(
 					$provider,
 					$id,
 					array(
@@ -250,7 +247,7 @@ class ProviderProfileAdminController {
 					$secret,
 					true
 				);
-				$savedProfile = $this->secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
+				$savedProfile    = $this->secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
 				if ( ! is_array( $savedProfile )
 					|| $label !== ( $savedProfile['label'] ?? null )
 					|| $kind !== ( $savedProfile['kind'] ?? null )
@@ -260,6 +257,9 @@ class ProviderProfileAdminController {
 					|| ( $selfDestruct ? $manualExpiry : null ) !== ( $savedProfile['destroy_on'] ?? null )
 					|| empty( $savedProfile['configured'] ) ) {
 					throw new CredentialRequestException( 'Booster could not verify that the repository credential was saved.' );
+				}
+				if ( $isReplacement ) {
+					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $savedId );
 				}
 				if ( $isReplacement ) {
 					$this->expiryObservations->clear( $provider->value, $savedId );
@@ -347,12 +347,12 @@ class ProviderProfileAdminController {
 					);
 				}
 				$clearedDefault = $id === $this->publicLookupProfiles->get( $provider->value );
+				if ( ! $this->secrets->deleteCredential( $provider, $id ) || isset( $this->secrets->credentialProfiles( $provider )[ $id ] ) ) {
+					throw new CredentialRequestException( 'Booster could not verify that the repository credential was removed.' );
+				}
 				$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
 				if ( $clearedDefault ) {
 					$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
-				}
-				if ( ! $this->secrets->deleteCredential( $provider, $id ) || isset( $this->secrets->credentialProfiles( $provider )[ $id ] ) ) {
-					throw new CredentialRequestException( 'Booster could not verify that the repository credential was removed.' );
 				}
 				if ( $clearedDefault ) {
 					$this->publicLookupProfiles->set( $provider->value, null );

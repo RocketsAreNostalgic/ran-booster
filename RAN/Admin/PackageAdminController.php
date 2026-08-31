@@ -568,19 +568,9 @@ final class PackageAdminController {
 			return null;
 		}
 
-		try {
-			$provider = $this->providers?->get( $package->getProviderCode() );
-			if ( ! $provider instanceof \RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser
-				|| ! $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
-				return null;
-			}
-
-			return array(
-				'profile_id' => $this->publicLookupProfiles?->get( $provider->getMetadata()->code->value ),
-			);
-		} catch ( Throwable ) {
-			return null;
-		}
+		return array(
+			'profile_id' => $this->publicLookupProfiles?->get( $package->getProviderCode() ),
+		);
 	}
 
 	/** @param array<string, string> $listArguments */

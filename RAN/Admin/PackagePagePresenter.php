@@ -442,18 +442,28 @@ final class PackagePagePresenter {
 			);
 		}
 
-		$baseline = apply_filters(
-			'ran_booster_admin_package_advanced_source_summary_projection',
-			array(
+		try {
+			$baseline = apply_filters(
+				'ran_booster_admin_package_advanced_source_summary_projection',
+				array(
+					'heading' => $heading,
+					'badges'  => $badges,
+					'status'  => $status,
+				),
+				$mode,
+				$this->type,
+				$selected,
+				$projection
+			);
+		} catch ( Throwable $failure ) {
+			$this->logFailure( 'advanced package source summary projection unavailable', 'advanced_package_source_summary_projection', $failure );
+
+			return array(
 				'heading' => $heading,
 				'badges'  => $badges,
 				'status'  => $status,
-			),
-			$mode,
-			$this->type,
-			$selected,
-			$projection
-		);
+			);
+		}
 
 		if ( is_array( $baseline ) && isset( $baseline['heading'] ) && is_string( $baseline['heading'] ) ) {
 			$validatedHeading = trim( wp_strip_all_tags( $baseline['heading'], true ) );

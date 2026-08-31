@@ -8,7 +8,13 @@ use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackagePagePresenter;
 
+require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+
 final class PackagePagePresenterTest extends TestCase {
+	protected function setUp(): void {
+		$GLOBALS['ran_booster_admin_view_filters'] = array();
+	}
+
 
 	public function testPluginConfigurationPreservesPluginRouting(): void {
 		$config = PackagePagePresenter::plugin();
@@ -45,5 +51,20 @@ final class PackagePagePresenterTest extends TestCase {
 		$this->expectException( InvalidArgumentException::class );
 
 		PackagePagePresenter::plugin()->getAction( 'publish' );
+	}
+
+	public function testAdvancedSourceSummaryProjectionFailureFallsBackToCoreSummary(): void {
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_package_advanced_source_summary_projection'] = array(
+			static function (): array {
+				throw new \RuntimeException( 'Extension unavailable.' );
+			},
+		);
+
+		$view       = PackagePagePresenter::plugin()->create( array(), false, false, 'branch' );
+		$projection = $view['packageSource']['advanced_summary_projection'];
+
+		self::assertSame( 'Branch deployments', $projection['heading'] );
+		self::assertSame( array(), $projection['badges'] );
+		self::assertSame( '', $projection['status'] );
 	}
 }

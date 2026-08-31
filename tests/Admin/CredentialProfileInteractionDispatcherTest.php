@@ -17,6 +17,7 @@ use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderProfileAdminController;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
@@ -559,6 +560,76 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 	}
 
+	public function testCredentialReplacementInvalidatesEvidenceOnlyAfterReplacingSecretMaterial(): void {
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$evidence             = new ReplacementAwareBranchCheckEvidenceStore(
+			function (): bool {
+				return 'replacement-secret-canary' === ( $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['secret'] ?? null );
+			}
+		);
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Replacement credential',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'existing' ),
+			'secret'        => 'replacement-secret-canary',
+		);
+
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				new InMemoryPublicRepositoryLookupProfileStore(),
+				branchCheckEvidence: $evidence
+			)
+		);
+
+		self::assertSame( 'success', $response->kind );
+		self::assertSame( array( 'fixture:credential_existing' ), $evidence->invalidatedProfiles );
+		self::assertTrue( $evidence->replacementWasPersisted );
+	}
+
+	public function testCredentialDeletionInvalidatesEvidenceOnlyAfterRemovingSecretMaterial(): void {
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$lookup               = new InMemoryPublicRepositoryLookupProfileStore();
+		$lookup->profiles     = array( 'fixture' => 'credential_existing' );
+		$evidence             = new ReplacementAwareBranchCheckEvidenceStore(
+			function (): bool {
+				return null === $this->secrets->credentialMaterial( 'fixture', 'credential_existing' );
+			}
+		);
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'   => 'delete-access-profile',
+			'provider' => 'fixture',
+			'id'       => 'credential_existing',
+		);
+
+		$response = $interaction->dispatch(
+			$this->dispatcher(
+				$dashboard,
+				$this->secrets,
+				$interaction,
+				$lookup,
+				branchCheckEvidence: $evidence
+			)
+		);
+
+		self::assertSame( 'success', $response->kind );
+		self::assertSame( array( 'fixture:credential_existing' ), $evidence->invalidatedProfiles );
+		self::assertTrue( $evidence->replacementWasPersisted );
+	}
+
 	public function testAccessProfileLockContentionFailsBeforeCredentialDeletion(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
@@ -866,7 +937,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		SecretsFile $secrets,
 		CapturingProviderProfileInteraction $interaction,
 		InMemoryPublicRepositoryLookupProfileStore $lookup,
-		?InMemoryCredentialExpiryObservationStore $expiryObservations = null
+		?InMemoryCredentialExpiryObservationStore $expiryObservations = null,
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
 	): Dispatcher {
 		$plugins = new class() extends PluginRepository { public function __construct() {} };
 		$themes  = new class() extends ThemeRepository { public function __construct() {} };
@@ -896,7 +968,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				$usage,
 				$lookup,
 				$expiryObservations ?? new InMemoryCredentialExpiryObservationStore(),
-				$interaction->facade()
+				$interaction->facade(),
+				$branchCheckEvidence
 			)
 		);
 	}
@@ -960,6 +1033,21 @@ final class CapturingProviderProfileInteraction {
 			$request,
 			(string) ( $args['ran_booster_interaction_message'] ?? '' )
 		);
+	}
+}
+
+final class ReplacementAwareBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+
+	/** @var list<string> */
+	public array $invalidatedProfiles    = array();
+	public bool $replacementWasPersisted = false;
+
+	/** @param \Closure(): bool $replacementMaterialWasPersisted */
+	public function __construct( private \Closure $replacementMaterialWasPersisted ) {}
+
+	public function bumpProfileGeneration( string $provider, string $profileId ): void {
+		$this->replacementWasPersisted = ( $this->replacementMaterialWasPersisted )();
+		$this->invalidatedProfiles[]   = $provider . ':' . $profileId;
 	}
 }
 

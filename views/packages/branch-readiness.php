@@ -20,8 +20,9 @@ $repositoryId                  = '' !== $readinessRepositoryId
 $providerSettingsUrl           = add_query_arg(
 	array_filter(
 		array(
-			'panel'      => 'repositories',
-			'repository' => $repositoryId,
+			'panel'           => 'repositories',
+			'repository'      => $repositoryId,
+			'repository_view' => 'branch',
 		),
 		static fn ( string $value ): bool => '' !== $value
 	),

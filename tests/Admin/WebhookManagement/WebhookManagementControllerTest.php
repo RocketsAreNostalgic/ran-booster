@@ -754,6 +754,36 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'does not prove an authenticated inbound delivery', $html );
 	}
 
+	public function testAuthoritativeTestReadbackPersistsAbsentAndConfigurationDrift(): void {
+		foreach ( array(
+			'absent' => $this->operationResult( 'succeeded', 'hook_absent', '77' ),
+			'drift'  => $this->operationResult(
+				'succeeded',
+				'configured_pending_delivery',
+				'77',
+				true,
+				array(
+					'endpoint'     => 'mismatched',
+					'events'       => 'matched',
+					'content_type' => 'matched',
+					'active'       => 'matched',
+				)
+			),
+		) as $expected => $result ) {
+			$gateway         = $this->gateway();
+			$gateway->result = $result;
+			$store           = new OperationStoreFixture();
+			$store->record   = $this->record( status: 'configured' );
+			$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+				$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
+				'valid'
+			);
+
+			self::assertSame( 'absent' === $expected ? 'remote_missing' : 'configuration_drift', $store->record?->status() );
+			self::assertStringContainsString( 'webhook_management_result=' . ( 'absent' === $expected ? 'remote_missing' : 'configuration_drift' ), $redirect );
+		}
+	}
+
 	public function testFailedPingRecordsUnverifiedStateAndDoesNotClaimSuccess(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult( 'failed', 'ping_delivery_failed', '77' );

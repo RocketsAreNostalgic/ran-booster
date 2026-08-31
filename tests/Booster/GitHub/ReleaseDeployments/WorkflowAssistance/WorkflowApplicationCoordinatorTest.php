@@ -59,6 +59,24 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		self::assertSame( 'provider_unavailable', $result['diagnostic_code'] );
 	}
 
+	public function testRejectedPreflightRetainsTheReleasePreflightDiagnosticForInspectionAndSetup(): void {
+		$facade                    = new D23ReleaseFacade();
+		$coordinator               = $this->coordinator( $facade, new D23ApplicationTransport(), new SetupRecordStore() );
+		$status                    = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$facade->preflightResponse = new ReleaseTrackingPreflight( 'invalid_release_assets', 'example-plugin', reasonCode: 'invalid_release' );
+
+		$inspection = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		self::assertSame( 'release_preflight', $inspection['failure_stage'] );
+		self::assertSame( 'invalid_release', $inspection['diagnostic_code'] );
+
+		$facade->preflightResponse = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin' );
+		$preview                   = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$facade->preflightResponse = new ReleaseTrackingPreflight( 'invalid_release_assets', 'example-plugin', reasonCode: 'invalid_release' );
+		$setup                     = $coordinator->setup( $status, $preview['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+		self::assertSame( 'release_preflight', $setup['failure_stage'] );
+		self::assertSame( 'invalid_release', $setup['diagnostic_code'] );
+	}
+
 	public function testFailureStagesMapOnlyRemoteAuthTemplateAndStorageFaults(): void {
 		$status      = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
 		$coordinator = $this->coordinator( new D23ReleaseFacade(), new D23ApplicationTransport(), new SetupRecordStore() );

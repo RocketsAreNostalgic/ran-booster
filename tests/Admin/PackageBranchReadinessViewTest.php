@@ -123,7 +123,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-readiness-actions__links', $html );
 		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 		self::assertStringContainsString( '>Review repository webhook settings</a>', $html );
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42"', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42&amp;repository_view=branch"', $html );
 		self::assertStringNotContainsString( 'repository=repo-42#', $html );
 		$checkPosition  = strpos( $html, '>Save settings and check</button>' );
 		$managePosition = strrpos( $html, '>Review repository webhook settings</a>' );
@@ -190,25 +190,25 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'client_hydratable' => false,
 			),
 		);
-		$packageSourceMode       = 'edit';
-		$packageFieldLayout      = 'grid';
-		$packageSourceView       = 'branch';
-		$showBranchSettings      = true;
-		$releaseManaged          = true;
-		$branchReadOnly          = true;
-		$branchValue             = 'main';
-		$subdirectoryValue       = '';
-		$packageAdvancedSections = array();
-		$packageAdvancedSummary  = 'Published releases · Active';
-		$packageAdvancedOpen     = false;
-		$packageRepositoryReady  = true;
-		$packageSource           = array();
-		$packageView             = new class() {
+		$packageSourceMode        = 'edit';
+		$packageFieldLayout       = 'grid';
+		$packageSourceView        = 'branch';
+		$showBranchSettings       = true;
+		$releaseManaged           = true;
+		$branchReadOnly           = true;
+		$branchValue              = 'main';
+		$subdirectoryValue        = '';
+		$packageAdvancedSections  = array();
+		$packageAdvancedSummary   = 'Published releases · Active';
+		$packageAdvancedOpen      = false;
+		$packageRepositoryReady   = true;
+		$packageSource            = array();
+		$packageView              = new class() {
 			public function getType(): string {
 				return 'plugin';
 			}
 		};
-		$packageWebhookCleanup   = array(
+		$packageWebhookCleanup    = array(
 			'context' => new WebhookCleanupContext(
 				'plugin',
 				'example/example.php',
@@ -231,7 +231,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Webhook cleanup', $html );
+		self::assertStringContainsString( 'Inactive Branch deployment settings', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
 		self::assertStringNotContainsString( '>Save settings and check</button>', $html );
 	}

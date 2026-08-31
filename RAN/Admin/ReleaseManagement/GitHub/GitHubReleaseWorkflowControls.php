@@ -101,7 +101,9 @@ final class GitHubReleaseWorkflowControls {
 		}
 
 		foreach ( $rows as &$row ) {
-			if ( ! is_array( $row ) || true === ( $row['historical'] ?? false ) ) {
+			if ( ! is_array( $row )
+				|| true === ( $row['historical'] ?? false )
+				|| 0 < max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) ) ) {
 				continue;
 			}
 			$summaries = is_array( $row['package_summaries'] ?? null )

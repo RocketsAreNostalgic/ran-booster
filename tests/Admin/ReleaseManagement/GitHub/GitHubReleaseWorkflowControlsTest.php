@@ -277,6 +277,57 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 0, $facade->statusReads );
 	}
 
+	public function testRepositoryRowsAcceptCaseVariantLocatorOnlyWithExactStableRepositoryIdentity(): void {
+		$rows                      = $this->repositoryRows();
+		$rows['101']['repository'] = 'Example/Example';
+		$matchingFacade            = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$matching                  = $this->controls( $matchingFacade )->enrichRepositoryRows( $rows, 'gh', array(), 'https://example.test/return' );
+
+		self::assertSame( 'Ready to assess', $matching['101']['details'][0]['value'] );
+		self::assertSame( 1, $matchingFacade->statusReads );
+
+		$mismatchedFacade = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$mismatched       = $this->controls( $mismatchedFacade, new PluginRepositoryDouble( repositoryId: '202' ) )->enrichRepositoryRows( $rows, 'gh', array(), 'https://example.test/return' );
+
+		self::assertSame( 'Unavailable', $mismatched['101']['details'][0]['value'] );
+		self::assertSame( 0, $mismatchedFacade->statusReads );
+	}
+
+	public function testRepositoryRowsBoundsDetailsBeforeNormalizationAndRetainsEveryAction(): void {
+		$rows = $this->repositoryRows();
+		foreach ( range( 1, 4 ) as $number ) {
+			$rows['101']['details'][] = array(
+				'key'   => 'core:detail-' . $number,
+				'label' => 'Core detail ' . $number,
+				'value' => 'Kept',
+				'tone'  => 'ok',
+			);
+		}
+		foreach ( range( 2, 17 ) as $number ) {
+			$identifier                          = 'example/package-' . $number . '.php';
+			$rows['101']['package_references'][] = $identifier;
+			$rows['101']['package_summaries'][]  = array(
+				'type'            => 'plugin',
+				'identifier'      => $identifier,
+				'source'          => 'branch',
+				'source_revision' => 3,
+			);
+		}
+
+		$projected = $this->controls()->enrichRepositoryRows( $rows, 'gh', array(), 'https://example.test/return' );
+
+		self::assertCount( 20, $projected['101']['details'] );
+		self::assertSame( array_column( $rows['101']['details'], 'key' ), array_column( array_slice( $projected['101']['details'], 0, 4 ), 'key' ) );
+		self::assertCount( 17, $projected['101']['actions'] );
+		self::assertSame(
+			array_map(
+				static fn ( array $summary ): string => 'gh:release-automation-' . substr( hash( 'sha256', $summary['type'] . '|' . $summary['identifier'] ), 0, 16 ),
+				$rows['101']['package_summaries']
+			),
+			array_keys( $projected['101']['actions'] )
+		);
+	}
+
 	public function testMultipleRepositoryPackagesHaveDistinctBoundedVisibleLabels(): void {
 		$rows                               = $this->repositoryRows();
 		$rows['101']['package_references']  = array( 'example/example.php', 'example-theme' );

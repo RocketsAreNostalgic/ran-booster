@@ -62,6 +62,10 @@ final class RepositoryResolverTest extends TestCase {
 		self::assertStringContainsString( 'limited to one user or organisation', $setup->credentialSummary );
 		self::assertStringContainsString( 'select the project repositories once', $setup->credentialSummary );
 		self::assertStringContainsString( 'Booster does not change that GitHub repository selection', $setup->credentialSummary );
+		self::assertStringContainsString( 'Contents to Read-only', $setup->credentialSummary );
+		self::assertStringContainsString( 'admin:repo_hook', $setup->credentialSummary );
+		self::assertStringContainsString( 'Webhooks: Read and write', $setup->credentialSummary );
+		self::assertStringContainsString( 'Workflows: Read and write', $setup->credentialSummary );
 	}
 
 	public function testAnonymousLookupResolvesCanonicalPublicRepositoryMetadata(): void {
@@ -680,6 +684,44 @@ final class RepositoryResolverTest extends TestCase {
 
 		\RAN\Booster\GitHub\repository_resolver_http_reset( $this->errorResponse( 404, array() ) );
 		self::assertFalse( $browser->pathExists( 'RocketsAreNostalgic/private-plugin', $ref, 'packages/missing', 'private-profile', true ) );
+	}
+
+	public function testRepositoryPathCheckRejectsMalformedOrUnexpectedSuccessfulBodies(): void {
+		$browser = new RepositoryBrowser( new RepositoryResolverSecretsStub() );
+		$ref     = str_repeat( 'a', 40 );
+
+		\RAN\Booster\GitHub\repository_resolver_http_reset(
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => " \n[]",
+			)
+		);
+		self::assertTrue( $browser->pathExists( 'RocketsAreNostalgic/example-plugin', $ref, 'packages/example' ) );
+
+		\RAN\Booster\GitHub\repository_resolver_http_reset(
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => " \n{}",
+			)
+		);
+		self::assertFalse( $browser->pathExists( 'RocketsAreNostalgic/example-plugin', $ref, 'packages/example' ) );
+
+		foreach ( array( '', ' ', 'null', 'true', '"file"', '<html>unavailable</html>' ) as $body ) {
+			\RAN\Booster\GitHub\repository_resolver_http_reset(
+				array(
+					'response' => array( 'code' => 200 ),
+					'body'     => $body,
+				)
+			);
+
+			try {
+				$browser->pathExists( 'RocketsAreNostalgic/example-plugin', $ref, 'packages/example' );
+				self::fail( 'Unexpected successful GitHub path responses must fail closed.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertSame( 'GitHub could not check the repository path.', $failure->getMessage() );
+				self::assertSame( 502, $failure->getCode() );
+			}
+		}
 	}
 
 	private function provider( RepositoryResolverSecretsStub $secrets ): GitHubProvider {

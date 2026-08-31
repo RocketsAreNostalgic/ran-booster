@@ -19,6 +19,7 @@ use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\ProviderDocumentationPresenter;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Booster;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentCoordinator;
@@ -50,6 +51,7 @@ use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
 use RAN\RepositoryProvider\RepositoryBrowseRequest;
 use RAN\RepositoryProvider\RepositoryBrowseResult;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
 use RAN\Storage\Database;
@@ -209,6 +211,33 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->prepareCalls );
 	}
 
+	public function testRepositoryBranchCheckDoesNotReuseItsMarkerAfterCredentialOrDefaultAccessGenerationChanges(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider         = new DashboardBranchCheckProvider();
+		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
+		$lookup->profiles = array( 'gh' => 'public-profile' );
+		$evidence         = new DashboardBranchCheckEvidenceStore();
+		$dashboard        = $this->dashboard(
+			$this->throwingSecrets(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			publicLookupProfiles: $lookup,
+			branchCheckEvidence: $evidence
+		);
+		$package          = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$check            = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET             = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		$evidence->bumpProfileGeneration( 'gh', 'public-profile' );
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		$evidence->bumpProviderGeneration( 'gh' );
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 3, $provider->prepareCalls );
+	}
+
 	public function testRepositoryBranchCheckIsCapturedAsSanitizedOperationalEvidence(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$directory = sys_get_temp_dir() . '/ran-booster-branch-check-' . bin2hex( random_bytes( 6 ) );
@@ -271,6 +300,53 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'public-profile', $provider->request?->repository->credentialId );
 	}
 
+	public function testRepositoryBranchCheckClearsEarlierEvidenceWhenTheProviderIsUnavailable(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$evidence = new DashboardBranchCheckEvidenceStore();
+		$package  = $this->managedPackage( 'provider-missing/example.php', 'Example', 'repo-42' );
+		$evidence->record( 'plugin', $package, null, 'verified' );
+		$dashboard = $this->dashboard(
+			$this->throwingSecrets(),
+			providers: new ProviderRegistry(),
+			branchCheckEvidence: $evidence
+		);
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
+				'ran-booster-repository-branch-check|plugin|provider-missing/example.php|branch|1'
+			),
+		);
+
+		$outcome = ( new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' ) )->invoke( $dashboard, $package, 'plugin' );
+
+		self::assertSame( 'provider_unavailable', $outcome );
+		self::assertNull( $evidence->find( 'plugin', $package, null ) );
+	}
+
+	public function testRepositoryBranchCheckDropsAStoredPublicProfileWithoutTheDeclaredCapability(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider         = new DashboardUncredentialedBranchCheckProvider();
+		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
+		$lookup->profiles = array( 'gh' => 'public-profile' );
+		$dashboard        = $this->dashboard(
+			$this->throwingSecrets(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			publicLookupProfiles: $lookup
+		);
+		$package          = $this->managedPackage( 'no-capability/example.php', 'Example', 'repo-42' );
+		$_GET             = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
+				'ran-booster-repository-branch-check|plugin|no-capability/example.php|branch|1'
+			),
+		);
+
+		$outcome = ( new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' ) )->invoke( $dashboard, $package, 'plugin' );
+
+		self::assertSame( 'verified', $outcome );
+		self::assertNull( $provider->request?->repository->credentialId );
+	}
+
 	public function testRepositoryBranchCheckDoesNotRewritePrivatePackageAccessAsPublicLookup(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider         = new DashboardBranchCheckProvider();
@@ -325,6 +401,23 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->cleanupCalls );
 	}
 
+	public function testRepositoryBranchCheckReusesMissingConfiguredSubdirectoryOutcomeWithoutProviderOrPathWork(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider( pathExists: false );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/missing' );
+		$check     = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'subdirectory_unavailable', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 'subdirectory_unavailable', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 1, $provider->prepareCalls );
+		self::assertSame( 1, $provider->pathCalls );
+	}
+
 	public function testRepositoryBranchCheckDistinguishesAnUnavailablePathCheckFromAMissingPath(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider( pathCheckFails: true );
@@ -338,6 +431,23 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' ) )->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 1, $provider->pathCalls );
 		self::assertSame( 1, $provider->cleanupCalls );
+	}
+
+	public function testRepositoryBranchCheckReusesUnavailableConfiguredSubdirectoryOutcomeWithoutProviderOrPathWork(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider( pathCheckFails: true );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$check     = new ReflectionMethod( Dashboard::class, 'requestedPackageRepositoryBranchCheck' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+		);
+
+		self::assertSame( 'subdirectory_unverified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 'subdirectory_unverified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 1, $provider->prepareCalls );
+		self::assertSame( 1, $provider->pathCalls );
 	}
 
 	public function testRepositoryBranchCheckDoesNotClaimAnUninspectedSubdirectoryIsVerified(): void {
@@ -630,6 +740,54 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertCount( 1, $data['managed_webhook_repositories']['repositories'] );
 		self::assertSame( 'branch', $data['managed_webhook_repositories']['repositories'][0]['source'] );
 		self::assertSame( 'Mixed sources', $data['repositoryTableRows'][0]['source_label'] );
+	}
+
+	public function testProviderRepositoryProjectionKeepsWebhookSettingsUrlWhenReleasePrecedesBranch(): void {
+		$_GET            = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$releasePackages = array();
+		for ( $index = 1; $index <= 20; ++$index ) {
+			$releasePackages[] = $this->managedPackage(
+				'release-shared-' . $index . '.php',
+				'Release Shared ' . $index,
+				'repo-shared',
+				\RAN\PackageSource::RELEASE_ASSET,
+				'bb',
+				repository: 'workspace/shared'
+			);
+		}
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( $releasePackages );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn(
+			array(
+				$this->managedPackage(
+					'branch-shared',
+					'Branch Shared',
+					'repo-shared',
+					policy: \RAN\Deployment\DeploymentPolicy::AUTOMATIC,
+					provider: 'bb',
+					repository: 'workspace/shared'
+				),
+			)
+		);
+
+		$data       = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			themes: $themes,
+			providerCredentials: true
+		)->getIndex()['data'];
+		$repository = $data['provider_repositories']['repositories'][0];
+
+		self::assertSame( 'mixed', $repository['source'] );
+		self::assertSame( 'https://example.test/workspace/shared/settings/hooks', $repository['webhook_settings_url'] );
+		self::assertTrue( $repository['has_automatic_branch_consumer'] );
+		self::assertCount( 20, $repository['package_summaries'] );
+		self::assertSame( 1, $repository['package_summaries_omitted'] );
+		self::assertSame( 1, $data['repositoryIntegrationSummary']['needs_review'] );
 	}
 
 	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {
@@ -1014,7 +1172,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			);
 			$data      = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
 
-			self::assertFalse( $data['packageSource']['advanced_open'], $type );
+			self::assertTrue( $data['packageSource']['advanced_open'], $type );
 			self::assertSame( array( '<section>Advanced source settings</section>' ), $data['packageSource']['advanced_sections'], $type );
 			self::assertArrayNotHasKey( 'sections', $data['packageSource'], $type );
 		}
@@ -2165,7 +2323,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?AdminAddOnRegistry $adminAddOns = null,
 		bool $providerCredentials = false,
 		?ProviderRegistry $providers = null,
-		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null
+		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
 	): RoutingDashboard {
 		$providers        = $providers ?? $this->providers( $providerCredentials );
 		$pluginRepository = $plugins ?? new class() extends PluginRepository {
@@ -2200,7 +2359,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$pluginRepository,
 			new Booster(),
 			$themeRepository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, null, $branchCheckEvidence ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),
@@ -2269,7 +2428,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	private function provider( ProviderCode $code, string $label, bool $withCredentials = false ): RepositoryProvider {
-		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, \RAN\RepositoryProvider\WebhookNormalizer {
+		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, \RAN\RepositoryProvider\WebhookNormalizer {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -2312,6 +2471,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function normalizeWebhook( \RAN\RepositoryProvider\WebhookRequest $request ): \RAN\RepositoryProvider\WebhookEnvelope {
 				unset( $request );
 				return \RAN\RepositoryProvider\WebhookEnvelope::ignored();
+			}
+
+			public function repositoryWebhookSettingsUrl( string $locator ): string {
+				return 'https://example.test/' . trim( $locator, '/' ) . '/settings/hooks';
 			}
 		};
 	}
@@ -2611,5 +2774,69 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 			public function cleanup(): void {
 			}
 		};
+	}
+}
+
+final class DashboardUncredentialedBranchCheckProvider implements RepositoryProvider {
+
+	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+	public ?ArchiveRequest $request = null;
+
+	public function getMetadata(): ProviderMetadata {
+		return new ProviderMetadata(
+			ProviderCode::parse( 'gh' ),
+			'GitHub',
+			'https://example.test/',
+			'Owner'
+		);
+	}
+
+	public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+		unset( $request );
+		throw new RuntimeException( 'Repository resolution is not used by the branch check.' );
+	}
+
+	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+		$this->request = $request;
+
+		return new class() implements PreparedArchive {
+			public function getUrl(): string {
+				return 'https://example.test/archive.zip';
+			}
+
+			public function getResolvedRef(): string {
+				return str_repeat( 'a', 40 );
+			}
+
+			public function verifyCurrentHead(): void {
+			}
+
+			public function cleanup(): void {
+			}
+		};
+	}
+}
+
+final class DashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+
+	/** @var array<string, mixed> */
+	private array $records = array();
+
+	protected function readOption(): array {
+		return $this->records;
+	}
+
+	protected function writeOption( array $records ): bool {
+		$this->records = $records;
+		return true;
+	}
+
+	protected function acquireMutationLock(): bool {
+		return true;
+	}
+
+	protected function releaseMutationLock(): bool {
+		return true;
 	}
 }

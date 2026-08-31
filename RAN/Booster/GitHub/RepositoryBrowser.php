@@ -336,9 +336,17 @@ class RepositoryBrowser {
 		}
 
 		// GitHub returns a JSON list for a directory and an object for a file,
-		// symlink, or submodule. The bounded prefix is sufficient to distinguish
-		// those shapes without downloading a potentially large directory listing.
-		return '[' === substr( ltrim( wp_remote_retrieve_body( $response ) ), 0, 1 );
+		// symlink, or submodule. The response is deliberately capped, so validate
+		// its shape without requiring the potentially truncated JSON to decode.
+		$prefix = substr( ltrim( wp_remote_retrieve_body( $response ) ), 0, 1 );
+		if ( '[' === $prefix ) {
+			return true;
+		}
+		if ( '{' === $prefix ) {
+			return false;
+		}
+
+		throw new RuntimeException( 'GitHub could not check the repository path.', 502 );
 	}
 
 	public function validateCredential( string $credentialId, float $timeout = 15.0 ): CredentialValidationResult {

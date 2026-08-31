@@ -69,6 +69,8 @@ final class RepositoryDetailRenderer {
 				<main class="ran-booster-repository-detail__main">
 					<?php if ( 'status' === $activeView ) { ?>
 						<?php $this->renderStatus( $row, $packages ); ?>
+					<?php } elseif ( 'branch' === $activeView && 0 < $omitted ) { ?>
+						<?php $this->renderIncompleteWorkflowControls( 'branch', $omitted ); ?>
 					<?php } elseif ( 'branch' === $activeView ) { ?>
 						<?php if ( null !== $renderWebhookPanel ) { ?>
 							<?php $renderWebhookPanel(); ?>
@@ -76,6 +78,8 @@ final class RepositoryDetailRenderer {
 							<?php $this->renderUnavailableWebhookCards( $sourceKey ); ?>
 						<?php } ?>
 						<?php $this->renderProviderActions( $row ); ?>
+					<?php } elseif ( 0 < $omitted ) { ?>
+						<?php $this->renderIncompleteWorkflowControls( 'releases', $omitted ); ?>
 					<?php } elseif ( null !== $renderReleasePanel ) { ?>
 						<div id="ran-booster-repository-release-workflows"><?php $this->renderReleaseContent( $renderReleasePanel, $packages ); ?></div>
 					<?php } else { ?>
@@ -164,6 +168,19 @@ final class RepositoryDetailRenderer {
 					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ __( 'Open %s settings', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
 				<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Assess release automation', 'ran-booster' ); ?></button></p>
+			</div>
+		</section>
+		<?php
+	}
+
+	private function renderIncompleteWorkflowControls( string $view, int $omitted ): void {
+		$label = 'branch' === $view ? __( 'Manage webhook', 'ran-booster' ) : __( 'Assess release automation', 'ran-booster' );
+		?>
+		<section class="ran-booster-settings-section" aria-labelledby="ran-booster-repository-incomplete-inventory-heading">
+			<header class="ran-booster-settings-section__header"><h3 id="ran-booster-repository-incomplete-inventory-heading"><?php esc_html_e( 'Package inventory incomplete', 'ran-booster' ); ?></h3></header>
+			<div class="ran-booster-settings-section__body">
+				<p><?php echo esc_html( sprintf( __( '%d connected package is not shown. Refresh repository inventory before using repository-wide workflow controls.', 'ran-booster' ), $omitted ) ); ?></p>
+				<p><button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $label ); ?></button></p>
 			</div>
 		</section>
 		<?php

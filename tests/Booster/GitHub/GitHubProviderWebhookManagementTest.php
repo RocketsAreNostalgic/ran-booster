@@ -158,8 +158,8 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 				'methods' => array( 'GET', 'DELETE', 'GET' ),
 			),
 			'test' => array(
-				'code'    => 'ping_verified',
-				'methods' => array( 'GET', 'GET', 'POST', 'GET' ),
+				'code'    => 'ping_requested',
+				'methods' => array( 'GET', 'POST' ),
 			),
 		};
 	}

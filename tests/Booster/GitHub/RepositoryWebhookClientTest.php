@@ -330,7 +330,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
 	}
 
-	public function testPingVerifiesOnlyANewSuccessfulPingDeliveryForTheExactHook(): void {
+	public function testPingAcceptanceDoesNotUseProviderDeliveryHistoryAsSigningProof(): void {
 		$hook     = $this->hook( 55, 'https://site.example/hook' );
 		$baseline = array(
 			array(
@@ -360,10 +360,10 @@ final class RepositoryWebhookClientTest extends TestCase {
 		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 
 		self::assertTrue( $result->succeeded() );
-		self::assertSame( 'ping_verified', $result->code() );
-		self::assertSame( 'verified', $result->toArray()['delivery'] );
-		self::assertSame( array( 'GET', 'GET', 'POST', 'GET' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
-		self::assertStringContainsString( '/hooks/55/pings', $requests[2]['url'] );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
+		self::assertSame( array( 'GET', 'POST' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+		self::assertStringContainsString( '/hooks/55/pings', $requests[1]['url'] );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
 		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
 	}
@@ -389,7 +389,7 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertSame( 'unknown', $result->toArray()['delivery'] );
 	}
 
-	public function testPingWaitsForANewPendingDeliveryToFinishWithoutAcceptingAnOlderPing(): void {
+	public function testPingAcceptanceRemainsUnverifiedWhenProviderHistoryContainsPingDeliveries(): void {
 		$hook                       = $this->hook( 55, 'https://site.example/hook' );
 		$oldPing                    = array(
 			'id'          => 10,
@@ -415,11 +415,11 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
 
-		self::assertSame( 'ping_verified', $result->code() );
-		self::assertSame( 'verified', $result->toArray()['delivery'] );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
 	}
 
-	public function testPingRecordsANewNonSuccessfulDeliveryAsUnverified(): void {
+	public function testPingAcceptanceRemainsUnverifiedWhenProviderHistoryContainsFailedDeliveries(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
 		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
@@ -441,12 +441,12 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
 
-		self::assertFalse( $result->succeeded() );
-		self::assertSame( 'ping_delivery_failed', $result->code() );
-		self::assertSame( 'unverified', $result->toArray()['delivery'] );
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
 	}
 
-	public function testPingDoesNotTreatARedirectedDeliveryAsVerified(): void {
+	public function testPingAcceptanceRemainsUnverifiedWhenProviderHistoryContainsRedirectedDeliveries(): void {
 		$hook = $this->hook( 55, 'https://site.example/hook' );
 		\RAN\Booster\GitHub\repository_resolver_http_queue(
 			array(
@@ -468,9 +468,9 @@ final class RepositoryWebhookClientTest extends TestCase {
 
 		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
 
-		self::assertFalse( $result->succeeded() );
-		self::assertSame( 'ping_delivery_failed', $result->code() );
-		self::assertSame( 'unverified', $result->toArray()['delivery'] );
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
 	}
 
 	public function testPingRefusesAMismatchedRecordedHookBeforeAnyPingRequest(): void {

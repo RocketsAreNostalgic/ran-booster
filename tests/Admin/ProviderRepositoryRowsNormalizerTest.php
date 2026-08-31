@@ -313,6 +313,25 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'Mixed sources', $result['rows']['101']['source_label'] );
 		self::assertSame( 'packages/plugin', $result['rows']['101']['package_summaries'][0]['subdirectory'] );
 		self::assertSame( array( 'owner/plugin.php', 'owner-theme' ), $result['rows']['101']['package_references'] );
+		self::assertSame(
+			array(
+				array(
+					'label'         => 'Plugin settings',
+					'screen_reader' => 'owner/plugin.php',
+				),
+				array(
+					'label'         => 'Theme settings',
+					'screen_reader' => 'owner-theme',
+				),
+			),
+			array_map(
+				static fn ( array $action ): array => array(
+					'label'         => $action['label'],
+					'screen_reader' => $action['screen_reader'],
+				),
+				array_values( $result['rows']['101']['actions'] )
+			)
+		);
 		self::assertSame( 'Automatic: 1', $result['rows']['101']['policies'][0]['label'] );
 		self::assertSame( 'Manual: 1', $result['rows']['101']['policies'][1]['label'] );
 		self::assertSame( array( 'owner/plugin.php' ), $capturedProjections['101']['package_references'] );

@@ -57,7 +57,7 @@ final class SetupRecordStoreTest extends TestCase {
 				'opaque'         => "future\0bytes",
 			),
 			'non_array' => 'opaque-row',
-			null        => null,
+			'null_row'  => null,
 		) as $name => $existing ) {
 			$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_setup_records'] = array( '123456789' => $existing );
 			$GLOBALS['ran_booster_release_deployments_test_option_updates'] = array();

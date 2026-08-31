@@ -179,6 +179,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$packageMutationAvailable = true;
 		$packageSourceChoices     = array(
 			'branch' => array(

@@ -283,8 +283,10 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$provider = $this->providers->get( (string) $package->getProviderCode() );
 		} catch ( UnknownProvider ) {
+			$this->branchCheckEvidence->record( $type, $package, $profileId, 'provider_unavailable', $profileFingerprint );
 			return 'provider_unavailable';
 		} catch ( Throwable ) {
+			$this->branchCheckEvidence->record( $type, $package, $profileId, 'unable_to_check', $profileFingerprint );
 			return 'unable_to_check';
 		}
 
@@ -293,11 +295,10 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$repository = $package->getRepository()->reference;
 			if ( ! $repository->private ) {
-				$credentialId = $profileId;
-				if ( $provider instanceof CredentialedPublicRepositoryBrowser
-					&& ! $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
-					$credentialId = null;
-				}
+				$credentialId = $provider instanceof CredentialedPublicRepositoryBrowser
+					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile
+						? $profileId
+						: null;
 
 				$repository = new RepositoryReference(
 					$repository->locator,
@@ -331,6 +332,16 @@ final readonly class ProviderSettingsPresenter {
 		$this->branchCheckEvidence->record( $type, $package, $profileId, $result, $profileFingerprint );
 
 		return $result;
+	}
+
+	/**
+	 * Returns the current non-secret access state for a one-time branch-check result.
+	 *
+	 * The dashboard may cache that result briefly, but credential replacement and
+	 * default public-profile changes must require a fresh remote check.
+	 */
+	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
+		return $this->branchCheckEvidence->profileFingerprintFor( $package, $this->effectiveBranchCheckProfile( $package ) );
 	}
 
 	/** @return array{outcome: 'verified', checked_at: string}|null */

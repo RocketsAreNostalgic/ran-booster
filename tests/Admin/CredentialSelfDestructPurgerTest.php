@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Admin;
 
+// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
+
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CredentialSelfDestructPurger;

@@ -8,10 +8,24 @@ require_once __DIR__ . '/../Support/PackageViewWordPressFunctions.php';
 require_once __DIR__ . '/../Support/DocumentationHookWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php';
+require_once __DIR__ . '/ReleaseManagement/Support/ReleaseManagementWordPressFunctions.php';
+require_once dirname( __DIR__, 2 ) . '/tests/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/WorkflowAssistanceTestBootstrap.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/GitHubReleaseWorkflowWordPressFunctions.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/ReleaseWorkflowCredentialStoreDouble.php';
+require_once __DIR__ . '/ReleaseManagement/Support/ReleaseManagementFixtures.php';
+require_once __DIR__ . '/ReleaseManagement/Support/ReleaseTrackingFacadeDouble.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/PluginRepositoryDouble.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/ThemeRepositoryDouble.php';
 
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
+use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
+use Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble;
+use Tests\Admin\ReleaseManagement\GitHub\Support\ReleaseWorkflowCredentialStoreDouble;
+use Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble;
+use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
+use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	protected function setUp(): void {
@@ -93,6 +107,80 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		self::assertSame( 'Ready to assess', $row['details'][0]['value'] );
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
+	}
+
+	public function testProjectDoesNotEnrichAnIncompleteInventoryWithPartialReleaseAutomationStatus(): void {
+		$controls = new GitHubReleaseWorkflowControls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ),
+			new PluginRepositoryDouble(),
+			new ThemeRepositoryDouble(),
+			new ReleaseWorkflowCredentialStoreDouble()
+		);
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = array( $controls, 'enrichRepositoryRows' );
+
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+			array(
+				array(
+					'target'                    => 'example/example',
+					'repository_id'             => '101',
+					'source'                    => 'branch',
+					'package_references'        => array( 'example/example.php', 'omitted/omitted.php' ),
+					'package_summaries'         => array(
+						array(
+							'type'              => 'plugin',
+							'identifier'        => 'example/example.php',
+							'display_name'      => 'Example plugin',
+							'settings_url'      => 'https://example.test/plugin-settings',
+							'source'            => 'branch',
+							'source_revision'   => 3,
+							'deployment_policy' => 'manual',
+						),
+					),
+					'package_summaries_omitted' => 1,
+					'deployment_policies'       => array(
+						'automatic' => 0,
+						'manual'    => 2,
+						'disabled'  => 0,
+					),
+					'automatic_count'           => 0,
+					'repository_url'            => 'https://github.com/example/example',
+					'webhook_settings_url'      => null,
+				),
+			),
+			'gh',
+			'GitHub',
+			'GitHub webhooks',
+			'GitHub secret',
+			'https://example.test/webhooks/gh',
+			true,
+			array(
+				'by_id'         => array(
+					'101' => array(
+						'repository_id'         => '101',
+						'eligible'              => true,
+						'package_references'    => array( 'example/example.php', 'omitted/omitted.php' ),
+						'deployment_policies'   => array(
+							'automatic' => 0,
+							'manual'    => 2,
+							'disabled'  => 0,
+						),
+						'reason_codes'          => array(),
+						'local_secret_coverage' => 'repository',
+					),
+				),
+				'by_repository' => array(),
+			),
+			null,
+			'',
+			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
+			'https://example.test/repositories'
+		);
+		$row    = $result['rows']['101'];
+
+		self::assertSame( 'Package inventory incomplete', $row['management_label'] );
+		self::assertSame( 'Workflow controls disabled', $row['management_detail'] );
+		self::assertSame( array(), $row['details'] );
+		self::assertArrayNotHasKey( 'gh:release-automation', $row['actions'] );
 	}
 
 	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {

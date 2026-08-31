@@ -297,11 +297,41 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 									<p class="ran-booster-section__description"><?php esc_html_e( 'Local readiness and recorded repository state. Booster does not contact the provider to build this summary.', 'ran-booster' ); ?></p>
 								</div>
 							</div>
+							<?php
+							$releasePackageCount    = (int) $repositoryIntegrationSummary['release_packages'];
+							$releaseRepositoryCount = (int) $repositoryIntegrationSummary['release_repositories'];
+							/* translators: %d is the number of packages using releases. */
+							$releasePackageCountLabel = sprintf( _n( '%d package', '%d packages', $releasePackageCount, 'ran-booster' ), $releasePackageCount );
+							/* translators: %d is the number of repositories supplying releases. */
+							$releaseRepositoryLabel  = sprintf( _n( '%d repository', '%d repositories', $releaseRepositoryCount, 'ran-booster' ), $releaseRepositoryCount );
+							$publishedReleaseSummary = true === ( $repositoryIntegrationSummary['release_totals_incomplete'] ?? false )
+								? sprintf(
+									/* translators: 1: lower-bound package count label, 2: repository count label. */
+									__( 'At least %1$s across %2$s · exact totals unavailable while a repository inventory is incomplete', 'ran-booster' ),
+									$releasePackageCountLabel,
+									$releaseRepositoryLabel
+								)
+								: ( true === ( $repositoryIntegrationSummary['release_workflows_inventory_incomplete'] ?? false )
+									? sprintf(
+										/* translators: 1: number of Published release packages, 2: number of repositories. */
+										__( '%1$d packages in %2$d repositories · workflow state unavailable while a repository inventory is incomplete', 'ran-booster' ),
+										$repositoryIntegrationSummary['release_packages'],
+										$repositoryIntegrationSummary['release_repositories']
+									)
+									: sprintf(
+										/* translators: 1: number of Published release packages, 2: number of repositories, 3: number of release workflows needing review. */
+										__( '%1$d packages in %2$d repositories · %3$d workflows need review', 'ran-booster' ),
+										$repositoryIntegrationSummary['release_packages'],
+										$repositoryIntegrationSummary['release_repositories'],
+										$repositoryIntegrationSummary['release_workflows_needing_review']
+									)
+								);
+							?>
 							<dl class="ran-booster-repository-integration-status">
 								<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhookAssistanceSiteReady ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for provider delivery', 'ran-booster' ) ); ?></dd></div>
 								<div><dt><?php esc_html_e( 'Signing profiles', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of locally ready signing profiles. */ _n( '%d ready locally', '%d ready locally', $readyWebhookProfileCount, 'ran-booster' ), $readyWebhookProfileCount ) ); ?></dd></div>
 								<div><dt><?php esc_html_e( 'Repository hooks', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: number of locally recorded hooks, 2: number of hook records needing review. */ __( '%1$d recorded locally · %2$d need review', 'ran-booster' ), $repositoryIntegrationSummary['recorded_hooks'], $repositoryIntegrationSummary['needs_review'] ) ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: number of Published release packages, 2: number of repositories, 3: number of release workflows needing review. */ __( '%1$d packages in %2$d repositories · %3$d workflows need review', 'ran-booster' ), $repositoryIntegrationSummary['release_packages'], $repositoryIntegrationSummary['release_repositories'], $repositoryIntegrationSummary['release_workflows_needing_review'] ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $publishedReleaseSummary ); ?></dd></div>
 							</dl>
 							<?php if ( ! $webhookAssistanceProviderCapable || ! $webhookAssistanceSiteReady ) { ?>
 								<div class="notice <?php echo esc_attr( $webhookHasHardFailure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>

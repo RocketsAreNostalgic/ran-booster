@@ -606,12 +606,14 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 
-	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_workflows_needing_review:int} */
+	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int} */
 	private function repositorySummary( array $rows ): array {
 		$recordedHooks                 = 0;
 		$needsReview                   = 0;
 		$releasePackages               = 0;
 		$releaseRepositories           = 0;
+		$releaseTotalsIncomplete       = false;
+		$releaseWorkflowsIncomplete    = false;
 		$releaseWorkflowsNeedingReview = 0;
 		foreach ( $rows as $row ) {
 			$recorded = false;
@@ -631,18 +633,36 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
 				++$needsReview;
 			}
-			if ( true === ( $row['historical'] ?? false ) || 0 !== (int) ( $row['package_summaries_omitted'] ?? 0 ) ) {
+			if ( true === ( $row['historical'] ?? false ) ) {
 				continue;
 			}
+			$source                      = is_string( $row['source_key'] ?? null ) ? $row['source_key'] : '';
+			$packageSummariesOmitted     = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
 			$releasePackagesInRepository = 0;
 			foreach ( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array() as $summary ) {
 				if ( is_array( $summary ) && 'release_asset' === ( $summary['source'] ?? null ) ) {
 					++$releasePackagesInRepository;
 				}
 			}
+			if ( 'release_asset' === $source && 0 < $packageSummariesOmitted ) {
+				$releasePackagesInRepository = is_array( $row['package_references'] ?? null )
+					? count( array_filter( $row['package_references'], 'is_string' ) )
+					: 0;
+				if ( 0 === $releasePackagesInRepository ) {
+					$releasePackagesInRepository = count( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array() ) + $packageSummariesOmitted;
+				}
+				$releaseWorkflowsIncomplete = true;
+			} elseif ( 'mixed' === $source && 0 < $packageSummariesOmitted ) {
+				$releasePackagesInRepository = max( 1, $releasePackagesInRepository );
+				$releaseTotalsIncomplete     = true;
+				$releaseWorkflowsIncomplete  = true;
+			}
 			if ( 0 < $releasePackagesInRepository ) {
 				$releasePackages += $releasePackagesInRepository;
 				++$releaseRepositories;
+			}
+			if ( 0 < $packageSummariesOmitted ) {
+				continue;
 			}
 			$providerReleaseDetailPrefix = is_string( $row['provider_code'] ?? null )
 				? $row['provider_code'] . ':release-automation-'
@@ -659,12 +679,14 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 
 		return array(
-			'repositories'                     => count( $rows ),
-			'recorded_hooks'                   => $recordedHooks,
-			'needs_review'                     => $needsReview,
-			'release_packages'                 => $releasePackages,
-			'release_repositories'             => $releaseRepositories,
-			'release_workflows_needing_review' => $releaseWorkflowsNeedingReview,
+			'repositories'                           => count( $rows ),
+			'recorded_hooks'                         => $recordedHooks,
+			'needs_review'                           => $needsReview,
+			'release_packages'                       => $releasePackages,
+			'release_repositories'                   => $releaseRepositories,
+			'release_totals_incomplete'              => $releaseTotalsIncomplete,
+			'release_workflows_inventory_incomplete' => $releaseWorkflowsIncomplete,
+			'release_workflows_needing_review'       => $releaseWorkflowsNeedingReview,
 		);
 	}
 

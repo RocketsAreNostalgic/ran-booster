@@ -136,6 +136,42 @@ final class SourceReadyAssessorTest extends TestCase {
 		self::assertSame( 'release_automation_conflict', $result->code() );
 	}
 
+	public function testManagedAssessmentAdoptsOnlyTheCanonicalGeneratedAutomation(): void {
+		$documents = array(
+			'example-plugin.php'                   => $this->pluginHeader(),
+			'.github/workflows/release-please.yml' => "steps:\n  - uses: googleapis/release-please-action@v4\n",
+			'.ran-booster-release-profile.json'    => '{}',
+			'.release-please-manifest.json'        => '{}',
+			'release-please-config.json'           => '{}',
+			'version.txt'                          => self::VERSION,
+			'release-contents.txt'                 => 'example-plugin.php',
+			'scripts/build-release.sh'             => "#!/bin/sh\ngh release create v1.2.3\n",
+			'scripts/verify-release.sh'            => '#!/bin/sh',
+			'scripts/upload-release-assets.sh'     => '#!/bin/sh',
+		);
+		$assessor  = new SourceReadyAssessor();
+		$adoptable = $assessor->assessManaged(
+			$this->snapshot( $documents ),
+			'plugin',
+			'example-plugin',
+			self::VERSION,
+			'https://github.com/' . self::REPOSITORY
+		);
+
+		self::assertTrue( $adoptable->readyForBootstrap() );
+
+		$documents['.github/workflows/other-release.yml'] = "steps:\n  - uses: softprops/action-gh-release@v2\n";
+		$conflict = $assessor->assessManaged(
+			$this->snapshot( $documents ),
+			'plugin',
+			'example-plugin',
+			self::VERSION,
+			'https://github.com/' . self::REPOSITORY
+		);
+
+		self::assertSame( 'release_automation_conflict', $conflict->code() );
+	}
+
 	public function testCustomPrettierOwnershipAndPotVersioningRefuse(): void {
 		$assessor = new SourceReadyAssessor();
 		$custom   = $assessor->assess(

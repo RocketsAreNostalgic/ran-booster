@@ -144,7 +144,7 @@ final class SourceReadyAssessor {
 			return SourceReadyAssessment::refused( 'repository_unsupported' );
 		}
 
-		if ( $this->hasCompetingReleaseAutomation( $snapshot ) ) {
+		if ( $this->hasCompetingReleaseAutomation( $snapshot, $allowKnownGeneratedPaths ) ) {
 			return SourceReadyAssessment::refused( 'release_automation_conflict' );
 		}
 		if ( $allowKnownGeneratedPaths ) {
@@ -358,8 +358,11 @@ final class SourceReadyAssessor {
 		);
 	}
 
-	public function hasCompetingReleaseAutomation( RepositorySnapshot $snapshot ): bool {
+	public function hasCompetingReleaseAutomation( RepositorySnapshot $snapshot, bool $allowKnownGeneratedPaths = false ): bool {
 		foreach ( array_keys( $snapshot->entries() ) as $path ) {
+			if ( $allowKnownGeneratedPaths && in_array( $path, self::GENERATED_PATHS, true ) ) {
+				continue;
+			}
 			if ( ! in_array( $path, self::GENERATED_PATHS, true )
 				&& in_array( basename( $path ), array( '.release-please-manifest.json', 'release-please-config.json' ), true ) ) {
 				return true;
@@ -367,6 +370,9 @@ final class SourceReadyAssessor {
 		}
 
 		foreach ( $snapshot->documentPaths() as $path ) {
+			if ( $allowKnownGeneratedPaths && in_array( $path, self::GENERATED_PATHS, true ) ) {
+				continue;
+			}
 			$workflow = str_starts_with( $path, '.github/workflows/' ) && 1 === preg_match( '/\.ya?ml\z/i', $path );
 			$script   = ( str_starts_with( $path, 'scripts/' ) || str_starts_with( $path, '.github/scripts/' ) || str_starts_with( $path, '.ci/' ) )
 				&& str_ends_with( strtolower( $path ), '.sh' );

@@ -775,6 +775,35 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array(), $gateway->calls );
 	}
 
+	public function testSavedCredentialAbsenceKeepsEveryWebhookMutationControlVisibleAndDisabled(): void {
+		$gateway                       = $this->gateway();
+		$gateway->credentialsAvailable = false;
+		$store                         = new OperationStoreFixture();
+		$store->record                 = $this->record();
+		$model                         = $this->display( $gateway, $store )->panel(
+			'gh',
+			'GitHub',
+			'1234',
+			'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh',
+			null,
+			null,
+			true
+		);
+
+		self::assertIsArray( $model );
+		self::assertSame( array(), $model['credential_choices'] );
+		self::assertSame(
+			array( 'setup', 'check', 'reconfigure', 'test', 'remove' ),
+			array_column( $model['operations'], 'key' )
+		);
+		self::assertSame( array( true, true, true, true, true ), array_column( $model['operations'], 'disabled' ) );
+
+		$html = $this->renderPanel( $gateway, $store );
+		foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $label ) {
+			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
+		}
+	}
+
 	public function testCheckRecordsConfigurationWithoutClaimingSignedDelivery(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult( 'succeeded', 'configured_pending_delivery', '77' );
@@ -1475,8 +1504,9 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	/** @var list<array<mixed>> */
 	public array $mutationCalls = array();
 	public RepositoryWebhookFitnessResult $fitness;
-	public bool $throwOnReadiness = false;
-	public bool $profileAbsent    = false;
+	public bool $throwOnReadiness     = false;
+	public bool $profileAbsent        = false;
+	public bool $credentialsAvailable = true;
 
 	public function __construct(
 		private readonly AssistanceReadiness $readinessResult,
@@ -1500,7 +1530,7 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	}
 
 	public function credentialChoices( string $providerCode ): array {
-		return hash_equals( $this->targetResult->providerCode(), $providerCode ) ? array(
+		return $this->credentialsAvailable && hash_equals( $this->targetResult->providerCode(), $providerCode ) ? array(
 			array(
 				'id'    => 'credential_1',
 				'label' => 'Temporary',

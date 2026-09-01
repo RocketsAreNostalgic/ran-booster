@@ -7,6 +7,7 @@ namespace RAN\Admin\WebhookManagement;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
 use RAN\Admin\Interaction\AdminInteractionRequest;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
 use RAN\RepositoryProvider\ProviderMetadata;
@@ -37,6 +38,7 @@ final class WebhookManagementController {
 		private readonly WebhookOperationCoordinator $operations,
 		private readonly WebhookDisplayModel $display,
 		private readonly ProviderRegistry $providers,
+		private readonly ManagedPackageWebhookAuthorityResolver $packageAuthorities,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
 		?callable $createNonce = null
@@ -218,11 +220,22 @@ final class WebhookManagementController {
 			return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
 		}
 		if ( ! in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
-			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package ) ) {
+			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package )
+			|| ! $this->packageReturnMatchesOperation( $page, $package, $providerCode, $repositoryId ) ) {
 			return $fallback;
 		}
 
-		return admin_url( 'admin.php?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1' );
+		return ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1';
+	}
+
+	/** Prove that a package-settings return URL belongs to this signed repository operation. */
+	private function packageReturnMatchesOperation( string $page, string $package, string $providerCode, string $repositoryId ): bool {
+		$type      = 'ran-booster-plugins' === $page ? 'plugin' : 'theme';
+		$authority = $this->packageAuthorities->forPackage( $type, $package );
+
+		return null !== $authority
+			&& hash_equals( $providerCode, $authority['provider_code'] )
+			&& hash_equals( $repositoryId, $authority['repository_id'] );
 	}
 
 	private function capableProviderMetadata( string $providerCode ): ?ProviderMetadata {

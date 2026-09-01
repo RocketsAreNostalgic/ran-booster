@@ -402,8 +402,15 @@ updater construction and registration, and projects only a typed
 bounded passive value: it contains normalized availability, offered-version,
 check-time, failure and candidate-validation fields, never the provider's raw
 updater object, diagnostics array or internal runtime state. Refresh returns an
-exact boolean. Missing capabilities, failed registration, invalid status and
-failed refresh all fail closed. Release tracking requires this capability and
+exact boolean. When candidate validation describes the release behind the
+current native offer, `candidateProviderReleaseId` must contain that release's
+exact opaque provider identity—the same identity returned by candidate listing
+and inspection. It remains empty when there is no current, candidate-validated
+native offer. Core does not infer this identity from a tag or version; without
+an exact identity match, the managed browser will not hand that candidate to
+WordPress as the current native update. Missing capabilities, failed
+registration, invalid status and failed refresh all fail closed. Release
+tracking requires this capability and
 `RepositoryReleaseMetadata` on the same registered provider aggregate;
 metadata alone is not eligibility. Core retains package enumeration, metadata
 path derivation, authority snapshots, WordPress hook timing, locks, stale-offer

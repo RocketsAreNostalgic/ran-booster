@@ -852,6 +852,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'Mixed sources', $data['repositoryTableRows'][0]['source_label'] );
 	}
 
+	public function testProviderRepositoryProjectionUsesNetworkPackageSettingsUrlsOnMultisite(): void {
+		$this->setMultisite( true );
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array( $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repo-example', provider: 'bb' ) )
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
+			$data['provider_repositories']['repositories'][0]['package_summaries'][0]['settings_url']
+		);
+	}
+
 	public function testProviderRepositoryProjectionKeepsWebhookSettingsUrlWhenReleasePrecedesBranch(): void {
 		$_GET            = array(
 			'tab'   => 'bb',
@@ -927,6 +950,32 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( array(), $row['actions'] );
 			self::assertSame( '', $row['repository_url'] );
 			self::assertSame( 'Repository identity conflict', $row['statuses'][0]['label'] );
+		}
+	}
+
+	public function testProviderRepositoryProjectionDoesNotFoldOpaqueProviderLocators(): void {
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				$this->managedPackage( 'plugin/upper.php', 'Uppercase Locator', 'repo-upper', provider: 'bb', repository: 'Owner/Repo' ),
+				$this->managedPackage( 'plugin/lower.php', 'Lowercase Locator', 'repo-lower', provider: 'bb', repository: 'owner/repo' ),
+			)
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertCount( 2, $data['repositoryTableRows'] );
+		foreach ( $data['repositoryTableRows'] as $row ) {
+			self::assertFalse( $row['historical'] );
+			self::assertNotSame( '', $row['repository_url'] );
 		}
 	}
 

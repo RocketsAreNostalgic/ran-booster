@@ -1445,7 +1445,7 @@ final class GitHubReleaseWorkflowControls {
 			$args['package'] = $identifier;
 		}
 
-		return add_query_arg( $args, admin_url( 'admin.php' ) );
+		return add_query_arg( $args, is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) );
 	}
 
 	private function repositoryReleaseUrl( string $repositoryId ): string {
@@ -1457,7 +1457,7 @@ final class GitHubReleaseWorkflowControls {
 				'repository'      => $repositoryId,
 				'repository_view' => 'releases',
 			),
-			admin_url( 'admin.php' )
+			is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
 		);
 	}
 

@@ -820,10 +820,10 @@ final readonly class ProviderSettingsPresenter {
 			if ( '' === $target ) {
 				continue;
 			}
-			$normalizedTarget = strtolower( trim( $target, '/' ) );
+			$locatorKey = $target;
 			if ( '' !== $repositoryId ) {
-				$idsByLocator[ $normalizedTarget ][ $repositoryId ]           = true;
-				$locatorsByRepositoryId[ $repositoryId ][ $normalizedTarget ] = true;
+				$idsByLocator[ $locatorKey ][ $repositoryId ]           = true;
+				$locatorsByRepositoryId[ $repositoryId ][ $locatorKey ] = true;
 			}
 		}
 
@@ -840,9 +840,9 @@ final readonly class ProviderSettingsPresenter {
 			if ( '' === $target ) {
 				continue;
 			}
-			$normalizedTarget = strtolower( trim( $target, '/' ) );
+			$locatorKey       = $target;
 			$identityConflict = '' !== $repositoryId && (
-				1 < count( $idsByLocator[ $normalizedTarget ] ?? array() )
+				1 < count( $idsByLocator[ $locatorKey ] ?? array() )
 				|| 1 < count( $locatorsByRepositoryId[ $repositoryId ] ?? array() )
 			);
 
@@ -938,7 +938,8 @@ final readonly class ProviderSettingsPresenter {
 			'type'              => $type,
 			'identifier'        => $identifier,
 			'display_name'      => $package->getDisplayName(),
-			'settings_url'      => admin_url( 'admin.php?page=' . $page . '&package=' . rawurlencode( $identifier ) ),
+			'settings_url'      => ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) )
+				. '?page=' . $page . '&package=' . rawurlencode( $identifier ),
 			'source'            => $source->value,
 			'source_revision'   => $package->getSourceRevision(),
 			'branch'            => (string) $package->getBranch(),

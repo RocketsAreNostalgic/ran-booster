@@ -764,6 +764,19 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		);
 	}
 
+	public function testPackageSettingsReturnDestinationUsesNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
+		$controls                   = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+		$request                    = $this->request( 'enable' );
+		$request['release_channel'] = 'stable';
+
+		$url = $controls->processAdminPostRequest( 'enable', $request );
+
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $url );
+		self::assertStringContainsString( 'page=ran-booster-plugins', $url );
+		self::assertStringContainsString( 'package=example%2Fexample.php', $url );
+	}
+
 	public function testChangeChannelUsesAnOriginRelativeHxLocationAndKeepsNativeRedirectAbsolute(): void {
 		$request                    = $this->request( 'change_channel' );
 		$request['release_channel'] = 'prerelease';

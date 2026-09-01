@@ -19,6 +19,8 @@ require_once __DIR__ . '/ReleaseManagement/GitHub/Support/PluginRepositoryDouble
 require_once __DIR__ . '/ReleaseManagement/GitHub/Support/ThemeRepositoryDouble.php';
 
 use LogicException;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
@@ -39,6 +41,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']                 = array();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
+		unset( $GLOBALS['ran_booster_package_view_multisite'] );
 	}
 
 	public function testProjectAppliesBoundedProviderEnrichmentBeforeNormalization(): void {
@@ -234,8 +237,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertArrayNotHasKey( 'gh:release-automation', $row['actions'] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {
-		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project(
 			array(
 				array(
 					'target'              => 'example/example',
@@ -267,14 +273,16 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
 			'https://example.test/repositories'
 		);
-		$row    = $result['selected'];
+		$row = $result['selected'];
 
 		self::assertIsArray( $row );
-		$action = $row['actions']['core:webhook-cleanup-review'];
+		$action   = $row['actions']['core:webhook-cleanup-review'];
+		$settings = $row['actions'][ 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ) ];
 		self::assertStringContainsString( 'panel=repositories', $action['url'] );
 		self::assertStringContainsString( 'repository=101', $action['url'] );
 		self::assertStringContainsString( 'repository_view=branch', $action['url'] );
 		self::assertStringEndsWith( '#ran-booster-repository-webhook-setup-heading', $action['url'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $settings['url'] );
 	}
 
 	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {

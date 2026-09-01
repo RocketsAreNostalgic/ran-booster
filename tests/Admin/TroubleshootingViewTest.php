@@ -807,7 +807,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryBranchHtml = (string) ob_get_clean();
-		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryBranchHtml );
+		self::assertStringContainsString( '>Push-to-deploy</h3>', $repositoryBranchHtml );
 
 		$requestedRepositoryId = 'stale-repository';
 		$providerViewData      = $this->providerViewData( get_defined_vars() );

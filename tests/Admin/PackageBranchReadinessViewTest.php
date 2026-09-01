@@ -490,7 +490,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( 'panel=repositories', $html );
-		self::assertMatchesRegularExpression( '/<button type="button" class="button" disabled aria-disabled="true">Review repository webhook settings<\\/button>/', $html );
+		self::assertMatchesRegularExpression( '/<button type="button" class="button" disabled aria-disabled="true">Manage webhooks<\\/button>/', $html );
 	}
 
 	#[DataProvider( 'repositoryBranchCheckOutcomeProvider' )]

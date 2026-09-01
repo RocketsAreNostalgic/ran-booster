@@ -37,15 +37,43 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		$controls->register();
 
 		self::assertArrayHasKey( 'ran_booster_admin_package_source_choices', $GLOBALS['ran_booster_release_management_test_filters'] );
+		self::assertSame(
+			array( $controls, 'keepReleaseSettingsDiscoverable' ),
+			$GLOBALS['ran_booster_release_management_test_filters']['ran_booster_admin_package_source_choices'][0]['callback']
+		);
+		self::assertSame( 20, $GLOBALS['ran_booster_release_management_test_filters']['ran_booster_admin_package_source_choices'][0]['priority'] );
+		self::assertSame( 5, $GLOBALS['ran_booster_release_management_test_filters']['ran_booster_admin_package_source_choices'][0]['accepted_args'] );
 		self::assertArrayNotHasKey( 'ran_booster_provider_repository_rows', $GLOBALS['ran_booster_release_management_test_filters'] );
 		self::assertArrayHasKey( 'ran_booster_admin_package_release_readiness_actions', $GLOBALS['ran_booster_release_management_test_actions'] );
+		self::assertSame(
+			array( $controls, 'renderPackageReleaseAutomationLink' ),
+			$GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_package_release_readiness_actions'][0]['callback']
+		);
+		self::assertSame( 20, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_package_release_readiness_actions'][0]['priority'] );
+		self::assertSame( 2, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_package_release_readiness_actions'][0]['accepted_args'] );
 		self::assertArrayHasKey( 'ran_booster_admin_repository_release_sections', $GLOBALS['ran_booster_release_management_test_actions'] );
 		self::assertSame(
 			array( $controls, 'renderRepositoryReleaseSections' ),
 			$GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_repository_release_sections'][0]['callback']
 		);
+		self::assertSame( 20, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_repository_release_sections'][0]['priority'] );
+		self::assertSame( 2, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_repository_release_sections'][0]['accepted_args'] );
 		self::assertArrayHasKey( 'admin_post_ran_booster_release_workflow', $GLOBALS['ran_booster_release_management_test_actions'] );
 		self::assertCount( 1, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'] );
+		self::assertSame( array( $controls, 'handleWorkflow' ), $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['callback'] );
+		self::assertSame( 10, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['priority'] );
+		self::assertSame( 1, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['accepted_args'] );
+	}
+
+	public function testCapableEditKeepsReleaseAssetSelectableWhileOtherContextsRemainUnchanged(): void {
+		$choices = array( 'release_asset' => array( 'disabled' => true ) );
+		$package = new class() { public function providerCode(): string {
+				return 'fixture';
+		} };
+
+		self::assertFalse( $this->controls()->keepReleaseSettingsDiscoverable( $choices, 'edit', 'plugin', $package, 'https://example.test' )['release_asset']['disabled'] );
+		self::assertSame( $choices, $this->controls()->keepReleaseSettingsDiscoverable( $choices, 'create', 'plugin', $package, 'https://example.test' ) );
+		self::assertSame( $choices, $this->controls( registered: false )->keepReleaseSettingsDiscoverable( $choices, 'edit', 'plugin', $package, 'https://example.test' ) );
 	}
 
 	public function testNonGitHubFixtureCompletesAllFiveOperationsThroughTheSingleNeutralRoute(): void {
@@ -59,6 +87,65 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			self::assertSame( 'credential_1', $call['credential_id'] );
 			self::assertSame( 'fixture', $provider->getMetadata()->code->value );
 		}
+	}
+
+	public function testHandleWorkflowUsesNativeAndHtmxRedirectTransports(): void {
+		$request = $this->request( 'inspect' );
+		$_POST   = $request;
+		try {
+			$this->controls()->handleWorkflow();
+			self::fail( 'Expected the native redirect to stop execution.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'native-redirect', $exception->getMessage() );
+		}
+		$native = (string) $GLOBALS['ran_booster_release_management_test_redirect'];
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?', $native );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $native, PHP_URL_QUERY ), $nativeQuery );
+		self::assertSame( 'ran-booster', $nativeQuery['page'] );
+		self::assertSame( 'fixture', $nativeQuery['tab'] );
+		self::assertSame( 'repositories', $nativeQuery['panel'] );
+		self::assertSame( '101', $nativeQuery['repository'] );
+		self::assertSame( 'releases', $nativeQuery['repository_view'] );
+		self::assertSame( 'ran-booster-repository-release-workflows', \RAN\Admin\ReleaseManagement\wp_parse_url( $native, PHP_URL_FRAGMENT ) );
+
+		try {
+			$_POST                      = $request;
+			$_SERVER['HTTP_HX_REQUEST'] = 'true';
+			try {
+				$this->controls()->handleWorkflow();
+				self::fail( 'Expected the HX response to stop execution.' );
+			} catch ( \RuntimeException $exception ) {
+				self::assertSame( 'hx-redirect', $exception->getMessage() );
+			}
+			$header = (string) $GLOBALS['ran_booster_release_management_test_header'];
+			self::assertSame(
+				'HX-Location: ' . (string) \RAN\Admin\ReleaseManagement\wp_json_encode(
+					array(
+						'path'   => \RAN\Admin\ReleaseManagement\wp_make_link_relative( $native ),
+						'target' => '#wpbody-content',
+						'select' => '#wpbody-content',
+						'swap'   => 'outerHTML show:none',
+					)
+				),
+				$header
+			);
+		} finally {
+			unset( $_SERVER['HTTP_HX_REQUEST'] );
+			$_POST = array();
+		}
+	}
+
+	public function testWorkflowProviderExceptionBecomesASignedUnavailableResultWithoutAWorkflowOperation(): void {
+		$provider                   = new RepositoryReleaseWorkflowProviderDouble();
+		$provider->throwOnOperation = true;
+		$url                        = $this->controls( provider: $provider )->processWorkflowRequest( $this->request( 'inspect' ) );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verifies the immediately preceding signed PRG result.
+		$result = ( new \ReflectionMethod( ReleaseWorkflowControls::class, 'requestedResult' ) )->invoke( $this->controls( provider: $provider ) );
+
+		self::assertSame( 'workflow_remote_unavailable', $result['code'] );
+		self::assertSame( 'unexpected', $result['failure_stage'] );
+		self::assertSame( 'unexpected_runtime_failure', $result['diagnostic_code'] );
+		self::assertSame( array(), $provider->calls );
 	}
 
 	public function testWorkflowResultFallsBackToThePackageReleaseAssetSettingsWhenTheRepositoryCannotBeResolved(): void {
@@ -98,6 +185,58 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-release-workflow-result', $html );
 		self::assertStringContainsString( 'Booster stopped before contacting the repository provider', $html );
 		self::assertStringNotContainsString( '<form', $html );
+	}
+
+	public function testFallbackPackageWorkflowNoticeRequiresAnUnchangedSignedResultAndMatchingScreen(): void {
+		$request                           = $this->request( 'inspect' );
+		$request['expected_repository_id'] = 'missing-repository';
+		$url                               = $this->controls()->processWorkflowRequest( $request );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $query );
+		$package       = new class() {
+			public function providerCode(): string {
+				return 'fixture'; }
+			public function type(): string {
+				return 'plugin'; }
+			public function identifier(): string {
+				return 'example/example.php'; }
+			public function sourceRevision(): int {
+				return 3; }
+		};
+		$rendersNotice = function ( array $get ) use ( $package ): bool {
+			$_GET = $get; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exercises display-only signed-result verification.
+			ob_start();
+			$this->controls()->renderPackageReleaseAutomationLink( $package, ReleaseManagementFixture::status() );
+			return str_contains( (string) ob_get_clean(), 'data-ran-booster-release-workflow-result' );
+		};
+
+		self::assertTrue( $rendersNotice( $query ) );
+		foreach ( array(
+			'ran_booster_release_workflow_result'          => 'workflow_remote_unavailable',
+			'ran_booster_release_workflow_success'         => '1',
+			'ran_booster_release_workflow_type'            => 'theme',
+			'ran_booster_release_workflow_package'         => 'other/other.php',
+			'ran_booster_release_workflow_source_revision' => '4',
+			'ran_booster_release_workflow_provider'        => 'other',
+			'ran_booster_release_workflow_repository'      => '102',
+			'ran_booster_release_workflow_channel'         => 'prerelease',
+			'ran_booster_release_workflow_failure_stage'   => 'unexpected',
+			'ran_booster_release_workflow_diagnostic'      => 'unexpected_runtime_failure',
+			'ran_booster_release_workflow_diagnostic_available' => '1',
+			'ran_booster_release_workflow_reference'       => str_repeat( 'a', 32 ),
+			'ran_booster_release_workflow_message'         => 'Different message.',
+			'ran_booster_release_workflow_remediation'     => 'Different remediation.',
+			'ran_booster_release_workflow_result_nonce'    => 'wrong',
+		) as $field => $value ) {
+			$mutated           = $query;
+			$mutated[ $field ] = $value;
+			self::assertFalse( $rendersNotice( $mutated ), $field );
+		}
+		$wrongPage         = $query;
+		$wrongPage['page'] = 'ran-booster-themes';
+		self::assertFalse( $rendersNotice( $wrongPage ) );
+		$wrongPackage            = $query;
+		$wrongPackage['package'] = 'other/other.php';
+		self::assertFalse( $rendersNotice( $wrongPackage ) );
 	}
 
 	public function testWorkflowResultReturnsToTheExactRepositoryReleaseView(): void {
@@ -230,6 +369,57 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( '>Unavailable<', $html );
 		self::assertStringNotContainsString( 'Ready to assess', $html );
 		self::assertStringContainsString( 'button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+	}
+
+	public function testPassiveRepositoryRenderReadsOnlyStatusAndOpaquePreviewWithoutAWorkflowMutation(): void {
+		$key      = str_repeat( 'a', 32 );
+		$provider = new RepositoryReleaseWorkflowProviderDouble(
+			preview: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview(
+				$key,
+				'fixture',
+				'101',
+				'bootstrap',
+				'prerelease',
+				'example/example',
+				array(
+					'repository'       => 'example/example',
+					'default_branch'   => 'main',
+					'base_sha'         => str_repeat( 'b', 40 ),
+					'pack_version'     => '1.0.0',
+					'template_digest'  => str_repeat( 'c', 64 ),
+					'old_template_tag' => '',
+					'new_template_tag' => 'v1.0.0',
+				),
+				array()
+			),
+			workflowResult: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult( 'workflow_inspected', true, $key )
+		);
+		$url      = $this->controls( provider: $provider )->processWorkflowRequest( $this->request( 'inspect' ) );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Uses the immediately preceding signed result and opaque preview key.
+		$provider->calls       = array();
+		$provider->statusReads = 0;
+		$row                   = array(
+			'provider_code'     => 'fixture',
+			'repository_id'     => '101',
+			'repository'        => 'example/example',
+			'package_summaries' => array(
+				array(
+					'type'            => 'plugin',
+					'identifier'      => 'example/example.php',
+					'source'          => 'branch',
+					'source_revision' => 3,
+				),
+			),
+		);
+
+		ob_start();
+		$this->controls( provider: $provider )->renderRepositoryReleaseSections( $row, 'https://example.test/repositories' );
+		$html = (string) ob_get_clean();
+
+		self::assertGreaterThan( 0, $provider->statusReads );
+		self::assertSame( array( 'preview' ), array_column( $provider->calls, 'operation' ) );
+		self::assertStringContainsString( 'Release publishing', $html );
+		self::assertStringContainsString( 'example/example</strong> · main', $html );
 	}
 
 	public function testPassiveRowsRemainUntouchedWhenTheCapableProviderHasNoRegisteredAdminSurface(): void {

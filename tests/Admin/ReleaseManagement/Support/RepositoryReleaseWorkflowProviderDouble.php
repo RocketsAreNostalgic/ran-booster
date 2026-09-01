@@ -34,9 +34,10 @@ use RuntimeException;
 
 final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	/** @var list<array{operation:string,credential_id:?string,channel?:string,key?:string,confirmation?:string}> */
-	public array $calls          = array();
-	public int $statusReads      = 0;
-	public bool $throwOnWorkflow = false;
+	public array $calls           = array();
+	public int $statusReads       = 0;
+	public bool $throwOnWorkflow  = false;
+	public bool $throwOnOperation = false;
 
 	public function __construct( private readonly string $code = 'fixture', private readonly string $repositoryId = '101', private readonly ?RepositoryReleaseWorkflowPreview $preview = null, private readonly ?RepositoryReleaseWorkflowStatus $status = null, private readonly ?RepositoryReleaseWorkflowResult $workflowResult = null, private readonly bool $adminSurface = true ) {}
 
@@ -128,6 +129,8 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 	/** @param array<string,string> $detail */
 	private function result( string $operation, ?string $credentialId, array $detail = array() ): RepositoryReleaseWorkflowResult {
 		$this->throwIfNeeded();
+		if ( $this->throwOnOperation ) {
+			throw new RuntimeException( 'Workflow provider operation failure.' ); }
 		$this->calls[] = array(
 			'operation'     => $operation,
 			'credential_id' => $credentialId,

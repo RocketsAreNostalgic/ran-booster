@@ -288,6 +288,65 @@ test('managed browser selects and inspects the newest current candidate, preserv
 	);
 });
 
+test('managed browser keeps an automatically inspected newer candidate outside earlier releases', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate(
+						'older',
+						'1.0.0',
+						'older',
+						'2026-08-03T00:00:00Z'
+					),
+					candidate(
+						'newer',
+						'3.0.0',
+						'newer',
+						'2026-08-02T00:00:00Z'
+					),
+				],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '3.0.0',
+				tag: 'v3.0.0',
+				installed_version: '2.0.0',
+				version_relationship: 'newer',
+			},
+		},
+	]);
+
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(harness.requests[1].get('release_id'), 'newer');
+	assert.equal(
+		harness.nodes.get('candidate-list').children[0].children[0].dataset
+			.releaseId,
+		'newer'
+	);
+	assert.equal(
+		harness.nodes.get('candidate-list').children[0].children[0].checked,
+		true
+	);
+	assert.equal(
+		descendants(
+			descendants(harness.nodes.get('candidate-list')).find(
+				(node) => node.tagName === 'details'
+			)
+		).find((node) => node.tagName === 'input').dataset.releaseId,
+		'older'
+	);
+});
+
 test('managed browser keeps the initial candidate inspection busy after its synchronous change event', async () => {
 	const inspection = deferred();
 	const harness = createHarness([

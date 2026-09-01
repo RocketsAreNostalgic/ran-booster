@@ -276,7 +276,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('invalid_candidates');
 			}
 			const nativeOffer = releases.find(isNativeUpdateOffer);
-			const preferredCandidate = nativeOffer || releases[0];
+			const inspectable = releases.filter(
+				(candidate) => candidate.version_relationship !== 'older'
+			);
+			const preferredCandidate =
+				nativeOffer || inspectable[0] || releases[0];
 			const installedCandidate = releases.find(
 				(candidate) => candidate.version_relationship === 'same'
 			);
@@ -365,9 +369,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (candidates) {
 				candidates.hidden = false;
 			}
-			const inspectable = releases.filter(
-				(candidate) => candidate.version_relationship !== 'older'
-			);
 			if (inspectable.length > 0) {
 				setStatus(
 					'Release candidates loaded',

@@ -145,6 +145,16 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][4]['value'] );
 		self::assertSame( 'Current local warning', $result['1234']['details'][2]['label'] );
 		self::assertSame( 'Secret needs attention', $result['1234']['details'][2]['value'] );
+		self::assertSame(
+			array(
+				'core:webhook-recorded-status',
+				'core:webhook-observation',
+				'core:webhook-current-warning',
+				'core:webhook-recorded-profile',
+				'core:webhook-last-checked',
+			),
+			array_column( $result['1234']['details'], 'key' )
+		);
 	}
 
 	public function testUnavailableManagementHistoryOmitsProfileAndCurrentWarningDetails(): void {
@@ -166,6 +176,14 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][2]['value'] );
+		self::assertSame(
+			array(
+				'core:webhook-recorded-status',
+				'core:webhook-observation',
+				'core:webhook-last-checked',
+			),
+			array_column( $result['1234']['details'], 'key' )
+		);
 		self::assertSame( array(), $result['1234']['actions'] );
 	}
 

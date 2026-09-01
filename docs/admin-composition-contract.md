@@ -292,11 +292,42 @@ Core owns and renders the provider repository table. Its internal webhook
 controls enrich rows and render the selected-repository panel only when the
 selected provider resolves both `RepositoryWebhookFitness` and
 `RepositoryWebhookManagement`, plus `WebhookNormalizer`, to the same registered
-aggregate. Core validates
-the resulting rows, preserves the fixed `core:webhook-management` action, and
-permits only bounded historical records from its own schema. There is no public
-row or panel composition hook, renderer callback or provider-supplied field
-schema.
+aggregate. Core validates the resulting rows and preserves the fixed
+`core:webhook-management` action. Providers and administration add-ons may
+extend those normalized rows through one structured filter:
+
+```php
+$rows = apply_filters(
+	'ran_booster_provider_repository_rows',
+	$rows,
+	$providerCode,
+	$branchProjections,
+	$returnUrl
+);
+```
+
+Callbacks return the incoming keyed row list. Existing rows and Core-owned
+fields are immutable. A callback may append bounded `details` and namespaced
+structured `actions`; it must preserve the existing detail prefix and every
+Core action. Only `core:webhook-management` may change its `url`, `disabled`
+and `described_by` state. The branch projection map is keyed like the current
+rows and contains only bounded local repository, package-policy, endpoint,
+eligibility, reason-code and secret-coverage facts. `$returnUrl` is the
+canonical selected-repository or repository-list destination.
+
+New rows are review-only history. Their key must be namespaced, `historical`
+must be `true`, and `provider_code` must match the selected provider. They
+cannot claim `core:webhook-management`; Core removes their detail URL and
+routes review to Activity. A row may contain at most 20 details. Detail keys
+and labels are limited to 96 characters, values to 255, and optional date and
+state values to 64; tones use the fixed Core set and `recorded` is Boolean.
+Actions follow the structured action contract below. Other historical fields
+are normalized through the same bounded row schema before rendering.
+
+Core contains a throwing callback, a non-array result or any invalid rewrite.
+It logs the extension failure and renders the already normalized Core and
+webhook rows. The filter supplies no provider HTML or selected-repository panel
+callback.
 
 Missing, partial or incompatible webhook facets create no action, panel,
 documentation section, asset or mutation authority. A complete non-GitHub

@@ -718,6 +718,20 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_release_deployments_preview', $query );
 	}
 
+	public function testWriteFormsAreDisabledWhenNoSavedCredentialChoicesExist(): void {
+		$controls = $this->controls();
+		$status   = ReleaseManagementFixture::status();
+		$method   = new ReflectionMethod( $controls, 'workflowForm' );
+
+		foreach ( array( 'setup', 'update_setup' ) as $operation ) {
+			$form = $method->invoke( $controls, $operation, $status, str_repeat( 'a', 32 ), 'example/example', 'stable', array() );
+
+			self::assertIsArray( $form, $operation );
+			self::assertSame( array(), $form['credentials'], $operation );
+			self::assertTrue( $form['disabled'], $operation );
+		}
+	}
+
 	public function testAllWorkflowPostReturnsUseNetworkAdminOnMultisite(): void {
 		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
 		$controls = $this->controls();

@@ -1435,6 +1435,7 @@ final class GitHubReleaseWorkflowControls {
 			'credentials'          => $credentials,
 			'anonymous_inspection' => $anonymousInspection,
 			'credentials_url'      => $this->credentialsUrl(),
+			'disabled'             => in_array( $operation, array( 'setup', 'update_setup' ), true ) && array() === $credentials,
 		);
 	}
 

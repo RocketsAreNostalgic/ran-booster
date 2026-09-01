@@ -228,14 +228,14 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 			$facade      = new D23ReleaseFacade();
 			$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
 			$established = $this->coordinator( $facade, $transport, new SetupRecordStore() );
-			$preview     = $established->inspect( $status, 'stable', 'nonce', 'selected-token' );
-			self::assertSame( 'workflow_setup_open', $established->setup( $status, $preview['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'selected-token' )['code'], $missingPath );
+			$preview     = $established->inspect( $status, 'stable', $this->readyPreflight(), 'selected-token' );
+			self::assertSame( 'workflow_setup_open', $established->setup( $status, $preview['preview_key'], 'owner/example-plugin', $this->readyPreflight(), 'selected-token' )['code'], $missingPath );
 			$transport->mergePull();
 			$transport->removeDefaultDocument( $missingPath );
 			$writes = $transport->writeCounts;
 			$GLOBALS['ran_booster_release_deployments_test_options'] = array();
 
-			$result = $this->coordinator( $facade, $transport, new SetupRecordStore() )->inspect( $status, 'stable', 'nonce', 'selected-token' );
+			$result = $this->coordinator( $facade, $transport, new SetupRecordStore() )->inspect( $status, 'stable', $this->readyPreflight(), 'selected-token' );
 
 			self::assertSame( 'workflow_profile_modified', $result['code'], $missingPath );
 			self::assertFalse( $result['successful'], $missingPath );
@@ -282,14 +282,14 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$facade      = new D23ReleaseFacade();
 		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
 		$established = $this->coordinator( $facade, $transport, new SetupRecordStore() );
-		$preview     = $established->inspect( $status, 'stable', 'nonce', 'token' );
-		self::assertSame( 'workflow_setup_open', $established->setup( $status, $preview['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' )['code'] );
+		$preview     = $established->inspect( $status, 'stable', $this->readyPreflight(), 'token' );
+		self::assertSame( 'workflow_setup_open', $established->setup( $status, $preview['preview_key'], 'owner/example-plugin', $this->readyPreflight(), 'token' )['code'] );
 		$transport->mergePull();
 		$transport->removeDefaultDocument( 'example-plugin.php' );
 		$writes = $transport->writeCounts;
 		$GLOBALS['ran_booster_release_deployments_test_options'] = array();
 
-		$result = $this->coordinator( $facade, $transport, new SetupRecordStore() )->inspect( $status, 'stable', 'nonce', 'token' );
+		$result = $this->coordinator( $facade, $transport, new SetupRecordStore() )->inspect( $status, 'stable', $this->readyPreflight(), 'token' );
 
 		self::assertSame( 'workflow_package_ambiguous', $result['code'] );
 		self::assertFalse( $result['successful'] );
@@ -620,10 +620,10 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$records     = new SetupRecordStore();
 		$coordinator = $this->coordinator( $facade, $transport, $records );
 		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
-		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$inspect     = $coordinator->inspect( $status, 'stable', $this->readyPreflight(), 'token' );
 
 		$GLOBALS['ran_booster_release_deployments_test_lock_release_result'] = false;
-		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', $this->readyPreflight(), 'token' );
 
 		self::assertSame( 'workflow_partial', $result['code'] );
 		self::assertFalse( $result['successful'] );
@@ -638,10 +638,10 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$records     = new SetupRecordStore();
 		$coordinator = $this->coordinator( $facade, $transport, $records );
 		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
-		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$inspect     = $coordinator->inspect( $status, 'stable', $this->readyPreflight(), 'token' );
 
 		$GLOBALS['ran_booster_release_deployments_test_lock_release_result'] = false;
-		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', $this->readyPreflight(), 'token' );
 
 		self::assertSame( 'workflow_partial', $result['code'] );
 		self::assertFalse( $result['successful'] );
@@ -707,13 +707,13 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$records     = new SetupRecordStore();
 		$coordinator = $this->coordinator( $facade, $transport, $records );
 		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
-		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$inspect     = $coordinator->inspect( $status, 'stable', $this->readyPreflight(), 'token' );
 		$GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] = static function (): void {
 			throw new \RuntimeException( 'expected test failure' );
 		};
 
 		try {
-			$coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+			$coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', $this->readyPreflight(), 'token' );
 			self::fail( 'Expected the test transient deletion to throw.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'expected test failure', $exception->getMessage() );
@@ -762,15 +762,16 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$records     = new SetupRecordStore();
 		$coordinator = $this->coordinator( $facade, $transport, $records );
 		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
-		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$preflight   = $this->readyPreflight();
+		$inspect     = $coordinator->inspect( $status, 'stable', $preflight, 'token' );
 		$competing   = null;
 		$connection  = $GLOBALS['wpdb'];
 
-		$GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] = static function () use ( &$competing, $coordinator, $status, $inspect, $transport, $connection ): void {
+		$GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] = static function () use ( &$competing, $coordinator, $status, $inspect, $transport, $connection, $preflight ): void {
 			unset( $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] );
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The callback models a competing request with a distinct database connection.
 			$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
-			$competing       = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+			$competing       = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', $preflight, 'token' );
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the request connection after the competing setup attempt.
 			$GLOBALS['wpdb'] = $connection;
 			self::assertSame(
@@ -785,7 +786,7 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 			);
 		};
 
-		$winner = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+		$winner = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', $preflight, 'token' );
 
 		self::assertSame( 'workflow_invalid_request', $competing['code'] );
 		self::assertSame( 'workflow_setup_open', $winner['code'] );

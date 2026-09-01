@@ -206,6 +206,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			),
 			'actions' => array(),
 		);
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';

@@ -179,36 +179,36 @@ final class ReleaseWorkflowControls {
 		if ( '' === $providerCode || true === ( $row['historical'] ?? false ) ) {
 			return;
 		}
-		$repositoryId     = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
-		$repository       = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
-		$summaries        = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
-		$summary          = $summaries[0] ?? array();
-		$type             = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
-		$identifier       = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
-		$revision         = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
-		$guard            = $this->repositorySourceGuard( $providerCode, $repositoryId, $type, $identifier, PackageSource::RELEASE_ASSET );
-		$sharedBranch     = 0 === $guard['release_count'] && 1 < $guard['relationship_count'];
-		$conflicted       = ! $guard['allowed'] && ! $sharedBranch;
-		$single           = $guard['allowed'] && 1 === $guard['relationship_count'] && 1 === count( $summaries );
-		$package          = $single ? $this->localPackage( $type, $identifier ) : null;
-		$status           = $single
+		$repositoryId      = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+		$repository        = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$summaries         = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
+		$summary           = $summaries[0] ?? array();
+		$type              = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
+		$identifier        = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
+		$revision          = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
+		$guard             = $this->repositorySourceGuard( $providerCode, $repositoryId, $type, $identifier, PackageSource::RELEASE_ASSET );
+		$sharedBranch      = 0 === $guard['release_count'] && 1 < $guard['relationship_count'];
+		$conflicted        = ! $guard['allowed'] && ! $sharedBranch;
+		$single            = $guard['allowed'] && 1 === $guard['relationship_count'] && 1 === count( $summaries );
+		$package           = $single ? $this->localPackage( $type, $identifier ) : null;
+		$status            = $single
 			? $this->requestBoundary( fn (): ?ReleaseTrackingStatus => $this->workflowDisplayStatus( $type, $identifier, $revision ), null )
 			: null;
-		$exact            = $status instanceof ReleaseTrackingStatus
+		$exact             = $status instanceof ReleaseTrackingStatus
 			&& $this->statusMatchesSummary( $status, $type, $identifier, (string) ( $summary['source'] ?? '' ), $revision, $repositoryId )
 			&& is_object( $package )
 			&& is_callable( array( $package, 'getRepository' ) )
 			&& hash_equals( $repository, (string) $package->getRepository() );
 		$workflowAvailable = null !== $this->workflowProvider( $providerCode );
-		$workflowStatus   = $exact ? $this->workflowProviderStatus( $status ) : null;
-		$result           = $this->requestedResult();
-		$matchingResult   = $exact && is_array( $result )
+		$workflowStatus    = $exact ? $this->workflowProviderStatus( $status ) : null;
+		$result            = $this->requestedResult();
+		$matchingResult    = $exact && is_array( $result )
 			&& hash_equals( $providerCode, (string) ( $result['provider'] ?? '' ) )
 			&& hash_equals( $repositoryId, (string) ( $result['repository'] ?? '' ) )
 			&& hash_equals( $type, (string) ( $result['type'] ?? '' ) )
 			&& hash_equals( $identifier, (string) ( $result['identifier'] ?? '' ) )
 			&& $revision === (int) ( $result['source_revision'] ?? 0 ) ? $result : null;
-		$view             = $exact
+		$view              = $exact
 			? $this->requestBoundary(
 				fn (): ?array => $this->workflowViewFor(
 					$type,
@@ -228,7 +228,7 @@ final class ReleaseWorkflowControls {
 				$this->unavailableWorkflowView( __( 'Booster could not read the local release-workflow status for this package.', 'ran-booster' ) )
 			)
 			: $this->unavailableWorkflowView( $sharedBranch || $conflicted ? '' : __( 'Booster could not confirm that this release status belongs to the exact saved package and source.', 'ran-booster' ) );
-		$packageReadiness = $exact ? array(
+		$packageReadiness  = $exact ? array(
 			array(
 				'name'         => is_string( $summary['display_name'] ?? null ) ? $summary['display_name'] : $identifier,
 				'type'         => $type,
@@ -239,9 +239,9 @@ final class ReleaseWorkflowControls {
 				'settings_url' => is_string( $summary['settings_url'] ?? null ) ? $summary['settings_url'] : '',
 			),
 		) : array();
-		$observation      = is_array( $view['assessment_observation'] ?? null ) ? $view['assessment_observation'] : null;
-		$observationKind  = is_array( $observation ) && is_string( $observation['kind'] ?? null ) ? $observation['kind'] : 'unassessed';
-		$automationState  = $this->repositoryReleaseAutomationState(
+		$observation       = is_array( $view['assessment_observation'] ?? null ) ? $view['assessment_observation'] : null;
+		$observationKind   = is_array( $observation ) && is_string( $observation['kind'] ?? null ) ? $observation['kind'] : 'unassessed';
+		$automationState   = $this->repositoryReleaseAutomationState(
 			$exact && $this->recordMatchesPackageStatus( $workflowStatus, $status ) ? $identifier : '',
 			$workflowAvailable && $exact && $status->eligible() && 'branch' === $status->source(),
 			$exact && $this->publishedReleasesWorking( $status ),
@@ -249,7 +249,7 @@ final class ReleaseWorkflowControls {
 			$observationKind,
 			$sharedBranch || ! $workflowAvailable
 		);
-		$automationNotice = '';
+		$automationNotice  = '';
 		if ( ! $sharedBranch && ! $conflicted ) {
 			$automationNotice = true === ( $view['unavailable'] ?? false )
 				? $this->display->stateNotice( $view )

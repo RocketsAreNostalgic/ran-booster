@@ -113,6 +113,15 @@ final class GitHubReleaseWorkflowDisplay {
 		return $html . '</div>';
 	}
 
+	/** Mark an already-persisted result so the client can consume its signed PRG query. */
+	public function resultMarker( array $view ): string {
+		$code = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
+
+		return str_starts_with( $code, 'workflow_' )
+			? '<div data-ran-booster-github-release-workflow-result hidden></div>'
+			: '';
+	}
+
 	private function validDiagnosticCode( string $code ): bool {
 		if ( 'release_automation_detected' === $code ) {
 			return true;

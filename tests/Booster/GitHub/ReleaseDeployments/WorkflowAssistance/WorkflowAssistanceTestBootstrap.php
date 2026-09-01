@@ -7,8 +7,9 @@ namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 // phpcs:disable Universal.Files.SeparateFunctionsFromOO -- This small bootstrap deliberately combines the WordPress function shims and their option-table double.
 
 final class SetupClaimDatabase {
-	public string $options    = 'wp_options';
-	public string $last_error = '';
+	public string $options       = 'wp_options';
+	public string $last_error    = '';
+	public int $lockAcquisitions = 0;
 	private string $connectionId;
 
 	public function __construct() {
@@ -28,7 +29,9 @@ final class SetupClaimDatabase {
 	}
 
 	public function get_var( string $query ): string|null {
+		$this->last_error = '';
 		if ( str_starts_with( $query, 'SELECT GET_LOCK(' ) ) {
+			++$this->lockAcquisitions;
 			$owner = $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null;
 			if ( null !== $owner && $owner !== $this->connectionId ) {
 				return '0';

@@ -19,6 +19,7 @@ use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\CorePackageExecutionFailure;
 use RAN\WordPress\CorePackageExecutionResult;
@@ -42,8 +43,10 @@ class DeploymentCoordinator {
 		private WordPressWorkerWakeup $wakeup,
 		private string $maintenancePath,
 		private WordPressUpdaterLock $updaterLock,
-		private ?DeploymentFailureNotifier $failureNotifier = null
+		private ?DeploymentFailureNotifier $failureNotifier = null,
+		private ?RepositorySourceGuard $sourceGuard = null
 	) {
+		$this->sourceGuard ??= new RepositorySourceGuard();
 		if ( '' === trim( $maintenancePath ) ) {
 			throw new RuntimeException( 'The WordPress maintenance path is invalid.' );
 		}
@@ -65,6 +68,7 @@ class DeploymentCoordinator {
 			if ( null === $command->providerCode || null === $command->repository || null === $command->branch || null === $command->packageSlug ) {
 				throw new RuntimeException( 'The package request is incomplete.' );
 			}
+			$this->sourceGuard->assertAllowed( $command->providerCode, $providerId, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->packageSlug, PackageSource::BRANCH );
 			$this->providers->get( ProviderCode::parse( $command->providerCode ) );
 			$request = new DeploymentRequest(
 				$command->repository,
@@ -250,7 +254,7 @@ class DeploymentCoordinator {
 		try {
 			BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 			PackageMutationGuard::assertFilesystemMutationAllowed();
-			$baseline = $this->assertFrozenTarget( $attempt, true );
+			$baseline = $this->assertFrozenTargetOutcome( $attempt, true );
 			BoosterLogger::log( 'target snapshot verified', $context + array( 'step' => 'target_verified' ) );
 			$baselineState = null === $baseline ? null : $this->packageRuntimeState( $baseline );
 			$failureCode   = DeploymentOutcome::CODE_PROVIDER_FAILED;
@@ -279,14 +283,17 @@ class DeploymentCoordinator {
 			BoosterLogger::log( 'core lock acquired', $context + array( 'step' => 'core_lock_acquired' ) );
 
 			$failureCode = DeploymentOutcome::CODE_POLICY_BLOCKED;
-			$this->assertFrozenTarget( $attempt );
+			$this->assertFrozenTargetOutcome( $attempt );
 			BoosterLogger::log( 'target snapshot re-verified post-lock', $context + array( 'step' => 'target_reverified' ) );
+			$failureCode = DeploymentOutcome::CODE_PROVIDER_FAILED;
 			$archive->verifyCurrentHead();
 			BoosterLogger::log( 'provider head verified', $context + array( 'step' => 'provider_head_verified' ) );
+			$failureCode = DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED;
 			$artifact->assertUnchanged();
 			BoosterLogger::log( 'artifact integrity re-verified', $context + array( 'step' => 'artifact_verified' ) );
+			$failureCode = DeploymentOutcome::CODE_POLICY_BLOCKED;
 			if ( file_exists( $this->maintenancePath ) ) {
-				throw new RuntimeException( 'WordPress maintenance mode is already active.' );
+				$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_MAINTENANCE_ACTIVE, 'WordPress maintenance mode is already active.' );
 			}
 
 			PackageMutationGuard::assertFilesystemMutationAllowed();
@@ -331,6 +338,16 @@ class DeploymentCoordinator {
 					'outcome_code' => $outcome->getCode(),
 				)
 			);
+		} catch ( DeploymentCheckFailure $failure ) {
+			$outcome = DeploymentOutcome::fromCode( $mutation ? DeploymentOutcome::CODE_INTERRUPTED : $failure->outcomeCode );
+			BoosterLogger::logException(
+				'deployment check failed',
+				$failure,
+				$context + array(
+					'step'         => 'deployment_check_failed',
+					'outcome_code' => $outcome->getCode(),
+				)
+			);
 		} catch ( DeploymentStorageFailure $failure ) {
 			$storageFailure = $failure;
 			BoosterLogger::logException( 'deployment storage failure', $failure, $context + array( 'step' => 'storage_failure' ) );
@@ -354,7 +371,7 @@ class DeploymentCoordinator {
 					$artifact->cleanup();
 					BoosterLogger::log( 'artifact cleanup completed', $context + array( 'step' => 'artifact_cleanup_completed' ) );
 				} catch ( Throwable $exception ) {
-					$outcome = DeploymentOutcome::fromCode( $mutation ? DeploymentOutcome::CODE_INTERRUPTED : DeploymentOutcome::CODE_PREFLIGHT_FAILED );
+					$outcome = DeploymentOutcome::fromCode( $mutation ? DeploymentOutcome::CODE_INTERRUPTED : DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED );
 					BoosterLogger::logException(
 						'artifact cleanup failed',
 						$exception,
@@ -526,11 +543,11 @@ class DeploymentCoordinator {
 		$request       = $attempt->getRequest();
 		$packageSource = $data['package_source'] ?? null;
 		if ( PackageSource::BRANCH->value !== $packageSource ) {
-			throw new RuntimeException( 'The deployment package source is unavailable.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED, 'The deployment package source is unavailable.' );
 		}
 		if ( 'install' === $data['operation'] ) {
 			if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->packageSlug ) {
-				throw new RuntimeException( 'RAN Booster cannot replace its own plugin files.' );
+				$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED, 'RAN Booster cannot replace its own plugin files.' );
 			}
 			if ( $this->destinationExists( (string) $data['package_type'], $request->packageSlug ) ) {
 				if ( $this->existingManagementMatchesInstallTarget( $attempt ) ) {
@@ -539,8 +556,10 @@ class DeploymentCoordinator {
 					}
 					throw new ExistingManagedDestination();
 				}
-				throw new RuntimeException( 'The package destination already exists.' );
+				$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_DESTINATION_EXISTS, 'The package destination already exists.' );
 			}
+
+			$this->sourceGuard->assertAllowed( (string) $data['provider'], (string) $data['provider_repository_id'], 'plugin' === $data['package_type'] ? 1 : 2, $request->packageSlug, PackageSource::BRANCH );
 
 			return null;
 		}
@@ -549,6 +568,19 @@ class DeploymentCoordinator {
 		$this->assertPackageSnapshot( $package, $data, $request );
 
 		return $package;
+	}
+
+	/** Classify source-guard persistence failures before the generic policy fence. */
+	private function assertFrozenTargetOutcome( DeploymentAttempt $attempt, bool $deferMatchingManagedDestination = false ): ?Package {
+		try {
+			return $this->assertFrozenTarget( $attempt, $deferMatchingManagedDestination );
+		} catch ( PackageStorageFailure $failure ) {
+			if ( 'ran_booster_repository_source_conflict' === $failure->getDiagnosticId() ) {
+				$this->fail( DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT, 'The repository source conflicts with an existing managed package.' );
+			}
+
+			$this->fail( DeploymentOutcome::CODE_REPOSITORY_SOURCE_UNAVAILABLE, 'The repository source relationship could not be read safely.' );
+		}
 	}
 
 	private function existingManagementMatchesInstallTarget( DeploymentAttempt $attempt ): bool {
@@ -585,13 +617,13 @@ class DeploymentCoordinator {
 			|| $package->getDeploymentPolicy() !== $request->deploymentPolicy
 			|| $package->getSource()->value !== ( $data['package_source'] ?? null )
 			|| $package->getSourceRevision() !== ( $data['package_source_revision'] ?? null ) ) {
-			throw new RuntimeException( 'The managed package changed before deployment.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, 'The managed package changed before deployment.' );
 		}
 	}
 
 	private function assertBranchSource( Package $package ): void {
 		if ( PackageSource::BRANCH !== $package->getSource() ) {
-			throw new RuntimeException( 'Branch deployment is unavailable for a release-managed package.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED, 'Branch deployment is unavailable for a release-managed package.' );
 		}
 	}
 
@@ -777,5 +809,10 @@ class DeploymentCoordinator {
 
 	private function releaseCoreLock( string $token ): bool {
 		return $this->updaterLock->release( $token );
+	}
+
+	private function fail( string $code, string $message ): never {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- A validated closed code and static internal message are not output.
+		throw new DeploymentCheckFailure( $code, $message );
 	}
 }

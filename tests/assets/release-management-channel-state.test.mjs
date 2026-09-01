@@ -81,6 +81,44 @@ test('selected release track maps to the stored release channel', () => {
 	);
 });
 
+test('branch release track selection updates only its local disclosure summary', () => {
+	const updateReleaseTrackSummary = Function(
+		`"use strict"; ${declaration('updateReleaseTrackSummary')} return updateReleaseTrackSummary;`
+	)();
+	const badge = { textContent: 'Stable' };
+	const disclosure = {
+		querySelector(selector) {
+			return selector === '[data-ran-booster-release-track-summary]'
+				? badge
+				: null;
+		},
+	};
+	const radio = (label, trackDisclosure = disclosure) => ({
+		matches(selector) {
+			return selector === '[data-ran-booster-release-channel]';
+		},
+		closest(selector) {
+			if (selector === '#ran-booster-release-track-settings') {
+				return trackDisclosure;
+			}
+			return selector === 'label' ? label : null;
+		},
+	});
+	const label = (text) => ({
+		querySelector(selector) {
+			return selector === 'span' ? { textContent: text } : null;
+		},
+	});
+
+	updateReleaseTrackSummary({ target: radio(label('Preview')) });
+	assert.equal(badge.textContent, 'Preview');
+	updateReleaseTrackSummary({ target: radio(label('Stable')) });
+	assert.equal(badge.textContent, 'Stable');
+	updateReleaseTrackSummary({ target: { matches: () => false } });
+	updateReleaseTrackSummary({ target: radio(label('Preview'), null) });
+	assert.equal(badge.textContent, 'Stable');
+});
+
 test('prospective client contains no managed release track dirty-state behavior', () => {
 	assert.doesNotMatch(source, /ran-booster-release-track-save/);
 	assert.doesNotMatch(source, /ranBoosterInitialReleaseChannel/);

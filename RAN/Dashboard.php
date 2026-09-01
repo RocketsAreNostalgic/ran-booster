@@ -23,6 +23,7 @@ use RAN\Admin\Component\RepositoryDetailRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
@@ -69,6 +70,7 @@ class Dashboard {
 	private ?AdminTabRegistry $adminTabs;
 	private ?AdminAddOnRegistry $adminAddOns;
 	private ?RepositoryWebhookManagementControls $webhookManagement;
+	private ?ReleaseWorkflowControls $releaseWorkflow;
 	private ?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
@@ -110,7 +112,8 @@ class Dashboard {
 		?SecretsStorageProvisioner $secretsStorage = null,
 		?AdminAddOnRegistry $adminAddOns = null,
 		?RepositoryWebhookManagementControls $webhookManagement = null,
-		?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice = null
+		?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice = null,
+		?ReleaseWorkflowControls $releaseWorkflow = null
 	) {
 		$this->db                    = $db;
 		$this->plugins               = $plugins;
@@ -132,6 +135,7 @@ class Dashboard {
 		$this->secretsStorage        = $secretsStorage;
 		$this->adminAddOns           = $adminAddOns;
 		$this->webhookManagement     = $webhookManagement;
+		$this->releaseWorkflow       = $releaseWorkflow;
 
 		$this->coreSelfUpdateDevelopmentNotice = $coreSelfUpdateDevelopmentNotice;
 	}
@@ -215,9 +219,10 @@ class Dashboard {
 			$data['providerListState'] = $this->requestedProviderListState();
 
 			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
-			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement ) );
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement, $this->releaseWorkflow ) );
 			$data                                    = array_merge( $data, $this->providerSettings->buildProfileListProjection( $data ) );
 			$data['webhookManagement']               = $this->webhookManagement;
+			$data['releaseWorkflow']                 = $this->releaseWorkflow;
 			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
 			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
 			$data['repositoryDetailRenderer']        = new RepositoryDetailRenderer();

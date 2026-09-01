@@ -48,7 +48,7 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\GitHubReleaseUpdateNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
-use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
@@ -156,12 +156,13 @@ $ran_booster_core_development_notice->register();
 			add_action(
 				'plugins_loaded',
 				static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {
+					// Provider workflow availability remains visible when the updater runtime is unavailable.
+					$ran_booster_container->make( ReleaseWorkflowControls::class )->register();
 					if ( GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
 						!== GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater ) ) {
 						return;
 					}
 					$ran_booster_container->make( ReleaseManagementControls::class )->register();
-					$ran_booster_container->make( GitHubReleaseWorkflowControls::class )->register();
 				},
 				PHP_INT_MAX
 			);

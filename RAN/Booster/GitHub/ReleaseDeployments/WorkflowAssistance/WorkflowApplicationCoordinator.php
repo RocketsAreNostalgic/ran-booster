@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use Throwable;
 
@@ -16,7 +16,6 @@ final class WorkflowApplicationCoordinator {
 	private const PREFLIGHT_REASON_CODES = array( 'provider_unavailable', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous' );
 
 	public function __construct(
-		private readonly ReleaseTrackingFacade $releases,
 		private readonly GitHubRepositoryClient $github,
 		private readonly TemplatePackRepositoryClient $templates,
 		private readonly SourceReadyAssessor $assessor,
@@ -24,13 +23,9 @@ final class WorkflowApplicationCoordinator {
 	) {
 	}
 
-	public function inspect( ReleaseTrackingStatus $status, string $channel, string $nonce, string $token ): array {
+	public function inspect( ReleaseTrackingStatus $status, string $channel, ReleaseTrackingPreflight $preflight, string $token ): array {
 		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) || $this->records->occupied( $status->providerRepositoryId() ) ) {
 			return $this->result( $status, 'invalid_request' );
-		}
-		$preflight = $this->releases->assessmentPreflight( $status->type(), $status->identifier(), $status->sourceRevision(), $channel, $nonce );
-		if ( null === $preflight ) {
-			return $this->result( $status, 'preflight_unavailable', false, '', 'release_preflight', 'preflight_contract_unavailable' );
 		}
 		if ( 'preflight_unavailable' === $preflight->code() ) {
 			$reason = '' !== $preflight->reasonCode() ? $preflight->reasonCode() : 'provider_unavailable';
@@ -54,15 +49,10 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	/** @param array<string,string> $preflightNonces */
-	public function setup( ReleaseTrackingStatus $status, string $key, string $confirmation, array $preflightNonces, string $token ): array {
+	public function setup( ReleaseTrackingStatus $status, string $key, string $confirmation, ReleaseTrackingPreflight $preflight, string $token ): array {
 		$preview = $this->preview( $key, $status );
 		if ( null === $preview || 'bootstrap' !== $preview['kind'] || '' === $token || ! hash_equals( $preview['repository'], trim( $confirmation ) ) ) {
 			return $this->result( $status, 'invalid_request', false, $key );
-		}
-		$nonce     = $preflightNonces[ $preview['preflight_channel'] ] ?? '';
-		$preflight = $this->releases->assessmentPreflight( $status->type(), $status->identifier(), $status->sourceRevision(), $preview['preflight_channel'], $nonce );
-		if ( null === $preflight ) {
-			return $this->result( $status, 'preflight_unavailable', false, $key, 'release_preflight', 'preflight_contract_unavailable' );
 		}
 		if ( 'preflight_unavailable' === $preflight->code() ) {
 			$reason = '' !== $preflight->reasonCode() ? $preflight->reasonCode() : 'provider_unavailable';
@@ -166,6 +156,11 @@ final class WorkflowApplicationCoordinator {
 		$valid   = is_string( $receipt ) && hash_equals( $record['receipt_digest'], hash( 'sha256', $receipt ) )
 			&& $this->receiptMatchesRecord( $receipt, $record, $snapshot['snapshot'] );
 		return $this->result( $status, $valid ? 'pr_merged' : 'target_changed', $valid );
+	}
+
+	/** Check stored workflow state before an adapter reads credential material. */
+	public function hasCurrentRecord( ReleaseTrackingStatus $status ): bool {
+		return null !== $this->currentRecord( $status );
 	}
 
 	/** @return array<string,int|string>|null */

@@ -208,14 +208,21 @@ them:
 - `RAN\RepositoryProvider\RepositoryReleaseNativeTargets` to construct and
   register provider-owned WordPress native update targets, detect an existing
   provider target, normalize passive status and perform an explicit refresh.
-  Implement it together with `RepositoryReleaseMetadata` to make a provider
+  Implement all five release-consumption capabilities together to make a provider
   eligible for managed published-release tracking. Core retains installed
   package enumeration, authority snapshots, mutation fences, locks and source
   transitions.
+- `RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement` for optional
+  release workflow assessment, draft pull requests, outcome checks and template
+  updates. It requires all five release-consumption contracts on the same
+  provider. Core owns the shared controls and authorization; providers return
+  immutable evidence and own their remote operations. See the
+  [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
 Each optional capability stays behind Booster's capability gate. If the provider
-omits a capability, Booster will keep the corresponding feature disabled rather
-than guessing at a fallback.
+omits an automation helper, Booster omits that helper's setup component without
+removing deployment support. A claimed but incomplete helper stays visible and
+disabled with a provider-configuration notice, rather than guessing a fallback.
 
 Credential validation may optionally report a normalized UTC expiry through
 `CredentialValidationResult::valid( CredentialExpiryReport::known( ... ) )`.

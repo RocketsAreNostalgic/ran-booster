@@ -148,6 +148,29 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'tnygmaps', $operation->packageSlug );
 	}
 
+	public function testNestedFixtureInstallUsesTheSameDirectoryWithOrWithoutATrailingSlash(): void {
+		$provider = $this->resolvingProvider(
+			new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'RocketsAreNostalgic/booster-fixture-plugin', 'booster-fixture-plugin', '1315521150', false, 'main', null ),
+			ProviderCode::parse( 'gh' )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+		foreach ( array( 'branch-fixture', 'branch-fixture/' ) as $subdirectory ) {
+			$request   = $resolver->resolve(
+				array(
+					'provider'     => 'gh',
+					'repository'   => 'RocketsAreNostalgic/booster-fixture-plugin',
+					'branch'       => 'main',
+					'subdirectory' => $subdirectory,
+				)
+			);
+			$operation = PackageOperation::fromInput( 'install-plugin', $request );
+
+			self::assertSame( 'branch-fixture', $operation->subdirectory );
+			self::assertSame( 'branch-fixture', $operation->packageSlug );
+			self::assertSame( '1315521150', $operation->providerRepositoryId );
+		}
+	}
+
 	public function testExplicitBranchIsPreservedOverTheResolvedDefaultBranch(): void {
 		$provider = $this->resolvingProvider(
 			new RepositoryDescriptor(

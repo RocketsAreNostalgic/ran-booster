@@ -236,6 +236,64 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Open plugin settings', $html );
 	}
 
+	public function testDeploymentActivityRendersKnownPackageVersionFailureInIndexAndDetail(): void {
+		$attempt             = DeploymentAttempt::fromDatabase(
+			array(
+				'id'                      => 2,
+				'correlation_id'          => str_repeat( 'd', 32 ),
+				'source'                  => 'manual',
+				'operation'               => 'update',
+				'package_type'            => 'plugin',
+				'package_slug'            => 'example',
+				'package_source'          => 'branch',
+				'package_source_revision' => 1,
+				'release_identity'        => null,
+				'provider'                => 'gh',
+				'provider_repository_id'  => 'repository-1',
+				'requested_ref'           => 'main',
+				'resolved_ref'            => null,
+				'delivery_id'             => null,
+				'delivery_digest'         => null,
+				'state'                   => 'failed',
+				'mutation_started_at'     => null,
+				'outcome_code'            => 'package_version_missing',
+				'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1}',
+				'created_at'              => '2026-07-23 06:00:00',
+				'finished_at'             => '2026-07-23 06:00:01',
+			)
+		);
+		$deploymentActivity  = array(
+			'items'                 => array( $attempt ),
+			'unavailable'           => false,
+			'has_cursor'            => false,
+			'next_cursor'           => null,
+			'package_settings_urls' => array(
+				'plugin' => array(
+					'example' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
+				),
+			),
+		);
+		$troubleshootingBase = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$index = (string) ob_get_clean();
+
+		$deploymentActivity['detail'] = $attempt;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+		$detail = (string) ob_get_clean();
+
+		foreach ( array( $index, $detail ) as $html ) {
+			self::assertStringContainsString( 'Version: 0.1.0', $html );
+			self::assertStringContainsString( 'rebuild the archive', $html );
+			self::assertStringNotContainsString( 'unavailable deployment outcome', $html );
+			self::assertStringNotContainsString( 'Authorization', $html );
+			self::assertStringNotContainsString( 'secret-canary', $html );
+			self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
+		}
+	}
+
 	public function testNeedsAttentionDetailShowsOriginAndProtectedResolutionConfirmation(): void {
 		$attempt             = DeploymentAttempt::fromDatabase(
 			array(

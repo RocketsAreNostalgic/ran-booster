@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace RAN\Admin\ReleaseManagement\GitHub;
+namespace RAN\Admin\ReleaseManagement;
 
-/** @internal GitHub-specific release workflow presentation. */
-final class GitHubReleaseWorkflowDisplay {
+/** @internal Fixed Core presentation for optional provider release workflows. */
+final class ReleaseWorkflowDisplay {
 	public function workflow( array $view, bool $includeResultNotice = true ): string {
 		$model = $this->workflowModel( $view );
 		$html  = '<div class="ran-booster-release-workflow">';
@@ -17,9 +17,11 @@ final class GitHubReleaseWorkflowDisplay {
 		$html .= '<p>' . esc_html__( 'Assess this repository before preparing a release-workflow pull request. Nothing is merged automatically.', 'ran-booster' ) . '</p>';
 		$html .= $model['inspect_form'] . $model['detail'];
 		$html .= '<hr><p><a href="' . esc_url( $this->documentationUrl() ) . '">'
-			. esc_html__( 'Booster Releases docs', 'ran-booster' ) . '</a> · <a href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'GitHub About releases', 'ran-booster' ) . '</a> · <a href="https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'GitHub immutable releases', 'ran-booster' ) . '</a></p>';
+			. esc_html__( 'Booster Releases docs', 'ran-booster' ) . '</a>';
+		foreach ( $view['documentation_links'] ?? array() as $link ) {
+			$html .= ' · <a href="' . esc_url( $link['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $link['label'] ) . '</a>';
+		}
+		$html .= '</p>';
 
 		return $html . '</div></div>';
 	}
@@ -41,9 +43,11 @@ final class GitHubReleaseWorkflowDisplay {
 			$key     = 'template_update' === ( $preview['kind'] ?? null ) ? 'update_setup' : 'setup';
 			$detail  = $this->preview( $preview );
 			$detail .= $this->form( is_array( $forms[ $key ] ?? null ) ? $forms[ $key ] : array() );
-		} elseif ( null !== $record && is_string( $record['repository'] ?? null ) && is_int( $record['pr_number'] ?? null ) ) {
-			$url     = 'https://github.com/' . $record['repository'] . '/pull/' . $record['pr_number'];
-			$detail  = '<hr><p><a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request on GitHub', 'ran-booster' ) . '</a></p>';
+		} elseif ( null !== $record ) {
+			$detail = '<hr>';
+			if ( is_string( $record['pull_request_url'] ?? null ) && '' !== $record['pull_request_url'] ) {
+				$detail .= '<p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . '</a></p>';
+			}
 			$detail .= $this->form( is_array( $forms['outcome'] ?? null ) ? $forms['outcome'] : array() );
 			$detail .= $this->form( is_array( $forms['update_inspect'] ?? null ) ? $forms['update_inspect'] : array() );
 		} elseif ( null !== $legacy ) {
@@ -59,13 +63,7 @@ final class GitHubReleaseWorkflowDisplay {
 
 	/** @param array<string,mixed> $legacy */
 	private function legacyDetail( array $legacy ): string {
-		$html = '<hr><p><strong>' . esc_html__( 'Legacy, unverified manual-reconciliation evidence.', 'ran-booster' ) . '</strong></p><p>' . esc_html__( 'Booster cannot prove the current remote, merged or managed-file state from this earlier record. No legacy outcome, update, retry or delete action is available.', 'ran-booster' ) . '</p>';
-		if ( ! isset( $legacy['unsupported'] ) && is_string( $legacy['repository'] ?? null ) && is_int( $legacy['pr_number'] ?? null ) && is_string( $legacy['setup_branch'] ?? null ) ) {
-			$url = 'https://github.com/' . $legacy['repository'] . '/pull/' . $legacy['pr_number'];
-			return $html . '<p><a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review the earlier pull request manually on GitHub', 'ran-booster' ) . '</a></p><p><code>' . esc_html( $legacy['setup_branch'] ) . '</code></p>';
-		}
-
-		return $html . '<p>' . esc_html__( 'The earlier record is not authoritative for this package. Assess the current source again.', 'ran-booster' ) . '</p>';
+		return '<hr><p>' . esc_html__( 'An earlier workflow record does not match the current package. Review the repository before assessing setup again; Booster will not overwrite that record.', 'ran-booster' ) . '</p>';
 	}
 
 	/** Render the one state-specific notice for the stable workflow shell. */
@@ -97,10 +95,15 @@ final class GitHubReleaseWorkflowDisplay {
 		};
 		$html        = '<div class="notice ' . esc_attr( $noticeTone ) . ' inline"'
 			. ( $successful ? ' data-ran-booster-package-success' : '' )
-			. ' data-ran-booster-github-release-workflow-result><p>' . esc_html( $this->workflowMessage( $code ) ) . '</p>';
+			. ' data-ran-booster-release-workflow-result><p>' . esc_html(
+				is_string( $view['result_message'] ?? null ) && '' !== $view['result_message']
+				? $view['result_message']
+				: $this->workflowMessage( $code )
+			) . '</p>';
 		$observation = in_array( $code, array( 'workflow_release_automation_conflict', 'workflow_release_automation_present', 'workflow_inspected' ), true );
 		if ( ! $successful && ! $observation && in_array( $stage, array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
-			$html .= '<details><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><p>' . esc_html( $this->failureDiagnosticMessage( $diagnostic, $stage ) ) . '</p>';
+			$remediation = is_string( $view['result_remediation'] ?? null ) && '' !== $view['result_remediation'] ? $view['result_remediation'] : $this->failureDiagnosticMessage( $diagnostic, $stage );
+			$html       .= '<details><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><p>' . esc_html( $remediation ) . '</p>';
 			if ( $this->validDiagnosticCode( $diagnostic ) ) {
 				$html .= '<p>' . esc_html__( 'Diagnostic code:', 'ran-booster' ) . ' <code>' . esc_html( $diagnostic ) . '</code></p>';
 			}
@@ -126,30 +129,30 @@ final class GitHubReleaseWorkflowDisplay {
 		if ( 'release_automation_detected' === $code ) {
 			return true;
 		}
-		return in_array( $code, array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' ), true );
+		return in_array( $code, array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'repository_source_conflict', 'repository_source_unavailable', 'repository_release_owner_exists', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' ), true );
 	}
 
 	/** @param array<string,mixed> $preview */
 	private function preview( array $preview ): string {
 		if ( ! is_string( $preview['repository'] ?? null ) || ! is_string( $preview['default_branch'] ?? null )
 			|| ! is_string( $preview['base_sha'] ?? null ) || ! is_string( $preview['pack_version'] ?? null )
-			|| ! is_array( $preview['new_template_identity'] ?? null ) || ! is_string( $preview['new_template_identity']['asset_sha256'] ?? null )
+			|| ! is_string( $preview['template_digest'] ?? null )
 			|| ! is_array( $preview['changes'] ?? null ) ) {
 			return '';
 		}
 		$html = '<p><strong>' . esc_html( $preview['repository'] ) . '</strong> · ' . esc_html( $preview['default_branch'] )
 			. ' · <code>' . esc_html( substr( $preview['base_sha'], 0, 12 ) ) . '</code></p>';
-		if ( 'template_update' === ( $preview['kind'] ?? null ) && is_array( $preview['old_template_identity'] ?? null ) ) {
+		if ( 'template_update' === ( $preview['kind'] ?? null ) && is_string( $preview['old_template_tag'] ?? null ) ) {
 			$html .= '<p>' . esc_html__( 'Template update:', 'ran-booster' ) . ' <strong>'
-				. esc_html( (string) ( $preview['old_template_identity']['release_tag'] ?? '' ) ) . ' → '
-				. esc_html( (string) ( $preview['new_template_identity']['release_tag'] ?? '' ) ) . '</strong></p>';
+				. esc_html( $preview['old_template_tag'] ) . ' → '
+				. esc_html( (string) ( $preview['new_template_tag'] ?? '' ) ) . '</strong></p>';
 		}
 		$html .= '<p>' . esc_html__( 'Template pack:', 'ran-booster' ) . ' <strong>' . esc_html( $preview['pack_version'] )
-			. '</strong> · <code>' . esc_html( substr( $preview['new_template_identity']['asset_sha256'], 0, 16 ) ) . '</code></p><ul>';
+			. '</strong> · <code>' . esc_html( substr( $preview['template_digest'], 0, 16 ) ) . '</code></p><ul>';
 		foreach ( $preview['changes'] as $change ) {
-			if ( is_array( $change ) && is_string( $change['path'] ?? null ) && is_string( $change['operation'] ?? null ) && is_string( $change['sha256'] ?? null ) ) {
+			if ( is_array( $change ) && is_string( $change['path'] ?? null ) && is_string( $change['operation'] ?? null ) && is_string( $change['digest'] ?? null ) ) {
 				$html .= '<li><code>' . esc_html( $change['path'] ) . '</code> — ' . esc_html( $change['operation'] )
-					. ' — <code>' . esc_html( substr( $change['sha256'], 0, 12 ) ) . '</code></li>';
+					. ' — <code>' . esc_html( substr( $change['digest'], 0, 12 ) ) . '</code></li>';
 			}
 		}
 
@@ -189,7 +192,7 @@ final class GitHubReleaseWorkflowDisplay {
 		}
 		$write              = in_array( $operation, array( 'setup', 'update_setup' ), true );
 		$credentialRequired = $write || ! $anonymous;
-		$html              .= '<p><label>' . esc_html__( 'Saved GitHub credential', 'ran-booster' )
+		$html              .= '<p><label>' . esc_html( isset( $form['provider_label'] ) ? sprintf( /* translators: %s is the repository provider name. */ __( 'Saved %s credential', 'ran-booster' ), $form['provider_label'] ) : __( 'Saved repository credential', 'ran-booster' ) )
 			. '<br><select name="booster_credential_id"' . ( $disabled ? ' disabled aria-disabled="true"' : ( $credentialRequired ? ' required' : '' ) ) . '>';
 		$html              .= $anonymous && ! $write
 			? '<option value="">' . esc_html__( 'Anonymous public inspection', 'ran-booster' ) . '</option>'
@@ -206,7 +209,7 @@ final class GitHubReleaseWorkflowDisplay {
 		$html .= '</p>';
 		$html .= '<p class="description">' . esc_html(
 			$write
-			? __( 'Choose a saved credential with Contents: write, Workflows: write and Pull requests: write. Its secret is never stored with this setup.', 'ran-booster' )
+			? ( $form['write_guidance'] ?? __( 'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.', 'ran-booster' ) )
 			: ( $anonymous
 				? __( 'Inspect anonymously, or use a saved credential to avoid anonymous API limits.', 'ran-booster' )
 				: __( 'Private repository inspection needs a saved credential.', 'ran-booster' ) )
@@ -226,13 +229,13 @@ final class GitHubReleaseWorkflowDisplay {
 			'workflow_pr_merged' => __( 'Booster verified that the recorded setup pull request was merged and its managed receipt is on the default branch. This does not prove a workflow ran or produced a release.', 'ran-booster' ),
 			'workflow_template_current' => __( 'The managed template pack is current.', 'ran-booster' ),
 			'workflow_template_update_available' => __( 'A newer compatible template pack is available. Review its exact changed paths before opening a draft.', 'ran-booster' ),
-			'workflow_partial' => __( 'GitHub may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
-			'workflow_unauthorised' => __( 'GitHub did not authorise the operation with the selected saved credential.', 'ran-booster' ),
-			'workflow_rate_limited' => __( 'GitHub has temporarily rate-limited the release workflow request. Booster made no change.', 'ran-booster' ),
-			'workflow_invalid_response' => __( 'GitHub returned an incomplete or invalid response. Booster made no change.', 'ran-booster' ),
+			'workflow_partial' => __( 'The repository provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
+			'workflow_unauthorised' => __( 'The repository provider did not authorise the operation with the selected saved credential.', 'ran-booster' ),
+			'workflow_rate_limited' => __( 'The repository provider has temporarily rate-limited the release workflow request. Booster made no change.', 'ran-booster' ),
+			'workflow_invalid_response' => __( 'The repository provider returned an incomplete or invalid response. Booster made no change.', 'ran-booster' ),
 			'workflow_template_unavailable' => __( 'The canonical release template source is temporarily unavailable. Booster made no change.', 'ran-booster' ),
 			'workflow_preflight_unavailable' => __( 'Booster could not validate the package release before continuing. No draft was opened.', 'ran-booster' ),
-			'workflow_remote_unavailable' => __( 'GitHub or the canonical template source did not provide trustworthy current state. Booster made no change.', 'ran-booster' ),
+			'workflow_remote_unavailable' => __( 'The repository provider or the canonical template source did not provide trustworthy current state. Booster made no change.', 'ran-booster' ),
 			'workflow_release_ready' => __( 'Published releases are available, but Booster cannot tell whether a release workflow produced them.', 'ran-booster' ),
 			'workflow_release_automation_conflict' => __( 'An existing release workflow was found. Booster will not overwrite it. Review it before using Booster setup.', 'ran-booster' ),
 			'workflow_release_automation_present' => __( 'Booster verified an exact canonical release setup in this repository. No setup pull request is needed.', 'ran-booster' ),
@@ -245,7 +248,7 @@ final class GitHubReleaseWorkflowDisplay {
 			'workflow_repository_unsupported' => __( 'This repository does not match the supported WordPress release configuration. Review and reconcile it before setting up a release workflow.', 'ran-booster' ),
 			'workflow_profile_missing', 'workflow_profile_modified' => __( 'The managed release profile is missing or modified. Booster made no change.', 'ran-booster' ),
 			'workflow_target_changed', 'workflow_template_superseded' => __( 'The repository or template identity changed. Assess the current state again.', 'ran-booster' ),
-			'workflow_invalid_request' => __( 'Booster stopped before contacting GitHub because this request no longer matched the current page or package.', 'ran-booster' ),
+			'workflow_invalid_request' => __( 'Booster stopped before contacting the repository provider because this request no longer matched the current page or package.', 'ran-booster' ),
 			default => __( 'The release workflow request was refused, changed or expired. Assess the repository again.', 'ran-booster' ),
 		};
 	}
@@ -258,21 +261,25 @@ final class GitHubReleaseWorkflowDisplay {
 			'package_source_changed' => __( 'The saved package or source changed before Booster could act. Reload the current package state and assess it again.', 'ran-booster' ),
 			'nonce_expired' => __( 'This form has expired. Reload the release workflow page and try again.', 'ran-booster' ),
 			'provider_unavailable' => __( "Booster could not read release data using the package's saved repository access. The credential selected for workflow setup is used only after this release check.", 'ran-booster' ),
+			'repository_source_conflict' => __( 'Another managed package now uses this repository. Review the repository package list, then change or remove the conflicting relationship before retrying.', 'ran-booster' ),
+			'repository_source_unavailable' => __( 'Booster could not safely read the repository source relationship. Check package storage and retry.', 'ran-booster' ),
+			'repository_release_owner_exists' => __( 'Another managed package already uses this repository for releases. Return that package to Branch deployments or stop managing it before retrying.', 'ran-booster' ),
 			'preflight_contract_unavailable' => __( 'The page or request state expired or changed. Reload the page and retry.', 'ran-booster' ),
+			'package_compatibility_invalid' => __( 'Correct the package Requires PHP or Requires at least header, publish a compatible release ZIP, then assess it again.', 'ran-booster' ),
 			default => $this->failureStageMessage( $stage ),
 		};
 	}
 
 	private function failureStageMessage( string $stage ): string {
 		return match ( $stage ) {
-			'request_validation' => __( 'Booster refused the request before reading saved credentials or contacting GitHub.', 'ran-booster' ),
-			'credential_authorisation' => __( 'Choose a saved GitHub credential with the required repository permissions, then retry.', 'ran-booster' ),
+			'request_validation' => __( 'Booster refused the request before reading saved credentials or contacting the repository provider.', 'ran-booster' ),
+			'credential_authorisation' => __( 'Choose a saved repository credential with the required repository permissions, then retry.', 'ran-booster' ),
 			'release_preflight' => __( 'Booster could not validate the package release before continuing. Review the release readiness details, then retry.', 'ran-booster' ),
-			'repository_snapshot' => __( 'GitHub did not provide a trustworthy current repository snapshot. Check repository access and try the assessment again.', 'ran-booster' ),
+			'repository_snapshot' => __( 'The repository provider did not provide a trustworthy current repository snapshot. Check repository access and try the assessment again.', 'ran-booster' ),
 			'template_pack' => __( 'The canonical release template pack changed or could not be verified. Assess the repository again before opening a draft.', 'ran-booster' ),
 			'preview_storage' => __( 'Booster could not retain the review preview locally. No draft was opened; retry the assessment.', 'ran-booster' ),
-			'repository_mutation' => __( 'GitHub may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
-			'local_persistence' => __( 'The draft may exist on GitHub, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
+			'repository_mutation' => __( 'The repository provider may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
+			'local_persistence' => __( 'The draft may exist on the repository provider, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
 			default => __( 'Booster stopped before it could verify the release-workflow request. Retry the assessment and use the failure reference when seeking support.', 'ran-booster' ),
 		};
 	}

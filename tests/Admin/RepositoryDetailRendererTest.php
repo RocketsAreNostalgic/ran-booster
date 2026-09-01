@@ -13,12 +13,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 
 	public function testStatusRendersMixedPackagesAndIntegrationHistoryWithoutMutationAuthority(): void {
 		$row = array(
-			'repository'                => 'owner/shared',
-			'repository_url'            => 'https://github.com/owner/shared',
-			'source_label'              => 'Mixed sources',
-			'source_key'                => 'mixed',
-			'package_summaries_omitted' => 3,
-			'package_summaries'         => array(
+			'repository'        => 'owner/shared',
+			'repository_url'    => 'https://github.com/owner/shared',
+			'source_label'      => 'Conflicting sources',
+			'source_key'        => 'mixed',
+			'package_summaries' => array(
 				array(
 					'type'              => 'plugin',
 					'identifier'        => 'owner/plugin.php',
@@ -42,7 +41,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'deployment_policy' => 'manual',
 				),
 			),
-			'details'                   => array(
+			'details'           => array(
 				array(
 					'key'   => 'core:webhook-recorded-status',
 					'label' => 'Recorded hook',
@@ -62,15 +61,15 @@ final class RepositoryDetailRendererTest extends TestCase {
 				),
 				array(
 					'key'   => 'gh:release-automation-a',
-					'label' => 'Provider workflow detail',
+					'label' => 'État du flux de publication',
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
 				),
 				array(
-					'key'   => 'provider:custom-workflow-observation',
-					'kind'  => 'release_workflow',
-					'label' => 'Flux de publication — owner/theme',
-					'value' => 'Configured',
+					'key'      => 'provider:custom-workflow-observation',
+					'category' => 'release_workflow',
+					'label'    => 'Flux de publication — owner/theme',
+					'value'    => 'Configured',
 				),
 				array(
 					'key'   => 'provider:legacy-release-workflow',
@@ -83,14 +82,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Configured',
 				),
 			),
-			'actions'                   => array(
-				array(
-					'key'      => 'fixture:provider-webhooks',
-					'label'    => 'Open fixture webhooks',
-					'type'     => 'link',
-					'url'      => 'https://example.test/provider-webhooks',
-					'external' => true,
-				),
+			'actions'           => array(
 				array(
 					'key'   => 'gh:release-automation-a',
 					'label' => 'Release automation: owner/plugin.php',
@@ -127,14 +119,14 @@ final class RepositoryDetailRendererTest extends TestCase {
 
 		self::assertFalse( $webhookRendered );
 		self::assertFalse( $releaseRendered );
-		self::assertStringContainsString( '2 packages shown; 3 more connected · Mixed sources', $html );
+		self::assertStringContainsString( '2 packages · Conflicting sources', $html );
+		self::assertStringContainsString( 'Conflicting sources.', $html );
+		self::assertStringContainsString( 'Review the package settings before using release workflow.', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
 		self::assertStringContainsString( '>Releases', $html );
 		self::assertStringContainsString( 'Ignores pushes', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
-		self::assertStringContainsString( '>Automatic<', $html );
-		self::assertStringContainsString( '>Manual<', $html );
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
@@ -142,10 +134,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
-		self::assertStringContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
-		self::assertStringNotContainsString( '1 package uses Branch', $html );
-		self::assertStringNotContainsString( '1 package tracks Releases', $html );
-		self::assertStringContainsString( 'Provider workflow detail', $html );
+		self::assertStringContainsString( '1 package uses Branch', $html );
+		self::assertStringContainsString( '1 package tracks Releases', $html );
+		self::assertStringContainsString( 'État du flux de publication', $html );
 		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Flux de publication — owner/theme', $html );
 		self::assertStringContainsString( 'Release automation — owner/legacy.php', $html );
@@ -156,8 +147,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertIsInt( $releaseHistoryPosition );
 		self::assertIsInt( $legacyHistoryPosition );
 		self::assertTrue( $webhookHistoryPosition < $releaseHistoryPosition );
-		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Provider workflow detail' ) );
-		self::assertTrue( $releaseHistoryPosition < strpos( $html, 'Flux de publication — owner/theme' ) );
+		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'État du flux de publication' ) );
+		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Flux de publication — owner/theme' ) );
 		self::assertTrue( $releaseHistoryPosition < $legacyHistoryPosition );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
@@ -224,7 +215,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
 	}
 
-	public function testBranchViewShowsDisabledWebhookContextForReleaseOnlyRepository(): void {
+	public function testBranchViewShowsWebhookGuidanceWithoutASetupControlWhenUnavailable(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -245,15 +236,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					),
 				),
 				'details'           => array(),
-				'actions'           => array(
-					array(
-						'key'      => 'fixture:provider-webhooks',
-						'label'    => 'Open fixture webhooks',
-						'type'     => 'link',
-						'url'      => 'https://example.test/provider-webhooks',
-						'external' => true,
-					),
-				),
+				'actions'           => array(),
 			),
 			'Bitbucket',
 			'https://example.test/repositories',
@@ -270,13 +253,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 
 		self::assertStringContainsString( 'no Branch package currently uses this repository webhook', $html );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section"' ) );
-		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup"', $html );
 		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section"', $html );
-		self::assertStringContainsString( 'Webhook setup', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-repository-webhook-setup-heading">Webhook setup</h4>', $html );
 		self::assertStringNotContainsString( '<details', $html );
-		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
-		self::assertStringContainsString( '>Set up webhook</button>', $html );
-		self::assertStringContainsString( 'Open fixture webhooks', $html );
+		self::assertStringNotContainsString( '>Set up webhook</button>', $html );
 		self::assertStringContainsString( 'Management history', $html );
 		self::assertStringContainsString( 'Recorded hook status', $html );
 		self::assertStringContainsString( 'Managed hook not yet set', $html );
@@ -286,6 +266,42 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Never', $html );
 		self::assertStringContainsString( 'View repository activity', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
+	}
+
+	public function testBranchViewDoesNotRenderCoreReleaseWorkflowActions(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/branch',
+				'source_label'      => 'Branch',
+				'source_key'        => 'branch',
+				'package_summaries' => array(),
+				'details'           => array(),
+				'actions'           => array(
+					array(
+						'key'      => 'core:release-workflow-deadbeefdeadbeef',
+						'label'    => 'Assess release setup',
+						'type'     => 'link',
+						'url'      => 'https://example.test/releases',
+						'disabled' => false,
+					),
+				),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( '>Assess release setup</a>', $html );
+		self::assertStringNotContainsString( 'https://example.test/releases', $html );
 	}
 
 	public function testIncompletePackageInventoryDisablesRepositoryWorkflowControls(): void {
@@ -406,9 +422,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 			),
 			'details'           => array(
 				array(
-					'key'   => 'gh:release-automation-a',
-					'label' => 'Release automation',
-					'value' => 'Configured',
+					'key'      => 'gh:release-automation-a',
+					'label'    => 'Processo di pubblicazione',
+					'value'    => 'Configured',
+					'category' => 'release_workflow',
 				),
 			),
 			'actions'           => array(),
@@ -443,7 +460,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Configured', $html );
 	}
 
-	public function testUnsupportedProviderKeepsReleaseControlsVisibleButDisabled(): void {
+	public function testUnavailableReleaseWorkflowKeepsPackageSettingsLinksWithoutAFalseAction(): void {
 		$row = array(
 			'repository'        => 'owner/releases',
 			'repository_url'    => '',
@@ -484,8 +501,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-release-heading">Release publishing</h3>', $html );
 		self::assertStringContainsString( 'Release workflow setup is unavailable for this repository provider.', $html );
 		self::assertStringContainsString( 'Open Theme settings', $html );
-		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
-		self::assertStringContainsString( 'Assess release setup', $html );
+		self::assertStringNotContainsString( 'Assess release setup', $html );
 	}
 
 	public function testProviderActionsPreserveNormalizedDescriptions(): void {

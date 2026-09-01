@@ -13,7 +13,8 @@ final class ReleaseManagementFixture {
 	public static function controls(
 		?ReleaseTrackingFacadeDouble $tracking = null,
 		?ProspectiveReleaseFacadeDouble $prospective = null,
-		?callable $readCandidates = null
+		?callable $readCandidates = null,
+		?\RAN\Storage\RepositorySourceGuard $sourceGuard = null
 	): ReleaseManagementControls {
 		$prospective ??= new ProspectiveReleaseFacadeDouble();
 		$tracking    ??= new ReleaseTrackingFacadeDouble( self::status() );
@@ -21,7 +22,8 @@ final class ReleaseManagementFixture {
 			$tracking,
 			$prospective,
 			$readCandidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->listCandidates( $type, $repository, $channel, '' ),
-			$tracking
+			$tracking,
+			$sourceGuard
 		);
 	}
 

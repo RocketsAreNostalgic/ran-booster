@@ -25,13 +25,28 @@ operational history.
 ## Decision history
 
 Before proposing a new updater, installer, lock, receipt, credential lifecycle,
-public facade, or shared release/branch abstraction, review the private package
-update decision register. It preserves material NO-GO and deferred approaches,
+public facade, or shared release/branch abstraction, review the
+[package update decision register](package-update-orchestration-decision-register.md).
+It preserves material NO-GO and deferred approaches,
 their evidence, and the specific triggers that would justify reconsideration.
 That audit trail does not override the current runtime behavior documented here.
 In particular, the register is the durable history for the removed exact
 release Reinstall path and its receipt/finalizer NO-GO; this guide does not
 present that retired operation as current behavior.
+
+[PU-035 and PU-036](package-update-orchestration-decision-register.md#2026-08-28-repository-exclusivity-and-multi-package-releases)
+record the repository relationship policy: on this site, one exact provider and
+stable repository ID supplies multiple Branch packages or one Release package,
+never both. Inactive packages and Disabled policies still count. A sole root
+package can switch modes; subdirectory packages remain Branch-only. Existing
+conflicts pause Release updates without changing files or records and use the
+ordinary Return to Branch action to remove the conflict.
+
+This is a product limit, not a filesystem limitation. Allowing Branch companions
+in future would be a narrower decision than supporting several Release packages.
+The latter is a deliberate non-goal. Release publishing may remain manual or
+use the author's own workflow, provided the artifact satisfies Booster's
+existing single-package ZIP, Update URI and integrity contract.
 
 The bundled controls keep fixed, purpose-specific request and result adapters.
 Core does not publish a generic availability, result-normalization or

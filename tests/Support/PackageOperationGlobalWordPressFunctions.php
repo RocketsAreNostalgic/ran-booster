@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+if ( ! function_exists( 'ran_booster_table_name' ) ) {
+	function ran_booster_table_name(): string {
+		return 'wp_ran_booster_packages';
+	}
+}
+
 if ( ! function_exists( '__' ) ) {
 	function __( string $text, string $domain = 'default' ): string {
 		unset( $domain );

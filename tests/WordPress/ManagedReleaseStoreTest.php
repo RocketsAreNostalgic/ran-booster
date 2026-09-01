@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\PackageSource;
 use RAN\Storage\Database;
 use RAN\WordPress\ManagedReleaseConfiguration;
+use RAN\WordPress\ManagedReleaseRepositorySourceUnavailable;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RuntimeException;
@@ -69,7 +70,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 			)
 		);
 		$lifecycle = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 3 ) )->method( 'requireReady' );
+		$lifecycle->expects( self::exactly( 4 ) )->method( 'requireReady' );
 		$store         = new ManagedReleaseStore(
 			$database,
 			$lifecycle,
@@ -137,6 +138,62 @@ final class ManagedReleaseStoreTest extends TestCase {
 		);
 		self::assertSame( array(), $database->updates );
 		self::assertSame( 'disabled', $database->row['deployment_policy'] );
+	}
+
+	public function testReturningToBranchDistinguishesAnUnavailableRepositorySourceGuardFromStaleState(): void {
+		$database                         = new ManagedReleaseStoreDatabase(
+			array(
+				'type'                  => 1,
+				'package'               => 'installed/example.php',
+				'source'                => 'release_asset',
+				'source_revision'       => 4,
+				'deployment_policy'     => 'manual',
+				'release_configuration' => '{}',
+			)
+		);
+		$database->sourceGuardUnavailable = true;
+		$store                            = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+
+		try {
+			$store->transition(
+				'plugin',
+				'installed/example.php',
+				PackageSource::RELEASE_ASSET,
+				4,
+				PackageSource::BRANCH,
+				null,
+				7
+			);
+			self::fail( 'An unavailable repository source guard must not be reported as a stale transition.' );
+		} catch ( ManagedReleaseRepositorySourceUnavailable $failure ) {
+			self::assertStringContainsString( 'repository source relationship', $failure->getMessage() );
+		}
+
+		self::assertSame( array(), $database->updates );
+	}
+
+	public function testChangingReleaseChannelDistinguishesAnUnavailableRepositorySourceGuardFromStaleState(): void {
+		$database                         = new ManagedReleaseStoreDatabase(
+			array(
+				'type'                  => 1,
+				'package'               => 'installed/example.php',
+				'source'                => 'release_asset',
+				'source_revision'       => 4,
+				'deployment_policy'     => 'manual',
+				'release_configuration' => ( new ManagedReleaseConfiguration( 'example', 'example.php', 'stable' ) )->toJson(),
+			)
+		);
+		$database->sourceGuardUnavailable = true;
+		$store                            = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+
+		try {
+			$store->changeChannel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			self::fail( 'An unavailable repository source guard must not be reported as a stale channel change.' );
+		} catch ( ManagedReleaseRepositorySourceUnavailable $failure ) {
+			self::assertStringContainsString( 'repository source relationship', $failure->getMessage() );
+		}
+
+		self::assertSame( array(), $database->updates );
 	}
 
 	public function testReleaseTransitionAndChannelChangeRejectNestedRowsWithoutWriting(): void {
@@ -246,7 +303,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 			)
 		);
 		$lifecycle     = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 2 ) )->method( 'requireReady' );
+		$lifecycle->expects( self::exactly( 3 ) )->method( 'requireReady' );
 		$store = new ManagedReleaseStore(
 			$database,
 			$lifecycle,

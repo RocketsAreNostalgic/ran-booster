@@ -29,10 +29,17 @@ use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+use RAN\RepositoryProvider\WebhookNormalizer;
+use RAN\RepositoryProvider\WebhookEnvelope;
+use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
+
+require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProviders.php';
 
 final class AssistedWebhookFacadeTest extends TestCase {
 
@@ -473,7 +480,20 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 1, $provider->calls );
 	}
 
-	private function facade( FixedFacadeSecretsFile $secrets, FixedWebhookProvider $provider, ?callable $acquireLock = null, ?callable $releaseLock = null, string $repository = 'owner/example' ): AssistedWebhookFacade {
+	public function testIncompleteWebhookAggregateRefusesAssessmentBeforeProviderWork(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FitnessOnlyWebhookManagementCapabilityProvider( 'gh', 'Partial fixture' );
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+
+		$result = $facade->assessSetup( $target, 'profile_1', 'good' )->toArray();
+
+		self::assertSame( 'assessment_unavailable', $result['code'] );
+		self::assertSame( 0, $provider->providerOperationCalls );
+	}
+
+	private function facade( FixedFacadeSecretsFile $secrets, RepositoryProvider $provider, ?callable $acquireLock = null, ?callable $releaseLock = null, string $repository = 'owner/example' ): AssistedWebhookFacade {
 		$registry = new ProviderRegistry( array( $provider ) );
 		$package  = new FixedFacadePackage( new ManagedRepository( 'gh', $repository, '101', 'main' ) );
 
@@ -490,7 +510,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 }
 
-final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhookFitness, RepositoryWebhookManagement {
+final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhookFitness, RepositoryWebhookManagement, WebhookNormalizer {
 	public const OPERATION            = 'repository-webhook-management';
 	public const VERSION              = 1;
 	public int $calls                 = 0;
@@ -517,6 +537,20 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 				return array();
 			}
 		};
+	}
+
+	public function getWebhookPolicy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {
+		return new InertWebhookPolicy( ProviderCode::parse( 'gh' ) );
+	}
+
+	public function diagnoseWebhookReadiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
+		return new \RAN\RepositoryProvider\ProviderDiagnosticResult( \RAN\RepositoryProvider\ProviderDiagnosticResult::PASSED, 'fixture_webhook_ready', 'Fixture is ready.', 'No action is required.' );
+	}
+
+	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+		unset( $request );
+
+		return WebhookEnvelope::ignored();
 	}
 
 	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {

@@ -10,6 +10,7 @@ use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\Secrets\SecretsFile;
 
 /** Core-governed repository-webhook-management/3 facade. */
@@ -186,7 +187,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 					if ( ! $this->identityConfirmed( 'check', $current, $credentialProfileId, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
 					}
-					$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+					$provider = $this->completeWebhookProvider( $current->providerCode() );
 
 					return $provider->check( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
 				} catch ( \Throwable ) {
@@ -210,7 +211,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 					if ( ! $this->identityConfirmed( 'reconfigure', $current, $credentialProfileId, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $record[0] );
 					}
-					$provider        = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+					$provider        = $this->completeWebhookProvider( $current->providerCode() );
 					$providerStarted = true;
 
 					return $provider->reconfigure( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $record[1] )->withProfile( $record[0] );
@@ -240,7 +241,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 					if ( ! $this->identityConfirmed( 'remove', $current, $credentialProfileId, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
 					}
-					$provider        = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+					$provider        = $this->completeWebhookProvider( $current->providerCode() );
 					$providerStarted = true;
 					$result          = $provider->remove( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
 					if ( $result->confirmsAbsence() && 'created' === $profile->disposition() && ! $this->deleteProfileIfRevision( $current->providerCode(), $profile->id(), $profile->revision() ) ) {
@@ -272,7 +273,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 					if ( ! $this->identityConfirmed( 'test', $current, $credentialProfileId, $hookId ) ) {
 						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
 					}
-					$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+					$provider = $this->completeWebhookProvider( $current->providerCode() );
 
 					return $provider->test( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
 				} catch ( \Throwable ) {
@@ -312,7 +313,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			if ( ! $this->identityConfirmed( 'setup', $current, $credentialId ) ) {
 				return $this->failed( 'repository_identity_unconfirmed' );
 			}
-			$provider = $this->providers->requireCapability( $current->providerCode(), RepositoryWebhookManagement::class );
+			$provider = $this->completeWebhookProvider( $current->providerCode() );
 			if ( null === $selection && null === $selectedProfileId ) {
 				$profileId       = $this->secrets->saveWebhook(
 					$current->providerCode(),
@@ -362,7 +363,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	private function providerAssessment( string $action, AssistanceTarget $target, ?string $credentialId, ?string $hookId ): RepositoryWebhookFitnessResult {
-		$provider = $this->providers->requireCapability( $target->providerCode(), RepositoryWebhookFitness::class );
+		$provider = $this->completeWebhookProvider( $target->providerCode() );
 
 		return match ( $action ) {
 			'setup'       => $provider->assessSetup( $target->repositoryId(), $target->repository(), $credentialId ),
@@ -371,6 +372,17 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			'remove'      => $provider->assessRemove( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId ),
 			'test'        => $provider->assessTest( $target->repositoryId(), $target->repository(), $credentialId, (string) $hookId ),
 		};
+	}
+
+	private function completeWebhookProvider( string $providerCode ): RepositoryWebhookManagement {
+		$fitness    = $this->providers->requireCapability( $providerCode, RepositoryWebhookFitness::class );
+		$management = $this->providers->requireCapability( $providerCode, RepositoryWebhookManagement::class );
+		$normalizer = $this->providers->requireCapability( $providerCode, WebhookNormalizer::class );
+		if ( $fitness !== $management || $management !== $normalizer ) {
+			throw new \RuntimeException( 'The provider webhook management capability is incomplete.' );
+		}
+
+		return $management;
 	}
 
 	/** @param callable(): RepositoryWebhookOperationResult $operation */

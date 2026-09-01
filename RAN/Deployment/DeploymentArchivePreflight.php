@@ -70,7 +70,7 @@ class DeploymentArchivePreflight {
 			$archive->cleanup();
 			BoosterLogger::log( 'provider archive cleanup completed', $attempt->logContext() + array( 'step' => 'provider_archive_cleanup_completed' ) );
 		} catch ( Throwable $exception ) {
-			$failure = new RuntimeException( 'Provider archive authentication could not be cleaned up safely.' );
+			$failure = $this->checkFailure( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, 'Provider archive authentication could not be cleaned up safely.' );
 			BoosterLogger::logException( 'provider archive cleanup failed', $exception, $attempt->logContext() + array( 'step' => 'provider_archive_cleanup_failed' ) );
 		}
 
@@ -79,14 +79,14 @@ class DeploymentArchivePreflight {
 				try {
 					$artifact->cleanup();
 				} catch ( Throwable ) {
-					throw new RuntimeException( 'The failed deployment archive could not be removed safely.' );
+					$this->fail( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, 'The failed deployment archive could not be removed safely.' );
 				}
 			}
 			throw $failure;
 		}
 
 		if ( null === $artifact ) {
-			throw new RuntimeException( 'The deployment archive could not be prepared safely.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, 'The deployment archive could not be prepared safely.' );
 		}
 
 		return $artifact;
@@ -111,7 +111,7 @@ class DeploymentArchivePreflight {
 			if ( null === $downloaded
 				|| $identity['device'] !== $downloaded['device']
 				|| $identity['inode'] !== $downloaded['inode'] ) {
-				throw new RuntimeException( 'The downloaded deployment archive identity changed unexpectedly.' );
+				$this->fail( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, 'The downloaded deployment archive identity changed unexpectedly.' );
 			}
 			$this->assertCompressedSize( $downloaded['size'] );
 			BoosterLogger::log( 'preflight archive downloaded', $attempt->logContext() + array( 'step' => 'preflight_archive_downloaded' ) );
@@ -123,7 +123,7 @@ class DeploymentArchivePreflight {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- The digest binds the exact local archive to the durable attempt.
 			$digest = hash_file( 'sha256', $path );
 			if ( ! is_string( $digest ) || preg_match( '/^[a-f0-9]{64}$/D', $digest ) !== 1 ) {
-				throw new RuntimeException( 'RAN Booster could not fingerprint the deployment archive.' );
+				$this->fail( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, 'RAN Booster could not fingerprint the deployment archive.' );
 			}
 
 			$artifact = new PreparedArtifact(
@@ -158,7 +158,7 @@ class DeploymentArchivePreflight {
 		$data = $attempt->safeData();
 		if ( 'webhook' === ( $data['source'] ?? null )
 			&& ! hash_equals( (string) ( $data['requested_ref'] ?? '' ), $resolvedRef ) ) {
-			throw new RuntimeException( 'The provider did not return the authenticated webhook revision.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, 'The provider did not return the authenticated webhook revision.' );
 		}
 	}
 
@@ -176,34 +176,34 @@ class DeploymentArchivePreflight {
 			|| '' === $request->packageSlug
 			|| ( 'install' === $data['operation'] && null !== $installedIdentifier )
 			|| ( 'update' === $data['operation'] && ( null === $installedIdentifier || '' === $installedIdentifier ) ) ) {
-			throw new RuntimeException( 'The deployment attempt is not eligible for archive preflight.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, 'The deployment attempt is not eligible for archive preflight.' );
 		}
 		if ( null !== $installedIdentifier
 			&& ( str_starts_with( $installedIdentifier, '/' )
 				|| str_contains( $installedIdentifier, '\\' )
 				|| preg_match( '#(^|/)\.\.?(/|$)#', $installedIdentifier ) === 1 ) ) {
-			throw new RuntimeException( 'The installed package identity is unsafe.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_IDENTITY_MISMATCH, 'The installed package identity is unsafe.' );
 		}
 		if ( 'plugin' === $data['package_type']
 			&& null !== $installedIdentifier
 			&& ! str_contains( $installedIdentifier, '/' ) ) {
-			throw new RuntimeException( 'Root-level single-file plugins cannot be updated safely.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_SINGLE_FILE_UNSUPPORTED, 'Root-level single-file plugins cannot be updated safely.' );
 		}
 	}
 
 	private function assertLocalReadiness( DeploymentAttempt $attempt ): void {
 		if ( ! class_exists( ZipArchive::class ) ) {
-			throw new RuntimeException( 'The PHP ext-zip platform requirement is unavailable; deployment archives cannot be inspected.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_ZIP_EXTENSION_MISSING, 'The PHP ext-zip platform requirement is unavailable; deployment archives cannot be inspected.' );
 		}
 		if ( is_multisite() ) {
-			throw new RuntimeException( 'Archive deployment is supported only on a single-site WordPress installation.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_MULTISITE_UNSUPPORTED, 'Archive deployment is supported only on a single-site WordPress installation.' );
 		}
 		if ( ! wp_is_file_mod_allowed( 'ran-booster' ) ) {
-			throw new RuntimeException( 'WordPress file modifications are disabled for this site.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_FILE_MODS_DISABLED, 'WordPress file modifications are disabled for this site.' );
 		}
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		if ( 'direct' !== get_filesystem_method() ) {
-			throw new RuntimeException( 'RAN Booster beta requires the direct WordPress filesystem method.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_FILESYSTEM_UNSUPPORTED, 'RAN Booster beta requires the direct WordPress filesystem method.' );
 		}
 
 		$tempRoot    = $this->canonicalWritableDirectory( $this->temporaryRoot() );
@@ -212,14 +212,14 @@ class DeploymentArchivePreflight {
 			: null;
 		$destination = $this->canonicalWritableDirectory( $this->destinationRoot( $attempt ) );
 		if ( null === $tempRoot || null === $contentRoot || null === $destination ) {
-			throw new RuntimeException( 'The deployment temporary, upgrade or destination directory is not writable.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_DIRECTORY_UNWRITABLE, 'The deployment temporary, upgrade or destination directory is not writable.' );
 		}
 	}
 
 	private function assertInitialFreeSpace(): void {
 		$available = disk_free_space( $this->temporaryRoot() );
 		if ( false === $available || $available < $this->compressedLimit() ) {
-			throw new RuntimeException( 'The deployment temporary directory does not have enough free space.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW, 'The deployment temporary directory does not have enough free space.' );
 		}
 	}
 
@@ -227,23 +227,23 @@ class DeploymentArchivePreflight {
 	private function createPrivateTemporaryFile(): array {
 		$root = $this->canonicalWritableDirectory( $this->temporaryRoot() );
 		if ( null === $root ) {
-			throw new RuntimeException( 'The deployment temporary directory is not writable.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_DIRECTORY_UNWRITABLE, 'The deployment temporary directory is not writable.' );
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_tempnam -- tempnam atomically creates the private local streaming target.
 		$path = tempnam( $root, 'ran-booster-' );
 		if ( false === $path ) {
-			throw new RuntimeException( 'RAN Booster could not create a private archive file.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_TEMPORARY_FILE_FAILED, 'RAN Booster could not create a private archive file.' );
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Restrictive mode is mandatory before the provider response is streamed.
 		if ( ! chmod( $path, 0600 ) ) {
 			$this->removeNewTemporaryFile( $path );
-			throw new RuntimeException( 'RAN Booster could not secure the private archive file.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_TEMPORARY_FILE_FAILED, 'RAN Booster could not secure the private archive file.' );
 		}
 		$identity = PreparedArtifact::regularFileIdentity( $path );
 		if ( null === $identity || 0600 !== $identity['permissions'] || 1 !== $identity['links'] ) {
 			$this->removeNewTemporaryFile( $path );
-			throw new RuntimeException( 'RAN Booster could not secure the private archive file.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_TEMPORARY_FILE_FAILED, 'RAN Booster could not secure the private archive file.' );
 		}
 
 		return array(
@@ -271,17 +271,17 @@ class DeploymentArchivePreflight {
 				// WordPress reports both network failures and local streamed-file write
 				// failures as http_request_failed. Retrying that undifferentiated error
 				// could repeat a persistent local failure.
-				throw new RuntimeException( 'The deployment archive could not be downloaded.' );
+				$this->fail( DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED, 'The deployment archive could not be downloaded.' );
 			}
 			$status = (int) wp_remote_retrieve_response_code( $response );
 			if ( 429 === $status || in_array( $status, array( 502, 503, 504 ), true ) ) {
 				if ( $attempt < self::DOWNLOAD_ATTEMPTS ) {
 					continue;
 				}
-				throw new RuntimeException( 'The deployment archive is temporarily unavailable.' );
+				$this->providerStatusFailure( $status, 'The deployment archive is temporarily unavailable.' );
 			}
 			if ( $status < 200 || $status >= 300 ) {
-				throw new RuntimeException( 'The provider returned an unsuccessful archive response.' );
+				$this->providerStatusFailure( $status, 'The provider returned an unsuccessful archive response.' );
 			}
 
 			return;
@@ -290,7 +290,7 @@ class DeploymentArchivePreflight {
 
 	private function assertSafeHttpsUrl( mixed $url ): void {
 		if ( ! is_string( $url ) || '' === $url || trim( $url ) !== $url ) {
-			throw new RuntimeException( 'The provider prepared an invalid archive URL.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID, 'The provider prepared an invalid archive URL.' );
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- This is the fixed provider-download trust boundary.
 		$parts = parse_url( $url );
@@ -301,13 +301,13 @@ class DeploymentArchivePreflight {
 			|| isset( $parts['user'] )
 			|| isset( $parts['pass'] )
 			|| isset( $parts['fragment'] ) ) {
-			throw new RuntimeException( 'The provider prepared an invalid archive URL.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID, 'The provider prepared an invalid archive URL.' );
 		}
 	}
 
 	private function resolvedRef( PreparedArchive $archive ): string {
 		if ( ! method_exists( $archive, 'getResolvedRef' ) ) {
-			throw new RuntimeException( 'The provider did not prove an immutable archive ref.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, 'The provider did not prove an immutable archive ref.' );
 		}
 		$ref = $archive->getResolvedRef();
 		if ( ! is_string( $ref )
@@ -315,7 +315,7 @@ class DeploymentArchivePreflight {
 			|| $ref !== trim( $ref )
 			|| strlen( $ref ) > 191
 			|| preg_match( '/[[:cntrl:]]/', $ref ) === 1 ) {
-			throw new RuntimeException( 'The provider returned an invalid immutable archive ref.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, 'The provider returned an invalid immutable archive ref.' );
 		}
 
 		return $ref;
@@ -325,7 +325,7 @@ class DeploymentArchivePreflight {
 	private function inspectZip( string $path, DeploymentAttempt $attempt, ?string $installedIdentifier ): array {
 		$zip = new ZipArchive();
 		if ( true !== $zip->open( $path, ZipArchive::RDONLY ) ) {
-			throw new RuntimeException( 'The deployment archive is not a readable ZIP file.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID, 'The deployment archive is not a readable ZIP file.' );
 		}
 
 		try {
@@ -337,12 +337,12 @@ class DeploymentArchivePreflight {
 			for ( $index = 0; $index < $zip->numFiles; ++$index ) {
 				$stat = $zip->statIndex( $index, ZipArchive::FL_UNCHANGED );
 				if ( false === $stat || ! is_string( $stat['name'] ?? null ) || ! is_int( $stat['size'] ?? null ) || $stat['size'] < 0 || ! is_int( $stat['crc'] ?? null ) ) {
-					throw new RuntimeException( 'The deployment archive contains invalid entry metadata.' );
+					$this->fail( DeploymentOutcome::CODE_ARCHIVE_ENTRY_INVALID, 'The deployment archive contains invalid entry metadata.' );
 				}
 				$name       = $stat['name'];
 				$normalized = $this->validateEntryName( $name );
 				if ( isset( $entries[ $normalized ] ) ) {
-					throw new RuntimeException( 'The deployment archive contains duplicate paths.' );
+					$this->fail( DeploymentOutcome::CODE_ARCHIVE_PATH_COLLISION, 'The deployment archive contains duplicate paths.' );
 				}
 				$entries[ $normalized ] = array(
 					'index'     => $index,
@@ -352,7 +352,7 @@ class DeploymentArchivePreflight {
 				$entryRoot = explode( '/', $normalized, 2 )[0];
 				$root    ??= $entryRoot;
 				if ( ! hash_equals( $root, $entryRoot ) ) {
-					throw new RuntimeException( 'The deployment archive must contain one package root.' );
+					$this->fail( DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID, 'The deployment archive must contain one package root.' );
 				}
 
 				$this->assertSafeEntryType( $zip, $index, $stat, str_ends_with( $name, '/' ) );
@@ -363,7 +363,7 @@ class DeploymentArchivePreflight {
 			}
 
 			if ( null === $root ) {
-				throw new RuntimeException( 'The deployment archive does not contain a package.' );
+				$this->fail( DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID, 'The deployment archive does not contain a package.' );
 			}
 			$this->assertNoPathCollisions( $entries );
 			$expectedVersion = $this->assertPackageIdentity( $zip, $attempt, $entries, $root, $installedIdentifier );
@@ -386,7 +386,7 @@ class DeploymentArchivePreflight {
 			|| str_starts_with( $name, '/' )
 			|| preg_match( '/^[A-Za-z]:/', $name ) === 1
 			|| str_contains( $name, '//' ) ) {
-			throw new RuntimeException( 'The deployment archive contains an unsafe path.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_PATH_UNSAFE, 'The deployment archive contains an unsafe path.' );
 		}
 
 		$normalized = rtrim( $name, '/' );
@@ -396,17 +396,17 @@ class DeploymentArchivePreflight {
 			|| in_array( '', $segments, true )
 			|| in_array( '.', $segments, true )
 			|| in_array( '..', $segments, true ) ) {
-			throw new RuntimeException( 'The deployment archive contains an unsafe path.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_PATH_UNSAFE, 'The deployment archive contains an unsafe path.' );
 		}
 		foreach ( $segments as $segment ) {
 			if ( strlen( $segment ) > 255 || preg_match( '/[^\x20-\x7E]/', $segment ) === 1 ) {
-				throw new RuntimeException( 'The deployment archive contains an unsafe path.' );
+				$this->fail( DeploymentOutcome::CODE_ARCHIVE_PATH_UNSAFE, 'The deployment archive contains an unsafe path.' );
 			}
 			$stem = strtoupper( explode( '.', $segment, 2 )[0] );
 			if ( str_contains( $segment, ':' )
 				|| preg_match( '/[ .]$/D', $segment ) === 1
 				|| preg_match( '/^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/D', $stem ) === 1 ) {
-				throw new RuntimeException( 'The deployment archive contains an unsafe path.' );
+				$this->fail( DeploymentOutcome::CODE_ARCHIVE_PATH_UNSAFE, 'The deployment archive contains an unsafe path.' );
 			}
 		}
 
@@ -419,7 +419,7 @@ class DeploymentArchivePreflight {
 		foreach ( $entries as $path => $entry ) {
 			$folded = strtolower( $path );
 			if ( isset( $caseFolded[ $folded ] ) ) {
-				throw new RuntimeException( 'The deployment archive contains duplicate paths.' );
+				$this->fail( DeploymentOutcome::CODE_ARCHIVE_PATH_COLLISION, 'The deployment archive contains duplicate paths.' );
 			}
 			$caseFolded[ $folded ] = $entry;
 		}
@@ -432,7 +432,7 @@ class DeploymentArchivePreflight {
 				$ancestor = '' === $ancestor ? $segment : $ancestor . '/' . $segment;
 				$key      = strtolower( $ancestor );
 				if ( isset( $caseFolded[ $key ] ) && ! $caseFolded[ $key ]['directory'] ) {
-					throw new RuntimeException( 'The deployment archive contains a file-parent path collision.' );
+					$this->fail( DeploymentOutcome::CODE_ARCHIVE_PATH_COLLISION, 'The deployment archive contains a file-parent path collision.' );
 				}
 			}
 		}
@@ -441,7 +441,7 @@ class DeploymentArchivePreflight {
 	private function verifyEntryContents( ZipArchive $zip, int $index, int $expectedSize, int $expectedCrc ): void {
 		$stream = $zip->getStreamIndex( $index, ZipArchive::FL_UNCHANGED );
 		if ( false === $stream ) {
-			throw new RuntimeException( 'The deployment archive contains unreadable entry data.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, 'The deployment archive contains unreadable entry data.' );
 		}
 		$read = 0;
 		$hash = hash_init( 'crc32b' );
@@ -450,11 +450,11 @@ class DeploymentArchivePreflight {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread -- Streaming every ZIP entry is required for bounded CRC verification.
 				$chunk = fread( $stream, 65536 );
 				if ( false === $chunk ) {
-					throw new RuntimeException( 'The deployment archive contains unreadable entry data.' );
+					$this->fail( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, 'The deployment archive contains unreadable entry data.' );
 				}
 				if ( '' === $chunk ) {
 					if ( ! feof( $stream ) ) {
-						throw new RuntimeException( 'The deployment archive contains unreadable entry data.' );
+						$this->fail( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, 'The deployment archive contains unreadable entry data.' );
 					}
 					break;
 				}
@@ -467,7 +467,7 @@ class DeploymentArchivePreflight {
 		}
 		$crc = hash_final( $hash );
 		if ( $read !== $expectedSize || ! hash_equals( sprintf( '%08x', $expectedCrc ), $crc ) ) {
-			throw new RuntimeException( 'The deployment archive contains unreadable entry data.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, 'The deployment archive contains unreadable entry data.' );
 		}
 	}
 
@@ -478,8 +478,11 @@ class DeploymentArchivePreflight {
 	}
 
 	private function assertEntryCount( int $entries ): void {
-		if ( $entries < 1 || $entries > self::MAX_ENTRIES ) {
-			throw new RuntimeException( 'The deployment archive exceeds the entry-count limit.' );
+		if ( 0 === $entries ) {
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID, 'The deployment archive does not contain a package.' );
+		}
+		if ( $entries > self::MAX_ENTRIES ) {
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_ENTRY_LIMIT, 'The deployment archive exceeds the entry-count limit.' );
 		}
 	}
 
@@ -514,20 +517,20 @@ class DeploymentArchivePreflight {
 	private function assertSafeEntryType( ZipArchive $zip, int $index, array $stat, bool $namedDirectory ): void {
 		$encryption = (int) ( $stat['encryption_method'] ?? ZipArchive::EM_NONE );
 		if ( ZipArchive::EM_NONE !== $encryption ) {
-			throw new RuntimeException( 'Encrypted deployment archive entries are not supported.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_ENCRYPTED, 'Encrypted deployment archive entries are not supported.' );
 		}
 
 		$operations = 0;
 		$attributes = 0;
 		if ( ! $zip->getExternalAttributesIndex( $index, $operations, $attributes, ZipArchive::FL_UNCHANGED ) ) {
-			throw new RuntimeException( 'The deployment archive contains invalid entry metadata.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_ENTRY_INVALID, 'The deployment archive contains invalid entry metadata.' );
 		}
 		$type = ( $attributes >> 16 ) & 0170000;
 		if ( ! in_array( $type, array( 0, 0040000, 0100000 ), true ) ) {
-			throw new RuntimeException( 'The deployment archive contains a link or device entry.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_ENTRY_UNSUPPORTED, 'The deployment archive contains a link or device entry.' );
 		}
 		if ( ( 0040000 === $type && ! $namedDirectory ) || ( 0100000 === $type && $namedDirectory ) ) {
-			throw new RuntimeException( 'The deployment archive contains invalid entry metadata.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_ENTRY_INVALID, 'The deployment archive contains invalid entry metadata.' );
 		}
 	}
 
@@ -554,14 +557,19 @@ class DeploymentArchivePreflight {
 			ARRAY_FILTER_USE_BOTH
 		);
 		if ( array() === $packageFiles ) {
-			throw new RuntimeException( 'The configured package directory is missing from the archive.' );
+			$this->fail(
+				is_string( $subdirectory ) && '' !== $subdirectory
+					? DeploymentOutcome::CODE_PACKAGE_SUBDIRECTORY_MISSING
+					: DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID,
+				'The configured package directory is missing from the archive.'
+			);
 		}
 
 		$type = (string) $data['package_type'];
 		if ( 'theme' === $type ) {
 			$stylesheet = $packageFiles[ $prefix . '/style.css' ] ?? null;
 			if ( null === $stylesheet ) {
-				throw new RuntimeException( 'The archive does not contain the expected WordPress theme.' );
+				$this->fail( DeploymentOutcome::CODE_PACKAGE_THEME_MISSING, 'The archive does not contain the expected WordPress theme.' );
 			}
 			$headers = $this->readHeaders( $zip, $stylesheet['index'], 'Theme Name' );
 			$this->assertCompatibility( $headers );
@@ -580,11 +588,14 @@ class DeploymentArchivePreflight {
 				}
 			}
 		}
-		if ( 1 !== count( $candidates ) ) {
-			throw new RuntimeException( 'The archive must contain exactly one top-level WordPress plugin.' );
+		if ( 0 === count( $candidates ) ) {
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_PLUGIN_MISSING, 'The archive does not contain the expected WordPress plugin.' );
+		}
+		if ( 1 < count( $candidates ) ) {
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_MULTIPLE_PLUGINS, 'The archive must contain exactly one top-level WordPress plugin.' );
 		}
 		if ( null !== $mainFile && ! isset( $candidates[ $mainFile ] ) ) {
-			throw new RuntimeException( 'The archive does not contain the expected WordPress plugin.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_PLUGIN_MISSING, 'The archive does not contain the expected WordPress plugin.' );
 		}
 		$headers = reset( $candidates );
 		$this->assertCompatibility( $headers );
@@ -598,12 +609,12 @@ class DeploymentArchivePreflight {
 		if ( 'theme' === ( $data['package_type'] ?? null )
 			&& null !== $installedIdentifier
 			&& ! hash_equals( $request->packageSlug, $installedIdentifier ) ) {
-			throw new RuntimeException( 'The archive package basename does not match the managed theme.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_IDENTITY_MISMATCH, 'The archive package basename does not match the managed theme.' );
 		}
 		if ( 'plugin' === ( $data['package_type'] ?? null ) && null !== $installedIdentifier ) {
 			$directory = basename( dirname( $installedIdentifier ) );
 			if ( ! hash_equals( $request->packageSlug, $directory ) ) {
-				throw new RuntimeException( 'The archive package basename does not match the managed plugin.' );
+				$this->fail( DeploymentOutcome::CODE_PACKAGE_IDENTITY_MISMATCH, 'The archive package basename does not match the managed plugin.' );
 			}
 		}
 	}
@@ -614,20 +625,26 @@ class DeploymentArchivePreflight {
 	private function readHeaders( ZipArchive $zip, int $index, string $required, bool $requiredFile = true ): ?array {
 		$contents = $zip->getFromIndex( $index, 8192, ZipArchive::FL_UNCHANGED );
 		if ( false === $contents ) {
-			throw new RuntimeException( 'The deployment package header could not be inspected.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_HEADER_UNREADABLE, 'The deployment package header could not be inspected.' );
 		}
 		$headers = array();
 		foreach ( array( $required, 'Version', 'Requires at least', 'Requires PHP' ) as $header ) {
 			$pattern = '/^[ \t\/*#@]*' . preg_quote( $header, '/' ) . ':[ \t]*(.+?)\s*$/mi';
 			$value   = preg_match( $pattern, $contents, $match ) === 1 ? trim( $match[1] ) : '';
 			if ( strlen( $value ) > 64 || preg_match( '/[[:cntrl:]]/', $value ) === 1 ) {
-				throw new RuntimeException( 'The deployment package contains an invalid compatibility header.' );
+				if ( 'Version' === $header ) {
+					$this->fail( DeploymentOutcome::CODE_PACKAGE_VERSION_INVALID, 'The deployment package contains an invalid Version header.' );
+				}
+				if ( $required === $header ) {
+					$this->fail( DeploymentOutcome::CODE_PACKAGE_HEADER_UNREADABLE, 'The deployment package header could not be inspected.' );
+				}
+				$this->fail( DeploymentOutcome::CODE_PACKAGE_COMPATIBILITY_INVALID, 'The deployment package contains an invalid compatibility header.' );
 			}
 			$headers[ $header ] = $value;
 		}
 		if ( '' === $headers[ $required ] ) {
 			if ( $requiredFile ) {
-				throw new RuntimeException( 'The deployment archive does not contain the expected package header.' );
+				$this->fail( DeploymentOutcome::CODE_PACKAGE_HEADER_MISSING, 'The deployment archive does not contain the expected package header.' );
 			}
 
 			return null;
@@ -639,8 +656,11 @@ class DeploymentArchivePreflight {
 	/** @param array<string, string> $headers */
 	private function expectedPackageVersion( array $headers ): string {
 		$version = $headers['Version'] ?? '';
+		if ( '' === $version ) {
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_VERSION_MISSING, 'The deployment package does not contain a Version header.' );
+		}
 		if ( preg_match( '/^[A-Za-z0-9][A-Za-z0-9._+-]*$/D', $version ) !== 1 ) {
-			throw new RuntimeException( 'The deployment package contains an invalid Version header.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_VERSION_INVALID, 'The deployment package contains an invalid Version header.' );
 		}
 
 		return $version;
@@ -652,15 +672,15 @@ class DeploymentArchivePreflight {
 		$requiresWp  = $headers['Requires at least'];
 		foreach ( array( $requiresPhp, $requiresWp ) as $version ) {
 			if ( '' !== $version && preg_match( '/^[0-9]+(?:\.[0-9]+){0,3}(?:[-+._][A-Za-z0-9.-]+)?$/D', $version ) !== 1 ) {
-				throw new RuntimeException( 'The deployment package contains an invalid compatibility header.' );
+				$this->fail( DeploymentOutcome::CODE_PACKAGE_COMPATIBILITY_INVALID, 'The deployment package contains an invalid compatibility header.' );
 			}
 		}
 		if ( '' !== $requiresPhp && version_compare( PHP_VERSION, $requiresPhp, '<' ) ) {
-			throw new RuntimeException( 'The deployment package requires a newer PHP version.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_REQUIRES_NEWER_PHP, 'The deployment package requires a newer PHP version.' );
 		}
 		$wpVersion = (string) get_bloginfo( 'version' );
 		if ( '' !== $requiresWp && ( '' === $wpVersion || version_compare( $wpVersion, $requiresWp, '<' ) ) ) {
-			throw new RuntimeException( 'The deployment package requires a newer WordPress version.' );
+			$this->fail( DeploymentOutcome::CODE_PACKAGE_REQUIRES_NEWER_WORDPRESS, 'The deployment package requires a newer WordPress version.' );
 		}
 	}
 
@@ -672,7 +692,7 @@ class DeploymentArchivePreflight {
 			|| false === $destinationAvailable
 			|| $upgradeAvailable < $required
 			|| $destinationAvailable < $required ) {
-			throw new RuntimeException( 'The deployment filesystem does not have enough free space.' );
+			$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW, 'The deployment filesystem does not have enough free space.' );
 		}
 	}
 
@@ -684,7 +704,7 @@ class DeploymentArchivePreflight {
 		$type = $attempt->safeData()['package_type'] ?? null;
 		if ( 'plugin' === $type ) {
 			if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
-				throw new RuntimeException( 'The WordPress plugin directory is unavailable.' );
+				$this->fail( DeploymentOutcome::CODE_DEPLOYMENT_DIRECTORY_UNWRITABLE, 'The WordPress plugin directory is unavailable.' );
 			}
 
 			return WP_PLUGIN_DIR;
@@ -703,11 +723,11 @@ class DeploymentArchivePreflight {
 	private function removeNewTemporaryFile( string $path ): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- The path was returned directly by tempnam in this call.
 		if ( ! unlink( $path ) ) {
-			throw new RuntimeException( 'The failed deployment archive could not be removed safely.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, 'The failed deployment archive could not be removed safely.' );
 		}
 		clearstatcache( true, $path );
 		if ( file_exists( $path ) || is_link( $path ) ) {
-			throw new RuntimeException( 'The failed deployment archive could not be removed safely.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, 'The failed deployment archive could not be removed safely.' );
 		}
 	}
 
@@ -717,15 +737,29 @@ class DeploymentArchivePreflight {
 		if ( null === $current
 			|| $current['device'] !== $created['device']
 			|| $current['inode'] !== $created['inode'] ) {
-			throw new RuntimeException( 'The failed deployment archive could not be removed safely.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, 'The failed deployment archive could not be removed safely.' );
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes the exact exclusive temporary file created by this preflight.
 		if ( ! unlink( $path ) ) {
-			throw new RuntimeException( 'The failed deployment archive could not be removed safely.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, 'The failed deployment archive could not be removed safely.' );
 		}
 		clearstatcache( true, $path );
 		if ( file_exists( $path ) || is_link( $path ) ) {
-			throw new RuntimeException( 'The failed deployment archive could not be removed safely.' );
+			$this->fail( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, 'The failed deployment archive could not be removed safely.' );
 		}
+	}
+
+	private function fail( string $code, string $message ): never {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- A validated closed code and static internal message are not output.
+		throw new DeploymentCheckFailure( $code, $message );
+	}
+
+	private function checkFailure( string $code, string $message ): DeploymentCheckFailure {
+		return new DeploymentCheckFailure( $code, $message );
+	}
+
+	private function providerStatusFailure( int $status, string $message ): never {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The normalized provider status and static message are not output.
+		throw DeploymentCheckFailure::providerStatus( $status, $message );
 	}
 }

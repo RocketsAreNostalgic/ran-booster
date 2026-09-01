@@ -479,10 +479,10 @@ test('an external enhanced submitter does not continue with a native form submis
 
 test('enhanced mutations preserve viewport and package disclosure states', () => {
 	for (const open of [
-		[false, false],
-		[true, true],
-		[true, false],
-		[false, true],
+		[false, false, false],
+		[true, true, true],
+		[true, false, true],
+		[false, true, false],
 	]) {
 		const state = fixture();
 		const init = loadFunction('initEnhancedMutationFeedback', {
@@ -491,6 +491,7 @@ test('enhanced mutations preserve viewport and package disclosure states', () =>
 		});
 		const ids = [
 			'ran-booster-advanced-source-settings',
+			'ran-booster-release-track-settings',
 			'ran-booster-package-danger-zone',
 		];
 		const replacementDetails = open.map((value, index) => ({
@@ -1051,13 +1052,13 @@ test('a package mutation converts its swapped success notice into the shared toa
 	]);
 });
 
-test('a rendered GitHub release workflow result consumes only its signed PRG query values', () => {
+test('a rendered provider release workflow result consumes only its signed PRG query values', () => {
 	const state = fixture();
 	state.window.location.href =
-		'https://example.test/wp-admin/admin.php?page=ran-booster&keep=present&ran_booster_github_release_workflow_result=workflow_preflight_unavailable&ran_booster_github_release_workflow_success=0&ran_booster_github_release_workflow_type=plugin&ran_booster_github_release_workflow_package=example%2Fexample.php&ran_booster_github_release_workflow_source_revision=3&ran_booster_github_release_workflow_failure_stage=release_preflight&ran_booster_github_release_workflow_diagnostic=provider_unavailable&ran_booster_github_release_workflow_diagnostic_available=1&ran_booster_github_release_workflow_reference=abc&ran_booster_github_release_workflow_channel=github&ran_booster_github_release_workflow_preview=none&ran_booster_github_release_workflow_result_nonce=signed&unrelated=retained';
+		'https://example.test/wp-admin/admin.php?page=ran-booster&keep=present&ran_booster_release_workflow_result=workflow_preflight_unavailable&ran_booster_release_workflow_success=0&ran_booster_release_workflow_type=plugin&ran_booster_release_workflow_package=example%2Fexample.php&ran_booster_release_workflow_failure_stage=release_preflight&ran_booster_release_workflow_diagnostic=provider_unavailable&ran_booster_release_workflow_diagnostic_available=1&ran_booster_release_workflow_reference=abc&ran_booster_release_workflow_channel=github&ran_booster_release_workflow_preview=none&ran_booster_release_workflow_source_revision=3&ran_booster_release_workflow_provider=fixture&ran_booster_release_workflow_repository=repo123&ran_booster_release_workflow_message=Provider%20unavailable&ran_booster_release_workflow_remediation=Reconnect%20the%20provider&ran_booster_release_workflow_result_nonce=signed&unrelated=retained';
 	state.document.querySelector = (selector) =>
 		selector ===
-		'#wpbody-content [data-ran-booster-github-release-workflow-result]'
+		'#wpbody-content [data-ran-booster-release-workflow-result]'
 			? {}
 			: null;
 
@@ -1075,10 +1076,10 @@ test('a rendered GitHub release workflow result consumes only its signed PRG que
 	]);
 });
 
-test('an ordinary visit does not rewrite a GitHub release workflow result URL', () => {
+test('an ordinary visit does not rewrite a provider release workflow result URL', () => {
 	const state = fixture();
 	state.window.location.href =
-		'https://example.test/wp-admin/admin.php?ran_booster_github_release_workflow_result=workflow_inspected';
+		'https://example.test/wp-admin/admin.php?ran_booster_release_workflow_result=workflow_inspected';
 
 	loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,

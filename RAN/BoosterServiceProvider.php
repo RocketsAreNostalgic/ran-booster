@@ -45,7 +45,7 @@ use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Internal\CoreContainer;
 use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
 use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
-use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
@@ -241,12 +241,12 @@ final class BoosterServiceProvider {
 		);
 		$container->bind( ProviderRegistry::class, $providers );
 		$container->bind(
-			GitHubReleaseWorkflowControls::class,
-			static fn ( CoreContainer $container ): GitHubReleaseWorkflowControls => new GitHubReleaseWorkflowControls(
+			ReleaseWorkflowControls::class,
+			static fn ( CoreContainer $container ): ReleaseWorkflowControls => new ReleaseWorkflowControls(
 				$container->make( ReleaseTrackingFacade::class ),
 				$container->make( PluginRepository::class ),
 				$container->make( ThemeRepository::class ),
-				$secrets->credentialsFor( 'gh' )
+				$container->make( ProviderRegistry::class )
 			)
 		);
 		$container->bind(
@@ -419,7 +419,8 @@ final class BoosterServiceProvider {
 			$releaseRegistrar,
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
-			publicLookupProfile: static fn ( string $provider ): ?string => $container->make( PublicRepositoryLookupProfileStore::class )->get( $provider )
+			publicLookupProfile: static fn ( string $provider ): ?string => $container->make( PublicRepositoryLookupProfileStore::class )->get( $provider ),
+			sourceGuard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
@@ -429,7 +430,8 @@ final class BoosterServiceProvider {
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class )
+			$container->make( ProviderRegistry::class ),
+			sourceGuard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
 		$container->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );

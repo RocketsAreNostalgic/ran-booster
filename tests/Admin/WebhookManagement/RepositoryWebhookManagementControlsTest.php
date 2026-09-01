@@ -110,6 +110,12 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			self::assertFalse( $controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' ) );
 			self::assertSame( '', ob_get_clean() );
 		}
+		foreach ( array( 'fitness-only', 'management-only', 'no-policy' ) as $providerCode ) {
+			self::assertTrue( $controls->hasManagementCapability( $providerCode ) );
+		}
+		foreach ( array( 'absent', 'missing', "bad\0code" ) as $providerCode ) {
+			self::assertFalse( $controls->hasManagementCapability( $providerCode ) );
+		}
 
 		foreach ( $providers as $provider ) {
 			self::assertSame( 0, $provider->providerOperationCalls );
@@ -123,6 +129,23 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$controls->enqueueAdminAssets( 'toplevel_page_ran-booster' );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
+	}
+
+	public function testClaimedIncompleteCapabilityRendersADisabledCoreShellWithoutFacadeOrProviderWork(): void {
+		$provider = new FitnessOnlyWebhookManagementCapabilityProvider( 'fitness-only', 'Fitness only' );
+		$controls = $this->controls( $provider );
+		$controls->register();
+
+		ob_start();
+		$controls->renderRepositoryWebhookSetup( 'fitness-only', '1234', 'https://example.test/repository', true, 'owner/branch' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Fitness only webhook configuration is incomplete.', $html );
+		self::assertStringContainsString( 'Branch packages can still be updated manually', $html );
+		self::assertStringContainsString( 'ran-booster-repository-webhook-setup is-inactive', $html );
+		self::assertStringContainsString( 'aria-disabled="true"', $html );
+		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
+		self::assertSame( 0, $provider->providerOperationCalls );
 	}
 
 	public function testRepositoryPanelReportsUnavailableTargetsWithoutRenderingMarkup(): void {

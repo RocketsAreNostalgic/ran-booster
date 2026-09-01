@@ -17,6 +17,10 @@ final readonly class PackageProjection {
 		return $this->typeValue;
 	}
 
+	public function providerCode(): string {
+		return 'gh';
+	}
+
 	public function identifier(): string {
 		return 'theme' === $this->typeValue ? 'example-theme' : 'example/example.php';
 	}

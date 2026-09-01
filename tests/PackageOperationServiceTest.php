@@ -33,6 +33,8 @@ use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
+use Tests\Support\RepositorySourceGuardDatabase;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\Troubleshooting\TroubleshootingService;
@@ -166,6 +168,38 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'info', $dashboard->messages[0]['type'] );
 		self::assertStringContainsString( 'settings were saved', $dashboard->messages[0]['message'] );
 		self::assertSame( 'error', $dashboard->messages[1]['type'] );
+	}
+
+	#[DataProvider( 'conflictingBranchOperations' )]
+	public function testBranchAdmissionRefusesAnotherReleaseOwnerBeforeWriting( string $action ): void {
+		$plugins = new OperationPluginRepository( $this->plugin() );
+		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		$themes->package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$database         = new RepositorySourceGuardDatabase();
+		$database->rows[] = (object) array(
+			'type'                   => 2,
+			'package'                => 'release-owner',
+			'source'                 => 'release_asset',
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+		);
+		$lock             = new OperationUpdaterLock();
+		$service          = $this->service( $plugins, $themes, new OperationCoordinator(), $lock, $database );
+		try {
+			$service->execute( PackageOperation::fromInput( $action, $this->input( $action, array( 'dry-run' => '1' ) ) ) );
+			self::fail( 'The destination Release owner must prevent adoption or reassignment.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertStringContainsString( 'release-owner', $failure->getMessage() );
+			self::assertNull( $plugins->stored );
+			self::assertNull( $themes->stored );
+			self::assertSame( array(), $plugins->edited );
+			self::assertSame( array(), $themes->edited );
+			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
+		}
+	}
+
+	public static function conflictingBranchOperations(): array {
+		return array( array( 'install-plugin' ), array( 'install-theme' ), array( 'edit-plugin' ), array( 'edit-theme' ) );
 	}
 
 	public function testLinkEditAndUnlinkUseTheExplicitRepositories(): void {
@@ -1224,6 +1258,35 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary-token', $dashboard->messages[0]['message'] );
 	}
 
+	public function testDashboardExplainsRepositoryReleaseOwnerRefusal(): void {
+		$database       = new RepositorySourceGuardDatabase();
+		$database->rows = array(
+			(object) array(
+				'type'                   => '1',
+				'package'                => 'booster-fixture-plugin/booster-fixture-plugin.php',
+				'provider'               => 'gh',
+				'provider_repository_id' => '1315521150',
+				'source'                 => 'release_asset',
+			),
+		);
+		$guard          = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$coordinator    = new OperationCoordinator();
+		try {
+			$guard->assertAllowed( 'gh', '1315521150', 1, 'branch-fixture', PackageSource::BRANCH );
+			self::fail( 'A release-owned repository must refuse another package.' );
+		} catch ( \RuntimeException $failure ) {
+			$coordinator->failure = $failure;
+		}
+		$dashboard = $this->dashboard( $coordinator );
+
+		self::assertFalse( $dashboard->postPackageOperation( 'install-plugin', $this->input( 'install-plugin', array( 'subdirectory' => 'branch-fixture' ) ) ) );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'ran_booster_repository_source_conflict', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'This repository already supplies releases to booster-fixture-plugin/booster-fixture-plugin.php. Additional packages cannot use it.', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'switch that package to Branch', $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( 'ran_booster_manual_action_failed', $dashboard->messages[0]['message'] );
+	}
+
 	/** @param array<string, mixed> $overrides */
 	private function input( string $action, array $overrides = array() ): array {
 		$type = str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme';
@@ -1261,16 +1324,40 @@ final class PackageOperationServiceTest extends TestCase {
 		OperationPluginRepository $plugins,
 		OperationThemeRepository $themes,
 		OperationCoordinator $coordinator,
-		?OperationUpdaterLock $updaterLock = null
+		?OperationUpdaterLock $updaterLock = null,
+		?RepositorySourceGuardDatabase $sourceDatabase = null
 	): PackageOperationService {
 		$updaterLock ??= new OperationUpdaterLock();
+		if ( null === $sourceDatabase ) {
+			$sourceDatabase = new RepositorySourceGuardDatabase();
+			foreach ( array(
+				1 => $plugins->package,
+				2 => $themes->package,
+			) as $type => $package ) {
+				try {
+					$package->getRepository();
+				} catch ( \TypeError ) {
+					continue; // Installed-only fixtures do not yet represent a managed relationship.
+				}
+				if ( null !== $package->getProviderCode() && null !== $package->getProviderRepositoryId() ) {
+					$sourceDatabase->rows[] = (object) array(
+						'type'                   => $type,
+						'package'                => $package->getIdentifier(),
+						'provider'               => $package->getProviderCode(),
+						'provider_repository_id' => $package->getProviderRepositoryId(),
+						'source'                 => $package->getSource()->value,
+					);
+				}
+			}
+		}
 
 		return new PackageOperationService(
 			$plugins,
 			$themes,
 			$coordinator,
 			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), null, $updaterLock ),
-			$updaterLock
+			$updaterLock,
+			new RepositorySourceGuard( $sourceDatabase, $this->createStub( Database::class ) )
 		);
 	}
 
@@ -1386,7 +1473,7 @@ final class OperationPluginRepository extends PluginRepository {
 	public ?\Throwable $unlinkFailure                     = null;
 	public ?Plugin $freshAfterMutation                    = null;
 	public ?PackageMutationResult $adoptionResult         = null;
-	public function __construct( private Plugin $package ) {}
+	public function __construct( public Plugin $package ) {}
 	public function fromSlug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }
@@ -1433,7 +1520,7 @@ final class OperationThemeRepository extends ThemeRepository {
 	public ?string $unlinked                              = null;
 	public ?string $requestedSlug                         = null;
 	public ?Theme $freshAfterMutation                     = null;
-	public function __construct( private Theme $package ) {}
+	public function __construct( public Theme $package ) {}
 	public function fromSlug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }

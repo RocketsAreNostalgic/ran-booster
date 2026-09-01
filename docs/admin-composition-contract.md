@@ -329,11 +329,13 @@ It logs the extension failure and renders the already normalized Core and
 webhook rows. The filter supplies no provider HTML or selected-repository panel
 callback.
 
-Missing, partial or incompatible webhook facets create no action, panel,
-documentation section, asset or mutation authority. A complete non-GitHub
-provider receives the same fixed Core placement; its bounded metadata supplies
-the provider code and label, while its facet implementation owns remote calls,
-credentials and provider-specific remediation.
+Absent webhook assistance omits its optional setup controls. Claimed but partial
+or incompatible facets retain the stable disabled component and a configuration
+notice, without operation authority. A complete non-GitHub provider receives the
+same fixed Core placement; its bounded metadata supplies the provider code and
+label, while its facet implementation owns remote calls, credentials and
+provider-specific remediation. Branch deployment and manual guidance do not
+depend on the optional helper.
 
 ## Package screen anatomy
 
@@ -481,21 +483,20 @@ plain-text badge labels of no more than 255 characters each, and a plain-text
 status of no more than 40 characters. An invalid or throwing projection falls
 back to the Core baseline; invalid badge labels and status values are dropped.
 
-Repository-scoped release automation belongs on the selected repository page:
+Repository-scoped release workflow management belongs on the selected repository
+page. Core composes `ReleaseWorkflowControls` directly with the repository
+renderer; there is no provider HTML action or competing provider-rendered shell.
+The optional `RepositoryReleaseWorkflowManagement` capability supplies bounded
+immutable status, preview and result values. Core keeps the heading, setup-status
+line, credential selector, labels and help links stable, varying only values,
+notices and enabled states. Rendering uses local evidence only.
 
-```php
-do_action(
-	'ran_booster_admin_repository_release_sections',
-	$repositoryRow,
-	$returnUrl
-);
-```
-
-Core owns the repository tabs and passes one normalized exact repository row.
-Providers may render bounded package-specific workflow status and forms, but
-must reauthorize the exact provider, repository ID, package identity and source
-revision before mutation. Rendering must use local evidence only; remote
-inspection requires an explicit administrator action.
+Core validates the exact provider, repository, package and source revision before
+each fixed operation. Package settings retain source, track, candidate selection,
+installation and update-policy controls. Repository history uses normalized
+`webhook` and `release_workflow` categories, not provider key prefixes or English
+headings; only exact current summary projections contribute to review counts.
+See the [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
 ## Structured administration actions
 

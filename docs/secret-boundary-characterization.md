@@ -200,6 +200,13 @@ preserve failed, partial and ambiguous outcomes and contain no raw response,
 headers, vendor messages or secret-derived material. This is a supported
 capability boundary, not hostile same-process PHP confidentiality.
 
+The current Provider API 10 contract is `repository-webhook-management/3` and
+adds `test`/`assessTest` to those four operations. The earlier checkpoint above
+records the original cutover. Release workflow management follows the same
+bound-store rule: Core sends a selected saved profile ID after authorization;
+the provider resolves its secret inside the fixed operation. Workflow evidence
+does not retain either credential IDs or secrets.
+
 ### Logging API removal checkpoint
 
 The coordinated Phase 1 closure removes the public ordinary-add-on Logging API

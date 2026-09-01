@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 
 namespace Tests\Admin\WebhookManagement;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
@@ -107,7 +108,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			self::assertFalse( $controls->supportsProvider( $providerCode ) );
 			self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, $providerCode, array(), 'https://example.test/' ) );
 			ob_start();
-			$controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' );
+			self::assertFalse( $controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' ) );
 			self::assertSame( '', ob_get_clean() );
 		}
 
@@ -123,6 +124,42 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$controls->enqueueAdminAssets( 'toplevel_page_ran-booster' );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
+	}
+
+	#[DataProvider( 'unavailableRepositoryPanelTargetProvider' )]
+	public function testRepositoryPanelReportsUnavailableTargetsWithoutRenderingAnEmptyShell( string $mode ): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::once() )->method( 'target' )->willReturnCallback(
+			static function () use ( $mode ): ?AssistanceTarget {
+				if ( 'throws' === $mode ) {
+					throw new \RuntimeException( 'Target unavailable.' );
+				}
+
+				return null;
+			}
+		);
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ManagedPackageWebhookAuthorityResolver( $this->createMock( PluginRepository::class ), $this->createMock( ThemeRepository::class ) ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/'
+		);
+		$controls->register();
+
+		ob_start();
+		self::assertFalse( $controls->renderRepositoryPanel( 'fixture-provider', '1234', 'https://example.test/repositories' ) );
+		self::assertSame( '', (string) ob_get_clean() );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function unavailableRepositoryPanelTargetProvider(): array {
+		return array(
+			'no exact target'      => array( 'missing' ),
+			'target lookup throws' => array( 'throws' ),
+		);
 	}
 
 	public function testBranchPackageRendersTheFixedNormalPostWebhookDisclosure(): void {

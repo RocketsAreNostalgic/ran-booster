@@ -138,6 +138,55 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'Configured at last check', $result['repositoryTableRows'][0]['details'][0]['value'] );
 	}
 
+	public function testProjectRetainsWebhookEvidenceWhenProviderExtensionRemovesIt(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'gh:101' => array(
+				'schema_version'              => 3,
+				'provider_code'               => 'gh',
+				'repository_id'               => '101',
+				'repository'                  => 'example/example',
+				'hook_id'                     => '77',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://hooks.example.test/webhook',
+				'status'                      => 'configured',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][]                   = static function ( array $rows ): array {
+			$rows['101']['details'] = array();
+
+			return $rows;
+		};
+
+		$result = $this->projectSingleRepositoryPage( $this->webhookManagementControls() );
+
+		self::assertSame( 'core:webhook-recorded-status', $result['repositoryTableRows'][0]['details'][0]['key'] );
+		self::assertSame( 'Configured at last check', $result['repositoryTableRows'][0]['details'][0]['value'] );
+	}
+
+	public function testProjectSummaryIgnoresExtensionForgedWebhookEvidence(): void {
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
+			$rows['101']['details'][] = array(
+				'key'      => 'core:webhook-recorded-status',
+				'label'    => 'Recorded hook status',
+				'value'    => 'Configured at last check',
+				'recorded' => true,
+				'state'    => 'configured',
+			);
+
+			return $rows;
+		};
+
+		$result = $this->projectSingleRepositoryPage( null, true );
+
+		self::assertSame( 0, $result['repositoryIntegrationSummary']['recorded_hooks'] );
+		self::assertSame( 1, $result['repositoryIntegrationSummary']['needs_review'] );
+	}
+
 	public function testProjectRetainsCoreRowsWhenProviderRowEnrichmentIsInvalid(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static fn(): string => 'invalid enrichment';
 
@@ -494,7 +543,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	}
 
 	/** @return array<string,mixed> */
-	private function projectSingleRepositoryPage( ?RepositoryWebhookManagementControls $webhookManagement = null ): array {
+	private function projectSingleRepositoryPage( ?RepositoryWebhookManagementControls $webhookManagement = null, bool $automatic = false ): array {
 		return ( new ProviderRepositoryRowsNormalizer() )->projectPage(
 			array(
 				'provider'                     => array(
@@ -514,11 +563,12 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 							'source'               => 'branch',
 							'package_references'   => array( 'example/example.php' ),
 							'deployment_policies'  => array(
-								'automatic' => 0,
-								'manual'    => 1,
+								'automatic' => $automatic ? 1 : 0,
+								'manual'    => $automatic ? 0 : 1,
 								'disabled'  => 0,
 							),
-							'automatic_count'      => 0,
+							'automatic_count'      => $automatic ? 1 : 0,
+							'has_automatic_branch_consumer' => $automatic,
 							'repository_url'       => 'https://github.com/example/example',
 							'webhook_settings_url' => null,
 						),
@@ -539,8 +589,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 							'eligible'              => true,
 							'package_references'    => array( 'example/example.php' ),
 							'deployment_policies'   => array(
-								'automatic' => 0,
-								'manual'    => 1,
+								'automatic' => $automatic ? 1 : 0,
+								'manual'    => $automatic ? 0 : 1,
 								'disabled'  => 0,
 							),
 							'reason_codes'          => array(),

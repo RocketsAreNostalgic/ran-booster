@@ -319,15 +319,17 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 										$hasBranchConsumer  = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
 										$renderWebhookPanel = null;
 									if ( $hasBranchConsumer && ! $webhookAssistanceSiteReady ) {
-										$renderWebhookPanel = static function (): void {
+										$renderWebhookPanel = static function (): bool {
 											?>
 												<p class="description"><?php esc_html_e( 'Repository webhook management is unavailable until this site can receive provider deliveries.', 'ran-booster' ); ?></p>
-												<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
-												<?php
+											<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
+											<?php
+
+											return true;
 										};
 									} elseif ( $hasBranchConsumer && null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] ) ) {
-										$renderWebhookPanel = static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl ): void {
-											$webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
+										$renderWebhookPanel = static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl ): bool {
+											return $webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
 										};
 									}
 										$repositoryDetailRenderer->render(

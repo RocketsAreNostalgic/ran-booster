@@ -48,6 +48,18 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Configured at last check',
 				),
 				array(
+					'key'   => 'core:webhook-current-warning',
+					'label' => 'Current local warning',
+					'value' => 'Needs verification',
+					'tone'  => 'warning',
+				),
+				array(
+					'key'      => 'core:webhook-last-checked',
+					'label'    => 'Last checked',
+					'value'    => 'August 20, 2026',
+					'datetime' => '2026-08-20T01:02:03Z',
+				),
+				array(
 					'key'   => 'fixture:release-automation-owner-plugin',
 					'label' => 'Release automation — owner/plugin.php',
 					'value' => 'Ready to assess',
@@ -99,9 +111,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'https://example.test/activity',
 			true,
 			'Receiver ready.',
-			static function () use ( &$webhookRendered ): void {
+			static function () use ( &$webhookRendered ): bool {
 				$webhookRendered = true;
 				echo '<div data-test-webhook></div>';
+
+				return true;
 			}
 		);
 		$html = (string) ob_get_clean();
@@ -124,6 +138,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'href="https://example.test/signing-secrets"', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
+		self::assertStringContainsString( 'ran-booster-badge--warning', $html );
+		self::assertStringContainsString( '<time datetime="2026-08-20T01:02:03Z">August 20, 2026</time>', $html );
 		self::assertStringContainsString( 'Repository details', $html );
 		self::assertStringContainsString( 'Provider access', $html );
 		self::assertLessThan( strpos( $html, 'Recorded webhook activity' ), strpos( $html, 'Provider access' ) );
@@ -165,6 +181,32 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'No eligible Branch package', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
+	}
+
+	public function testBranchRepositoryFallsBackWhenTheSupportedWebhookPanelCannotBeProjected(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'          => 'owner/branch',
+				'repository_url'      => '',
+				'source_label'        => 'Branch',
+				'has_branch_consumer' => true,
+				'package_summaries'   => array(),
+				'details'             => array(),
+				'actions'             => array(),
+			),
+			'Fixture Forge',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			static fn (): bool => false
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Repository webhook management is temporarily unavailable for this repository.', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage repository webhook</button>', $html );
+		self::assertStringNotContainsString( 'One repository webhook is shared', $html );
 	}
 
 	public function testBranchRepositoryWithoutAssistedManagementRetainsManualGuidanceWithoutInventingAnAction(): void {

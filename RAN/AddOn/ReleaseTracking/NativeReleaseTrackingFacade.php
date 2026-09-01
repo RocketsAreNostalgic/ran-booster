@@ -370,7 +370,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** @return list<RepositoryReference> */
 	private function releaseBrowserRepositories( Package $package ): array {
 		$repository = $package->getRepository()->reference;
-		$profileId  = ( $this->publicLookupProfile )( (string) $package->getProviderCode() );
+		if ( $repository->private ) {
+			return null === $repository->credentialId ? array() : array( $repository );
+		}
+		$profileId = ( $this->publicLookupProfile )( (string) $package->getProviderCode() );
 		if ( null !== $repository->credentialId ) {
 			return $profileId === $repository->credentialId || null === $profileId
 				? array( $repository )
@@ -379,10 +382,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		if ( null !== $profileId ) {
 			return array( $this->repositoryWithCredential( $repository, $profileId ) );
 		}
-		if ( $repository->private ) {
-			return array();
-		}
-
 		return array( $repository );
 	}
 

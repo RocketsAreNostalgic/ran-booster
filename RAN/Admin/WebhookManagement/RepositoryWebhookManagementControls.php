@@ -197,22 +197,24 @@ final class RepositoryWebhookManagementControls {
 		return $this->display->enrichRows( $rows, $providerCode, $metadata->label, $metadata->repositoryUrlBase, $repositoryProjections, $returnUrl );
 	}
 
-	public function renderRepositoryPanel( string $providerCode, string $repositoryId, string $returnUrl ): void {
+	public function renderRepositoryPanel( string $providerCode, string $repositoryId, string $returnUrl ): bool {
 		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
 		if ( ! $metadata instanceof ProviderMetadata ) {
-			return;
+			return false;
 		}
 
 		$context = $this->controller->panelContext();
 		$model   = $this->display->panel( $providerCode, $metadata->label, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
 		if ( null === $model ) {
-			return;
+			return false;
 		}
 
 		ob_start();
 		$this->adminInteraction->renderFormAttributes( $model['interaction_request'] );
 		$formAttributes = (string) ob_get_clean();
 		require __DIR__ . '/views/panel.php';
+
+		return true;
 	}
 
 	/** @param list<array<string, mixed>> $sections @return list<array<string, mixed>> */

@@ -33,7 +33,8 @@ final class ProviderRepositoryRowsNormalizer {
 		$siteEndpoint  = is_string( $site['callback_url'] ?? null ) ? $site['callback_url'] : $endpoint;
 		$reasonCodes   = is_array( $site['reason_codes'] ?? null ) ? $site['reason_codes'] : array();
 		$siteReady     = null !== $site && 'ready' === ( $site['status'] ?? null );
-		$baseUrl       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
+		$baseUrl       = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) )
+			. '?page=ran-booster&tab=' . rawurlencode( $providerCode );
 		$providerUrl   = static fn ( array $args = array() ): string => add_query_arg( $args, $baseUrl );
 		$taskUrls      = array();
 		$taskRequests  = array();
@@ -66,7 +67,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$taskUrls['repositories'],
 			$releaseWorkflow
 		);
-		$repositorySummary         = $this->repositorySummary( $model['rows'] );
+		$repositorySummary         = $this->repositorySummary( $model['webhook_rows'], $model['rows'] );
 		$repositoryView            = in_array( $data['repositoryView'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repositoryView'] : 'status';
 		$repositoryViewUrls        = array();
 		$repositoryViewRequestUrls = array();
@@ -134,7 +135,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param mixed                               $presented
 	 * @return array<string, array<string, mixed>>
 	 */
-	public function normalize( array $baseRows, mixed $presented, string $providerCode ): array {
+	public function normalize( array $baseRows, mixed $presented, string $providerCode, bool $allowCoreDetailAppend = false ): array {
 		if ( ! is_array( $presented ) ) {
 			throw new LogicException( 'Provider repository rows must be a keyed array.' );
 		}
@@ -166,7 +167,7 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( array_slice( $details, 0, count( $baseDetails ) ) !== $baseDetails ) {
 				throw new LogicException( 'Provider filters may append but not replace Core details.' );
 			}
-			$this->assertDetails( $details );
+			$this->assertDetails( $details, count( $baseDetails ), $allowCoreDetailAppend );
 
 			$baseActions = is_array( $baseRow['actions'] ?? null ) ? $baseRow['actions'] : array();
 			$actions     = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
@@ -211,7 +212,12 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Historical rows must not claim Core actions.' );
 			}
 			$row['actions'] = $normalizer->normalize( $rowActions );
-			$rows[ $key ]   = $this->normalizeHistoricalRow( $key, $row, $providerCode );
+			foreach ( $row['actions'] as $action ) {
+				if ( 'post' === $action['type'] ) {
+					throw new LogicException( 'Historical rows may contain link actions only.' );
+				}
+			}
+			$rows[ $key ] = $this->normalizeHistoricalRow( $key, $row, $providerCode );
 		}
 
 		return $rows;
@@ -221,7 +227,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param list<array<string,mixed>> $repositories
 	 * @param array{by_id:array<string,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
 	 * @param callable(array<string,mixed>):string $providerUrl
-	 * @return array{requested_id:string,list_url:string,return_url:string,rows:array<string,array<string,mixed>>,selected:?array}
+	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<string,array<string,mixed>>,rows:array<string,array<string,mixed>>,selected:?array}
 	 */
 	public function project(
 		array $repositories,
@@ -447,7 +453,7 @@ final class ProviderRepositoryRowsNormalizer {
 				)
 				: '';
 			if ( ! $inventoryIncomplete && ! $historical ) {
-				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $reasonId, $locator, $detailUrl );
+				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator, $detailUrl );
 			}
 			$rows[ $rowKey ] = array(
 				'key'                           => $rowKey,
@@ -458,7 +464,6 @@ final class ProviderRepositoryRowsNormalizer {
 				'repository'                    => $locator,
 				'repository_url'                => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
 				'detail_url'                    => $detailUrl,
-				'review_url'                    => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 				'package_type_label'            => $typeLabel,
 				'source_key'                    => $source,
 				'source_label'                  => match ( $source ) {
@@ -501,13 +506,14 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$coreRows = null !== $webhookManagement
+		$coreRows    = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
-		$coreRows = null !== $releaseWorkflow
-			? $releaseWorkflow->enrichRepositoryRows( $coreRows, $providerCode, $projections, $returnUrl )
-			: $coreRows;
-		$coreRows = $this->normalize( $rows, $coreRows, $providerCode );
+		$webhookRows = $this->normalize( $rows, $coreRows, $providerCode, true );
+		$coreRows    = null !== $releaseWorkflow
+			? $releaseWorkflow->enrichRepositoryRows( $webhookRows, $providerCode, $projections, $returnUrl )
+			: $webhookRows;
+		$coreRows    = $this->normalize( $webhookRows, $coreRows, $providerCode, true );
 		try {
 			$presented = apply_filters(
 				'ran_booster_provider_repository_rows',
@@ -540,6 +546,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'requested_id' => $requestedId,
 			'list_url'     => $listUrl,
 			'return_url'   => $returnUrl,
+			'webhook_rows' => $webhookRows,
 			'rows'         => $rows,
 			'selected'     => $selected,
 		);
@@ -595,7 +602,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$isPlugin = str_ends_with( strtolower( $reference ), '.php' );
 			if ( ! $isPlugin && 1 !== preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) {
 				continue; }
-			$url = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) );
+			$url = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference );
 			if ( ! $isRelease ) {
 				$url = add_query_arg( 'source_view', 'branch', $url ) . '#ran-booster-branch-readiness'; }
 			$key             = 'core:package-' . substr( hash( 'sha256', $reference ), 0, 16 );
@@ -613,16 +620,19 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 	/** @param list<mixed> $details */
-	private function assertDetails( array $details ): void {
+	private function assertDetails( array $details, int $coreDetailCount = 0, bool $allowCoreDetailAppend = false ): void {
 		if ( count( $details ) > 20 ) {
 			throw new LogicException( 'Repository details must be bounded.' );
 		}
 
-		foreach ( $details as $detail ) {
+		foreach ( $details as $index => $detail ) {
 			if ( ! is_array( $detail ) ) {
 				throw new LogicException( 'Repository details must be display maps.' );
 			}
-			$this->boundedString( $detail['key'] ?? '', 96, true );
+			$key = $this->boundedString( $detail['key'] ?? '', 96, true );
+			if ( ! $allowCoreDetailAppend && $index >= $coreDetailCount && str_starts_with( $key, 'core:' ) ) {
+				throw new LogicException( 'Provider filters may not append Core detail keys.' );
+			}
 			$this->boundedString( $detail['label'] ?? null, 96, false );
 			$this->boundedString( $detail['value'] ?? null, 255, true );
 			$tone = $this->boundedString( $detail['tone'] ?? '', 16, true );
@@ -644,8 +654,12 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 
-	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int} */
-	private function repositorySummary( array $rows ): array {
+	/**
+	 * @param array<string,array<string,mixed>> $webhookRows Core and webhook-management rows, before provider extensions.
+	 * @param array<string,array<string,mixed>> $rows        Provider-enriched rows.
+	 * @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int}
+	 */
+	private function repositorySummary( array $webhookRows, array $rows ): array {
 		$recordedHooks                 = 0;
 		$needsReview                   = 0;
 		$releasePackages               = 0;
@@ -672,6 +686,8 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
 				++$needsReview;
 			}
+		}
+		foreach ( $rows as $row ) {
 			if ( true === ( $row['historical'] ?? false ) ) {
 				continue;
 			}
@@ -700,13 +716,12 @@ final class ProviderRepositoryRowsNormalizer {
 				$releasePackages += $releasePackagesInRepository;
 				++$releaseRepositories;
 			}
-			$exactLiveRelease = 0 === $packageSummariesOmitted
-				&& '' !== (string) ( $row['repository_id'] ?? '' );
+			if ( 0 < $packageSummariesOmitted ) {
+				continue;
+			}
 			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
 				if ( ! is_array( $detail )
-					|| ! $exactLiveRelease
-					|| 'release_workflow' !== ( $detail['category'] ?? null )
-					|| true !== ( $detail['review_summary'] ?? false )
+					|| ! $this->isReleaseWorkflowDetail( $detail )
 					|| ! in_array( $detail['tone'] ?? null, array( 'pending', 'warning' ), true ) ) {
 					continue;
 				}
@@ -731,6 +746,12 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
+	/** @param array<string, mixed> $detail */
+	private function isReleaseWorkflowDetail( array $detail ): bool {
+		return 'release_workflow' === ( $detail['kind'] ?? null )
+			|| ( 'release_workflow' === ( $detail['category'] ?? null ) && true === ( $detail['review_summary'] ?? false ) );
+	}
+
 	/**
 	 * @param array<string, mixed> $row
 	 * @return array<string, mixed>
@@ -748,7 +769,6 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository'         => $this->boundedString( $row['repository'] ?? null, 255, false ),
 			'repository_url'     => $this->safeUrl( $row['repository_url'] ?? '' ),
 			'detail_url'         => '',
-			'review_url'         => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 			'historical'         => true,
 			'types'              => $this->badges( $row['types'] ?? array() ),
 			'package_message'    => $this->boundedString( $row['package_message'] ?? '', 255, true ),

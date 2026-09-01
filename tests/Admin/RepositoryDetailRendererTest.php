@@ -48,6 +48,18 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Configured at last check',
 				),
 				array(
+					'key'   => 'core:webhook-current-warning',
+					'label' => 'Current local warning',
+					'value' => 'Needs verification',
+					'tone'  => 'warning',
+				),
+				array(
+					'key'      => 'core:webhook-last-checked',
+					'label'    => 'Last checked',
+					'value'    => 'August 20, 2026',
+					'datetime' => '2026-08-20T01:02:03Z',
+				),
+				array(
 					'key'   => 'gh:release-automation-a',
 					'label' => 'État du flux de publication',
 					'value' => 'Ready to assess',
@@ -92,9 +104,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'status',
 			$this->viewUrls(),
 			$this->viewRequestUrls(),
-			static function () use ( &$webhookRendered ): void {
-					$webhookRendered = true;
-					echo '<div data-test-webhook></div>';
+			static function () use ( &$webhookRendered ): bool {
+				$webhookRendered = true;
+				echo '<div data-test-webhook></div>';
+
+				return true;
 			},
 			static function () use ( &$releaseRendered ): void {
 					$releaseRendered = true;
@@ -109,7 +123,6 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Conflicting sources.', $html );
 		self::assertStringContainsString( 'Review the package settings before using release workflow.', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
-		self::assertStringContainsString( '<dt>Releases</dt>', $html );
 		self::assertStringContainsString( '>Releases', $html );
 		self::assertStringContainsString( 'Ignores pushes', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
@@ -117,9 +130,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
-		self::assertSame( 1, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
-		self::assertSame( 1, substr_count( $html, 'Active for one or more packages in this repository.' ) );
-		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
+		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
 		self::assertStringContainsString( '1 package uses Branch', $html );
 		self::assertStringContainsString( '1 package tracks Releases', $html );
@@ -142,10 +155,64 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Provider receiver', $html );
 		self::assertStringNotContainsString( 'Receiver ready.', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
+		self::assertStringContainsString( 'ran-booster-badge--warning', $html );
+		self::assertStringContainsString( '<time datetime="2026-08-20T01:02:03Z">August 20, 2026</time>', $html );
 		self::assertStringContainsString( 'Repository details', $html );
 		self::assertStringContainsString( 'Provider access', $html );
 		self::assertLessThan( strpos( $html, 'Provider access' ), strpos( $html, 'Repository details' ) );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
+	}
+
+	public function testStatusKeepsExactSourceCountsForCompletePackageInventory(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/complete',
+				'source_label'      => 'Mixed sources',
+				'source_key'        => 'mixed',
+				'package_summaries' => array(
+					array(
+						'type'              => 'plugin',
+						'identifier'        => 'branch/plugin.php',
+						'display_name'      => 'Branch plugin',
+						'settings_url'      => 'https://example.test/branch',
+						'source'            => 'branch',
+						'source_revision'   => 1,
+						'branch'            => 'main',
+						'subdirectory'      => '',
+						'deployment_policy' => 'manual',
+					),
+					array(
+						'type'              => 'theme',
+						'identifier'        => 'release-theme',
+						'display_name'      => 'Release theme',
+						'settings_url'      => 'https://example.test/release',
+						'source'            => 'release_asset',
+						'source_revision'   => 2,
+						'branch'            => '',
+						'subdirectory'      => '',
+						'deployment_policy' => 'manual',
+					),
+				),
+				'details'           => array(),
+				'actions'           => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'status',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '1 package uses Branch', $html );
+		self::assertStringContainsString( '1 package tracks Releases', $html );
+		self::assertStringNotContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
 	}
 
 	public function testBranchViewShowsWebhookGuidanceWithoutASetupControlWhenUnavailable(): void {
@@ -305,6 +372,36 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'data-test-release', $html );
 	}
 
+	public function testBranchRepositoryFallsBackWhenTheSupportedWebhookPanelCannotBeProjected(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'          => 'owner/branch',
+				'repository_url'      => '',
+				'source_label'        => 'Branch',
+				'has_branch_consumer' => true,
+				'package_summaries'   => array(),
+				'details'             => array(),
+				'actions'             => array(),
+			),
+			'Fixture Forge',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			static fn (): bool => false,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Repository webhook management is temporarily unavailable for this repository.', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage repository webhook</button>', $html );
+	}
+
 	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {
 		$row             = array(
 			'repository'        => 'owner/releases',
@@ -355,7 +452,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertTrue( $releaseRendered );
-		self::assertStringContainsString( 'data-ran-booster-repository-view="releases" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="releases" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
+		self::assertSame( 3, substr_count( $html, 'aria-controls="ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
@@ -476,7 +574,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'id="ran-booster-repository-webhook-heading"', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this provider.', $html );
 		self::assertStringContainsString( 'Use the provider webhook settings when available.', $html );
 		self::assertStringNotContainsString( 'no Branch package currently uses this repository webhook', $html );

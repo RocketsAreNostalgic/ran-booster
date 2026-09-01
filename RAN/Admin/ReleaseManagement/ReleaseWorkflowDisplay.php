@@ -16,7 +16,7 @@ final class ReleaseWorkflowDisplay {
 		$html .= '<div class="ran-booster-release-workflow__body">';
 		$html .= '<p>' . esc_html__( 'Assess this repository before preparing a release-workflow pull request. Nothing is merged automatically.', 'ran-booster' ) . '</p>';
 		$html .= $model['inspect_form'] . $model['detail'];
-		$html .= '<hr><p><a href="' . esc_url( admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-documentation-published-releases' ) ) . '">'
+		$html .= '<hr><p><a href="' . esc_url( $this->documentationUrl() ) . '">'
 			. esc_html__( 'Booster Releases docs', 'ran-booster' ) . '</a>';
 		foreach ( $view['documentation_links'] ?? array() as $link ) {
 			$html .= ' · <a href="' . esc_url( $link['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $link['label'] ) . '</a>';
@@ -24,6 +24,12 @@ final class ReleaseWorkflowDisplay {
 		$html .= '</p>';
 
 		return $html . '</div></div>';
+	}
+
+	private function documentationUrl(): string {
+		$path = 'admin.php?page=ran-booster&tab=documentation#ran-booster-documentation-published-releases';
+
+		return is_multisite() ? network_admin_url( $path ) : admin_url( $path );
 	}
 
 	/** @return array{notice:string,inspect_form:string,detail:string} */
@@ -108,6 +114,15 @@ final class ReleaseWorkflowDisplay {
 		}
 
 		return $html . '</div>';
+	}
+
+	/** Mark an already-persisted result so the client can consume its signed PRG query. */
+	public function resultMarker( array $view ): string {
+		$code = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
+
+		return str_starts_with( $code, 'workflow_' )
+			? '<div data-ran-booster-github-release-workflow-result hidden></div>'
+			: '';
 	}
 
 	private function validDiagnosticCode( string $code ): bool {

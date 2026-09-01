@@ -183,6 +183,52 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'panel=repositories', $html );
 	}
 
+	public function testMissingPackageEditContextDefaultsToNonEditableWithoutWarnings(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$packageMutationAvailable = true;
+		$packageBranchReadiness   = array(
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'reason_codes'          => array( 'repository_identity_unavailable' ),
+				'local_secret_coverage' => 'unknown',
+			),
+		);
+		$bufferLevel              = ob_get_level();
+
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes render warnings to exceptions.
+		set_error_handler(
+			static function ( int $severity, string $message, string $file, int $line ): never {
+				throw new \ErrorException( $message, 0, $severity, $file, $line );
+			}
+		);
+		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+
+		try {
+			$html = ( static function () use ( $providerCode, $settingsUrl, $providerWebhookAvailable, $branchValue, $deploymentPolicy, $packageMutationAvailable, $packageBranchReadiness ): string {
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+
+				return (string) ob_get_clean();
+			} )();
+		} finally {
+			while ( ob_get_level() > $bufferLevel ) {
+				ob_end_clean();
+			}
+
+			restore_error_handler();
+		}
+
+		self::assertStringNotContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
+	}
+
 	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
 		$providerCode             = 'gh';
 		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
@@ -462,6 +508,35 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringNotContainsString( 'panel=repositories', $html );
 		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
+	}
+
+	public function testBranchPackageDoesNotUsePersistedIdentityWhenRepositoryLocatorIsInvalid(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$providerRepositoryId     = '1315521150';
+		$repositoryValue          = 'owner/booster-fixture-plugin';
+		$releaseManaged           = false;
+		$packageBranchReadiness   = array(
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'repository'            => 'owner/booster-fixture-plugin',
+				'reason_codes'          => array( 'repository_locator_invalid' ),
+				'local_secret_coverage' => 'unknown',
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'panel=repositories', $html );
+		self::assertMatchesRegularExpression( '/<button type="button" class="button" disabled aria-disabled="true">Manage webhooks<\\/button>/', $html );
 	}
 
 	#[DataProvider( 'repositoryBranchCheckOutcomeProvider' )]

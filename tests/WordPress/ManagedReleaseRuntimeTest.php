@@ -1625,15 +1625,24 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			publicLookupProfile: static fn ( string $provider ): ?string => $profiles->get( $provider )
 		);
 
-		foreach ( array_keys( $packages ) as $current ) {
+		foreach ( array( 'public', 'explicit' ) as $current ) {
 			$nonce = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
 			self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
 			$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
 			self::assertTrue( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce )?->ready() );
 		}
 
-		self::assertSame( array( 'public-profile', 'public-profile', 'package-profile', 'public-profile', 'package-profile', 'public-profile', 'private-profile', 'public-profile', 'private-profile', 'public-profile', 'public-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
-		self::assertSame( array( false, false, false, false, false, false, true, true, true, true, true, true ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
+		self::assertSame( array( 'public-profile', 'public-profile', 'package-profile', 'public-profile', 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+		self::assertSame( array( false, false, false, false, false, false ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
+
+		$current    = 'private';
+		$references = array();
+		$nonce      = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+		$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
+		self::assertSame( array( 'private-profile', 'private-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+		self::assertSame( array( true, true ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
 
 		$failureMode = 'none';
 		$current     = 'explicit';
@@ -1650,11 +1659,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNull( $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
 		self::assertSame( array( 'package-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
 
-		$failureMode        = 'none';
-		$current            = 'private_lookup';
-		$profiles->profiles = array();
-		$references         = array();
-		$nonce              = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		$failureMode = 'none';
+		$current     = 'private_lookup';
+		$references  = array();
+		$nonce       = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertNull( $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
 		$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertNull( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
@@ -1695,7 +1703,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'package-profile', $packages['branch_explicit']->getRepository()->reference->credentialId );
 	}
 
-	public function testEnablePreflightDoesNotSubstituteThePublicLookupProfileForTheSavedPackageCredential(): void {
+	public function testPrivateEnablePreflightUsesOnlyTheSavedPackageCredential(): void {
 		$package = $this->package(
 			'plugin',
 			'example/example.php',
@@ -1737,9 +1745,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$preflightNonce = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 		$preflight      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $preflightNonce );
-		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $preflight?->code() );
 		self::assertSame(
-			array( 'package-profile', 'public-profile' ),
+			array( 'package-profile' ),
 			array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references )
 		);
 

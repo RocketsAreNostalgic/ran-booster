@@ -107,7 +107,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			self::assertFalse( $controls->supportsProvider( $providerCode ) );
 			self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, $providerCode, array(), 'https://example.test/' ) );
 			ob_start();
-			$controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' );
+			self::assertFalse( $controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' ) );
 			self::assertSame( '', ob_get_clean() );
 		}
 		foreach ( array( 'fitness-only', 'management-only', 'no-policy' ) as $providerCode ) {
@@ -146,6 +146,35 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 		self::assertSame( 0, $provider->providerOperationCalls );
+	}
+
+	public function testRepositoryPanelReportsUnavailableTargetsWithoutRenderingMarkup(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		foreach ( array( 'missing', 'throws' ) as $mode ) {
+			$facade = $this->createMock( WebhookAssistanceFacade::class );
+			$facade->expects( self::once() )->method( 'target' )->willReturnCallback(
+				static function () use ( $mode ): ?AssistanceTarget {
+					if ( 'throws' === $mode ) {
+						throw new \RuntimeException( 'Target unavailable.' );
+					}
+
+					return null;
+				}
+			);
+			$controls = new RepositoryWebhookManagementControls(
+				$facade,
+				$this->createMock( AdminInteractionFacade::class ),
+				new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+				dirname( __DIR__, 3 ) . '/',
+				'https://example.test/wp-content/plugins/ran-booster/',
+				new ManagedPackageWebhookAuthorityResolver( $this->createMock( PluginRepository::class ), $this->createMock( ThemeRepository::class ) )
+			);
+			$controls->register();
+
+			ob_start();
+			self::assertFalse( $controls->renderRepositoryPanel( 'fixture-provider', '1234', 'https://example.test/repositories' ), $mode );
+			self::assertSame( '', (string) ob_get_clean(), $mode );
+		}
 	}
 
 	public function testRepositoryPageReusesTheFixedNormalPostWebhookSection(): void {
@@ -193,7 +222,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				),
 			)
 		);
-		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/' );
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/', $this->packageAuthorities() );
 		$controls->register();
 
 		ob_start();
@@ -281,7 +310,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$this->createMock( AdminInteractionFacade::class ),
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
 			dirname( __DIR__, 3 ) . '/',
-			'https://example.test/wp-content/plugins/ran-booster/'
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->packageAuthorities()
 		);
 		$controls->register();
 
@@ -459,7 +489,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$this->createMock( AdminInteractionFacade::class ),
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
 			dirname( __DIR__, 3 ) . '/',
-			'https://example.test/wp-content/plugins/ran-booster/'
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->packageAuthorities()
 		);
 		$controls->register();
 
@@ -540,7 +571,15 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$this->createMock( AdminInteractionFacade::class ),
 			new ProviderRegistry( $providers ),
 			dirname( __DIR__, 3 ) . '/',
-			'https://example.test/wp-content/plugins/ran-booster/'
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->packageAuthorities()
+		);
+	}
+
+	private function packageAuthorities(): ManagedPackageWebhookAuthorityResolver {
+		return new ManagedPackageWebhookAuthorityResolver(
+			$this->createMock( PluginRepository::class ),
+			$this->createMock( ThemeRepository::class )
 		);
 	}
 

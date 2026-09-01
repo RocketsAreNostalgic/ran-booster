@@ -14,6 +14,7 @@ use RAN\AddOn\WebhookAssistance\WebhookProfileMetadata;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
 use RAN\Admin\Interaction\AdminInteractionRequest;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
@@ -22,6 +23,10 @@ use RAN\Admin\WebhookManagement\WebhookManagementController;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+use RAN\Package;
+use RAN\PackageSource;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\ThemeRepository;
 use Tests\Support\CompleteWebhookManagementCapabilityProvider;
 use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
 
@@ -144,11 +149,12 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][5]['value'] );
 		self::assertSame( 'Current local warning', $result['1234']['details'][2]['label'] );
+		self::assertSame( 'Secret needs attention', $result['1234']['details'][2]['value'] );
 		self::assertSame(
 			array(
 				'core:webhook-recorded-status',
 				'core:webhook-observation',
-				'core:webhook-current-local-warning',
+				'core:webhook-current-warning',
 				'core:webhook-management-credential',
 				'core:webhook-signing-secret',
 				'core:webhook-last-checked',
@@ -440,8 +446,9 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function testPackageInitiatedOperationReturnsToTheAllowlistedPackageSettingsRoute(): void {
-		$interaction = new CapturingAdminInteractionFacade();
-		$redirect    = $this->controller( adminInteraction: $interaction )->handleAdminPost(
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$interaction                                   = new CapturingAdminInteractionFacade();
+		$redirect                                      = $this->controller( adminInteraction: $interaction )->handleAdminPost(
 			$this->request(
 				array(
 					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&source_view=branch&ran_booster_open_advanced=1&unsafe=discarded',
@@ -451,6 +458,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'page=ran-booster-plugins', $redirect );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $redirect );
 		self::assertStringContainsString( 'package=example%2Fexample.php', $redirect );
 		self::assertStringContainsString( 'source_view=branch', $redirect );
 		self::assertStringContainsString( 'ran_booster_open_advanced=1', $redirect );
@@ -459,6 +467,48 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'panel=repositories', $redirect );
 		self::assertStringNotContainsString( '#ran-booster-', $redirect );
 		self::assertNull( $interaction->outcome, 'Package settings use the ordinary redirect because the provider repository HTMX target is absent.' );
+	}
+
+	public function testPackageReturnMustBelongToTheOperatedProviderRepository(): void {
+		$matching = $this->packageAuthorities(
+			array(
+				'example/example.php' => array( 'gh', '1234' ),
+				'other/other.php'     => array( 'gh', 'other' ),
+			),
+			array(
+				'example-theme' => array( 'gh', '1234' ),
+				'other-theme'   => array( 'gh', 'other' ),
+			)
+		);
+
+		$controller = $this->controller( authorities: $matching );
+		$plugin     = $controller->handleAdminPost(
+			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php' ) ),
+			'valid'
+		);
+		$theme      = $controller->handleAdminPost(
+			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme' ) ),
+			'valid'
+		);
+		$unrelated  = $controller->handleAdminPost(
+			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=other%2Fother.php' ) ),
+			'valid'
+		);
+		$otherTheme = $controller->handleAdminPost(
+			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=other-theme' ) ),
+			'valid'
+		);
+
+		self::assertStringContainsString( 'page=ran-booster-plugins', $plugin );
+		self::assertStringContainsString( 'package=example%2Fexample.php', $plugin );
+		self::assertStringContainsString( 'page=ran-booster-themes', $theme );
+		self::assertStringContainsString( 'package=example-theme', $theme );
+		self::assertStringContainsString( 'page=ran-booster', $unrelated );
+		self::assertStringContainsString( 'panel=repositories', $unrelated );
+		self::assertStringNotContainsString( 'other%2Fother.php', $unrelated );
+		self::assertStringContainsString( 'page=ran-booster', $otherTheme );
+		self::assertStringContainsString( 'panel=repositories', $otherTheme );
+		self::assertStringNotContainsString( 'package=other-theme', $otherTheme );
 	}
 
 	public function testRepositoryInitiatedOperationReturnsToItsExactRepositoryRoute(): void {
@@ -488,6 +538,64 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 		self::assertStringContainsString( 'repository=1234', $fallback );
 		self::assertStringNotContainsString( 'repository=other', $fallback );
+	}
+
+	public function testWebhookManagementRoutesUseNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$display                                       = $this->display();
+		$available                                     = $display->panel(
+			'gh',
+			'GitHub',
+			'1234',
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			null,
+			null,
+			true
+		);
+		$unavailable                                   = $display->unavailablePanel(
+			'gh',
+			'GitHub',
+			'1234',
+			'owner/repository',
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			'Webhook operations are unavailable.'
+		);
+
+		self::assertIsArray( $available );
+		foreach ( array( $available, $unavailable ) as $model ) {
+			self::assertSame( 'https://example.test/wp-admin/admin-post.php', $model['form_action'] );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=', $model['credentials_url'] );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=', $model['secrets_url'] );
+			foreach ( $model['operations'] as $operation ) {
+				self::assertStringStartsWith( 'https://example.test/wp-admin/admin-post.php?action=', $operation['url'] );
+			}
+		}
+
+		$redirect = $this->controller()->handleAdminPost(
+			$this->request( array( 'return_url' => 'https://untrusted.example.test/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234' ) ),
+			'valid'
+		);
+
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234', $redirect );
+	}
+
+	public function testWebhookManagementRoutesKeepSingleSiteAdminPaths(): void {
+		$display     = $this->display();
+		$unavailable = $display->unavailablePanel(
+			'gh',
+			'GitHub',
+			'1234',
+			'owner/repository',
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh',
+			'Webhook operations are unavailable.'
+		);
+
+		self::assertSame( 'https://example.test/wp-admin/admin-post.php', $unavailable['form_action'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials', $unavailable['credentials_url'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=secrets', $unavailable['secrets_url'] );
+		foreach ( $unavailable['operations'] as $operation ) {
+			self::assertStringStartsWith( 'https://example.test/wp-admin/admin-post.php?action=', $operation['url'] );
+		}
 	}
 
 	public function testCompleteNonGitHubProviderUsesTheSamePlacementAndOperationPath(): void {
@@ -541,6 +649,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				new WebhookOperationCoordinator( $gateway, $store ),
 				$this->display( $gateway, $store ),
 				$registry,
+				$this->packageAuthorities(),
 				static fn (): bool => true,
 				static fn (): bool => true
 			);
@@ -722,6 +831,35 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway = $this->gateway();
 		$this->controller( gateway: $gateway )->handleAdminPost( $this->request(), 'wrong' );
 		self::assertSame( array(), $gateway->calls );
+	}
+
+	public function testSavedCredentialAbsenceKeepsEveryWebhookMutationControlVisibleAndDisabled(): void {
+		$gateway                       = $this->gateway();
+		$gateway->credentialsAvailable = false;
+		$store                         = new OperationStoreFixture();
+		$store->record                 = $this->record();
+		$model                         = $this->display( $gateway, $store )->panel(
+			'gh',
+			'GitHub',
+			'1234',
+			'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh',
+			null,
+			null,
+			true
+		);
+
+		self::assertIsArray( $model );
+		self::assertSame( array(), $model['credential_choices'] );
+		self::assertSame(
+			array( 'setup', 'check', 'reconfigure', 'test', 'remove' ),
+			array_column( $model['operations'], 'key' )
+		);
+		self::assertSame( array( true, true, true, true, true ), array_column( $model['operations'], 'disabled' ) );
+
+		$html = $this->renderPanel( $gateway, $store );
+		foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $label ) {
+			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
+		}
 	}
 
 	public function testCheckRecordsConfigurationWithoutClaimingSignedDelivery(): void {
@@ -1146,6 +1284,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 	protected function tearDown(): void {
 		$_GET = array();
+		unset( $GLOBALS['ran_booster_package_view_multisite'] );
 	}
 
 	/** @param array<string, mixed> $changes @return array<string, mixed> */
@@ -1278,13 +1417,14 @@ final class WebhookManagementControllerTest extends TestCase {
 		return (string) ob_get_clean();
 	}
 
-	private function controller( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?AdminInteractionFacade $adminInteraction = null, string $providerCode = 'gh', string $providerLabel = 'GitHub' ): WebhookManagementController {
+	private function controller( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?AdminInteractionFacade $adminInteraction = null, string $providerCode = 'gh', string $providerLabel = 'GitHub', ?ManagedPackageWebhookAuthorityResolver $authorities = null ): WebhookManagementController {
 		$gateway  ??= $this->gateway();
 		$store    ??= new OperationStoreFixture();
 		$controller = new WebhookManagementController(
 			new WebhookOperationCoordinator( $gateway, $store ),
 			$this->display( $gateway, $store ),
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( $providerCode, $providerLabel ) ) ),
+			$authorities ?? $this->packageAuthorities( array( 'example/example.php' => array( $providerCode, '1234' ) ) ),
 			static fn (): bool => true,
 			static fn ( string $nonce, string $action ): bool => ( 'valid' === $nonce && in_array(
 				$action,
@@ -1305,6 +1445,32 @@ final class WebhookManagementControllerTest extends TestCase {
 		}
 
 		return $controller;
+	}
+
+	/**
+	 * @param array<string, array{0:string,1:string}> $plugins
+	 * @param array<string, array{0:string,1:string}> $themes
+	 */
+	private function packageAuthorities( array $plugins = array(), array $themes = array() ): ManagedPackageWebhookAuthorityResolver {
+		$pluginRepository = $this->createMock( PluginRepository::class );
+		$themeRepository  = $this->createMock( ThemeRepository::class );
+		$pluginRepository->method( 'boosterPluginFromFile' )->willReturnCallback( fn ( mixed $identifier ): Package => $this->returnPackage( $plugins, $identifier ) );
+		$themeRepository->method( 'boosterThemeFromStylesheet' )->willReturnCallback( fn ( mixed $identifier ): Package => $this->returnPackage( $themes, $identifier ) );
+
+		return new ManagedPackageWebhookAuthorityResolver( $pluginRepository, $themeRepository );
+	}
+
+	/** @param array<string, array{0:string,1:string}> $packages */
+	private function returnPackage( array $packages, mixed $identifier ): Package {
+		if ( ! is_string( $identifier ) || ! isset( $packages[ $identifier ] ) ) {
+			throw new \RuntimeException( 'Package return authority did not match.' );
+		}
+		$package = $this->createMock( Package::class );
+		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'getProviderCode' )->willReturn( $packages[ $identifier ][0] );
+		$package->method( 'getProviderRepositoryId' )->willReturn( $packages[ $identifier ][1] );
+
+		return $package;
 	}
 }
 
@@ -1396,8 +1562,9 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	/** @var list<array<mixed>> */
 	public array $mutationCalls = array();
 	public RepositoryWebhookFitnessResult $fitness;
-	public bool $throwOnReadiness = false;
-	public bool $profileAbsent    = false;
+	public bool $throwOnReadiness     = false;
+	public bool $profileAbsent        = false;
+	public bool $credentialsAvailable = true;
 
 	public function __construct(
 		private readonly AssistanceReadiness $readinessResult,
@@ -1421,7 +1588,7 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	}
 
 	public function credentialChoices( string $providerCode ): array {
-		return hash_equals( $this->targetResult->providerCode(), $providerCode ) ? array(
+		return $this->credentialsAvailable && hash_equals( $this->targetResult->providerCode(), $providerCode ) ? array(
 			array(
 				'id'    => 'credential_1',
 				'label' => 'Temporary',

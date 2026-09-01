@@ -865,7 +865,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryBranchHtml = (string) ob_get_clean();
-		self::assertStringContainsString( '>Repository webhook</h3>', $repositoryBranchHtml );
+		self::assertStringContainsString( '>Push-to-deploy</h3>', $repositoryBranchHtml );
 
 		$requestedRepositoryId = 'stale-repository';
 		$providerViewData      = $this->providerViewData( get_defined_vars() );
@@ -1049,7 +1049,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
 		self::assertStringContainsString( 'Owner secret', $html );
 		self::assertStringContainsString( 'Repository identity conflict', $html );
-		self::assertStringContainsString( 'Review record', $html );
+		self::assertStringNotContainsString( 'Review record', $html );
 		self::assertStringNotContainsString( 'Managed packages for this repository disagree about its provider identity.', $html );
 		self::assertStringNotContainsString( '>Manage webhook</button>', $html );
 		self::assertStringNotContainsString( 'aria-describedby="ran-booster-provider-readiness-reason-0 ran-booster-provider-readiness-reason-0-site"', $html );

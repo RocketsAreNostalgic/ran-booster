@@ -4,6 +4,70 @@ declare(strict_types=1);
 
 namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 
+// phpcs:disable Universal.Files.SeparateFunctionsFromOO -- This small bootstrap deliberately combines the WordPress function shims and their option-table double.
+
+final class SetupClaimDatabase {
+	public string $options       = 'wp_options';
+	public string $last_error    = '';
+	public int $lockAcquisitions = 0;
+	private string $connectionId;
+
+	public function __construct() {
+		$this->connectionId = spl_object_hash( $this );
+	}
+
+	public function prepare( string $query, mixed ...$arguments ): string {
+		foreach ( $arguments as $argument ) {
+			$query = (string) preg_replace_callback(
+				'/%[is]/',
+				static fn ( array $match ): string => '%i' === $match[0] ? '`' . (string) $argument . '`' : "'" . addslashes( (string) $argument ) . "'",
+				$query,
+				1
+			);
+		}
+		return $query;
+	}
+
+	public function get_var( string $query ): string|null {
+		$this->last_error = '';
+		if ( str_starts_with( $query, 'SELECT GET_LOCK(' ) ) {
+			++$this->lockAcquisitions;
+			$owner = $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null;
+			if ( null !== $owner && $owner !== $this->connectionId ) {
+				return '0';
+			}
+			$GLOBALS['ran_booster_release_deployments_test_lock_owner'] = $this->connectionId;
+			$callback = $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] ?? null;
+			if ( is_callable( $callback ) ) {
+				$callback();
+			}
+			return '1';
+		}
+		if ( str_starts_with( $query, 'SELECT RELEASE_LOCK(' ) ) {
+			if ( false === ( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] ?? true ) ) {
+				$this->last_error = 'release failed';
+				return null;
+			}
+			if ( ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) !== $this->connectionId ) {
+				return '0';
+			}
+			unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+			return '1';
+		}
+		return null;
+	}
+
+	public function disconnect(): void {
+		if ( ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) === $this->connectionId ) {
+			unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+		}
+	}
+
+	public function isLockHeld(): bool {
+		return ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) === $this->connectionId;
+	}
+}
+
 if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
 	define( 'MINUTE_IN_SECONDS', 60 );
 }
@@ -116,6 +180,30 @@ if ( ! function_exists( __NAMESPACE__ . '\\update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\add_option' ) ) {
+	function add_option( string $option, mixed $value = '', string $deprecated = '', bool|string $autoload = true ): bool {
+		if ( array_key_exists( $option, $GLOBALS['ran_booster_release_deployments_test_options'] ) ) {
+			return false;
+		}
+		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ] = $value;
+		$callback = $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] ?? null;
+		if ( is_callable( $callback ) ) {
+			$callback( $option, $value, $autoload );
+		}
+		return true;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\delete_option' ) ) {
+	function delete_option( string $option ): bool {
+		if ( ! array_key_exists( $option, $GLOBALS['ran_booster_release_deployments_test_options'] ) ) {
+			return false;
+		}
+		unset( $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
+		return true;
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\get_current_user_id' ) ) {
 	function get_current_user_id(): int {
 		return 1;
@@ -138,6 +226,10 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_transient' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\delete_transient' ) ) {
 	function delete_transient( string $key ): bool {
+		$callback = $GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] ?? null;
+		if ( is_callable( $callback ) ) {
+			$callback( $key );
+		}
 		unset( $GLOBALS['ran_booster_release_deployments_test_transients'][ $key ] );
 		return true;
 	}

@@ -71,9 +71,7 @@ final class WorkflowApplicationCoordinator {
 		if ( 'ok' !== $remote['code'] || ! $this->previewMatchesBundle( $preview, $remote ) ) {
 			return $this->result( $status, 'target_changed', false, $key );
 		}
-		return delete_transient( self::PREVIEW_PREFIX . $key )
-			? $this->openDraft( $status, $key, $remote, 'bootstrap', '', $token )
-			: $this->result( $status, 'invalid_request', false, $key );
+		return $this->openDraft( $status, $key, $remote, 'bootstrap', '', $token );
 	}
 
 	public function inspectUpdate( ReleaseTrackingStatus $status, string $token ): array {
@@ -124,9 +122,7 @@ final class WorkflowApplicationCoordinator {
 		if ( ! $this->previewMatchesBundle( $preview, $remote ) || $remote['old_template_identity'] !== $preview['old_template_identity'] ) {
 			return $this->result( $status, 'template_superseded', false, $key );
 		}
-		return delete_transient( self::PREVIEW_PREFIX . $key )
-			? $this->openDraft( $status, $key, $remote, 'template_update', $remote['old_pack_version'], $token )
-			: $this->result( $status, 'invalid_request', false, $key );
+		return $this->openDraft( $status, $key, $remote, 'template_update', $remote['old_pack_version'], $token );
 	}
 
 	public function outcome( ReleaseTrackingStatus $status, string $token ): array {
@@ -292,8 +288,9 @@ final class WorkflowApplicationCoordinator {
 			|| ! hash_equals( 'https://github.com/' . $target['repository'], $inputs['update_uri'] ) ) {
 			return array( 'code' => 'managed_profile_modified' );
 		}
-		if ( $this->assessor->hasCompetingReleaseAutomation( $target['snapshot'] ) ) {
-			return array( 'code' => 'release_automation_conflict' );
+		$assessment = $this->assessor->assessManaged( $target['snapshot'], $status->type(), $status->packageRoot(), $status->installedVersion(), $status->eligibility()->expectedUpdateUri() );
+		if ( ! $assessment->readyForBootstrap() ) {
+			return array( 'code' => $assessment->code() );
 		}
 		$historical = $this->templates->exact( array_slice( $receipt['template'], 2, null, true ), $token );
 		if ( 'ok' !== $historical['code'] ) {
@@ -355,6 +352,26 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	private function openDraft( ReleaseTrackingStatus $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
+		$claim = $this->records->claim( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision(), 'template_update' === $operation );
+		if ( null === $claim ) {
+			return $this->result( $status, 'invalid_request', false, $previewKey );
+		}
+		try {
+			$outcome = $this->openClaimedDraft( $status, $previewKey, $remote, $operation, $oldPackVersion, $token );
+		} finally {
+			$released = $this->releaseClaim( $status, $claim );
+		}
+		return $released || ! $outcome['successful'] ? $outcome : $this->result( $status, 'partial', false, '', 'local_persistence' );
+	}
+
+	private function releaseClaim( ReleaseTrackingStatus $status, string $claim ): bool {
+		return $this->records->releaseClaim( $status->providerRepositoryId(), $claim );
+	}
+
+	private function openClaimedDraft( ReleaseTrackingStatus $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
+		if ( ! delete_transient( self::PREVIEW_PREFIX . $previewKey ) ) {
+			return $this->result( $status, 'invalid_request', false, $previewKey );
+		}
 		$bundle = $remote['bundle'];
 		$branch = 'bootstrap' === $operation
 			? sprintf( 'ran-booster/release-setup-v2-%s-%s', substr( $remote['base_sha'], 0, 12 ), substr( $bundle->hash(), 0, 8 ) )

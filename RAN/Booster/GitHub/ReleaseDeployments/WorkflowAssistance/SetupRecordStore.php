@@ -50,6 +50,9 @@ final class SetupRecordStore {
 	private const FAILURE_FIELDS           = array( 'operation', 'outcome_code', 'failure_stage', 'package_type', 'package_identifier', 'source_revision', 'repository_id', 'diagnostic_code', 'diagnostic_available', 'correlation_reference', 'recorded_at' );
 	private const FAILURE_STAGES           = array( 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' );
 	private const FAILURE_DIAGNOSTIC_CODES = array( 'diagnostic_detail_unavailable', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
+
+	private ?string $claimToken      = null;
+	private ?string $claimConnection = null;
 	/** @return array<string,int|string>|null */
 	public function find( string $repositoryId ): ?array {
 		$raw = $this->raw( $repositoryId );
@@ -67,16 +70,120 @@ final class SetupRecordStore {
 		$all = get_option( self::OPTION, array() );
 		return is_array( $all ) && array_key_exists( $repositoryId, $all );
 	}
-	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
-	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
-		$record = $this->find( $repositoryId );
-		if ( null === $record || $revision <= $record['source_revision']
-			|| ! hash_equals( $type, $record['package_type'] ) || ! hash_equals( $identifier, $record['package_identifier'] ) ) {
+	/** Serialize setup and the shared record write before any provider mutation. @return string|null Opaque exact-owner claim. */
+	public function claim( string $repositoryId, string $type, string $identifier, int $revision, bool $allowExistingRecord = false ): ?string {
+		$this->hasActiveClaim();
+		if ( ! $this->number( $repositoryId ) || ! in_array( $type, array( 'plugin', 'theme' ), true )
+			|| ! $this->text( $identifier, 255 ) || $revision < 1 || null !== $this->claimToken ) {
 			return null;
 		}
+		$claim = bin2hex( random_bytes( 16 ) );
+		if ( ! $this->acquireClaimLock() ) {
+			return null;
+		}
+		$this->claimToken      = $claim;
+		$this->claimConnection = $this->connectionFingerprint();
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::OPTION, 'options' );
+		}
+		$existing = $this->find( $repositoryId );
+		if ( $allowExistingRecord
+			? null === $existing || ! hash_equals( $type, $existing['package_type'] )
+				|| ! hash_equals( $identifier, $existing['package_identifier'] ) || $revision !== $existing['source_revision']
+			: $this->occupied( $repositoryId ) ) {
+			$this->releaseClaim( $repositoryId, $claim );
+			return null;
+		}
+		return $claim;
+	}
 
-		$record['source_revision'] = $revision;
-		return $this->save( $record ) ? $this->find( $repositoryId ) : null;
+	/** Release only the exact connection-local lock held by this store instance. */
+	public function releaseClaim( string $repositoryId, string $claim ): bool {
+		if ( ! $this->number( $repositoryId ) || ! $this->hasActiveClaim() || ! hash_equals( $this->claimToken, $claim ) ) {
+			return false;
+		}
+		$released = $this->releaseClaimLock();
+		if ( $released ) {
+			$this->claimToken      = null;
+			$this->claimConnection = null;
+		}
+		return $released;
+	}
+
+	/** Keep a failed release claim only while its original database connection remains current. */
+	private function hasActiveClaim(): bool {
+		if ( null === $this->claimToken ) {
+			return false;
+		}
+		if ( null !== $this->claimConnection && hash_equals( $this->claimConnection, $this->connectionFingerprint() ) ) {
+			return true;
+		}
+		$this->claimToken      = null;
+		$this->claimConnection = null;
+		return false;
+	}
+
+	private function connectionFingerprint(): string {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) ) {
+			return '';
+		}
+		$fingerprint = (string) spl_object_id( $wpdb );
+		if ( isset( $wpdb->dbh ) && is_object( $wpdb->dbh ) ) {
+			$fingerprint .= ':' . spl_object_id( $wpdb->dbh );
+		} elseif ( isset( $wpdb->dbh ) && is_resource( $wpdb->dbh ) ) {
+			$fingerprint .= ':' . get_resource_id( $wpdb->dbh );
+		}
+		return $fingerprint;
+	}
+
+	private function acquireClaimLock(): bool {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_var' ) ) {
+			return false;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory lock serializes remote setup and the shared evidence option.
+		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', self::claimLockName() ) );
+		return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
+	}
+
+	private function releaseClaimLock(): bool {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_var' ) ) {
+			return false;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory locks are released automatically if the database connection closes.
+		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::claimLockName() ) );
+		return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
+	}
+
+	private static function claimLockName(): string {
+		global $wpdb;
+		$options = is_object( $wpdb ) && isset( $wpdb->options ) ? (string) $wpdb->options : 'unavailable';
+		return 'ran_booster_release_workflow_' . substr( hash( 'sha256', $options ), 0, 32 );
+	}
+	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
+	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
+		$acquired = ! $this->hasActiveClaim();
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return null;
+		}
+		$readback = null;
+		$released = true;
+		try {
+			$this->refreshRecordCache();
+			$record = $this->find( $repositoryId );
+			if ( null !== $record && $revision > $record['source_revision']
+				&& hash_equals( $type, $record['package_type'] ) && hash_equals( $identifier, $record['package_identifier'] ) ) {
+				$record['source_revision'] = $revision;
+				$readback                  = $this->persistRecord( $record ) ? $this->find( $repositoryId ) : null;
+			}
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $released ? $readback : null;
 	}
 	/** Schema 1 is display-only evidence and never mutation authority. @return array<string,int|string>|null */
 	public function legacyEvidence( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
@@ -105,6 +212,25 @@ final class SetupRecordStore {
 		if ( null === $record ) {
 			return false;
 		}
+		$acquired = ! $this->hasActiveClaim();
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$saved    = false;
+		$released = true;
+		try {
+			$this->refreshRecordCache();
+			$saved = $this->persistRecord( $record );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $saved && $released;
+	}
+
+	/** @param array<string,int|string> $record */
+	private function persistRecord( array $record ): bool {
 		$all = get_option( self::OPTION, array() );
 		if ( ! is_array( $all ) || count( $all ) > self::MAX_RECORDS
 			|| ( ! array_key_exists( $record['repo_id'], $all ) && count( $all ) >= self::MAX_RECORDS ) ) {
@@ -112,7 +238,9 @@ final class SetupRecordStore {
 		}
 		if ( array_key_exists( $record['repo_id'], $all ) ) {
 			$existing = is_array( $all[ $record['repo_id'] ] ) ? $this->normalize( $all[ $record['repo_id'] ] ) : null;
-			if ( null === $existing || ! hash_equals( $record['repo_id'], $existing['repo_id'] ) ) {
+			if ( null === $existing || ! hash_equals( $record['repo_id'], $existing['repo_id'] )
+				|| ! hash_equals( $record['package_type'], $existing['package_type'] )
+				|| ! hash_equals( $record['package_identifier'], $existing['package_identifier'] ) ) {
 				return false;
 			}
 		}
@@ -120,12 +248,46 @@ final class SetupRecordStore {
 		update_option( self::OPTION, $all, false );
 		return $this->find( $record['repo_id'] ) === $record;
 	}
+
+	private function refreshRecordCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::OPTION, 'options' );
+		}
+	}
+	private function refreshFailureCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::FAILURE_OPTION, 'options' );
+		}
+	}
+	private function refreshAssessmentCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::ASSESSMENT_OPTION, 'options' );
+		}
+	}
 	/** @param array<string,mixed> $observation */
 	public function saveAssessmentObservation( array $observation ): bool {
 		$observation = $this->normalizeObservation( $observation );
 		if ( null === $observation ) {
 			return false;
 		}
+		$acquired = ! $this->hasActiveClaim();
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$saved    = false;
+		$released = true;
+		try {
+			$this->refreshAssessmentCache();
+			$saved = $this->persistAssessmentObservation( $observation );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $saved && $released;
+	}
+	/** @param array<string,int|string> $observation */
+	private function persistAssessmentObservation( array $observation ): bool {
 		$all = $this->assessmentObservations();
 		if ( null === $all ) {
 			return false;
@@ -172,6 +334,24 @@ final class SetupRecordStore {
 		if ( null === $failure ) {
 			return false;
 		}
+		$acquired = ! $this->hasActiveClaim();
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$recorded = false;
+		$released = true;
+		try {
+			$this->refreshFailureCache();
+			$recorded = $this->persistFailure( $failure );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $recorded && $released;
+	}
+	/** @param array<string,int|string> $failure */
+	private function persistFailure( array $failure ): bool {
 		$history = get_option( self::FAILURE_OPTION, array() );
 		if ( ! is_array( $history ) || ! array_is_list( $history ) || count( $history ) > self::MAX_FAILURES ) {
 			return false;

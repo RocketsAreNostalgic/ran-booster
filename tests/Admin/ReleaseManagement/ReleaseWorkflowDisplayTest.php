@@ -176,6 +176,20 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'cccccccccccccccccccccccccccccccc', $withoutReference );
 	}
 
+	public function testCompatibilityMetadataFailureRetainsItsConcreteDiagnosticCode(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
+			array(
+				'result_code'       => 'workflow_preflight_unavailable',
+				'result_successful' => false,
+				'failure_stage'     => 'release_preflight',
+				'diagnostic_code'   => 'package_compatibility_invalid',
+			)
+		);
+
+		self::assertStringContainsString( '<details><summary>Failure details</summary>', $html );
+		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
+	}
+
 	public function testImmediatePreflightContractFailureExplainsThatTheRequestStateMustBeReloaded(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
@@ -264,6 +278,20 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			self::assertStringContainsString( 'https://forge.example.test/docs/releases', $html );
 			self::assertStringNotContainsString( 'github.com', $html );
 		}
+	}
+
+	public function testPublishedReleaseDocumentationUsesNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
+		try {
+			$html = ( new ReleaseWorkflowDisplay() )->workflow( array() );
+		} finally {
+			unset( $GLOBALS['ran_booster_release_management_test_multisite'] );
+		}
+
+		self::assertStringContainsString(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&amp;tab=documentation#ran-booster-documentation-published-releases',
+			$html
+		);
 	}
 
 	public function testPreviewAndFormValuesAreEscapedWithoutLeakingRawMarkup(): void {
@@ -515,6 +543,39 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			} else {
 				self::assertStringContainsString( 'name="booster_credential_id"', $html, $operation );
 			}
+		}
+	}
+
+	public function testCredentiallessWriteFormsRemainInTheStableShellButAreDisabled(): void {
+		$display = new ReleaseWorkflowDisplay();
+
+		foreach ( array(
+			'setup'        => 'Open draft pull request',
+			'update_setup' => 'Open template update draft pull request',
+		) as $operation => $label ) {
+			$form                = $this->form( $operation, 'owner/example' );
+			$form['credentials'] = array();
+			$form['disabled']    = true;
+			$html                = $display->workflow(
+				array(
+					'preview' => array(
+						'kind'                  => 'update_setup' === $operation ? 'template_update' : 'bootstrap',
+						'repository'            => 'owner/example',
+						'default_branch'        => 'main',
+						'base_sha'              => str_repeat( 'a', 40 ),
+						'pack_version'          => '1.2.3',
+						'new_template_identity' => array( 'asset_sha256' => str_repeat( 'b', 64 ) ),
+						'changes'               => array(),
+					),
+					'forms'   => array( $operation => $form ),
+				)
+			);
+
+			self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $html, $operation );
+			self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html, $operation );
+			self::assertStringContainsString( '>Manage credentials</a>', $html, $operation );
+			self::assertStringContainsString( '>' . $label . '</button>', $html, $operation );
+			self::assertStringContainsString( '<button type="submit" class="button button-primary" disabled aria-disabled="true">', $html, $operation );
 		}
 	}
 

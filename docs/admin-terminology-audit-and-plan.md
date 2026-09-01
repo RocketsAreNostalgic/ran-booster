@@ -4,8 +4,9 @@ Date: August 27, 2026.
 
 Reachable rollback checkpoint: `e1364c9608017c0bea0351fc098eee2f79f1087e`
 (`fix(admin): checkpoint repository integration rehearsal`). Checkpoint-relative
-check results and worktree state are not claimed here because the earlier
-checkpoint object is no longer reachable.
+check results and worktree state from the original recorded checkpoint
+`0585f3c89a8559abf34150e994ff96f742d6eea6` are not claimed here because that
+object is no longer reachable.
 
 ## Purpose
 
@@ -266,7 +267,7 @@ disposable activation check as passed.
   including PHPCS and PHPStan. Core PHPUnit: 2,713 tests, 18,304 assertions
   and two skips. Isolated GitHub suite: 349 tests, 2,115 assertions and two
   skips. Characterization: 35 checks.
-- Full `pnpm check` passed, including 186 asset tests. All 30 changed PHP
+- Full `pnpm check` passed, including 186 asset tests. All 31 changed PHP
   files passed syntax checks; `git diff --check` passed.
 - A separate read-only review of the package/client diff found no issues.
   It confirmed that the changes preserve source-switch actions, routes,
@@ -279,15 +280,17 @@ disposable activation check as passed.
   provenance line and documentation links. The Update URI remedy now points
   to package settings, where the exact header is actually displayed.
 - Checkpoint-relative token and line-count comparisons are not reproduced here
-  because the original checkpoint object is unreachable. JavaScript changes
+  because the original recorded checkpoint
+  `0585f3c89a8559abf34150e994ff96f742d6eea6` is unreachable. JavaScript changes
   only source labels and their accessible text.
   No concrete types, public seams or persistent fields were added.
 - README, stylesheets, dependencies, source/policy behavior and remote state
-  are unchanged. The exact `4d67176dfde21c43598539e5e57169a699ec4fec`
-  release archive passed its WordPress activation smoke check on the disposable
-  `booster-test-no-links` site: version `1.0.0-beta.27` remained active, the
-  `RAN\Booster` runtime class loaded and the installed release manifest retained
-  that source commit. No PNS package or database mutation was performed.
+  are unchanged. Exact-head archive verification and activation evidence is
+  recorded with the pull-request review rather than embedding a
+  self-referential commit hash here. The proof must name the final head and
+  archive checksum, verify the embedded `source_commit`, and read back the
+  active version and `RAN\Booster` runtime class from the marked disposable
+  WordPress site. No PNS package or database mutation is used for that proof.
 - No live save, source switch, workflow assessment, push, PR, merge, release or
   Dex/workbench operation was performed.
 - Desktop views were inspected at 1,422 pixels with no horizontal overflow.
@@ -295,8 +298,8 @@ disposable activation check as passed.
   responsive/navigation asset contracts and ordinary URL loads passed.
 
 All implementation slices are complete. The rollback checkpoint remains
-separate from this terminology pass. Next: owner wording review before
-committing this terminology pass.
+separate from this terminology pass. Next: finish exact-SHA pull-request
+review, resolve any findings, then request owner authority for integration.
 
 ## Copy reductions
 

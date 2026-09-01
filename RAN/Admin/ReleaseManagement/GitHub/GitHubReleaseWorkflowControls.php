@@ -1280,7 +1280,7 @@ final class GitHubReleaseWorkflowControls {
 		$anonymous = is_object( $package ) && $this->anonymousWorkflowInspectionAllowed( $package );
 		$status    = $this->workflowDisplayStatus( $type, $identifier, $revision );
 		if ( null === $status ) {
-			return $this->unavailableWorkflowView( __( 'Booster could not confirm the local Published release readiness for this package. Try again after reviewing its settings.', 'ran-booster' ), anonymousInspection: $anonymous );
+			return $this->unavailableWorkflowView( __( 'Booster could not confirm the local Release readiness for this package. Try again after reviewing its settings.', 'ran-booster' ), anonymousInspection: $anonymous );
 		}
 		if ( ! $status->eligible() ) {
 			return $this->unavailableWorkflowView( $this->workflowUnavailableReason( $status ), $code, $successful, 'blocked', $anonymous );

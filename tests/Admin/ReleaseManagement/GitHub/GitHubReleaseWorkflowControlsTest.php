@@ -1259,6 +1259,19 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'setup_recorded', $persisted['automation_state'] );
 	}
 
+	public function testUnavailableWorkflowStatusNamesTheCurrentReadinessHeading(): void {
+		$status   = $this->statusAtRevision( ReleaseManagementFixture::status(), 4 );
+		$controls = $this->controls( new ReleaseTrackingFacadeDouble( $status ) );
+		$method   = new ReflectionMethod( $controls, 'workflowViewFor' );
+		$view     = $method->invoke( $controls, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+
+		self::assertIsArray( $view );
+		self::assertSame(
+			'Booster could not confirm the local Release readiness for this package. Try again after reviewing its settings.',
+			$view['unavailable_reason']
+		);
+	}
+
 	public function testExactPackageWorkflowViewExposesOnlyItsPersistedFailureHistory(): void {
 		self::assertTrue(
 			( new SetupRecordStore() )->recordFailure(

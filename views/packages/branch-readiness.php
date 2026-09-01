@@ -2,7 +2,7 @@
 
 defined( 'WPINC' ) || die;
 
-$isPackageEdit              = true === ( $isPackageEdit ?? false );
+$isPackageEdit                = true === ( $isPackageEdit ?? false );
 $providerBaseUrl              = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
 $repositoryReadiness          = is_array( $packageBranchReadiness['repository'] ?? null )
 	? $packageBranchReadiness['repository']

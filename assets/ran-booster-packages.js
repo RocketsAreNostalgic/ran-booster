@@ -12,10 +12,14 @@
 		callback();
 	}
 
-	onDomReady(initPackageAdmin);
+	onDomReady(function () {
+		consumeAdvancedSettingsOpenRequest();
+		initPackageAdmin();
+	});
 
 	document.addEventListener('htmx:afterSwap', function (event) {
 		if (event.detail?.target?.id === 'wpbody-content') {
+			consumeAdvancedSettingsOpenRequest();
 			const developmentNotice = document.querySelector(
 				'[data-ran-booster-core-development-notice]'
 			);
@@ -28,10 +32,21 @@
 		}
 	});
 
+	function consumeAdvancedSettingsOpenRequest() {
+		const url = new URL(window.location.href);
+		if (!url.searchParams.has('ran_booster_open_advanced')) {
+			return;
+		}
+
+		url.searchParams.delete('ran_booster_open_advanced');
+		window.history.replaceState(window.history.state, '', url);
+	}
+
 	function initPackageAdmin() {
 		initPackageMutationForms();
 		initPackageOperationControls();
 		initPackageSourceControls();
+		initPackageSourceUnsavedGuard();
 
 		document
 			.querySelectorAll('.button-update-package')
@@ -154,7 +169,11 @@
 					const source = tab.getAttribute(
 						'data-ran-booster-source-choice'
 					);
-					if (!source || tab.disabled) {
+					if (
+						!source ||
+						tab.disabled ||
+						tab.getAttribute('aria-disabled') === 'true'
+					) {
 						return;
 					}
 
@@ -200,6 +219,105 @@
 						selectTab(tab);
 					});
 				});
+			});
+	}
+
+	function initPackageSourceUnsavedGuard() {
+		const settingsForm = document.querySelector(
+			'#ran-booster-package-edit-form'
+		);
+		const sourceShell = document.querySelector(
+			'[data-ran-booster-source-controls]'
+		);
+
+		if (
+			!settingsForm ||
+			!sourceShell ||
+			settingsForm.dataset?.ranBoosterSourceUnsavedGuardBound === 'true'
+		) {
+			return;
+		}
+
+		settingsForm.dataset.ranBoosterSourceUnsavedGuardBound = 'true';
+
+		const controls = Array.from(settingsForm.elements || []).filter(
+			function (control) {
+				return (
+					!control.disabled &&
+					![
+						'button',
+						'hidden',
+						'image',
+						'reset',
+						'submit',
+						'radio',
+					].includes(control.type)
+				);
+			}
+		);
+		const baseline = new Map(
+			controls.map(function (control) {
+				return [control, settingValue(control)];
+			})
+		);
+		const isDirty = function () {
+			return controls.some(function (control) {
+				return baseline.get(control) !== settingValue(control);
+			});
+		};
+		function settingValue(control) {
+			return ['checkbox', 'radio'].includes(control.type)
+				? control.checked
+				: control.value;
+		}
+		const notice = sourceShell.querySelector(
+			'[data-ran-booster-source-unsaved-notice]'
+		);
+		const hideNoticeIfClean = function () {
+			if (!isDirty() && notice) {
+				notice.hidden = true;
+			}
+		};
+		const blockIfDirty = function (event) {
+			if (!isDirty()) {
+				hideNoticeIfClean();
+				return false;
+			}
+
+			event.preventDefault();
+			event.stopImmediatePropagation?.();
+			if (notice) {
+				notice.hidden = false;
+			}
+			return true;
+		};
+		controls.forEach(function (control) {
+			control.addEventListener('input', hideNoticeIfClean);
+			control.addEventListener('change', hideNoticeIfClean);
+		});
+
+		sourceShell
+			.querySelectorAll('[data-ran-booster-source-choice]')
+			.forEach(function (choice) {
+				if (
+					choice.getAttribute('href') === null ||
+					choice.disabled ||
+					choice.getAttribute('aria-disabled') === 'true'
+				) {
+					return;
+				}
+				choice.addEventListener('click', blockIfDirty, true);
+			});
+
+		document
+			.querySelectorAll('form[data-ran-booster-source-transition]')
+			.forEach(function (transitionForm) {
+				transitionForm.addEventListener('submit', blockIfDirty, true);
+				transitionForm.addEventListener(
+					'htmx:beforeRequest',
+					blockIfDirty,
+					true
+				);
 			});
 	}
 
@@ -278,12 +396,20 @@
 					return;
 				}
 
+				const nativeAction = form.getAttribute('action') || '';
+				let hxPost = nativeAction;
+				try {
+					const actionUrl = new URL(nativeAction);
+					hxPost = `${actionUrl.pathname}${actionUrl.search}${actionUrl.hash}`;
+				} catch {
+					// Relative actions already have the HTMX-safe form.
+				}
 				let requiresProcessing = false;
 				const attributes = {
 					'data-ran-booster-enhanced-mutation': '',
 					'data-ran-booster-error-target':
 						'#ran-booster-package-mutation-error',
-					'hx-post': form.getAttribute('action') || '',
+					'hx-post': hxPost,
 					'hx-select': '#wpbody-content',
 					'hx-swap': 'outerHTML show:none',
 					'hx-sync': 'this:drop',

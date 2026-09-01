@@ -25,13 +25,28 @@ operational history.
 ## Decision history
 
 Before proposing a new updater, installer, lock, receipt, credential lifecycle,
-public facade, or shared release/branch abstraction, review the private package
-update decision register. It preserves material NO-GO and deferred approaches,
+public facade, or shared release/branch abstraction, review the
+[package update decision register](package-update-orchestration-decision-register.md).
+It preserves material NO-GO and deferred approaches,
 their evidence, and the specific triggers that would justify reconsideration.
 That audit trail does not override the current runtime behavior documented here.
 In particular, the register is the durable history for the removed exact
 release Reinstall path and its receipt/finalizer NO-GO; this guide does not
 present that retired operation as current behavior.
+
+[PU-035 and PU-036](package-update-orchestration-decision-register.md#2026-08-28-repository-exclusivity-and-multi-package-releases)
+record the repository relationship policy: on this site, one exact provider and
+stable repository ID supplies multiple Branch packages or one Release package,
+never both. Inactive packages and Disabled policies still count. A sole root
+package can switch modes; subdirectory packages remain Branch-only. Existing
+conflicts pause Release updates without changing files or records and use the
+ordinary Return to Branch action to remove the conflict.
+
+This is a product limit, not a filesystem limitation. Allowing Branch companions
+in future would be a narrower decision than supporting several Release packages.
+The latter is a deliberate non-goal. Release publishing may remain manual or
+use the author's own workflow, provided the artifact satisfies Booster's
+existing single-package ZIP, Update URI and integrity contract.
 
 The bundled controls keep fixed, purpose-specific request and result adapters.
 Core does not publish a generic availability, result-normalization or
@@ -155,7 +170,7 @@ These controls do not change managed plugin or theme release policies.
 
 | Trigger                    | Initiator                                                                                 | Immediate handoff                                                                                                          | Can download a ZIP?                           | Can change files? |
 | -------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------- |
-| **Use published releases** | Administrator in Booster                                                                  | Core handler → internal coordinator → provider listing and exact inspection → atomic source transition                     | Yes, for eligibility and identity validation  | No                |
+| **Use releases**           | Administrator in Booster                                                                  | Core handler → internal coordinator → provider listing and exact inspection → atomic source transition                     | Yes, for eligibility and identity validation  | No                |
 | Request bootstrap          | Booster                                                                                   | Registers each eligible managed target with the shared updater before `plugins_loaded` selects one bundled updater runtime | No                                            | No                |
 | Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | Yes, for candidate validation on a cache miss | No                |
 | **Check releases**         | Administrator in Booster                                                                  | Core handler → internal coordinator → updater cache clear → WordPress native update check                                  | Yes, for fresh candidate validation           | No                |
@@ -539,15 +554,12 @@ At the installer boundary, `CorePackageExecutor` presents the already-local
 archive through a request-only native offer and pre-download hook. WordPress
 does not download the repository ZIP again.
 
-`ran_wp_release_updater_v1_core_artifact_handoff` is the active,
-request-scoped branch integration boundary. Core supplies one neutral
-`TemporaryArtifact` capability for the same unchanged preflighted path, package
-type, installed identifier, `update` action and expected version. The selected
-updater consumes it once, rechecks archive and staged-package identity at the
-native lifecycle boundaries, and retains cleanup through WordPress rollback.
-It does not restore exact release Reinstall, broaden archive authority or start
-release discovery. The former GitHub-specific filter and `ClaimedArtifact`
-contract are historical only and must not be registered alongside this path.
+The selected release updater does not accept that earlier local path. It admits
+only an updater-owned, freshly reacquired release artifact and rejects any
+non-false pre-download reply for a matching native target. Repository-source
+exclusivity therefore remains the boundary between tracked-branch deployment
+and native release update. A conflicting release target fails closed; Core does
+not bypass it through a local-artifact handoff or compatibility shim.
 
 ## Performance and repeated-work audit
 
@@ -566,9 +578,9 @@ optimization candidates; it is not a runtime profile.
   that repository ZIP independently.
 - Prospective inspection downloads, validates and discards the exact release
   ZIP; install performs a fresh acquisition.
-- A branch archive is scanned before handoff and later extracted and staged by
-  WordPress. Those are different security and installation phases, not two
-  archive downloads.
+- A branch archive is scanned before WordPress later extracts and stages it.
+  Those are different security and installation phases, not two archive
+  downloads.
 
 ### Intentional repeated work
 

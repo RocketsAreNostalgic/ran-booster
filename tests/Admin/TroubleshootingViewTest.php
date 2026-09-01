@@ -7,6 +7,7 @@ namespace Tests\Admin;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
+use RAN\Admin\Component\RepositoryDetailRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ProviderSettingsPresenter;
@@ -44,6 +45,7 @@ final class TroubleshootingViewTest extends TestCase {
 				'webhookManagement'               => null,
 				'statusSummaryRenderer'           => new AdminStatusSummaryRenderer(),
 				'providerManagementTableRenderer' => new ProviderManagementTableRenderer(),
+				'repositoryDetailRenderer'        => new RepositoryDetailRenderer(),
 				'repositoryTableRenderer'         => new RepositoryTableRenderer(),
 			)
 		);
@@ -234,6 +236,64 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Open plugin settings', $html );
 	}
 
+	public function testDeploymentActivityRendersKnownPackageVersionFailureInIndexAndDetail(): void {
+		$attempt             = DeploymentAttempt::fromDatabase(
+			array(
+				'id'                      => 2,
+				'correlation_id'          => str_repeat( 'd', 32 ),
+				'source'                  => 'manual',
+				'operation'               => 'update',
+				'package_type'            => 'plugin',
+				'package_slug'            => 'example',
+				'package_source'          => 'branch',
+				'package_source_revision' => 1,
+				'release_identity'        => null,
+				'provider'                => 'gh',
+				'provider_repository_id'  => 'repository-1',
+				'requested_ref'           => 'main',
+				'resolved_ref'            => null,
+				'delivery_id'             => null,
+				'delivery_digest'         => null,
+				'state'                   => 'failed',
+				'mutation_started_at'     => null,
+				'outcome_code'            => 'package_version_missing',
+				'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1}',
+				'created_at'              => '2026-07-23 06:00:00',
+				'finished_at'             => '2026-07-23 06:00:01',
+			)
+		);
+		$deploymentActivity  = array(
+			'items'                 => array( $attempt ),
+			'unavailable'           => false,
+			'has_cursor'            => false,
+			'next_cursor'           => null,
+			'package_settings_urls' => array(
+				'plugin' => array(
+					'example' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
+				),
+			),
+		);
+		$troubleshootingBase = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$index = (string) ob_get_clean();
+
+		$deploymentActivity['detail'] = $attempt;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+		$detail = (string) ob_get_clean();
+
+		foreach ( array( $index, $detail ) as $html ) {
+			self::assertStringContainsString( 'Version: 0.1.0', $html );
+			self::assertStringContainsString( 'rebuild the archive', $html );
+			self::assertStringNotContainsString( 'unavailable deployment outcome', $html );
+			self::assertStringNotContainsString( 'Authorization', $html );
+			self::assertStringNotContainsString( 'secret-canary', $html );
+			self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
+		}
+	}
+
 	public function testNeedsAttentionDetailShowsOriginAndProtectedResolutionConfirmation(): void {
 		$attempt             = DeploymentAttempt::fromDatabase(
 			array(
@@ -283,7 +343,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[attempt_id]" value="7"', $html );
 		self::assertStringContainsString( 'name="ran_booster[correlation_id]" value="' . str_repeat( 'b', 32 ) . '"', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirm_reviewed]" value="1" required', $html );
-		self::assertStringContainsString( 'Acknowledge historical uncertainty', $html );
+		self::assertStringContainsString( 'I have checked the package&#039;s current state and want to allow another deployment.', $html );
+		self::assertStringContainsString( 'Allow retry and return to theme settings', $html );
+		self::assertStringContainsString( '<form method="post" action="https://example.test/wp-admin/admin.php?page=ran-booster-themes&amp;package=example-theme">', $html );
 		self::assertStringNotContainsString( 'Blocked retry requests', $html );
 		self::assertStringContainsString( 'Back to Activity</a>', $html );
 		self::assertStringNotContainsString( 'class="button" href="' . $troubleshootingBase . '&amp;panel=activity"', $html );
@@ -373,9 +435,10 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Booster did not retain which final-state check could not be proved.', $html );
+		self::assertStringContainsString( 'WordPress reported that it changed this package, but Booster could not confirm the final result.', $html );
+		self::assertStringContainsString( 'Checking the box only clears the retry block. It does not change the package or prove what happened before.', $html );
 		self::assertStringContainsString( 'activity #8', $html );
-		self::assertStringContainsString( 'Acknowledge historical uncertainty', $html );
+		self::assertStringContainsString( 'Allow retry', $html );
 		self::assertStringNotContainsString( 'Provider request ID', $html );
 	}
 
@@ -701,13 +764,17 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-provider', $html );
 		self::assertStringContainsString( 'Repository access', $html );
-		self::assertStringContainsString( 'Saved credentials provide access to private repositories entered manually.', $html );
+		self::assertStringContainsString( 'Saved credentials enable access to private repositories entered manually.', $html );
 		self::assertStringContainsString( '>Add credential</button>', $html );
 		self::assertStringContainsString( 'data-credential-modal="access"', $html );
 		self::assertStringNotContainsString( 'ran-booster-credential-table--access', $html );
-		self::assertStringContainsString( 'id="ran-booster-push-to-deploy-heading" class="ran-booster-section__title">Push-to-Deploy</h3>', $html );
-		self::assertStringContainsString( 'Booster verifies the webhook signature, matches the repository and branch', $html );
-		self::assertStringContainsString( 'Webhook signing · No secret saved', $html );
+		self::assertStringContainsString( 'id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title">Signing secrets</h3>', $html );
+		self::assertStringContainsString( 'Signing secrets verify repository webhook deliveries.', $html );
+		self::assertStringContainsString( 'data-modal="webhook">Add webhook secret</button>', $html );
+		self::assertLessThan( strpos( $html, 'id="ran-booster-repository-integrations-heading"' ), strpos( $html, 'id="ran-booster-webhook-secrets-heading"' ) );
+		self::assertSame( 0, substr_count( $html, 'Manage signing secrets' ) );
+		self::assertStringContainsString( 'id="ran-booster-repository-integrations-heading" class="ran-booster-section__title">Repository integrations</h3>', $html );
+		self::assertStringContainsString( 'Manage repositories, webhooks and release workflows.', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-summary--pending' ) );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-dot is-pending' ) );
 		self::assertStringNotContainsString( 'ran-booster-status-summary--attention', $html );
@@ -723,7 +790,6 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-repository-record__actions"', $html );
 		self::assertStringNotContainsString( 'ran-booster-webhook-repositories__setup-link', $html );
 		self::assertStringContainsString( 'Plugin · Branch · 1 package', $html );
-		self::assertStringContainsString( 'href="https://github.com/owner/example/settings/hooks"', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'opens repository in a new tab', $html );
 		self::assertStringNotContainsString( 'Push-to-Deploy URL configured', $html );
@@ -741,14 +807,13 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<option value="owner/example">owner/example</option>', $html );
 		self::assertStringNotContainsString( 'assisted_repository=repo-42', $html );
 		self::assertStringNotContainsString( '>Manage webhook</button>', $html );
-		self::assertStringContainsString( 'Fixture webhooks', $html );
-		self::assertStringContainsString( 'Plugin settings', $html );
-		self::assertStringContainsString( 'source_view=branch#ran-booster-branch-readiness', html_entity_decode( $html ) );
-		self::assertStringContainsString( '<span class="screen-reader-text">: plugin/example.php</span>', $html );
+		self::assertStringContainsString( 'Manage repository', $html );
+		self::assertStringContainsString( 'panel=repositories&repository=repo-42', html_entity_decode( $html ) );
+		self::assertStringNotContainsString( 'Fixture webhooks', $html );
+		self::assertStringNotContainsString( 'Plugin settings', $html );
 		self::assertStringNotContainsString( 'class="ran-booster-repository-record__details"', $html );
-		self::assertLessThan( strpos( $html, 'Plugin settings' ), strpos( $html, 'Fixture webhooks' ) );
 		self::assertStringNotContainsString( '>Set up in GitHub</a>', $html );
-		self::assertStringContainsString( '>Add webhook secret</button>', $html );
+		self::assertStringContainsString( 'Add Push-to-Deploy secret', $html );
 		self::assertStringContainsString( 'data-credential-modal="webhook"', $html );
 		self::assertStringNotContainsString( 'ran-booster-credential-table--webhook', $html );
 		self::assertStringContainsString( 'data-webhook-secret-tools', $html );
@@ -784,14 +849,23 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repositoryHtml = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h4>', $repositoryHtml );
-		self::assertStringContainsString( 'Back to managed repositories', $repositoryHtml );
-		self::assertStringContainsString( 'source_view=branch#ran-booster-branch-readiness', html_entity_decode( $repositoryHtml ) );
+		self::assertStringContainsString( 'Back to repositories', $repositoryHtml );
+		self::assertStringContainsString( 'Packages using this repository', $repositoryHtml );
+		self::assertStringContainsString( 'Management history', $repositoryHtml );
+		self::assertStringContainsString( 'This is local history, not live provider state.', $repositoryHtml );
+		self::assertStringNotContainsString( '#ran-booster-branch-readiness', html_entity_decode( $repositoryHtml ) );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $repositoryHtml );
-		self::assertSame( 1, substr_count( $repositoryHtml, 'data-ran-booster-provider-repository' ) );
-		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42&amp;add_webhook_secret=1', $repositoryHtml );
-		self::assertStringContainsString( '>Add repository secret</a>', $repositoryHtml );
+		self::assertSame( 0, substr_count( $repositoryHtml, 'data-ran-booster-provider-repository' ) );
 		self::assertStringNotContainsString( "\n\t\t\tManage webhook", $repositoryHtml );
+
+		$repositoryView   = 'branch';
+		$providerViewData = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$repositoryBranchHtml = (string) ob_get_clean();
+		self::assertStringContainsString( '>Push-to-deploy</h3>', $repositoryBranchHtml );
 
 		$requestedRepositoryId = 'stale-repository';
 		$providerViewData      = $this->providerViewData( get_defined_vars() );
@@ -816,8 +890,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'disabled aria-disabled="true"', $withoutAddOnHtml );
 		self::assertStringNotContainsString( 'assisted_repository=', $withoutAddOnHtml );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $withoutAddOnHtml );
-		self::assertStringContainsString( 'Fixture webhooks', $withoutAddOnHtml );
-		self::assertStringContainsString( 'Plugin settings', $withoutAddOnHtml );
+		self::assertStringContainsString( 'Manage repository', $withoutAddOnHtml );
+		self::assertStringNotContainsString( 'Plugin settings', $withoutAddOnHtml );
 	}
 
 	public function testReleaseManagedRepositoryIsVisibleButExcludedFromWebhookComposition(): void {
@@ -876,15 +950,14 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'ran-booster-repository-record--release', $html );
-		self::assertStringContainsString( 'Theme · Published release · 1 package', $html );
-		self::assertStringContainsString( 'Published release', $html );
+		self::assertStringContainsString( 'Theme · Releases · 1 package', $html );
+		self::assertStringContainsString( 'Releases', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--info">Push-to-Deploy unavailable</span>', $html );
 		self::assertStringContainsString( 'Local signing setup is retained for an easier return to Branch.', $html );
 		self::assertSame( 0, substr_count( $html, 'disabled aria-disabled="true"' ) );
-		self::assertStringContainsString( 'Review webhook cleanup', $html );
-		self::assertStringContainsString( 'webhook_cleanup=1#ran-booster-webhook-cleanup', html_entity_decode( $html ) );
-		self::assertStringContainsString( 'Theme settings', $html );
-		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=release-theme', $html );
+		self::assertStringContainsString( 'Manage repository', $html );
+		self::assertStringNotContainsString( 'Review webhook cleanup', $html );
+		self::assertStringNotContainsString( 'Theme settings', $html );
 		self::assertStringNotContainsString( 'source_view=branch', $html );
 		self::assertStringNotContainsString( '#ran-booster-branch-readiness', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
@@ -903,9 +976,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'This package ignores pushes.', $withoutEvidence );
 		self::assertStringContainsString( 'Pushes are ignored.', $withoutEvidence );
 		self::assertStringContainsString( 'id="ran-booster-provider-readiness-reason-0-release-source"', $withoutEvidence );
-		self::assertStringContainsString( 'Published release', $withoutEvidence );
+		self::assertStringContainsString( 'Theme · Releases · 1 package', $withoutEvidence );
 		self::assertStringContainsString( 'Push-to-Deploy unavailable', $withoutEvidence );
-		self::assertStringContainsString( 'Fixture webhooks', $withoutEvidence );
+		self::assertStringNotContainsString( 'Fixture webhooks', $withoutEvidence );
+		self::assertStringContainsString( 'Manage repository', $withoutEvidence );
 	}
 
 	public function testProviderSettingsExplainsBlockedLocalAssistedHookSetup(): void {
@@ -972,16 +1046,40 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Push-to-Deploy needs attention', $html );
-		self::assertStringContainsString( 'data-ran-booster-assistance-site-notice', $html );
-		self::assertSame( 1, substr_count( $html, 'This site uses a local URL, so providers cannot deliver webhooks to it.' ) );
-			self::assertStringContainsString( 'Push-to-Deploy needs attention', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
 		self::assertStringContainsString( 'Owner secret', $html );
 		self::assertStringContainsString( 'Repository identity conflict', $html );
+		self::assertStringNotContainsString( 'Review record', $html );
 		self::assertStringNotContainsString( 'Managed packages for this repository disagree about its provider identity.', $html );
 		self::assertStringNotContainsString( '>Manage webhook</button>', $html );
 		self::assertStringNotContainsString( 'aria-describedby="ran-booster-provider-readiness-reason-0 ran-booster-provider-readiness-reason-0-site"', $html );
 		self::assertStringNotContainsString( 'assisted_repository=repo-42', $html );
+
+		$webhook_assistance_readiness['repositories'][0] = array(
+			'provider_code'         => 'gh',
+			'repository_id'         => 'repo-42',
+			'repository'            => 'owner/example',
+			'package_references'    => array( 'plugin/example.php' ),
+			'deployment_policies'   => array(
+				'automatic' => 1,
+				'manual'    => 0,
+				'disabled'  => 0,
+			),
+			'local_secret_coverage' => 'shared',
+			'eligible'              => false,
+		);
+		$requestedRepositoryId                           = 'repo-42';
+		$repositoryView                                  = 'branch';
+		$providerViewData                                = $this->providerViewData( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $providerViewData );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$repositoryHtml = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Push-to-deploy</h3>', $repositoryHtml );
+		self::assertStringContainsString( 'Repository webhook management is unavailable until this site can receive provider deliveries.', $repositoryHtml );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Manage repository webhook</button>', $repositoryHtml );
 	}
 
 	public function testProviderSettingsShowsOnlyPathlessRecoveryGuidanceWhenStorageIsUnavailable(): void {
@@ -1084,6 +1182,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Public lookup (public_lookup)', $html );
 		self::assertStringContainsString( 'dedicated, expiring, least-privilege credential', $html );
 		self::assertStringContainsString( 'Credential guidance', $html );
+		self::assertStringNotContainsString( 'The active provider can read every credential saved under its provider code', $html );
 		self::assertStringContainsString( 'Deleting it returns Fixture public lookup to Anonymous', $html );
 		self::assertStringContainsString( 'ran-booster-credential-self-destruct', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider-disclosure ran-booster-public-lookup-profile', $html );
@@ -1312,6 +1411,30 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 			'repositories' => array(),
 		);
+		$provider_repositories                = array(
+			'repositories' => array(
+				array(
+					'target'                    => 'workspace/partial',
+					'repository_id'             => 'partial-1',
+					'source'                    => 'mixed',
+					'package_references'        => array( 'branch/package.php', 'release/package.php' ),
+					'package_summaries'         => array(
+						array(
+							'type'              => 'plugin',
+							'identifier'        => 'branch/package.php',
+							'display_name'      => 'Branch package',
+							'settings_url'      => 'https://example.test/branch-package',
+							'source'            => 'branch',
+							'source_revision'   => 1,
+							'branch'            => 'main',
+							'subdirectory'      => '',
+							'deployment_policy' => 'manual',
+						),
+					),
+					'package_summaries_omitted' => 1,
+				),
+			),
+		);
 
 		$providerTask     = 'status';
 		$providerViewData = $this->providerViewData( get_defined_vars() );
@@ -1328,9 +1451,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'hx-push-url="true"', $statusHtml );
 		self::assertStringContainsString( 'hx-history="false"', $statusHtml );
 		self::assertStringContainsString( 'hx-sync="this:replace"', $statusHtml );
-		self::assertSame( 5, substr_count( $statusHtml, 'hx-get="admin.php?page=ran-booster&amp;tab=bb&amp;panel=' ) );
+		self::assertSame( 4, substr_count( $statusHtml, 'hx-get="admin.php?page=ran-booster&amp;tab=bb&amp;panel=' ) );
 		self::assertSame( 4, substr_count( $statusHtml, 'data-ran-booster-provider-task="' ) );
-		self::assertSame( 3, substr_count( $statusHtml, 'hx-boost="true"' ) );
+		self::assertSame( 2, substr_count( $statusHtml, 'hx-boost="true"' ) );
 		self::assertStringContainsString( 'data-ran-booster-provider-task-progress', $statusHtml );
 		self::assertStringContainsString( 'data-ran-booster-provider-task-error', $statusHtml );
 		self::assertMatchesRegularExpression(
@@ -1341,7 +1464,8 @@ final class TroubleshootingViewTest extends TestCase {
 			'/panel=status"[^>]+data-ran-booster-provider-task="status"[^>]+aria-current="page">Status<\/a>/',
 			$statusHtml
 		);
-		self::assertStringContainsString( '<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title">Readiness overview</h4>', $statusHtml );
+		self::assertStringContainsString( '<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title">Status</h4>', $statusHtml );
+		self::assertStringContainsString( 'At least 1 package across 1 repository · exact totals unavailable while a repository inventory is incomplete', $statusHtml );
 		self::assertStringNotContainsString( 'id="ran-booster-webhook-instructions-heading"', $statusHtml );
 
 		$providerTask     = 'setup';
@@ -1352,18 +1476,30 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$setupHtml = (string) ob_get_clean();
 
-		self::assertSame( 1, substr_count( $setupHtml, 'hx-boost="true"' ) );
+		self::assertSame( 2, substr_count( $setupHtml, 'hx-boost="true"' ) );
 		self::assertMatchesRegularExpression(
-			'/panel=setup"[^>]+data-ran-booster-provider-task="setup"[^>]+aria-current="page">Webhook setup<\/a>/',
+			'/panel=setup"[^>]+data-ran-booster-provider-task="setup"[^>]+aria-current="page">Webhook receiver<\/a>/',
 			$setupHtml
 		);
-		self::assertStringContainsString( '<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title">Webhook setup</h4>', $setupHtml );
-		self::assertStringContainsString( 'Create the Bitbucket webhook', $setupHtml );
+		self::assertStringContainsString( '<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title">Webhook receiver</h4>', $setupHtml );
+		self::assertStringContainsString( 'This provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $setupHtml );
+		self::assertStringContainsString( 'Manage repositories', $setupHtml );
+		self::assertStringContainsString( 'panel=repositories', $setupHtml );
+		self::assertStringContainsString( 'Payload URL', $setupHtml );
+		self::assertStringContainsString( 'application/json', $setupHtml );
 		self::assertStringContainsString( 'Repository push', $setupHtml );
+		self::assertStringContainsString( 'Open Bitbucket instructions', $setupHtml );
+		self::assertStringContainsString( 'Detailed manual setup and troubleshooting', $setupHtml );
+		self::assertStringNotContainsString( 'Choose a signing secret', $setupHtml );
+		self::assertStringNotContainsString( 'Manage webhook automatically', $setupHtml );
+		self::assertStringNotContainsString( 'enable Automatic from package settings', $setupHtml );
 		self::assertStringNotContainsString( 'GitHub', $setupHtml );
 
-		$providerTask     = 'repositories';
-		$providerViewData = $this->providerViewData( get_defined_vars() );
+		$providerTask          = 'repositories';
+		$provider_repositories = array(
+			'repositories' => array(),
+		);
+		$providerViewData      = $this->providerViewData( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $providerViewData );
 		ob_start();

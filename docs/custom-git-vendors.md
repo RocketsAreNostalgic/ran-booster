@@ -173,9 +173,11 @@ them:
   repository directly to its provider-owned webhook settings screen.
 - `RAN\RepositoryProvider\RepositoryWebhookFitness` and
   `RAN\RepositoryProvider\RepositoryWebhookManagement` together for the exact
-  `repository-webhook-management/1` setup, check, reconfigure and remove
-  operation. The provider owns its fixed vendor calls; Core owns authorization,
-  binding, secret custody and bounded results. Core does not generate a
+  `repository-webhook-management/3` setup, check, reconfigure, remove and test
+  operation, with matching read-only `assessSetup`, `assessCheck`,
+  `assessReconfigure`, `assessRemove` and `assessTest` methods. The provider
+  owns its fixed vendor calls; Core owns authorization, binding, secret custody
+  and bounded results. Core does not generate a
   management form, credential schema or route from the backend capability.
 - `RAN\RepositoryProvider\RepositoryReleaseMetadata` for the provider's
   canonical Update URI and public release-details URL. This is local metadata
@@ -186,6 +188,15 @@ them:
   stable or prerelease channel. The provider owns remote calls and credential
   use; the facet grants no download, inspection, installation or mutation
   authority.
+
+    When an otherwise eligible release read cannot complete with the supplied
+    access profile because of credential/access denial, rate limiting, or a
+    transport failure, throw
+    `RAN\RepositoryProvider\RepositoryReleaseReadUnavailable`. Core can then
+    make its one allowed public-lookup retry for a public repository. Do not throw
+    it for an empty release list, an invalid release, or package incompatibility;
+    do not retry or choose another credential inside the provider.
+
 - `RAN\RepositoryProvider\RepositoryReleaseInspector` for inspecting one exact
   release and returning bounded, path-free evidence. The provider owns archive
   acquisition, verification and disposal; the facet grants no installation,
@@ -197,14 +208,21 @@ them:
 - `RAN\RepositoryProvider\RepositoryReleaseNativeTargets` to construct and
   register provider-owned WordPress native update targets, detect an existing
   provider target, normalize passive status and perform an explicit refresh.
-  Implement it together with `RepositoryReleaseMetadata` to make a provider
+  Implement all five release-consumption capabilities together to make a provider
   eligible for managed published-release tracking. Core retains installed
   package enumeration, authority snapshots, mutation fences, locks and source
   transitions.
+- `RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement` for optional
+  release workflow assessment, draft pull requests, outcome checks and template
+  updates. It requires all five release-consumption contracts on the same
+  provider. Core owns the shared controls and authorization; providers return
+  immutable evidence and own their remote operations. See the
+  [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
 Each optional capability stays behind Booster's capability gate. If the provider
-omits a capability, Booster will keep the corresponding feature disabled rather
-than guessing at a fallback.
+omits an automation helper, Booster omits that helper's setup component without
+removing deployment support. A claimed but incomplete helper stays visible and
+disabled with a provider-configuration notice, rather than guessing a fallback.
 
 Credential validation may optionally report a normalized UTC expiry through
 `CredentialValidationResult::valid( CredentialExpiryReport::known( ... ) )`.

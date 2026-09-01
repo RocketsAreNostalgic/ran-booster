@@ -7,12 +7,16 @@ separate authorization.
 
 ## Core implementation checkpoint
 
-Core now publishes the exact `repository-webhook-management/1` fitness and
+Core now publishes the exact `repository-webhook-management/3` fitness and
 management capabilities, four bounded non-secret results/interfaces, and one
 private GitHub webhook client. The former callback result types, secret-bearing
 Webhook Assistance callbacks, Webhook Cleanup facade, marker and ready hook are
 absent. No persistence, schema, option, hook, background, JavaScript or CSS
 surface was added.
+
+The fixed action set is `setup`, `check`, `reconfigure`, `remove` and `test`;
+the read-only fitness facet mirrors it with `assessSetup`, `assessCheck`,
+`assessReconfigure`, `assessRemove` and `assessTest`.
 
 The management `check()` and `remove()` methods deliberately include Core's
 canonical callback URL. The earlier sketch omitted it, but hook ID alone cannot
@@ -89,11 +93,10 @@ Only exact setup and reconfigure receive one Core-held signing secret, and only
 for the duration of that fixed method. Assessment, check, remove, descriptors,
 results, logs and the ordinary add-on receive none.
 
-The request-only PAT fallback remains a separate, weaker input to these exact
-methods. It is supplied for one capability- and nonce-confirmed request and is
-never saved, assigned, returned or converted into a reusable handle. The saved
-profile path and request-only path must not share a generic credential or
-transport abstraction.
+Webhook management accepts only a saved credential profile. The matching
+provider resolves its plaintext only within the fixed capability call; no
+request-supplied credential path, generic credential input or transport
+abstraction exists.
 
 ## Smallest separately typed contracts
 
@@ -102,10 +105,10 @@ or `execute( operation, payload )` dispatcher.
 
 ```text
 RepositoryWebhookFitness
-  assessSetup(authority, credentialProfileId?, requestCredential?)
-  assessCheck(authority, credentialProfileId?, hookId, requestCredential?)
-  assessReconfigure(authority, credentialProfileId?, hookId, requestCredential?)
-  assessRemove(authority, credentialProfileId?, hookId, requestCredential?)
+  assessSetup(authority, credentialProfileId?)
+  assessCheck(authority, credentialProfileId?, hookId)
+  assessReconfigure(authority, credentialProfileId?, hookId)
+  assessRemove(authority, credentialProfileId?, hookId)
 
 RepositoryWebhookManagement
   setup(authority, credentialProfileId, signingSecret)
@@ -114,17 +117,13 @@ RepositoryWebhookManagement
   remove(authority, credentialProfileId, hookId)
 ```
 
-The request-only fallback may be represented only as explicit overloads or an
-explicit sensitive parameter on those same fixed methods. It may not become a
-general credential input, provider SDK or authenticated transport.
-
 Fitness and execution are separate. `RepositoryWebhookFitness` is read-only,
 cannot receive a signing secret, cannot mutate or compensate, and never grants
 general execution authority. Each management call nevertheless repeats the
-matching fitness read in the same request, with the same single saved or
-request-only credential source, to remotely rebind Core's stable repository ID
-to the locator immediately before execution. The fitness and execution call
-budgets remain independent.
+matching fitness read in the same request, with the same saved credential
+profile, to remotely rebind Core's stable repository ID to the locator
+immediately before execution. The fitness and execution call budgets remain
+independent.
 
 Provider-specific permission names, token kinds, GitHub endpoints, request
 bodies, pagination, error interpretation, compensation and readback stay in
@@ -271,8 +270,8 @@ authorized base, 164 lines above the original planning cap. The owner approved
 this modest variance after review found no smaller existing primitive that
 preserved the required failure semantics. The additional code is limited to:
 
-- request-only credential assessment and a same-request stable repository-ID
-  rebind before each mutation;
+- saved-credential assessment and a same-request stable repository-ID rebind
+  before each mutation;
 - a target-keyed, zero-persistence advisory lock (the existing updater lock was
   global, while attempt rows and sidecar locking would add state or hold secret
   storage across provider HTTP calls); and

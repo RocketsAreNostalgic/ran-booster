@@ -8,7 +8,8 @@ use RAN\RepositoryProvider\PreparedArchive;
 
 final class PreflightPreparedArchive implements PreparedArchive {
 
-	public int $cleanupCalls = 0;
+	public int $cleanupCalls  = 0;
+	public bool $cleanupFails = false;
 
 	public function __construct( private readonly string $resolvedRef = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' ) {
 	}
@@ -26,5 +27,8 @@ final class PreflightPreparedArchive implements PreparedArchive {
 
 	public function cleanup(): void {
 		++$this->cleanupCalls;
+		if ( $this->cleanupFails ) {
+			throw new \RuntimeException( 'Provider cleanup failed.' );
+		}
 	}
 }

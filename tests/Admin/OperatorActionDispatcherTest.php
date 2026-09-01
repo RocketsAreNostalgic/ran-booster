@@ -379,7 +379,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$dashboard            = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
 			->method( 'addMessage' )
-			->with( 'The deployment review was recorded. This package may now be retried.' );
+			->with( 'Retry is allowed. No package files or settings were changed.' );
 
 		$this->dispatcher( $dashboard, attempts: $attempts )->dispatchPostRequests();
 

@@ -48,8 +48,6 @@ final class ProviderTrustConformanceTest extends TestCase {
 			array(
 				'views/provider.php',
 				'views/provider/modals.php',
-				'views/packages/fields/credential.php',
-				'views/provider-public-lookup-profile.php',
 				'views/portability-review.php',
 				'views/troubleshooting.php',
 			) as $relativePath
@@ -58,7 +56,6 @@ final class ProviderTrustConformanceTest extends TestCase {
 			$source = file_get_contents( $root . '/' . $relativePath );
 			self::assertIsString( $source );
 			if ( 'views/provider.php' === $relativePath ) {
-				self::assertStringContainsString( '$providerTrustDescription', $source );
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source inspection is the contract under test.
 				$source = file_get_contents( $root . '/RAN/Admin/ProviderSettingsPresenter.php' );
 				self::assertIsString( $source );

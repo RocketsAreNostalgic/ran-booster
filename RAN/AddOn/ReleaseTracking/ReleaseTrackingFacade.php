@@ -40,6 +40,15 @@ interface ReleaseTrackingFacade {
 		string $nonce
 	): ?ReleaseTrackingPreflight;
 
+	/** Assess an eligible Branch or release-asset package without changing package or updater state. */
+	public function assessmentPreflight(
+		string $type,
+		string $identifier,
+		int $expectedSourceRevision,
+		string $channel,
+		string $nonce
+	): ?ReleaseTrackingPreflight;
+
 	public function enable(
 		string $type,
 		string $identifier,

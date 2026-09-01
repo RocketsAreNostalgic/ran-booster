@@ -33,8 +33,8 @@ spl_autoload_register(
 			return;
 		}
 		if ( 'RAN\\PackageSubdirectory' === $class ) {
-			// RepositoryDescriptor owns package-slug validation through this
-			// transitive Core value helper; the GitHub module does not import it.
+			// RepositoryDescriptor and the path-inspection capability share this
+			// Core-owned repository-relative path validator.
 			require $ranBoosterRoot . '/RAN/PackageSubdirectory.php';
 			return;
 		}

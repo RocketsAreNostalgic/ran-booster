@@ -17,6 +17,7 @@ final readonly class ReleaseTrackingEligibility {
 	public const UNSUPPORTED_PROVIDER            = 'unsupported_provider';
 	public const INVALID_REPOSITORY              = 'invalid_repository';
 	public const INVALID_PACKAGE_IDENTITY        = 'invalid_package_identity';
+	public const SUBDIRECTORY_NOT_SUPPORTED      = 'subdirectory_not_supported';
 	public const TARGET_ALREADY_USES_RAN_UPDATER = 'target_already_uses_ran_updater';
 
 	public function __construct(
@@ -33,6 +34,7 @@ final readonly class ReleaseTrackingEligibility {
 				self::UNSUPPORTED_PROVIDER,
 				self::INVALID_REPOSITORY,
 				self::INVALID_PACKAGE_IDENTITY,
+				self::SUBDIRECTORY_NOT_SUPPORTED,
 				self::TARGET_ALREADY_USES_RAN_UPDATER,
 			),
 			true

@@ -50,19 +50,23 @@ final class PackageControlContractTest extends TestCase {
 		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-package-mutation' ) );
 		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-native-submit' ) );
 		self::assertStringContainsString( 'data-ran-booster-package-mutation', $reinstall );
-		self::assertStringContainsString( 'hx-include="#ran-booster-package-edit-form"', $edit );
+		$associatedSettingsInclude = 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"';
+		self::assertStringContainsString( $associatedSettingsInclude, $edit );
+		self::assertStringContainsString( $associatedSettingsInclude, $reinstall );
+		self::assertStringContainsString( $associatedSettingsInclude, $readiness );
 		self::assertStringContainsString( 'hx-get=', $source );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $source );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $source );
 		self::assertStringContainsString( 'type="button"', $source );
-		self::assertStringContainsString( 'Published releases', $source );
+		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $source );
 		self::assertStringContainsString( 'Provider capability required', $source );
 		self::assertStringNotContainsString( 'Subscriber', $source );
 		self::assertStringNotContainsString( 'Release Deployments', $source );
-		self::assertStringContainsString( 'method="get"', $readiness );
+		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $readiness );
+		self::assertStringContainsString( 'hx-post=', $readiness );
 		self::assertStringContainsString( 'hx-push-url=', $readiness );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $readiness );
-		self::assertStringNotContainsString( 'data-ran-booster-package-mutation', $readiness );
+		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $readiness );
 	}
 
 	public function testPluginAndThemeUseOneSharedTemplateSet(): void {
@@ -90,7 +94,7 @@ final class PackageControlContractTest extends TestCase {
 			'unlink'                    => array( 'edit', 'mutation-post', 'core', 'signed package PRG', 'local package form', 'package index' ),
 			'unlink and delete'         => array( 'edit', 'mutation-post', 'core', 'signed package PRG', 'local package form', 'package index' ),
 			'saved source navigation'   => array( 'edit', 'readonly-htmx-get', 'core', 'selected pane', 'unchanged page', 'canonical source view' ),
-			'branch readiness'          => array( 'edit', 'readonly-htmx-get', 'core', 'transient toast', 'persistent readiness warning', 'canonical branch view' ),
+			'branch readiness'          => array( 'edit', 'mutation-post', 'core', 'green repository row', 'saved form or repository warning', 'canonical branch view' ),
 			'published release actions' => array( 'edit', 'mutation-post', 'core', 'Core PRG', 'local source panel', 'canonical release view' ),
 			'repository provider links' => array( 'edit', 'native-link', 'provider', 'navigation', 'provider page', 'provider settings' ),
 			'activate or enable'        => array( 'edit', 'native-link', 'wordpress', 'WordPress action', 'WordPress page', 'saved package settings' ),

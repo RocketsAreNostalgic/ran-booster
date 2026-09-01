@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use InvalidArgumentException;
 use RAN\Admin\ProviderSettingsPresenter;
+use RAN\Admin\PackageAdminController;
 use RAN\Booster;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentCoordinator;
@@ -32,6 +33,8 @@ use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
+use Tests\Support\RepositorySourceGuardDatabase;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\Troubleshooting\TroubleshootingService;
@@ -93,6 +96,60 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'example/example.php', $query['package'] );
 	}
 
+	public function testSaveAndCheckRedirectUsesTheAuthoritativeEditedPackageWithoutASuccessNotice(): void {
+		$package   = $this->plugin();
+		$dashboard = $this->dashboard( new OperationCoordinator(), $package );
+
+		$redirect = $dashboard->postPackageOperation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'branch'                             => 'feature/verified-after-save',
+					'subdirectory'                       => 'packages/example',
+					'check_repository_branch_after_save' => '1',
+				)
+			)
+		);
+
+		self::assertIsString( $redirect );
+		self::assertSame( 'feature/verified-after-save', $package->getBranch() );
+		self::assertSame( 'packages/example', $package->getSubdirectory() );
+		$query = $this->redirectQuery( $redirect );
+		self::assertSame( 'ran-booster-plugins', $query['page'] );
+		self::assertSame( 'example/example.php', $query['package'] );
+		self::assertSame( 'branch', $query['source_view'] );
+		self::assertSame( '1', $query['ran_booster_repository_branch_check'] );
+		self::assertArrayNotHasKey( 'ran_booster_result', $query );
+		self::assertArrayNotHasKey( '_ran_booster_notice_nonce', $query );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_repository_branch_nonce'],
+				PackageAdminController::repositoryBranchCheckAction( $package, 'plugin' )
+			)
+		);
+	}
+
+	public function testFailedSaveNeverProducesARepositoryBranchCheckRedirect(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$input     = $this->input(
+			'edit-plugin',
+			array(
+				'check_repository_branch_after_save' => '1',
+				'expected_branch'                    => 'older-branch',
+			)
+		);
+
+		self::assertFalse( $dashboard->postPackageOperation( 'edit-plugin', $input ) );
+		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertSame( 'ran_booster_package_edit_conflict', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'No settings were saved and no repository check ran.', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Save settings and check again.', $dashboard->messages[0]['message'] );
+
+		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
 	public function testFailedReinstallKeepsTheSavedSettingsNoticeBesideTheDeploymentError(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
@@ -111,6 +168,38 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'info', $dashboard->messages[0]['type'] );
 		self::assertStringContainsString( 'settings were saved', $dashboard->messages[0]['message'] );
 		self::assertSame( 'error', $dashboard->messages[1]['type'] );
+	}
+
+	#[DataProvider( 'conflictingBranchOperations' )]
+	public function testBranchAdmissionRefusesAnotherReleaseOwnerBeforeWriting( string $action ): void {
+		$plugins = new OperationPluginRepository( $this->plugin() );
+		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		$themes->package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$database         = new RepositorySourceGuardDatabase();
+		$database->rows[] = (object) array(
+			'type'                   => 2,
+			'package'                => 'release-owner',
+			'source'                 => 'release_asset',
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+		);
+		$lock             = new OperationUpdaterLock();
+		$service          = $this->service( $plugins, $themes, new OperationCoordinator(), $lock, $database );
+		try {
+			$service->execute( PackageOperation::fromInput( $action, $this->input( $action, array( 'dry-run' => '1' ) ) ) );
+			self::fail( 'The destination Release owner must prevent adoption or reassignment.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertStringContainsString( 'release-owner', $failure->getMessage() );
+			self::assertNull( $plugins->stored );
+			self::assertNull( $themes->stored );
+			self::assertSame( array(), $plugins->edited );
+			self::assertSame( array(), $themes->edited );
+			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
+		}
+	}
+
+	public static function conflictingBranchOperations(): array {
+		return array( array( 'install-plugin' ), array( 'install-theme' ), array( 'edit-plugin' ), array( 'edit-theme' ) );
 	}
 
 	public function testLinkEditAndUnlinkUseTheExplicitRepositories(): void {
@@ -186,8 +275,8 @@ final class PackageOperationServiceTest extends TestCase {
 			),
 			$notice
 		);
-		self::assertSame( 'success', $dashboard->messages[0]['type'] );
-		self::assertSame( 'Plugin is already managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
+		self::assertSame( 'warning', $dashboard->messages[0]['type'] );
+		self::assertSame( 'Plugin is already installed and managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
 	}
 
 	public function testLinkKeepsMismatchedExistingManagementAsStorageFailure(): void {
@@ -368,7 +457,6 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testReleaseManagedPackageRetainsItsRepositoryIdentityWhileUpdatingAccessAndPolicy(): void {
 		$plugin = $this->plugin();
 		$plugin->setRepository( new ManagedRepository( 'gh', 'owner/release', 'R_release', 'stable', true, 'old-access' ) );
-		$plugin->setSubdirectory( 'packages/example' );
 		$plugin->setSource( PackageSource::RELEASE_ASSET, 2 );
 		$plugins = new OperationPluginRepository( $plugin );
 		$service = $this->service(
@@ -392,7 +480,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'expected_repository'             => 'owner/release',
 				'expected_branch'                 => 'stable',
 				'expected_credential_id'          => 'old-access',
-				'expected_subdirectory'           => 'packages/example',
+				'expected_subdirectory'           => '',
 				'expected_private'                => '1',
 				'expected_package_slug'           => 'example',
 				'expected_deployment_policy'      => DeploymentPolicy::MANUAL->value,
@@ -406,7 +494,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'R_release', $plugins->edited['provider_repository_id'] );
 		self::assertSame( 'stable', $plugins->edited['branch'] );
 		self::assertTrue( $plugins->edited['private'] );
-		self::assertSame( 'packages/example', $plugins->edited['subdirectory'] );
+		self::assertNull( $plugins->edited['subdirectory'] );
 		self::assertSame( 'new-access', $plugins->edited['credential_id'] );
 		self::assertSame( DeploymentPolicy::AUTOMATIC->value, $plugins->edited['deployment_policy'] );
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $plugins->edited['expected_source'] );
@@ -421,6 +509,30 @@ final class PackageOperationServiceTest extends TestCase {
 			)['status']
 		);
 		self::assertSame( 'example/example.php', $plugins->unlinked );
+	}
+
+	public function testLegacyReleaseManagedPackageWithSubdirectoryCannotBeEdited(): void {
+		$plugin = $this->plugin();
+		$plugin->setSubdirectory( 'packages/example' );
+		$plugin->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$plugins = new OperationPluginRepository( $plugin );
+		$service = $this->service(
+			$plugins,
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			new OperationCoordinator()
+		);
+		$input   = $this->input(
+			'edit-plugin',
+			array(
+				'expected_subdirectory'    => 'packages/example',
+				'expected_source'          => PackageSource::RELEASE_ASSET->value,
+				'expected_source_revision' => 2,
+			)
+		);
+
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'must return to Branch first' );
+		$service->execute( PackageOperation::fromInput( 'edit-plugin', $input ) );
 	}
 
 	public function testLinkOnlyReturnsTheDisabledPackageReadBack(): void {
@@ -490,6 +602,65 @@ final class PackageOperationServiceTest extends TestCase {
 			self::assertInstanceOf( Package::class, $result['package'] );
 		}
 		self::assertSame( 4, $coordinator->calls );
+	}
+
+	public function testAlreadyManagedInstallIsReportedAsAlreadyManaged(): void {
+		$coordinator         = new OperationCoordinator();
+		$coordinator->result = array(
+			'status'         => 'succeeded',
+			'correlation_id' => str_repeat( 'a', 32 ),
+			'outcome_code'   => 'already_managed',
+		);
+		$service             = $this->service(
+			new OperationPluginRepository( $this->plugin() ),
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			$coordinator
+		);
+
+		$result = $service->execute( PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin' ) ) );
+
+		self::assertSame( 'already-managed', $result['status'] );
+		self::assertSame( 'already_managed', $result['outcome_code'] );
+		self::assertInstanceOf( Package::class, $result['package'] );
+	}
+
+	public function testAlreadyManagedInstallRedirectsToTheSignedAlreadyManagedWarning(): void {
+		$coordinator         = new OperationCoordinator();
+		$coordinator->result = array(
+			'status'         => 'succeeded',
+			'correlation_id' => str_repeat( 'a', 32 ),
+			'outcome_code'   => 'already_managed',
+		);
+		$dashboard           = $this->dashboard( $coordinator );
+
+		$redirect = $dashboard->postPackageOperation( 'install-plugin', $this->input( 'install-plugin' ) );
+
+		self::assertIsString( $redirect );
+		$query = $this->redirectQuery( $redirect );
+		self::assertSame( 'already-managed', $query['ran_booster_result'] );
+		self::assertSame( 'example/example.php', $query['ran_booster_package'] );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_notice_nonce'],
+				'ran-booster-package-success|plugin|already-managed|example/example.php'
+			)
+		);
+		$_GET = $query;
+		self::assertSame(
+			array(
+				'operation'  => 'already-managed',
+				'identifier' => 'example/example.php',
+			),
+			$this->invokePackageSuccessNotice( $dashboard, 'plugin' )
+		);
+		self::assertSame(
+			array(
+				'type'    => 'warning',
+				'message' => 'Plugin is already installed and managed by Booster. No package settings were changed.',
+			),
+			$dashboard->messages[0]
+		);
 	}
 
 	public function testTerminalDeploymentFailureReturnsOnlyFixedSafeData(): void {
@@ -875,9 +1046,9 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_active', $dashboard->messages[0]['code'] );
-		self::assertStringContainsString( 'earlier deployment for the plugin example could not be verified', $dashboard->messages[0]['message'] );
-		self::assertStringContainsString( 'not currently running', $dashboard->messages[0]['message'] );
-		self::assertStringContainsString( 'Open its recovery details', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'could not confirm how an earlier deployment of the plugin example ended', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'No deployment is currently running', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Check the package and allow another attempt', $dashboard->messages[0]['message'] );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
@@ -1087,6 +1258,35 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary-token', $dashboard->messages[0]['message'] );
 	}
 
+	public function testDashboardExplainsRepositoryReleaseOwnerRefusal(): void {
+		$database       = new RepositorySourceGuardDatabase();
+		$database->rows = array(
+			(object) array(
+				'type'                   => '1',
+				'package'                => 'booster-fixture-plugin/booster-fixture-plugin.php',
+				'provider'               => 'gh',
+				'provider_repository_id' => '1315521150',
+				'source'                 => 'release_asset',
+			),
+		);
+		$guard          = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$coordinator    = new OperationCoordinator();
+		try {
+			$guard->assertAllowed( 'gh', '1315521150', 1, 'branch-fixture', PackageSource::BRANCH );
+			self::fail( 'A release-owned repository must refuse another package.' );
+		} catch ( \RuntimeException $failure ) {
+			$coordinator->failure = $failure;
+		}
+		$dashboard = $this->dashboard( $coordinator );
+
+		self::assertFalse( $dashboard->postPackageOperation( 'install-plugin', $this->input( 'install-plugin', array( 'subdirectory' => 'branch-fixture' ) ) ) );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'ran_booster_repository_source_conflict', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'This repository already supplies releases to booster-fixture-plugin/booster-fixture-plugin.php. Additional packages cannot use it.', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'switch that package to Branch', $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( 'ran_booster_manual_action_failed', $dashboard->messages[0]['message'] );
+	}
+
 	/** @param array<string, mixed> $overrides */
 	private function input( string $action, array $overrides = array() ): array {
 		$type = str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme';
@@ -1124,16 +1324,40 @@ final class PackageOperationServiceTest extends TestCase {
 		OperationPluginRepository $plugins,
 		OperationThemeRepository $themes,
 		OperationCoordinator $coordinator,
-		?OperationUpdaterLock $updaterLock = null
+		?OperationUpdaterLock $updaterLock = null,
+		?RepositorySourceGuardDatabase $sourceDatabase = null
 	): PackageOperationService {
 		$updaterLock ??= new OperationUpdaterLock();
+		if ( null === $sourceDatabase ) {
+			$sourceDatabase = new RepositorySourceGuardDatabase();
+			foreach ( array(
+				1 => $plugins->package,
+				2 => $themes->package,
+			) as $type => $package ) {
+				try {
+					$package->getRepository();
+				} catch ( \TypeError ) {
+					continue; // Installed-only fixtures do not yet represent a managed relationship.
+				}
+				if ( null !== $package->getProviderCode() && null !== $package->getProviderRepositoryId() ) {
+					$sourceDatabase->rows[] = (object) array(
+						'type'                   => $type,
+						'package'                => $package->getIdentifier(),
+						'provider'               => $package->getProviderCode(),
+						'provider_repository_id' => $package->getProviderRepositoryId(),
+						'source'                 => $package->getSource()->value,
+					);
+				}
+			}
+		}
 
 		return new PackageOperationService(
 			$plugins,
 			$themes,
 			$coordinator,
 			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), null, $updaterLock ),
-			$updaterLock
+			$updaterLock,
+			new RepositorySourceGuard( $sourceDatabase, $this->createStub( Database::class ) )
 		);
 	}
 
@@ -1249,7 +1473,7 @@ final class OperationPluginRepository extends PluginRepository {
 	public ?\Throwable $unlinkFailure                     = null;
 	public ?Plugin $freshAfterMutation                    = null;
 	public ?PackageMutationResult $adoptionResult         = null;
-	public function __construct( private Plugin $package ) {}
+	public function __construct( public Plugin $package ) {}
 	public function fromSlug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }
@@ -1296,7 +1520,7 @@ final class OperationThemeRepository extends ThemeRepository {
 	public ?string $unlinked                              = null;
 	public ?string $requestedSlug                         = null;
 	public ?Theme $freshAfterMutation                     = null;
-	public function __construct( private Theme $package ) {}
+	public function __construct( public Theme $package ) {}
 	public function fromSlug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }

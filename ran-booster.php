@@ -47,6 +47,8 @@ use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\Interaction\AdminInteractionFacade;
+use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
 use RAN\Booster\GitHub\GitHubProvider;
@@ -168,6 +170,15 @@ $ran_booster_core_development_notice->register();
 
 			$portability      = $ran_booster_container->make( PortabilityFacade::class );
 			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
+			add_action(
+				'plugins_loaded',
+				static function () use ( $ran_booster_container ): void {
+					// Provider release controls remain available even when native updater activation fails.
+					$ran_booster_container->make( ReleaseWorkflowControls::class )->register();
+					$ran_booster_container->make( ReleaseManagementControls::class )->register();
+				},
+				PHP_INT_MAX
+			);
 			if ( GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
 				GitHubProvider::registerLegacyAssistedHooksAddOnNotice();
 			} else {

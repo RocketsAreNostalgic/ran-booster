@@ -74,7 +74,7 @@ $renderCredentialCell = static function ( array $profile, string $column ) use (
 	</template>
 	<?php
 };
-$renderWebhookCell = static function ( array $profile, string $column ) use ( $provider, $deleteWebhookInteractionValues, $providerMutationFields ): void {
+$renderWebhookCell  = static function ( array $profile, string $column ) use ( $provider, $deleteWebhookInteractionValues, $providerMutationFields ): void {
 	if ( 'name' === $column ) {
 		?>
 		<strong><?php echo esc_html( $profile['label'] ); ?></strong>
@@ -115,19 +115,20 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 		<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>"><?php } ?><input type="hidden" name="ran_booster[action]" value="delete-webhook-profile"><input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="ran_booster[id]" value="<?php echo esc_attr( $profile['id'] ); ?>"><button type="submit" class="button button-delete" data-confirm="<?php echo esc_attr( $profile['delete_confirmation'] ); ?>"><?php esc_html_e( 'Delete', 'ran-booster' ); ?></button></form>
 	<?php
 };
+$isRepositoryDetail = 'overview' === $providerView && 'repositories' === $providerTask && '' !== $requestedRepositoryId;
 
 ?>
 
 <div id="ran-booster-provider-profile-region" data-ran-booster-admin-mutation-region="provider-profiles">
 <?php settings_errors(); ?>
-<section class="ran-booster-page-shell ran-booster-provider ran-booster-panel" aria-labelledby="ran-booster-provider-heading">
-	<?php if ( 'overview' === $providerView ) { ?>
+<section class="ran-booster-page-shell ran-booster-provider<?php echo $isRepositoryDetail ? ' ran-booster-repository-page' : ' ran-booster-panel'; ?>" aria-labelledby="ran-booster-provider-heading">
+	<?php if ( 'overview' === $providerView && ! $isRepositoryDetail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
 			<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Repository provider', 'ran-booster' ); ?></p>
 			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( $provider['label'] ); ?></h2>
-			<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Configure private repository access and optional Push-to-Deploy updates.', 'ran-booster' ); ?></p>
+			<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Manage repository access, integrations and the packages connected to this site.', 'ran-booster' ); ?></p>
 		</header>
-	<?php } else { ?>
+	<?php } elseif ( 'overview' !== $providerView ) { ?>
 		<a class="ran-booster-provider-management__back" href="<?php echo esc_url( $overviewUrl ); ?>">&larr; <?php echo esc_html( $providerBackLabel ); ?></a>
 		<header class="ran-booster-provider-management__header">
 			<div>
@@ -151,19 +152,48 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 		</header>
 	<?php } ?>
 
-	<?php if ( $storageUnavailable ) { ?>
+	<?php if ( $storageUnavailable && ! $isRepositoryDetail ) { ?>
 		<div class="notice notice-error inline ran-booster-provider__notice" data-ran-booster-provider-storage-notice>
 			<p><strong><?php esc_html_e( 'Encrypted credential storage is unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Restore the matching sidecar and site key from the same backup before changing credentials.', 'ran-booster' ); ?></p>
 		</div>
 	<?php } ?>
 
-	<?php if ( 'overview' === $providerView ) { ?>
+	<?php if ( $isRepositoryDetail ) { ?>
+		<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
+			<?php
+			$hasBranchConsumer = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
+			$repositoryDetailRenderer->render(
+				$selectedRepositoryRow,
+				$provider['label'],
+				$repositoryListUrl,
+				$activityUrl,
+				$webhookAssistanceSiteReady,
+				$webhookAssistanceSiteReady ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhookSiteReasons ),
+				$repositoryView,
+				$repositoryViewUrls,
+				$repositoryViewRequestUrls,
+				null !== $webhookManagement && $webhookManagement->hasManagementCapability( $provider['code'] )
+					? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): void {
+						$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
+						$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+					}
+					: null,
+				static function () use ( $selectedRepositoryRow, $providerReturnUrl, $repositoryViewUrls ): void {
+					$returnUrl = is_string( $repositoryViewUrls['releases'] ?? null ) ? $repositoryViewUrls['releases'] : $providerReturnUrl;
+					do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $returnUrl );
+				}
+			);
+			?>
+		<?php } else { ?>
+			<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
+			<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+		<?php } ?>
+	<?php } elseif ( 'overview' === $providerView ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
 		<section class="ran-booster-provider-section" aria-labelledby="ran-booster-access-tokens-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php echo esc_html( $provider['capabilities']['browse'] ? __( 'Saved credentials provide access to private repositories. Public repository discovery does not require one.', 'ran-booster' ) : __( 'Saved credentials provide access to private repositories entered manually.', 'ran-booster' ) ); ?></p>
-					<p class="ran-booster-section__description"><?php echo esc_html( $providerTrustDescription ); ?></p>
+					<p class="ran-booster-section__description"><?php echo esc_html( $provider['capabilities']['browse'] ? __( 'Saved credentials enable private repository access; public repository discovery does not require one.', 'ran-booster' ) : __( 'Saved credentials enable access to private repositories entered manually.', 'ran-booster' ) ); ?></p>
 				</header>
 			<div class="ran-booster-provider-section__body">
 				<?php
@@ -192,28 +222,13 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 			<?php require __DIR__ . '/provider-public-lookup-profile.php'; ?>
 		<?php } ?>
 
-		<?php if ( $providerHasWebhookSettings ) { ?>
-			<section id="ran-booster-webhook-secrets-heading" class="ran-booster-provider-section" aria-labelledby="ran-booster-push-to-deploy-heading">
+		<?php if ( $hasWebhookSettings ) { ?>
+			<section class="ran-booster-provider-section" aria-labelledby="ran-booster-webhook-secrets-heading">
 				<header class="ran-booster-provider-section__header">
-				<h3 id="ran-booster-push-to-deploy-heading" class="ran-booster-section__title"><?php esc_html_e( 'Push-to-Deploy', 'ran-booster' ); ?></h3>
-				<p class="ran-booster-section__description">
-						<?php
-						printf(
-							/* translators: %s is the repository provider name. */
-							esc_html__( '%s push webhooks can trigger managed branch deployments whose Updates setting is Automatic.', 'ran-booster' ),
-							esc_html( $provider['label'] )
-						);
-						?>
-					</p>
-					<p><?php esc_html_e( 'Booster verifies the webhook signature, matches the repository and branch, then queues only eligible managed packages.', 'ran-booster' ); ?></p>
+					<h3 id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title"><?php esc_html_e( 'Signing secrets', 'ran-booster' ); ?></h3>
+					<p class="ran-booster-section__description"><?php esc_html_e( 'Signing secrets verify repository webhook deliveries.', 'ran-booster' ); ?></p>
 				</header>
 				<div class="ran-booster-provider-section__body">
-					<?php if ( $webhookAssistanceProviderCapable && ! $webhookAssistanceSiteReady ) { ?>
-						<div class="notice <?php echo esc_attr( $webhookHasHardFailure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>
-							<p><strong><?php esc_html_e( 'Push-to-Deploy needs attention', 'ran-booster' ); ?></strong><br><?php echo esc_html( implode( ' ', $webhookSiteReasons ) ); ?></p>
-						</div>
-					<?php } ?>
-
 					<?php
 					$statusSummaryRenderer->render(
 						$webhookSummary['tone'],
@@ -223,16 +238,28 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 							if ( 0 === $webhookRowCount && $hasWebhookSettings ) {
 								?>
 								<button type="button" class="button ran-booster-open-credential-modal" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
-								<?php
+									<?php
 							} elseif ( ! $storageUnavailable ) {
 								?>
-								<a class="button" href="<?php echo esc_url( $secretsUrl ); ?>"><?php esc_html_e( 'Manage secrets', 'ran-booster' ); ?></a>
-								<?php
+								<a class="button" href="<?php echo esc_url( $secretsUrl ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
+									<?php
 							}
 						}
 					);
 			?>
+				</div>
+			</section>
+		<?php } ?>
 
+		<?php if ( $repositoryIntegrationAvailable ) { ?>
+			<section class="ran-booster-provider-section" aria-labelledby="ran-booster-repository-integrations-heading">
+				<header class="ran-booster-provider-section__header">
+					<h3 id="ran-booster-repository-integrations-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository integrations', 'ran-booster' ); ?></h3>
+				<p class="ran-booster-section__description">
+						<?php esc_html_e( 'Manage repositories, webhooks and release workflows.', 'ran-booster' ); ?>
+					</p>
+				</header>
+				<div class="ran-booster-provider-section__body">
 					<div
 						id="ran-booster-provider-tasks"
 						class="ran-booster-provider-tasks"
@@ -243,12 +270,12 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 						hx-history="false"
 						hx-sync="this:replace"
 					>
-						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Push-to-Deploy tasks', 'ran-booster' ); ?>" hx-boost="true">
+						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true">
 							<?php
 							foreach ( array(
 								'status'       => __( 'Status', 'ran-booster' ),
 								'repositories' => __( 'Repositories', 'ran-booster' ),
-								'setup'        => __( 'Webhook setup', 'ran-booster' ),
+								'setup'        => __( 'Webhook receiver', 'ran-booster' ),
 							) as $task => $label ) {
 								?>
 								<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $taskUrls[ $task ] ); ?>" hx-get="<?php echo esc_url( $taskRequestUrls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $providerTask === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a>
@@ -266,48 +293,69 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 							<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="status" aria-labelledby="ran-booster-provider-status-heading">
 							<div class="ran-booster-provider-task-panel__heading">
 								<div>
-									<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title"><?php esc_html_e( 'Readiness overview', 'ran-booster' ); ?></h4>
-									<p class="ran-booster-section__description"><?php esc_html_e( 'Resolve site-level blockers here; manage individual repositories in the Repositories view.', 'ran-booster' ); ?></p>
+									<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title"><?php esc_html_e( 'Status', 'ran-booster' ); ?></h4>
+									<p class="ran-booster-section__description"><?php esc_html_e( 'Local records only; no provider request is made.', 'ran-booster' ); ?></p>
 								</div>
 							</div>
-							<div class="ran-booster-readiness-overview">
-								<article>
-									<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Site URL', 'ran-booster' ); ?></p>
-									<strong><?php echo esc_html( $webhookAssistanceSiteReady ? __( 'Public delivery ready', 'ran-booster' ) : __( 'Public delivery unavailable', 'ran-booster' ) ); ?></strong>
-									<p><?php echo esc_html( $webhookAssistanceSiteReady ? __( 'The payload URL is structurally ready to receive provider deliveries.', 'ran-booster' ) : __( 'Review the blocking reason above before testing provider delivery.', 'ran-booster' ) ); ?></p>
-									<a href="<?php echo esc_url( $wordpressUrlsUrl ); ?>"><?php esc_html_e( 'Review WordPress URLs', 'ran-booster' ); ?></a>
-								</article>
-								<article>
-									<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Managed packages', 'ran-booster' ); ?></p>
-									<strong><?php echo esc_html( $automaticPackageLabel ); ?></strong>
-									<p><?php echo esc_html( $managedPackageDescription ); ?> <?php esc_html_e( 'Manual and Disabled packages ignore pushes.', 'ran-booster' ); ?></p>
-								<a class="button" href="<?php echo esc_url( $taskUrls['repositories'] ); ?>" hx-get="<?php echo esc_url( $taskRequestUrls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Review repositories', 'ran-booster' ); ?></a>
-							</article>
-						</div>
-						<div class="ran-booster-provider-next-step">
-								<div>
-									<strong><?php esc_html_e( 'Recommended next step', 'ran-booster' ); ?></strong>
-									<p><?php echo esc_html( $webhookAssistanceSiteReady ? __( 'Configure and verify one repository webhook, then enable Automatic deployment from package settings.', 'ran-booster' ) : __( 'Configure a public HTTPS site URL before testing delivery or enabling Automatic deployment.', 'ran-booster' ) ); ?></p>
+							<?php
+							$releasePackageCount    = (int) $repositoryIntegrationSummary['release_packages'];
+							$releaseRepositoryCount = (int) $repositoryIntegrationSummary['release_repositories'];
+							/* translators: %d is the number of packages using releases. */
+							$releasePackageCountLabel = sprintf( _n( '%d package', '%d packages', $releasePackageCount, 'ran-booster' ), $releasePackageCount );
+							/* translators: %d is the number of repositories supplying releases. */
+							$releaseRepositoryLabel  = sprintf( _n( '%d repository', '%d repositories', $releaseRepositoryCount, 'ran-booster' ), $releaseRepositoryCount );
+							$publishedReleaseSummary = true === ( $repositoryIntegrationSummary['release_totals_incomplete'] ?? false )
+								? sprintf(
+									/* translators: 1: lower-bound package count label, 2: repository count label. */
+									__( 'At least %1$s across %2$s · exact totals unavailable while a repository inventory is incomplete', 'ran-booster' ),
+									$releasePackageCountLabel,
+									$releaseRepositoryLabel
+								)
+								: ( true === ( $repositoryIntegrationSummary['release_workflows_inventory_incomplete'] ?? false )
+									? sprintf(
+										/* translators: 1: number of Published release packages, 2: number of repositories. */
+										__( '%1$d packages in %2$d repositories · workflow state unavailable while a repository inventory is incomplete', 'ran-booster' ),
+										$repositoryIntegrationSummary['release_packages'],
+										$repositoryIntegrationSummary['release_repositories']
+									)
+									: sprintf(
+										/* translators: 1: number of Published release packages, 2: number of repositories, 3: number of release workflows needing review. */
+										__( '%1$d packages in %2$d repositories · %3$d workflows need review', 'ran-booster' ),
+										$repositoryIntegrationSummary['release_packages'],
+										$repositoryIntegrationSummary['release_repositories'],
+										$repositoryIntegrationSummary['release_workflows_needing_review']
+									)
+								);
+							?>
+							<dl class="ran-booster-repository-integration-status">
+								<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhookAssistanceSiteReady ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for provider delivery', 'ran-booster' ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Signing profiles', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of locally ready signing profiles. */ _n( '%d ready locally', '%d ready locally', $readyWebhookProfileCount, 'ran-booster' ), $readyWebhookProfileCount ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Repository hooks', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: number of locally recorded hooks, 2: number of hook records needing review. */ __( '%1$d recorded locally · %2$d need review', 'ran-booster' ), $repositoryIntegrationSummary['recorded_hooks'], $repositoryIntegrationSummary['needs_review'] ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $publishedReleaseSummary ); ?></dd></div>
+							</dl>
+							<?php if ( ! $webhookAssistanceProviderCapable || ! $webhookAssistanceSiteReady ) { ?>
+								<div class="notice <?php echo esc_attr( $webhookHasHardFailure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>
+									<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( $webhookAssistanceProviderCapable ? implode( ' ', $webhookSiteReasons ) : sprintf( /* translators: %s is the repository provider name. */ __( '%s does not provide Booster with assisted webhook management. Repository inventory remains available.', 'ran-booster' ), $provider['label'] ) ); ?></p>
 								</div>
-							<a class="button button-primary" href="<?php echo esc_url( $taskUrls['setup'] ); ?>" hx-get="<?php echo esc_url( $taskRequestUrls['setup'] ); ?>" hx-boost="true"><?php esc_html_e( 'Review webhook setup', 'ran-booster' ); ?></a>
-						</div>
+							<?php } ?>
+							<div class="ran-booster-provider-task-actions">
+								<a class="button" href="<?php echo esc_url( $taskUrls['repositories'] ); ?>" hx-get="<?php echo esc_url( $taskRequestUrls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Review repositories', 'ran-booster' ); ?></a>
+								<a class="button" href="<?php echo esc_url( $wordpressUrlsUrl ); ?>"><?php esc_html_e( 'Review WordPress URLs', 'ran-booster' ); ?></a>
+								<a class="button" href="<?php echo esc_url( $activityUrl ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a>
+							</div>
 					</section>
 				<?php } elseif ( 'setup' === $providerTask ) { ?>
 					<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="setup" aria-labelledby="ran-booster-webhook-instructions-heading">
 							<div class="ran-booster-provider-task-panel__heading">
 								<div>
-									<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4>
-									<p class="ran-booster-section__description"><?php esc_html_e( 'Complete these steps for one repository, verify a real provider delivery, then enable Automatic deployment deliberately.', 'ran-booster' ); ?></p>
+									<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title"><?php esc_html_e( 'Webhook receiver', 'ran-booster' ); ?></h4>
+									<p class="ran-booster-section__description"><?php esc_html_e( 'This provider uses one shared receiver on this site. Configure and check each repository from Repositories.', 'ran-booster' ); ?></p>
 								</div>
 								<?php if ( null !== $webhookSetup ) { ?>
 									<a class="button" href="<?php echo esc_url( $webhookSetup['documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $providerInstructionsLabel ); ?></a>
 								<?php } ?>
 							</div>
-							<div class="ran-booster-webhook-steps">
-								<article><span>1</span><strong><?php esc_html_e( 'Choose a signing secret', 'ran-booster' ); ?></strong><p><?php echo esc_html( $secretChoiceDescription ); ?></p></article>
-								<article><span>2</span><strong><?php echo esc_html( $createProviderWebhookLabel ); ?></strong><p><?php esc_html_e( 'Paste the payload URL and shared secret, keep SSL verification enabled, and select the configured push event.', 'ran-booster' ); ?></p></article>
-								<article><span>3</span><strong><?php esc_html_e( 'Verify before enabling', 'ran-booster' ); ?></strong><p><?php esc_html_e( 'Send a real delivery, confirm a successful provider response, then enable Automatic from package settings.', 'ran-booster' ); ?></p></article>
-							</div>
+							<p><a class="button" href="<?php echo esc_url( $taskUrls['repositories'] ); ?>" hx-get="<?php echo esc_url( $taskRequestUrls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
 								<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare provider delivery history with the Provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhookOperationsUrl ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p></div>
 							<dl class="ran-booster-webhook-endpoint">
 								<div>
@@ -325,7 +373,7 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 									<summary><?php esc_html_e( 'Detailed manual setup and troubleshooting', 'ran-booster' ); ?></summary>
 									<div class="ran-booster-provider-disclosure__body">
 										<p><?php echo esc_html( $manualSetupDescription ); ?></p>
-										<ol><li><?php esc_html_e( 'Paste the payload URL and matching secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the provider records a successful response.', 'ran-booster' ); ?></li></ol>
+										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the provider records a successful response.', 'ran-booster' ); ?></li></ol>
 										<p><a href="<?php echo esc_url( $webhookSetup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?></a></p>
 									</div>
 								</details>
@@ -333,17 +381,44 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 				</section>
 				<?php } else { ?>
 					<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="repositories" aria-labelledby="ran-booster-managed-webhook-repositories-heading">
+						<?php if ( '' === $requestedRepositoryId ) { ?>
 						<div class="ran-booster-provider-task-panel__heading">
 							<div>
-								<h4 id="ran-booster-managed-webhook-repositories-heading" class="ran-booster-section__title"><?php echo esc_html( '' === $requestedRepositoryId ? __( 'Managed repositories', 'ran-booster' ) : __( 'Repository webhook', 'ran-booster' ) ); ?></h4>
+								<h4 id="ran-booster-managed-webhook-repositories-heading" class="ran-booster-section__title"><?php esc_html_e( 'Managed repositories', 'ran-booster' ); ?></h4>
 								<p class="ran-booster-section__description"><?php echo esc_html( $repositoryWebhookDescription ); ?></p>
 							</div>
 						</div>
+						<?php } ?>
 							<?php if ( '' !== $requestedRepositoryId ) { ?>
-								<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to managed repositories', 'ran-booster' ); ?></a></p>
 								<?php if ( is_array( $selectedRepositoryRow ) ) { ?>
-									<?php $repositoryTableRenderer->render( 'ran-booster-managed-webhook-repositories-heading', array( $selectedRepositoryRow ) ); ?>
+									<?php
+									$hasBranchConsumer = ! empty( $selectedRepositoryRow['has_branch_consumer'] );
+									$repositoryDetailRenderer->render(
+										$selectedRepositoryRow,
+										$provider['label'],
+										$repositoryListUrl,
+										$activityUrl,
+										$webhookAssistanceSiteReady,
+										$webhookAssistanceSiteReady ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhookSiteReasons ),
+										$repositoryView,
+										$repositoryViewUrls,
+										$repositoryViewRequestUrls,
+										null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
+										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): bool {
+											$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
+											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+
+											return true;
+										}
+											: null,
+										static function () use ( $selectedRepositoryRow, $providerReturnUrl, $repositoryViewUrls ): void {
+											$returnUrl = is_string( $repositoryViewUrls['releases'] ?? null ) ? $repositoryViewUrls['releases'] : $providerReturnUrl;
+											do_action( 'ran_booster_admin_repository_release_sections', $selectedRepositoryRow, $returnUrl );
+										}
+									);
+									?>
 								<?php } else { ?>
+									<p><a href="<?php echo esc_url( $repositoryListUrl ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
 									<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
 								<?php } ?>
 							<?php } elseif ( array() !== $repositoryTableRows ) { ?>
@@ -369,11 +444,6 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 							<?php } else { ?>
 								<p class="description"><?php esc_html_e( 'Managed repository status is temporarily unavailable.', 'ran-booster' ); ?></p>
 							<?php } ?>
-							<?php
-							if ( is_array( $selectedRepositoryRow ) && null !== $webhookManagement ) {
-								$webhookManagement->renderRepositoryPanel( $provider['code'], $requestedRepositoryId, $providerReturnUrl );
-							}
-							?>
 				</section>
 			<?php } ?>
 					</div>
@@ -402,14 +472,14 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 				<div><label class="screen-reader-text" for="ran-booster-credential-search"><?php esc_html_e( 'Search credentials', 'ran-booster' ); ?></label><input id="ran-booster-credential-search" type="search" name="s" value="<?php echo esc_attr( $providerListState['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search credentials…', 'ran-booster' ); ?>"><button class="button" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button></div>
 			</form>
 			<?php
-			$providerManagementTableRenderer->render(
-				\RAN\Admin\Component\ProviderManagementTableRenderer::ACCESS,
-				$credentialList['rows'],
-				__( 'No credentials match the current filters.', 'ran-booster' ),
-				$renderCredentialCell,
-				$credentialSortUrls,
-				$credentialPagination
-			);
+				$providerManagementTableRenderer->render(
+					\RAN\Admin\Component\ProviderManagementTableRenderer::ACCESS,
+					$credentialList['rows'],
+					__( 'No credentials match the current filters.', 'ran-booster' ),
+					$renderCredentialCell,
+					$credentialSortUrls,
+					$credentialPagination
+				);
 			?>
 		<?php } ?>
 	<?php } elseif ( 'secrets' === $providerView ) { ?>
@@ -433,7 +503,7 @@ $renderWebhookCell = static function ( array $profile, string $column ) use ( $p
 		<?php } ?>
 	<?php } ?>
 
-	<?php if ( $hasCredentialSettings || $providerHasWebhookSettings ) { ?>
+	<?php if ( ! $isRepositoryDetail && ( $hasCredentialSettings || $providerHasWebhookSettings ) ) { ?>
 		<footer class="ran-booster-provider__footer"><p class="description ran-booster-secrets-location"><?php esc_html_e( 'Saved credentials use Booster encrypted local storage outside the plugin directory and WordPress database. Deployment constants appear as immutable profiles and always take precedence.', 'ran-booster' ); ?></p></footer>
 	<?php } ?>
 </section>

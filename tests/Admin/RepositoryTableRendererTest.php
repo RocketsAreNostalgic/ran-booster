@@ -17,12 +17,14 @@ final class RepositoryTableRendererTest extends TestCase {
 				'provider_label'     => 'GitHub',
 				'repository'         => 'owner/<unsafe>',
 				'repository_url'     => 'https://github.com/owner/repository',
+				'detail_url'         => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=42',
 				'package_type_label' => 'Plugin',
 				'source_label'       => 'Branch',
 				'management_label'   => 'Disabled',
 				'management_detail'  => 'Owner secret',
 				'management_tone'    => 'ok',
 				'consequence'        => 'Push-to-Deploy disabled; pushes are ignored.',
+				'consequence_id'     => 'reason-id',
 				'types'              => array(
 					array(
 						'label' => 'Plugin',
@@ -80,26 +82,24 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'Plugin · Branch · 2 packages', $html );
 		self::assertStringContainsString( 'Disabled', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--ok">Owner secret</span>', $html );
-		self::assertStringContainsString( '<p>Push-to-Deploy disabled; pushes are ignored.</p>', $html );
-		self::assertStringContainsString( 'class="ran-booster-repository-record__status-links"', $html );
-		self::assertStringContainsString( 'href="https://example.test/secret">Set webhook secret</a>', $html );
+		self::assertStringContainsString( '<p id="reason-id">Push-to-Deploy disabled; pushes are ignored.</p>', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__policies', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__status-badges', $html );
-		self::assertStringContainsString( '2 packages use this repository', $html );
-		self::assertStringContainsString( '<code>first/plugin.php</code>', $html );
-		self::assertStringContainsString( 'disabled aria-disabled="true" aria-describedby="reason-id"', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
-		self::assertStringContainsString( '<span class="screen-reader-text">: first/plugin.php</span>', $html );
-		self::assertLessThan( strpos( $html, 'GitHub Hooks' ), strpos( $html, 'Manage webhook' ) );
-		self::assertLessThan( strpos( $html, 'Plugin settings' ), strpos( $html, 'GitHub Hooks' ) );
+		self::assertStringContainsString( 'Manage repository', $html );
+		self::assertStringContainsString( 'repository=42', html_entity_decode( $html ) );
+		self::assertSame( 1, substr_count( $html, 'class="button"' ) );
+		self::assertStringNotContainsString( 'Manage webhook', $html );
+		self::assertStringNotContainsString( 'Plugin settings', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
 
-	public function testItAddsOnlyStructuredOptionalDetails(): void {
+	public function testItRendersNormalizedHistoricalLinkEvidenceInline(): void {
 		$html = $this->render(
 			array(
 				'provider_label' => 'GitHub',
 				'repository'     => 'owner/repository',
+				'historical'     => true,
 				'details'        => array(
 					array(
 						'label' => 'Assisted hook status',
@@ -116,90 +116,30 @@ final class RepositoryTableRendererTest extends TestCase {
 						'datetime' => '',
 					),
 				),
-			)
-		);
-
-		self::assertSame( 1, substr_count( $html, 'class="ran-booster-repository-record__details"' ) );
-		self::assertStringContainsString( 'ran-booster-badge--warning">No assisted hook recorded</span>', $html );
-		self::assertStringContainsString( '<strong>Recorded hook profile</strong>', $html );
-		self::assertStringContainsString( '<span>Assisted hook not yet set</span>', $html );
-		self::assertStringContainsString( '<strong>Last checked</strong>', $html );
-		self::assertStringContainsString( '<span>Never</span>', $html );
-	}
-
-	public function testItRendersReleaseManagementAsInertWithoutHidingPackageSettings(): void {
-		$html = $this->render(
-			array(
-				'repository'         => 'owner/release-managed',
-				'repository_url'     => 'https://github.com/owner/release-managed',
-				'repository_id'      => 'release-42',
-				'package_type_label' => 'Theme',
-				'source_key'         => 'release_asset',
-				'source_label'       => 'Published release',
-				'management_label'   => 'Published release',
-				'management_detail'  => 'Push-to-Deploy unavailable',
-				'management_tone'    => 'info',
-				'consequence'        => 'Managed by Published releases. Switch to Branch in package settings to enable webhooks.',
-				'consequence_id'     => 'release-source-reason',
-				'package_references' => array( 'release-theme' ),
-				'actions'            => array(
+				'actions'        => array(
 					array(
-						'key'          => 'core:webhook-management',
-						'label'        => 'Manage webhook',
-						'disabled'     => true,
-						'described_by' => 'release-source-reason',
-					),
-					array(
-						'key'          => 'core:provider-webhooks',
-						'label'        => 'GitHub webhooks',
-						'disabled'     => true,
-						'described_by' => 'release-source-reason',
-					),
-					array(
-						'key'      => 'core:package-release',
-						'label'    => 'Theme settings',
-						'url'      => 'https://example.test/theme-settings',
-						'disabled' => false,
+						'key'           => 'github:open-repository',
+						'label'         => 'Open GitHub repository',
+						'type'          => 'link',
+						'url'           => 'https://github.com/owner/repository',
+						'hidden'        => array(),
+						'disabled'      => false,
+						'external'      => true,
+						'described_by'  => '',
+						'screen_reader' => 'owner/repository',
 					),
 				),
 			)
 		);
 
-		self::assertStringContainsString( 'ran-booster-repository-record--release', $html );
-		self::assertStringContainsString( 'Theme · Published release · 1 package', $html );
-		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--info">Push-to-Deploy unavailable</span>', $html );
-		self::assertStringContainsString( 'id="release-source-reason"', $html );
-		self::assertSame( 2, substr_count( $html, 'disabled aria-disabled="true" aria-describedby="release-source-reason"' ) );
-		self::assertStringContainsString( 'class="button" href="https://example.test/theme-settings"', $html );
-		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
-	}
-
-	public function testItConsolidatesMultiplePackageSettingsIntoOneControl(): void {
-		$html = $this->render(
-			array(
-				'repository'         => 'owner/shared',
-				'package_references' => array( 'plugin/one.php', 'plugin/two.php' ),
-				'actions'            => array(
-					array(
-						'key'      => 'core:package-one',
-						'label'    => 'Plugin settings',
-						'url'      => 'https://example.test/settings-one',
-						'disabled' => false,
-					),
-					array(
-						'key'      => 'core:package-two',
-						'label'    => 'Plugin settings',
-						'url'      => 'https://example.test/settings-two',
-						'disabled' => false,
-					),
-				),
-			)
-		);
-
-		self::assertStringContainsString( 'class="ran-booster-repository-record__settings-menu"', $html );
-		self::assertStringContainsString( '<summary class="button">Package settings</summary>', $html );
-		self::assertStringContainsString( 'href="https://example.test/settings-one"', $html );
-		self::assertStringContainsString( 'href="https://example.test/settings-two"', $html );
+		self::assertStringContainsString( 'ran-booster-repository-record__details', $html );
+		self::assertStringContainsString( 'Assisted hook status', $html );
+		self::assertStringContainsString( 'No assisted hook recorded', $html );
+		self::assertStringContainsString( 'Open GitHub repository', $html );
+		self::assertStringNotContainsString( '<form ', $html );
+		self::assertStringNotContainsString( 'Review record', $html );
+		self::assertStringNotContainsString( 'panel=activity', html_entity_decode( $html ) );
+		self::assertStringNotContainsString( 'Manage repository', $html );
 	}
 
 	/** @param array<string, mixed> $row */

@@ -8,6 +8,10 @@ function __( string $text, string $domain = 'default' ): string {
 	return \RAN\Admin\ReleaseManagement\__( $text, $domain );
 }
 
+function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
+	return 1 === $number ? $single : $plural;
+}
+
 function esc_html( mixed $value ): string {
 	return \RAN\Admin\ReleaseManagement\esc_html( $value );
 }
@@ -26,6 +30,10 @@ function esc_html__( string $text, string $domain = 'default' ): string {
 
 function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
 	return \RAN\Admin\ReleaseManagement\add_action( $hook, $callback, $priority, $acceptedArgs );
+}
+
+function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+	return \RAN\Admin\ReleaseManagement\add_filter( $hook, $callback, $priority, $acceptedArgs );
 }
 
 function wp_json_encode( mixed $value ): string|false {
@@ -72,6 +80,18 @@ function sanitize_text_field( mixed $value ): string {
 
 function admin_url( string $path = '' ): string {
 	return \RAN\Admin\ReleaseManagement\admin_url( $path );
+}
+
+function wp_make_link_relative( string $link ): string {
+	return \RAN\Admin\ReleaseManagement\wp_make_link_relative( $link );
+}
+
+function network_admin_url( string $path = '' ): string {
+	return \RAN\Admin\ReleaseManagement\network_admin_url( $path );
+}
+
+function is_multisite(): bool {
+	return \RAN\Admin\ReleaseManagement\is_multisite();
 }
 
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {

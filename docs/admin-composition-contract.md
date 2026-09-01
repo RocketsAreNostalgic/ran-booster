@@ -292,17 +292,50 @@ Core owns and renders the provider repository table. Its internal webhook
 controls enrich rows and render the selected-repository panel only when the
 selected provider resolves both `RepositoryWebhookFitness` and
 `RepositoryWebhookManagement`, plus `WebhookNormalizer`, to the same registered
-aggregate. Core validates
-the resulting rows, preserves the fixed `core:webhook-management` action, and
-permits only bounded historical records from its own schema. There is no public
-row or panel composition hook, renderer callback or provider-supplied field
-schema.
+aggregate. Core validates the resulting rows and preserves the fixed
+`core:webhook-management` action. Providers and administration add-ons may
+extend those normalized rows through one structured filter:
 
-Missing, partial or incompatible webhook facets create no action, panel,
-documentation section, asset or mutation authority. A complete non-GitHub
-provider receives the same fixed Core placement; its bounded metadata supplies
-the provider code and label, while its facet implementation owns remote calls,
-credentials and provider-specific remediation.
+```php
+$rows = apply_filters(
+	'ran_booster_provider_repository_rows',
+	$rows,
+	$providerCode,
+	$branchProjections,
+	$returnUrl
+);
+```
+
+Callbacks return the incoming keyed row list. Existing rows and Core-owned
+fields are immutable. A callback may append bounded `details` and namespaced
+structured `actions`; it must preserve the existing detail prefix and every
+Core action. Only `core:webhook-management` may change its `url`, `disabled`
+and `described_by` state. The branch projection map is keyed like the current
+rows and contains only bounded local repository, package-policy, endpoint,
+eligibility, reason-code and secret-coverage facts. `$returnUrl` is the
+canonical selected-repository or repository-list destination.
+
+New rows are review-only history. Their key must be namespaced, `historical`
+must be `true`, and `provider_code` must match the selected provider. They
+cannot claim `core:webhook-management`; Core removes their detail and review
+URLs, then renders bounded evidence and actions inline. A row may contain at most 20 details. Detail keys
+and labels are limited to 96 characters, values to 255, and optional date and
+state values to 64; tones use the fixed Core set and `recorded` is Boolean.
+Historical actions are link-only. Other historical fields
+are normalized through the same bounded row schema before rendering.
+
+Core contains a throwing callback, a non-array result or any invalid rewrite.
+It logs the extension failure and renders the already normalized Core and
+webhook rows. The filter supplies no provider HTML or selected-repository panel
+callback.
+
+Absent webhook assistance omits its optional setup controls. Claimed but partial
+or incompatible facets retain the stable disabled component and a configuration
+notice, without operation authority. A complete non-GitHub provider receives the
+same fixed Core placement; its bounded metadata supplies the provider code and
+label, while its facet implementation owns remote calls, credentials and
+provider-specific remediation. Branch deployment and manual guidance do not
+depend on the optional helper.
 
 ## Package screen anatomy
 
@@ -340,6 +373,7 @@ $package->displayName();
 $package->providerCode();
 $package->source();           // "branch" or "release_asset".
 $package->sourceRevision();
+$package->subdirectory();     // Repository subdirectory, or "" for the root; at most 255 characters.
 $package->deploymentPolicy(); // "disabled", "manual" or "automatic".
 $package->settingsUrl();
 ```
@@ -422,6 +456,47 @@ subdirectory, release track and exact candidate selection. Add-ons may filter
 `ran_booster_admin_package_advanced_source_summary` with the same mode, type,
 selected source and projection arguments, but must return one bounded
 plain-text summary.
+
+Add-ons may filter the structured advanced-source summary projection:
+
+```php
+apply_filters(
+	'ran_booster_admin_package_advanced_source_summary_projection',
+	array(
+		'heading' => __( 'Published releases', 'ran-booster' ),
+		'badges'  => array(
+			array( 'label' => __( 'Stable', 'ran-booster' ) ),
+		),
+		'status'  => __( 'Active', 'ran-booster' ),
+	),
+	$mode,
+	$type,
+	$selectedSource,
+	$projection // ?\RAN\Admin\AdminPackageProjection
+);
+```
+
+The baseline has a heading, a list of badge arrays with a `label`, and a
+status. Core trims and strips tags. A heading is required and must be plain
+text, non-empty and no more than 80 characters. Core keeps at most three
+plain-text badge labels of no more than 255 characters each, and a plain-text
+status of no more than 40 characters. An invalid or throwing projection falls
+back to the Core baseline; invalid badge labels and status values are dropped.
+
+Repository-scoped release workflow management belongs on the selected repository
+page. Core composes `ReleaseWorkflowControls` directly with the repository
+renderer; there is no provider HTML action or competing provider-rendered shell.
+The optional `RepositoryReleaseWorkflowManagement` capability supplies bounded
+immutable status, preview and result values. Core keeps the heading, setup-status
+line, credential selector, labels and help links stable, varying only values,
+notices and enabled states. Rendering uses local evidence only.
+
+Core validates the exact provider, repository, package and source revision before
+each fixed operation. Package settings retain source, track, candidate selection,
+installation and update-policy controls. Repository history uses normalized
+`webhook` and `release_workflow` categories, not provider key prefixes or English
+headings; only exact current summary projections contribute to review counts.
+See the [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
 ## Structured administration actions
 

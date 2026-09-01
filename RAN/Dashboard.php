@@ -19,9 +19,11 @@ use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
+use RAN\Admin\Component\RepositoryDetailRenderer;
 use RAN\Admin\Component\RepositoryTableRenderer;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
@@ -68,6 +70,7 @@ class Dashboard {
 	private ?AdminTabRegistry $adminTabs;
 	private ?AdminAddOnRegistry $adminAddOns;
 	private ?RepositoryWebhookManagementControls $webhookManagement;
+	private ?ReleaseWorkflowControls $releaseWorkflow;
 	private ?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice;
 
 	private ?ProviderDocumentationPresenter $providerDocumentation;
@@ -109,7 +112,8 @@ class Dashboard {
 		?SecretsStorageProvisioner $secretsStorage = null,
 		?AdminAddOnRegistry $adminAddOns = null,
 		?RepositoryWebhookManagementControls $webhookManagement = null,
-		?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice = null
+		?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice = null,
+		?ReleaseWorkflowControls $releaseWorkflow = null
 	) {
 		$this->db                    = $db;
 		$this->plugins               = $plugins;
@@ -131,6 +135,7 @@ class Dashboard {
 		$this->secretsStorage        = $secretsStorage;
 		$this->adminAddOns           = $adminAddOns;
 		$this->webhookManagement     = $webhookManagement;
+		$this->releaseWorkflow       = $releaseWorkflow;
 
 		$this->coreSelfUpdateDevelopmentNotice = $coreSelfUpdateDevelopmentNotice;
 	}
@@ -210,14 +215,17 @@ class Dashboard {
 			);
 			$data['providerView']      = $this->requestedProviderView();
 			$data['providerTask']      = $this->requestedProviderTask();
+			$data['repositoryView']    = $this->requestedProviderRepositoryView();
 			$data['providerListState'] = $this->requestedProviderListState();
 
 			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
-			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement ) );
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement, $this->releaseWorkflow ) );
 			$data                                    = array_merge( $data, $this->providerSettings->buildProfileListProjection( $data ) );
 			$data['webhookManagement']               = $this->webhookManagement;
+			$data['releaseWorkflow']                 = $this->releaseWorkflow;
 			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
 			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
+			$data['repositoryDetailRenderer']        = new RepositoryDetailRenderer();
 			$data['repositoryTableRenderer']         = new RepositoryTableRenderer();
 		} elseif ( null !== $selectedTab && 'portability' === $selectedTab->getKey() ) {
 			try {
@@ -451,19 +459,26 @@ class Dashboard {
 		if ( isset( $_GET['package'] ) ) {
 			try {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package selection.
-				$identifier = sanitize_text_field( wp_unslash( $_GET['package'] ) );
-				$package    = 'plugin' === $type
+				$identifier                                = sanitize_text_field( wp_unslash( $_GET['package'] ) );
+				$package                                   = 'plugin' === $type
 					? $this->plugins->boosterPluginFromFile( $identifier )
 					: $this->themes->boosterThemeFromStylesheet( $identifier );
+				$repositoryBranchCheckOutcome              = $this->requestedPackageRepositoryBranchCheck( $package, $type );
+				$repositoryBranchCheckEvidence             = null === $repositoryBranchCheckOutcome
+					? $this->providerSettings->packageRepositoryBranchEvidence( $type, $package )
+					: null;
+				$editData                                  = $packageView->edit(
+					$package,
+					$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
+					$this->providerSettings->buildPackageBranchReadiness( $package ),
+					$this->requestedPackageSourceView(),
+					$this->requestedAdvancedSettingsOpen()
+				);
+				$editData['repositoryBranchCheckOutcome']  = $repositoryBranchCheckOutcome;
+				$editData['repositoryBranchCheckEvidence'] = $repositoryBranchCheckEvidence;
 				return $this->render(
 					'packages/edit',
-					$packageView->edit(
-						$package,
-						$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
-						$this->providerSettings->buildPackageBranchReadiness( $package ),
-						$this->providerSettings->buildPackageWebhookRetention( $package ),
-						$this->requestedPackageSourceView()
-					)
+					$editData
 				);
 			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
 			} catch ( PluginNotFound | ThemeNotFound $missing ) {
@@ -482,6 +497,56 @@ class Dashboard {
 		}
 
 		return $this->render( 'packages/index', $this->packageIndexData( $packages, $packageView ) );
+	}
+
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
+	private function requestedPackageRepositoryBranchCheck( Package $package, string $type ): ?string {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This boundary verifies the action-specific nonce below.
+		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
+			|| '1' !== (string) $_GET['ran_booster_repository_branch_check']
+			|| ! current_user_can( 'manage_options' )
+			|| ! isset( $_GET['_ran_booster_repository_branch_nonce'] )
+			|| ! is_string( $_GET['_ran_booster_repository_branch_nonce'] )
+		) {
+			return null;
+		}
+		$action = PackageAdminController::repositoryBranchCheckAction( $package, $type );
+		$nonce  = wp_unslash( $_GET['_ran_booster_repository_branch_nonce'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		if ( ! wp_verify_nonce( $nonce, $action ) ) {
+			return null;
+		}
+		$marker = 'ran_booster_branch_check_' . hash(
+			'sha256',
+			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0"
+			. $this->providerSettings->packageRepositoryBranchCheckAccessFingerprint( $package )
+		);
+		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
+			$completed = get_transient( $marker );
+			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
+				if ( 'verified' !== $completed || null !== $this->providerSettings->packageRepositoryBranchEvidence( $type, $package ) ) {
+					return $completed;
+				}
+			}
+		}
+
+		$outcome = $this->providerSettings->checkPackageRepositoryBranch( $type, $package );
+		if ( function_exists( __NAMESPACE__ . '\\set_transient' ) || function_exists( 'set_transient' ) ) {
+			set_transient( $marker, $outcome, 3600 );
+		}
+		BoosterLogger::log(
+			'repository branch check completed',
+			array(
+				'event'        => 'repository_branch_checked',
+				'operation'    => 'repository_branch_check',
+				'outcome_code' => $outcome,
+				'package_slug' => (string) $package->getSlug(),
+				'provider'     => (string) $package->getProviderCode(),
+				'source'       => $package->getSource()->value,
+				'step'         => 'package_branch_check',
+			)
+		);
+		return $outcome;
 	}
 
 	/**
@@ -555,6 +620,16 @@ class Dashboard {
 		return in_array( $value, array( 'branch', 'release_asset' ), true ) ? $value : '';
 	}
 
+	private function requestedAdvancedSettingsOpen(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
+		$value = isset( $_GET['ran_booster_open_advanced'] ) && is_string( $_GET['ran_booster_open_advanced'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
+			? sanitize_key( wp_unslash( $_GET['ran_booster_open_advanced'] ) )
+			: '';
+
+		return '1' === $value || '' !== $this->requestedPackageSourceView();
+	}
+
 	private function renderPackageCreate( PackagePagePresenter $packageView ): mixed {
 		try {
 			$this->db->requireReady();
@@ -570,7 +645,8 @@ class Dashboard {
 				$this->hasRequestedProvider(),
 				$this->requestedOpenPicker(),
 				$this->requestedPackageSourceView(),
-				in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null
+				in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null,
+				$this->requestedAdvancedSettingsOpen()
 			)
 		);
 	}
@@ -773,6 +849,16 @@ class Dashboard {
 			: '';
 
 		return in_array( $task, array( 'repositories', 'setup' ), true ) ? $task : 'status';
+	}
+
+	private function requestedProviderRepositoryView(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
+		$view = isset( $_GET['repository_view'] ) && is_string( $_GET['repository_view'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
+			? sanitize_key( wp_unslash( $_GET['repository_view'] ) )
+			: '';
+
+		return in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? $view : 'status';
 	}
 
 	private function requestedProviderRepositoryId(): string {

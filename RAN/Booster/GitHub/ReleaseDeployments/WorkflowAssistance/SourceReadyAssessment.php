@@ -10,6 +10,7 @@ use InvalidArgumentException;
 final readonly class SourceReadyAssessment {
 	private const REFUSALS = array(
 		'package_ambiguous',
+		'managed_profile_modified',
 		'prettier_contract_custom',
 		'release_automation_conflict',
 		'release_path_conflict',

@@ -23,6 +23,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
 use RAN\Deployment\DeploymentArchivePreflight;
 use RAN\Deployment\DeploymentArchiveLimitFailure;
+use RAN\Deployment\DeploymentCheckFailure;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
@@ -54,6 +55,8 @@ use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
+use RAN\Storage\Database;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\WordPress\CorePackageExecutionFailure;
@@ -63,6 +66,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use ReflectionMethod;
 use Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use Tests\Support\RepositorySourceGuardDatabase;
 
 final class DeploymentCoordinatorTest extends TestCase {
 
@@ -76,9 +80,12 @@ final class DeploymentCoordinatorTest extends TestCase {
 	private CoordinatorExecutor $executor;
 	private CoordinatorFailureEmail $failureEmail;
 	private DeploymentCoordinator $coordinator;
+	private RepositorySourceGuardDatabase $sourceDatabase;
 	private int $randomByte = 1;
 	/** @var list<string> */
 	private array $artifacts = array();
+	/** @var list<string> */
+	private array $directories = array();
 
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_worker_doing_cron']                = true;
@@ -86,9 +93,9 @@ final class DeploymentCoordinatorTest extends TestCase {
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
 		WordPressWorkerWakeupCron::reset();
-		$this->database     = new AttemptRepositoryDatabase();
-		$GLOBALS['wpdb']    = $this->database;
-		$this->attempts     = new DeploymentAttemptRepository(
+		$this->database       = new AttemptRepositoryDatabase();
+		$GLOBALS['wpdb']      = $this->database;
+		$this->attempts       = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
@@ -96,14 +103,15 @@ final class DeploymentCoordinatorTest extends TestCase {
 				return str_repeat( chr( $this->randomByte++ ), $length );
 			}
 		);
-		$this->plugins      = new CoordinatorPluginRepository();
-		$this->themes       = new CoordinatorThemeRepository();
-		$this->provider     = new CoordinatorProvider();
-		$this->providers    = new ProviderRegistry( array( $this->provider ) );
-		$this->preflight    = new CoordinatorPreflight();
-		$this->executor     = new CoordinatorExecutor();
-		$this->failureEmail = new CoordinatorFailureEmail();
-		$this->coordinator  = new DeploymentCoordinator(
+		$this->plugins        = new CoordinatorPluginRepository();
+		$this->themes         = new CoordinatorThemeRepository();
+		$this->provider       = new CoordinatorProvider();
+		$this->providers      = new ProviderRegistry( array( $this->provider ) );
+		$this->preflight      = new CoordinatorPreflight();
+		$this->executor       = new CoordinatorExecutor();
+		$this->failureEmail   = new CoordinatorFailureEmail();
+		$this->sourceDatabase = new RepositorySourceGuardDatabase();
+		$this->coordinator    = new DeploymentCoordinator(
 			$this->attempts,
 			$this->plugins,
 			$this->themes,
@@ -113,7 +121,8 @@ final class DeploymentCoordinatorTest extends TestCase {
 			new WordPressWorkerWakeup( $this->attempts ),
 			sys_get_temp_dir() . '/ran-booster-coordinator-maintenance',
 			new WordPressUpdaterLock(),
-			$this->failureEmail
+			$this->failureEmail,
+			new RepositorySourceGuard( $this->sourceDatabase, $this->createStub( Database::class ) )
 		);
 	}
 
@@ -121,6 +130,11 @@ final class DeploymentCoordinatorTest extends TestCase {
 		foreach ( $this->artifacts as $path ) {
 			if ( file_exists( $path ) || is_link( $path ) ) {
 				unlink( $path );
+			}
+		}
+		foreach ( $this->directories as $path ) {
+			if ( is_dir( $path ) ) {
+				rmdir( $path );
 			}
 		}
 		unset( $GLOBALS['wpdb'], $GLOBALS['ran_booster_worker_doing_cron'], $GLOBALS['ran_booster_storage_test_options'], $GLOBALS['ran_booster_package_mutation_guard_multisite'], $GLOBALS['ran_booster_package_mutation_guard_file_mods'], $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
@@ -215,6 +229,51 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertSame( array(), $this->failureEmail->attempts );
 	}
 
+	public function testManualCheckFailurePersistsItsSpecificCodeWithoutMutation(): void {
+		$GLOBALS['ran_booster_worker_doing_cron'] = false;
+		$package                                  = $this->plugin();
+		$this->plugins->managed                   = array( $package );
+		$this->plugins->byIdentifier              = $package;
+		$this->preflight->failure                 = new DeploymentCheckFailure( DeploymentOutcome::CODE_PACKAGE_VERSION_MISSING, 'The deployment package does not contain a Version header.' );
+
+		$result = $this->coordinator->executeManual( $this->updateCommand() );
+
+		self::assertSame( DeploymentOutcome::CODE_PACKAGE_VERSION_MISSING, $result['outcome_code'] );
+		self::assertSame( DeploymentOutcome::CODE_PACKAGE_VERSION_MISSING, $this->database->rows[0]['outcome_code'] );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 0, $this->executor->calls );
+	}
+
+	public function testUnknownPreflightFailureDoesNotPersistItsMessage(): void {
+		$GLOBALS['ran_booster_worker_doing_cron'] = false;
+		$package                                  = $this->plugin();
+		$this->plugins->managed                   = array( $package );
+		$this->plugins->byIdentifier              = $package;
+		$this->preflight->failure                 = new RuntimeException( 'secret-canary' );
+
+		$result = $this->coordinator->executeManual( $this->updateCommand() );
+
+		self::assertSame( DeploymentOutcome::CODE_PREFLIGHT_FAILED, $result['outcome_code'] );
+		self::assertStringNotContainsString( 'secret-canary', json_encode( $this->database->rows, JSON_THROW_ON_ERROR ) );
+	}
+
+	public function testArtifactCleanupFailureAfterMutationRemainsInterrupted(): void {
+		$GLOBALS['ran_booster_worker_doing_cron'] = false;
+		$package                                  = $this->plugin();
+		$this->plugins->managed                   = array( $package );
+		$this->plugins->byIdentifier              = $package;
+		$this->plugins->installed                 = $package;
+		$this->preflight->artifact                = $this->artifact( '1.0.0' );
+		$this->executor->afterExecution           = function (): void {
+			unlink( $this->preflight->artifact?->getPath() ?? '' );
+		};
+
+		$result = $this->coordinator->executeManual( $this->updateCommand() );
+
+		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $result['outcome_code'] );
+		self::assertSame( DeploymentState::NEEDS_ATTENTION->value, $this->database->rows[0]['state'] );
+	}
+
 	/** @return iterable<string, array{DeploymentArchiveLimitFailure,string}> */
 	public static function archiveLimitFailures(): iterable {
 		yield 'compressed' => array( DeploymentArchiveLimitFailure::compressed(), DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE );
@@ -273,6 +332,42 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertSame( array(), WordPressWorkerWakeupCron::$events );
 	}
 
+	public function testReleaseOwnerRefusesNewBranchInstallBeforeProviderAndFilesystemWork(): void {
+		$this->sourceDatabase->rows[] = (object) array(
+			'type'                   => '2',
+			'package'                => 'release-theme',
+			'source'                 => 'release_asset',
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_install_plugin',
+		);
+		try {
+			$this->coordinator->executeManual( $this->installCommand( 'plugin', 'new-branch' ) );
+			self::fail( 'A Release owner must refuse a new Branch relationship.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertStringContainsString( 'release-theme', $failure->getMessage() );
+			self::assertSame( 0, $this->provider->prepareCalls );
+			self::assertSame( 0, $this->executor->calls );
+			self::assertSame( array(), $this->database->rows );
+		}
+	}
+
+	public function testReleaseOwnerAppearingDuringPreflightRefusesBranchFilesystemMutation(): void {
+		$this->preflight->artifact     = $this->artifact( '1.0.0' );
+		$this->preflight->beforeReturn = function (): void {
+			$this->sourceDatabase->rows[] = (object) array(
+				'type'                   => '2',
+				'package'                => 'release-theme',
+				'source'                 => 'release_asset',
+				'provider'               => 'gh',
+				'provider_repository_id' => 'R_install_plugin',
+			);
+		};
+		$result                        = $this->coordinator->executeManual( $this->installCommand( 'plugin', 'new-branch' ) );
+		self::assertSame( DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT, $result['outcome_code'] );
+		self::assertSame( 0, $this->executor->calls );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->database->optionRows );
+	}
+
 	public function testManualPluginInstallRunsTheFullSynchronousCoordinatorPath(): void {
 		$GLOBALS['ran_booster_worker_doing_cron'] = false;
 		$slug                                     = 'ran-booster-install-fixture-plugin';
@@ -304,6 +399,145 @@ final class DeploymentCoordinatorTest extends TestCase {
 
 		self::assertSame( 'succeeded', $result['status'] );
 		self::assertSame( DeploymentPolicy::DISABLED, $this->plugins->installed->getDeploymentPolicy() );
+		self::assertSame( 1, $this->plugins->stores );
+	}
+
+	public function testInstallWithAnExistingManagedTargetIsADurableAlreadyManagedOutcomeAfterFinalLockRevalidation(): void {
+		$slug = 'ran-booster-existing-managed-install-fixture';
+		$this->createPluginDestination( $slug );
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'different-branch', true, 'different-credential' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$this->plugins->byIdentifier->setSource( PackageSource::RELEASE_ASSET, 9 );
+		$this->preflight->artifact = $this->artifact( '2.0.0' );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'succeeded', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_ALREADY_MANAGED, $result['outcome_code'] );
+		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
+		self::assertSame( 1, $this->provider->prepareCalls );
+		self::assertSame( 1, $this->preflight->calls );
+		self::assertSame( 0, $this->executor->calls );
+		self::assertSame( 0, $this->plugins->stores );
+	}
+
+	public function testInstallRechecksAnExistingManagedTargetAfterConcurrentRemovalTakesTheUpdaterLock(): void {
+		$slug = 'ran-booster-removal-race-install-fixture';
+		$path = WP_PLUGIN_DIR . '/' . $slug;
+		$this->createPluginDestination( $slug );
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::MANUAL );
+		$this->preflight->artifact         = $this->artifact( '2.0.0' );
+		$this->coordinator                 = new LockHookDeploymentCoordinator(
+			$this->attempts,
+			$this->plugins,
+			$this->themes,
+			$this->providers,
+			$this->preflight,
+			$this->executor,
+			new WordPressWorkerWakeup( $this->attempts ),
+			sys_get_temp_dir() . '/ran-booster-coordinator-maintenance',
+			new WordPressUpdaterLock(),
+			$this->failureEmail,
+			new RepositorySourceGuard( $this->sourceDatabase, $this->createStub( Database::class ) )
+		);
+		$this->coordinator->beforeCoreLock = function () use ( $path ): void {
+			$this->plugins->byIdentifier = null;
+			rmdir( $path );
+		};
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'succeeded', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $result['outcome_code'] );
+		self::assertSame( 1, $this->provider->prepareCalls );
+		self::assertSame( 1, $this->preflight->calls );
+		self::assertSame( 1, $this->executor->calls );
+		self::assertSame( 1, $this->plugins->stores );
+	}
+
+	public function testInstallWithAnExistingMismatchedManagedTargetStaysPolicyBlocked(): void {
+		$slug = 'ran-booster-existing-mismatched-install-fixture';
+		$this->createPluginDestination( $slug );
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/other', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_DESTINATION_EXISTS, $result['outcome_code'] );
+		self::assertSame( DeploymentState::FAILED->value, $this->database->rows[0]['state'] );
+		self::assertSame( 0, $this->provider->prepareCalls );
+		self::assertSame( 0, $this->preflight->calls );
+		self::assertSame( 0, $this->executor->calls );
+		self::assertSame( 0, $this->plugins->stores );
+	}
+
+	public function testInstallTreatsAnExactExistingManagementConflictAsVerifiedSuccess(): void {
+		$slug                        = 'ran-booster-reconcile-fixture';
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::MANUAL );
+		$this->plugins->byIdentifier->setSource( PackageSource::BRANCH, 9 );
+		$this->plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$this->preflight->artifact     = $this->artifact( '2.0.0' );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'succeeded', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $result['outcome_code'] );
+		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
+		self::assertSame( 1, $this->plugins->stores );
+	}
+
+	public function testInstallKeepsAnExistingManagementConflictWithDifferentAccessOrPolicyAsPersistenceUncertain(): void {
+		$slug                        = 'ran-booster-reconcile-access-fixture';
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/install-plugin', 'R_install_plugin', 'main', true, 'other-credential' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$this->plugins->byIdentifier->setSource( PackageSource::BRANCH, 9 );
+		$this->plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$this->preflight->artifact     = $this->artifact( '2.0.0' );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_PERSISTENCE_UNCERTAIN, $result['outcome_code'] );
+	}
+
+	public function testInstallKeepsAMismatchedExistingManagementConflictAsPersistenceUncertain(): void {
+		$slug                        = 'ran-booster-reconcile-mismatch-fixture';
+		$this->plugins->installed    = $this->plugin( '2.0.0', 'owner/install-plugin', $slug );
+		$this->plugins->byIdentifier = $this->plugin( '2.0.0', 'owner/other', $slug );
+		$this->plugins->byIdentifier->setRepository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
+		$this->plugins->byIdentifier->setDeploymentPolicy( DeploymentPolicy::MANUAL );
+		$this->plugins->adoptionResult = PackageMutationResult::conflict(
+			PackageStorageOperation::INSERT,
+			'ran_booster_storage_adoption_conflict',
+			'Booster found existing package management data. No package changes were made.'
+		);
+		$this->preflight->artifact     = $this->artifact( '2.0.0' );
+
+		$result = $this->coordinator->executeManual( $this->installCommand( 'plugin', $slug ) );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( DeploymentOutcome::CODE_PERSISTENCE_UNCERTAIN, $result['outcome_code'] );
+		self::assertSame( DeploymentState::NEEDS_ATTENTION->value, $this->database->rows[0]['state'] );
 		self::assertSame( 1, $this->plugins->stores );
 	}
 
@@ -471,6 +705,36 @@ final class DeploymentCoordinatorTest extends TestCase {
 		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
 	}
 
+	public function testProviderTransientFailureDuringHeadVerificationMapsToProviderUnavailableWithoutMutation(): void {
+		$attempt                      = $this->claimedUpdate();
+		$this->preflight->artifact    = $this->artifact( '2.0.0' );
+		$this->provider->beforeVerify = static function (): void {
+			throw new RuntimeException( 'transient failure', 503 );
+		};
+
+		$outcome = $this->coordinator->executeClaimed( $attempt );
+
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $outcome->getCode() );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 0, $this->executor->calls );
+	}
+
+	public function testArtifactIntegrityFailureBeforeMutationMapsToArchiveIntegrityFailedWithoutMutation(): void {
+		$attempt                       = $this->claimedUpdate();
+		$artifact                      = $this->artifact( '2.0.0' );
+		$this->preflight->artifact     = $artifact;
+		$this->preflight->beforeReturn = static function () use ( $artifact ): void {
+			$cleaned = new \ReflectionProperty( $artifact, 'cleaned' );
+			$cleaned->setValue( $artifact, true );
+		};
+
+		$outcome = $this->coordinator->executeClaimed( $attempt );
+
+		self::assertSame( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED, $outcome->getCode() );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 0, $this->executor->calls );
+	}
+
 	public function testWpPusherActivatedAfterPreflightFailsBeforeMutationFence(): void {
 		$attempt                      = $this->claimedUpdate();
 		$this->preflight->artifact    = $this->artifact( '2.0.0' );
@@ -519,7 +783,7 @@ final class DeploymentCoordinatorTest extends TestCase {
 
 		$outcome = $this->coordinator->executeClaimed( $attempt );
 
-		self::assertSame( DeploymentOutcome::CODE_POLICY_BLOCKED, $outcome->getCode() );
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, $outcome->getCode() );
 		self::assertSame( 0, $this->preflight->calls );
 		self::assertSame( 0, $this->executor->calls );
 	}
@@ -823,6 +1087,15 @@ final class DeploymentCoordinatorTest extends TestCase {
 		return new PreparedArtifact( $path, str_repeat( 'a', 40 ), $version, hash_file( 'sha256', $path ), $identity['device'], $identity['inode'], $identity['size'], $identity['permissions'], $identity['links'] );
 	}
 
+	private function createPluginDestination( string $slug ): void {
+		$path = WP_PLUGIN_DIR . '/' . $slug;
+		if ( ! is_dir( WP_PLUGIN_DIR ) ) {
+			mkdir( WP_PLUGIN_DIR, 0700, true );
+		}
+		mkdir( $path, 0700 );
+		$this->directories[] = $path;
+	}
+
 	private function plugin( string $version = '1.0.0', string $repository = 'owner/example', string $slug = 'example' ): Plugin {
 		$plugin = Plugin::fromWpArray(
 			$slug . '/' . $slug . '.php',
@@ -930,6 +1203,7 @@ final class CoordinatorPluginRepository extends PluginRepository {
 	public ?Package $byIdentifier                   = null;
 	public ?Package $installed                      = null;
 	public ?PackageStorageFailure $readFailure      = null;
+	public ?PackageMutationResult $adoptionResult   = null;
 	public int $stores                              = 0;
 	public function __construct() {}
 	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
@@ -946,7 +1220,7 @@ final class CoordinatorPluginRepository extends PluginRepository {
 		return PackageMutationResult::changed( PackageStorageOperation::INSERT ); }
 	public function adopt( Plugin $plugin ): PackageMutationResult {
 		++$this->stores;
-		return PackageMutationResult::changed( PackageStorageOperation::INSERT ); }
+		return $this->adoptionResult ?? PackageMutationResult::changed( PackageStorageOperation::INSERT ); }
 }
 
 final class CoordinatorThemeRepository extends ThemeRepository {
@@ -1070,6 +1344,19 @@ final class CoordinatorFailureEmail extends BackgroundDeploymentFailureEmail {
 		$this->attempts[] = $attempt;
 
 		return true;
+	}
+}
+
+final class LockHookDeploymentCoordinator extends DeploymentCoordinator {
+	/** @var null|callable(): void */
+	public $beforeCoreLock = null;
+
+	protected function acquireCoreLock(): string {
+		if ( null !== $this->beforeCoreLock ) {
+			( $this->beforeCoreLock )();
+		}
+
+		return parent::acquireCoreLock();
 	}
 }
 // phpcs:enable Generic.Files.OneObjectStructurePerFile

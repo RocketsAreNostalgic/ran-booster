@@ -331,12 +331,28 @@ final class GitHubRepositoryClientTest extends TestCase {
 		self::assertSame( 'conflict', $client->createDraftPullRequest( self::REPOSITORY, 'setup', 'main', 'Title', 'Body', 'token' )['code'] );
 		self::assertSame( 'invalid_request', $client->repository( '../unsafe', "bad\ntoken" )['code'] );
 	}
+	public function testRateLimitedResponsesInclude429AndOnlyExhausted403Responses(): void {
+		$transport = new D23GitHubTransport(
+			array(
+				$this->response( 403, array(), array( 'x-ratelimit-remaining' => '0' ) ),
+				$this->response( 403, array(), array( 'x-ratelimit-remaining' => '1' ) ),
+				$this->response( 401, array(), array( 'x-ratelimit-remaining' => '0' ) ),
+				$this->response( 429, array() ),
+			)
+		);
+		$client    = new GitHubRepositoryClient( $transport );
+		self::assertSame( 'rate_limited', $client->repository( self::REPOSITORY )['code'] );
+		self::assertSame( 'unauthorised', $client->repository( self::REPOSITORY )['code'] );
+		self::assertSame( 'unauthorised', $client->repository( self::REPOSITORY )['code'] );
+		self::assertSame( 'rate_limited', $client->repository( self::REPOSITORY )['code'] );
+	}
 
 	/** @return array<string,mixed> */
-	private function response( int $status, array $body ): array {
+	private function response( int $status, array $body, array $headers = array() ): array {
 		return array(
 			'response' => array( 'code' => $status ),
 			'body'     => (string) wp_json_encode( $body ),
+			'headers'  => $headers,
 		);
 	}
 	/** @return array<string,mixed> */

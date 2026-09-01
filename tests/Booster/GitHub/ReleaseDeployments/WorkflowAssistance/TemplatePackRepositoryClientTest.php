@@ -13,6 +13,10 @@ require_once __DIR__ . '/Support/TemplatePackApi2Fixture.php';
 
 final class TemplatePackRepositoryClientTest extends TestCase {
 
+	protected function setUp(): void {
+		\RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\template_pack_repository_actions_reset();
+	}
+
 	public function testSelectsHighestCompatibleStableImmutablePackAndReportsNewerApi(): void {
 		$compatibleManifest   = TemplatePackApi2Fixture::manifest();
 		$compatibleArchive    = TemplatePackApi2Fixture::archive( $compatibleManifest );
@@ -116,6 +120,71 @@ final class TemplatePackRepositoryClientTest extends TestCase {
 			'template_pack_changed',
 			$this->client( $changedTransport )->exact( $changed )['code']
 		);
+	}
+
+	public function testAuthenticatedRequestsSendTheOperationTokenForJsonAndAssetReads(): void {
+		$archive   = TemplatePackApi2Fixture::archive();
+		$release   = $this->release( 41, 'v1.2.3', $archive );
+		$transport = new TemplatePackScriptedTransport(
+			array(
+				$this->repositoryResponse(),
+				$this->response( 200, array( $release ) ),
+				$this->response( 200, $release ),
+				$this->tagResponse(),
+				$this->response( 200, array( 'sha' => TemplatePackApi2Fixture::COMMIT ) ),
+				$this->binaryResponse( 200, $archive ),
+			)
+		);
+
+		self::assertSame( 'ok', $this->client( $transport )->discover( 'operation-token' )['code'] );
+		foreach ( $transport->requests as $request ) {
+			self::assertSame( 'Bearer operation-token', $request['args']['headers']['Authorization'] );
+		}
+		self::assertSame( 'application/octet-stream', $transport->requests[5]['args']['headers']['Accept'] );
+	}
+
+	public function testAssetRedirectScrubsTheOperationTokenWithoutChangingCanonicalApiAuthentication(): void {
+		$archive   = TemplatePackApi2Fixture::archive();
+		$release   = $this->release( 41, 'v1.2.3', $archive );
+		$responses = array(
+			$this->repositoryResponse(),
+			$this->response( 200, array( $release ) ),
+			$this->response( 200, $release ),
+			$this->tagResponse(),
+			$this->response( 200, array( 'sha' => TemplatePackApi2Fixture::COMMIT ) ),
+			$this->binaryResponse( 200, $archive ),
+		);
+		$requests  = array();
+		$client    = new TemplatePackRepositoryClient(
+			static function ( string $method, string $url, array $args ) use ( &$requests, &$responses ): array {
+				$requests[] = array(
+					'method' => $method,
+					'url'    => $url,
+					'args'   => $args,
+				);
+				if ( 'application/octet-stream' === ( $args['headers']['Accept'] ?? null ) ) {
+					$actions = \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\template_pack_repository_actions( 'requests-requests.before_redirect' );
+					self::assertCount( 1, $actions );
+					$location = 'https://release-assets.githubusercontent.com/template-pack.zip';
+					$headers  = $args['headers'];
+					call_user_func_array(
+						$actions[0]['callback'],
+						array( &$location, &$headers, null, array(), (object) array( 'url' => $url ) )
+					);
+					self::assertArrayNotHasKey( 'Authorization', $headers );
+					self::assertSame( 'RAN-Booster-Release-Deployments', $headers['User-Agent'] );
+				}
+
+				return array_shift( $responses );
+			}
+		);
+
+		self::assertSame( 'ok', $client->discover( 'operation-token' )['code'] );
+		self::assertCount( 6, $requests );
+		foreach ( $requests as $request ) {
+			self::assertSame( 'Bearer operation-token', $request['args']['headers']['Authorization'] );
+		}
+		self::assertSame( array(), \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\template_pack_repository_actions( 'requests-requests.before_redirect' ) );
 	}
 
 	public function testRepositoryAndAssetDigestMismatchesFailClosed(): void {

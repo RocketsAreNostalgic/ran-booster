@@ -7,8 +7,8 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
-function loadInitializer() {
-	const signature = '\tfunction initPackageSourceControls() {';
+function loadFunction(name, scope = {}) {
+	const signature = `\tfunction ${name}() {`;
 	const start = source.indexOf(signature);
 
 	assert.notEqual(start, -1, 'The package source initializer must exist.');
@@ -37,7 +37,14 @@ function loadInitializer() {
 		'The package source initializer must be complete.'
 	);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	return Function(
+		...Object.keys(scope),
+		`"use strict"; return (${source.slice(start, end)});`
+	)(...Object.values(scope));
+}
+
+function loadInitializer() {
+	return loadFunction('initPackageSourceControls');
 }
 
 function classListFixture(initial = []) {
@@ -56,6 +63,30 @@ function classListFixture(initial = []) {
 		},
 	};
 }
+
+test('an explicit Advanced settings route is consumed after its first render', () => {
+	let replaced = '';
+	const window = {
+		location: {
+			href: 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&source_view=release_asset&ran_booster_open_advanced=1#ran-booster-advanced-source-settings',
+		},
+		history: {
+			state: { retained: true },
+			replaceState(state, title, url) {
+				assert.deepEqual(state, { retained: true });
+				assert.equal(title, '');
+				replaced = String(url);
+			},
+		},
+	};
+
+	loadFunction('consumeAdvancedSettingsOpenRequest', { URL, window })();
+
+	assert.equal(
+		replaced,
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&source_view=release_asset#ran-booster-advanced-source-settings'
+	);
+});
 
 function tabFixture(sourceName, selected = false) {
 	const listeners = new Map();
@@ -236,6 +267,23 @@ test('package source choices reveal their matching panels', () => {
 	}
 });
 
+test('an aria-disabled source choice remains unchanged when focused and activated', () => {
+	const state = fixture('owner/package');
+	state.release.attributes.set('aria-disabled', 'true');
+
+	try {
+		loadInitializer()();
+		state.release.tab.click();
+
+		assert.equal(state.release.attributes.get('aria-pressed'), 'false');
+		assert.equal(state.branch.attributes.get('aria-pressed'), 'true');
+		assert.deepEqual(state.sourceEvents, []);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
 test('package source navigation waits for the authoritative response', () => {
 	const state = fixture('owner/package');
 	state.release.attributes.set(
@@ -256,5 +304,175 @@ test('package source navigation waits for the authoritative response', () => {
 	} finally {
 		delete globalThis.document;
 		delete globalThis.window;
+	}
+});
+
+function sourceUnsavedGuardFixture() {
+	const listeners = new Map();
+	const controlListeners = new Map();
+	const trackableControl = function (name, control) {
+		return {
+			...control,
+			addEventListener(type, listener) {
+				controlListeners.set(`${name}:${type}`, listener);
+			},
+		};
+	};
+	const text = trackableControl('text', {
+		checked: false,
+		type: 'text',
+		value: 'saved',
+	});
+	const policy = trackableControl('policy', {
+		type: 'select-one',
+		value: 'manual',
+	});
+	const nonce = { type: 'hidden', value: 'nonce' };
+	const destination = { type: 'radio', checked: true, value: 'stable' };
+	const form = {
+		dataset: {},
+		elements: [text, policy, nonce, destination],
+	};
+	const notice = {
+		hidden: true,
+		textContent:
+			'Save or revert your package settings before changing source.',
+	};
+	const navigation = {
+		dataset: {},
+		addEventListener(type, listener) {
+			listeners.set(`navigation:${type}`, listener);
+		},
+		getAttribute(name) {
+			return name === 'href'
+				? '/wp-admin/source_view=release_asset'
+				: null;
+		},
+	};
+	const transition = {
+		dataset: {},
+		addEventListener(type, listener) {
+			listeners.set(`transition:${type}`, listener);
+		},
+		requestSubmit() {
+			return eventThrough(listeners.get('transition:submit'));
+		},
+	};
+	const sourceShell = {
+		querySelector(selector) {
+			return selector === '[data-ran-booster-source-unsaved-notice]'
+				? notice
+				: null;
+		},
+		querySelectorAll() {
+			return [navigation];
+		},
+	};
+
+	globalThis.document = {
+		querySelector(selector) {
+			return (
+				{
+					'#ran-booster-package-edit-form': form,
+					'[data-ran-booster-source-controls]': sourceShell,
+				}[selector] ?? null
+			);
+		},
+		querySelectorAll(selector) {
+			return selector === 'form[data-ran-booster-source-transition]'
+				? [transition]
+				: [];
+		},
+	};
+
+	return {
+		controlListeners,
+		destination,
+		form,
+		listeners,
+		navigation,
+		notice,
+		policy,
+		text,
+		transition,
+	};
+}
+
+function eventThrough(listener) {
+	const event = {
+		defaultPrevented: false,
+		propagationStopped: false,
+		preventDefault() {
+			this.defaultPrevented = true;
+		},
+		stopImmediatePropagation() {
+			this.propagationStopped = true;
+		},
+	};
+	listener(event);
+	return event;
+}
+
+test('dirty ordinary settings block source navigation and external source submits', () => {
+	const state = sourceUnsavedGuardFixture();
+
+	try {
+		loadFunction('initPackageSourceUnsavedGuard')();
+		state.text.value = 'changed';
+
+		const navigation = eventThrough(
+			state.listeners.get('navigation:click')
+		);
+		assert.equal(navigation.defaultPrevented, true);
+		assert.equal(navigation.propagationStopped, true);
+		assert.equal(state.transition.requestSubmit().defaultPrevented, true);
+		assert.equal(
+			eventThrough(state.listeners.get('transition:htmx:beforeRequest'))
+				.defaultPrevented,
+			true
+		);
+		assert.equal(state.notice.hidden, false);
+		assert.equal(
+			state.notice.textContent,
+			'Save or revert your package settings before changing source.'
+		);
+	} finally {
+		delete globalThis.document;
+	}
+});
+
+test('reverted settings and transition-only fields do not block source changes', () => {
+	const state = sourceUnsavedGuardFixture();
+
+	try {
+		loadFunction('initPackageSourceUnsavedGuard')();
+		state.text.value = 'changed';
+		state.text.value = 'saved';
+		state.destination.checked = false;
+		state.controlListeners.get('text:input')();
+
+		const navigation = eventThrough(
+			state.listeners.get('navigation:click')
+		);
+		assert.equal(navigation.defaultPrevented, false);
+		assert.equal(navigation.propagationStopped, false);
+		assert.equal(state.transition.requestSubmit().defaultPrevented, false);
+		assert.equal(state.notice.hidden, true);
+	} finally {
+		delete globalThis.document;
+	}
+});
+
+test('HTMX re-initialization keeps the original ordinary-settings baseline', () => {
+	const state = sourceUnsavedGuardFixture();
+
+	try {
+		loadFunction('initPackageSourceUnsavedGuard')();
+		state.policy.value = 'automatic';
+		loadFunction('initPackageSourceUnsavedGuard')();
+
+		assert.equal(state.transition.requestSubmit().defaultPrevented, true);
+	} finally {
+		delete globalThis.document;
 	}
 });

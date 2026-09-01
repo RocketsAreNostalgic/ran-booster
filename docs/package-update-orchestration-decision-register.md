@@ -47,7 +47,7 @@ Release Deployments `main` at `986b8aa`, and updater `main` at `2d9300c`.
 | PU-004 | NO-GO                | A new per-target reservation broker or second updater lock                                                | WordPress already has `auto_updater.lock`; another reservation lifecycle creates stale-owner, cleanup, and ordering machinery.                                                                                                                                                                                              | Reauthorize before acquisition, then use the existing global lock only for the final pre-install-to-completion window.                                                                                                                                                                                                                                                                                                                                         | The existing lock cannot close a reproduced supported single-package race and the alternative has a smaller proved lifecycle than failing closed.                                                                                            |
 | PU-005 | NO-GO                | Managed multi-target native Update brokerage                                                              | WordPress per-item bulk hooks omit normal context and a target-held global lease conflicts with later items. Request-level brokerage is disproportionate to the product scale.                                                                                                                                              | Support one managed manual plugin/theme Update, including WordPress's one-item `bulk_upgrade()` implementation; multi-target managed native Update fails closed.                                                                                                                                                                                                                                                                                               | Repeated real-world demand and hook-level evidence show a small WordPress-native ownership seam without a request coordinator.                                                                                                               |
 | PU-006 | NO-GO                | Credential generation/revision, request snapshot, or token fingerprint for P0                             | A revision adds schema and requires every credential mutation to participate, while still not proving live repository identity. A snapshot adds secret-lifecycle complexity to save repeated reads.                                                                                                                         | Preserve lazy request-time resolution and re-check the stored stable repository ID at fresh authorization boundaries.                                                                                                                                                                                                                                                                                                                                          | Repeated resolution becomes a measured bottleneck or a reproduced authority race cannot be closed by the existing lock and current identity check.                                                                                           |
-| PU-007 | Approved replacement | A parallel local-artifact handoff or compatibility path                                                   | One exact request-local handoff and `PreparedArtifact::assertUnchanged()` protect branch artifacts. A second hook/type would duplicate that boundary, while the neutral updater cannot load the legacy claim type.                                                                                                           | Replace the GitHub-specific hook and `ClaimedArtifact` in place with the sole neutral `ran_wp_release_updater_v1_core_artifact_handoff` and `TemporaryArtifact`; retain no dual-run path.                                                                                                                                                                                                                                                                        | A supported source cannot be represented safely by the current exact neutral handoff and the replacement deletes rather than duplicates the existing path.                                                                                  |
+| PU-007 | Security removal | A parallel local-artifact handoff or compatibility path                                                   | The released neutral updater proved that accepting an earlier Core-supplied pre-download path bypasses updater-owned acquisition and verification. Renaming the legacy claim type did not close that authority gap.                                                                                                           | Remove both updater handoff filters and capability types. The updater admits only its own freshly reacquired release artifact; source exclusivity keeps tracked-branch deployment outside a matching native release target, and collisions fail closed.                                                                                                                                                                                                          | A named supported source cannot use either existing path and a new design proves updater-owned acquisition and verification without trusting an earlier local reply, duplicating installers or weakening source exclusivity.                 |
 | PU-008 | NO-GO                | Parallel updater API 2/API 3 implementations or compatibility adapters                                    | Only four controlled test installations consume Booster. Carrying both claim contracts would add branches and tests for a deployment state we do not support.                                                                                                                                                               | Replace Prospective API 2 with strict custody-bearing API 3 in place; keep no API 2 adapter.                                                                                                                                                                                                                                                                                                                                                                   | An external consumer or public support commitment exists before cutover and cannot move through the coordinated updater → Core release sequence.                                                                                             |
 | PU-009 | NO-GO                | Generic installed-state/postcondition DTOs or result hierarchies                                          | Storage, WordPress execution, branch deployment, release business outcome, and presentation represent different authority layers. Combining them obscures ownership.                                                                                                                                                        | Keep source-specific result types; consider only a private exact-fact reader if it deletes duplicated code.                                                                                                                                                                                                                                                                                                                                                    | Landed callers share identical immutable facts and a private extraction reduces production code without merging outcome policy.                                                                                                              |
 | PU-010 | Deferred             | Shared release/branch ZIP validator                                                                       | The policies overlap but differ in archive purpose, package root, source identity, and trust inputs. Premature extraction risks weakening one path.                                                                                                                                                                         | Retain separate validators and compare them with the same hostile fixture corpus.                                                                                                                                                                                                                                                                                                                                                                              | Differential fixtures prove a small identical path/type iteration primitive that reduces security-sensitive duplication.                                                                                                                     |
@@ -75,6 +75,8 @@ Release Deployments `main` at `986b8aa`, and updater `main` at `2d9300c`.
 | PU-032 | Deferred             | Requiring GitHub immutable releases for all eligible or unattended updates in this P0                     | The current Release Please profile publishes before uploading assets, while immutable publication requires the assets to be attached before publication. Reading `immutable` from the API is also not cryptographic attestation verification.                                                                               | Retain the platform-reported immutable flag as normalized evidence without enforcement; prove draft → attach → publish separately before a future add-on policy requires it.                                                                                                                                                                                                                                                                                   | The workflow lifecycle is updated and exercised across supported public/private repositories, and automatic-policy UX defines mutable-release handling.                                                                                      |
 | PU-033 | NO-GO                | Speculative Core services, DTOs, registries, facades or state justified by future release extensibility   | Core is carried by every installation, while the current product serves a single developer/small agency and has no present consumer for a general assurance framework. Future possibility does not repay permanent production LoC, concepts, API and maintenance cost.                                                      | Delete/reuse first. Keep GitHub-specific behavior in Release Deployments or a future optional add-on. The live updater composition proves the assurance checker can register directly with the selected updater runtime, so Core receives zero assurance production/API surface.                                                                                                                                                                               | A named current Core-owned safety or released-compatibility invariant remains after smaller alternatives are exhausted, its exact production-line/type/public-seam/state delta is recorded, and the owner approves it before implementation. |
 | PU-034 | Approved exception   | Letting Release Deployments infer release readiness from branch status, duplicate the release verifier, temporarily switch package source, or inspect releases with its separate request-only setup credential | Branch status intentionally has no release result, duplicating verification creates two artifact authorities, a temporary source change is a mutation rather than inspection, and the setup credential is not Core's stored package credential. The Phase 3 implementation proved that these smaller-looking alternatives either could not answer the question or crossed an existing authority boundary. | Add-on API 12 adds one read-only `ReleaseTrackingFacade::preflight()` operation and a channel-bound use of the existing nonce action. It accepts only the current eligible branch-managed plugin or theme at the exact source revision and reuses enablement's forced verifier. Failed authorization or binding returns `null`; verifier outcomes use the existing bounded result. The approved Core production delta is +66 net lines, one public method and one optional nonce argument, with zero new concrete types, services, DTOs, registries, storage fields, locks, credentials, provider clients or mutation paths. | A smaller implementation deletes the same authority ambiguity without duplicating verification or weakening exact capability, nonce, package, revision and channel binding; or the assisted workflow consumer is removed and the public operation has no remaining supported caller. |
+| PU-035 | Current product policy | Allowing Branch companions alongside a Release package on the same site and repository | Although technically possible, mixed ownership adds supported combinations, ambiguous controls and a larger support/test burden. | One repository supplies multiple Branch packages or one Release package, never both. Reinforce existing operation and transactional storage boundaries with one shared admission helper; retain ordinary Return to Branch recovery. | Demonstrated demand justifies Branch companions beside at most one Release package, including the extra UI and support coverage. |
+| PU-036 | Deliberate non-goal | One repository release serving several managed packages | Asset-to-package mapping, coordinated versioning and additional packaging conventions would expand the release contract and support surface. | Keep workflow-independent consumption of one compatible uploaded package ZIP. Booster workflow setup is optional; users may publish manually or with their own automation. | A separate explicit product decision approves a multi-package artifact and ownership contract; relaxing PU-035 alone is not sufficient. |
 
 PU-014 remains the historical reason Core must not simply omit its target
 registration. Its reconsideration trigger is satisfied by updater
@@ -83,6 +85,77 @@ registration. Its reconsideration trigger is satisfied by updater
 runtime selection and the prospective API while native self-update discovery
 is disabled. Core pinned that immutable release and passed its release gates;
 the later `v1.5.0-beta.10` retains the same contract.
+
+## 2026-08-28 repository exclusivity and multi-package releases
+
+### PU-035: one repository, one deployment model
+
+On one WordPress site, an exact provider code and stable repository ID may
+supply multiple managed Branch packages, or one managed Release package—never
+both. The count includes plugins and themes, inactive packages and Disabled
+update policies. Folders inside a repository and unmanaged WordPress
+installations do not create managed relationships. A sole root package may
+switch between Branch and Releases; existing subdirectory restrictions still
+apply.
+
+This supersedes the earlier repository-management proposal allowing Branch
+companions alongside one Release owner. That proposal separated remote
+repository identity from local installation destinations; that reasoning was
+not a filesystem error. The narrower policy deliberately reduces the number
+of supported combinations, makes the two modes easier to explain, and limits
+the support and test burden. It does not claim those combinations are
+technically impossible.
+
+`RepositorySourceGuard` applies the rule to existing package records. Normal
+installation, adoption, imports, repository edits, prospective Release
+installation and source switching use the same decision. Admission happens
+before installation and is rechecked under the existing updater lock before
+filesystem mutation or a source change. Persistence checks the relationship
+and writes it within the existing InnoDB transaction and locking-read pattern,
+retaining exact package and source-revision checks. UI projections and Release
+workflow admission reuse the same rule. Native Release registration and
+download authority must not admit a conflicting group or retain its stale
+offers.
+
+No repository-mode record, ownership table, schema migration, second lock,
+repair state or background reconciliation is needed. The records already
+describe the relationship; an atomic admission decision protects it. A generic
+policy framework would add concepts without another current policy consumer.
+Missing or ambiguous identity fails closed rather than inventing an owner.
+
+Existing conflicts preserve package files and records. Affected Release
+updates and workflow operations pause, while existing Branch deployments
+remain available. Administrators use the existing **Return to Branch** action
+on each Release package; a return remains permitted even if other conflicting
+Release rows remain. The ordinary rule is reevaluated after each explicit
+change. Booster neither chooses a winner nor silently repairs the records.
+
+**Reasonable future relaxation:** allow Branch companions alongside at most
+one Release package if user demand warrants the extra support coverage. That
+would relax the shared predicate and update tests, documentation and
+mixed-repository presentation. It would not require a data migration or
+removal of concurrency protection. No feature flag or preparatory extension
+mechanism is part of the current decision.
+
+### PU-036: multiple Release packages are a separate non-goal
+
+A repository release serving several managed packages is not a planned
+extension of PU-035. Booster does not want to own the additional asset mapping,
+version coordination and multi-package conventions that such a contract
+would require supporting.
+
+The current model lets users publish manually or through their own automation;
+Booster's workflow setup remains optional. This independence is bounded by the
+supported artifact contract: exactly one uploaded ZIP, the appropriate
+WordPress plugin or theme structure and Update URI, and repository identity
+and integrity verification. It does not mean any archive or release layout is
+accepted; PU-027 records the artifact requirements.
+
+WordPress can install separate package ZIPs. Nor does every conceivable
+multi-package design require a particular producer workflow. The decision is
+to avoid expanding Booster's consumer contract and support surface, not to
+assert a WordPress limitation. Reopening it requires a separate explicit
+product decision, not merely relaxing repository exclusivity.
 
 ## 2026-07-31 exact-release Reinstall re-evaluation
 
@@ -263,3 +336,27 @@ This is an identifier and custody-type replacement, not a second installer or
 new release authority. It adds no registry, cache, persistent row, provider
 dispatch or generic callback surface. The prior RETAIN record remains above as
 historical evidence; it is superseded for current runtime and operational use.
+
+## 2026-09-01 PU-007 security correction — REMOVE
+
+Updater commit `dd693a9eec64c17369b0eacd9c1bb5a8794b78a3` supplied new
+security evidence: the neutral handoff still allowed a Core-supplied
+pre-download path to bypass updater-owned acquisition and verification. The
+released `ran/wp-release-updater` `v0.1.0-beta.1` therefore removed
+`TemporaryArtifact::forCoreUpdate()`, `TemporaryArtifact::acceptCoreUpdate()`
+and `ran_wp_release_updater_v1_core_artifact_handoff`.
+
+Core follows that correction in the same hard-cut migration:
+
+- remove the neutral handoff filter, capability construction and transfer state;
+- retain `PreparedArtifact::assertUnchanged()` and Core's request-local native
+  offer for tracked-branch artifacts;
+- let a matching native release target reject an earlier local pre-download
+  reply rather than adding a bypass; and
+- rely on the existing repository-source exclusivity guard to keep supported
+  tracked-branch and native-release ownership disjoint.
+
+The August 20 RETAIN and August 23 REPLACE IN PLACE records remain above as
+historical rationale. Neither handoff is current runtime authority. Reconsider
+a handoff only with a reviewed design that keeps acquisition and verification
+inside the updater and does not trust an earlier local path.

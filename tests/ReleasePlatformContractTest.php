@@ -7,7 +7,7 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleasePlatformContractTest extends TestCase {
-	private const UPDATER_COMMIT  = 'd2f00ffe647dc78e910b26281e97190ba7f0d7d8';
+	private const UPDATER_COMMIT  = 'c289d7c9efe51b1fdda8f328807396498faf85e2';
 	private const UPDATER_PACKAGE = 'ran/wp-release-updater';
 	private const UPDATER_PATH    = 'vendor/ran/wp-release-updater';
 	private const UPDATER_VERSION = '0.1.0-beta.1';

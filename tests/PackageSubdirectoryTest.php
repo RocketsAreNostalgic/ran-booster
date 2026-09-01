@@ -19,13 +19,14 @@ final class PackageSubdirectoryTest extends TestCase {
 	/** @return array<string, array{mixed, string|null}> */
 	public static function validPaths(): array {
 		return array(
-			'absent'        => array( null, null ),
-			'empty'         => array( '', null ),
-			'whitespace'    => array( '  ', null ),
-			'single'        => array( 'plugin', 'plugin' ),
-			'nested'        => array( 'packages/example-plugin', 'packages/example-plugin' ),
-			'trimmed'       => array( ' packages/example-plugin ', 'packages/example-plugin' ),
-			'literal token' => array( 'packages/%41ddon', 'packages/%41ddon' ),
+			'absent'         => array( null, null ),
+			'empty'          => array( '', null ),
+			'whitespace'     => array( '  ', null ),
+			'single'         => array( 'plugin', 'plugin' ),
+			'nested'         => array( 'packages/example-plugin', 'packages/example-plugin' ),
+			'trimmed'        => array( ' packages/example-plugin ', 'packages/example-plugin' ),
+			'trailing slash' => array( 'branch-fixture/', 'branch-fixture' ),
+			'literal token'  => array( 'packages/%41ddon', 'packages/%41ddon' ),
 		);
 	}
 
@@ -39,24 +40,26 @@ final class PackageSubdirectoryTest extends TestCase {
 	/** @return array<string, array{mixed}> */
 	public static function invalidPaths(): array {
 		return array(
-			'non-string'               => array( array( 'packages/example' ) ),
-			'absolute'                 => array( '/packages/example' ),
-			'UNC'                      => array( '\\\\server\\share' ),
-			'drive absolute'           => array( 'C:/packages/example' ),
-			'drive relative'           => array( 'C:packages/example' ),
-			'backslash'                => array( 'packages\\example' ),
-			'empty segment'            => array( 'packages//example' ),
-			'trailing separator'       => array( 'packages/example/' ),
-			'current segment'          => array( 'packages/./example' ),
-			'parent segment'           => array( 'packages/../example' ),
-			'encoded parent'           => array( 'packages/%2e%2e/example' ),
-			'double encoded parent'    => array( 'packages/%252e%252e/example' ),
-			'encoded separator'        => array( 'packages%2fexample' ),
-			'double encoded separator' => array( 'packages%252fexample' ),
-			'deep encoded separator'   => array( 'packages%2525252fexample' ),
-			'encoded backslash'        => array( 'packages%5cexample' ),
-			'NUL'                      => array( "packages/\0example" ),
-			'control'                  => array( "packages/\nexample" ),
+			'non-string'                => array( array( 'packages/example' ) ),
+			'absolute'                  => array( '/packages/example' ),
+			'UNC'                       => array( '\\\\server\\share' ),
+			'drive absolute'            => array( 'C:/packages/example' ),
+			'drive relative'            => array( 'C:packages/example' ),
+			'backslash'                 => array( 'packages\\example' ),
+			'empty segment'             => array( 'packages//example' ),
+			'root'                      => array( '/' ),
+			'double root'               => array( '//' ),
+			'trailing double separator' => array( 'branch//' ),
+			'current segment'           => array( 'packages/./example' ),
+			'parent segment'            => array( 'packages/../example' ),
+			'encoded parent'            => array( 'packages/%2e%2e/example' ),
+			'double encoded parent'     => array( 'packages/%252e%252e/example' ),
+			'encoded separator'         => array( 'packages%2fexample' ),
+			'double encoded separator'  => array( 'packages%252fexample' ),
+			'deep encoded separator'    => array( 'packages%2525252fexample' ),
+			'encoded backslash'         => array( 'packages%5cexample' ),
+			'NUL'                       => array( "packages/\0example" ),
+			'control'                   => array( "packages/\nexample" ),
 		);
 	}
 
@@ -72,5 +75,18 @@ final class PackageSubdirectoryTest extends TestCase {
 
 		$this->expectException( InvalidArgumentException::class );
 		PackageSubdirectory::normalizeSlug( 'packages/example-plugin' );
+	}
+
+	public function testItRejectsTrailingSeparatorForProviderDestinationSlug(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		PackageSubdirectory::normalizeSlug( 'foo/' );
+	}
+
+	public function testItIsIdempotentAfterTrailingSeparatorCanonicalization(): void {
+		$normalized = PackageSubdirectory::normalize( 'branch-fixture/' );
+
+		self::assertSame( 'branch-fixture', $normalized );
+		self::assertSame( $normalized, PackageSubdirectory::normalize( $normalized ) );
 	}
 }

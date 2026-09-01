@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "../ran-wp-release-updater",
-                "reference": "d2f00ffe647dc78e910b26281e97190ba7f0d7d8"
+                "reference": "c289d7c9efe51b1fdda8f328807396498faf85e2"
             },
             "require": {
                 "ext-hash": "*",
@@ -36,6 +36,7 @@
                 "check": [
                     "@validate:strict",
                     "@test:unit",
+                    "@test:release-publisher",
                     "@lint:php"
                 ],
                 "check:phase3": [
@@ -50,6 +51,12 @@
                 ],
                 "test:parity": [
                     "php tests/Integration/paired-github-provider-proof.php"
+                ],
+                "test:wordpress-bulk": [
+                    "php tests/Integration/wordpress-native-mixed-bulk-proof.php"
+                ],
+                "test:release-publisher": [
+                    "node --test tests/release-publisher.test.mjs"
                 ],
                 "validate:strict": [
                     "composer validate --strict --no-check-publish"

@@ -2,8 +2,17 @@
 
 defined( 'WPINC' ) || die;
 
-$packageSourceMode = isset( $packageSourceMode ) && 'create' === $packageSourceMode ? 'create' : 'edit';
-$isPackageEdit     = 'edit' === $packageSourceMode;
+$packageSourceMode      = isset( $packageSourceMode ) && 'create' === $packageSourceMode ? 'create' : 'edit';
+$isPackageEdit          = 'edit' === $packageSourceMode;
+$branchSettingsInactive = $isPackageEdit && $releaseManaged;
+
+ob_start();
+foreach ( $packageAdvancedSections as $packageAdvancedSection ) {
+	if ( is_string( $packageAdvancedSection ) && '' !== $packageAdvancedSection ) {
+		echo $packageAdvancedSection; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer.
+	}
+}
+$packageAdvancedSectionsMarkup = (string) ob_get_clean();
 
 ob_start();
 ?>
@@ -12,6 +21,9 @@ ob_start();
 	require __DIR__ . '/source-choices.php';
 	$packageFieldForm = $isPackageEdit ? 'ran-booster-package-edit-form' : '';
 	?>
+	<div class="notice notice-warning inline" role="alert" hidden data-ran-booster-source-unsaved-notice>
+		<p><?php esc_html_e( 'Save or revert your package settings before changing source.', 'ran-booster' ); ?></p>
+	</div>
 	<div
 		id="ran-booster-source-pane-branch"
 		class="ran-booster-package-source-pane<?php echo $isPackageEdit ? '' : ' ran-booster-settings-fields__branch'; ?>"
@@ -20,23 +32,25 @@ ob_start();
 		data-ran-booster-branch-fields
 		<?php echo $isPackageEdit && ! $showBranchSettings ? 'hidden' : ''; ?>
 	>
-		<div class="ran-booster-settings-fields">
-			<?php require __DIR__ . '/fields/branch.php'; ?>
-			<?php require __DIR__ . '/fields/subdirectory.php'; ?>
-		</div>
-		<?php if ( $isPackageEdit && $releaseManaged ) { ?>
-			<div class="notice notice-info inline">
-				<p><?php esc_html_e( 'Published releases remain the current source. Return the package to Branch management before changing this retained branch target.', 'ran-booster' ); ?></p>
+		<?php if ( $isPackageEdit && $showBranchSettings && isset( $packageSourceChoices['branch']['description'] ) ) { ?>
+			<p class="ran-booster-package-source-pane__description"><?php echo esc_html( (string) $packageSourceChoices['branch']['description'] ); ?></p>
+		<?php } ?>
+		<?php if ( $isPackageEdit && 'branch' === $packageSourceView ) { ?>
+			<?php echo $packageAdvancedSectionsMarkup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer. ?>
+		<?php } ?>
+		<fieldset class="ran-booster-branch-settings<?php echo $branchSettingsInactive ? ' is-inactive' : ''; ?>"<?php disabled( $branchSettingsInactive ); ?><?php echo $branchSettingsInactive ? ' aria-disabled="true"' : ''; ?>>
+			<legend class="screen-reader-text"><?php echo esc_html( $branchSettingsInactive ? __( 'Inactive Branch deployment settings', 'ran-booster' ) : __( 'Branch deployment settings', 'ran-booster' ) ); ?></legend>
+			<div class="ran-booster-settings-fields">
+				<?php require __DIR__ . '/fields/branch.php'; ?>
+				<?php require __DIR__ . '/fields/subdirectory.php'; ?>
 			</div>
-		<?php } ?>
-		<?php if ( $isPackageEdit && $showBranchOperations ) { ?>
-			<?php require __DIR__ . '/branch-readiness.php'; ?>
-		<?php } ?>
+			<?php if ( $isPackageEdit ) { ?>
+				<?php require __DIR__ . '/branch-readiness.php'; ?>
+			<?php } ?>
+		</fieldset>
 	</div>
-	<?php foreach ( $packageAdvancedSections as $packageAdvancedSection ) { ?>
-		<?php if ( is_string( $packageAdvancedSection ) && '' !== $packageAdvancedSection ) { ?>
-			<?php echo $packageAdvancedSection; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer. ?>
-		<?php } ?>
+	<?php if ( ! ( $isPackageEdit && 'branch' === $packageSourceView ) ) { ?>
+		<?php echo $packageAdvancedSectionsMarkup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer. ?>
 	<?php } ?>
 </fieldset>
 <?php

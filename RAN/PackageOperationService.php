@@ -10,6 +10,7 @@ use RAN\Deployment\PackageMutationGuard;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
@@ -19,13 +20,17 @@ use RuntimeException;
  */
 final readonly class PackageOperationService {
 
+	private RepositorySourceGuard $sourceGuard;
+
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
 		private DeploymentCoordinator $deployments,
 		private PackageRemovalService $removals,
-		private WordPressUpdaterLock $updaterLock
+		private WordPressUpdaterLock $updaterLock,
+		?RepositorySourceGuard $sourceGuard = null
 	) {
+		$this->sourceGuard = $sourceGuard ?? new RepositorySourceGuard();
 	}
 
 	/** @return array{status: string, package?: Package, correlation_id?: string, outcome_code?: string} */
@@ -51,7 +56,7 @@ final readonly class PackageOperationService {
 		};
 	}
 
-	/** @return array{status: 'succeeded'|'failed', package?: Package, correlation_id: string, outcome_code: string} */
+	/** @return array{status: 'succeeded'|'already-managed'|'failed', package?: Package, correlation_id: string, outcome_code: string} */
 	private function deploy( PackageOperation $operation ): array {
 		$result        = $this->deployments->executeManual( $operation );
 		$status        = $result['status'] ?? null;
@@ -79,6 +84,9 @@ final readonly class PackageOperationService {
 		}
 
 		$safe['package'] = $this->deployedPackage( $operation );
+		if ( 'install' === $operation->operation && DeploymentOutcome::CODE_ALREADY_MANAGED === $outcomeCode ) {
+			$safe['status'] = 'already-managed';
+		}
 
 		return $safe;
 	}
@@ -113,6 +121,7 @@ final readonly class PackageOperationService {
 			PackageMutationGuard::assertPluginFileAllowed( $package->getIdentifier() );
 		}
 		$this->applyRepository( $package, $operation );
+		$this->sourceGuard->assertAllowed( (string) $package->getProviderCode(), (string) $package->getProviderRepositoryId(), 'plugin' === $operation->packageType ? 1 : 2, (string) $package->getIdentifier(), PackageSource::BRANCH );
 		$adoption = $this->adopt( $operation->packageType, $package );
 		if ( 'ran_booster_storage_adoption_conflict' === $adoption->getDiagnosticId() ) {
 			$existing = $this->matchingExistingTarget( $operation, $package );
@@ -167,7 +176,10 @@ final readonly class PackageOperationService {
 			);
 		}
 		$releaseManaged = PackageSource::RELEASE_ASSET === $existing->getSource();
-		$repository     = $releaseManaged
+		if ( $releaseManaged && null !== $existing->getSubdirectory() ) {
+			throw new RuntimeException( 'Published release packages with a repository subdirectory must return to Branch first.' );
+		}
+		$repository = $releaseManaged
 			? new ManagedRepository(
 				$existing->getProviderCode(),
 				(string) $existing->getRepository(),
@@ -177,7 +189,8 @@ final readonly class PackageOperationService {
 				'' === (string) $operation->credentialId ? null : $operation->credentialId
 			)
 			: $this->repository( $operation, $this->providerRepositoryIdForEdit( $operation, $existing ) );
-		$result         = 'plugin' === $operation->packageType
+		$this->sourceGuard->assertAllowed( $repository->provider->value, $repository->reference->providerRepositoryId, 'plugin' === $operation->packageType ? 1 : 2, $identifier, $existing->getSource() );
+		$result = 'plugin' === $operation->packageType
 			? $this->plugins->editPlugin( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) )
 			: $this->themes->editTheme( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) );
 		$result->requireSuccess();

@@ -28,6 +28,7 @@ $branchValue                      = isset( $submittedPackage['branch'] ) && is_s
 $subdirectoryValue                = isset( $submittedPackage['subdirectory'] ) && is_scalar( $submittedPackage['subdirectory'] )
 	? sanitize_text_field( wp_unslash( (string) $submittedPackage['subdirectory'] ) )
 	: (string) $package->getSubdirectory();
+$savedSubdirectoryValue           = (string) $package->getSubdirectory();
 $submittedDeploymentPolicy        = isset( $submittedPackage['deployment_policy'] ) && is_scalar( $submittedPackage['deployment_policy'] )
 	? \RAN\Deployment\DeploymentPolicy::tryFrom( sanitize_key( wp_unslash( (string) $submittedPackage['deployment_policy'] ) ) )
 	: null;
@@ -95,25 +96,26 @@ $packageExtensionPanels   = isset( $packageExtensionPanels ) && is_array( $packa
 $packageBranchReadiness   = isset( $packageBranchReadiness ) && is_array( $packageBranchReadiness )
 	? $packageBranchReadiness
 	: null;
-$packageWebhookCleanup    = isset( $packageWebhookCleanup ) && is_array( $packageWebhookCleanup )
-	? $packageWebhookCleanup
+
+$repositoryBranchCheckOutcome = isset( $repositoryBranchCheckOutcome ) && is_string( $repositoryBranchCheckOutcome )
+	&& in_array( $repositoryBranchCheckOutcome, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true )
+	? $repositoryBranchCheckOutcome
 	: null;
-$packageSourceChoices     = is_array( $packageSource['choices'] ?? null ) ? $packageSource['choices'] : array();
-$packageAdvancedSections  = is_array( $packageSource['advanced_sections'] ?? null ) ? $packageSource['advanced_sections'] : array();
-$packageAdvancedSummary   = is_string( $packageSource['advanced_summary'] ?? null )
+$packageSourceChoices         = is_array( $packageSource['choices'] ?? null ) ? $packageSource['choices'] : array();
+$packageAdvancedSections      = is_array( $packageSource['advanced_sections'] ?? null ) ? $packageSource['advanced_sections'] : array();
+$packageAdvancedSummary       = is_string( $packageSource['advanced_summary'] ?? null )
 	? $packageSource['advanced_summary']
 	: __( 'Branch · provider default', 'ran-booster' );
-$packageSourceView        = is_string( $packageSource['selected'] ?? null ) ? $packageSource['selected'] : $package->getSource()->value;
-$packageCurrentSource     = is_string( $packageSource['current'] ?? null ) ? $packageSource['current'] : $package->getSource()->value;
-$packageSourceUnavailable = array_key_exists( 'unavailable', $packageSource ?? array() )
+$packageSourceView            = is_string( $packageSource['selected'] ?? null ) ? $packageSource['selected'] : $package->getSource()->value;
+$packageCurrentSource         = is_string( $packageSource['current'] ?? null ) ? $packageSource['current'] : $package->getSource()->value;
+$packageSourceUnavailable     = array_key_exists( 'unavailable', $packageSource ?? array() )
 	? true === $packageSource['unavailable']
 	: \RAN\PackageSource::BRANCH !== $package->getSource();
-$packageSourceMode        = 'edit';
-$packageRepositoryReady   = true;
-$packageAdvancedOpen      = isset( $_POST['ran_booster'] )
-	|| true === ( $packageSource['advanced_open'] ?? false )
-	|| $packageSourceView !== $packageCurrentSource;
-$packageDangerOpen        = in_array(
+$packageSourceMode            = 'edit';
+$packageRepositoryReady       = true;
+$packageAdvancedOpen          = isset( $_POST['ran_booster'] )
+	|| true === ( $packageSource['advanced_open'] ?? false );
+$packageDangerOpen            = in_array(
 	$submittedAction,
 	array( $packageView->getAction( 'unlink' ), $packageView->getAction( 'unlink-delete' ) ),
 	true
@@ -206,8 +208,8 @@ $sourceSummary               = 'branch' === $packageCurrentSource
 		__( 'Branch · %s', 'ran-booster' ),
 		'' !== (string) $package->getBranch() ? (string) $package->getBranch() : __( 'provider default', 'ran-booster' )
 	)
-	: (string) ( $packageSourceChoices[ $packageCurrentSource ]['heading'] ?? __( 'Unavailable source', 'ran-booster' ) );
-$sourceSummaryMeta = (string) ( $packageSourceChoices[ $packageCurrentSource ]['meta'] ?? __( 'The source provider is unavailable', 'ran-booster' ) );
+	: (string) ( $packageSourceChoices[ $packageCurrentSource ]['heading'] ?? __( 'Unavailable update source', 'ran-booster' ) );
+$sourceSummaryMeta = (string) ( $packageSourceChoices[ $packageCurrentSource ]['meta'] ?? __( 'The update source provider is unavailable', 'ran-booster' ) );
 $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 	\RAN\Deployment\DeploymentPolicy::DISABLED->value => __( 'Disabled', 'ran-booster' ),
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
@@ -234,15 +236,16 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 		<?php if ( $packageSourceUnavailable ) { ?>
 			<section class="ran-booster-settings-section" aria-labelledby="ran-booster-package-source-unavailable-heading">
 				<header class="ran-booster-settings-section__header">
-					<h3 id="ran-booster-package-source-unavailable-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package source unavailable', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php esc_html_e( 'The package remains linked, but its source controls require an add-on that is not currently available.', 'ran-booster' ); ?></p>
+					<h3 id="ran-booster-package-source-unavailable-heading" class="ran-booster-section__title"><?php esc_html_e( 'Update source unavailable', 'ran-booster' ); ?></h3>
+					<p class="ran-booster-section__description"><?php esc_html_e( 'The package remains linked, but its update source controls require an add-on that is not currently available.', 'ran-booster' ); ?></p>
 				</header>
 				<div class="ran-booster-settings-section__body">
 					<div class="notice notice-warning inline">
-						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
+						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
 					</div>
-					<div class="ran-booster-settings-actions">
-						<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></a>
+					<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
+						<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+						<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a>
 					</div>
 				</div>
 			</section>
@@ -300,13 +303,10 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 			</section>
 
 			<div class="ran-booster-settings-actions ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
-				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( $settingsUrl ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form" <?php disabled( ! $packageMutationAvailable ); ?>><?php echo esc_html( $packageSettingsSaveLabel ); ?></button>
-				<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></a>
+				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $settingsUrl ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]" <?php disabled( ! $packageMutationAvailable ); ?>><?php echo esc_html( $packageSettingsSaveLabel ); ?></button>
+				<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+				<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a>
 			</div>
-		<?php } ?>
-
-		<?php if ( $releaseManaged && null !== $packageWebhookCleanup ) { ?>
-			<?php require __DIR__ . '/webhook-cleanup.php'; ?>
 		<?php } ?>
 
 		<?php foreach ( $packageExtensionPanels as $packageExtensionPanel ) { ?>
@@ -343,5 +343,4 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 		</div>
 	</aside>
 </div>
-<p class="ran-booster-package-settings__install-another"><a href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a></p>
 <?php // phpcs:enable WordPress.Security.NonceVerification.Missing ?>

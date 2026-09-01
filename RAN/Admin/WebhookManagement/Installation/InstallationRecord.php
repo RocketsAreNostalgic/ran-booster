@@ -14,6 +14,7 @@ final readonly class InstallationRecord {
 		private string $repositoryId,
 		private string $repository,
 		private string $hookId,
+		private string $managementCredentialId,
 		private string $webhookProfileId,
 		private string $webhookProfileScope,
 		private int $webhookProfileRevision,
@@ -29,6 +30,7 @@ final readonly class InstallationRecord {
 			|| '' === trim( $hookId )
 			|| strlen( $hookId ) > 191
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $hookId )
+			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $managementCredentialId )
 			|| '' === trim( $webhookProfileId )
 			|| ! in_array( $webhookProfileScope, array( 'owner', 'repository' ), true )
 			|| $webhookProfileRevision < 1
@@ -67,6 +69,10 @@ final readonly class InstallationRecord {
 		return self::UNKNOWN_HOOK_ID;
 	}
 
+	public function managementCredentialId(): string {
+		return $this->managementCredentialId;
+	}
+
 	public function webhookProfileId(): string {
 		return $this->webhookProfileId;
 	}
@@ -96,11 +102,15 @@ final readonly class InstallationRecord {
 	}
 
 	public function withCheck( string $status, string $checkedAt, ?string $endpoint = null ): self {
-		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $this->webhookProfileId, $this->webhookProfileScope, $this->webhookProfileRevision, $this->webhookProfileDisposition, $endpoint ?? $this->endpoint, $status, $this->createdAt, $checkedAt );
+		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $this->managementCredentialId, $this->webhookProfileId, $this->webhookProfileScope, $this->webhookProfileRevision, $this->webhookProfileDisposition, $endpoint ?? $this->endpoint, $status, $this->createdAt, $checkedAt );
 	}
 
-	public function withProfile( string $profileId, string $scope, int $revision, string $disposition, string $endpoint, string $status, string $checkedAt ): self {
-		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $profileId, $scope, $revision, $disposition, $endpoint, $status, $this->createdAt, $checkedAt );
+	public function withManagementCredential( string $managementCredentialId, string $status, string $checkedAt, ?string $endpoint = null ): self {
+		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $managementCredentialId, $this->webhookProfileId, $this->webhookProfileScope, $this->webhookProfileRevision, $this->webhookProfileDisposition, $endpoint ?? $this->endpoint, $status, $this->createdAt, $checkedAt );
+	}
+
+	public function withProfile( string $managementCredentialId, string $profileId, string $scope, int $revision, string $disposition, string $endpoint, string $status, string $checkedAt ): self {
+		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $managementCredentialId, $profileId, $scope, $revision, $disposition, $endpoint, $status, $this->createdAt, $checkedAt );
 	}
 
 	public function storageKey(): string {
@@ -111,14 +121,15 @@ final readonly class InstallationRecord {
 		return $providerCode . ':' . $repositoryId;
 	}
 
-	/** @return array{schema_version: int, provider_code: string, repository_id: string, repository: string, hook_id: string, webhook_profile_id: string, webhook_profile_scope: string, webhook_profile_revision: int, webhook_profile_disposition: string, endpoint: string, status: string, created_at: string, checked_at: string} */
+	/** @return array{schema_version: int, provider_code: string, repository_id: string, repository: string, hook_id: string, management_credential_id: string, webhook_profile_id: string, webhook_profile_scope: string, webhook_profile_revision: int, webhook_profile_disposition: string, endpoint: string, status: string, created_at: string, checked_at: string} */
 	public function toArray(): array {
 		return array(
-			'schema_version'              => 3,
+			'schema_version'              => 4,
 			'provider_code'               => $this->providerCode,
 			'repository_id'               => $this->repositoryId,
 			'repository'                  => $this->repository,
 			'hook_id'                     => $this->hookId,
+			'management_credential_id'    => $this->managementCredentialId,
 			'webhook_profile_id'          => $this->webhookProfileId,
 			'webhook_profile_scope'       => $this->webhookProfileScope,
 			'webhook_profile_revision'    => $this->webhookProfileRevision,
@@ -132,15 +143,16 @@ final readonly class InstallationRecord {
 
 	/** @param array<string, mixed> $record */
 	public static function fromArray( array $record ): self {
-		$expected = array( 'schema_version', 'provider_code', 'repository_id', 'repository', 'hook_id', 'webhook_profile_id', 'webhook_profile_scope', 'webhook_profile_revision', 'webhook_profile_disposition', 'endpoint', 'status', 'created_at', 'checked_at' );
+		$expected = array( 'schema_version', 'provider_code', 'repository_id', 'repository', 'hook_id', 'management_credential_id', 'webhook_profile_id', 'webhook_profile_scope', 'webhook_profile_revision', 'webhook_profile_disposition', 'endpoint', 'status', 'created_at', 'checked_at' );
 
 		if ( count( $record ) !== count( $expected )
 			|| array_diff( array_keys( $record ), $expected )
-			|| 3 !== $record['schema_version']
+			|| 4 !== $record['schema_version']
 			|| ! is_string( $record['provider_code'] )
 			|| ! is_string( $record['repository_id'] )
 			|| ! is_string( $record['repository'] )
 			|| ! is_string( $record['hook_id'] )
+			|| ! is_string( $record['management_credential_id'] )
 			|| ! is_string( $record['webhook_profile_id'] )
 			|| ! is_string( $record['webhook_profile_scope'] )
 			|| ! is_int( $record['webhook_profile_revision'] )
@@ -153,7 +165,7 @@ final readonly class InstallationRecord {
 			throw new InvalidArgumentException( 'Invalid persisted repository webhook-management installation record.' );
 		}
 
-		return new self( $record['provider_code'], $record['repository_id'], $record['repository'], $record['hook_id'], $record['webhook_profile_id'], $record['webhook_profile_scope'], $record['webhook_profile_revision'], $record['webhook_profile_disposition'], $record['endpoint'], $record['status'], $record['created_at'], $record['checked_at'] );
+		return new self( $record['provider_code'], $record['repository_id'], $record['repository'], $record['hook_id'], $record['management_credential_id'], $record['webhook_profile_id'], $record['webhook_profile_scope'], $record['webhook_profile_revision'], $record['webhook_profile_disposition'], $record['endpoint'], $record['status'], $record['created_at'], $record['checked_at'] );
 	}
 
 	private function validEndpoint( string $endpoint ): bool {

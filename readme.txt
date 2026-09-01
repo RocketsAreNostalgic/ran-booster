@@ -73,12 +73,11 @@ Each provider tab shows the callback URL, required event, repository context,
 and manual setup links beside the saved local secrets. Every repository still
 needs its own remote webhook; a saved local secret alone is not a ready hook.
 Bundled GitHub webhook management can set up, check, reconfigure and remove
-GitHub repository webhooks. It can reuse an applicable saved Core credential or
-accept a request-only fine-grained token granting Webhooks: Read and write
-permission. Reconfigure sends the current Core secret and callback settings to
-the identified remote hook; it does not replace the secret. A request-only
-token is used only for the submitted operation and is never saved; saved
-profiles remain under the site's credential custody and are referenced by ID.
+GitHub repository webhooks using an applicable saved Core credential. Setup can
+reuse an applicable saved signing secret or create one only for the repository.
+Reconfigure sends the recorded Core secret and callback settings to the
+identified remote hook; it does not replace the secret. Saved profiles remain
+under the site's credential custody and are referenced by ID.
 Webhook management never enables Automatic deployment; deployment policy
 remains a separate administrator decision.
 

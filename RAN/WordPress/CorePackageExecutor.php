@@ -20,8 +20,6 @@ use WP_Error;
  */
 class CorePackageExecutor {
 
-	private const CORE_ARTIFACT_HANDOFF_FILTER = 'ran_wp_release_updater_v1_core_artifact_handoff';
-
 	/** @var Closure(string, string, string, object|null): mixed|null */
 	private ?Closure $coreOperation;
 
@@ -143,16 +141,18 @@ class CorePackageExecutor {
 		$preDownload     = $this->preDownloadFilter( $type, 'update', $artifact, $inputs['identifier'] );
 		$sourceFilter    = $this->sourceSelectionFilter( $inputs['slug'], $inputs['subdirectory'], $type, 'update', $inputs['identifier'] );
 		$vcsFilter       = $this->vcsFilter( $type, $inputs['identifier'] );
-		$handoffFilter   = $this->coreArtifactHandoffFilter( $type, $inputs['identifier'], $artifact );
+		$coreAutoUpdate  = has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
 		$cronFilter      = static fn (): bool => true;
 		$completions     = array();
 		$complete        = $this->completionCollector( $completions );
+		if ( false !== $coreAutoUpdate && ! remove_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update', $coreAutoUpdate ) ) {
+			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_UNCERTAIN );
+		}
 
 		add_filter( $transientHook, $transientFilter, 10, 1 );
 		add_filter( 'upgrader_pre_download', $preDownload, 10, 4 );
 		add_filter( 'upgrader_source_selection', $sourceFilter, 10, 4 );
 		add_filter( 'automatic_updates_is_vcs_checkout', $vcsFilter, 10, 2 );
-		add_filter( self::CORE_ARTIFACT_HANDOFF_FILTER, $handoffFilter, 10, 6 );
 		add_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX, 1 );
 		add_action( 'upgrader_process_complete', $complete, 100, 2 );
 
@@ -167,9 +167,11 @@ class CorePackageExecutor {
 			remove_filter( 'upgrader_pre_download', $preDownload, 10 );
 			remove_filter( 'upgrader_source_selection', $sourceFilter, 10 );
 			remove_filter( 'automatic_updates_is_vcs_checkout', $vcsFilter, 10 );
-			remove_filter( self::CORE_ARTIFACT_HANDOFF_FILTER, $handoffFilter, 10 );
 			remove_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX );
 			remove_action( 'upgrader_process_complete', $complete, 100 );
+			if ( false !== $coreAutoUpdate ) {
+				add_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update', $coreAutoUpdate );
+			}
 		}
 	}
 
@@ -260,50 +262,6 @@ class CorePackageExecutor {
 			}
 
 			return $reply;
-		};
-	}
-
-	/**
-	 * Admit only this immutable Core artifact through the selected updater's
-	 * neutral handoff. Every other earlier download reply remains fail-closed.
-	 *
-	 * @return Closure(mixed, mixed, mixed, mixed, mixed, mixed): mixed
-	 */
-	private function coreArtifactHandoffFilter( string $type, string $identifier, PreparedArtifact $artifact ): Closure {
-		return static function (
-			mixed $admitted,
-			mixed $reply,
-			mixed $package,
-			mixed $extra,
-			mixed $targetType,
-			mixed $targetIdentifier
-		) use (
-			$type,
-			$identifier,
-			$artifact
-		): mixed {
-			if ( null !== $admitted ) {
-				return $admitted;
-			}
-			if ( ! is_string( $reply )
-				|| ! is_string( $package )
-				|| ! is_array( $extra )
-				|| $type !== $targetType
-				|| $identifier !== $targetIdentifier
-				|| $identifier !== ( $extra[ $type ] ?? null )
-				|| 'update' !== ( $extra['action'] ?? null )
-				|| ! hash_equals( $artifact->getPath(), $reply )
-				|| ! hash_equals( $artifact->getPath(), $package ) ) {
-				return $admitted;
-			}
-
-			try {
-				$claim = $artifact->claimForNativeUpdate( $type, $identifier );
-			} catch ( Throwable ) {
-				return null;
-			}
-
-			return $claim;
 		};
 	}
 
@@ -469,14 +427,15 @@ class CorePackageExecutor {
 		?string $identifier,
 		array $completions
 	): CorePackageExecutionResult {
-		$requiresCompletion = true === $result || $this->isRestoredPluginFailure( $type, $result );
+		$successfulInstallation = $this->isCanonicalInstallationResult( $result );
+		$requiresCompletion     = true === $result || $successfulInstallation || $this->isRestoredPluginFailure( $type, $result );
 		if ( array() !== $completions || $requiresCompletion ) {
 			if ( 1 !== count( $completions ) || ! $this->completionMatches( $completions[0], $type, $action, $identifier ) ) {
 				return CorePackageExecutionResult::failed( CorePackageExecutionFailure::OPERATION_MISMATCH );
 			}
 		}
 
-		if ( true === $result ) {
+		if ( true === $result || $successfulInstallation ) {
 			return CorePackageExecutionResult::succeeded();
 		}
 		if ( false === $result ) {
@@ -490,6 +449,33 @@ class CorePackageExecutor {
 		}
 
 		return CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_UNCERTAIN );
+	}
+
+	/**
+	 * WordPress may return WP_Upgrader::install_package()'s documented result
+	 * array after a successful automatic plugin or theme update.
+	 */
+	private function isCanonicalInstallationResult( mixed $result ): bool {
+		if ( ! is_array( $result )
+			|| array_keys( $result ) !== array( 'source', 'source_files', 'destination', 'destination_name', 'local_destination', 'remote_destination', 'clear_destination' )
+			|| ! is_string( $result['source'] )
+			|| ! is_array( $result['source_files'] )
+			|| ! array_is_list( $result['source_files'] )
+			|| ! is_string( $result['destination'] )
+			|| ! is_string( $result['destination_name'] )
+			|| ! is_string( $result['local_destination'] )
+			|| ! is_string( $result['remote_destination'] )
+			|| ! is_bool( $result['clear_destination'] ) ) {
+			return false;
+		}
+
+		foreach ( $result['source_files'] as $sourceFile ) {
+			if ( ! is_string( $sourceFile ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/** @param array<string, mixed> $completion */

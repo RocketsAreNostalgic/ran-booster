@@ -33,6 +33,7 @@ use RAN\RepositoryProvider\RepositoryBrowseResult;
 use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryPathInspector;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
 use RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected;
@@ -46,6 +47,10 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
@@ -55,13 +60,21 @@ use RAN\RepositoryProvider\StaleDeployment;
 use RAN\RepositoryProvider\WebhookEnvelope;
 use RAN\RepositoryProvider\WebhookNormalizer as WebhookNormalizerContract;
 use RAN\RepositoryProvider\WebhookRequest;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryClient;
+use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryReleaseWorkflow;
+use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
+use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SourceReadyAssessor;
+use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient;
+use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;
 use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver;
 use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseService;
 use RuntimeException;
 
-final class GitHubProvider implements RepositoryProvider, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
+final class GitHubProvider implements RepositoryProvider, RepositoryPathInspector, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets, RepositoryReleaseWorkflowManagement {
 	public const OPERATION = 'repository-webhook-management';
-	public const VERSION   = 1;
+	public const VERSION   = 3;
 
 	private ProviderMetadata $metadata;
 
@@ -72,6 +85,7 @@ final class GitHubProvider implements RepositoryProvider, CredentialValidator, C
 	private WebhookNormalizer $webhooks;
 	private Diagnostics $diagnostics;
 	private CredentialPolicy $credentialPolicy;
+	private GitHubRepositoryReleaseWorkflow $releaseWorkflow;
 
 	/** @var array<string, GitHubReleaseNativeTarget> */
 	private array $nativeTargets = array();
@@ -115,6 +129,17 @@ final class GitHubProvider implements RepositoryProvider, CredentialValidator, C
 		$this->webhookClient    = $webhookClient;
 		$this->diagnostics      = new Diagnostics( $browser );
 		$this->credentialPolicy = new CredentialPolicy();
+		$workflowRecords        = new SetupRecordStore();
+		$this->releaseWorkflow  = new GitHubRepositoryReleaseWorkflow(
+			$credentials,
+			new WorkflowApplicationCoordinator(
+				new GitHubRepositoryClient(),
+				new TemplatePackRepositoryClient(),
+				new SourceReadyAssessor(),
+				$workflowRecords
+			),
+			$workflowRecords
+		);
 		$this->metadata         = new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
@@ -168,7 +193,7 @@ final class GitHubProvider implements RepositoryProvider, CredentialValidator, C
 					),
 				),
 				new ProviderSetupMetadata(
-					'Public repositories need no token. For private repositories, prefer a fine-grained personal access token: choose the resource owner, select only the repositories this site needs, and set Repository permissions → Contents to Read-only (Metadata: Read-only is automatic). A fine-grained token is limited to one user or organisation: select the project repositories once, then use its saved Booster profile for the packages that need it. Booster does not change that GitHub repository selection. A classic personal access token needs the repo scope and no other scope; it is inherently broad and cannot be limited to selected repositories or read-only access. Booster does not need admin:repo_hook or any other webhook permission. For organisation repositories, the token owner also needs repository access and any required SSO authorisation or organisation approval.',
+					'Public repositories need no token. For private repository browsing and archive reads, prefer a fine-grained personal access token: choose the resource owner, select only the repositories this site needs, and set Repository permissions → Contents to Read-only (Metadata: Read-only is automatic). A fine-grained token is limited to one user or organisation, so select the project repositories once and use its saved Booster profile for the packages that need it. Booster does not change that GitHub repository selection. Repository webhook management is different: classic tokens need admin:repo_hook, while fine-grained tokens need Repository permissions → Webhooks: Read and write. Release-workflow automation writes repository files and needs Contents: Read and write, Workflows: Read and write, and Pull requests: Read and write. Keep those elevated capabilities on a separate saved credential from ordinary read access where possible. A classic personal access token with repo scope is inherently broad and cannot be limited to selected repositories or read-only access. For organisation repositories, the token owner also needs repository access and any required SSO authorisation or organisation approval.',
 					array(
 						array(
 							'label' => 'Create and manage GitHub personal access tokens',
@@ -203,6 +228,34 @@ final class GitHubProvider implements RepositoryProvider, CredentialValidator, C
 
 	public function getProviderDiagnostics(): ProviderDiagnostics {
 		return $this->diagnostics;
+	}
+
+	public function workflowStatus( ReleaseTrackingStatus $status ): RepositoryReleaseWorkflowStatus {
+		return $this->releaseWorkflow->status( $status );
+	}
+
+	public function workflowPreview( ReleaseTrackingStatus $status, string $key ): ?RepositoryReleaseWorkflowPreview {
+		return $this->releaseWorkflow->preview( $status, $key );
+	}
+
+	public function workflowInspect( ReleaseTrackingStatus $status, string $channel, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+		return $this->releaseWorkflow->inspect( $status, $channel, $preflight, $credentialId );
+	}
+
+	public function workflowSetup( ReleaseTrackingStatus $status, string $key, string $confirmation, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+		return $this->releaseWorkflow->setup( $status, $key, $confirmation, $preflight, $credentialId );
+	}
+
+	public function workflowOutcome( ReleaseTrackingStatus $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+		return $this->releaseWorkflow->outcome( $status, $credentialId );
+	}
+
+	public function workflowInspectUpdate( ReleaseTrackingStatus $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+		return $this->releaseWorkflow->inspectUpdate( $status, $credentialId );
+	}
+
+	public function workflowSetupUpdate( ReleaseTrackingStatus $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+		return $this->releaseWorkflow->setupUpdate( $status, $key, $confirmation, $credentialId );
 	}
 
 	public function getCredentialPolicy(): ProviderCredentialPolicy {
@@ -296,6 +349,16 @@ final class GitHubProvider implements RepositoryProvider, CredentialValidator, C
 			$ref,
 			$this->archiveAuthorizer( $repository ),
 			$headVerifier
+		);
+	}
+
+	public function repositoryPathExists( RepositoryReference $repository, string $ref, string $path ): bool {
+		return $this->browser->pathExists(
+			$repository->locator,
+			$ref,
+			$path,
+			$repository->credentialId,
+			$repository->private
 		);
 	}
 
@@ -533,64 +596,69 @@ final class GitHubProvider implements RepositoryProvider, CredentialValidator, C
 		}
 	}
 
-	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
-		return $this->webhookClient->assessSetup( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
+		return $this->webhookClient->assessSetup( $repositoryId, $repository, $this->credential( $credentialProfileId ) );
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		$this->assertHookId( $hookId );
 
-		return $this->webhookClient->assessCheck( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+		return $this->webhookClient->assessCheck( $repositoryId, $repository, $this->credential( $credentialProfileId ) );
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		$this->assertHookId( $hookId );
 
-		return $this->webhookClient->assessReconfigure( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+		return $this->webhookClient->assessReconfigure( $repositoryId, $repository, $this->credential( $credentialProfileId ) );
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		$this->assertHookId( $hookId );
 
-		return $this->webhookClient->assessRemove( $repositoryId, $repository, $this->credential( $credentialProfileId, $requestCredential ) );
+		return $this->webhookClient->assessRemove( $repositoryId, $repository, $this->credential( $credentialProfileId ) );
 	}
 
-	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential, #[\SensitiveParameter] string $signingSecret ): RepositoryWebhookOperationResult {
+	public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+		$this->assertHookId( $hookId );
+
+		return $this->webhookClient->assessTest( $repositoryId, $repository, $this->credential( $credentialProfileId ) );
+	}
+
+	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] string $signingSecret ): RepositoryWebhookOperationResult {
 		$this->assertRepositoryId( $repositoryId );
 
-		return $this->webhookClient->setup( $repository, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ), $signingSecret );
+		return $this->webhookClient->setup( $repository, $callbackUrl, $this->credential( $credentialProfileId ), $signingSecret );
 	}
 
-	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential ): RepositoryWebhookOperationResult {
+	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
 		$this->assertRepositoryId( $repositoryId );
 
-		return $this->webhookClient->check( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ) );
+		return $this->webhookClient->check( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId ) );
 	}
 
-	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential, #[\SensitiveParameter] string $signingSecret ): RepositoryWebhookOperationResult {
+	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] string $signingSecret ): RepositoryWebhookOperationResult {
 		$this->assertRepositoryId( $repositoryId );
 
-		return $this->webhookClient->reconfigure( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ), $signingSecret );
+		return $this->webhookClient->reconfigure( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId ), $signingSecret );
 	}
 
-	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, #[\SensitiveParameter] ?string $requestCredential ): RepositoryWebhookOperationResult {
+	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
 		$this->assertRepositoryId( $repositoryId );
 
-		return $this->webhookClient->remove( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId, $requestCredential ) );
+		return $this->webhookClient->remove( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId ) );
 	}
 
-	private function credential( ?string $credentialProfileId, ?string $requestCredential ): string {
+	public function test( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
+		$this->assertRepositoryId( $repositoryId );
+		$this->assertHookId( $hookId );
+
+		return $this->webhookClient->test( $repository, $hookId, $callbackUrl, $this->credential( $credentialProfileId ) );
+	}
+
+	private function credential( ?string $credentialProfileId ): string {
 		$credentialProfileId = null === $credentialProfileId ? null : trim( $credentialProfileId );
-		$requestCredential   = null === $requestCredential ? null : trim( $requestCredential );
-		if ( ( null === $credentialProfileId || '' === $credentialProfileId ) === ( null === $requestCredential || '' === $requestCredential ) ) {
-			throw new RuntimeException( 'Select exactly one GitHub credential source.', 400 );
-		}
-		if ( null !== $requestCredential && '' !== $requestCredential ) {
-			if ( strlen( $requestCredential ) > 512 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $requestCredential ) ) {
-				throw new RuntimeException( 'The request-only GitHub credential is invalid.', 400 );
-			}
-
-			return $requestCredential;
+		if ( null === $credentialProfileId || '' === $credentialProfileId ) {
+			throw new RuntimeException( 'Choose a saved GitHub credential.', 400 );
 		}
 
 		$material = $this->credentials->credentialMaterial( $credentialProfileId );
@@ -673,7 +741,6 @@ final class GitHubProvider implements RepositoryProvider, CredentialValidator, C
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
 		$credential = $this->releaseAccessToken( $repository );
-
 		return new GitHubReleaseService(
 			array(
 				'canonical_repository_locator' => $repository->locator,

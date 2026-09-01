@@ -40,6 +40,11 @@ final class DeploymentOutcomeTest extends TestCase {
 		DeploymentOutcome::fromCode( 'provider said Authorization: bearer secret' );
 	}
 
+	public function testCheckFailureCannotRepresentSuccess(): void {
+		$this->expectException( InvalidArgumentException::class );
+		new \RAN\Deployment\DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYED, 'not a failure' );
+	}
+
 	/** @return list<array{int, string}> */
 	public static function providerFailureProvider(): array {
 		return array(

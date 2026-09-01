@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tests\Admin\ReleaseManagement\Support;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
+use RAN\Admin\ReleaseManagement\ManagedReleaseBrowser;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingResult;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use RuntimeException;
 
-final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade {
+final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, ManagedReleaseBrowser {
 	public int $statusReads = 0;
 
 	public int $statusListReads = 0;
@@ -27,17 +29,30 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade {
 
 	public bool $throwOnNonce = false;
 
-	public function __construct( private ReleaseTrackingStatus $releaseStatus ) {
+	public ?RepositoryReleaseCandidateList $candidateList = null;
+
+	public ?ReleaseTrackingPreflight $candidateInspection = null;
+
+	/** @var null|callable():void */
+	public $afterCandidateList = null;
+
+	/** @var null|callable():void */
+	public $afterCandidateInspection = null;
+
+	/** @param array<string,ReleaseTrackingStatus> $releaseStatuses */
+	public function __construct(
+		private ReleaseTrackingStatus $releaseStatus,
+		private array $releaseStatuses = array()
+	) {
 	}
 
 	public function status( string $type, string $identifier ): ReleaseTrackingStatus {
-		unset( $type, $identifier );
 		++$this->statusReads;
 		if ( $this->throwOnStatus ) {
 			throw new RuntimeException( 'status-failure' );
 		}
 
-		return $this->releaseStatus;
+		return $this->releaseStatuses[ $type . '|' . $identifier ] ?? $this->releaseStatus;
 	}
 
 	public function statuses( string $type, array $identifiers ): array {
@@ -71,6 +86,34 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade {
 		$this->calls[] = array( 'preflight', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
 
 		return $this->releaseStatus->preflight();
+	}
+
+	public function assessmentPreflight( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
+		$this->calls[] = array( 'assessment_preflight', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
+
+		return $this->releaseStatus->preflight();
+	}
+
+	public function listCandidates( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ?RepositoryReleaseCandidateList {
+		$this->calls[] = array( 'list_candidates', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
+		if ( is_callable( $this->afterCandidateList ) ) {
+			( $this->afterCandidateList )();
+		}
+
+		return $this->candidateList;
+	}
+
+	public function setStatus( ReleaseTrackingStatus $status ): void {
+		$this->releaseStatus = $status;
+	}
+
+	public function inspectCandidate( string $type, string $identifier, int $expectedSourceRevision, string $releaseId, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
+		$this->calls[] = array( 'inspect_candidate', $type, $identifier, $expectedSourceRevision, $releaseId, $tag, $channel, $nonce );
+		if ( is_callable( $this->afterCandidateInspection ) ) {
+			( $this->afterCandidateInspection )();
+		}
+
+		return $this->candidateInspection;
 	}
 
 	public function enable( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ReleaseTrackingResult {

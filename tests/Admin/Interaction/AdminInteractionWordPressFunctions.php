@@ -10,6 +10,10 @@ function admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 }
 
+function wp_make_link_relative( string $link ): string {
+	return (string) preg_replace( '|^(https?:)?//[^/]+(/?.*)|i', '$2', $link );
+}
+
 function esc_attr( mixed $value ): string {
 	return htmlspecialchars( (string) $value, ENT_QUOTES, 'UTF-8' );
 }

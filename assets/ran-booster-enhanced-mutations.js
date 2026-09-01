@@ -232,25 +232,81 @@
 			announce(region.textContent.trim(), 'error');
 		}
 
-		function renderedFailureMessage(form) {
+		function renderedFailureNotice(form) {
 			const region = errorRegion(form);
-			const notice = Array.from(
-				document.querySelectorAll(
-					'#wpbody-content .notice-error, #wpbody-content .error'
-				)
-			).find(function (candidate) {
-				return (
-					candidate !== region &&
-					candidate.hidden !== true &&
-					(candidate.textContent || '').trim() !== ''
-				);
-			});
+			const selector = form?.hasAttribute?.(
+				'data-ran-booster-relocate-rendered-error'
+			)
+				? '#wpbody-content [data-ran-booster-repository-branch-check]'
+				: '#wpbody-content .notice-error, #wpbody-content .error';
+			return Array.from(document.querySelectorAll(selector)).find(
+				function (candidate) {
+					return (
+						candidate !== region &&
+						candidate.hidden !== true &&
+						(candidate.textContent || '').trim() !== ''
+					);
+				}
+			);
+		}
+
+		function renderedFailureMessage(notice) {
+			if (!notice) {
+				return '';
+			}
 
 			return (
 				notice?.querySelector?.('p')?.textContent ||
 				notice?.textContent ||
 				''
 			).trim();
+		}
+
+		function focusRenderedFailure(form) {
+			const notice = renderedFailureNotice(form);
+			const message = renderedFailureMessage(notice);
+			if (!message) {
+				return false;
+			}
+
+			notice.setAttribute?.('role', 'alert');
+			if (!notice.hasAttribute?.('tabindex')) {
+				notice.setAttribute?.('tabindex', '-1');
+			}
+			notice.focus?.({ preventScroll: true });
+			announce(message, 'error');
+			return true;
+		}
+
+		function relocateRenderedFailure(form) {
+			if (
+				!form?.hasAttribute?.(
+					'data-ran-booster-relocate-rendered-error'
+				)
+			) {
+				return false;
+			}
+
+			const region = errorRegion(form);
+			const notice = renderedFailureNotice(form);
+			const message = renderedFailureMessage(notice);
+			if (!region || !message) {
+				return false;
+			}
+
+			const paragraph = region.querySelector?.('p');
+			if (paragraph) {
+				paragraph.textContent = message;
+			} else {
+				region.textContent = message;
+			}
+			const details = notice.querySelector?.('details');
+			if (details) {
+				region.append?.(details);
+			}
+			notice.remove?.();
+			focusError(form);
+			return true;
 		}
 
 		function hideToast(toast) {
@@ -409,6 +465,23 @@
 			return messages.join(' ');
 		}
 
+		function consumeReleaseWorkflowResult() {
+			if (
+				document.querySelector(
+					'#wpbody-content [data-ran-booster-release-workflow-result]'
+				) === null
+			) {
+				return;
+			}
+
+			const canonicalUrl = new URL(window.location.href);
+			'ran_booster_release_workflow_result ran_booster_release_workflow_success ran_booster_release_workflow_type ran_booster_release_workflow_package ran_booster_release_workflow_failure_stage ran_booster_release_workflow_diagnostic ran_booster_release_workflow_diagnostic_available ran_booster_release_workflow_reference ran_booster_release_workflow_channel ran_booster_release_workflow_preview ran_booster_release_workflow_result_nonce ran_booster_release_workflow_source_revision ran_booster_release_workflow_provider ran_booster_release_workflow_repository ran_booster_release_workflow_message ran_booster_release_workflow_remediation'
+				.split(' ')
+				.forEach((key) => canonicalUrl.searchParams.delete(key));
+			const history = window.history;
+			history.replaceState(history.state, '', canonicalUrl);
+		}
+
 		function dispatchSuccess(message) {
 			if (!message || typeof window.CustomEvent !== 'function') {
 				return;
@@ -431,6 +504,8 @@
 			},
 			true
 		);
+
+		consumeReleaseWorkflowResult();
 
 		document.addEventListener('click', function (event) {
 			const submitter = enhancedFormFrom(event.target);
@@ -475,6 +550,7 @@
 			}
 
 			restoreInteractionState();
+			consumeReleaseWorkflowResult();
 			const successMessage = consumeEnhancedSuccess();
 			if (successMessage) {
 				pendingInteractionState ||= {
@@ -485,13 +561,21 @@
 				return;
 			}
 
+			if (relocateRenderedFailure(form)) {
+				return;
+			}
+
 			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
-				focusError(form, renderedFailureMessage(form));
+				if (!focusRenderedFailure(form)) {
+					focusError(form);
+				}
 				return;
 			}
 
 			if (isPackageMutation(form) && errorRegion(form)) {
-				focusError(form, renderedFailureMessage(form));
+				if (!focusRenderedFailure(form)) {
+					focusError(form);
+				}
 			}
 		});
 

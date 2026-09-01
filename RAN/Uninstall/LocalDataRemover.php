@@ -12,6 +12,7 @@ use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Deployment\WordPressWorkerWakeup;
@@ -31,6 +32,9 @@ class LocalDataRemover {
 		Database::VERSION_OPTION,
 		CredentialExpiryObservationStore::OPTION_NAME,
 		PublicRepositoryLookupProfileStore::OPTION_NAME,
+		RepositoryBranchCheckEvidenceStore::OPTION_NAME,
+		'ran_booster_release_deployments_assessment_observations',
+		'ran_booster_release_deployments_failure_history',
 	);
 
 	private const USER_META_KEYS = array(

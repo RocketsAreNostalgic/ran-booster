@@ -7,6 +7,7 @@ namespace RAN\Admin\WebhookManagement\Display;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionRequest;
+use RAN\Admin\WebhookManagement\WebhookManagementAdminUrl;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 
@@ -120,14 +121,15 @@ final class WebhookDisplayModel {
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return array<string, mixed>|null
 	 */
-	public function panel( string $providerCode, string $providerLabel, string $repositoryId, string $returnUrl, ?string $resultCode, ?array $recovery, bool $canManage, ?string $remediation = null ): ?array {
+	public function panel( string $providerCode, string $providerLabel, string $repositoryId, string $returnUrl, ?string $resultCode, ?array $recovery, bool $canManage, ?string $remediation = null, ?string $webhooksUrl = null ): ?array {
 		if ( ! $canManage || '' === trim( $repositoryId ) ) {
 			return null;
 		}
 
 		try {
 			$target = $this->facade->target( $providerCode, $repositoryId );
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $exception ) {
+			unset( $exception );
 			return null;
 		}
 		if ( null === $target || ! hash_equals( $repositoryId, $target->repositoryId() ) ) {
@@ -137,16 +139,9 @@ final class WebhookDisplayModel {
 		$this->projectedStatuses = array();
 		$record                  = $this->records->find( $providerCode, $repositoryId );
 		$status                  = null === $record ? null : $this->projectedStatus( $record );
-		$operations              = null === $recovery ? $this->availableOperations( $target, $record, $status, $providerLabel ) : array();
-		$operationModels         = array();
-		foreach ( $operations as $operation => $label ) {
-			$operationModels[] = array(
-				'key'     => $operation,
-				'label'   => $label,
-				'url'     => $this->operationUrl( $operation, $providerCode, $repositoryId ),
-				'primary' => array_key_first( $operations ) === $operation,
-			);
-		}
+		$credentials             = $this->credentialChoices( $providerCode );
+		$operations              = null === $recovery ? $this->availableOperations( $target, $record, $status, $providerLabel, array() !== $credentials ) : array();
+		$operationModels         = $this->operationModels( $operations, $providerCode, $repositoryId );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
@@ -166,21 +161,86 @@ final class WebhookDisplayModel {
 		}
 
 		return array(
-			'form_action'         => admin_url( 'admin-post.php' ),
-			'admin_action'        => 'ran_booster_repository_webhook_management_operation',
-			'provider_code'       => $providerCode,
-			'provider_label'      => $providerLabel,
-			'repository_id'       => $repositoryId,
-			'repository'          => $target->repository(),
-			'interaction_request' => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
-			'result'              => null === $resultCode ? null : array(
-				'class'   => $this->isSuccessfulResult( $resultCode ) ? 'notice-success' : 'notice-error',
+			'disabled'                    => false,
+			'unavailable_reason'          => null,
+			'webhook_profile_disabled'    => null !== $record,
+			'webhook_profile_placeholder' => null === $record
+				? __( 'Choose a signing secret', 'ran-booster' )
+				: ( 'local_profile_missing' === $status ? __( 'Recorded signing secret is unavailable', 'ran-booster' ) : __( 'Recorded signing secret', 'ran-booster' ) ),
+			'credentials_url'             => $this->providerSettingsUrl( $providerCode, 'credentials' ),
+			'secrets_url'                 => $this->providerSettingsUrl( $providerCode, 'secrets' ),
+			'form_action'                 => WebhookManagementAdminUrl::forPath( 'admin-post.php' ),
+			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
+			'provider_code'               => $providerCode,
+			'provider_label'              => $providerLabel,
+			'repository_id'               => $repositoryId,
+			'repository'                  => $target->repository(),
+			'webhooks_url'                => $webhooksUrl,
+			'return_url'                  => $this->panelUrl( $returnUrl, $repositoryId ),
+			'interaction_request'         => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
+			'result'                      => null === $resultCode ? null : array(
+				'class'   => $this->resultNoticeClass( $resultCode ),
 				'message' => $this->notice( $resultCode, $recovery, $remediation ),
 			),
-			'recovery_warning'    => $recoveryWarning,
-			'credential_choices'  => $this->credentialChoices( $providerCode ),
-			'operations'          => $operationModels,
-			'action_help'         => $help,
+			'recovery_warning'            => $recoveryWarning,
+			'management_credential_id'    => null === $record ? null : $record->managementCredentialId(),
+			'credential_choices'          => $credentials,
+			'webhook_profile_choices'     => null === $record ? $this->webhookProfileChoices( $providerCode, $repositoryId ) : array(),
+			'operations'                  => $operationModels,
+			'action_help'                 => $help,
+		);
+	}
+
+	/** @param array<string,string> $available @return list<array{key:string,label:string,url:string,primary:bool,disabled:bool}> */
+	private function operationModels( array $available, string $providerCode, string $repositoryId ): array {
+		$labels     = array(
+			'setup'       => __( 'Set up webhook', 'ran-booster' ),
+			'check'       => __( 'Check webhook', 'ran-booster' ),
+			'reconfigure' => __( 'Update webhook', 'ran-booster' ),
+			'test'        => __( 'Test webhook', 'ran-booster' ),
+			'remove'      => __( 'Remove webhook', 'ran-booster' ),
+		);
+		$operations = array();
+		foreach ( $labels as $operation => $label ) {
+			$operations[] = array(
+				'key'      => $operation,
+				'label'    => $label,
+				'url'      => $this->operationUrl( $operation, $providerCode, $repositoryId ),
+				'primary'  => 'setup' === $operation,
+				'disabled' => ! isset( $available[ $operation ] ),
+			);
+		}
+
+		return $operations;
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function unavailablePanel( string $providerCode, string $providerLabel, string $repositoryId, string $repository, string $returnUrl, string $reason, ?string $webhooksUrl = null ): array {
+		return array(
+			'disabled'                    => true,
+			'unavailable_reason'          => $reason,
+			'webhook_profile_disabled'    => true,
+			'webhook_profile_placeholder' => __( 'Choose a signing secret', 'ran-booster' ),
+			'management_credential_id'    => null,
+			'credentials_url'             => $this->providerSettingsUrl( $providerCode, 'credentials' ),
+			'secrets_url'                 => $this->providerSettingsUrl( $providerCode, 'secrets' ),
+			'form_action'                 => WebhookManagementAdminUrl::forPath( 'admin-post.php' ),
+			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
+			'provider_code'               => $providerCode,
+			'provider_label'              => $providerLabel,
+			'repository_id'               => $repositoryId,
+			'repository'                  => $repository,
+			'webhooks_url'                => $webhooksUrl,
+			'return_url'                  => $this->panelUrl( $returnUrl, $repositoryId ),
+			'interaction_request'         => null,
+			'result'                      => null,
+			'recovery_warning'            => null,
+			'credential_choices'          => $this->credentialChoices( $providerCode ),
+			'webhook_profile_choices'     => array(),
+			'operations'                  => $this->operationModels( array(), $providerCode, $repositoryId ),
+			'action_help'                 => null,
 		);
 	}
 
@@ -189,7 +249,7 @@ final class WebhookDisplayModel {
 		/* translators: %s: repository provider name. */
 		$intro = sprintf( __( 'Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $providerLabel );
 		/* translators: %s: repository provider name. */
-		$credentialHeading = sprintf( __( 'Saved profile or request-only %s access', 'ran-booster' ), $providerLabel );
+		$credentialHeading = sprintf( __( 'Saved %s access', 'ran-booster' ), $providerLabel );
 		/* translators: %s: repository provider name. */
 		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check.', 'ran-booster' ), $providerLabel );
 		/* translators: %s: repository provider name. */
@@ -204,7 +264,7 @@ final class WebhookDisplayModel {
 			),
 			array(
 				'heading' => $credentialHeading,
-				'body'    => __( 'Select an eligible saved Booster credential or provide fresh request-only access for the selected repository. A saved credential is resolved inside the fixed provider operation; a pasted credential is submitted for this operation only. Neither value is persisted or logged by webhook management.', 'ran-booster' ),
+				'body'    => __( 'Select an eligible saved Booster credential for the selected repository. Booster resolves the saved credential inside the fixed provider operation; no credential material is returned to webhook management.', 'ran-booster' ),
 			),
 			array(
 				'heading' => __( 'Readiness and recorded status', 'ran-booster' ),
@@ -237,12 +297,14 @@ final class WebhookDisplayModel {
 		}
 
 		return match ( $code ) {
+			'ping_requested', 'ping_verified' => 'GitHub accepted the ping request for the recorded hook. This does not prove an authenticated inbound delivery or verify the signing secret; recorded status remains needs verification.',
+			'ping_delivery_failed' => 'GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the provider delivery details.',
 			'configured_pending_delivery' => 'Webhook management configured the remote hook. Signed delivery verification is still pending.',
 			'verified' => 'Webhook management confirmed the recorded remote configuration. Correlate provider delivery history with the Provider request ID in Booster Activity before treating signed delivery as established.',
 			'removed' => 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.',
 			'forbidden' => 'You are not permitted to manage this repository webhook. Nothing was changed.',
 			'invalid_request' => 'The webhook request was invalid or expired. Nothing was changed; reload this repository and try again.',
-			'invalid_token' => 'Select one saved credential or provide one request-only credential, then try again.',
+			'invalid_token' => 'Select one saved credential, then try again.',
 			'operation_unauthorized' => 'Core could not authorize this repository webhook operation. Nothing was changed.',
 			'repository_identity_unconfirmed' => 'Core could not confirm the selected repository identity. Nothing was changed.',
 			'operation_busy' => 'Another webhook operation is already in progress for this repository. Wait for it to finish, then check the recorded state.',
@@ -273,6 +335,12 @@ final class WebhookDisplayModel {
 		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
 	}
 
+	private function resultNoticeClass( string $code ): string {
+		return in_array( $code, array( 'ping_requested', 'ping_verified' ), true )
+			? 'notice-warning'
+			: ( $this->isSuccessfulResult( $code ) ? 'notice-success' : 'notice-error' );
+	}
+
 	public function canRespondInlineToFailure( string $code ): bool {
 		return in_array( $code, array( 'forbidden', 'invalid_request', 'invalid_token', 'operation_unauthorized', 'repository_identity_unconfirmed', 'operation_busy', 'setup_failed', 'setup_compensated', 'assessment_insufficient', 'assessment_stale', 'assessment_unsupported', 'assessment_unavailable' ), true );
 	}
@@ -281,7 +349,8 @@ final class WebhookDisplayModel {
 	private function readiness( string $providerCode ): ?array {
 		try {
 			$projection = $this->facade->readiness( $providerCode )->toArray();
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $exception ) {
+			unset( $exception );
 			return null;
 		}
 		if ( array_keys( $projection ) !== array( 'site', 'repositories' )
@@ -333,17 +402,43 @@ final class WebhookDisplayModel {
 		}
 		$normalized = array();
 		foreach ( $choices as $choice ) {
-			if ( ! is_array( $choice ) || ! is_string( $choice['id'] ?? null ) || ! is_string( $choice['label'] ?? null ) || ! is_string( $choice['kind'] ?? null ) || ( null !== ( $choice['destroy_on'] ?? null ) && ! is_string( $choice['destroy_on'] ) ) ) {
+			if ( ! is_array( $choice ) || ! is_string( $choice['id'] ?? null ) || ! is_string( $choice['label'] ?? null ) || ! is_string( $choice['kind'] ?? null ) ) {
+				continue;
+			}
+			$destroyOn = $choice['destroy_on'] ?? null;
+			if ( null !== $destroyOn && ! is_string( $destroyOn ) ) {
 				continue;
 			}
 			$label = $choice['label'] . ' (' . $choice['kind'] . ')';
-			if ( is_string( $choice['destroy_on'] ) ) {
+			if ( is_string( $destroyOn ) ) {
 				/* translators: %s: credential removal date. */
-				$label .= ' · ' . sprintf( __( 'removes after %s', 'ran-booster' ), $choice['destroy_on'] );
+				$label .= ' · ' . sprintf( __( 'removes after %s', 'ran-booster' ), $destroyOn );
 			}
 			$normalized[] = array(
 				'id'    => $choice['id'],
 				'label' => $label,
+			);
+		}
+
+		return $normalized;
+	}
+
+	/** @return list<array{id:string,label:string,scope:string}> */
+	private function webhookProfileChoices( string $providerCode, string $repositoryId ): array {
+		try {
+			$choices = $this->facade->webhookProfileChoices( $providerCode, $repositoryId );
+		} catch ( \Throwable ) {
+			return array();
+		}
+		$normalized = array();
+		foreach ( $choices as $choice ) {
+			if ( ! is_array( $choice ) || ! is_string( $choice['id'] ?? null ) || ! is_string( $choice['label'] ?? null ) || ! in_array( $choice['scope'] ?? null, array( 'repository', 'owner' ), true ) ) {
+				continue;
+			}
+			$normalized[] = array(
+				'id'    => $choice['id'],
+				'label' => $choice['label'],
+				'scope' => $choice['scope'],
 			);
 		}
 
@@ -423,11 +518,15 @@ final class WebhookDisplayModel {
 		$history = null === $record ? null : WebhookHistory::fromRecord( $record )->toArray();
 		$details = array(
 			array(
-				'label' => __( 'Recorded hook status', 'ran-booster' ),
-				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
-				'tone'  => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+				'key'      => 'core:webhook-recorded-status',
+				'label'    => __( 'Recorded hook status', 'ran-booster' ),
+				'value'    => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
+				'tone'     => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+				'recorded' => null !== $history,
+				'state'    => $statusCode,
 			),
 			array(
+				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
 				'value' => null === $history ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
@@ -436,6 +535,7 @@ final class WebhookDisplayModel {
 
 		if ( null !== $history && $statusCode !== $history['recorded_status'] ) {
 			$details[] = array(
+				'key'   => 'core:webhook-current-warning',
 				'label' => __( 'Current local warning', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $statusCode ),
 				'tone'  => $this->historicalStatusTone( $statusCode ),
@@ -446,10 +546,17 @@ final class WebhookDisplayModel {
 			$details,
 			array(
 				array(
-					'label' => __( 'Recorded hook profile', 'ran-booster' ),
+					'key'   => 'core:webhook-management-credential',
+					'label' => __( 'Management credential', 'ran-booster' ),
+					'value' => null === $record ? __( 'Webhook has not been managed yet', 'ran-booster' ) : $this->managementCredentialLabel( $record ),
+				),
+				array(
+					'key'   => 'core:webhook-signing-secret',
+					'label' => __( 'Recorded signing secret', 'ran-booster' ),
 					'value' => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->recordedProfileLabel( $statusCode, $record ),
 				),
 				array(
+					'key'      => 'core:webhook-last-checked',
 					'label'    => __( 'Last checked', 'ran-booster' ),
 					'value'    => null === $history ? __( 'Never', 'ran-booster' ) : $history['checked_at'],
 					'datetime' => null === $history ? '' : $history['checked_at'],
@@ -464,16 +571,37 @@ final class WebhookDisplayModel {
 
 		return array(
 			array(
+				'key'   => 'core:webhook-recorded-status',
 				'label' => __( 'Recorded hook status', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $history['recorded_status'] ),
 				'tone'  => $this->historicalStatusTone( $history['recorded_status'] ),
 			),
 			array(
+				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
 				'value' => __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
 			),
 			array(
+				'key'   => 'core:webhook-management-credential',
+				'label' => __( 'Management credential', 'ran-booster' ),
+				'value' => sprintf(
+					/* translators: %s: saved credential profile ID. */
+					__( 'Last managed with saved credential profile %s; current availability was not checked.', 'ran-booster' ),
+					$record->managementCredentialId()
+				),
+			),
+			array(
+				'key'   => 'core:webhook-signing-secret',
+				'label' => __( 'Recorded signing secret', 'ran-booster' ),
+				'value' => sprintf(
+					/* translators: %s: signing secret profile ID. */
+					__( 'Recorded signing secret profile %s; current availability was not checked.', 'ran-booster' ),
+					$record->webhookProfileId()
+				),
+			),
+			array(
+				'key'      => 'core:webhook-last-checked',
 				'label'    => __( 'Last checked', 'ran-booster' ),
 				'value'    => $history['checked_at'],
 				'datetime' => $history['checked_at'],
@@ -482,10 +610,17 @@ final class WebhookDisplayModel {
 	}
 
 	/** @return array<string, string> */
-	private function availableOperations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, string $providerLabel ): array {
+	private function availableOperations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, string $providerLabel, bool $hasCredential ): array {
+		if ( ! $hasCredential ) {
+			return array();
+		}
 		if ( null === $record ) {
 			/* translators: %s: repository provider name. */
-			return array( 'setup' => sprintf( __( 'Set up in %s', 'ran-booster' ), $providerLabel ) );
+			return array(
+				/* translators: %s: repository provider name. */
+				'setup'         => sprintf( __( 'Set up in %s', 'ran-booster' ), $providerLabel ),
+				'disabled:test' => __( 'Test webhook', 'ran-booster' ),
+			);
 		}
 		if ( $record->requiresHookIdentification() ) {
 			return array();
@@ -497,6 +632,8 @@ final class WebhookDisplayModel {
 		}
 		/* translators: %s: repository provider name. */
 		$operations['check'] = sprintf( __( 'Check %s', 'ran-booster' ), $providerLabel );
+		/* translators: %s: repository provider name. */
+		$operations['test'] = sprintf( __( 'Test %s webhook', 'ran-booster' ), $providerLabel );
 		if ( ! in_array( $status, array( 'local_profile_missing', 'remote_missing', 'removal_pending' ), true ) ) {
 			/* translators: %s: repository provider name. */
 			$operations['remove'] = sprintf( __( 'Remove from %s', 'ran-booster' ), $providerLabel );
@@ -506,15 +643,22 @@ final class WebhookDisplayModel {
 	}
 
 	private function panelUrl( string $returnUrl, string $repositoryId ): string {
+		if ( 1 === preg_match( '/[?&]page=ran-booster-(?:plugins|themes)(?:&|$)/', $returnUrl ) ) {
+			return $returnUrl;
+		}
 		$url = 1 === preg_match( '/[?&]repository=/', $returnUrl ) ? $returnUrl : $returnUrl . ( str_contains( $returnUrl, '?' ) ? '&' : '?' ) . 'repository=' . rawurlencode( $repositoryId );
 
-		return $url . '#ran-booster-repository-webhook-management-operation-heading';
+		return $url;
 	}
 
 	private function operationUrl( string $operation, string $providerCode, string $repositoryId ): string {
 		$action = 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $providerCode, $repositoryId ) );
 
-		return admin_url( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
+		return WebhookManagementAdminUrl::forPath( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
+	}
+
+	private function providerSettingsUrl( string $providerCode, string $view ): string {
+		return WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&view=' . rawurlencode( $view ) );
 	}
 
 	private function historicalStatusLabel( string $status ): string {
@@ -538,13 +682,61 @@ final class WebhookDisplayModel {
 
 	private function recordedProfileLabel( string $status, InstallationRecord $record ): string {
 		if ( 'local_profile_missing' === $status ) {
-			return __( 'Secret needs attention', 'ran-booster' );
+			return sprintf(
+				/* translators: %s: signing secret profile ID. */
+				__( 'Recorded signing secret profile %s is unavailable.', 'ran-booster' ),
+				$record->webhookProfileId()
+			);
+		}
+		$label = $this->webhookProfileLabel( $record );
+		if ( null !== $label ) {
+			return sprintf(
+				/* translators: %s: current signing secret profile label. */
+				__( '%s; current local profile metadata is available.', 'ran-booster' ),
+				$label
+			);
 		}
 		$scope  = 'owner' === $record->webhookProfileScope() ? __( 'Owner-shared secret', 'ran-booster' ) : __( 'Repository secret', 'ran-booster' );
 		$source = 'created' === $record->webhookProfileDisposition() ? __( 'created for this hook', 'ran-booster' ) : __( 'reused from Booster', 'ran-booster' );
 
 		/* translators: 1: signing secret scope, 2: signing secret source. */
 		return sprintf( __( '%1$s; %2$s', 'ran-booster' ), $scope, $source );
+	}
+
+	private function managementCredentialLabel( InstallationRecord $record ): string {
+		try {
+			foreach ( $this->facade->credentialChoices( $record->providerCode() ) as $choice ) {
+				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->managementCredentialId(), $choice['id'] ) ) {
+					return sprintf(
+						/* translators: %s: current saved credential profile label. */
+						__( 'Last managed with %s; provider authority has not been revalidated.', 'ran-booster' ),
+						$choice['label']
+					);
+				}
+			}
+		} catch ( \Throwable $exception ) {
+			unset( $exception );
+		}
+
+		return sprintf(
+			/* translators: %s: saved credential profile ID. */
+			__( 'Previously used saved credential profile %s is unavailable.', 'ran-booster' ),
+			$record->managementCredentialId()
+		);
+	}
+
+	private function webhookProfileLabel( InstallationRecord $record ): ?string {
+		try {
+			foreach ( $this->facade->webhookProfileChoices( $record->providerCode(), $record->repositoryId() ) as $choice ) {
+				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->webhookProfileId(), $choice['id'] ) ) {
+					return $choice['label'];
+				}
+			}
+		} catch ( \Throwable $exception ) {
+			unset( $exception );
+		}
+
+		return null;
 	}
 
 	private function projectedStatus( InstallationRecord $record, bool $retainedSource = false ): string {

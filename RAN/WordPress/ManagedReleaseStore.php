@@ -6,8 +6,10 @@ namespace RAN\WordPress;
 
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\PackageSubdirectory;
 use RAN\PackageSource;
 use RAN\Storage\Database;
+use RAN\Storage\RepositorySourceGuard;
 use RuntimeException;
 
 /**
@@ -66,43 +68,82 @@ class ManagedReleaseStore {
 			return false;
 		}
 
-		$before = $this->row( $type, $identifier );
-		if ( $expectedSource->value !== ( $before->source ?? null )
-			|| $expectedRevision !== (int) ( $before->source_revision ?? 0 ) ) {
+		if ( false === $this->database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $this->database->query( 'START TRANSACTION' ) ) {
 			return false;
 		}
-		$policy     = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';
-		$nextPolicy = DeploymentPolicy::AUTOMATIC->value === $policy
+		try {
+			$before = $this->row( $type, $identifier, true );
+			if ( PackageSource::RELEASE_ASSET === $newSource ) {
+				$this->assertReleaseSubdirectory( $before );
+			}
+			if ( $expectedSource->value !== ( $before->source ?? null )
+				|| $expectedRevision !== (int) ( $before->source_revision ?? 0 )
+				|| ! is_string( $before->provider ?? null )
+				|| ! is_string( $before->provider_repository_id ?? null ) ) {
+				$wpdb = $this->database;
+				$wpdb->query( 'ROLLBACK' );
+				return false;
+			}
+			$assessment = ( new RepositorySourceGuard( $this->database, $this->lifecycle ) )->assess(
+				$before->provider,
+				$before->provider_repository_id,
+				self::typeId( $type ),
+				$identifier,
+				$newSource,
+				true
+			);
+			if ( ! $assessment['allowed'] ) {
+				$this->database->query( 'ROLLBACK' );
+				if ( 'repository_source_unavailable' === $assessment['code'] ) {
+					throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
+				}
+
+				return false;
+			}
+			$policy     = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';
+			$nextPolicy = DeploymentPolicy::AUTOMATIC->value === $policy
 			? DeploymentPolicy::MANUAL->value
 			: $policy;
-		$data       = array(
-			'source'                => $newSource->value,
-			'source_revision'       => $expectedRevision + 1,
-			'source_previous'       => $expectedSource->value,
-			'source_changed_at'     => ( $this->clock )(),
-			'source_changed_by'     => $userId > 0 ? $userId : null,
-			'deployment_policy'     => $nextPolicy,
-			'release_configuration' => $configuration?->toJson(),
-		);
-		$where      = array(
-			'type'              => self::typeId( $type ),
-			'package'           => $identifier,
-			'source'            => $expectedSource->value,
-			'source_revision'   => $expectedRevision,
-			'deployment_policy' => $policy,
-		);
+			$data       = array(
+				'source'                => $newSource->value,
+				'source_revision'       => $expectedRevision + 1,
+				'source_previous'       => $expectedSource->value,
+				'source_changed_at'     => ( $this->clock )(),
+				'source_changed_by'     => $userId > 0 ? $userId : null,
+				'deployment_policy'     => $nextPolicy,
+				'release_configuration' => $configuration?->toJson(),
+			);
+			$where      = array(
+				'type'              => self::typeId( $type ),
+				'package'           => $identifier,
+				'source'            => $expectedSource->value,
+				'source_revision'   => $expectedRevision,
+				'deployment_policy' => $policy,
+			);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the exact source-transition CAS boundary.
-		if ( 1 !== $this->database->update( ran_booster_table_name(), $data, $where ) ) {
-			return false;
-		}
+			if ( 1 !== $this->database->update( ran_booster_table_name(), $data, $where ) ) {
+				$this->database->query( 'ROLLBACK' );
+				return false;
+			}
 
-		$after = $this->row( $type, $identifier );
+			$after = $this->row( $type, $identifier, true );
 
-		return $newSource->value === ( $after->source ?? null )
+			$verified = $newSource->value === ( $after->source ?? null )
 			&& $expectedRevision + 1 === (int) ( $after->source_revision ?? 0 )
 			&& $expectedSource->value === ( $after->source_previous ?? null )
 			&& $data['release_configuration'] === ( $after->release_configuration ?? null )
-			&& $nextPolicy === ( $after->deployment_policy ?? null );
+				&& $nextPolicy === ( $after->deployment_policy ?? null );
+			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
+				$this->database->query( 'ROLLBACK' );
+				return false;
+			}
+
+			return true;
+		} catch ( \Throwable $exception ) {
+			$this->database->query( 'ROLLBACK' );
+			throw $exception;
+		}
 	}
 
 	/**
@@ -130,59 +171,98 @@ class ManagedReleaseStore {
 			return false;
 		}
 
-		$before = $this->row( $type, $identifier );
-		if ( PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
+		if ( false === $this->database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $this->database->query( 'START TRANSACTION' ) ) {
+			return false;
+		}
+		try {
+			$before     = $this->row( $type, $identifier, true );
+			$assessment = ! is_string( $before->provider ?? null ) || ! is_string( $before->provider_repository_id ?? null )
+				? array(
+					'allowed' => false,
+					'code'    => 'repository_source_unavailable',
+				)
+				: ( new RepositorySourceGuard( $this->database, $this->lifecycle ) )->assess(
+					$before->provider,
+					$before->provider_repository_id,
+					self::typeId( $type ),
+					$identifier,
+					PackageSource::RELEASE_ASSET,
+					true
+				);
+			if ( ! $assessment['allowed'] ) {
+				$this->database->query( 'ROLLBACK' );
+				if ( 'repository_source_unavailable' === $assessment['code'] ) {
+					throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
+				}
+
+				return false;
+			}
+			$this->assertReleaseSubdirectory( $before );
+			if ( PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
 			|| $expectedRevision !== (int) ( $before->source_revision ?? 0 )
 			|| ! is_string( $before->release_configuration ?? null ) ) {
-			return false;
-		}
-		$current = ManagedReleaseConfiguration::fromJson( $before->release_configuration );
-		if ( $channel === $current->channel() ) {
-			return false;
-		}
-		$next = new ManagedReleaseConfiguration(
-			$current->packageRoot(),
-			$current->metadataFile(),
-			$channel
-		);
+				$this->database->query( 'ROLLBACK' );
+				return false;
+			}
+			$current = ManagedReleaseConfiguration::fromJson( $before->release_configuration );
+			if ( $channel === $current->channel() ) {
+				$this->database->query( 'ROLLBACK' );
+				return false;
+			}
+			$next = new ManagedReleaseConfiguration(
+				$current->packageRoot(),
+				$current->metadataFile(),
+				$channel
+			);
 
-		$policy     = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';
-		$nextPolicy = DeploymentPolicy::AUTOMATIC->value === $policy
+			$policy     = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';
+			$nextPolicy = DeploymentPolicy::AUTOMATIC->value === $policy
 			? DeploymentPolicy::MANUAL->value
 			: $policy;
-		$data       = array(
-			'source_revision'       => $expectedRevision + 1,
-			'source_changed_at'     => ( $this->clock )(),
-			'source_changed_by'     => $userId > 0 ? $userId : null,
-			'deployment_policy'     => $nextPolicy,
-			'release_configuration' => $next->toJson(),
-		);
-		$where      = array(
-			'type'                  => self::typeId( $type ),
-			'package'               => $identifier,
-			'source'                => PackageSource::RELEASE_ASSET->value,
-			'source_revision'       => $expectedRevision,
-			'deployment_policy'     => $policy,
-			'release_configuration' => $current->toJson(),
-		);
+			$data       = array(
+				'source_revision'       => $expectedRevision + 1,
+				'source_changed_at'     => ( $this->clock )(),
+				'source_changed_by'     => $userId > 0 ? $userId : null,
+				'deployment_policy'     => $nextPolicy,
+				'release_configuration' => $next->toJson(),
+			);
+			$where      = array(
+				'type'                  => self::typeId( $type ),
+				'package'               => $identifier,
+				'source'                => PackageSource::RELEASE_ASSET->value,
+				'source_revision'       => $expectedRevision,
+				'deployment_policy'     => $policy,
+				'release_configuration' => $current->toJson(),
+			);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the exact same-source configuration CAS boundary.
-		if ( 1 !== $this->database->update( ran_booster_table_name(), $data, $where ) ) {
-			return false;
-		}
+			if ( 1 !== $this->database->update( ran_booster_table_name(), $data, $where ) ) {
+				$this->database->query( 'ROLLBACK' );
+				return false;
+			}
 
-		$after = $this->row( $type, $identifier );
+			$after = $this->row( $type, $identifier, true );
 
-		return PackageSource::RELEASE_ASSET->value === ( $after->source ?? null )
+			$verified = PackageSource::RELEASE_ASSET->value === ( $after->source ?? null )
 			&& $expectedRevision + 1 === (int) ( $after->source_revision ?? 0 )
 			&& $next->toJson() === ( $after->release_configuration ?? null )
 			&& $nextPolicy === ( $after->deployment_policy ?? null );
+			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
+				$this->database->query( 'ROLLBACK' );
+				return false;
+			}
+			return true;
+		} catch ( \Throwable $exception ) {
+			$this->database->query( 'ROLLBACK' );
+			throw $exception;
+		}
 	}
 
-	private function row( string $type, string $identifier ): object {
+	private function row( string $type, string $identifier, bool $lock = false ): object {
 		$this->assertIdentity( $type, $identifier );
 		$this->lifecycle?->requireReady();
 		$query = $this->database->prepare(
-			'SELECT * FROM %i WHERE type = %d AND package = %s LIMIT 2',
+			'SELECT * FROM %i WHERE type = %d AND package = %s LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
 			ran_booster_table_name(),
 			self::typeId( $type ),
 			$identifier
@@ -203,6 +283,18 @@ class ManagedReleaseStore {
 			|| strlen( $identifier ) > 255
 			|| str_contains( $identifier, "\0" ) ) {
 			throw new RuntimeException( 'The managed release package identity is invalid.' );
+		}
+	}
+
+	private function assertReleaseSubdirectory( object $row ): void {
+		try {
+			$subdirectory = PackageSubdirectory::normalize( $row->subdirectory ?? null );
+		} catch ( \InvalidArgumentException $exception ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The prior exception remains internal to the typed storage failure.
+			throw new RuntimeException( 'The managed release package subdirectory is invalid.', 0, $exception );
+		}
+		if ( null !== $subdirectory ) {
+			throw new ManagedReleaseSubdirectoryNotSupported( 'The managed release package subdirectory is not supported.' );
 		}
 	}
 

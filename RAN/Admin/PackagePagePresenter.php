@@ -119,17 +119,16 @@ final class PackagePagePresenter {
 		Package $package,
 		array $packageProviderSettings,
 		?array $packageBranchReadiness,
-		?array $webhookRetention,
-		string $requestedSourceView
+		string $requestedSourceView,
+		bool $openAdvanced = false
 	): array {
 		return array(
 			'packageProviderSettings' => $packageProviderSettings,
 			'packageBranchReadiness'  => $packageBranchReadiness,
-			'packageWebhookCleanup'   => $this->webhookCleanup( $package, $webhookRetention ),
 			'package'                 => $package,
 			'packageView'             => $this,
 			'packageExtensionPanels'  => $this->extensionPanels( $package ),
-			'packageSource'           => $this->sourceComposition( 'edit', $requestedSourceView, $package ),
+			'packageSource'           => $this->sourceComposition( 'edit', $requestedSourceView, $package, $openAdvanced ),
 		);
 	}
 
@@ -139,14 +138,15 @@ final class PackagePagePresenter {
 		bool $explicitProvider,
 		bool $openRepositoryPicker,
 		string $requestedSourceView,
-		?string $managedPackageIdentifier = null
+		?string $managedPackageIdentifier = null,
+		bool $openAdvanced = false
 	): array {
 		return array(
 			'packageProviderSettings'  => $packageProviderSettings,
 			'packageView'              => $this,
 			'explicitProvider'         => $explicitProvider,
 			'openRepositoryPicker'     => $openRepositoryPicker,
-			'packageSource'            => $this->sourceComposition( 'create', $requestedSourceView ),
+			'packageSource'            => $this->sourceComposition( 'create', $requestedSourceView, null, $openAdvanced ),
 			'managedPackageIdentifier' => $managedPackageIdentifier,
 		);
 	}
@@ -252,13 +252,18 @@ final class PackagePagePresenter {
 	 *   choices: array<string, array<string, mixed>>,
 	 *   advanced_sections: list<string>,
 	 *   advanced_summary: string,
+	 *   advanced_summary_projection: array{
+	 *     heading: string,
+	 *     badges: list<array{label: string}>,
+	 *     status: string
+	 *   },
 	 *   selected: string,
 	 *   current: string,
 	 *   advanced_open: bool,
 	 *   unavailable: bool
 	 * }
 	 */
-	private function sourceComposition( string $mode, string $requested, ?Package $package = null ): array {
+	private function sourceComposition( string $mode, string $requested, ?Package $package = null, bool $openAdvanced = false ): array {
 		$projection = null === $package ? null : $this->projection( $package );
 		$pageUrl    = null === $projection
 			? add_query_arg( 'page', $this->getCreatePageSlug(), $this->getAdminUrl() )
@@ -267,7 +272,7 @@ final class PackagePagePresenter {
 			'branch'        => array(
 				'key'               => 'branch',
 				'heading'           => __( 'Branch', 'ran-booster' ),
-				'description'       => __( 'Deploy a saved repository branch manually or when a signed push webhook arrives.', 'ran-booster' ),
+				'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
 				'meta'              => __( 'Included with Booster', 'ran-booster' ),
 				'url'               => add_query_arg( 'source_view', 'branch', $pageUrl ),
 				'disabled'          => false,
@@ -276,8 +281,8 @@ final class PackagePagePresenter {
 			),
 			'release_asset' => array(
 				'key'               => 'release_asset',
-				'heading'           => __( 'Published releases', 'ran-booster' ),
-				'description'       => __( 'Install verified published packages when the selected provider supports release management.', 'ran-booster' ),
+				'heading'           => __( 'Releases', 'ran-booster' ),
+				'description'       => __( 'Install published releases through WordPress.', 'ran-booster' ),
 				'meta'              => __( 'Included with Booster', 'ran-booster' ),
 				'url'               => '',
 				'disabled'          => true,
@@ -312,13 +317,14 @@ final class PackagePagePresenter {
 		}
 
 		return array(
-			'choices'           => $choices,
-			'advanced_sections' => $this->advancedSourceSections( $mode, $selected, $projection, $pageUrl ),
-			'advanced_summary'  => $this->advancedSourceSummary( $mode, $selected, $choices, $projection, $package ),
-			'selected'          => $selected,
-			'current'           => $current,
-			'advanced_open'     => '' !== $requested,
-			'unavailable'       => PackageSource::BRANCH->value !== $current
+			'choices'                     => $choices,
+			'advanced_sections'           => $this->advancedSourceSections( $mode, $selected, $projection, $pageUrl ),
+			'advanced_summary'            => $this->advancedSourceSummary( $mode, $selected, $choices, $projection, $package ),
+			'advanced_summary_projection' => $this->advancedSourceSummaryProjection( $mode, $selected, $package, $projection ),
+			'selected'                    => $selected,
+			'current'                     => $current,
+			'advanced_open'               => $openAdvanced,
+			'unavailable'                 => PackageSource::BRANCH->value !== $current
 				&& ( ! isset( $choices[ $current ] ) || ! $choices[ $current ]['hydrated'] ),
 		);
 	}
@@ -362,7 +368,7 @@ final class PackagePagePresenter {
 	): string {
 		$sourceLabel = is_string( $choices[ $selected ]['heading'] ?? null )
 			? $choices[ $selected ]['heading']
-			: __( 'Package source', 'ran-booster' );
+			: __( 'Update source', 'ran-booster' );
 		$summary     = PackageSource::BRANCH->value === $selected
 			? sprintf(
 				/* translators: 1: source label, 2: branch. */
@@ -394,6 +400,109 @@ final class PackagePagePresenter {
 		}
 
 		return $summary;
+	}
+
+	/**
+	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
+	 */
+	private function advancedSourceSummaryProjection(
+		string $mode,
+		string $selected,
+		?Package $package,
+		?AdminPackageProjection $projection
+	): array {
+		$source  = 'edit' === $mode && null !== $package
+			? $package->getSource()->value
+			: $selected;
+		$heading = PackageSource::BRANCH->value === $source
+			? __( 'Branch', 'ran-booster' )
+			: __( 'Releases', 'ran-booster' );
+		$badges  = array();
+		$status  = '';
+		if ( 'edit' === $mode && null !== $package ) {
+			if ( PackageSource::BRANCH->value === $source && null !== $projection ) {
+				$subdirectory = trim( $projection->subdirectory() );
+				if ( '' !== $subdirectory ) {
+					$badges[] = array(
+						'label' => $subdirectory,
+					);
+				}
+				$status = __( 'Active', 'ran-booster' );
+			} elseif ( PackageSource::RELEASE_ASSET->value === $source ) {
+				$badges[] = array(
+					'label' => __( 'Stable', 'ran-booster' ),
+				);
+				$status   = __( 'Active', 'ran-booster' );
+			}
+		} elseif ( 'create' === $mode && PackageSource::RELEASE_ASSET->value === $selected ) {
+			$badges[] = array(
+				'label' => __( 'Stable', 'ran-booster' ),
+			);
+		}
+
+		try {
+			$baseline = apply_filters(
+				'ran_booster_admin_package_advanced_source_summary_projection',
+				array(
+					'heading' => $heading,
+					'badges'  => $badges,
+					'status'  => $status,
+				),
+				$mode,
+				$this->type,
+				$selected,
+				$projection
+			);
+		} catch ( Throwable $failure ) {
+			$this->logFailure( 'advanced package source summary projection unavailable', 'advanced_package_source_summary_projection', $failure );
+
+			return array(
+				'heading' => $heading,
+				'badges'  => $badges,
+				'status'  => $status,
+			);
+		}
+
+		if ( is_array( $baseline ) && isset( $baseline['heading'] ) && is_string( $baseline['heading'] ) ) {
+			$validatedHeading = trim( wp_strip_all_tags( $baseline['heading'], true ) );
+			if ( '' === $validatedHeading || strlen( $validatedHeading ) > 80 ) {
+				return array(
+					'heading' => $heading,
+					'badges'  => $badges,
+					'status'  => $status,
+				);
+			}
+			if ( is_array( $baseline['badges'] ) ) {
+				$validated = array();
+				foreach ( $baseline['badges'] as $badge ) {
+					$label = is_array( $badge ) && is_string( $badge['label'] ?? null )
+						? trim( wp_strip_all_tags( $badge['label'], true ) )
+						: '';
+					if ( '' !== $label && strlen( $label ) <= 255 && count( $validated ) < 3 ) {
+						$validated[] = array(
+							'label' => $label,
+						);
+					}
+				}
+				$badges = $validated;
+			} else {
+				$badges = array();
+			}
+			$validatedStatus = is_string( $baseline['status'] ?? null )
+				? trim( wp_strip_all_tags( $baseline['status'], true ) )
+				: '';
+			return array(
+				'heading' => $validatedHeading,
+				'badges'  => $badges,
+				'status'  => strlen( $validatedStatus ) <= 40 ? $validatedStatus : '',
+			);
+		}
+
+		return array(
+			'heading' => $heading,
+			'badges'  => $badges,
+			'status'  => $status,
+		);
 	}
 
 	/** @return list<string> */
@@ -544,67 +653,10 @@ final class PackagePagePresenter {
 		return $normalized;
 	}
 
-	/** @return array{context: WebhookCleanupContext, actions: list<string>}|null */
-	private function webhookCleanup( Package $package, ?array $retention ): ?array {
-		if ( null === $retention ) {
-			return null;
-		}
-
-		try {
-			$adminUrl = $this->getAdminUrl();
-			$context  = new WebhookCleanupContext(
-				$this->type,
-				(string) $package->getIdentifier(),
-				(string) $retention['provider_code'],
-				(string) $retention['repository_id'],
-				(string) $retention['repository'],
-				(string) $retention['local_secret_coverage'],
-				true === $retention['available'],
-				true === $retention['branch_evidence_available'],
-				$retention['branch_package_references'],
-				(string) $retention['provider_webhooks_url'],
-				add_query_arg(
-					array(
-						'page' => 'ran-booster',
-						'tab'  => (string) $retention['provider_code'],
-						'view' => 'secrets',
-					),
-					$adminUrl
-				),
-				add_query_arg(
-					array(
-						'page' => 'ran-booster',
-						'tab'  => 'documentation',
-					),
-					$adminUrl
-				) . '#ran-booster-webhook-cleanup',
-				$this->projection( $package )->settingsUrl()
-			);
-		} catch ( Throwable $failure ) {
-			$this->logFailure( 'package webhook cleanup context unavailable', 'package_webhook_cleanup_context', $failure );
-
-			return null;
-		}
-
-		$bufferLevel = ob_get_level();
-		ob_start();
-		try {
-			do_action( 'ran_booster_admin_package_webhook_cleanup_actions', $context );
-			$content = (string) ob_get_clean();
-			$actions = '' === trim( $content ) ? array() : array( $content );
-		} catch ( Throwable $failure ) {
-			$this->cleanBuffer( $bufferLevel );
-			$actions = array();
-			$this->logFailure( 'package webhook cleanup action unavailable', 'package_webhook_cleanup_action', $failure );
-		}
-
-		return array(
-			'context' => $context,
-			'actions' => $actions,
-		);
-	}
-
 	private function projection( Package $package ): AdminPackageProjection {
+		$subdirectory = is_string( $package->getSubdirectory() )
+			? trim( $package->getSubdirectory() )
+			: '';
 		return new AdminPackageProjection(
 			$this->type,
 			(string) $package->getIdentifier(),
@@ -619,7 +671,8 @@ final class PackagePagePresenter {
 					'package' => (string) $package->getIdentifier(),
 				),
 				$this->getAdminUrl()
-			)
+			),
+			$subdirectory
 		);
 	}
 

@@ -1,6 +1,6 @@
-name: Security contact
-description: Request a confidential contact path when private vulnerability reporting is unavailable.
-title: '[Security]: '
+name: Security reporting help
+description: Use only when private vulnerability reporting is unavailable. Do not include vulnerability details.
+title: '[Security reporting help]: '
 body:
     - type: markdown
       attributes:

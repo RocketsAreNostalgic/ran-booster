@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN;
 
-use InvalidArgumentException;
-
 /**
  * Normalize and validate a repository-relative package directory.
  */
@@ -36,6 +34,10 @@ final class PackageSubdirectory {
 			|| preg_match( '/^[A-Za-z]:/', $value )
 			|| preg_match( '/[\x00-\x1F\x7F]/', $value ) ) {
 			throw self::invalid();
+		}
+
+		if ( str_ends_with( $value, '/' ) ) {
+			$value = substr( $value, 0, -1 );
 		}
 
 		$segments = explode( '/', $value );
@@ -72,7 +74,10 @@ final class PackageSubdirectory {
 	public static function normalizeSlug( mixed $value ): string {
 		$slug = self::normalize( $value );
 
-		if ( null === $slug || str_contains( $slug, '/' ) ) {
+		if ( null === $slug
+			|| ! is_string( $value )
+			|| str_ends_with( trim( $value ), '/' )
+			|| str_contains( $slug, '/' ) ) {
 			throw self::invalid();
 		}
 
@@ -117,7 +122,7 @@ final class PackageSubdirectory {
 		}
 	}
 
-	private static function invalid(): InvalidArgumentException {
-		return new InvalidArgumentException( 'The package subdirectory must be a normalized relative path.' );
+	private static function invalid(): InvalidPackageSubdirectory {
+		return new InvalidPackageSubdirectory( 'The package subdirectory must be a normalized relative path.' );
 	}
 }

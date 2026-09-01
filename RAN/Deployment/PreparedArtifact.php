@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use RAN\Logging\BoosterLogger;
-use RAN\WPReleaseUpdater\V1\Archive\TemporaryArtifact;
 use RuntimeException;
 
 /**
@@ -14,10 +13,6 @@ use RuntimeException;
 final class PreparedArtifact {
 
 	private bool $cleaned = false;
-
-	private bool $verified = false;
-
-	private bool $transferred = false;
 
 	public function __construct(
 		private readonly string $path,
@@ -64,10 +59,9 @@ final class PreparedArtifact {
 	 * Prove that the caller is about to use the exact downloaded bytes.
 	 */
 	public function assertUnchanged(): void {
-		if ( $this->cleaned || $this->transferred ) {
+		if ( $this->cleaned ) {
 			throw new RuntimeException( 'The prepared deployment artifact has already been cleaned up.' );
 		}
-		$this->verified = false;
 		if ( ! $this->hasOriginalIdentity() ) {
 			BoosterLogger::log(
 				'artifact integrity check failed before use',
@@ -91,40 +85,13 @@ final class PreparedArtifact {
 			);
 			throw new RuntimeException( 'The prepared deployment artifact changed before use.' );
 		}
-
-		$this->verified = true;
-	}
-
-	/**
-	 * Transfer cleanup ownership to the shared updater.
-	 */
-	public function claimForNativeUpdate( string $type, string $identifier ): TemporaryArtifact {
-		if ( $this->cleaned
-			|| $this->transferred
-			|| ! $this->verified ) {
-			throw new RuntimeException( 'The prepared deployment artifact is unavailable.' );
-		}
-		if ( ! $this->hasOriginalIdentity() ) {
-			throw new RuntimeException( 'The prepared deployment artifact changed before handoff.' );
-		}
-
-		$claim             = TemporaryArtifact::forCoreUpdate(
-			$this->path,
-			$this->digest,
-			$type,
-			$identifier,
-			$this->expectedVersion
-		);
-		$this->transferred = true;
-
-		return $claim;
 	}
 
 	/**
 	 * Delete only the unchanged file owned by this artifact.
 	 */
 	public function cleanup(): void {
-		if ( $this->cleaned || $this->transferred ) {
+		if ( $this->cleaned ) {
 			return;
 		}
 		$this->assertUnchanged();

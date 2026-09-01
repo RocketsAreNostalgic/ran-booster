@@ -100,7 +100,7 @@ final class DeploymentAdminController {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 		}
 		$this->attempts->resolveNeedsAttention( $attemptId, $correlationId, $this->currentUserId() );
-		$this->dashboard->addMessage( __( 'The deployment review was recorded. This package may now be retried.', 'ran-booster' ) );
+		$this->dashboard->addMessage( __( 'Retry is allowed. No package files or settings were changed.', 'ran-booster' ) );
 	}
 
 	private function canonicalAttemptId( mixed $value ): int {

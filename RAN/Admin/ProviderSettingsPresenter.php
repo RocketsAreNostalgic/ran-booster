@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -16,7 +17,10 @@ use RAN\RepositoryProvider\CredentialValidator;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowser;
+use RAN\RepositoryProvider\RepositoryPathInspector;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\UnknownProvider;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\Secrets\SecretsFile;
@@ -24,6 +28,7 @@ use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Storage\CredentialUsageReader;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use Throwable;
 
@@ -33,10 +38,13 @@ use Throwable;
  * Secret-bearing records are deliberately never requested from the sidecar.
  */
 final readonly class ProviderSettingsPresenter {
+	private const MAX_REPOSITORY_PACKAGE_SUMMARIES = 20;
 
 	private PublicRepositoryLookupProfileStore $publicLookupProfiles;
 	private CredentialExpiryObservationStore $expiryObservations;
 	private CredentialExpiryReminder $expiryReminders;
+	private RepositoryBranchCheckEvidenceStore $branchCheckEvidence;
+	private WordPressUpdaterLock $branchCheckLock;
 
 	public function __construct(
 		private ProviderRegistry $providers,
@@ -47,7 +55,9 @@ final readonly class ProviderSettingsPresenter {
 		?CredentialExpiryReminder $expiryReminders = null,
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null,
-		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null
+		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?WordPressUpdaterLock $branchCheckLock = null
 	) {
 		$this->publicLookupProfiles = $publicLookupProfiles ?? new PublicRepositoryLookupProfileStore();
 		$this->expiryObservations   = $expiryObservations ?? new CredentialExpiryObservationStore();
@@ -56,6 +66,8 @@ final readonly class ProviderSettingsPresenter {
 			$this->secrets,
 			$this->expiryObservations
 		);
+		$this->branchCheckEvidence  = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->branchCheckLock      = $branchCheckLock ?? new WordPressUpdaterLock();
 	}
 
 	/**
@@ -210,13 +222,14 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return array{
 	 *     provider_code: string,
+	 *     retained: bool,
 	 *     site: array{status: string, reason_codes: list<string>, callback_url: string},
 	 *     repository: array<string, mixed>|null,
 	 *     webhook_settings_url: string
 	 * }|null
 	 */
 	public function buildPackageBranchReadiness( Package $package ): ?array {
-		if ( PackageSource::BRANCH !== $package->getSource() || null === $this->webhookAssistance ) {
+		if ( ! in_array( $package->getSource(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true ) || null === $this->webhookAssistance ) {
 			return null;
 		}
 
@@ -233,6 +246,25 @@ final readonly class ProviderSettingsPresenter {
 			$readiness = $this->webhookAssistanceReadiness( $providerCode, $provider );
 			if ( null === $readiness ) {
 				return null;
+			}
+			if ( PackageSource::RELEASE_ASSET === $package->getSource() ) {
+				$retention = $this->buildPackageWebhookRetention( $package );
+				if ( null === $retention ) {
+					return null;
+				}
+
+				return array(
+					'provider_code'        => $providerCode,
+					'retained'             => true,
+					'site'                 => $readiness['site'],
+					'repository'           => array(
+						'repository_id'         => $retention['repository_id'],
+						'repository'            => $retention['repository'],
+						'reason_codes'          => array(),
+						'local_secret_coverage' => $retention['local_secret_coverage'],
+					),
+					'webhook_settings_url' => $retention['provider_webhooks_url'],
+				);
 			}
 
 			$repositoryId = $package->getProviderRepositoryId();
@@ -254,6 +286,7 @@ final readonly class ProviderSettingsPresenter {
 
 			return array(
 				'provider_code'        => $providerCode,
+				'retained'             => false,
 				'site'                 => $readiness['site'],
 				'repository'           => $match,
 				'webhook_settings_url' => (string) ( $this->repositoryWebhookSettingsUrl(
@@ -264,6 +297,131 @@ final readonly class ProviderSettingsPresenter {
 		} catch ( Throwable ) {
 			return null;
 		}
+	}
+
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
+	public function checkPackageRepositoryBranch( string $type, Package $package ): string {
+		if ( PackageSource::BRANCH !== $package->getSource() ) {
+			return 'unable_to_check';
+		}
+		try {
+			return $this->branchCheckLock->run(
+				fn (): string => $this->checkPackageRepositoryBranchWhileLocked( $type, $package ),
+				'Another package operation is in progress.',
+				'The package operation lock could not be released.'
+			);
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+	}
+
+	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
+	private function checkPackageRepositoryBranchWhileLocked( string $type, Package $package ): string {
+		$profileId          = $this->effectiveBranchCheckProfile( $package );
+		$profileFingerprint = $this->branchCheckEvidence->profileFingerprintFor( $package, $profileId );
+
+		try {
+			$provider = $this->providers->get( (string) $package->getProviderCode() );
+		} catch ( UnknownProvider ) {
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'provider_unavailable', $profileFingerprint );
+		} catch ( Throwable ) {
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'unable_to_check', $profileFingerprint );
+		}
+
+		$archive = null;
+		$result  = 'unable_to_check';
+		try {
+			$repository = $package->getRepository()->reference;
+			if ( ! $repository->private ) {
+				$credentialId = $provider instanceof CredentialedPublicRepositoryBrowser
+					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile
+						? $profileId
+						: null;
+
+				$repository = new RepositoryReference(
+					$repository->locator,
+					$repository->providerRepositoryId,
+					false,
+					$credentialId
+				);
+			}
+
+			$archive     = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->getBranch() ) );
+			$resolvedRef = $archive->getResolvedRef();
+			if ( '' !== trim( $resolvedRef )
+				&& strlen( $resolvedRef ) <= 191
+				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolvedRef )
+			) {
+				$subdirectory = $package->getSubdirectory();
+				if ( is_string( $subdirectory ) && '' !== $subdirectory
+					&& $provider instanceof RepositoryPathInspector
+				) {
+					try {
+						$result = $provider->repositoryPathExists( $repository, $resolvedRef, $subdirectory )
+							? 'verified'
+							: 'subdirectory_unavailable';
+					} catch ( Throwable ) {
+						$result = 'subdirectory_unverified';
+					}
+				} elseif ( is_string( $subdirectory ) && '' !== $subdirectory ) {
+					$result = 'subdirectory_unverified';
+				} else {
+					$result = 'verified';
+				}
+			}
+		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Provider failures intentionally map to a closed result.
+		} catch ( Throwable ) {
+			// The provider failure is intentionally not exposed to administrators.
+		} finally {
+			if ( null !== $archive ) {
+				try {
+					$archive->cleanup();
+				} catch ( Throwable ) {
+					$result = 'unable_to_check';
+				}
+			}
+		}
+
+		return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, $result, $profileFingerprint );
+	}
+
+	/** @param 'verified'|'unable_to_check'|'provider_unavailable' $outcome */
+	private function recordPackageRepositoryBranchCheck(
+		string $type,
+		Package $package,
+		?string $profileId,
+		string $outcome,
+		string $profileFingerprint
+	): string {
+		try {
+			$this->branchCheckEvidence->record( $type, $package, $profileId, $outcome, $profileFingerprint );
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+
+		return $outcome;
+	}
+
+	/**
+	 * Returns the current non-secret access state for a one-time branch-check result.
+	 *
+	 * The dashboard may cache that result briefly, but credential replacement and
+	 * default public-profile changes must require a fresh remote check.
+	 */
+	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
+		return $this->branchCheckEvidence->profileFingerprintFor( $package, $this->effectiveBranchCheckProfile( $package ) );
+	}
+
+	/** @return array{outcome: 'verified', checked_at: string}|null */
+	public function packageRepositoryBranchEvidence( string $type, Package $package ): ?array {
+		return $this->branchCheckEvidence->find( $type, $package, $this->effectiveBranchCheckProfile( $package ) );
+	}
+
+	private function effectiveBranchCheckProfile( Package $package ): ?string {
+		if ( $package->isPrivate() ) {
+			return $package->getCredentialId();
+		}
+		return $this->publicLookupProfiles->get( (string) $package->getProviderCode() );
 	}
 
 	/**
@@ -609,7 +767,7 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * List repository targets already managed by Booster without mutating package rows.
 	 *
-	 * @return array{available: bool, owners: list<string>, repositories: list<array{target: string, repository_id: string, source: string, package_count: int, automatic_count: int, package_references: list<string>, deployment_policies: array{automatic: int, manual: int, disabled: int}, repository_url: string|null, webhook_settings_url: string|null}>}
+	 * @return array{available: bool, owners: list<string>, repositories: list<array<string, mixed>>}
 	 */
 	private function managedRepositories( string $provider, RepositoryProvider $repositoryProvider, bool $branchOnly ): array {
 		if ( null === $this->plugins || null === $this->themes ) {
@@ -622,8 +780,20 @@ final readonly class ProviderSettingsPresenter {
 
 		try {
 			$packages = array_merge(
-				$this->plugins->allDeploymentPlugins(),
-				$this->themes->allDeploymentThemes()
+				array_map(
+					static fn ( Package $package ): array => array(
+						'package' => $package,
+						'type'    => 'plugin',
+					),
+					array_values( $this->plugins->allDeploymentPlugins() )
+				),
+				array_map(
+					static fn ( Package $package ): array => array(
+						'package' => $package,
+						'type'    => 'theme',
+					),
+					array_values( $this->themes->allDeploymentThemes() )
+				)
 			);
 		} catch ( Throwable ) {
 				return array(
@@ -633,50 +803,104 @@ final readonly class ProviderSettingsPresenter {
 				);
 		}
 
-		$owners       = array();
-		$repositories = array();
-		foreach ( $packages as $package ) {
-			$source = $package->getSource();
+		$owners                 = array();
+		$repositories           = array();
+		$idsByLocator           = array();
+		$locatorsByRepositoryId = array();
+		foreach ( $packages as $entry ) {
+			$package = $entry['package'];
+			$source  = $package->getSource();
 			if ( $package->getProviderCode() !== $provider
 				|| ( $branchOnly && PackageSource::BRANCH !== $source ) ) {
 				continue;
 			}
 
-			$target = trim( (string) $package->getRepository() );
+			$target       = trim( (string) $package->getRepository() );
+			$repositoryId = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
 			if ( '' === $target ) {
 				continue;
 			}
+			$locatorKey = $target;
+			if ( '' !== $repositoryId ) {
+				$idsByLocator[ $locatorKey ][ $repositoryId ]           = true;
+				$locatorsByRepositoryId[ $repositoryId ][ $locatorKey ] = true;
+			}
+		}
 
-			$key   = strtolower( $target ) . ( $branchOnly ? '' : '|' . $source->value );
+		foreach ( $packages as $entry ) {
+			$package = $entry['package'];
+			$source  = $package->getSource();
+			if ( $package->getProviderCode() !== $provider
+				|| ( $branchOnly && PackageSource::BRANCH !== $source ) ) {
+				continue;
+			}
+
+			$target       = trim( (string) $package->getRepository() );
+			$repositoryId = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
+			if ( '' === $target ) {
+				continue;
+			}
+			$locatorKey       = $target;
+			$identityConflict = '' !== $repositoryId && (
+				1 < count( $idsByLocator[ $locatorKey ] ?? array() )
+				|| 1 < count( $locatorsByRepositoryId[ $repositoryId ] ?? array() )
+			);
+
+			// Provider IDs, not mutable locators or package source, are the live-row
+			// authority. An absent ID stays visible for review but is never operable.
+			$key   = '' === $repositoryId
+				? 'historical:' . hash( 'sha256', $target . '|' . $source->value . '|' . (string) $package->getIdentifier() )
+				: $repositoryId;
 			$parts = explode( '/', trim( $target, '/' ), 2 );
 			if ( 2 === count( $parts ) && '' !== trim( $parts[0] ) ) {
 				$owners[ strtolower( $parts[0] ) ] = $parts[0];
 			}
 			if ( ! isset( $repositories[ $key ] ) ) {
 				$repositories[ $key ] = array(
-					'target'               => $target,
-					'repository_id'        => (string) ( $package->getProviderRepositoryId() ?? '' ),
-					'source'               => $source->value,
-					'package_count'        => 0,
-					'automatic_count'      => 0,
-					'package_references'   => array(),
-					'deployment_policies'  => array(
+					'target'                        => $target,
+					'repository_id'                 => $repositoryId,
+					'sources'                       => array( $source->value => true ),
+					'historical'                    => '' === $repositoryId || $identityConflict,
+					'identity_conflict'             => $identityConflict,
+					'package_count'                 => 0,
+					'automatic_count'               => 0,
+					'has_automatic_branch_consumer' => false,
+					'package_references'            => array(),
+					'branch_package_references'     => array(),
+					'package_summaries'             => array(),
+					'deployment_policies'           => array(
 						'automatic' => 0,
 						'manual'    => 0,
 						'disabled'  => 0,
 					),
-					'repository_url'       => $this->repositoryUrl( $repositoryProvider, $target ),
-					'webhook_settings_url' => PackageSource::BRANCH === $source
+					'repository_url'                => $identityConflict ? null : $this->repositoryUrl( $repositoryProvider, $target ),
+					'webhook_settings_url'          => PackageSource::BRANCH === $source && ! $identityConflict
 						? $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target )
 						: null,
 				);
-			} elseif ( $repositories[ $key ]['repository_id'] !== (string) ( $package->getProviderRepositoryId() ?? '' ) ) {
-				$repositories[ $key ]['repository_id'] = '';
+			}
+			if ( $identityConflict ) {
+				$repositories[ $key ]['historical']           = true;
+				$repositories[ $key ]['identity_conflict']    = true;
+				$repositories[ $key ]['repository_url']       = null;
+				$repositories[ $key ]['webhook_settings_url'] = null;
+			} elseif ( PackageSource::BRANCH === $source && null === $repositories[ $key ]['webhook_settings_url'] ) {
+				$repositories[ $key ]['webhook_settings_url'] = $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target );
 			}
 
+			$repositories[ $key ]['sources'][ $source->value ] = true;
 			++$repositories[ $key ]['package_count'];
 			$repositories[ $key ]['package_references'][] = (string) $package->getIdentifier();
-			$policy                                       = $package->getDeploymentPolicy()->value;
+			if ( PackageSource::BRANCH === $source ) {
+				$repositories[ $key ]['branch_package_references'][] = (string) $package->getIdentifier();
+				if ( 'automatic' === $package->getDeploymentPolicy()->value ) {
+					$repositories[ $key ]['has_automatic_branch_consumer'] = true;
+				}
+			}
+			if ( self::MAX_REPOSITORY_PACKAGE_SUMMARIES > count( $repositories[ $key ]['package_summaries'] ) ) {
+				$repositories[ $key ]['package_summaries'][] = $this->packageSummary( $package, $source, $entry['type'] );
+			}
+			$policy = $package->getDeploymentPolicy()->value;
 			++$repositories[ $key ]['deployment_policies'][ $policy ];
 			if ( 'automatic' === $policy ) {
 				++$repositories[ $key ]['automatic_count'];
@@ -685,6 +909,13 @@ final readonly class ProviderSettingsPresenter {
 
 		foreach ( $repositories as &$repository ) {
 			sort( $repository['package_references'], SORT_STRING );
+			sort( $repository['branch_package_references'], SORT_STRING );
+			usort( $repository['package_summaries'], static fn ( array $left, array $right ): int => strcmp( $left['identifier'], $right['identifier'] ) );
+			$repository['package_summaries_omitted'] = max( 0, $repository['package_count'] - count( $repository['package_summaries'] ) );
+			$sourceKeys                              = array_keys( $repository['sources'] );
+			sort( $sourceKeys, SORT_STRING );
+			$repository['source'] = 2 === count( $sourceKeys ) ? 'mixed' : ( $sourceKeys[0] ?? PackageSource::BRANCH->value );
+			unset( $repository['sources'] );
 		}
 		unset( $repository );
 
@@ -695,6 +926,25 @@ final readonly class ProviderSettingsPresenter {
 			'available'    => true,
 			'owners'       => array_values( $owners ),
 			'repositories' => array_values( $repositories ),
+		);
+	}
+
+	/** @return array{type:string,identifier:string,display_name:string,settings_url:string,source:string,source_revision:int,branch:string,subdirectory:string,deployment_policy:string} */
+	private function packageSummary( Package $package, PackageSource $source, string $type ): array {
+		$identifier = (string) $package->getIdentifier();
+		$page       = 'theme' === $type ? 'ran-booster-themes' : 'ran-booster-plugins';
+
+		return array(
+			'type'              => $type,
+			'identifier'        => $identifier,
+			'display_name'      => $package->getDisplayName(),
+			'settings_url'      => ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) )
+				. '?page=' . $page . '&package=' . rawurlencode( $identifier ),
+			'source'            => $source->value,
+			'source_revision'   => $package->getSourceRevision(),
+			'branch'            => (string) $package->getBranch(),
+			'subdirectory'      => (string) $package->getSubdirectory(),
+			'deployment_policy' => $package->getDeploymentPolicy()->value,
 		);
 	}
 
@@ -1192,6 +1442,7 @@ final readonly class ProviderSettingsPresenter {
 			'credentialRowCount'             => count( $credentialProjection['rows'] ),
 			'credentialScopes'               => $credentialProjection['scopes'],
 			'webhookRowCount'                => count( $webhookRows ),
+			'readyWebhookProfileCount'       => count( array_filter( $webhookRows, static fn ( array $row ): bool => 'ready' === ( $row['status_key'] ?? null ) ) ),
 			'credentialSummary'              => $summaries['credential'],
 			'webhookSummary'                 => $summaries['webhook'],
 			'credentialList'                 => $credentialList,

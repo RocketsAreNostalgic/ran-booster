@@ -1,0 +1,857 @@
+<?php
+
+declare(strict_types=1);
+
+namespace RAN\Admin\ReleaseManagement;
+
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\Logging\BoosterLogger;
+use RAN\PackageSource;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
+use RAN\Storage\ThemeRepository;
+use Throwable;
+
+/** @internal GET-side release-workflow projection owner. */
+final class ReleaseWorkflowPresenter {
+	private readonly ReleaseTrackingOperations $tracking;
+	private readonly RepositorySourceGuard $sourceGuard;
+	/** @var array<string,\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus|null> */
+	private array $workflowStatuses = array();
+
+	public function __construct(
+		private readonly ReleaseTrackingFacade $releases,
+		private readonly PluginRepository $plugins,
+		private readonly ThemeRepository $themes,
+		private readonly ProviderRegistry $providers,
+		private readonly ReleaseWorkflowRequestController $requests,
+		?RepositorySourceGuard $sourceGuard = null
+	) {
+		$this->tracking    = new ReleaseTrackingOperations( $releases );
+		$this->sourceGuard = $sourceGuard ?? new RepositorySourceGuard();
+	}
+
+	public function keepReleaseSettingsDiscoverable(
+		array $choices,
+		string $mode,
+		string $type,
+		?object $package,
+		string $pageUrl
+	): array {
+		unset( $type, $pageUrl );
+		if ( 'edit' !== $mode || null === $package || ! isset( $choices['release_asset'] )
+			|| ! is_callable( array( $package, 'providerCode' ) ) || ! $this->releaseProviderSupported( (string) $package->providerCode() ) ) {
+			return $choices;
+		}
+
+		$choices['release_asset']['disabled'] = false;
+		return $choices;
+	}
+
+	/**
+	 * Add local release-workflow status and navigation to managed repository rows.
+	 *
+	 * @param array<string, array<string, mixed>> $rows
+	 * @param array<string, array<string, mixed>> $repositoryProjections
+	 * @return array<string, array<string, mixed>>
+	 */
+	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
+		unset( $repositoryProjections, $returnUrl );
+		if ( null === $this->workflowProvider( $providerCode ) ) {
+			return $rows;
+		}
+
+		foreach ( $rows as &$row ) {
+			if ( ! is_array( $row )
+				|| true === ( $row['historical'] ?? false )
+				|| 0 < (int) ( $row['package_summaries_omitted'] ?? 0 ) ) {
+				continue;
+			}
+			$rowDetails     = is_array( $row['details'] ?? null ) ? $row['details'] : array();
+			$availableSlots = 20 - count( $rowDetails );
+			$summaries      = is_array( $row['package_summaries'] ?? null )
+				? array_values( array_filter( $row['package_summaries'], 'is_array' ) )
+				: array();
+			$multiple       = 1 < count( $summaries );
+			foreach ( $summaries as $summary ) {
+				$projection = $this->repositoryReleaseAutomationProjection( $row, $summary, $multiple );
+				if ( null === $projection ) {
+					continue;
+				}
+				if ( 0 >= $availableSlots ) {
+					continue;
+				}
+				$row['details'][]                               = $projection['detail'];
+				$row['actions'][ $projection['action']['key'] ] = $projection['action'];
+				--$availableSlots;
+			}
+		}
+		unset( $row );
+
+		return $rows;
+	}
+
+	private function observationKindForResult( string $code ): string {
+		return match ( $code ) {
+			'workflow_release_automation_conflict' => 'existing_automation_detected',
+			'workflow_release_automation_present'  => 'booster_setup_verified',
+			'workflow_inspected'                   => 'no_recognisable_automation',
+			default                                => '',
+		};
+	}
+
+	private function publishedReleasesWorking( ReleaseTrackingStatus $status ): bool {
+		return $status->eligible() && 'release_asset' === $status->source() && '' === $status->failureCode();
+	}
+
+	private function statusMatchesSummary( ReleaseTrackingStatus $status, string $type, string $identifier, string $source, int $revision, string $repositoryId ): bool {
+		return hash_equals( $type, $status->type() )
+			&& hash_equals( $identifier, $status->identifier() )
+			&& hash_equals( $source, $status->source() )
+			&& $revision === $status->sourceRevision()
+			&& hash_equals( $repositoryId, $status->providerRepositoryId() );
+	}
+
+	/** @param array<string,mixed>|null $result @return array{result_view:?array<string,mixed>,url:string} */
+	public function packageProjection( object $package, ReleaseTrackingStatus $status, ?array $result ): array {
+		if ( ! is_callable( array( $package, 'providerCode' ) )
+			|| ! is_callable( array( $package, 'type' ) )
+			|| ! is_callable( array( $package, 'identifier' ) )
+			|| ! is_callable( array( $package, 'sourceRevision' ) ) ) {
+			return array(
+				'result_view' => null,
+				'url'         => '',
+			);
+		}
+
+		$resultView   = is_array( $result )
+			&& hash_equals( (string) $package->type(), (string) ( $result['type'] ?? '' ) )
+			&& hash_equals( (string) $package->identifier(), (string) ( $result['identifier'] ?? '' ) )
+			? array(
+				'result_code'           => $result['code'],
+				'result_successful'     => $result['successful'],
+				'failure_stage'         => $result['failure_stage'],
+				'diagnostic_code'       => $result['diagnostic_code'],
+				'diagnostic_available'  => $result['diagnostic_available'],
+				'correlation_reference' => $result['correlation_reference'],
+				'result_message'        => $result['message'],
+				'result_remediation'    => $result['remediation'],
+			) : null;
+		$providerCode = (string) $package->providerCode();
+		$url          = null !== $this->workflowProvider( $providerCode )
+			&& hash_equals( $providerCode, $this->workflowProviderCode( $status ) )
+			&& hash_equals( $status->type(), (string) $package->type() )
+			&& hash_equals( $status->identifier(), (string) $package->identifier() )
+			&& $status->sourceRevision() === (int) $package->sourceRevision()
+			? $this->repositoryReleaseUrl( $status->providerRepositoryId(), $providerCode ) : '';
+
+		return array(
+			'result_view' => $resultView,
+			'url'         => $url,
+		);
+	}
+
+	/** @param array<string,mixed> $row @param array<string,mixed>|null $result @return array<string,mixed>|null */
+	public function repositorySectionProjection( array $row, string $returnUrl, string $previewKey, ?array $result ): ?array {
+		$providerCode = is_string( $row['provider_code'] ?? null ) ? $row['provider_code'] : '';
+		if ( '' === $providerCode || true === ( $row['historical'] ?? false ) ) {
+			return null;
+		}
+
+		$repositoryId      = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+		$repository        = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$summaries         = is_array( $row['package_summaries'] ?? null ) ? array_values( array_filter( $row['package_summaries'], 'is_array' ) ) : array();
+		$summary           = $summaries[0] ?? array();
+		$type              = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
+		$identifier        = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
+		$revision          = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
+		$guard             = $this->repositorySourceGuard( $providerCode, $repositoryId, $type, $identifier, PackageSource::RELEASE_ASSET );
+		$shared            = 0 === $guard['release_count'] && 1 < $guard['relationship_count'];
+		$conflicted        = ! $guard['allowed'] && ! $shared;
+		$single            = $guard['allowed'] && 1 === $guard['relationship_count'] && 1 === count( $summaries );
+		$package           = $single ? $this->localPackage( $type, $identifier ) : null;
+		$status            = $single ? $this->requestBoundary( fn (): ?ReleaseTrackingStatus => $this->workflowDisplayStatus( $type, $identifier, $revision ), null ) : null;
+		$exact             = $status instanceof ReleaseTrackingStatus
+			&& $this->statusMatchesSummary( $status, $type, $identifier, (string) ( $summary['source'] ?? '' ), $revision, $repositoryId )
+			&& is_object( $package ) && is_callable( array( $package, 'getRepository' ) )
+			&& hash_equals( $repository, (string) $package->getRepository() );
+		$workflowAvailable = null !== $this->workflowProvider( $providerCode );
+		$workflowStatus    = $exact ? $this->workflowProviderStatus( $status ) : null;
+		$matchingResult    = $exact && is_array( $result )
+			&& hash_equals( $providerCode, (string) ( $result['provider'] ?? '' ) )
+			&& hash_equals( $repositoryId, (string) ( $result['repository'] ?? '' ) )
+			&& hash_equals( $type, (string) ( $result['type'] ?? '' ) )
+			&& hash_equals( $identifier, (string) ( $result['identifier'] ?? '' ) )
+			&& $revision === (int) ( $result['source_revision'] ?? 0 ) ? $result : null;
+		$view              = $exact
+			? $this->requestBoundary(
+				fn (): ?array => $this->workflowViewFor(
+					$type,
+					$identifier,
+					$revision,
+					(string) ( $matchingResult['code'] ?? '' ),
+					true === ( $matchingResult['successful'] ?? false ),
+					$previewKey,
+					(string) ( $matchingResult['channel'] ?? '' ),
+					(string) ( $matchingResult['failure_stage'] ?? '' ),
+					(string) ( $matchingResult['diagnostic_code'] ?? '' ),
+					true === ( $matchingResult['diagnostic_available'] ?? false ),
+					(string) ( $matchingResult['correlation_reference'] ?? '' ),
+					(string) ( $matchingResult['message'] ?? '' ),
+					(string) ( $matchingResult['remediation'] ?? '' )
+				),
+				$this->unavailableWorkflowView( __( 'Booster could not read the local release-workflow status for this package.', 'ran-booster' ) )
+			)
+			: $this->unavailableWorkflowView( $shared || $conflicted ? '' : __( 'Booster could not confirm that this release status belongs to the exact saved package and source.', 'ran-booster' ) );
+		$readiness         = $exact ? array(
+			'name'         => is_string( $summary['display_name'] ?? null ) ? $summary['display_name'] : $identifier,
+			'type'         => $type,
+			'eligible'     => $status->eligible(),
+			'message'      => $this->repositoryPackageReadinessMessage( $status ),
+			'tracking'     => 'release_asset' === $status->source(),
+			'channel'      => $status->channel(),
+			'settings_url' => is_string( $summary['settings_url'] ?? null ) ? $summary['settings_url'] : '',
+		) : null;
+		$observation       = is_array( $view['assessment_observation'] ?? null ) ? $view['assessment_observation'] : null;
+		$observationKind   = is_array( $observation ) && is_string( $observation['kind'] ?? null ) ? $observation['kind'] : 'unassessed';
+		$automation        = $this->repositoryReleaseAutomationState(
+			$exact && $this->recordMatchesPackageStatus( $workflowStatus, $status ) ? $identifier : '',
+			$workflowAvailable && $exact && $status->eligible() && 'branch' === $status->source(),
+			$exact && $this->publishedReleasesWorking( $status ),
+			$workflowStatus?->recordOccupied() ?? false,
+			$observationKind,
+			$shared || ! $workflowAvailable
+		);
+		$resultObservation = is_array( $matchingResult ) ? $this->observationKindForResult( (string) $matchingResult['code'] ) : null;
+
+		return array(
+			'settings_url'           => $single && is_string( $summary['settings_url'] ?? null ) ? $summary['settings_url'] : '',
+			'settings_label'         => 'plugin' === $type ? __( 'Plugin settings', 'ran-booster' ) : __( 'Theme settings', 'ran-booster' ),
+			'shared'                 => $shared,
+			'conflicted'             => $conflicted,
+			'relationship_count'     => $guard['relationship_count'],
+			'return_url'             => $returnUrl,
+			'conflict_packages'      => $summaries,
+			'ineligible_message'     => $exact && ! $status->eligible() ? $this->repositoryPackageReadinessMessage( $status ) : '',
+			'lifecycle'              => $this->repositoryLifecycleProjection(
+				$exact && $status->eligible(),
+				$exact && 'release_asset' === $status->source(),
+				$exact && $this->recordMatchesStatus( $workflowStatus, $status ),
+				$workflowAvailable && $exact && $status->eligible() && 'branch' === $status->source(),
+				$exact && $this->publishedReleasesWorking( $status ),
+				$observationKind,
+				$workflowAvailable
+			),
+			'readiness'              => array(
+				'repository'         => $repository,
+				'relationship_count' => $guard['relationship_count'],
+				'package'            => $readiness,
+				'provider_supported' => $this->releaseProviderSupported( $providerCode ),
+			),
+			'show_automation'        => null !== $this->workflowProvider( $providerCode ) || null !== $this->workflowCapability( $providerCode ),
+			'automation'             => $automation,
+			'automation_unavailable' => ! $shared && ! $conflicted && true === ( $view['unavailable'] ?? false ),
+			'automation_notice'      => ! $shared && ! $conflicted,
+			'provider_workflow_url'  => 'existing_automation_detected' === $observationKind ? ( $workflowStatus?->providerWorkflowUrl() ?? '' ) : '',
+			'show_result_notice'     => null !== $resultObservation && ( '' === $resultObservation || ! hash_equals( $resultObservation, $observationKind ) ),
+			'workflow_view'          => $view,
+		);
+	}
+
+	/** @return array{allowed:bool,code:string,relationship_count:int,release_count:int,owner_type:?int,owner_package:?string} */
+	private function repositorySourceGuard( string $providerCode, string $repositoryId, string $type, string $identifier, PackageSource $source ): array {
+		$typeId = 'plugin' === $type ? 1 : ( 'theme' === $type ? 2 : 0 );
+
+		return $this->requestBoundary(
+			fn (): array => $this->sourceGuard->assess( $providerCode, $repositoryId, $typeId, $identifier, $source ),
+			array(
+				'allowed'            => false,
+				'code'               => 'repository_source_unavailable',
+				'relationship_count' => 0,
+				'release_count'      => 0,
+				'owner_type'         => null,
+				'owner_package'      => null,
+			)
+		);
+	}
+
+	/** @return list<array{label:string,message:string,state:string}> */
+	private function repositoryLifecycleProjection( bool $packageReady, bool $trackingReady, bool $workflowRecorded, bool $workflowReadyToAssess, bool $publishedReleasesWorking, string $observationKind, bool $workflowAvailable ): array {
+		$automationReady = $workflowRecorded || in_array( $observationKind, array( 'existing_automation_detected', 'booster_setup_verified' ), true );
+		$automationLabel = $workflowRecorded ? __( 'Setup pull request recorded; check its outcome.', 'ran-booster' ) : match ( $observationKind ) {
+			'existing_automation_detected' => __( 'Existing workflow found.', 'ran-booster' ),
+			'booster_setup_verified'       => __( 'Compatible workflow configuration verified.', 'ran-booster' ),
+			'no_recognisable_automation'   => __( 'No workflow found; setup is available.', 'ran-booster' ),
+			default                        => $workflowReadyToAssess ? __( 'Ready to assess.', 'ran-booster' ) : ( $publishedReleasesWorking ? __( 'Releases are available; workflow not assessed.', 'ran-booster' ) : __( 'Workflow setup needs attention.', 'ran-booster' ) ),
+		};
+		$items = array(
+			array(
+				'label'   => __( 'Prepare package', 'ran-booster' ),
+				'message' => $packageReady ? __( 'This package is ready for published-release tracking.', 'ran-booster' ) : __( 'This package needs attention before using published releases.', 'ran-booster' ),
+				'state'   => $packageReady ? 'is-ok' : 'is-warning',
+			),
+			array(
+				'label'   => __( 'Track releases', 'ran-booster' ),
+				'message' => $trackingReady ? __( 'Published releases are selected.', 'ran-booster' ) : __( 'Published releases are not selected.', 'ran-booster' ),
+				'state'   => $trackingReady ? 'is-ok' : 'is-pending',
+			),
+		);
+		if ( $workflowAvailable ) {
+			$items[] = array(
+				'label'   => __( 'Release workflow — optional', 'ran-booster' ),
+				'message' => $automationLabel,
+				'state'   => $automationReady ? 'is-ok' : ( $publishedReleasesWorking ? 'is-pending' : 'is-warning' ),
+			);
+		}
+		return $items;
+	}
+
+	/** @return array{label:string,tone:string,message:string,notice_tone:string,provenance:string} */
+	private function repositoryReleaseAutomationState( string $workflowOwner, bool $workflowReadyToAssess, bool $publishedReleasesWorking, bool $recordOccupied, string $observationKind, bool $unavailable = false ): array {
+		$state   = __( 'Needs attention', 'ran-booster' );
+		$tone    = 'ran-booster-badge--error';
+		$message = __( 'Release workflow status is unavailable.', 'ran-booster' );
+		$notice  = 'notice-warning';
+		$origin  = __( 'Booster setup: Not recorded.', 'ran-booster' );
+		if ( $unavailable ) {
+			$state   = __( 'Unavailable', 'ran-booster' );
+			$tone    = 'ran-booster-badge--info';
+			$message = __( 'Release workflow is unavailable for this repository.', 'ran-booster' );
+			$notice  = 'notice-info';
+		} elseif ( '' !== $workflowOwner ) {
+			$state   = __( 'Setup recorded', 'ran-booster' );
+			$tone    = 'ran-booster-badge--warning';
+			$message = sprintf( /* translators: %s: exact package type and name. */ __( 'A setup pull request is recorded for %s. Check its outcome before relying on the workflow.', 'ran-booster' ), $workflowOwner );
+			$origin  = __( 'Booster setup: Draft pull request recorded.', 'ran-booster' );
+		} elseif ( 'existing_automation_detected' === $observationKind ) {
+			$state   = __( 'Existing workflow found', 'ran-booster' );
+			$tone    = 'ran-booster-badge--info';
+			$message = __( 'An existing release workflow was found in this repository. Booster will not overwrite it.', 'ran-booster' );
+			$notice  = 'notice-info';
+		} elseif ( 'booster_setup_verified' === $observationKind ) {
+			$state   = __( 'Compatible workflow verified', 'ran-booster' );
+			$tone    = 'ran-booster-badge--success';
+			$message = __( 'A Booster-compatible workflow configuration was verified. Execution has not been checked.', 'ran-booster' );
+			$notice  = 'notice-success';
+			$origin  = __( 'Booster setup: No local setup pull-request record.', 'ran-booster' );
+		} elseif ( 'mixed_observations' === $observationKind ) {
+			$state   = __( 'Multiple assessments', 'ran-booster' );
+			$tone    = 'ran-booster-badge--info';
+			$message = __( 'Workflow assessments differ. Review each package below.', 'ran-booster' );
+			$notice  = 'notice-info';
+		} elseif ( 'no_recognisable_automation' === $observationKind ) {
+			$state   = __( 'No workflow found', 'ran-booster' );
+			$tone    = 'ran-booster-badge--info';
+			$message = __( 'No recognizable release workflow was found. Booster can prepare a setup pull request.', 'ran-booster' );
+			$notice  = 'notice-info';
+		} elseif ( $workflowReadyToAssess ) {
+			$state   = __( 'Ready to assess', 'ran-booster' );
+			$tone    = 'ran-booster-badge--success';
+			$message = __( 'Assess this repository before preparing a setup pull request.', 'ran-booster' );
+		} elseif ( $recordOccupied ) {
+			$state   = __( 'Blocked', 'ran-booster' );
+			$message = __( 'A local workflow record is occupied by a different package or revision. Review it before setup.', 'ran-booster' );
+		} elseif ( $publishedReleasesWorking ) {
+			$state   = __( 'Not assessed', 'ran-booster' );
+			$tone    = 'ran-booster-badge--info';
+			$message = __( 'Releases are available; their publishing method has not been assessed.', 'ran-booster' );
+			$notice  = 'notice-info';
+		}
+		return array(
+			'label'       => $state,
+			'tone'        => $tone,
+			'message'     => $message,
+			'notice_tone' => $notice,
+			'provenance'  => $origin,
+		);
+	}
+
+	private function repositoryPackageReadinessMessage( ReleaseTrackingStatus $status ): string {
+		return match ( $status->eligibility()->code() ) {
+			'eligible' => __( 'Installed identity and Update URI match the configured repository.', 'ran-booster' ),
+			'missing_update_uri' => __( 'The installed package does not declare the required Update URI.', 'ran-booster' ),
+			'mismatched_update_uri' => __( 'The installed package Update URI does not match this repository.', 'ran-booster' ),
+			'invalid_package_identity' => __( 'The installed package identity does not match this repository.', 'ran-booster' ),
+			'subdirectory_not_supported' => __( 'This package uses a repository subdirectory. Published releases require the repository root.', 'ran-booster' ),
+			'target_already_uses_ran_updater' => __( 'This package already uses another release updater.', 'ran-booster' ),
+			default => __( 'The saved package or repository relationship needs attention.', 'ran-booster' ),
+		};
+	}
+
+	private function workflowSourceGuard( string $type, string $identifier, object $package ): array {
+		if ( ! is_callable( array( $package, 'getProviderCode' ) )
+			|| ! is_callable( array( $package, 'getProviderRepositoryId' ) )
+			|| ! is_string( $package->getProviderRepositoryId() ) ) {
+			return array(
+				'allowed'            => false,
+				'code'               => 'repository_source_unavailable',
+				'relationship_count' => 0,
+				'release_count'      => 0,
+				'owner_type'         => null,
+				'owner_package'      => null,
+			);
+		}
+
+		return $this->repositorySourceGuard(
+			$package->getProviderCode(),
+			$package->getProviderRepositoryId(),
+			$type,
+			$identifier,
+			PackageSource::RELEASE_ASSET
+		);
+	}
+
+	private function workflowPackage( string $type, string $identifier, int $revision ): ?object {
+		$package = $this->localPackage( $type, $identifier );
+		return null !== $package && $revision === $package->getSourceRevision()
+			&& is_string( $package->getProviderRepositoryId() ) && '' !== $package->getProviderRepositoryId()
+			? $package : null;
+	}
+	private function packageMatchesStatus( object $package, ReleaseTrackingStatus $status ): bool {
+		return $status->providerRepositoryId() === $package->getProviderRepositoryId()
+			&& $status->sourceRevision() === $package->getSourceRevision();
+	}
+	private function anonymousWorkflowInspectionAllowed( object $package ): bool {
+		return is_callable( array( $package, 'isPrivate' ) )
+			&& false === $this->requestBoundary( fn (): mixed => $package->isPrivate(), null );
+	}
+
+	/**
+	 * @param array<string, mixed> $row
+	 * @param array<string, mixed> $summary
+	 * @return array{detail:array{label:string,value:string,tone:string},action:array<string,mixed>}|null
+	 */
+	private function repositoryReleaseAutomationProjection( array $row, array $summary, bool $multiple ): ?array {
+		$type            = is_string( $summary['type'] ?? null ) ? $summary['type'] : '';
+		$reference       = is_string( $summary['identifier'] ?? null ) ? $summary['identifier'] : '';
+		$summarySource   = is_string( $summary['source'] ?? null ) ? $summary['source'] : '';
+		$summaryRevision = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || '' === $reference
+			|| ! in_array( $summarySource, array( 'branch', 'release_asset' ), true ) || 1 > $summaryRevision ) {
+			return null;
+		}
+		$package      = $this->localPackage( $type, $reference );
+		$status       = null;
+		$providerCode = is_string( $row['provider_code'] ?? null ) ? $row['provider_code'] : '';
+		$repository   = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
+		$locator      = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$exact        = null !== $this->workflowProvider( $providerCode ) && null !== $package && '' !== $repository
+			&& is_callable( array( $package, 'getIdentifier' ) )
+			&& is_callable( array( $package, 'getProviderRepositoryId' ) )
+			&& is_callable( array( $package, 'getRepository' ) )
+			&& is_callable( array( $package, 'getSourceRevision' ) )
+			&& is_string( $package->getIdentifier() )
+			&& hash_equals( $reference, $package->getIdentifier() )
+			&& hash_equals( $providerCode, (string) $package->getProviderCode() )
+			&& is_string( $package->getProviderRepositoryId() )
+			&& hash_equals( $repository, $package->getProviderRepositoryId() )
+			&& 0 === strcasecmp( $locator, (string) $package->getRepository() )
+			&& $summaryRevision === $package->getSourceRevision();
+		if ( $exact ) {
+			$status = $this->requestBoundary(
+				fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $reference, $summaryRevision ),
+				null
+			);
+			$exact  = $status instanceof ReleaseTrackingStatus
+				&& hash_equals( $repository, $status->providerRepositoryId() )
+				&& hash_equals( $type, $status->type() )
+				&& hash_equals( $reference, $status->identifier() )
+				&& $summaryRevision === $status->sourceRevision()
+				&& hash_equals( $summarySource, $status->source() );
+		}
+
+		$value = __( 'Unavailable', 'ran-booster' );
+		$tone  = 'warning';
+		if ( $exact && $status instanceof ReleaseTrackingStatus ) {
+			$workflowStatus  = $this->workflowProviderStatus( $status );
+			$observationKind = $workflowStatus?->observationKind() ?? '';
+			if ( $this->recordMatchesStatus( $workflowStatus, $status ) ) {
+				$value = __( 'Setup recorded', 'ran-booster' );
+				$tone  = 'pending';
+			} elseif ( 'existing_automation_detected' === $observationKind ) {
+				$value = __( 'Existing workflow found', 'ran-booster' );
+				$tone  = 'info';
+			} elseif ( 'booster_setup_verified' === $observationKind ) {
+				$value = __( 'Compatible workflow verified', 'ran-booster' );
+				$tone  = 'ok';
+			} elseif ( $this->publishedReleasesWorking( $status ) ) {
+				$value = __( 'Published releases working', 'ran-booster' );
+				$tone  = 'ok';
+			} elseif ( in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true ) ) {
+				$value = __( 'Blocked', 'ran-booster' );
+				$tone  = 'warning';
+			} elseif ( ! ( $workflowStatus?->recordOccupied() ?? true ) && $status->eligible() && '' === $status->failureCode() ) {
+				$value = 'branch' === $status->source()
+					? __( 'Ready to assess', 'ran-booster' )
+					: __( 'Published releases selected', 'ran-booster' );
+				$tone  = 'branch' === $status->source() ? 'ok' : 'pending';
+			}
+		}
+
+		$settingsUrl = $this->repositoryReleaseUrl( $repository, $providerCode );
+		$label       = $multiple
+			? sprintf(
+				/* translators: %s is a managed plugin file or theme stylesheet. */
+				__( 'Release workflow: %s', 'ran-booster' ),
+				$this->boundedReference( $reference, 74 )
+			)
+			: __( 'Release workflow', 'ran-booster' );
+		$detailLabel = $multiple
+			? sprintf(
+				/* translators: %s is a managed plugin file or theme stylesheet. */
+				__( 'Release workflow — %s', 'ran-booster' ),
+				$this->boundedReference( $reference, 70 )
+			)
+			: __( 'Release workflow', 'ran-booster' );
+		$key = 'core:release-workflow-' . substr( hash( 'sha256', $providerCode . '|' . $type . '|' . $reference ), 0, 16 );
+
+		return array(
+			'detail' => array(
+				'key'            => $key,
+				'label'          => $detailLabel,
+				'value'          => $value,
+				'tone'           => $tone,
+				'category'       => 'release_workflow',
+				'review_summary' => $exact && $status instanceof ReleaseTrackingStatus && null !== $this->workflowProviderStatus( $status ),
+			),
+			'action' => array(
+				'key'           => $key,
+				'label'         => $label,
+				'type'          => 'link',
+				'url'           => $settingsUrl,
+				'hidden'        => array(),
+				'disabled'      => false,
+				'external'      => false,
+				'described_by'  => '',
+				'screen_reader' => $reference,
+			),
+		);
+	}
+
+	private function localPackage( string $type, string $identifier ): ?object {
+		return $this->requestBoundary(
+			fn (): object => 'plugin' === $type
+				? $this->plugins->boosterPluginFromFile( $identifier )
+				: $this->themes->boosterThemeFromStylesheet( $identifier ),
+			null
+		);
+	}
+
+	private function recordMatchesStatus( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
+		return $record instanceof \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus
+			&& $record->recordExact()
+			&& hash_equals( $status->providerRepositoryId(), $record->repositoryId() )
+			&& hash_equals( $status->type(), $record->packageType() )
+			&& hash_equals( $status->identifier(), $record->packageIdentifier() )
+			&& $status->sourceRevision() === $record->sourceRevision();
+	}
+
+	private function recordMatchesPackageStatus( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
+		return $record instanceof \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus
+			&& $record->recordOccupied()
+			&& hash_equals( $this->workflowProviderCode( $status ), $record->providerCode() )
+			&& hash_equals( $status->providerRepositoryId(), $record->repositoryId() )
+			&& hash_equals( $status->type(), $record->packageType() )
+			&& hash_equals( $status->identifier(), $record->packageIdentifier() );
+	}
+
+	private function boundedReference( string $reference, int $maximum ): string {
+		return strlen( $reference ) <= $maximum
+			? $reference
+			: substr( $reference, 0, $maximum - 3 ) . '...';
+	}
+
+	/** @return array<string,mixed>|null */
+	private function workflowViewFor( string $type, string $identifier, int $revision, string $code, bool $successful, string $previewKey, string $channel, string $stage = '', string $diagnostic = '', bool $diagnosticAvailable = false, string $reference = '', string $message = '', string $remediation = '' ): ?array {
+		$status  = $this->workflowDisplayStatus( $type, $identifier, $revision );
+		$package = $this->workflowPackage( $type, $identifier, $revision );
+		if ( null === $status || null === $package || ! $this->packageMatchesStatus( $package, $status ) ) {
+			return $this->unavailableWorkflowView( __( 'Booster could not confirm this package. Reload its settings and try again.', 'ran-booster' ) );
+		}
+		$providerCode = (string) $package->getProviderCode();
+		if ( null === $this->workflowCapability( $providerCode ) ) {
+			return null;
+		}
+		$provider      = $this->workflowProvider( $providerCode );
+		$state         = null === $provider ? null : $this->workflowProviderStatus( $status );
+		$anonymous     = $this->anonymousWorkflowInspectionAllowed( $package );
+		$sourceGuard   = $this->workflowSourceGuard( $type, $identifier, $package );
+		$metadata      = $this->providers->metadata()[ $providerCode ] ?? null;
+		$writeGuidance = $state?->writeGuidance() ?? '';
+		if ( '' === trim( $writeGuidance ) ) {
+			$writeGuidance = __( 'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.', 'ran-booster' );
+		}
+		$extra  = array(
+			'provider_label'        => $metadata?->label ?? $providerCode,
+			'documentation_links'   => $state?->documentationLinks() ?? array(),
+			'provider_workflow_url' => $state?->providerWorkflowUrl() ?? '',
+			'write_guidance'        => $writeGuidance,
+		);
+		$reason = null === $provider
+			? __( 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.', 'ran-booster' )
+			: ( null === $state ? __( 'The provider could not supply local workflow status. Retry after checking the provider plugin.', 'ran-booster' ) : '' );
+		if ( '' === $reason && ! $status->eligible() ) {
+			$reason = $this->workflowUnavailableReason( $status );
+		}
+		if ( '' === $reason && ! $sourceGuard['allowed'] ) {
+			$reason = 'repository_source_unavailable' === ( $sourceGuard['code'] ?? '' )
+				? __( 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.', 'ran-booster' )
+				: __( 'Releases require a repository used by only one managed package. Review the repository package list.', 'ran-booster' );
+		}
+		if ( '' === $reason && $state->recordOccupied() && ! $this->recordMatchesPackageStatus( $state, $status ) ) {
+			$reason = __( 'A workflow record belongs to a different package. Review the recorded repository state before setup.', 'ran-booster' );
+		}
+		$credentials = $state?->credentialChoices() ?? array();
+		$channel     = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : $status->channel();
+		$preview     = null;
+		if ( '' === $reason && '' !== $previewKey ) {
+			$preview = $this->requestBoundary( fn () => $provider->workflowPreview( $status, $previewKey ), null );
+			if ( null !== $preview && ( $preview->key() !== $previewKey || $preview->providerCode() !== $providerCode || $preview->repositoryId() !== $status->providerRepositoryId() ) ) {
+				$preview = null;
+			}
+		}
+		$forms = array( 'inspect' => $this->workflowForm( 'inspect', $status, '', '', $channel, $credentials, $anonymous ) );
+		if ( '' !== $reason || null === $forms['inspect'] ) {
+			$forms                           = $this->unavailableWorkflowView( $reason, anonymousInspection: $anonymous )['forms'];
+			$forms['inspect']['credentials'] = $credentials;
+		}
+		if ( null !== $preview ) {
+			$operation           = 'template_update' === $preview->kind() ? 'update_setup' : 'setup';
+			$forms[ $operation ] = $this->workflowForm( $operation, $status, $previewKey, $preview->confirmation(), $preview->channel(), $credentials, $anonymous );
+		}
+		if ( '' === $reason && $this->recordMatchesPackageStatus( $state, $status ) ) {
+			$forms['outcome']        = $this->workflowForm( 'outcome', $status, credentials: $credentials, anonymousInspection: $anonymous );
+			$forms['update_inspect'] = $this->workflowForm( 'update_inspect', $status, credentials: $credentials, anonymousInspection: $anonymous );
+		}
+		foreach ( $forms as &$form ) {
+			if ( is_array( $form ) ) {
+				$form['provider_label']  = $extra['provider_label'];
+				$form['write_guidance']  = $extra['write_guidance'];
+				$form['credentials_url'] = add_query_arg(
+					array(
+						'page' => 'ran-booster',
+						'tab'  => $providerCode,
+						'view' => 'credentials',
+					),
+					admin_url( 'admin.php' )
+				);
+			}
+		}
+		unset( $form );
+		return $extra + array(
+			'result_code'            => $code,
+			'result_successful'      => $successful,
+			'failure_stage'          => $stage,
+			'diagnostic_code'        => $diagnostic,
+			'diagnostic_available'   => $diagnosticAvailable,
+			'correlation_reference'  => $reference,
+			'result_message'         => $message,
+			'result_remediation'     => $remediation,
+			'unavailable'            => '' !== $reason,
+			'unavailable_reason'     => $reason,
+			'preview'                => null === $preview ? null : $preview->summary() + array(
+				'kind'    => $preview->kind(),
+				'changes' => $preview->changedPaths(),
+			),
+			'record'                 => $this->recordMatchesPackageStatus( $state, $status ) ? array( 'pull_request_url' => $state->pullRequestUrl() ) : null,
+			'legacy'                 => true === $state?->recordOccupied() && ! $this->recordMatchesPackageStatus( $state, $status ) ? array( 'unsupported' => true ) : null,
+			'failure_history'        => $state?->failureHistory() ?? array(),
+			'assessment_observation' => null !== $state && '' !== $state->observationKind() ? array(
+				'kind'        => $state->observationKind(),
+				'recorded_at' => $state->observedAt(),
+			) : null,
+			'automation_state'       => '' !== $reason ? 'blocked' : ( $this->recordMatchesPackageStatus( $state, $status ) ? 'setup_recorded' : ( null !== $preview ? 'preview' : 'ready' ) ),
+			'forms'                  => array_filter( $forms, 'is_array' ),
+		);
+	}
+	/** @return array<string,mixed> */
+	private function unavailableWorkflowView( string $reason, string $code = '', bool $successful = false, string $automationState = 'blocked', bool $anonymousInspection = false ): array {
+		return array(
+			'result_code'        => $code,
+			'result_successful'  => $successful,
+			'unavailable'        => true,
+			'unavailable_reason' => $reason,
+			'preview'            => null,
+			'record'             => null,
+			'legacy'             => null,
+			'automation_state'   => $automationState,
+			'forms'              => array(
+				'inspect' => array(
+					'operation'            => 'inspect',
+					'action'               => admin_url( 'admin-post.php' ),
+					'fields'               => array(),
+					'credentials'          => array(),
+					'anonymous_inspection' => $anonymousInspection,
+					'credentials_url'      => admin_url( 'admin.php?page=ran-booster' ),
+					'disabled'             => true,
+				),
+			),
+		);
+	}
+	/** Render-only identity check. POST requests continue through workflowStatus(). */
+	private function workflowDisplayStatus( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
+		$status = $this->releases?->status( $type, $identifier );
+		if ( ! $status instanceof ReleaseTrackingStatus || $revision !== $status->sourceRevision()
+			|| ! hash_equals( $type, $status->type() ) || ! hash_equals( $identifier, $status->identifier() ) ) {
+			return null;
+		}
+
+		return $status;
+	}
+
+	private function workflowUnavailableReason( ReleaseTrackingStatus $status ): string {
+		return match ( $status->eligibility()->code() ) {
+			'missing_update_uri' => __( 'Open package settings for the required Update URI, add it to the package header, then deploy the corrected package.', 'ran-booster' ),
+			'mismatched_update_uri' => __( 'This package Update URI must match the configured repository.', 'ran-booster' ),
+			'unsupported_provider' => __( 'This repository provider cannot use published-release tracking.', 'ran-booster' ),
+			'invalid_repository' => __( 'The saved repository needs attention before a release workflow can be assessed.', 'ran-booster' ),
+			'invalid_package_identity' => __( 'The installed package identity must match the configured repository.', 'ran-booster' ),
+			'subdirectory_not_supported' => __( 'Published releases require this package at the repository root; continue using Branch for a repository subdirectory.', 'ran-booster' ),
+			'target_already_uses_ran_updater' => __( 'This package already has its own release updater, so Booster cannot manage published releases as well.', 'ran-booster' ),
+			default => __( 'Resolve Release readiness before assessing a workflow.', 'ran-booster' ),
+		};
+	}
+
+	/** @return array<string,mixed>|null */
+	private function workflowForm(
+		string $operation,
+		ReleaseTrackingStatus $status,
+		string $preview = '',
+		string $confirmation = '',
+		string $channel = '',
+		array $credentials = array(),
+		bool $anonymousInspection = false
+	): ?array {
+		$preflight = '';
+		if ( in_array( $operation, array( 'inspect', 'setup' ), true ) ) {
+			if ( null === $this->releases || ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
+				return null;
+			}
+			$action = $this->releases->nonceAction( 'assessment_preflight', $status->type(), $status->identifier(), $status->sourceRevision(), $channel );
+			if ( '' === $action ) {
+				return null;
+			}
+			$preflight = wp_create_nonce( $action );
+		}
+		$fields = array(
+			'action'                   => 'ran_booster_release_workflow',
+			'workflow_operation'       => $operation,
+			'expected_provider'        => $this->workflowProviderCode( $status ),
+			'expected_repository_id'   => $status->providerRepositoryId(),
+			'_wpnonce'                 => wp_create_nonce( $this->requests->workflowNonceAction( $operation, $status, $preview ) ),
+			'expected_type'            => $status->type(),
+			'expected_identifier'      => $status->identifier(),
+			'expected_source_revision' => (string) $status->sourceRevision(),
+		);
+		if ( '' !== $preview ) {
+			$fields['preview_key'] = $preview;
+		}
+		if ( 'inspect' === $operation ) {
+			$fields['release_channel'] = $channel;
+		}
+		if ( '' !== $preflight ) {
+			$fields[ 'core_preflight_nonce_' . $channel ] = $preflight;
+		}
+
+		return array(
+			'operation'            => $operation,
+			'action'               => admin_url( 'admin-post.php' ),
+			'fields'               => $fields,
+			'confirm'              => $confirmation,
+			'credentials'          => $credentials,
+			'anonymous_inspection' => $anonymousInspection,
+			'credentials_url'      => add_query_arg(
+				array(
+					'page' => 'ran-booster',
+					'tab'  => $this->workflowProviderCode( $status ),
+					'view' => 'credentials',
+				),
+				admin_url( 'admin.php' )
+			),
+		);
+	}
+
+	/** @return list<array{id:string,label:string}> */
+	private function workflowCapability( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
+		try {
+			return $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagement::class );
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
+	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
+		$provider = $this->workflowCapability( $providerCode );
+		return null !== $provider && 1 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
+	}
+
+	private function releaseProviderSupported( string $providerCode ): bool {
+		try {
+			$provider = $this->providers->get( $providerCode );
+			return $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseMetadata
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseCandidateListing
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseInspector
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseAcquirer
+				&& $provider instanceof \RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+		} catch ( Throwable ) {
+			return false;
+		}
+	}
+
+	private function workflowProviderStatus( ReleaseTrackingStatus $status ): ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus {
+		$providerCode = $this->workflowProviderCode( $status );
+		$provider     = $this->workflowProvider( $providerCode );
+		if ( null === $provider ) {
+			return null;
+		}
+		$key = hash( 'sha256', (string) wp_json_encode( array( $providerCode, $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) ) );
+		if ( ! array_key_exists( $key, $this->workflowStatuses ) ) {
+			$value = $this->requestBoundary( fn () => $provider->workflowStatus( $status ), null );
+			if ( null !== $value && ( $value->providerCode() !== $providerCode
+				|| $value->repositoryId() !== $status->providerRepositoryId()
+				|| ( $value->recordExact() && ( $value->packageType() !== $status->type() || $value->packageIdentifier() !== $status->identifier() || $value->sourceRevision() !== $status->sourceRevision() ) ) ) ) {
+				$value = null;
+			}
+			$this->workflowStatuses[ $key ] = $value;
+		}
+		return $this->workflowStatuses[ $key ];
+	}
+
+	private function workflowProviderCode( ReleaseTrackingStatus $status ): string {
+		$package = $this->workflowPackage( $status->type(), $status->identifier(), $status->sourceRevision() );
+		return null !== $package && $this->packageMatchesStatus( $package, $status ) ? (string) $package->getProviderCode() : '';
+	}
+	/** @param array<string,string> $exceptionContext */
+	private function requestBoundary( callable $operation, mixed $failure, array $exceptionContext = array() ): mixed {
+		$bufferLevel = ob_get_level();
+		ob_start();
+		try {
+			$result = $operation();
+			ob_end_clean();
+			return $result;
+		} catch ( Throwable $exception ) {
+			while ( ob_get_level() > $bufferLevel ) {
+				ob_end_clean();
+			}
+			if ( array() !== $exceptionContext ) {
+				BoosterLogger::logException( 'Provider release workflow request failed', $exception, $exceptionContext );
+			}
+			return $failure;
+		}
+	}
+	private function repositoryReleaseUrl( string $repositoryId, string $providerCode = '' ): string {
+		return add_query_arg(
+			array(
+				'page'            => 'ran-booster',
+				'tab'             => $providerCode,
+				'panel'           => 'repositories',
+				'repository'      => $repositoryId,
+				'repository_view' => 'releases',
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+}

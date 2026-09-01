@@ -54,15 +54,22 @@ final class ProviderApiLifecycleTest extends TestCase {
 		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
 		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
 		$targetRegistration   = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
+		$releaseControls      = strpos( $bootstrap, 'make( ReleaseManagementControls::class )->register()' );
+		$workflowControls     = strpos( $bootstrap, 'make( ReleaseWorkflowControls::class )->register()' );
 
 		self::assertIsInt( $providerRegistration );
 		self::assertIsInt( $providerSeal );
 		self::assertIsInt( $targetRegistration );
 		self::assertTrue( $providerRegistration < $providerSeal );
 		self::assertTrue( $providerSeal < $targetRegistration );
+		self::assertIsInt( $releaseControls );
+		self::assertIsInt( $workflowControls );
+		self::assertTrue( $targetRegistration < $releaseControls );
+		self::assertTrue( $targetRegistration < $workflowControls );
+		self::assertTrue( $workflowControls < $releaseControls );
 		self::assertSame( 1, substr_count( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' ) );
-		self::assertStringNotContainsString( 'ReleaseManagementControls::class )->register()', $bootstrap );
-		self::assertStringNotContainsString( 'GitHubReleaseWorkflowControls::class )->register()', $bootstrap );
+		self::assertSame( 1, substr_count( $bootstrap, 'make( ReleaseManagementControls::class )->register()' ) );
+		self::assertSame( 1, substr_count( $bootstrap, 'make( ReleaseWorkflowControls::class )->register()' ) );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION', $bootstrap );
 		self::assertStringNotContainsString( 'ran_booster_release_tracking_ready', $bootstrap );
 		self::assertStringNotContainsString( 'ran_booster_prospective_release_ready', $bootstrap );

@@ -45,14 +45,14 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}
 
-	public function testCurrentOrchestrationDocumentationNamesOnlyTheNeutralHandoff(): void {
+	public function testCurrentOrchestrationDocumentationNamesNoRemovedHandoff(): void {
 		$guide     = $this->source( 'docs/package-update-orchestration.md' );
 		$decisions = $this->source( 'docs/package-update-orchestration-decision-register.md' );
 
-		self::assertStringContainsString( 'ran_wp_release_updater_v1_core_artifact_handoff', $guide );
+		self::assertStringNotContainsString( 'ran_wp_release_updater_v1_core_artifact_handoff', $guide );
 		self::assertStringNotContainsString( 'ran_wp_github_release_updater_v1_core_reinstall_handoff', $guide );
 		self::assertStringContainsString( '## 2026-08-23 PU-007 owner decision — REPLACE IN PLACE', $decisions );
-		self::assertStringContainsString( 'historical evidence; it is superseded for current runtime', $decisions );
+		self::assertStringContainsString( '## 2026-09-01 PU-007 security correction — REMOVE', $decisions );
 	}
 
 	public function testBundledSuccessorRegistersOnceAfterProviderSeal(): void {
@@ -60,15 +60,34 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 
 		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
 		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
+		$releaseControls      = strpos( $bootstrap, '$ran_booster_container->make( ReleaseManagementControls::class )->register();' );
+		$workflowControls     = strpos( $bootstrap, '$ran_booster_container->make( ReleaseWorkflowControls::class )->register();' );
 		$runtimeInit          = strpos( $bootstrap, '$ran_booster_runtime->init()' );
 
 		self::assertIsInt( $providerRegistration );
 		self::assertIsInt( $providerSeal );
 		self::assertIsInt( $runtimeInit );
 		self::assertLessThan( $providerSeal, $providerRegistration );
-		self::assertStringNotContainsString( 'ReleaseManagementControls::class )->register()', $bootstrap );
-		self::assertStringNotContainsString( 'GitHubReleaseWorkflowControls::class )->register()', $bootstrap );
+		self::assertIsInt( $releaseControls );
+		self::assertIsInt( $workflowControls );
+		self::assertLessThan( $releaseControls, $providerSeal );
+		self::assertLessThan( $workflowControls, $providerSeal );
+		self::assertLessThan( $runtimeInit, $releaseControls );
+		self::assertLessThan( $runtimeInit, $workflowControls );
+		self::assertSame(
+			1,
+			preg_match_all( '/\$ran_booster_container->make\( ReleaseManagementControls::class \)->register\(\);/', $bootstrap )
+		);
+		self::assertSame(
+			1,
+			preg_match_all( '/\$ran_booster_container->make\( ReleaseWorkflowControls::class \)->register\(\);/', $bootstrap )
+		);
+		self::assertStringNotContainsString( 'GitHubReleaseUpdaterBootstrap', $bootstrap );
 		self::assertStringNotContainsString( 'prospectiveApiVersion', $bootstrap );
+		self::assertMatchesRegularExpression(
+			'/ReleaseWorkflowControls::class \)->register\(\);[\s\S]*?PHP_INT_MAX/',
+			$bootstrap
+		);
 	}
 
 	public function testHardCutRemovesExternalReleasePublicationsAndProspectiveMarker(): void {

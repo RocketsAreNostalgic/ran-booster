@@ -27,6 +27,28 @@ final readonly class PackageRepositoryRequestResolver {
 	 * @return array<string, mixed>
 	 */
 	public function resolve( array $request ): array {
+		return $this->resolveRequest( $request );
+	}
+
+	/**
+	 * Resolve one controller-authorized public lookup without persisting it as package access.
+	 *
+	 * @param array<string, mixed> $request Package form request.
+	 * @return array<string, mixed>
+	 */
+	public function resolveWithTrustedPublicLookupProfile( array $request, ?string $profileId ): array {
+		if ( null !== $profileId && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $profileId ) ) {
+			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
+		}
+
+		return $this->resolveRequest( $request, $profileId, true );
+	}
+
+	/**
+	 * @param array<string, mixed> $request Package form request.
+	 * @return array<string, mixed>
+	 */
+	private function resolveRequest( array $request, ?string $trustedPublicLookupId = null, bool $trustedPublicLookup = false ): array {
 		$providerInput = $request['provider'] ?? null;
 		if ( ! is_string( $providerInput ) ) {
 			throw new InvalidArgumentException( 'Choose a repository provider.' );
@@ -53,6 +75,8 @@ final readonly class PackageRepositoryRequestResolver {
 		if ( ! is_string( $repositoryInput ) ) {
 			throw new InvalidArgumentException( 'Enter a repository account and name.' );
 		}
+		$subdirectoryInput = $request['subdirectory'] ?? null;
+		$subdirectory      = PackageSubdirectory::normalize( is_string( $subdirectoryInput ) ? wp_unslash( $subdirectoryInput ) : $subdirectoryInput );
 
 		$credentialInput = $request['credential_id'] ?? null;
 		$credentialId    = is_string( $credentialInput ) ? trim( wp_unslash( $credentialInput ) ) : '';
@@ -79,8 +103,17 @@ final readonly class PackageRepositoryRequestResolver {
 			}
 			$this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
 		}
+		if ( $trustedPublicLookup ) {
+			$browser = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
+			if ( ! $browser->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
+				throw new InvalidArgumentException( 'A default public repository lookup profile is unavailable for this provider.' );
+			}
+			$publicPicker = true;
+		}
 
-		$verificationCredentialId = '' !== $publicLookupId ? $publicLookupId : $credentialId;
+		$verificationCredentialId = $trustedPublicLookup
+			? $trustedPublicLookupId
+			: ( '' !== $publicLookupId ? $publicLookupId : $credentialId );
 		$repository               = $aggregate->resolveRepository(
 			new RepositoryLookupRequest(
 				wp_unslash( $repositoryInput ),
@@ -98,9 +131,6 @@ final readonly class PackageRepositoryRequestResolver {
 		$branchInput = $request['branch'] ?? '';
 		$branch      = is_string( $branchInput ) ? trim( sanitize_text_field( wp_unslash( $branchInput ) ) ) : '';
 
-		$subdirectoryInput = $request['subdirectory'] ?? null;
-		$subdirectory      = PackageSubdirectory::normalize( is_string( $subdirectoryInput ) ? wp_unslash( $subdirectoryInput ) : $subdirectoryInput );
-
 		$request['provider']                            = $provider->value;
 		$request['repository']                          = $repository->locator;
 		$request['package_slug']                        = PackageSubdirectory::installationSlug( $repository->packageSlug, $subdirectory );
@@ -109,7 +139,9 @@ final readonly class PackageRepositoryRequestResolver {
 		$request['provider_repository_identity_source'] = 'resolved';
 		$request['repository_default_branch']           = $repository->defaultBranch;
 		$request['private']                             = $repository->private ? '1' : '0';
-		$request['credential_id']                       = $publicPicker ? '' : $repository->credentialId ?? '';
+		$request['credential_id']                       = $trustedPublicLookup
+			? $credentialId
+			: ( $publicPicker ? '' : $repository->credentialId ?? '' );
 		$request['branch']                              = '' === $branch ? $repository->defaultBranch : $branch;
 		$request['deployment_policy']                   = $deploymentPolicy->value;
 		unset( $request['public_lookup_profile_id'] );

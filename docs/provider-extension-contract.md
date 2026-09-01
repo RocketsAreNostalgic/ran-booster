@@ -81,21 +81,25 @@ capabilities and state.
 
 A provider may implement both `RepositoryWebhookFitness` and
 `RepositoryWebhookManagement` for the exact operation
-`repository-webhook-management/1`. These interfaces expose only the four
-closed actions `setup`, `check`, `reconfigure` and `remove`, with matching
-read-only `assess*` methods. There is no operation dispatcher, callable,
-provider client, transport or credential handle in the public contract.
+`repository-webhook-management/3`. These interfaces expose only the five
+closed actions `setup`, `check`, `reconfigure`, `remove` and `test`, with
+matching read-only `assessSetup`, `assessCheck`, `assessReconfigure`,
+`assessRemove` and `assessTest` methods. There is no operation dispatcher,
+callable, provider client, transport or credential handle in the public contract.
 
 Saved credential IDs are display-safe inputs. The provider resolves their
 plaintext only through its already-bound `ProviderCredentialStore` and only
-inside the selected fixed call. A request-only credential is a separate
-explicit sensitive parameter for both assessment and execution of that call and
-is never persisted or returned. Exactly one saved ID or request-only value is
-accepted. Only setup and reconfigure receive the Core-held signing secret.
+inside the selected fixed call. Webhook management accepts one saved credential
+ID. Setup may select one applicable saved signing-secret profile or request a
+new repository-scoped secret; only setup and reconfigure receive the Core-held
+signing secret.
 The fixed management placement also requires `WebhookNormalizer` on that same
 aggregate, proving that provider registration supplied the signing policy Core
 needs to create and retain webhook profiles. Operation facets without that
-policy receive no UI or route authority.
+policy receive no operation authority. Their setup component stays visible but
+disabled, with a provider-configuration notice. The registered base
+`RepositoryProvider` contract supplies Branch resolution and archive acquisition;
+the helper does not replace either capability.
 
 Immediately before each management call, Core invokes the matching read-only
 assessment with the same credential source. The provider must remotely compare
@@ -111,10 +115,64 @@ when both operation interfaces and `WebhookNormalizer` resolve to the same
 registered provider aggregate. The
 provider's bounded metadata supplies its code and label; the provider owns
 credential use, remote behavior and the bounded plain-text remediation returned
-by its operation result. Missing, partial or incompatible facets create no
-action, panel, documentation, asset or mutation authority. This placement is
+by its operation result. Absent helper capabilities omit their optional setup
+component. Partial or incompatible implementations retain disabled controls and
+a configuration notice, never operation authority. This placement is
 not a capability enumerator, generic form schema, callback registry or provider
 HTML seam.
+
+### Optional release workflow management
+
+`RepositoryReleaseWorkflowManagement` opts into the fixed workflow helper with
+`RELEASE_WORKFLOW_API_VERSION = 1`. The same registered provider must also
+implement all five release-consumption contracts: `RepositoryReleaseMetadata`,
+`RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
+`RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`.
+
+The dependencies are one-way. A provider may support releases without workflow
+setup, or Branch deployments without assisted webhooks. A Branch package may be
+assessed for release workflow setup before it switches to Releases. Package
+eligibility and repository exclusivity still apply; package source is not a
+substitute for provider capability.
+
+The interface exposes local `workflowStatus()` and validated `workflowPreview()`
+reads plus five operations: `workflowInspect()`, `workflowSetup()`,
+`workflowOutcome()`, `workflowInspectUpdate()` and `workflowSetupUpdate()`.
+Providers return bounded immutable status, preview and result values, not HTML,
+callbacks, clients or storage handles. Available releases, detected automation,
+verified configuration, recorded setup pull requests and latest outcomes remain
+separate evidence.
+
+`RepositoryReleaseWorkflowResult::failureStage()` is a closed, Core-owned
+display category, never a provider-defined value. Successful results must use
+an empty failure stage. A failed result may use an empty stage or only
+`credential_authorisation`, `release_preflight`, `repository_snapshot`,
+`template_pack`, `preview_storage`, `repository_mutation`,
+`local_persistence` or `unexpected`.
+
+Core admits one fixed workflow endpoint. It checks administrator permissions,
+provider dependencies, exact repository/package/source revision, repository
+admission, operation nonce, preview identity and credential-profile eligibility
+before calling the operation. Assessment and setup each receive fresh Core
+release preflight evidence for that exact target. Setup takes its channel from
+the provider's validated, current-user preview, never a submitted channel.
+
+Operations receive only a saved credential profile ID. The provider resolves
+secret material through its bound credential store after authorization. Public
+inspection may be anonymous; private inspection and write operations require
+an eligible saved credential. Neither credential IDs nor secrets belong in
+workflow records, previews or failure history.
+
+Core renders the shared component from local evidence only. Missing workflow
+capability omits its setup component and management links. An implemented helper
+with incomplete dependencies or unavailable state stays visible but disabled
+with an actionable notice; direct requests fail before secrets or remote work.
+Deployment tabs and independently supported release consumption remain usable.
+Remote inspection requires an explicit action. Outcomes return to the exact
+repository Releases tab, with diagnostics inside its notice area.
+
+This optional interface does not change Provider API 10 or its registration
+factory, and introduces no repository settings object or shared workflow storage.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
@@ -128,7 +186,7 @@ single registered aggregate implements both webhook operation facets and the
 signing-policy normalizer. Core derives only
 the bounded provider code and label from metadata; providers cannot supply
 fields, HTML, callbacks or route behavior. The fixed host owns authorization,
-credential-source choice, result bounds and the schema-3 recovery record, while
+credential-source choice, result bounds and the schema-4 recovery record, while
 the provider facets own credential use, remote behavior and bounded plain-text
 remediation. Core publishes no renderer registry, callable transport, generic
 dispatcher or raw credential handle.
@@ -340,9 +398,9 @@ is the provider's bounded inspection preference. Core inspects at most the first
 two candidates in that order, continues only when the provider classifies the
 package as incompatible, and accepts only exact listing-to-inspection identity
 continuity. A vanished, corrupt or contradictory preferred release fails closed
-without falling through to an older release. The facet
-does not by itself make the complete release product available. Until those
-remaining operations have their own provider facets,
+without falling through to an older release. The facet does not by itself make
+the complete release product available. Until those remaining operations have
+their own provider facets,
 Core's complete-product projection continues to advertise only the bundled
 GitHub implementation. A provider implementing candidate listing alone remains
 available to an authorized listing consumer but receives no complete-product UI
@@ -350,6 +408,16 @@ or later-operation authority. The temporary standalone-add-on facade can project
 only positive integer release identities; opaque provider identities remain
 valid contract values but require the later hard cut before that facade can
 consume them.
+
+When a release listing or inspection read cannot be completed with the supplied
+repository access profile because of credential/access denial, rate limiting, or
+transport failure, it must throw the typed
+`RAN\RepositoryProvider\RepositoryReleaseReadUnavailable`. Core alone may use that signal to retry a
+public repository through its separately configured public lookup profile. Do
+not use this exception for an empty eligible-release list, an invalid release,
+or package incompatibility; return the relevant typed result for those cases.
+Do not catch the signal and replace it with a generic exception, and do not
+retry or switch credentials inside a provider.
 
 `RepositoryReleaseInspector` is the independent remote facet for inspecting one
 exact provider release. It accepts the package type, resolved repository,
@@ -391,8 +459,15 @@ updater construction and registration, and projects only a typed
 bounded passive value: it contains normalized availability, offered-version,
 check-time, failure and candidate-validation fields, never the provider's raw
 updater object, diagnostics array or internal runtime state. Refresh returns an
-exact boolean. Missing capabilities, failed registration, invalid status and
-failed refresh all fail closed. Release tracking requires this capability and
+exact boolean. When candidate validation describes the release behind the
+current native offer, `candidateProviderReleaseId` must contain that release's
+exact opaque provider identity—the same identity returned by candidate listing
+and inspection. It remains empty when there is no current, candidate-validated
+native offer. Core does not infer this identity from a tag or version; without
+an exact identity match, the managed browser will not hand that candidate to
+WordPress as the current native update. Missing capabilities, failed
+registration, invalid status and failed refresh all fail closed. Release
+tracking requires this capability and
 `RepositoryReleaseMetadata` on the same registered provider aggregate;
 metadata alone is not eligibility. Core retains package enumeration, metadata
 path derivation, authority snapshots, WordPress hook timing, locks, stale-offer

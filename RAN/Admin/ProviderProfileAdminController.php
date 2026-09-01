@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\Dashboard;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\{Admin\ProviderAdminMetadata, CredentialedPublicRepositoryBrowser, CredentialValidator, InvalidCredentialInput, InvalidWebhookInput, ProviderCode, ProviderRegistry, UnsupportedProviderCapability, WebhookNormalizer};
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
@@ -15,6 +16,7 @@ use RAN\Admin\Interaction\{CoreAdminInteractionFacade, SignedAdminInteractionReq
 class ProviderProfileAdminController {
 	public const TARGET_KEY      = 'core_provider_profiles';
 	public const TARGET_SELECTOR = '#ran-booster-provider-profile-region';
+	private RepositoryBranchCheckEvidenceStore $branchCheckEvidence;
 	public function __construct(
 		private Dashboard $dashboard,
 		private ProviderRegistry $providers,
@@ -24,8 +26,11 @@ class ProviderProfileAdminController {
 		private CredentialUsageReader $credentialUsage,
 		private PublicRepositoryLookupProfileStore $publicLookupProfiles,
 		private CredentialExpiryObservationStore $expiryObservations,
-		private ?CoreAdminInteractionFacade $interaction = null
-	) {}
+		private ?CoreAdminInteractionFacade $interaction = null,
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
+	) {
+		$this->branchCheckEvidence = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
+	}
 	public function manageCredentialProfiles( array $request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
 		$action             = is_string( $request['action'] ?? null ) ? $request['action'] : '';
@@ -143,6 +148,7 @@ class ProviderProfileAdminController {
 					throw new CredentialRequestException( 'Choose Anonymous or a saved repository credential.' );
 				}
 			}
+			$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
 			$this->publicLookupProfiles->set( $provider->value, '' === $profileId ? null : $profileId );
 			$message = '' === $profileId
 				? 'Public repository lookup will use anonymous access.'
@@ -229,7 +235,15 @@ class ProviderProfileAdminController {
 			function () use ( $provider, $id, $secret, $label, $kind, $configuration, $selfDestruct, $manualExpirySubmitted, $manualExpiry, $manualExpiryIsProviderFallback ): string {
 				$existingProfile = null === $id ? null : ( $this->secrets->credentialProfiles( $provider )[ $id ] ?? null );
 				$isReplacement   = is_array( $existingProfile ) && '' !== $secret;
-				$savedId         = $this->secrets->saveCredential(
+				$accessChanged   = is_array( $existingProfile )
+					&& ( $isReplacement
+						|| $kind !== ( $existingProfile['kind'] ?? null )
+						|| ! is_array( $existingProfile['configuration'] ?? null )
+						|| $configuration !== $existingProfile['configuration'] );
+				if ( $accessChanged && null !== $id ) {
+					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
+				}
+				$savedId      = $this->secrets->saveCredential(
 					$provider,
 					$id,
 					array(
@@ -242,7 +256,7 @@ class ProviderProfileAdminController {
 					$secret,
 					true
 				);
-				$savedProfile    = $this->secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
+				$savedProfile = $this->secrets->credentialProfiles( $provider )[ $savedId ] ?? null;
 				if ( ! is_array( $savedProfile )
 					|| $label !== ( $savedProfile['label'] ?? null )
 					|| $kind !== ( $savedProfile['kind'] ?? null )
@@ -346,6 +360,23 @@ class ProviderProfileAdminController {
 					$this->publicLookupProfiles->set( $provider->value, null );
 				}
 				$this->expiryObservations->clear( $provider->value, $id );
+				try {
+					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
+					if ( $clearedDefault ) {
+						$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
+					}
+				} catch ( \Throwable $failure ) {
+					BoosterLogger::logException(
+						'repository branch evidence invalidation failed after credential removal',
+						$failure,
+						array(
+							'source'    => 'admin',
+							'operation' => 'delete-access-profile',
+							'step'      => 'branch_check_evidence_invalidation',
+							'provider'  => $provider->value,
+						)
+					);
+				}
 				return $clearedDefault
 					? 'Repository credential removed. Public repository lookup now uses anonymous access.'
 					: 'Repository credential removed.';

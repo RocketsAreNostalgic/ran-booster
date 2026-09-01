@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Deployment;
 
-require_once dirname( __DIR__, 2 ) . '/../ran-wp-release-updater/src/Archive/TemporaryArtifact.php';
-
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\PreparedArtifact;
 use RuntimeException;
@@ -25,51 +23,26 @@ final class PreparedArtifactTest extends TestCase {
 		}
 	}
 
-	public function testTransfersCleanupOwnership(): void {
+	public function testCleanupDeletesTheExactUnchangedArtifact(): void {
 		$artifact = $this->artifact();
 		$path     = $artifact->getPath();
-		$artifact->assertUnchanged();
-		$claim = $artifact->claimForNativeUpdate( 'plugin', 'example/example.php' );
 
 		$artifact->cleanup();
-		self::assertFileExists( $path );
-		self::assertSame(
-			'1.2.3',
-			$claim->acceptCoreUpdate( 'plugin', 'example/example.php', 'update', $path )
-		);
-		self::assertTrue( $claim->discard() );
 		self::assertFileDoesNotExist( $path );
 	}
 
-	public function testClaimRequiresCoreVerificationAndCanBeMintedOnlyOnce(): void {
+	public function testCleanupRejectsChangedArtifactWithoutDeletingIt(): void {
 		$artifact = $this->artifact();
-
+		$path     = $artifact->getPath();
+		file_put_contents( $path, 'changed Core artifact' );
 		try {
-			$artifact->claimForNativeUpdate( 'plugin', 'example/example.php' );
-			self::fail( 'An unverified artifact must not transfer cleanup ownership.' );
+			$artifact->cleanup();
+			self::fail( 'Changed bytes must not be deleted as an owned artifact.' );
 		} catch ( RuntimeException $failure ) {
-			self::assertSame( 'The prepared deployment artifact is unavailable.', $failure->getMessage() );
+			self::assertSame( 'The prepared deployment artifact changed before use.', $failure->getMessage() );
 		}
 
-		$artifact->assertUnchanged();
-		$claim = $artifact->claimForNativeUpdate( 'plugin', 'example/example.php' );
-		try {
-			$artifact->claimForNativeUpdate( 'plugin', 'example/example.php' );
-			self::fail( 'A prepared artifact must transfer ownership only once.' );
-		} catch ( RuntimeException $failure ) {
-			self::assertSame( 'The prepared deployment artifact is unavailable.', $failure->getMessage() );
-		}
-
-		self::assertTrue( $claim->discard() );
-	}
-
-	public function testChangedArtifactCannotTransferCleanupOwnership(): void {
-		$artifact = $this->artifact();
-		$artifact->assertUnchanged();
-		file_put_contents( $artifact->getPath(), 'changed Core artifact' );
-
-		$this->expectException( RuntimeException::class );
-		$artifact->claimForNativeUpdate( 'plugin', 'example/example.php' );
+		self::assertFileExists( $path );
 	}
 
 	private function artifact(): PreparedArtifact {

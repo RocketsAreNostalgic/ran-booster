@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentArchivePreflight;
 use RAN\Deployment\DeploymentArchiveLimitFailure;
+use RAN\Deployment\DeploymentCheckFailure;
 use RAN\Deployment\DeploymentArchivePreflightWordPressState;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentOutcome;
@@ -90,6 +91,22 @@ final class DeploymentArchivePreflightTest extends TestCase {
 		$artifact->assertUnchanged();
 	}
 
+	public function testProviderCleanupFailureRemovesThePreparedTemporaryArtifact(): void {
+		$this->zip( array( 'bundle/example.php' => self::VALID_PLUGIN ) );
+		$archive               = new PreflightPreparedArchive();
+		$archive->cleanupFails = true;
+
+		try {
+			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), $archive, 'example/example.php' );
+			self::fail( 'Provider cleanup failure must fail the preflight.' );
+		} catch ( DeploymentCheckFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED, $failure->outcomeCode );
+		}
+
+		self::assertSame( 1, $archive->cleanupCalls );
+		$this->assertNoPreparedArtifactsRemain();
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPreflightLoadsTheWordPressFilesystemApiOutsideAdmin(): void {
@@ -149,7 +166,7 @@ final class DeploymentArchivePreflightTest extends TestCase {
 	}
 
 	#[DataProvider( 'terminalArchiveFailures' )]
-	public function testTerminalArchiveFailureIsNotRetried( bool $wpError, int $status, string $message ): void {
+	public function testTerminalArchiveFailureIsNotRetried( bool $wpError, int $status, string $message, string $code ): void {
 		$this->zip( array( 'bundle/example.php' => self::VALID_PLUGIN ) );
 		DeploymentArchivePreflightWordPressState::$responses = array(
 			array(
@@ -163,8 +180,9 @@ final class DeploymentArchivePreflightTest extends TestCase {
 		try {
 			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), $archive, 'example/example.php' );
 			self::fail( 'A terminal archive failure must fail the attempt.' );
-		} catch ( RuntimeException $failure ) {
+		} catch ( DeploymentCheckFailure $failure ) {
 			self::assertSame( $message, $failure->getMessage() );
+			self::assertSame( $code, $failure->outcomeCode );
 		}
 		self::assertSame( 1, DeploymentArchivePreflightWordPressState::$requests );
 		self::assertSame( 1, $archive->cleanupCalls );
@@ -172,9 +190,9 @@ final class DeploymentArchivePreflightTest extends TestCase {
 	}
 
 	public static function terminalArchiveFailures(): iterable {
-		yield 'stream or network failure' => array( true, 200, 'The deployment archive could not be downloaded.' );
-		yield 'not found' => array( false, 404, 'The provider returned an unsuccessful archive response.' );
-		yield 'internal server error' => array( false, 500, 'The provider returned an unsuccessful archive response.' );
+		yield 'stream or network failure' => array( true, 200, 'The deployment archive could not be downloaded.', DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED );
+		yield 'not found' => array( false, 404, 'The provider returned an unsuccessful archive response.', DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING );
+		yield 'internal server error' => array( false, 500, 'The provider returned an unsuccessful archive response.', DeploymentOutcome::CODE_PROVIDER_FAILED );
 	}
 
 	public function testDefaultAndConfiguredLimitsPreserveTheExpandedSafetyRatio(): void {
@@ -311,6 +329,50 @@ final class DeploymentArchivePreflightTest extends TestCase {
 		$artifact->cleanup();
 	}
 
+	#[DataProvider( 'pluginCandidateFailures' )]
+	public function testClassifiesZeroAndMultiplePluginCandidates( array $entries, string $code ): void {
+		$this->zip( $entries );
+
+		try {
+			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), new PreflightPreparedArchive(), 'example/example.php' );
+			self::fail( 'Plugin candidates must be classified.' );
+		} catch ( DeploymentCheckFailure $failure ) {
+			self::assertSame( $code, $failure->outcomeCode );
+		}
+	}
+
+	/** @return iterable<string, array{array<string,string>,string}> */
+	public static function pluginCandidateFailures(): iterable {
+		yield 'zero candidates' => array( array( 'bundle/example.php' => '<?php' ), DeploymentOutcome::CODE_PACKAGE_PLUGIN_MISSING );
+		yield 'multiple candidates' => array(
+			array(
+				'bundle/one.php' => "<?php\n/*\nPlugin Name: One\nVersion: 1.0.0\n*/",
+				'bundle/two.php' => "<?php\n/*\nPlugin Name: Two\nVersion: 1.0.0\n*/",
+			),
+			DeploymentOutcome::CODE_PACKAGE_MULTIPLE_PLUGINS,
+		);
+	}
+
+	#[DataProvider( 'versionHeaderFailures' )]
+	public function testClassifiesMissingAndInvalidPackageVersionHeaders( string $contents, string $code ): void {
+		$this->zip( array( 'bundle/example.php' => $contents ) );
+
+		try {
+			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), new PreflightPreparedArchive(), 'example/example.php' );
+			self::fail( 'The Version header must be classified.' );
+		} catch ( DeploymentCheckFailure $failure ) {
+			self::assertSame( $code, $failure->outcomeCode );
+		}
+		$this->assertNoPreparedArtifactsRemain();
+	}
+
+	/** @return iterable<string, array{string,string}> */
+	public static function versionHeaderFailures(): iterable {
+		yield 'missing Version' => array( "<?php\n/*\nPlugin Name: Example\n*/", DeploymentOutcome::CODE_PACKAGE_VERSION_MISSING );
+		yield 'invalid Version' => array( "<?php\n/*\nPlugin Name: Example\nVersion: not allowed!\n*/", DeploymentOutcome::CODE_PACKAGE_VERSION_INVALID );
+		yield 'unsafe Version' => array( "<?php\n/*\nPlugin Name: Example\nVersion: 1.2.3\x01\n*/", DeploymentOutcome::CODE_PACKAGE_VERSION_INVALID );
+	}
+
 	#[DataProvider( 'unsafeArchives' )]
 	public function testRejectsHostilePathsAndPackageShapes( array $entries, string $message ): void {
 		$this->zip( $entries );
@@ -356,6 +418,14 @@ final class DeploymentArchivePreflightTest extends TestCase {
 			'duplicate paths',
 		);
 		yield 'wrong identity' => array( array( 'bundle/wrong.php' => "<?php\n/*\nPlugin Name: Wrong\nVersion: 1.0.0\n*/" ), 'expected WordPress plugin' );
+		yield 'no plugin header' => array( array( 'bundle/example.php' => '<?php' ), 'expected WordPress plugin' );
+		yield 'multiple plugin headers' => array(
+			array(
+				'bundle/one.php' => "<?php\n/*\nPlugin Name: One\nVersion: 1.0.0\n*/",
+				'bundle/two.php' => "<?php\n/*\nPlugin Name: Two\nVersion: 1.0.0\n*/",
+			),
+			'exactly one top-level WordPress plugin',
+		);
 	}
 
 	public function testRejectsRootLevelPluginUpdateBeforeDownload(): void {
@@ -393,6 +463,15 @@ final class DeploymentArchivePreflightTest extends TestCase {
 			( new DeploymentArchivePreflight() )->prepare( $this->attempt(), new PreflightPreparedArchive(), 'example/example.php' );
 		} finally {
 			$this->assertNoPreparedArtifactsRemain();
+		}
+	}
+
+	public function testZeroArchiveEntriesAreClassifiedAsAnInvalidLayout(): void {
+		try {
+			( new ReflectionMethod( new DeploymentArchivePreflight(), 'assertEntryCount' ) )->invoke( new DeploymentArchivePreflight(), 0 );
+			self::fail( 'Zero-entry archives must be rejected.' );
+		} catch ( DeploymentCheckFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID, $failure->outcomeCode );
 		}
 	}
 

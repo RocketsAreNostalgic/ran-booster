@@ -33,6 +33,13 @@ if ( ! function_exists( 'esc_html_e' ) ) {
 	}
 }
 
+if ( ! function_exists( 'esc_html__' ) ) {
+	function esc_html__( string $text, string $domain = 'default' ): string {
+		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText,WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test shim forwards fixture strings.
+		return esc_html( __( $text, $domain ) );
+	}
+}
+
 if ( ! function_exists( 'esc_attr_e' ) ) {
 	function esc_attr_e( string $text, string $domain = 'default' ): void {
 		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText,WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test shim forwards fixture strings.
@@ -51,6 +58,12 @@ if ( ! function_exists( '_n' ) ) {
 if ( ! function_exists( 'esc_url' ) ) {
 	function esc_url( mixed $value ): string {
 		return esc_attr( $value );
+	}
+}
+
+if ( ! function_exists( 'wp_kses_post' ) ) {
+	function wp_kses_post( mixed $value ): string {
+		return (string) $value;
 	}
 }
 
@@ -134,6 +147,12 @@ if ( ! function_exists( 'admin_url' ) ) {
 if ( ! function_exists( 'network_admin_url' ) ) {
 	function network_admin_url( string $path = '' ): string {
 		return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
+	}
+}
+
+if ( ! function_exists( 'rest_url' ) ) {
+	function rest_url( string $path = '' ): string {
+		return 'https://example.test/wp-json/' . ltrim( $path, '/' );
 	}
 }
 

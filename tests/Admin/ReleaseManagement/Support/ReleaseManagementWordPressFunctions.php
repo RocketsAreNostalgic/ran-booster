@@ -12,6 +12,12 @@ function __( string $text, string $domain = 'default' ): string {
 	return $text;
 }
 
+function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
+	unset( $domain );
+
+	return 1 === $number ? $single : $plural;
+}
+
 function esc_html( mixed $value ): string {
 	return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 }
@@ -103,6 +109,22 @@ function admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 }
 
+function network_admin_url( string $path = '' ): string {
+	return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
+}
+
+function is_multisite(): bool {
+	return true === ( $GLOBALS['ran_booster_release_management_test_multisite'] ?? false );
+}
+
+function self_admin_url( string $path = '' ): string {
+	return admin_url( $path );
+}
+
+function wp_nonce_url( string $actionurl, int|string $action = -1, string $name = '_wpnonce' ): string {
+	return add_query_arg( $name, wp_create_nonce( (string) $action ), $actionurl );
+}
+
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {
 	if ( is_array( $key ) ) {
 		$args = $key;
@@ -133,6 +155,25 @@ function add_action( string $hook, callable $callback, int $priority = 10, int $
 	);
 
 	return true;
+}
+
+function do_action( string $hook, mixed ...$args ): void {
+	$callbacks = $GLOBALS['ran_booster_release_management_test_actions'][ $hook ] ?? array();
+	if ( ! is_array( $callbacks ) ) {
+		return;
+	}
+
+	usort(
+		$callbacks,
+		static fn ( array $left, array $right ): int => (int) ( $left['priority'] ?? 10 ) <=> (int) ( $right['priority'] ?? 10 )
+	);
+	foreach ( $callbacks as $registered ) {
+		if ( ! is_array( $registered ) || ! is_callable( $registered['callback'] ?? null ) ) {
+			continue;
+		}
+		$acceptedArgs = max( 0, (int) ( $registered['accepted_args'] ?? 1 ) );
+		call_user_func_array( $registered['callback'], array_slice( $args, 0, $acceptedArgs ) );
+	}
 }
 
 function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
@@ -171,6 +212,17 @@ function wp_localize_script( string $handle, string $name, array $data ): bool {
 function wp_json_encode( mixed $value ): string|false {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- WordPress encoder fixture.
 	return json_encode( $value );
+}
+
+function wp_make_link_relative( string $link ): string {
+	$parts = wp_parse_url( $link );
+	if ( ! is_array( $parts ) ) {
+		return $link;
+	}
+
+	return ( $parts['path'] ?? '' )
+		. ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' )
+		. ( isset( $parts['fragment'] ) ? '#' . $parts['fragment'] : '' );
 }
 
 function wp_safe_redirect( string $url ): bool {

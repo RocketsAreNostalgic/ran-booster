@@ -32,18 +32,20 @@ use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\CredentialExpiryReminder;
 use RAN\Admin\CredentialSelfDestructPurger;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
 use RAN\Admin\BackgroundDeploymentFailureMonitor;
 use RAN\Admin\ManagedPluginFailureRows;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
-use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Internal\CoreContainer;
 use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;
 use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderCode;
@@ -176,7 +178,8 @@ final class BoosterServiceProvider {
 			static fn ( CoreContainer $container ): CredentialSelfDestructPurger => new CredentialSelfDestructPurger(
 				$container->make( SecretsFile::class ),
 				$container->make( CredentialExpiryObservationStore::class ),
-				$container->make( PublicRepositoryLookupProfileStore::class )
+				$container->make( PublicRepositoryLookupProfileStore::class ),
+				$container->make( RepositoryBranchCheckEvidenceStore::class )
 			)
 		);
 		$container->bind(
@@ -238,6 +241,15 @@ final class BoosterServiceProvider {
 		);
 		$container->bind( ProviderRegistry::class, $providers );
 		$container->bind(
+			ReleaseWorkflowControls::class,
+			static fn ( CoreContainer $container ): ReleaseWorkflowControls => new ReleaseWorkflowControls(
+				$container->make( ReleaseTrackingFacade::class ),
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
+				$container->make( ProviderRegistry::class )
+			)
+		);
+		$container->bind(
 			WebhookAssistanceFacade::class,
 			static fn ( CoreContainer $container ): WebhookAssistanceFacade => new AssistedWebhookFacade(
 				$container->make( WebhookAssistanceReadinessEvaluator::class ),
@@ -245,17 +257,18 @@ final class BoosterServiceProvider {
 				$container->make( ProviderRegistry::class )
 			)
 		);
-		$container->bind(
-			RepositoryWebhookManagementControls::class,
-			static fn ( CoreContainer $container ): RepositoryWebhookManagementControls => new RepositoryWebhookManagementControls(
-				$container->make( WebhookAssistanceFacade::class ),
-				$container->make( AdminInteractionFacade::class ),
-				new ManagedPackageWebhookAuthorityResolver( $container->make( PluginRepository::class ), $container->make( ThemeRepository::class ) ),
-				$container->make( ProviderRegistry::class ),
-				(string) $runtime->boosterPath,
-				(string) $runtime->boosterUrl
+		$webhookControls = new RepositoryWebhookManagementControls(
+			$container->make( WebhookAssistanceFacade::class ),
+			$container->make( AdminInteractionFacade::class ),
+			$container->make( ProviderRegistry::class ),
+			(string) $runtime->boosterPath,
+			(string) $runtime->boosterUrl,
+			new ManagedPackageWebhookAuthorityResolver(
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class )
 			)
 		);
+		$container->bind( RepositoryWebhookManagementControls::class, $webhookControls );
 		$expiryReminders = new CredentialExpiryReminder(
 			$container->make( ProviderRegistry::class ),
 			$secrets,
@@ -328,7 +341,8 @@ final class BoosterServiceProvider {
 				$container->make( ThemeRepository::class ),
 				$container->make( PackageRemovalGateway::class ),
 				$container->make( DeploymentAttemptRepository::class ),
-				$container->make( WordPressUpdaterLock::class )
+				$container->make( WordPressUpdaterLock::class ),
+				$container->make( RepositoryBranchCheckEvidenceStore::class )
 			)
 		);
 		$container->bind(
@@ -404,7 +418,9 @@ final class BoosterServiceProvider {
 			$releaseStore,
 			$releaseRegistrar,
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class )
+			$container->make( ProviderRegistry::class ),
+			publicLookupProfile: static fn ( string $provider ): ?string => $container->make( PublicRepositoryLookupProfileStore::class )->get( $provider ),
+			sourceGuard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $releaseFacade );
 		$container->bind( ReleaseTrackingFacade::class, $releaseFacade );
@@ -414,7 +430,8 @@ final class BoosterServiceProvider {
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class )
+			$container->make( ProviderRegistry::class ),
+			sourceGuard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospectiveFacade );
 		$container->bind( ProspectiveReleaseFacade::class, $prospectiveFacade );
@@ -429,7 +446,8 @@ final class BoosterServiceProvider {
 						$container->make( ProviderRegistry::class )
 					),
 					'read',
-				)
+				),
+				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) )
 			)
 		);
 	}

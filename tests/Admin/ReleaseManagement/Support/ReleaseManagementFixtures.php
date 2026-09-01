@@ -13,13 +13,17 @@ final class ReleaseManagementFixture {
 	public static function controls(
 		?ReleaseTrackingFacadeDouble $tracking = null,
 		?ProspectiveReleaseFacadeDouble $prospective = null,
-		?callable $readCandidates = null
+		?callable $readCandidates = null,
+		?\RAN\Storage\RepositorySourceGuard $sourceGuard = null
 	): ReleaseManagementControls {
 		$prospective ??= new ProspectiveReleaseFacadeDouble();
+		$tracking    ??= new ReleaseTrackingFacadeDouble( self::status() );
 		return new ReleaseManagementControls(
-			$tracking ?? new ReleaseTrackingFacadeDouble( self::status() ),
+			$tracking,
 			$prospective,
-			$readCandidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->listCandidates( $type, $repository, $channel, '' )
+			$readCandidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->listCandidates( $type, $repository, $channel, '' ),
+			$tracking,
+			$sourceGuard
 		);
 	}
 
@@ -29,7 +33,8 @@ final class ReleaseManagementFixture {
 		string $eligibilityCode = ReleaseTrackingEligibility::ELIGIBLE,
 		bool $updateAvailable = false,
 		string $channel = 'stable',
-		string $failureCode = ''
+		string $failureCode = '',
+		string $deploymentPolicy = 'manual'
 	): ReleaseTrackingStatus {
 		$identifier = 'theme' === $type ? 'example-theme' : 'example/example.php';
 
@@ -39,7 +44,7 @@ final class ReleaseManagementFixture {
 			$source,
 			3,
 			'101',
-			'manual',
+			$deploymentPolicy,
 			new ReleaseTrackingEligibility(
 				$eligibilityCode,
 				'https://github.com/example/example',
@@ -74,6 +79,7 @@ final class ReleaseManagementFixture {
 			'redirect',
 			'header',
 			'json',
+			'multisite',
 		) as $suffix ) {
 			unset( $GLOBALS[ 'ran_booster_release_management_test_' . $suffix ] );
 		}

@@ -79,7 +79,7 @@ final class ManagedReleaseBrowserOperations {
 				'version'              => $inspection->latestVersion(),
 				'details_url'          => $inspection->releaseUrl(),
 				'installed_version'    => $status->installedVersion(),
-				'version_relationship' => $inspection->versionRelationship(),
+				'version_relationship' => self::versionRelationship( $inspection->latestVersion(), $status->installedVersion() ),
 				'native_offer'         => array(
 					'available'  => $status->updateAvailable(),
 					'release_id' => $status->nativeOfferReleaseId(),
@@ -97,10 +97,14 @@ final class ManagedReleaseBrowserOperations {
 			'version'              => $candidate->version,
 			'prerelease'           => $candidate->prerelease,
 			'published_at'         => $candidate->publishedAt,
-			'version_relationship' => version_compare( $candidate->version, $installedVersion ) > 0
-				? 'newer'
-				: ( version_compare( $candidate->version, $installedVersion ) < 0 ? 'older' : 'same' ),
+			'version_relationship' => self::versionRelationship( $candidate->version, $installedVersion ),
 		);
+	}
+
+	private static function versionRelationship( string $version, string $installedVersion ): string {
+		return version_compare( $version, $installedVersion ) > 0
+			? 'newer'
+			: ( version_compare( $version, $installedVersion ) < 0 ? 'older' : 'same' );
 	}
 
 	private function validRequest( string $type, string $identifier, int $revision, string $channel ): bool {

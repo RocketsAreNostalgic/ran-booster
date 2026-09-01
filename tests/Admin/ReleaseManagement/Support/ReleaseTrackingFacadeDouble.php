@@ -36,6 +36,9 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	/** @var null|callable():void */
 	public $afterCandidateList = null;
 
+	/** @var null|callable():void */
+	public $afterCandidateInspection = null;
+
 	public function __construct( private ReleaseTrackingStatus $releaseStatus ) {
 	}
 
@@ -97,6 +100,9 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public function inspectCandidate( string $type, string $identifier, int $expectedSourceRevision, string $releaseId, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
 		$this->calls[] = array( 'inspect_candidate', $type, $identifier, $expectedSourceRevision, $releaseId, $tag, $channel, $nonce );
+		if ( is_callable( $this->afterCandidateInspection ) ) {
+			( $this->afterCandidateInspection )();
+		}
 
 		return $this->candidateInspection;
 	}

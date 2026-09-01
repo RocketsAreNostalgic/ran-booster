@@ -166,4 +166,32 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
+
+	public function testBranchRepositoryWithoutAssistedManagementRetainsManualGuidanceWithoutInventingAnAction(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'          => 'owner/branch',
+				'repository_url'      => '',
+				'source_label'        => 'Branch',
+				'has_branch_consumer' => true,
+				'package_summaries'   => array(),
+				'details'             => array(),
+				'actions'             => array(),
+			),
+			'Bitbucket',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'id="ran-booster-repository-webhook-heading"', $html );
+		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this provider.', $html );
+		self::assertStringContainsString( 'Use the provider webhook settings when available.', $html );
+		self::assertStringNotContainsString( 'No eligible Branch package', $html );
+		self::assertStringNotContainsString( 'Manage repository webhook', $html );
+	}
 }

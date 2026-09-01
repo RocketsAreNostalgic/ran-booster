@@ -65,6 +65,8 @@ final class RepositoryDetailRenderer {
 				<?php if ( null !== $renderWebhookPanel ) { ?>
 					<p class="description"><?php esc_html_e( 'One repository webhook is shared by eligible Branch packages. Published-release packages are shown for context and ignore pushes.', 'ran-booster' ); ?></p>
 					<?php $renderWebhookPanel(); ?>
+				<?php } elseif ( true === ( $row['has_branch_consumer'] ?? false ) ) { ?>
+					<p class="description"><?php esc_html_e( 'Core-assisted webhook management is unavailable for this provider. Use the provider webhook settings when available.', 'ran-booster' ); ?></p>
 				<?php } else { ?>
 					<p class="description"><?php esc_html_e( 'No eligible Branch package uses this repository. Published-release packages ignore pushes, so webhook operations are unavailable.', 'ran-booster' ); ?></p>
 					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>

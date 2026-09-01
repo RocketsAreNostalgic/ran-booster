@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use Tests\Admin\ReleaseManagement\Support\PackageProjection;
@@ -209,6 +210,39 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 'source_changed', $result['code'] );
 		self::assertSame( array(), $result['data'] );
 		self::assertSame( 2, $tracking->statusReads );
+	}
+
+	public function testManagedCandidateInspectionRecomputesRelationshipFromTheFreshInstalledVersion(): void {
+		$tracking                           = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->candidateInspection      = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0', 'v1.2.0', '1.2.0', 'newer' );
+		$tracking->afterCandidateInspection = static function () use ( $tracking ): void {
+			$tracking->setStatus(
+				new ReleaseTrackingStatus(
+					'plugin',
+					'example/example.php',
+					'release_asset',
+					3,
+					'101',
+					'manual',
+					new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-plugin' ),
+					new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0' ),
+					'example-plugin',
+					'1.2.0',
+					'1.2.0'
+				)
+			);
+		};
+		$controls                           = ReleaseManagementFixture::controls( $tracking );
+		$request                            = $this->managedRequest( 'inspect_candidate' );
+		$request['release_id']              = '42';
+		$request['release_tag']             = 'v1.2.0';
+
+		$result = $controls->processManagedBrowserRequest( 'inspect_candidate', $request );
+
+		self::assertTrue( $result['successful'] );
+		self::assertSame( '1.2.0', $result['data']['installed_version'] );
+		self::assertSame( 'same', $result['data']['version_relationship'] );
+		self::assertSame( 1, $tracking->statusReads );
 	}
 
 	public function testManagedBrowserRemainsAvailableWhenNativeUpdaterStatusCannotBeRead(): void {

@@ -15,6 +15,7 @@ final class SetupRecordStoreTest extends TestCase {
 		$GLOBALS['ran_booster_release_deployments_test_option_updates'] = array();
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_override'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] );
 	}
 	public function testSchemaTwoIsExactBoundedAndNonAutoloaded(): void {
 		$store  = new SetupRecordStore();
@@ -71,6 +72,29 @@ final class SetupRecordStoreTest extends TestCase {
 			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact raw scalar value bytes are the compatibility subject under test.
 			self::assertSame( $before, serialize( $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_setup_records'] ), $name );
 		}
+	}
+	public function testClaimIsAtomicAndReleaseRequiresTheExactBinding(): void {
+		$store = new SetupRecordStore();
+		self::assertTrue( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertFalse( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertFalse( $store->releaseClaim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
+		self::assertTrue( $store->releaseClaim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertTrue( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
+	}
+	public function testExistingRecordClaimRequiresItsExactPackageAndRevision(): void {
+		$store = new SetupRecordStore();
+		self::assertTrue( $store->save( $this->record() ) );
+		self::assertFalse( $store->claim( '987654321', 'plugin', 'example-plugin/example-plugin.php', 3, true ) );
+		self::assertFalse( $store->claim( '123456789', 'theme', 'example-plugin/example-plugin.php', 3, true ) );
+		self::assertFalse( $store->claim( '123456789', 'plugin', 'other/other.php', 3, true ) );
+		self::assertFalse( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4, true ) );
+		self::assertTrue( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3, true ) );
+	}
+	public function testSaveNeverTransfersARepositoryRecordToAnotherPackage(): void {
+		$store = new SetupRecordStore();
+		self::assertTrue( $store->save( $this->record() ) );
+		self::assertFalse( $store->save( array_replace( $this->record(), array( 'package_identifier' => 'other/other.php' ) ) ) );
+		self::assertSame( 'example-plugin/example-plugin.php', $store->find( '123456789' )['package_identifier'] );
 	}
 	public function testSchemaOneIsDisplayOnlyAndNeverCurrentAuthority(): void {
 		$legacy                 = array_intersect_key( $this->record(), array_flip( array( 'repo_id', 'repository', 'package_type', 'package_identifier', 'source_revision', 'default_branch', 'setup_branch', 'head_sha', 'pr_number' ) ) );

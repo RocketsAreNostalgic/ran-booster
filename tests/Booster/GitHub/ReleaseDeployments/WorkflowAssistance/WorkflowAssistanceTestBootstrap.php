@@ -116,6 +116,30 @@ if ( ! function_exists( __NAMESPACE__ . '\\update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\add_option' ) ) {
+	function add_option( string $option, mixed $value = '', string $deprecated = '', bool|string $autoload = true ): bool {
+		if ( array_key_exists( $option, $GLOBALS['ran_booster_release_deployments_test_options'] ) ) {
+			return false;
+		}
+		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ] = $value;
+		$callback = $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] ?? null;
+		if ( is_callable( $callback ) ) {
+			$callback( $option, $value, $autoload );
+		}
+		return true;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\delete_option' ) ) {
+	function delete_option( string $option ): bool {
+		if ( ! array_key_exists( $option, $GLOBALS['ran_booster_release_deployments_test_options'] ) ) {
+			return false;
+		}
+		unset( $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
+		return true;
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\get_current_user_id' ) ) {
 	function get_current_user_id(): int {
 		return 1;
@@ -138,6 +162,10 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_transient' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\delete_transient' ) ) {
 	function delete_transient( string $key ): bool {
+		$callback = $GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] ?? null;
+		if ( is_callable( $callback ) ) {
+			$callback( $key );
+		}
 		unset( $GLOBALS['ran_booster_release_deployments_test_transients'][ $key ] );
 		return true;
 	}

@@ -142,6 +142,9 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$GLOBALS['ran_booster_release_deployments_test_transients'] = array();
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_claim_delete_callback'] );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused option-table double exercises compare-and-delete claim ownership.
+		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
 	}
 
 	public function testCompleteApiTwoBootstrapUsesExactPreviewGitObjectsReadbackAndSchemaTwo(): void {
@@ -651,8 +654,9 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 			$retry  = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
 			self::assertSame( 'workflow_invalid_request', $retry['code'], $operation );
 			self::assertSame( $counts, $transport->writeCounts, $operation );
-			self::assertTrue( $records->claim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ), $operation );
-			self::assertTrue( $records->releaseClaim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ), $operation );
+			$claim = $records->claim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 );
+			self::assertNotNull( $claim, $operation );
+			self::assertTrue( $records->releaseClaim( '101', $claim ), $operation );
 		}
 	}
 
@@ -674,8 +678,9 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 			self::assertSame( 'expected test failure', $exception->getMessage() );
 		}
 
-		self::assertTrue( $records->claim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
-		self::assertTrue( $records->releaseClaim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		$claim = $records->claim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNotNull( $claim );
+		self::assertTrue( $records->releaseClaim( '101', $claim ) );
 	}
 
 

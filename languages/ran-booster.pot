@@ -2139,7 +2139,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:681
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:314
-#: RAN/Booster.php:647
+#: RAN/Booster.php:648
 #: views/attempts/index.php:39
 #: views/onboarding.php:22
 #: views/packages/branch-readiness.php:189
@@ -3618,62 +3618,62 @@ msgstr ""
 msgid "Extensions are temporarily unavailable. Reload the page or check the Booster installation."
 msgstr ""
 
-#: RAN/Booster.php:643
+#: RAN/Booster.php:644
 #: views/attempts/index.php:34
 #: views/packages/index.php:53
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:644
+#: RAN/Booster.php:645
 #: views/attempts/index.php:35
 #: views/packages/index.php:54
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:645
+#: RAN/Booster.php:646
 #: views/attempts/index.php:36
 #: views/packages/index.php:55
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:646
+#: RAN/Booster.php:647
 #: views/attempts/index.php:38
 #: views/packages/index.php:56
 #: views/troubleshooting.php:36
 msgid "Failed"
 msgstr ""
 
-#: RAN/Booster.php:648
+#: RAN/Booster.php:649
 #: views/packages/index.php:299
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:649
+#: RAN/Booster.php:650
 #: views/packages/index.php:301
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:650
+#: RAN/Booster.php:651
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:651
+#: RAN/Booster.php:652
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:652
+#: RAN/Booster.php:653
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:653
+#: RAN/Booster.php:654
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:654
+#: RAN/Booster.php:655
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:655
+#: RAN/Booster.php:656
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
@@ -7332,4 +7332,8 @@ msgstr ""
 
 #: views/troubleshooting.php:269
 msgid "This report contains only the safe, displayed result fields. Review it before sharing."
+msgstr ""
+
+#: assets/ran-booster-enhanced-mutations.js:630
+msgid "We could not complete that request. Please try again."
 msgstr ""

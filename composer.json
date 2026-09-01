@@ -45,6 +45,8 @@
         "test:characterization": "@php tests/characterization.php",
         "i18n:pot": "bash scripts/make-pot.sh",
         "i18n:check": "bash scripts/make-pot.sh --check",
+        "i18n:fixture": "bash scripts/make-test-i18n-fixture.sh",
+        "i18n:fixture:check": "bash scripts/make-test-i18n-fixture.sh --check",
         "test:github-module": "phpunit --configuration phpunit.github-module.xml --fail-on-phpunit-deprecation",
         "test:unit": "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation",
         "test:published-template-pack": "bash tests/published-template-pack.sh",
@@ -76,6 +78,7 @@
         "verify:release": "bash scripts/verify-release.sh",
         "check": [
             "@i18n:check",
+            "@i18n:fixture:check",
             "@test",
             "@test:release-candidate-marker",
             "@test:release-state-contracts",

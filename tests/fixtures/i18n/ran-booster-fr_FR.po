@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: RAN Booster\n"
+"Language: fr_FR\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: Test fixture\n"
+"Language-Team: French\n"
+"MIME-Version: 1.0\n"
+"POT-Creation-Date: 2026-09-01T00:00:00+00:00\n"
+"PO-Revision-Date: 2026-09-01T00:00:00+00:00\n"
+
+#: RAN/Booster.php:643
+msgid "Queued"
+msgstr "En attente"
+
+#: assets/ran-booster-enhanced-mutations.js:630
+msgid "We could not complete that request. Please try again."
+msgstr "Nous n’avons pas pu effectuer cette demande. Veuillez réessayer."

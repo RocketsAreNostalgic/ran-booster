@@ -31,6 +31,10 @@ const footerCss = fs.readFileSync(
 );
 
 function loadFunction(name, dependencies = {}) {
+	const localizedDependencies = {
+		wp: { i18n: { __: (text) => text } },
+		...dependencies,
+	};
 	const signature = `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
@@ -57,9 +61,9 @@ function loadFunction(name, dependencies = {}) {
 	assert.notEqual(end, -1, `The ${name} function must be complete.`);
 
 	return Function(
-		...Object.keys(dependencies),
+		...Object.keys(localizedDependencies),
 		`"use strict"; return (${source.slice(start, end)});`
-	)(...Object.values(dependencies));
+	)(...Object.values(localizedDependencies));
 }
 
 function classList() {
@@ -898,9 +902,20 @@ test('enhanced mutation transport failures reset busy state and keep an error lo
 		'htmx:timeout',
 	]) {
 		const state = fixture();
+		const translations = [];
+		const translatedFailure =
+			'Nous n’avons pas pu effectuer cette demande. Veuillez réessayer.';
 		const init = loadFunction('initEnhancedMutationFeedback', {
 			document: state.document,
 			window: state.window,
+			wp: {
+				i18n: {
+					__: (message, domain) => {
+						translations.push({ message, domain });
+						return translatedFailure;
+					},
+				},
+			},
 		});
 
 		init();
@@ -915,19 +930,21 @@ test('enhanced mutation transport failures reset busy state and keep an error lo
 		});
 
 		assert.equal(state.formAttributes.has('aria-busy'), false, eventName);
+		assert.deepEqual(translations, [
+			{
+				message:
+					'We could not complete that request. Please try again.',
+				domain: 'ran-booster',
+			},
+		]);
 		assert.equal(state.button.disabled, false, eventName);
 		assert.equal(state.error.hidden, false, eventName);
-		assert.equal(
-			state.error.textContent,
-			'We could not complete that request. Please try again.',
-			eventName
-		);
+		assert.equal(state.error.textContent, translatedFailure, eventName);
 		assert.deepEqual(
 			state.announcements,
 			[
 				{
-					message:
-						'We could not complete that request. Please try again.',
+					message: translatedFailure,
 					type: 'assertive',
 				},
 			],

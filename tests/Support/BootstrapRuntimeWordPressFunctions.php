@@ -11,6 +11,7 @@ $GLOBALS['ran_booster_deactivation_callbacks'] = array();
 $GLOBALS['ran_booster_cleared_cron_hooks']     = array();
 $GLOBALS['ran_booster_fired_actions']          = array();
 $GLOBALS['ran_booster_rest_routes']            = array();
+$GLOBALS['ran_booster_loaded_textdomains']     = array();
 
 function is_multisite(): bool {
 	return true;
@@ -81,6 +82,12 @@ function plugin_dir_url( string $file ): string {
 
 function plugin_basename( string $file ): string {
 	return basename( dirname( $file ) ) . '/' . basename( $file );
+}
+
+function load_plugin_textdomain( string $domain, bool $deprecated = false, string $path = '' ): bool {
+	$GLOBALS['ran_booster_loaded_textdomains'][] = compact( 'domain', 'deprecated', 'path' );
+
+	return true;
 }
 
 function wp_clear_scheduled_hook( string $hook, array $arguments = array() ): int {

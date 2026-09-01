@@ -24,11 +24,13 @@ final class BoosterAssetsTest extends TestCase {
 
 	protected function setUp(): void {
 		$_GET = array();
-		$GLOBALS['ran_booster_asset_test_registered_styles']  = array();
-		$GLOBALS['ran_booster_asset_test_enqueued_styles']    = array();
-		$GLOBALS['ran_booster_asset_test_registered_scripts'] = array();
-		$GLOBALS['ran_booster_asset_test_enqueued_scripts']   = array();
-		$GLOBALS['ran_booster_asset_test_localized_scripts']  = array();
+		$GLOBALS['ran_booster_asset_test_registered_styles']   = array();
+		$GLOBALS['ran_booster_asset_test_enqueued_styles']     = array();
+		$GLOBALS['ran_booster_asset_test_registered_scripts']  = array();
+		$GLOBALS['ran_booster_asset_test_enqueued_scripts']    = array();
+		$GLOBALS['ran_booster_asset_test_localized_scripts']   = array();
+		$GLOBALS['ran_booster_asset_test_script_events']       = array();
+		$GLOBALS['ran_booster_asset_test_script_translations'] = array();
 	}
 
 	protected function tearDown(): void {
@@ -38,7 +40,9 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_styles'],
 			$GLOBALS['ran_booster_asset_test_registered_scripts'],
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts'],
-			$GLOBALS['ran_booster_asset_test_localized_scripts']
+			$GLOBALS['ran_booster_asset_test_localized_scripts'],
+			$GLOBALS['ran_booster_asset_test_script_events'],
+			$GLOBALS['ran_booster_asset_test_script_translations']
 		);
 	}
 
@@ -181,7 +185,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-secure-inputs']['footer'] );
 		self::assertSame(
-			array( 'ran-booster-js', 'wp-a11y' ),
+			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['dependencies']
 		);
 		self::assertStringEndsWith(
@@ -189,6 +193,38 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['source']
 		);
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['footer'] );
+		self::assertSame(
+			array(
+				array(
+					'handle' => 'ran-booster-enhanced-mutations',
+					'domain' => 'ran-booster',
+					'path'   => dirname( __DIR__, 2 ) . '/languages',
+				),
+			),
+			$GLOBALS['ran_booster_asset_test_script_translations']
+		);
+		self::assertSame(
+			array(
+				array(
+					'function' => 'wp_register_script',
+					'handle'   => 'ran-booster-enhanced-mutations',
+				),
+				array(
+					'function' => 'wp_set_script_translations',
+					'handle'   => 'ran-booster-enhanced-mutations',
+				),
+				array(
+					'function' => 'wp_register_script',
+					'handle'   => 'ran-booster-packages',
+				),
+			),
+			array_slice( $GLOBALS['ran_booster_asset_test_script_events'], 3, 3 )
+		);
+		foreach ( $GLOBALS['ran_booster_asset_test_registered_scripts'] as $handle => $script ) {
+			if ( 'ran-booster-enhanced-mutations' !== $handle ) {
+				self::assertNotContains( 'wp-i18n', $script['dependencies'] );
+			}
+		}
 		self::assertSame(
 			array( 'ran-booster-enhanced-mutations' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-packages']['dependencies']
@@ -396,7 +432,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
-			array( 'ran-booster-js', 'wp-a11y' ),
+			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['dependencies']
 		);
 		self::assertStringEndsWith(
@@ -439,7 +475,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
-			array( 'ran-booster-js', 'wp-a11y' ),
+			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['dependencies']
 		);
 		self::assertArrayNotHasKey( 'ran-booster-htmx', $GLOBALS['ran_booster_asset_test_registered_scripts'] );
@@ -469,7 +505,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
-			array( 'ran-booster-js', 'wp-a11y' ),
+			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['dependencies']
 		);
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );

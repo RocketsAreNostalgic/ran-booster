@@ -995,6 +995,16 @@ jobs:
           - name: Read back the installed GitHub provider contract
             run: wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress
 
+          - name: Prove installed archive localisation
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_LOCALISATION_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_LOCALISATION_TEST_URL: 'http://localhost'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                bash tests/WordPress/localisation-installed-smoke.sh
+
           - name: Prove global Core container isolation
             run: |
                 wp eval '

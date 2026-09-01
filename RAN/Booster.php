@@ -553,10 +553,11 @@ class Booster {
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-enhanced-mutations.js',
-			array( 'ran-booster-js', 'wp-a11y' ),
+			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
 			$enhancedMutationScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-enhanced-mutations', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-packages',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-packages.js',

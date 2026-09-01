@@ -591,6 +591,38 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testRepositorySubtabsUseNetworkAdminHrefsButKeepRelativeHtmxRequestsOnMultisite(): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+			array(
+				'provider'              => array(
+					'code'           => 'gh',
+					'label'          => 'GitHub',
+					'capabilities'   => array(),
+					'webhook_scopes' => array(),
+				),
+				'providerTask'          => 'repositories',
+				'repositoryView'        => 'branch',
+				'requestedRepositoryId' => '101',
+				'provider_repositories' => array(
+					'repositories' => array(
+						array(
+							'target'            => 'owner/repository',
+							'repository_id'     => '101',
+							'source'            => 'branch',
+							'package_summaries' => array( $this->summary( 'plugin', 'plugin/plugin.php', 'Plugin', 'branch', 'main', '', 'manual' ) ),
+						),
+					),
+				),
+			)
+		);
+
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repositoryViewUrls']['status'] ) );
+		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
+	}
+
 	public function testRepositorySummaryUsesAutomaticBranchAggregateBeyondPackageSummaryCap(): void {
 		$summaries = array();
 		for ( $index = 1; $index <= 20; ++$index ) {

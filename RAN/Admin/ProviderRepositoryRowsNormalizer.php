@@ -32,7 +32,8 @@ final class ProviderRepositoryRowsNormalizer {
 		$siteEndpoint  = is_string( $site['callback_url'] ?? null ) ? $site['callback_url'] : $endpoint;
 		$reasonCodes   = is_array( $site['reason_codes'] ?? null ) ? $site['reason_codes'] : array();
 		$siteReady     = null !== $site && 'ready' === ( $site['status'] ?? null );
-		$baseUrl       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
+		$baseUrl       = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) )
+			. '?page=ran-booster&tab=' . rawurlencode( $providerCode );
 		$providerUrl   = static fn ( array $args = array() ): string => add_query_arg( $args, $baseUrl );
 		$taskUrls      = array();
 		$taskRequests  = array();

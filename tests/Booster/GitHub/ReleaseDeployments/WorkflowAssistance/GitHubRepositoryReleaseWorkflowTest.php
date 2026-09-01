@@ -20,6 +20,14 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_release_deployments_test_options']    = array();
 		$GLOBALS['ran_booster_release_deployments_test_transients'] = array();
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The workflow record fixture requires the same connection-local advisory-lock double as its persistence tests.
+		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
+	}
+
+	protected function tearDown(): void {
+		$GLOBALS['wpdb']->disconnect();
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
 	}
 
 	public function testPassiveStatusUsesOnlyDisplaySafeProfilesAndExactActionsUrl(): void {

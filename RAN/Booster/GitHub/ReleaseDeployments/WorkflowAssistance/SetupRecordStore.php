@@ -7,8 +7,6 @@ namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 /** Stores exact, bounded, non-secret setup pull-request evidence. */
 final class SetupRecordStore {
 	private const OPTION                   = 'ran_booster_release_deployments_setup_records';
-	private const CLAIM_PREFIX             = 'ran_booster_release_deployments_setup_claim_';
-	private const CLAIM_TTL                = 900;
 	private const ASSESSMENT_OPTION        = 'ran_booster_release_deployments_assessment_observations';
 	private const FAILURE_OPTION           = 'ran_booster_release_deployments_failure_history';
 	private const MAX_RECORDS              = 100;
@@ -52,6 +50,8 @@ final class SetupRecordStore {
 	private const FAILURE_FIELDS           = array( 'operation', 'outcome_code', 'failure_stage', 'package_type', 'package_identifier', 'source_revision', 'repository_id', 'diagnostic_code', 'diagnostic_available', 'correlation_reference', 'recorded_at' );
 	private const FAILURE_STAGES           = array( 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' );
 	private const FAILURE_DIAGNOSTIC_CODES = array( 'diagnostic_detail_unavailable', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
+
+	private ?string $claimToken = null;
 	/** @return array<string,int|string>|null */
 	public function find( string $repositoryId ): ?array {
 		$raw = $this->raw( $repositoryId );
@@ -69,76 +69,67 @@ final class SetupRecordStore {
 		$all = get_option( self::OPTION, array() );
 		return is_array( $all ) && array_key_exists( $repositoryId, $all );
 	}
-	/** Atomically reserve one exact package setup before any provider mutation. @return string|null Opaque exact-owner claim. */
+	/** Serialize setup and the shared record write before any provider mutation. @return string|null Opaque exact-owner claim. */
 	public function claim( string $repositoryId, string $type, string $identifier, int $revision, bool $allowExistingRecord = false ): ?string {
 		if ( ! $this->number( $repositoryId ) || ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| ! $this->text( $identifier, 255 ) || $revision < 1 ) {
+			|| ! $this->text( $identifier, 255 ) || $revision < 1 || null !== $this->claimToken ) {
 			return null;
+		}
+		$claim = bin2hex( random_bytes( 16 ) );
+		if ( ! $this->acquireClaimLock() ) {
+			return null;
+		}
+		$this->claimToken = $claim;
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::OPTION, 'options' );
 		}
 		$existing = $this->find( $repositoryId );
 		if ( $allowExistingRecord
 			? null === $existing || ! hash_equals( $type, $existing['package_type'] )
 				|| ! hash_equals( $identifier, $existing['package_identifier'] ) || $revision !== $existing['source_revision']
 			: $this->occupied( $repositoryId ) ) {
+			$this->releaseClaim( $repositoryId, $claim );
 			return null;
 		}
-		$option = self::CLAIM_PREFIX . $repositoryId;
-		$claim  = $this->claimValue( $repositoryId, $type, $identifier, $revision );
-		if ( add_option( $option, $claim, '', false ) ) {
-			return $claim;
-		}
-		$stored = get_option( $option, null );
-		if ( ! is_string( $stored ) || ! $this->expiredClaim( $stored ) || ! $this->deleteExactClaim( $option, $stored ) ) {
-			return null;
-		}
-		return add_option( $option, $claim, '', false ) ? $claim : null;
+		return $claim;
 	}
 
-	/** Release only the exact reservation held by this setup attempt. */
+	/** Release only the exact connection-local lock held by this store instance. */
 	public function releaseClaim( string $repositoryId, string $claim ): bool {
-		return $this->claimRepositoryId( $claim ) === $repositoryId
-			&& $this->deleteExactClaim( self::CLAIM_PREFIX . $repositoryId, $claim );
-	}
-
-	private function claimValue( string $repositoryId, string $type, string $identifier, int $revision ): string {
-		return implode(
-			':',
-			array(
-				'v1',
-				(string) ( time() + self::CLAIM_TTL ),
-				bin2hex( random_bytes( 16 ) ),
-				hash( 'sha256', implode( "\0", array( $repositoryId, $type, $identifier, (string) $revision ) ) ),
-				$repositoryId,
-			)
-		);
-	}
-
-	private function expiredClaim( string $claim ): bool {
-		$parts = explode( ':', $claim );
-		return 5 === count( $parts ) && 'v1' === $parts[0] && ctype_digit( $parts[1] ) && (int) $parts[1] <= time()
-			&& 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $parts[2] ) && 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $parts[3] ) && $this->number( $parts[4] );
-	}
-
-	private function claimRepositoryId( string $claim ): ?string {
-		$parts = explode( ':', $claim );
-		return 5 === count( $parts ) && 'v1' === $parts[0] && ctype_digit( $parts[1] )
-			&& 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $parts[2] ) && 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $parts[3] )
-			&& $this->number( $parts[4] ) ? $parts[4] : null;
-	}
-
-	/** Compare-and-delete prevents an expired owner from deleting its successor. */
-	private function deleteExactClaim( string $option, string $claim ): bool {
-		global $wpdb;
-		if ( ! is_object( $wpdb ) || ! isset( $wpdb->options ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'query' ) ) {
+		if ( ! $this->number( $repositoryId ) || null === $this->claimToken || ! hash_equals( $this->claimToken, $claim ) ) {
 			return false;
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery -- Atomic compare-and-delete is the claim's concurrency boundary.
-		$result = $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s AND option_value = %s', $wpdb->options, $option, $claim ) );
-		if ( 1 === $result && function_exists( 'wp_cache_delete' ) ) {
-			wp_cache_delete( $option, 'options' );
-			wp_cache_delete( 'notoptions', 'options' );
+		if ( ! $this->releaseClaimLock() ) {
+			return false;
 		}
-		return 1 === $result;
+		$this->claimToken = null;
+		return true;
+	}
+
+	private function acquireClaimLock(): bool {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_var' ) ) {
+			return false;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory lock serializes remote setup and the shared evidence option.
+		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', self::claimLockName() ) );
+		return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
+	}
+
+	private function releaseClaimLock(): bool {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_var' ) ) {
+			return false;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory locks are released automatically if the database connection closes.
+		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::claimLockName() ) );
+		return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
+	}
+
+	private static function claimLockName(): string {
+		global $wpdb;
+		$options = is_object( $wpdb ) && isset( $wpdb->options ) ? (string) $wpdb->options : 'unavailable';
+		return 'ran_booster_release_workflow_' . substr( hash( 'sha256', $options ), 0, 32 );
 	}
 	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
 	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {

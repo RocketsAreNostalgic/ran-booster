@@ -7,6 +7,7 @@ namespace RAN\Admin\WebhookManagement;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
 use RAN\Admin\Interaction\AdminInteractionRequest;
+use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
 use RAN\RepositoryProvider\ProviderMetadata;
@@ -36,6 +37,7 @@ final class WebhookManagementController {
 		private readonly WebhookOperationCoordinator $operations,
 		private readonly WebhookDisplayModel $display,
 		private readonly ProviderRegistry $providers,
+		private readonly ManagedPackageWebhookAuthorityResolver $packageAuthorities,
 		?callable $canManage = null,
 		?callable $verifyNonce = null,
 		?callable $createNonce = null
@@ -92,40 +94,33 @@ final class WebhookManagementController {
 		}
 		$resultCode = $result['code'];
 
-		$safeRepositoryId = strlen( $repositoryId ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ? $repositoryId : '';
+		$safeRepositoryId   = strlen( $repositoryId ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ? $repositoryId : '';
+		$returnUrl          = $this->safeReturnUrl( $this->stringValue( $request, 'return_url' ), $providerCode, $safeRepositoryId );
+		$interactionRequest = $this->interactionRequest( $returnUrl );
 		if ( null !== $this->adminInteraction
+			&& null !== $interactionRequest
 			&& $metadata instanceof ProviderMetadata
 			&& true === $result['inline_safe'] ) {
-			$request = $this->interactionRequest( $providerCode, $safeRepositoryId );
 			$outcome = true === $result['successful']
-				? AdminInteractionOutcome::success( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) )
-				: AdminInteractionOutcome::validationFailure( $request, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) );
+				? AdminInteractionOutcome::success( $interactionRequest, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) )
+				: AdminInteractionOutcome::validationFailure( $interactionRequest, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) );
 			$this->adminInteraction->respond( $outcome );
 		}
 
-		$recoveryQuery    = null === $result['recovery']
-			? ''
-			: '&recovery_hook=' . rawurlencode( $result['recovery']['hook_id'] ) . '&recovery_profile=' . rawurlencode( $result['recovery']['profile_id'] );
-		$remediation      = false === $result['inline_safe'] ? $this->safeRemediation( $result['remediation'] ) : null;
-		$remediationQuery = null === $remediation
-			? ''
-			: '&webhook_management_remediation=' . rawurlencode( $remediation )
-				. '&_ran_booster_webhook_result_nonce=' . rawurlencode(
-					( $this->createNonce )( $this->resultNonceAction( $providerCode, $safeRepositoryId, $resultCode, $remediation ) )
-				);
-
-		$redirect = admin_url( 'admin.php?page=ran-booster' );
-		if ( $metadata instanceof ProviderMetadata ) {
-			$redirect .= '&tab=' . rawurlencode( $metadata->code->value );
+		$remediation = false === $result['inline_safe'] ? $this->safeRemediation( $result['remediation'] ) : null;
+		$args        = array( 'webhook_management_result' => $resultCode );
+		if ( null !== $result['recovery'] ) {
+			$args['recovery_hook']    = $result['recovery']['hook_id'];
+			$args['recovery_profile'] = $result['recovery']['profile_id'];
+		}
+		if ( null !== $remediation ) {
+			$args['webhook_management_remediation']    = $remediation;
+			$args['webhook_management_provider']       = $providerCode;
+			$args['webhook_management_repository']     = $safeRepositoryId;
+			$args['_ran_booster_webhook_result_nonce'] = ( $this->createNonce )( $this->resultNonceAction( $providerCode, $safeRepositoryId, $resultCode, $remediation ) );
 		}
 
-		return $redirect
-			. '&panel=repositories'
-			. ( '' === $safeRepositoryId ? '' : '&repository=' . rawurlencode( $safeRepositoryId ) )
-			. '&webhook_management_result=' . rawurlencode( $resultCode )
-			. $recoveryQuery
-			. $remediationQuery
-			. '#ran-booster-repository-webhook-management-operation-heading';
+		return add_query_arg( $args, $returnUrl );
 	}
 
 	/** @return list<ProviderMetadata> */
@@ -155,10 +150,14 @@ final class WebhookManagementController {
 			: null;
 		$hookId        = $safeReference( $query['recovery_hook'] ?? null );
 		$profileId     = $safeReference( $query['recovery_profile'] ?? null );
-		$providerCode  = $this->stringValue( $query, 'tab' );
-		$repositoryId  = $this->stringValue( $query, 'repository' );
-		$remediation   = $this->safeRemediation( $query['webhook_management_remediation'] ?? null );
-		$resultNonce   = $this->stringValue( $query, '_ran_booster_webhook_result_nonce' );
+		$providerCode  = $this->stringValue( $query, 'webhook_management_provider' );
+		$repositoryId  = $this->stringValue( $query, 'webhook_management_repository' );
+		if ( '' === $providerCode || '' === $repositoryId ) {
+			$providerCode = $this->stringValue( $query, 'tab' );
+			$repositoryId = $this->stringValue( $query, 'repository' );
+		}
+		$remediation = $this->safeRemediation( $query['webhook_management_remediation'] ?? null );
+		$resultNonce = $this->stringValue( $query, '_ran_booster_webhook_result_nonce' );
 		if ( null === $remediation
 			|| '' === $code
 			|| ! ( $this->verifyNonce )( $resultNonce, $this->resultNonceAction( $providerCode, $repositoryId, $code, $remediation ) ) ) {
@@ -188,12 +187,59 @@ final class WebhookManagementController {
 			: null;
 	}
 
-	private function interactionRequest( string $providerCode, string $repositoryId ): AdminInteractionRequest {
+	private function interactionRequest( string $returnUrl ): ?AdminInteractionRequest {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The URL has already been reconstructed by safeReturnUrl().
+		$query = parse_url( $returnUrl, PHP_URL_QUERY );
+		parse_str( is_string( $query ) ? $query : '', $arguments );
+		if ( 'ran-booster' !== ( $arguments['page'] ?? '' ) ) {
+			return null;
+		}
+
 		return AdminInteractionRequest::providerRepositories(
 			'repository-webhook-management:manage-webhook',
-			admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . '#ran-booster-repository-webhook-management-operation-heading',
+			$returnUrl,
 			'repository-webhook-management-error'
 		);
+	}
+
+	private function safeReturnUrl( string $candidate, string $providerCode, string $repositoryId ): string {
+		$fallback = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories'
+			. ( '' === $repositoryId ? '' : '&repository=' . rawurlencode( $repositoryId ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Reconstructs an allowlisted same-admin route; the candidate is never returned directly.
+		$parts = parse_url( $candidate );
+		if ( ! is_array( $parts ) ) {
+			return $fallback;
+		}
+		parse_str( (string) ( $parts['query'] ?? '' ), $query );
+		$page    = is_string( $query['page'] ?? null ) ? $query['page'] : '';
+		$package = is_string( $query['package'] ?? null ) ? $query['package'] : '';
+		$tab     = is_string( $query['tab'] ?? null ) ? $query['tab'] : '';
+		$panel   = is_string( $query['panel'] ?? null ) ? $query['panel'] : '';
+		$target  = is_string( $query['repository'] ?? null ) ? $query['repository'] : '';
+		if ( 'ran-booster' === $page
+			&& hash_equals( $providerCode, $tab )
+			&& 'repositories' === $panel
+			&& '' !== $repositoryId
+			&& hash_equals( $repositoryId, $target ) ) {
+			return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) );
+		}
+		if ( ! in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
+			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package )
+			|| ! $this->packageReturnMatchesOperation( $page, $package, $providerCode, $repositoryId ) ) {
+			return $fallback;
+		}
+
+		return ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1';
+	}
+
+	/** Prove that a package-settings return URL belongs to this signed repository operation. */
+	private function packageReturnMatchesOperation( string $page, string $package, string $providerCode, string $repositoryId ): bool {
+		$type      = 'ran-booster-plugins' === $page ? 'plugin' : 'theme';
+		$authority = $this->packageAuthorities->forPackage( $type, $package );
+
+		return null !== $authority
+			&& hash_equals( $providerCode, $authority['provider_code'] )
+			&& hash_equals( $repositoryId, $authority['repository_id'] );
 	}
 
 	private function capableProviderMetadata( string $providerCode ): ?ProviderMetadata {

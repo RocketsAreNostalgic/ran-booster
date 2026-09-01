@@ -27,7 +27,8 @@ final readonly class ReleaseTrackingStatus {
 		private string $lastCheckedAt = '',
 		private string $cooldownUntil = '',
 		private string $failureCode = '',
-		private string $channel = 'stable'
+		private string $channel = 'stable',
+		private string $nativeOfferReleaseId = ''
 	) {
 		if ( ! in_array( $this->type, array( 'plugin', 'theme' ), true )
 			|| '' === trim( $this->identifier )
@@ -42,7 +43,7 @@ final readonly class ReleaseTrackingStatus {
 			throw new InvalidArgumentException( 'Release tracking status requires a valid package identity.' );
 		}
 
-		foreach ( array( $this->packageRoot, $this->installedVersion, $this->latestVersion, $this->lastCheckedAt, $this->cooldownUntil, $this->failureCode ) as $value ) {
+		foreach ( array( $this->packageRoot, $this->installedVersion, $this->latestVersion, $this->lastCheckedAt, $this->cooldownUntil, $this->failureCode, $this->nativeOfferReleaseId ) as $value ) {
 			if ( strlen( $value ) > 255 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ) {
 				throw new InvalidArgumentException( 'Release tracking status values must be bounded display values.' );
 			}
@@ -115,5 +116,9 @@ final readonly class ReleaseTrackingStatus {
 
 	public function failureCode(): string {
 		return $this->failureCode;
+	}
+
+	public function nativeOfferReleaseId(): string {
+		return $this->nativeOfferReleaseId;
 	}
 }

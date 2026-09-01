@@ -4,7 +4,10 @@ declare( strict_types = 1 );
 
 namespace Tests\Admin\WebhookManagement;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\AddOn\WebhookAssistance\AssistanceTarget;
+use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
@@ -29,6 +32,9 @@ require_once dirname( __DIR__, 2 ) . '/Support/PackageViewWordPressFunctions.php
 
 final class RepositoryWebhookManagementControlsTest extends TestCase {
 	protected function setUp(): void {
+		if ( ! defined( 'ABSPATH' ) ) {
+			define( 'ABSPATH', __DIR__ . '/' );
+		}
 		$GLOBALS['ran_booster_repository_webhook_management_actions']      = array();
 		$GLOBALS['ran_booster_repository_webhook_management_filters']      = array();
 		$GLOBALS['ran_booster_repository_webhook_management_styles']       = array();
@@ -48,7 +54,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_filters'] )
 		);
 		self::assertSame(
-			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts', 'ran_booster_admin_package_settings_sections' ),
+			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts', 'ran_booster_admin_package_settings_sections', 'ran_booster_admin_package_advanced_source_sections' ),
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_actions'] )
 		);
 		foreach ( array_merge( $GLOBALS['ran_booster_repository_webhook_management_actions'], $GLOBALS['ran_booster_repository_webhook_management_filters'] ) as $registrations ) {
@@ -57,7 +63,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 0, $provider->providerOperationCalls );
 	}
 
-	public function testItLoadsScopedStylesOnlyOnTheCapableSelectedProviderScreen(): void {
+	public function testItLoadsScopedStylesOnCapableProviderAndPackageSettingsScreens(): void {
 		$controls = $this->controls( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) );
 		$controls->register();
 		$_GET = array(
@@ -78,6 +84,13 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			),
 			$GLOBALS['ran_booster_repository_webhook_management_styles'][0]
 		);
+
+		$_GET = array(
+			'page'    => 'ran-booster-plugins',
+			'package' => 'example/example.php',
+		);
+		$controls->enqueueAdminAssets( 'ran-booster_page_ran-booster-plugins' );
+		self::assertCount( 2, $GLOBALS['ran_booster_repository_webhook_management_styles'] );
 	}
 
 	public function testPartialAbsentMissingAndMalformedProvidersReceiveNoPlacementBeforeProviderWork(): void {
@@ -95,7 +108,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			self::assertFalse( $controls->supportsProvider( $providerCode ) );
 			self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, $providerCode, array(), 'https://example.test/' ) );
 			ob_start();
-			$controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' );
+			self::assertFalse( $controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' ) );
 			self::assertSame( '', ob_get_clean() );
 		}
 
@@ -111,6 +124,208 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$controls->enqueueAdminAssets( 'toplevel_page_ran-booster' );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
+	}
+
+	#[DataProvider( 'unavailableRepositoryPanelTargetProvider' )]
+	public function testRepositoryPanelReportsUnavailableTargetsWithoutRenderingAnEmptyShell( string $mode ): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::once() )->method( 'target' )->willReturnCallback(
+			static function () use ( $mode ): ?AssistanceTarget {
+				if ( 'throws' === $mode ) {
+					throw new \RuntimeException( 'Target unavailable.' );
+				}
+
+				return null;
+			}
+		);
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ManagedPackageWebhookAuthorityResolver( $this->createMock( PluginRepository::class ), $this->createMock( ThemeRepository::class ) ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/'
+		);
+		$controls->register();
+
+		ob_start();
+		self::assertFalse( $controls->renderRepositoryPanel( 'fixture-provider', '1234', 'https://example.test/repositories' ) );
+		self::assertSame( '', (string) ob_get_clean() );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function unavailableRepositoryPanelTargetProvider(): array {
+		return array(
+			'no exact target'      => array( 'missing' ),
+			'target lookup throws' => array( 'throws' ),
+		);
+	}
+
+	public function testBranchPackageRendersTheFixedNormalPostWebhookDisclosure(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$package = $this->createMock( Package::class );
+		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'getProviderCode' )->willReturn( 'fixture-provider' );
+		$package->method( 'getProviderRepositoryId' )->willReturn( '1234' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::once() )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn(
+			new AssistanceTarget(
+				'fixture-provider',
+				'1234',
+				'owner/example',
+				'Example',
+				array( 'example/example.php' ),
+				array(
+					'automatic' => 0,
+					'manual'    => 1,
+					'disabled'  => 0,
+				),
+				'https://example.test/webhook'
+			)
+		);
+		$facade->expects( self::once() )->method( 'credentialChoices' )->with( 'fixture-provider' )->willReturn( array() );
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ManagedPackageWebhookAuthorityResolver( $plugins, $this->createMock( ThemeRepository::class ) ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/' );
+		$controls->register();
+
+		ob_start();
+		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Webhook setup', $html );
+		self::assertStringContainsString( 'class="ran-booster-package-disclosure ran-booster-package-webhook-setup"', $html );
+		self::assertStringContainsString( 'class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body"', $html );
+		self::assertStringContainsString( 'name="action" value="ran_booster_repository_webhook_management_operation"', $html );
+		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
+		self::assertStringContainsString( 'does not enable Automatic updates', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-package-webhook-setup open', $html );
+		self::assertStringNotContainsString( 'hx-post=', $html );
+		self::assertStringNotContainsString( 'hx-target=', $html );
+	}
+
+	public function testPackageWebhookDisclosureOpensForAnOperationResultAndRecoveryContext(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$_GET    = array(
+			'webhook_management_result' => 'operation_failed',
+			'recovery_hook'             => '77',
+			'recovery_profile'          => 'profile_123',
+		);
+		$package = $this->createMock( Package::class );
+		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'getProviderCode' )->willReturn( 'fixture-provider' );
+		$package->method( 'getProviderRepositoryId' )->willReturn( '1234' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::once() )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn(
+			new AssistanceTarget(
+				'fixture-provider',
+				'1234',
+				'owner/example',
+				'Example',
+				array( 'example/example.php' ),
+				array(
+					'automatic' => 0,
+					'manual'    => 1,
+					'disabled'  => 0,
+				),
+				'https://example.test/webhook'
+			)
+		);
+		$facade->expects( self::once() )->method( 'credentialChoices' )->with( 'fixture-provider' )->willReturn( array() );
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ManagedPackageWebhookAuthorityResolver( $plugins, $this->createMock( ThemeRepository::class ) ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/' );
+		$controls->register();
+
+		ob_start();
+		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-package-webhook-setup open', $html );
+		self::assertStringContainsString( 'could not confirm the operation outcome', $html );
+		self::assertStringContainsString( 'returned recovery references', strtolower( $html ) );
+	}
+
+	public function testBranchProjectionWithoutStableIdentityStaysVisibleAndInert(): void {
+		$controls = $this->controls( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) );
+		$controls->register();
+
+		ob_start();
+		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'missing/missing.php', 'Missing', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Webhook setup', $html );
+		self::assertStringContainsString( 'stable repository identity', $html );
+		self::assertStringContainsString( 'disabled', $html );
+	}
+
+	public function testReleaseSourceProjectionDoesNotDuplicateThePausedWebhookDisclosure(): void {
+		$controls = $this->controls( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) );
+		$controls->register();
+
+		ob_start();
+		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'release/release.php', 'Release', 'fixture-provider', 'release_asset', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		self::assertSame( '', (string) ob_get_clean() );
+	}
+
+	public function testLocalCallbackReadinessExplainsWhyWebhookSetupIsDisabled(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$package = $this->createMock( Package::class );
+		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'getProviderCode' )->willReturn( 'fixture-provider' );
+		$package->method( 'getProviderRepositoryId' )->willReturn( '1234' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::once() )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn( null );
+		$facade->expects( self::once() )->method( 'readiness' )->with( 'fixture-provider' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https' ), 'http://localhost:10008/webhook', array() ) );
+		$facade->expects( self::never() )->method( 'credentialChoices' );
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ManagedPackageWebhookAuthorityResolver( $plugins, $this->createMock( ThemeRepository::class ) ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/' );
+		$controls->register();
+
+		ob_start();
+		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'public HTTPS URL', $html );
+		self::assertStringContainsString( 'class="ran-booster-package-disclosure ran-booster-package-webhook-setup"', $html );
+		self::assertStringContainsString( 'class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body"', $html );
+		self::assertStringContainsString( 'disabled', $html );
+	}
+
+	public function testRepositoryConflictReadinessMatchesTheExactPackageReference(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$package = $this->createMock( Package::class );
+		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'getProviderCode' )->willReturn( 'fixture-provider' );
+		$package->method( 'getProviderRepositoryId' )->willReturn( '1234' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::once() )->method( 'target' )->willReturn( null );
+		$facade->expects( self::once() )->method( 'readiness' )->willReturn(
+			new AssistanceReadiness(
+				array(),
+				'https://example.test/webhook',
+				array(
+					array(
+						'repository_id'      => null,
+						'package_references' => array( 'example/example.php' ),
+						'reason_codes'       => array( 'repository_identity_conflict' ),
+					),
+				)
+			)
+		);
+		$facade->expects( self::never() )->method( 'credentialChoices' );
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ManagedPackageWebhookAuthorityResolver( $plugins, $this->createMock( ThemeRepository::class ) ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/' );
+		$controls->register();
+
+		ob_start();
+		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'disagree about this repository identity', $html );
 	}
 
 	public function testPartialProviderKeepsReleaseRowHistoryLocalAndInert(): void {

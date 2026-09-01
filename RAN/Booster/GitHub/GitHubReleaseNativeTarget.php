@@ -108,7 +108,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			$this->stringValue( $validation, 'code' ),
 			$this->stringValue( $validation, 'release_tag' ),
 			$this->stringValue( $validation, 'release_version' ),
-			$this->stringValue( $validation, 'package_header_version' )
+			$this->stringValue( $validation, 'package_header_version' ),
+			$this->candidateReleaseId( $validation )
 		);
 	}
 
@@ -145,6 +146,14 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 		$value = $values[ $key ] ?? null;
 
 		return is_int( $value ) && $value > 0 ? $value : null;
+	}
+
+	/** @param array<string, mixed> $validation */
+	private function candidateReleaseId( array $validation ): string {
+		$identity  = $validation['identity'] ?? null;
+		$releaseId = is_array( $identity ) ? $identity['release_id'] ?? null : null;
+
+		return is_int( $releaseId ) && $releaseId > 0 ? (string) $releaseId : '';
 	}
 
 	private static function factory( ?callable $factory ): Closure {

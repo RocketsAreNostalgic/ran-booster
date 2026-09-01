@@ -23,22 +23,42 @@ ob_start();
 		<?php if ( $isPackageEdit && $showBranchSettings && isset( $packageSourceChoices['branch']['description'] ) ) { ?>
 			<p class="ran-booster-package-source-pane__description"><?php echo esc_html( (string) $packageSourceChoices['branch']['description'] ); ?></p>
 		<?php } ?>
-		<div class="ran-booster-settings-fields">
-			<?php require __DIR__ . '/fields/branch.php'; ?>
-			<?php require __DIR__ . '/fields/subdirectory.php'; ?>
-		</div>
-		<?php if ( $isPackageEdit && $releaseManaged ) { ?>
-			<div class="notice notice-info inline">
-				<p><?php esc_html_e( 'Published releases remain the current source. Return the package to Branch management before changing this retained branch target.', 'ran-booster' ); ?></p>
+		<header class="ran-booster-package-source-pane__header">
+			<h3><?php esc_html_e( 'Branch readiness', 'ran-booster' ); ?></h3>
+			<?php if ( $isPackageEdit && $releaseManaged ) { ?>
+				<p><?php esc_html_e( 'Published releases remain the package source and settings are retained until returning.', 'ran-booster' ); ?></p>
+			<?php } else { ?>
+				<p><?php esc_html_e( 'Branch deployments are the package source.', 'ran-booster' ); ?></p>
+			<?php } ?>
+		</header>
+		<fieldset class="ran-booster-branch-settings<?php echo $isPackageEdit && $releaseManaged ? ' is-inactive' : ''; ?>"<?php disabled( $isPackageEdit && $releaseManaged ); ?><?php echo $isPackageEdit && $releaseManaged ? ' aria-disabled="true"' : ''; ?>>
+			<?php if ( $isPackageEdit && $releaseManaged ) { ?>
+				<legend class="screen-reader-text"><?php esc_html_e( 'Inactive Branch deployment settings', 'ran-booster' ); ?></legend>
+			<?php } ?>
+			<div class="ran-booster-settings-fields">
+				<?php require __DIR__ . '/fields/branch.php'; ?>
+				<?php require __DIR__ . '/fields/subdirectory.php'; ?>
 			</div>
+			<?php if ( $isPackageEdit ) { ?>
+				<?php require __DIR__ . '/branch-readiness.php'; ?>
+			<?php } ?>
+		</fieldset>
+		<?php if ( $isPackageEdit && $releaseManaged && 'branch' === $packageSourceView ) { ?>
+			<?php foreach ( $packageAdvancedSections as $packageAdvancedSection ) { ?>
+				<?php if ( is_string( $packageAdvancedSection ) && '' !== $packageAdvancedSection ) { ?>
+					<?php echo $packageAdvancedSection; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer. ?>
+				<?php } ?>
+			<?php } ?>
 		<?php } ?>
-		<?php if ( $isPackageEdit && $showBranchOperations ) { ?>
-			<?php require __DIR__ . '/branch-readiness.php'; ?>
+		<?php if ( $isPackageEdit && $releaseManaged && null !== $packageWebhookCleanup ) { ?>
+			<?php require __DIR__ . '/webhook-cleanup.php'; ?>
 		<?php } ?>
 	</div>
-	<?php foreach ( $packageAdvancedSections as $packageAdvancedSection ) { ?>
-		<?php if ( is_string( $packageAdvancedSection ) && '' !== $packageAdvancedSection ) { ?>
-			<?php echo $packageAdvancedSection; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer. ?>
+	<?php if ( ! ( $isPackageEdit && $releaseManaged && 'branch' === $packageSourceView ) ) { ?>
+		<?php foreach ( $packageAdvancedSections as $packageAdvancedSection ) { ?>
+			<?php if ( is_string( $packageAdvancedSection ) && '' !== $packageAdvancedSection ) { ?>
+				<?php echo $packageAdvancedSection; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer. ?>
+			<?php } ?>
 		<?php } ?>
 	<?php } ?>
 </fieldset>

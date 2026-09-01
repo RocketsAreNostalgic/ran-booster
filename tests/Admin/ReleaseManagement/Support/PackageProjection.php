@@ -8,7 +8,8 @@ final readonly class PackageProjection {
 	public function __construct(
 		private string $sourceValue = 'branch',
 		private string $typeValue = 'plugin',
-		private int $revisionValue = 3
+		private int $revisionValue = 3,
+		private string $subdirectoryValue = ''
 	) {
 	}
 
@@ -30,6 +31,10 @@ final readonly class PackageProjection {
 
 	public function sourceRevision(): int {
 		return $this->revisionValue;
+	}
+
+	public function subdirectory(): string {
+		return $this->subdirectoryValue;
 	}
 
 	public function settingsUrl(): string {

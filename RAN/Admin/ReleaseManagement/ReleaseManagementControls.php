@@ -24,16 +24,19 @@ final class ReleaseManagementControls {
 	private readonly ProspectiveReleaseOperations $prospectiveOperations;
 	private readonly ReleaseTrackingFacade $releases;
 	private readonly ReleaseTrackingOperations $tracking;
+	private readonly ManagedReleaseBrowserOperations $managedBrowser;
 	private readonly ReleaseManagementDisplay $display;
 
 	public function __construct(
 		ReleaseTrackingFacade $releases,
 		ProspectiveReleaseFacade $prospective,
-		callable $readCandidates
+		callable $readCandidates,
+		ManagedReleaseBrowser $managedBrowser
 	) {
 		$this->display               = new ReleaseManagementDisplay();
 		$this->releases              = $releases;
 		$this->tracking              = new ReleaseTrackingOperations( $releases );
+		$this->managedBrowser        = new ManagedReleaseBrowserOperations( $managedBrowser, $releases );
 		$this->prospectiveOperations = new ProspectiveReleaseOperations( $prospective, $readCandidates );
 	}
 
@@ -42,6 +45,7 @@ final class ReleaseManagementControls {
 		add_filter( 'ran_booster_admin_package_management_actions', array( $this, 'filterManagementActions' ), 10, 3 );
 		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'filterSourceChoices' ), 10, 5 );
 		add_filter( 'ran_booster_admin_package_advanced_source_summary', array( $this, 'filterAdvancedSourceSummary' ), 10, 5 );
+		add_filter( 'ran_booster_admin_package_advanced_source_summary_projection', array( $this, 'filterAdvancedSourceSummaryProjection' ), 10, 5 );
 		add_filter( 'ran_booster_documentation_sections_before_about', array( $this, 'filterDocumentationSections' ), 10, 3 );
 		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'renderAdvancedSourceSection' ), 10, 5 );
 		add_action( 'admin_notices', array( $this, 'renderOperationNotice' ) );
@@ -54,6 +58,8 @@ final class ReleaseManagementControls {
 		add_action( 'admin_post_ran_booster_release_install', array( $this, 'handleProspectiveInstall' ) );
 		add_action( 'wp_ajax_ran_booster_release_list_candidates', array( $this, 'handleProspectiveListCandidates' ) );
 		add_action( 'wp_ajax_ran_booster_release_inspect', array( $this, 'handleProspectiveInspect' ) );
+		add_action( 'wp_ajax_ran_booster_managed_release_list_candidates', array( $this, 'handleManagedListCandidates' ) );
+		add_action( 'wp_ajax_ran_booster_managed_release_inspect', array( $this, 'handleManagedInspect' ) );
 	}
 
 	/**
@@ -185,7 +191,7 @@ final class ReleaseManagementControls {
 			$this->requestBoundary( fn () => $this->display->renderOperationNotice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], null === $package ? null : $this->packageStatus( $package ) ), null );
 		}
 		$status      = null === $package ? null : $this->packageStatus( $package );
-		$nonces      = null === $package ? array() : $this->packageNonceActions( $package );
+		$nonces      = null === $package ? array() : $this->packageNonceActions( $package, $status );
 		$prospective = $this->prospectiveProjection( $type );
 		$recheck     = isset( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI marker.
 			&& is_scalar( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -211,6 +217,32 @@ final class ReleaseManagementControls {
 		}
 
 		return $this->requestBoundary( fn (): string => $this->display->advancedSourceSummary( $summary, $mode, $selectedSource, $package, null === $package ? null : $this->packageStatus( $package ) ), $summary );
+	}
+
+	/**
+	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
+	 */
+	public function filterAdvancedSourceSummaryProjection(
+		array $projection,
+		string $mode,
+		string $type,
+		string $selectedSource,
+		?object $package
+	): array {
+		unset( $type, $selectedSource );
+		if ( null === $this->tracking ) {
+			return $projection;
+		}
+
+		return $this->requestBoundary(
+			fn (): array => $this->display->advancedSourceSummaryProjection(
+				$projection,
+				$mode,
+				$package,
+				null === $package ? null : $this->packageStatus( $package )
+			),
+			$projection
+		);
 	}
 
 	public function renderOperationNotice(): void {
@@ -283,6 +315,14 @@ final class ReleaseManagementControls {
 		$this->handleProspectiveAjax( 'inspect' );
 	}
 
+	public function handleManagedListCandidates(): void {
+		$this->handleManagedBrowserAjax( 'list_candidates' );
+	}
+
+	public function handleManagedInspect(): void {
+		$this->handleManagedBrowserAjax( 'inspect_candidate' );
+	}
+
 	public function handleProspectiveInstall(): never {
 		// This controller selects and validates the exact purpose nonce before reading prospective domain values.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -300,7 +340,7 @@ final class ReleaseManagementControls {
 		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen routing.
 			? sanitize_key( wp_unslash( $_GET['page'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen routing.
 			: '';
-		if ( null === $this->tracking || ! in_array( $page, array( 'ran-booster-plugins-create', 'ran-booster-themes-create' ), true ) ) {
+		if ( null === $this->tracking || ! in_array( $page, array( 'ran-booster-plugins-create', 'ran-booster-themes-create', 'ran-booster-plugins', 'ran-booster-themes' ), true ) ) {
 			return;
 		}
 
@@ -315,6 +355,10 @@ final class ReleaseManagementControls {
 			is_file( $scriptPath ) ? (string) filemtime( $scriptPath ) : '1',
 			true
 		);
+		if ( in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true ) ) {
+			wp_enqueue_style( 'ran-booster-release-management', plugins_url( 'assets/ran-booster-release-management.css', $pluginRoot . '/ran-booster.php' ), array( 'ran-booster-styles' ), is_file( $assetRoot . '/ran-booster-release-management.css' ) ? (string) filemtime( $assetRoot . '/ran-booster-release-management.css' ) : '1' );
+			return;
+		}
 		if ( null === $this->prospectiveOperations ) {
 			return;
 		}
@@ -377,7 +421,7 @@ final class ReleaseManagementControls {
 		if ( is_string( $hxRequest ) && 'true' === strtolower( $hxRequest ) ) {
 			$location = wp_json_encode(
 				array(
-					'path'   => $url,
+					'path'   => wp_make_link_relative( $url ),
 					'target' => '#wpbody-content',
 					'select' => '#wpbody-content',
 					'swap'   => 'outerHTML show:none',
@@ -436,7 +480,13 @@ final class ReleaseManagementControls {
 			|| ( is_string( $request['return_to_settings'] ?? null ) && '1' === wp_unslash( $request['return_to_settings'] ) );
 		$url      = $this->returnUrl( $outcome['type'], $outcome['identifier'], $settings );
 		if ( $settings ) {
-			$url = add_query_arg( 'source_view', 'return_to_branch' === $operation ? 'branch' : 'release_asset', $url );
+			$url = add_query_arg(
+				array(
+					'source_view'               => 'return_to_branch' === $operation ? 'branch' : 'release_asset',
+					'ran_booster_open_advanced' => '1',
+				),
+				$url
+			);
 		}
 		$channel = in_array( $operation, array( 'enable', 'change_channel' ), true )
 			? $this->releaseChannelFrom( $request )
@@ -457,6 +507,63 @@ final class ReleaseManagementControls {
 				'successful' => $outcome['successful'],
 				'code'       => $outcome['code'],
 				'data'       => $outcome['data'] ?? array(),
+			)
+		);
+	}
+
+	private function handleManagedBrowserAjax( string $operation ): never {
+		// This route reads only identity/revision values until the purpose nonce is proven.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$request = is_array( $_POST ) ? $_POST : array();
+		$outcome = $this->processManagedBrowserRequest( $operation, $request );
+
+		wp_send_json(
+			array(
+				'successful' => $outcome['successful'],
+				'code'       => $outcome['code'],
+				'data'       => $outcome['data'],
+			)
+		);
+	}
+
+	/** @param array<string,mixed> $request @return array{code:string,successful:bool,data:array<mixed>} */
+	public function processManagedBrowserRequest( string $operation, array $request ): array {
+		$type       = $this->strictRequestedType( $request );
+		$identifier = $this->requestedIdentifier( $request );
+		$revision   = $this->requestedRevision( $request );
+		$channel    = $this->releaseChannelFrom( $request );
+		$nonce      = is_string( $request['_wpnonce'] ?? null ) ? sanitize_text_field( wp_unslash( $request['_wpnonce'] ) ) : '';
+		$fallback   = array(
+			'code'       => 'invalid_request',
+			'successful' => false,
+			'data'       => array(),
+		);
+		if ( ! in_array( $operation, array( 'list_candidates', 'inspect_candidate' ), true )
+			|| '' === $type || '' === $identifier || $revision < 1 || '' === $channel ) {
+			return $fallback;
+		}
+		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
+			return array(
+				'code'       => 'forbidden',
+				'successful' => false,
+				'data'       => array(),
+			);
+		}
+		$action = $this->requestBoundary( fn (): string => $this->tracking->nonceAction( $operation, $type, $identifier, $revision, $channel ), '' );
+		if ( '' === $action || '' === $nonce || 1 !== wp_verify_nonce( $nonce, $action ) ) {
+			return $fallback;
+		}
+		$releaseId = is_string( $request['release_id'] ?? null ) ? wp_unslash( $request['release_id'] ) : '';
+		$tag       = is_string( $request['release_tag'] ?? null ) ? wp_unslash( $request['release_tag'] ) : '';
+
+		return $this->requestBoundary(
+			fn (): array => 'list_candidates' === $operation
+				? $this->managedBrowser->listCandidates( $type, $identifier, $revision, $channel, $nonce )
+				: $this->managedBrowser->inspect( $type, $identifier, $revision, $releaseId, $tag, $channel, $nonce ),
+			array(
+				'code'       => 'unable_to_check',
+				'successful' => false,
+				'data'       => array(),
 			)
 		);
 	}
@@ -556,9 +663,9 @@ final class ReleaseManagementControls {
 		);
 	}
 
-	private function packageNonceAction( string $operation, object $package ): ?string {
+	private function packageNonceAction( string $operation, object $package, string $channel = '' ): ?string {
 		$action = $this->requestBoundary(
-			function () use ( $operation, $package ): string {
+			function () use ( $operation, $package, $channel ): string {
 				if ( null === $this->tracking || ! is_callable( array( $package, 'type' ) )
 					|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'sourceRevision' ) ) ) {
 					return '';
@@ -570,7 +677,7 @@ final class ReleaseManagementControls {
 					return '';
 				}
 
-				return $this->tracking->nonceAction( $operation, $type, $identifier, $revision );
+				return $this->tracking->nonceAction( $operation, $type, $identifier, $revision, $channel );
 			},
 			''
 		);
@@ -609,12 +716,20 @@ final class ReleaseManagementControls {
 	}
 
 	/** @return array<string,string> */
-	private function packageNonceActions( object $package ): array {
+	private function packageNonceActions( object $package, ?ReleaseTrackingStatus $status ): array {
 		$actions = array();
 		foreach ( array( 'enable', 'refresh', 'change_channel', 'return_to_branch' ) as $operation ) {
 			$nonce = $this->packageNonceAction( $operation, $package );
 			if ( null !== $nonce ) {
 				$actions[ $operation ] = wp_create_nonce( $nonce );
+			}
+		}
+		if ( null !== $status && 'release_asset' === $status->source() ) {
+			foreach ( array( 'list_candidates', 'inspect_candidate' ) as $operation ) {
+				$nonce = $this->packageNonceAction( $operation, $package, $status->channel() );
+				if ( null !== $nonce ) {
+					$actions[ $operation ] = wp_create_nonce( $nonce );
+				}
 			}
 		}
 
@@ -671,7 +786,7 @@ final class ReleaseManagementControls {
 			$args['package'] = $identifier;
 		}
 
-		return add_query_arg( $args, admin_url( 'admin.php' ) );
+		return add_query_arg( $args, is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) );
 	}
 
 	/**

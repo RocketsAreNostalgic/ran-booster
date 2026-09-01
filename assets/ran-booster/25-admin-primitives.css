@@ -83,6 +83,44 @@
 	font-size: var(--ran-booster-font-size-base);
 }
 
+.ran-booster-admin .ran-booster-advanced-source-summary {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-6);
+	align-items: center;
+}
+
+.ran-booster-admin .ran-booster-advanced-source-summary__heading {
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: 400;
+}
+
+.ran-booster-admin .ran-booster-advanced-source-summary__badge {
+	display: inline-flex;
+	align-items: center;
+	padding-block: var(--ran-booster-space-2);
+	padding-inline: var(--ran-booster-space-6);
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-surface-subtle);
+	color: var(--ran-booster-text);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: 400;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.ran-booster-admin .ran-booster-advanced-source-summary__badge::before {
+	content: none;
+}
+
+.ran-booster-admin .ran-booster-advanced-source-summary__status {
+	color: var(--ran-booster-text-subtle);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: 400;
+}
+
 @media screen and (max-width: 782px) {
 	.ran-booster-admin .ran-booster-page-shell__header,
 	.ran-booster-admin .ran-booster-page-shell__body {

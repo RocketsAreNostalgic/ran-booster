@@ -12,10 +12,14 @@
 		callback();
 	}
 
-	onDomReady(initPackageAdmin);
+	onDomReady(function () {
+		consumeAdvancedSettingsOpenRequest();
+		initPackageAdmin();
+	});
 
 	document.addEventListener('htmx:afterSwap', function (event) {
 		if (event.detail?.target?.id === 'wpbody-content') {
+			consumeAdvancedSettingsOpenRequest();
 			const developmentNotice = document.querySelector(
 				'[data-ran-booster-core-development-notice]'
 			);
@@ -27,6 +31,16 @@
 			initPackageAdmin();
 		}
 	});
+
+	function consumeAdvancedSettingsOpenRequest() {
+		const url = new URL(window.location.href);
+		if (!url.searchParams.has('ran_booster_open_advanced')) {
+			return;
+		}
+
+		url.searchParams.delete('ran_booster_open_advanced');
+		window.history.replaceState(window.history.state, '', url);
+	}
 
 	function initPackageAdmin() {
 		initPackageMutationForms();
@@ -282,12 +296,20 @@
 					return;
 				}
 
+				const nativeAction = form.getAttribute('action') || '';
+				let hxPost = nativeAction;
+				try {
+					const actionUrl = new URL(nativeAction);
+					hxPost = `${actionUrl.pathname}${actionUrl.search}${actionUrl.hash}`;
+				} catch {
+					// Relative actions already have the HTMX-safe form.
+				}
 				let requiresProcessing = false;
 				const attributes = {
 					'data-ran-booster-enhanced-mutation': '',
 					'data-ran-booster-error-target':
 						'#ran-booster-package-mutation-error',
-					'hx-post': form.getAttribute('action') || '',
+					'hx-post': hxPost,
 					'hx-select': '#wpbody-content',
 					'hx-swap': 'outerHTML show:none',
 					'hx-sync': 'this:drop',

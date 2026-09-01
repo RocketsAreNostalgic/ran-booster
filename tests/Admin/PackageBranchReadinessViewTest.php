@@ -8,9 +8,74 @@ require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\WebhookCleanupContext;
 use RAN\Deployment\DeploymentPolicy;
 
 final class PackageBranchReadinessViewTest extends TestCase {
+
+	#[DataProvider( 'sourceSettingsModeProvider' )]
+	public function testSourceSettingsOnlyRenderBranchReadinessForSavedPackages( string $packageSourceMode, bool $expectsReadiness ): void {
+		$packageMutationAvailable = true;
+		$packageSourceChoices     = array(
+			'branch' => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy a saved repository branch.',
+				'meta'              => 'Included with Booster',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+				'disabled'          => false,
+				'hydrated'          => true,
+				'client_hydratable' => false,
+			),
+		);
+		$packageFieldForm         = 'edit' === $packageSourceMode ? 'ran-booster-package-edit-form' : '';
+		$packageFieldLayout       = 'grid';
+		$packageSourceView        = 'branch';
+		$showBranchSettings       = true;
+		$releaseManaged           = false;
+		$branchReadOnly           = false;
+		$branchValue              = 'main';
+		$subdirectoryValue        = '';
+		$packageAdvancedSections  = array();
+		$packageAdvancedSummary   = 'Branch · provider default';
+		$packageAdvancedOpen      = false;
+		$packageRepositoryReady   = true;
+		$packageSource            = array();
+		$packageView              = new class() {
+			public function getType(): string {
+				return 'plugin';
+			}
+		};
+
+		if ( $expectsReadiness ) {
+			$providerCode                 = 'gh';
+			$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+			$providerWebhookAvailable     = true;
+			$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
+			$packageBranchReadiness       = null;
+			$repositoryBranchCheckOutcome = null;
+		}
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Branch deployments are the package source.', $html );
+		if ( $expectsReadiness ) {
+			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
+			self::assertStringContainsString( '>Save settings and check</button>', $html );
+		} else {
+			self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
+			self::assertStringNotContainsString( '>Save settings and check</button>', $html );
+		}
+	}
+
+	/** @return array<string, array{string, bool}> */
+	public static function sourceSettingsModeProvider(): array {
+		return array(
+			'new package'   => array( 'create', false ),
+			'saved package' => array( 'edit', true ),
+		);
+	}
 
 	public function testViewReportsBoundedLocalEvidenceWithoutClaimingRemoteWebhookState(): void {
 		$providerCode             = 'gh';
@@ -58,12 +123,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'hx-post=', $html );
+		self::assertStringContainsString( 'hx-post="/wp-admin/admin.php?', $html );
 		self::assertStringNotContainsString( 'name="ran_booster_branch_readiness_check"', $html );
 		self::assertStringNotContainsString( 'hx-get=', $html );
 		self::assertStringContainsString( 'hx-target="#wpbody-content"', $html );
 		self::assertStringContainsString( 'hx-select="#wpbody-content"', $html );
 		self::assertStringContainsString( 'hx-swap="outerHTML show:#ran-booster-branch-readiness:top"', $html );
 		self::assertStringContainsString( 'hx-push-url=', $html );
+		self::assertStringContainsString( 'hx-push-url="/wp-admin/admin.php?', $html );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $html );
 		self::assertStringContainsString( 'id="ran-booster-repository-branch-check-error"', $html );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-repository-branch-check-error"', $html );
@@ -73,6 +140,92 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-package-mutation', $html );
 		self::assertStringNotContainsString( 'remote webhook is configured', strtolower( $html ) );
 		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
+	}
+
+	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
+		$packageMutationAvailable = true;
+		$packageSourceChoices     = array(
+			'branch' => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy a saved repository branch.',
+				'meta'              => 'Included with Booster',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+				'disabled'          => false,
+				'hydrated'          => true,
+				'client_hydratable' => false,
+			),
+		);
+		$packageSourceMode        = 'edit';
+		$packageFieldLayout       = 'grid';
+		$packageSourceView        = 'branch';
+		$showBranchSettings       = true;
+		$releaseManaged           = true;
+		$branchReadOnly           = true;
+		$branchValue              = 'main';
+		$subdirectoryValue        = '';
+		$packageAdvancedSections  = array();
+		$packageAdvancedSummary   = 'Published releases · Active';
+		$packageAdvancedOpen      = false;
+		$packageRepositoryReady   = true;
+		$packageSource            = array();
+		$packageBranchReadiness   = array(
+			'retained'             => true,
+			'webhook_settings_url' => 'https://github.com/example/example/settings/hooks',
+			'site'                 => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+				'callback_url' => 'https://site.example/wp-json/ran-booster/v1/webhooks/gh',
+			),
+			'repository'           => array(
+				'repository_id'         => '101',
+				'repository'            => 'example/example',
+				'reason_codes'          => array(),
+				'local_secret_coverage' => 'repository',
+			),
+		);
+		$packageView              = new class() {
+			public function getType(): string {
+				return 'plugin';
+			}
+		};
+		$packageWebhookCleanup    = array(
+			'context' => new WebhookCleanupContext(
+				'plugin',
+				'example/example.php',
+				'gh',
+				'101',
+				'example/example',
+				'repository',
+				true,
+				true,
+				array(),
+				'https://example.test/webhooks',
+				'https://example.test/secrets',
+				'https://example.test/docs',
+				'https://example.test/settings'
+			),
+			'actions' => array(),
+		);
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Webhook cleanup', $html );
+		self::assertStringContainsString( 'ran-booster-branch-settings is-inactive', $html );
+		self::assertStringContainsString( 'disabled="disabled"', $html );
+		self::assertStringContainsString( 'Published releases remain the package source and settings are retained until returning.', $html );
+		self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
+		self::assertStringContainsString( 'Retained Branch setup', $html );
+		self::assertStringContainsString( 'Published releases are active. These saved Branch facts are retained and read-only until returning.', $html );
+		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
+		self::assertStringContainsString( 'The site exposes a structurally valid HTTPS webhook endpoint.', $html );
+		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
+		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}
 
 	#[DataProvider( 'subdirectoryChecklistProvider' )]

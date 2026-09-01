@@ -46,7 +46,7 @@ final class AdminActionRenderer {
 		$confirm      = is_string( $action['confirm'] ?? null ) ? $action['confirm'] : '';
 		$hasBusyState = '' !== $busyLabel;
 		?>
-		<form action="<?php echo esc_url( $action['url'] ); ?>" method="post"<?php echo $hasBusyState ? ' class="ran-booster-package-row__update-form"' : ''; ?> data-ran-booster-enhanced-mutation data-ran-booster-package-mutation hx-post="<?php echo esc_url( $action['url'] ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop">
+		<form action="<?php echo esc_url( $action['url'] ); ?>" method="post"<?php echo $hasBusyState ? ' class="ran-booster-package-row__update-form"' : ''; ?> data-ran-booster-enhanced-mutation data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $action['url'] ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop">
 			<?php foreach ( $action['hidden'] as $name => $value ) { ?>
 				<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>">
 			<?php } ?>

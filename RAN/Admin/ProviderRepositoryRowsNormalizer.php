@@ -7,6 +7,8 @@ namespace RAN\Admin;
 use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\Logging\BoosterLogger;
+use Throwable;
 
 /**
  * Builds and protects Core-owned provider repository rows.
@@ -45,10 +47,10 @@ final class ProviderRepositoryRowsNormalizer {
 				'admin.php'
 			);
 		}
-		$counts       = $this->counts( $managed['repositories'] );
-		$sharedLabel  = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
-		$webhookLabel = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
-		$model        = $this->project(
+		$counts            = $this->counts( $managed['repositories'] );
+		$sharedLabel       = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
+		$webhookLabel      = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
+		$model             = $this->project(
 			$repositories['repositories'],
 			$providerCode,
 			$providerLabel,
@@ -62,6 +64,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$providerUrl,
 			$taskUrls['repositories']
 		);
+		$repositorySummary = $this->repositorySummary( $model['webhook_rows'] );
 
 		return array(
 			'providerTask'                     => in_array( $data['providerTask'] ?? null, array( 'repositories', 'setup' ), true ) ? $data['providerTask'] : 'status',
@@ -69,6 +72,8 @@ final class ProviderRepositoryRowsNormalizer {
 			'webhookEndpoint'                  => $endpoint,
 			'webhookAssistanceProviderCapable' => null !== $site,
 			'webhookAssistanceSiteReady'       => $siteReady,
+			'repositoryIntegrationAvailable'   => array() !== $model['rows'] || ( ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] ) ),
+			'repositoryIntegrationSummary'     => $repositorySummary,
 			'webhookSiteReasons'               => $this->siteReasons( $reasonCodes, $siteEndpoint ),
 			'webhookHasHardFailure'            => array() !== array_intersect( $reasonCodes, array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ),
 			'taskUrls'                         => $taskUrls,
@@ -84,6 +89,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'repositoryTableRows'              => array_values( $model['rows'] ),
 			'repositoryRowCountLabel'          => sprintf( _n( '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'ran-booster' ), count( $model['rows'] ) ),
 			'selectedRepositoryRow'            => $model['selected'],
+			'activityUrl'                      => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 		) + $this->copy( $providerLabel, is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null, $counts, $sharedLabel );
 	}
 
@@ -92,7 +98,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param mixed                               $presented
 	 * @return array<string, array<string, mixed>>
 	 */
-	public function normalize( array $baseRows, mixed $presented, string $providerCode ): array {
+	public function normalize( array $baseRows, mixed $presented, string $providerCode, bool $allowCoreDetailAppend = false ): array {
 		if ( ! is_array( $presented ) ) {
 			throw new LogicException( 'Provider repository rows must be a keyed array.' );
 		}
@@ -124,7 +130,7 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( array_slice( $details, 0, count( $baseDetails ) ) !== $baseDetails ) {
 				throw new LogicException( 'Provider filters may append but not replace Core details.' );
 			}
-			$this->assertDetails( $details );
+			$this->assertDetails( $details, count( $baseDetails ), $allowCoreDetailAppend );
 
 			$baseActions = is_array( $baseRow['actions'] ?? null ) ? $baseRow['actions'] : array();
 			$actions     = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
@@ -169,7 +175,12 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Historical rows must not claim Core actions.' );
 			}
 			$row['actions'] = $normalizer->normalize( $rowActions );
-			$rows[ $key ]   = $this->normalizeHistoricalRow( $key, $row, $providerCode );
+			foreach ( $row['actions'] as $action ) {
+				if ( 'post' === $action['type'] ) {
+					throw new LogicException( 'Historical rows may contain link actions only.' );
+				}
+			}
+			$rows[ $key ] = $this->normalizeHistoricalRow( $key, $row, $providerCode );
 		}
 
 		return $rows;
@@ -179,7 +190,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param list<array<string,mixed>> $repositories
 	 * @param array{by_id:array<string,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
 	 * @param callable(array<string,mixed>):string $providerUrl
-	 * @return array{requested_id:string,list_url:string,return_url:string,rows:array<string,array<string,mixed>>,selected:?array}
+	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<string,array<string,mixed>>,rows:array<string,array<string,mixed>>,selected:?array}
 	 */
 	public function project(
 		array $repositories,
@@ -215,25 +226,43 @@ final class ProviderRepositoryRowsNormalizer {
 			$locator         = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
 			$source          = is_string( $repository['source'] ?? null ) ? $repository['source'] : 'branch';
 			$isRelease       = 'release_asset' === $source;
+			$hasBranch       = in_array( $source, array( 'branch', 'mixed' ), true );
+			$isMixed         = 'mixed' === $source;
+			$historical      = ! empty( $repository['historical'] ) || '' === trim( $managedId );
 			$retained        = $isRelease && is_array( $repository['retained_webhook'] ?? null ) ? $repository['retained_webhook'] : array();
 			$branchConsumers = array_values( array_filter( $retained['branch_package_references'] ?? array(), 'is_string' ) );
 			$readinessRow    = ! $isRelease && '' !== $managedId && isset( $readiness['by_id'][ $managedId ] )
 				? $readiness['by_id'][ $managedId ]
 				: ( ! $isRelease ? ( $readiness['by_repository'][ strtolower( $locator ) ] ?? null ) : null );
-			$repositoryId    = $isRelease ? $managedId : ( is_string( $readinessRow['repository_id'] ?? null ) ? $readinessRow['repository_id'] : '' );
+			$repositoryId    = $isRelease
+				? $managedId
+				: ( is_string( $readinessRow['repository_id'] ?? null ) && '' !== $readinessRow['repository_id'] ? $readinessRow['repository_id'] : $managedId );
 			$rowKey          = '' !== $repositoryId ? $repositoryId : 'repository:' . hash( 'sha256', $providerCode . '|' . strtolower( $locator ) . '|' . $source );
 			$reasonCodes     = is_array( $readinessRow['reason_codes'] ?? null ) ? $readinessRow['reason_codes'] : array();
-			$issues          = array_values( array_filter( array_map( static fn ( mixed $code ): ?string => is_string( $code ) ? ( $issueLabels[ $code ] ?? null ) : null, $reasonCodes ) ) );
-			$coverage        = $isRelease
+			if ( true === ( $repository['identity_conflict'] ?? false ) && ! in_array( 'repository_identity_conflict', $reasonCodes, true ) ) {
+				$reasonCodes[] = 'repository_identity_conflict';
+			}
+			$historical              = $historical || array() !== array_intersect( $reasonCodes, array( 'repository_identity_unavailable', 'repository_identity_conflict' ) );
+			$issues                  = array_values( array_filter( array_map( static fn ( mixed $code ): ?string => is_string( $code ) ? ( $issueLabels[ $code ] ?? null ) : null, $reasonCodes ) ) );
+			$coverage                = $isRelease
 				? ( is_string( $retained['local_secret_coverage'] ?? null ) ? $retained['local_secret_coverage'] : 'unknown' )
 				: ( is_string( $readinessRow['local_secret_coverage'] ?? null ) ? $readinessRow['local_secret_coverage'] : 'unknown' );
-			$policies        = is_array( $readinessRow['deployment_policies'] ?? null ) ? $readinessRow['deployment_policies'] : ( is_array( $repository['deployment_policies'] ?? null ) ? $repository['deployment_policies'] : array() );
-			$references      = is_array( $readinessRow['package_references'] ?? null ) ? $readinessRow['package_references'] : ( is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array() );
-			$references      = array_values( array_filter( $references, 'is_string' ) );
-			$automatic       = (int) ( $policies['automatic'] ?? $repository['automatic_count'] ?? 0 );
-			$manual          = (int) ( $policies['manual'] ?? 0 );
-			$disabled        = (int) ( $policies['disabled'] ?? 0 );
-			$policyBadges    = array(
+			$repositoryPolicies      = is_array( $repository['deployment_policies'] ?? null ) ? $repository['deployment_policies'] : array();
+			$repositoryReferences    = is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array();
+			$readinessPolicies       = is_array( $readinessRow['deployment_policies'] ?? null ) ? $readinessRow['deployment_policies'] : null;
+			$readinessReferences     = is_array( $readinessRow['package_references'] ?? null ) ? $readinessRow['package_references'] : null;
+			$policies                = $isMixed ? $repositoryPolicies : ( $readinessPolicies ?? $repositoryPolicies );
+			$references              = $isMixed ? $repositoryReferences : ( $readinessReferences ?? $repositoryReferences );
+			$references              = array_values( array_filter( $references, 'is_string' ) );
+			$branchReferences        = is_array( $repository['branch_package_references'] ?? null )
+				? array_values( array_filter( $repository['branch_package_references'], 'is_string' ) )
+				: ( $hasBranch ? $references : array() );
+			$packageSummaries        = $this->packageSummaries( $repository['package_summaries'] ?? array() );
+			$packageSummariesOmitted = max( 0, (int) ( $repository['package_summaries_omitted'] ?? 0 ) );
+			$automatic               = (int) ( $policies['automatic'] ?? $repository['automatic_count'] ?? 0 );
+			$manual                  = (int) ( $policies['manual'] ?? 0 );
+			$disabled                = (int) ( $policies['disabled'] ?? 0 );
+			$policyBadges            = array(
 				array(
 					'label' => sprintf( __( 'Automatic: %d', 'ran-booster' ), $automatic ),
 					'tone'  => 'neutral',
@@ -327,10 +356,12 @@ final class ProviderRepositoryRowsNormalizer {
 				$managementTone   = 'info'; }
 			$releaseReasonId = $isRelease && '' !== $consequence ? $reasonId . '-release-source' : '';
 			$describedBy     = array_filter( array( $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $siteReady && ! $isRelease ? $reasonId . '-site' : '' ) );
-			$actions         = null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode ) && ! $isRelease
+			$actions         = null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode ) && $hasBranch && ! $historical
 				? $this->webhookManagementAction( $locator, $describedBy )
 				: array();
-			$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator );
+			if ( ! $historical ) {
+				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator );
+			}
 			$secretTarget    = 'shared' === $coverage ? (string) strtok( $locator, '/' ) : $locator;
 			$secretLink      = 'none' === $coverage ? array(
 				'label'  => __( 'Add repository secret', 'ran-booster' ),
@@ -362,36 +393,53 @@ final class ProviderRepositoryRowsNormalizer {
 					'scope'  => '',
 					'target' => '',
 				) : null );
+			$detailUrl       = '' !== $repositoryId && ! $historical
+				? $providerUrl(
+					array(
+						'panel'      => 'repositories',
+						'repository' => $repositoryId,
+					)
+				)
+				: '';
 			$rows[ $rowKey ] = array(
-				'key'                => $rowKey,
-				'provider_code'      => $providerCode,
-				'repository_id'      => $repositoryId,
-				'historical'         => false,
-				'provider_label'     => $providerLabel,
-				'repository'         => $locator,
-				'repository_url'     => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
-				'package_type_label' => $typeLabel,
-				'source_key'         => $source,
-				'source_label'       => $isRelease ? __( 'Published release', 'ran-booster' ) : __( 'Branch', 'ran-booster' ),
-				'management_label'   => $managementLabel,
-				'management_detail'  => $managementDetail,
-				'management_tone'    => $managementTone,
-				'consequence'        => $consequence,
-				'consequence_id'     => $releaseReasonId,
-				'types'              => array_values( $types ),
-				'policies'           => $policyBadges,
-				'package_references' => $references,
-				'statuses'           => $statuses,
-				'status_links'       => null === $secretLink ? array() : array( $secretLink ),
-				'actions'            => $actions,
+				'key'                           => $rowKey,
+				'provider_code'                 => $providerCode,
+				'repository_id'                 => $repositoryId,
+				'historical'                    => $historical,
+				'provider_label'                => $providerLabel,
+				'repository'                    => $locator,
+				'repository_url'                => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
+				'detail_url'                    => $detailUrl,
+				'package_type_label'            => $typeLabel,
+				'source_key'                    => $source,
+				'source_label'                  => match ( $source ) {
+					'release_asset' => __( 'Published releases', 'ran-booster' ),
+					'mixed' => __( 'Mixed sources', 'ran-booster' ),
+					default => __( 'Branch', 'ran-booster' ),
+				},
+				'management_label'              => $managementLabel,
+				'management_detail'             => $managementDetail,
+				'management_tone'               => $managementTone,
+				'consequence'                   => $consequence,
+				'consequence_id'                => $releaseReasonId,
+				'types'                         => array_values( $types ),
+				'policies'                      => $policyBadges,
+				'package_references'            => $references,
+				'has_branch_consumer'           => array() !== $branchReferences,
+				'has_automatic_branch_consumer' => true === ( $repository['has_automatic_branch_consumer'] ?? false ),
+				'package_summaries'             => $packageSummaries,
+				'package_summaries_omitted'     => $packageSummariesOmitted,
+				'statuses'                      => $statuses,
+				'status_links'                  => null === $secretLink ? array() : array( $secretLink ),
+				'actions'                       => $actions,
 			);
-			if ( ! $isRelease ) {
+			if ( $hasBranch && ! $historical ) {
 				$projections[ $rowKey ] = array(
 					'provider_code'         => $providerCode,
 					'repository_id'         => $repositoryId,
 					'repository'            => $locator,
 					'label'                 => $locator,
-					'package_references'    => $references,
+					'package_references'    => $branchReferences,
 					'deployment_policies'   => array(
 						'automatic' => $automatic,
 						'manual'    => $manual,
@@ -404,11 +452,32 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$presented = null !== $webhookManagement
+		$presented   = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
-		$rows      = $this->normalize( $rows, $presented, $providerCode );
-		$selected  = null;
+		$webhookRows = $this->normalize( $rows, $presented, $providerCode, true );
+		try {
+			$presented = apply_filters(
+				'ran_booster_provider_repository_rows',
+				$webhookRows,
+				$providerCode,
+				$projections,
+				$returnUrl
+			);
+			$rows      = $this->normalize( $webhookRows, $presented, $providerCode );
+		} catch ( Throwable $failure ) {
+			$rows = $webhookRows;
+			BoosterLogger::logException(
+				'provider repository row enrichment unavailable',
+				$failure,
+				array(
+					'source'   => 'admin',
+					'step'     => 'provider_repository_row_enrichment',
+					'provider' => $providerCode,
+				)
+			);
+		}
+		$selected = null;
 		foreach ( $rows as $row ) {
 			if ( '' !== $requestedId && false === ( $row['historical'] ?? false ) && $requestedId === ( $row['repository_id'] ?? null ) ) {
 				$selected = $row;
@@ -419,6 +488,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'requested_id' => $requestedId,
 			'list_url'     => $listUrl,
 			'return_url'   => $returnUrl,
+			'webhook_rows' => $webhookRows,
 			'rows'         => $rows,
 			'selected'     => $selected,
 		);
@@ -448,7 +518,13 @@ final class ProviderRepositoryRowsNormalizer {
 			$reference = $references[0] ?? '';
 			$isPlugin  = is_string( $reference ) && str_ends_with( strtolower( $reference ), '.php' );
 			if ( is_string( $reference ) && '' !== $reference && ( $isPlugin || 1 === preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) ) {
-				$url = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) . '&webhook_cleanup=1#ran-booster-webhook-cleanup' );
+				$url = add_query_arg(
+					array(
+						'source_view'     => 'branch',
+						'webhook_cleanup' => 1,
+					),
+					( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference )
+				) . '#ran-booster-webhook-cleanup';
 			}
 			$key             = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'core:webhook-cleanup-review' : 'core:provider-webhooks';
 			$actions[ $key ] = array(
@@ -479,7 +555,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$isPlugin = str_ends_with( strtolower( $reference ), '.php' );
 			if ( ! $isPlugin && 1 !== preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) {
 				continue; }
-			$url = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) );
+			$url = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference );
 			if ( ! $isRelease ) {
 				$url = add_query_arg( 'source_view', 'branch', $url ) . '#ran-booster-branch-readiness'; }
 			$key             = 'core:package-' . substr( hash( 'sha256', $reference ), 0, 16 );
@@ -497,14 +573,18 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 	/** @param list<mixed> $details */
-	private function assertDetails( array $details ): void {
+	private function assertDetails( array $details, int $coreDetailCount = 0, bool $allowCoreDetailAppend = false ): void {
 		if ( count( $details ) > 20 ) {
 			throw new LogicException( 'Repository details must be bounded.' );
 		}
 
-		foreach ( $details as $detail ) {
+		foreach ( $details as $index => $detail ) {
 			if ( ! is_array( $detail ) ) {
 				throw new LogicException( 'Repository details must be display maps.' );
+			}
+			$key = $this->boundedString( $detail['key'] ?? '', 96, true );
+			if ( ! $allowCoreDetailAppend && $index >= $coreDetailCount && str_starts_with( $key, 'core:' ) ) {
+				throw new LogicException( 'Provider filters may not append Core detail keys.' );
 			}
 			$this->boundedString( $detail['label'] ?? null, 96, false );
 			$this->boundedString( $detail['value'] ?? null, 255, true );
@@ -513,7 +593,42 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Repository detail tones are invalid.' );
 			}
 			$this->boundedString( $detail['datetime'] ?? '', 64, true );
+			$this->boundedString( $detail['state'] ?? '', 64, true );
+			if ( isset( $detail['recorded'] ) && ! is_bool( $detail['recorded'] ) ) {
+				throw new LogicException( 'Repository detail recorded flags must be boolean.' );
+			}
 		}
+	}
+
+	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int} */
+	private function repositorySummary( array $rows ): array {
+		$recordedHooks = 0;
+		$needsReview   = 0;
+		foreach ( $rows as $row ) {
+			$recorded = false;
+			$healthy  = false;
+			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
+				if ( ! is_array( $detail ) || 'core:webhook-recorded-status' !== ( $detail['key'] ?? null ) ) {
+					continue;
+				}
+				$recorded = true === ( $detail['recorded'] ?? false );
+				$healthy  = 'configured' === ( $detail['state'] ?? null );
+				break;
+			}
+			if ( $recorded ) {
+				++$recordedHooks;
+			}
+			$automaticBranch = true === ( $row['has_automatic_branch_consumer'] ?? false );
+			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
+				++$needsReview;
+			}
+		}
+
+		return array(
+			'repositories'   => count( $rows ),
+			'recorded_hooks' => $recordedHooks,
+			'needs_review'   => $needsReview,
+		);
 	}
 
 	/**
@@ -532,6 +647,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository_id'      => $repositoryId,
 			'repository'         => $this->boundedString( $row['repository'] ?? null, 255, false ),
 			'repository_url'     => $this->safeUrl( $row['repository_url'] ?? '' ),
+			'detail_url'         => '',
 			'historical'         => true,
 			'types'              => $this->badges( $row['types'] ?? array() ),
 			'package_message'    => $this->boundedString( $row['package_message'] ?? '', 255, true ),
@@ -612,6 +728,45 @@ final class ProviderRepositoryRowsNormalizer {
 			fn ( mixed $value ): string => $this->boundedString( $value, $maximumLength, false ),
 			array_values( $values )
 		);
+	}
+
+	/**
+	 * @return list<array{type:string,identifier:string,display_name:string,settings_url:string,source:string,source_revision:int,branch:string,subdirectory:string,deployment_policy:string}>
+	 */
+	private function packageSummaries( mixed $summaries ): array {
+		if ( ! is_array( $summaries ) || count( $summaries ) > 20 ) {
+			throw new LogicException( 'Repository package summaries must be bounded.' );
+		}
+
+		$normalized = array();
+		foreach ( $summaries as $summary ) {
+			if ( ! is_array( $summary ) ) {
+				throw new LogicException( 'Repository package summaries must be display maps.' );
+			}
+			$type     = $this->boundedString( $summary['type'] ?? null, 16, false );
+			$source   = $this->boundedString( $summary['source'] ?? null, 32, false );
+			$policy   = $this->boundedString( $summary['deployment_policy'] ?? null, 16, false );
+			$revision = is_int( $summary['source_revision'] ?? null ) ? $summary['source_revision'] : 0;
+			if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
+				|| ! in_array( $source, array( 'branch', 'release_asset' ), true )
+				|| ! in_array( $policy, array( 'automatic', 'manual', 'disabled' ), true )
+				|| 1 > $revision ) {
+				throw new LogicException( 'Repository package summary values are invalid.' );
+			}
+			$normalized[] = array(
+				'type'              => $type,
+				'identifier'        => $this->boundedString( $summary['identifier'] ?? null, 255, false ),
+				'display_name'      => $this->boundedString( $summary['display_name'] ?? null, 255, false ),
+				'settings_url'      => $this->safeUrl( $summary['settings_url'] ?? null, false ),
+				'source'            => $source,
+				'source_revision'   => $revision,
+				'branch'            => $this->boundedString( $summary['branch'] ?? '', 255, true ),
+				'subdirectory'      => $this->boundedString( $summary['subdirectory'] ?? '', 255, true ),
+				'deployment_policy' => $policy,
+			);
+		}
+
+		return $normalized;
 	}
 
 	private function safeUrl( mixed $value, bool $allowEmpty = true ): string {

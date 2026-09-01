@@ -220,7 +220,7 @@ class Dispatcher {
 		if ( $this->isHtmxRequest() ) {
 			$location = wp_json_encode(
 				array(
-					'path'   => $url,
+					'path'   => wp_make_link_relative( $url ),
 					'target' => '#wpbody-content',
 					'select' => '#wpbody-content',
 					'swap'   => 'outerHTML show:none',

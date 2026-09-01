@@ -19,7 +19,8 @@ final readonly class RepositoryReleaseNativeTargetStatus {
 		public string $candidateCode = '',
 		public string $candidateReleaseTag = '',
 		public string $candidateReleaseVersion = '',
-		public string $candidatePackageHeaderVersion = ''
+		public string $candidatePackageHeaderVersion = '',
+		public string $candidateProviderReleaseId = ''
 	) {
 		if ( ! in_array( $versionRelationship, self::RELATIONSHIPS, true )
 			|| ! self::validVersion( $offeredVersion )
@@ -29,7 +30,8 @@ final readonly class RepositoryReleaseNativeTargetStatus {
 			|| ! self::validCode( $candidateCode )
 			|| ! self::validText( $candidateReleaseTag, 100 )
 			|| ! self::validVersion( $candidateReleaseVersion )
-			|| ! self::validVersion( $candidatePackageHeaderVersion ) ) {
+			|| ! self::validVersion( $candidatePackageHeaderVersion )
+			|| ! self::validText( $candidateProviderReleaseId, 191 ) ) {
 			throw new InvalidArgumentException( 'The repository release native target status is invalid.' );
 		}
 		$candidateValues = array(
@@ -39,7 +41,12 @@ final readonly class RepositoryReleaseNativeTargetStatus {
 		);
 		if ( ( array() !== array_filter( $candidateValues, static fn ( string $value ): bool => '' === $value )
 			&& array() !== array_filter( $candidateValues, static fn ( string $value ): bool => '' !== $value ) )
-			|| ( '' === $candidateCode && '' !== $candidatePackageHeaderVersion ) ) {
+			|| ( '' === $candidateCode && '' !== $candidatePackageHeaderVersion )
+			|| ( '' !== $candidateProviderReleaseId
+				&& ( 'release_identity_verified' !== $candidateCode
+					|| '' === $candidateReleaseTag
+					|| '' === $candidateReleaseVersion
+					|| '' === $candidatePackageHeaderVersion ) ) ) {
 			throw new InvalidArgumentException( 'The repository release native target status is invalid.' );
 		}
 	}

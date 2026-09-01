@@ -154,6 +154,29 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
+.ran-booster-admin .ran-booster-package-source-pane__header {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-package-source-pane__header h3 {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-package-source-pane__header p {
+	margin: var(--ran-booster-space-3) 0 0;
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-branch-settings {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.ran-booster-admin .ran-booster-branch-settings.is-inactive {
+	opacity: 0.58;
+}
+
 .ran-booster-admin .ran-booster-package-source-readiness {
 	margin-block-start: var(--ran-booster-space-16);
 }
@@ -189,14 +212,14 @@
 
 .ran-booster-source-choice:focus,
 .ran-booster-source-choice:hover {
-	border-color: var(--ran-booster-link-strong);
 	background: var(--ran-booster-surface-info);
 	color: var(--ran-booster-text-muted);
 }
 
 .ran-booster-source-choice.is-selected {
 	padding: calc(var(--ran-booster-space-16) - 1px);
-	border: 2px solid var(--ran-booster-link-strong);
+	border-radius: var(--ran-booster-radius-control)
+		var(--ran-booster-radius-control) 0 0;
 	background: var(--ran-booster-surface-info);
 }
 
@@ -226,7 +249,6 @@
 	position: relative;
 	z-index: 1;
 	padding: var(--ran-booster-space-10) var(--ran-booster-space-14);
-	border-color: var(--ran-booster-link-strong);
 	border-block-end-color: var(--ran-booster-surface);
 	background: var(--ran-booster-surface);
 	cursor: default;
@@ -245,8 +267,6 @@
 	.ran-booster-package-source--navigation
 	+ .ran-booster-package-source-pane {
 	margin-block-start: 0;
-	padding: var(--ran-booster-space-20);
-	border: 1px solid var(--ran-booster-link-strong);
 	background: var(--ran-booster-surface);
 }
 
@@ -361,11 +381,89 @@
 	font-size: var(--ran-booster-font-size-xs);
 }
 
-.ran-booster-admin .ran-booster-release-track > label {
+.ran-booster-admin .ran-booster-release-track-section {
+	margin-block-start: var(--ran-booster-space-18);
+}
+
+.ran-booster-admin .ran-booster-release-track-section h3 {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-release-track-control {
+	min-inline-size: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.ran-booster-admin .ran-booster-release-track-options {
 	display: inline-flex;
-	gap: var(--ran-booster-space-5);
+}
+
+.ran-booster-admin .ran-booster-release-track-option {
+	display: inline-flex;
 	align-items: center;
-	margin-inline-end: var(--ran-booster-space-12);
+	justify-content: center;
+	gap: var(--ran-booster-space-8);
+	min-inline-size: 120px;
+	min-block-size: 36px;
+	margin: 0;
+	padding-inline: var(--ran-booster-space-14);
+	text-align: start;
+}
+
+.ran-booster-admin
+	.ran-booster-release-track-option
+	+ .ran-booster-release-track-option {
+	margin-inline-start: -1px;
+}
+
+.ran-booster-admin .ran-booster-release-track-option:focus-within,
+.ran-booster-admin button.ran-booster-release-track-option:focus-visible {
+	position: relative;
+	z-index: 1;
+	outline: 2px solid var(--ran-booster-link-strong);
+	outline-offset: 1px;
+}
+
+.ran-booster-admin .ran-booster-release-track-option:has(input:checked) {
+	position: relative;
+	z-index: 1;
+	border-color: var(--ran-booster-link-strong);
+	background: var(--ran-booster-color-blue-100);
+	color: var(--ran-booster-link-strong);
+}
+
+.ran-booster-admin .ran-booster-release-track-option.is-current {
+	position: relative;
+	z-index: 1;
+}
+
+.ran-booster-admin .ran-booster-release-track-control > .description {
+	max-inline-size: 720px;
+	margin-block: var(--ran-booster-space-12) 0;
+}
+
+.ran-booster-admin
+	.ran-booster-release-track-control.is-disabled
+	.ran-booster-release-track-option {
+	border-color: var(--ran-booster-border);
+	background: var(--ran-booster-surface-subtle);
+	color: var(--ran-booster-text-muted);
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.ran-booster-admin
+	.ran-booster-release-track-control.is-disabled
+	.ran-booster-release-track-option:has(input:checked) {
+	border-color: var(--ran-booster-strong-divider);
+	background: var(--ran-booster-color-neutral-200);
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-release-track-notice {
+	margin-block: var(--ran-booster-space-14) 0;
 }
 
 .ran-booster-admin .ran-booster-settings-field .ran-booster-repository-field {
@@ -708,15 +806,64 @@
 	inline-size: 100%;
 }
 
-.ran-booster-admin .ran-booster-webhook-cleanup__review {
-	margin-block-start: var(--ran-booster-space-14);
+.ran-booster-admin .ran-booster-package-disclosure {
+	margin-block: var(--ran-booster-space-16) 0;
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-surface-subtle);
 }
 
-.ran-booster-admin .ran-booster-webhook-cleanup__review > summary {
-	inline-size: fit-content;
-	color: var(--ran-booster-link);
-	font-weight: 600;
+.ran-booster-admin .ran-booster-package-disclosure > summary {
+	display: grid;
+	grid-template-columns: 10px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+	padding: var(--ran-booster-space-16);
 	cursor: pointer;
+	list-style: none;
+}
+
+.ran-booster-admin
+	.ran-booster-package-disclosure
+	> summary::-webkit-details-marker {
+	display: none;
+}
+
+.ran-booster-admin .ran-booster-package-disclosure > summary::before {
+	inline-size: 0.4rem;
+	block-size: 0.4rem;
+	flex: 0 0 auto;
+	border: solid currentcolor;
+	border-width: 0 2px 2px 0;
+	content: "";
+	transform: rotate(-45deg);
+	transition: transform 120ms ease;
+}
+
+.ran-booster-admin .ran-booster-package-disclosure > summary strong {
+	min-inline-size: 0;
+}
+
+.ran-booster-admin .ran-booster-package-disclosure[open] > summary {
+	border-block-end: 1px solid var(--ran-booster-border);
+}
+
+.ran-booster-admin .ran-booster-package-disclosure[open] > summary::before {
+	transform: rotate(45deg);
+}
+
+.ran-booster-admin .ran-booster-package-disclosure > summary:focus-visible {
+	outline: 2px solid var(--ran-booster-link-strong);
+	outline-offset: -2px;
+}
+
+.ran-booster-admin .ran-booster-package-disclosure__body {
+	padding: 0 var(--ran-booster-space-16) var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-webhook-cleanup__state {
+	color: var(--ran-booster-text-muted);
+	font-weight: 600;
 }
 
 .ran-booster-admin .ran-booster-webhook-cleanup__content {

@@ -10,6 +10,7 @@ require_once __DIR__ . '/RuntimeUpdaterFacade.php';
 require_once __DIR__ . '/RuntimeReleaseProvider.php';
 require_once __DIR__ . '/../Support/WPError.php';
 require_once __DIR__ . '/../Support/WordPressUpgraderSkins.php';
+require_once __DIR__ . '/../Support/InMemoryPublicRepositoryLookupProfileStore.php';
 require_once __DIR__ . '/../Portability/WpPusherCoexistenceWordPressFunctions.php';
 
 use InvalidArgumentException;
@@ -37,6 +38,7 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeNotFound;
@@ -46,6 +48,7 @@ use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
+use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class ManagedReleaseRuntimeTest extends TestCase {
 
@@ -1218,6 +1221,209 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( array(), $invalidations );
 		self::assertSame( 0, $lock->acquires );
+	}
+
+	public function testManagedReleaseReadsUseTheConfiguredPublicLookupProfileWithoutReplacingPackageCredentials(): void {
+		$packages = array(
+			'public'         => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL ),
+			'explicit'       => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, credentialId: 'package-profile' ),
+			'private'        => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, private: true, credentialId: 'private-profile' ),
+			'private_lookup' => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, private: true ),
+		);
+		$current  = 'public';
+		$plugins  = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
+			static function () use ( &$packages, &$current ): Package {
+				return $packages[ $current ];
+			}
+		);
+		$themes             = $this->createStub( ThemeRepository::class );
+		$store              = new RuntimeReleaseStore(
+			array( "plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
+		);
+		$lock               = new RuntimeUpdaterLock();
+		$profiles           = new InMemoryPublicRepositoryLookupProfileStore();
+		$profiles->profiles = array( 'gh' => 'public-profile' );
+		$references         = array();
+		$failureMode        = 'typed';
+		$providers          = $this->releaseMetadataRegistry(
+			list: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references, &$failureMode ): RepositoryReleaseCandidateList {
+				$references[] = $repository;
+				if ( in_array( $repository->credentialId, array( 'package-profile', 'private-profile' ), true ) ) {
+					if ( 'typed' === $failureMode ) {
+						throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
+					}
+					if ( 'domain' === $failureMode ) {
+						throw new \RuntimeException( 'Fixture domain failure.' );
+					}
+				}
+
+				return new RepositoryReleaseCandidateList( array() );
+			},
+			inspect: static function ( string $type, RepositoryReference $repository, string $releaseId, string $tag, string $channel ) use ( &$references, &$failureMode ): RepositoryReleaseInspection {
+				$references[] = $repository;
+				if ( in_array( $repository->credentialId, array( 'package-profile', 'private-profile' ), true ) ) {
+					if ( 'typed' === $failureMode ) {
+						throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
+					}
+					if ( 'domain' === $failureMode ) {
+						throw new \RuntimeException( 'Fixture domain failure.' );
+					}
+				}
+
+				return new RepositoryReleaseInspection( $releaseId, $tag, '2.0.0', str_repeat( 'a', 40 ), 'example', 'example.php', 'v1:' . str_repeat( 'b', 64 ) );
+			}
+		);
+		$facade             = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => hash_equals( $action, $nonce ),
+			metadataEligible: static fn (): bool => true,
+			publicLookupProfile: static fn ( string $provider ): ?string => $profiles->get( $provider )
+		);
+
+		foreach ( array( 'public', 'explicit' ) as $current ) {
+			$nonce = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+			$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertTrue( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce )?->ready() );
+		}
+
+		self::assertSame( array( 'public-profile', 'public-profile', 'package-profile', 'public-profile', 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+		self::assertSame( array( false, false, false, false, false, false ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
+
+		$current    = 'private';
+		$references = array();
+		$nonce      = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+		$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
+		self::assertSame( array( 'private-profile', 'private-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+		self::assertSame( array( true, true ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
+
+		$failureMode = 'none';
+		$current     = 'explicit';
+		$references  = array();
+		$nonce       = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+		$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertTrue( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce )?->ready() );
+		self::assertSame( array( 'package-profile', 'package-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+
+		$failureMode = 'domain';
+		$references  = array();
+		$nonce       = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+		self::assertSame( array( 'package-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+
+		$failureMode = 'none';
+		$current     = 'private_lookup';
+		$references  = array();
+		$nonce       = $facade->nonceAction( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->listCandidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+		$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
+		self::assertSame( array(), $references );
+		self::assertNull( $packages['private_lookup']->getRepository()->reference->credentialId );
+
+		$packages['branch_public'] = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		$current                   = 'branch_public';
+		$profiles->profiles        = array( 'gh' => 'public-profile' );
+		$references                = array();
+		$nonce                     = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+		$preflight                 = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
+		self::assertSame( array( 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+		self::assertNull( $packages['branch_public']->getRepository()->reference->credentialId );
+
+		$packages['branch_explicit'] = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			credentialId: 'package-profile',
+			source: PackageSource::BRANCH
+		);
+		$current                     = 'branch_explicit';
+		$references                  = array();
+		$failureMode                 = 'typed';
+		$nonce                       = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+		$preflight                   = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
+		self::assertSame( array( 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
+		self::assertSame( 'package-profile', $packages['branch_explicit']->getRepository()->reference->credentialId );
+	}
+
+	public function testPrivateEnablePreflightUsesOnlyTheSavedPackageCredential(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			private: true,
+			credentialId: 'package-profile',
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes     = $this->createStub( ThemeRepository::class );
+		$store      = new RuntimeReleaseStore();
+		$lock       = new RuntimeUpdaterLock();
+		$references = array();
+		$providers  = $this->releaseMetadataRegistry(
+			list: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references ): RepositoryReleaseCandidateList {
+				unset( $type, $channel );
+				$references[] = $repository;
+				if ( 'package-profile' === $repository->credentialId ) {
+					throw new RepositoryReleaseReadUnavailable( 'The package credential cannot read this repository.' );
+				}
+
+				return new RepositoryReleaseCandidateList( array() );
+			}
+		);
+		$facade     = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => hash_equals( $action, $nonce ),
+			metadataEligible: static fn (): bool => true,
+			publicLookupProfile: static fn (): string => 'public-profile'
+		);
+
+		$preflightNonce = $facade->nonceAction( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
+		$preflight      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $preflightNonce );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $preflight?->code() );
+		self::assertSame(
+			array( 'package-profile' ),
+			array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references )
+		);
+
+		$references  = array();
+		$enableNonce = $facade->nonceAction( 'enable', 'plugin', 'example/example.php', 1 );
+		$result      = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', $enableNonce );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
+		self::assertSame(
+			array( 'package-profile' ),
+			array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references )
+		);
+		self::assertSame( array(), $store->transitions );
 	}
 
 	public function testProviderPreflightFailsClosedAcrossIdentityChannelAndOperationalBoundaries(): void {

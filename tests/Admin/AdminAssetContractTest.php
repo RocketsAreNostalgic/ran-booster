@@ -588,7 +588,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-webhook-steps', $view );
 		self::assertStringContainsString( 'AdminStatusSummaryRenderer', $dashboard );
 		self::assertStringContainsString( '$statusSummaryRenderer->render(', $view );
-		self::assertSame( 2, substr_count( $view, '$statusSummaryRenderer->render(' ) );
+		self::assertSame( 1, substr_count( $view, '$statusSummaryRenderer->render(' ) );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-summary {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-neutral {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-pending {', $css );
@@ -877,6 +877,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'hx-select="#wpbody-content"', $renderer );
 		self::assertStringContainsString( 'hx-swap="outerHTML show:none"', $renderer );
 		self::assertStringContainsString( 'hx-sync="this:drop"', $renderer );
+		self::assertStringContainsString( 'action="<?php echo esc_url( $action[\'url\'] ); ?>"', $renderer );
+		self::assertStringContainsString( 'hx-post="<?php echo esc_url( wp_make_link_relative( $action[\'url\'] ) ); ?>"', $renderer );
 		self::assertStringContainsString( "'data-ran-booster-enhanced-mutation': ''", $packages );
 		self::assertStringContainsString( "'hx-target': '#wpbody-content'", $packages );
 		self::assertStringContainsString( "'hx-select': '#wpbody-content'", $packages );

@@ -30,6 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<input type="hidden" name="action" value="<?php echo esc_attr( $model['admin_action'] ); ?>">
 				<input type="hidden" name="provider_code" value="<?php echo esc_attr( $model['provider_code'] ); ?>">
 				<input type="hidden" name="repository_id" value="<?php echo esc_attr( $model['repository_id'] ); ?>">
+				<input type="hidden" name="return_url" value="<?php echo esc_url( $model['return_url'] ); ?>">
 				<div id="repository-webhook-management-error"></div>
 				<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide"><span class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label"><?php esc_html_e( 'Repository', 'ran-booster' ); ?></span><code><?php echo esc_html( $model['repository'] ); ?></code></div>
 

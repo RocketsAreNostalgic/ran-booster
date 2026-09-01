@@ -71,7 +71,7 @@ final class CoreAdminInteractionFacade implements
 			'data-ran-booster-enhanced-mutation'     => '',
 			'data-ran-booster-error-target'          => '#' . $signedRequest->errorRegionId,
 			'data-ran-booster-interaction-operation' => $signedRequest->operation,
-			'hx-post'                                => admin_url( 'admin-post.php' ),
+			'hx-post'                                => wp_make_link_relative( admin_url( 'admin-post.php' ) ),
 			'hx-target'                              => $signedRequest->targetSelector,
 			'hx-select'                              => $signedRequest->targetSelector,
 			'hx-swap'                                => 'outerHTML transition:true show:none',

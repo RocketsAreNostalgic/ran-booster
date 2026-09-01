@@ -103,6 +103,22 @@ function admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 }
 
+function network_admin_url( string $path = '' ): string {
+	return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
+}
+
+function is_multisite(): bool {
+	return true === ( $GLOBALS['ran_booster_release_management_test_multisite'] ?? false );
+}
+
+function self_admin_url( string $path = '' ): string {
+	return admin_url( $path );
+}
+
+function wp_nonce_url( string $actionurl, int|string $action = -1, string $name = '_wpnonce' ): string {
+	return add_query_arg( $name, wp_create_nonce( (string) $action ), $actionurl );
+}
+
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {
 	if ( is_array( $key ) ) {
 		$args = $key;
@@ -171,6 +187,17 @@ function wp_localize_script( string $handle, string $name, array $data ): bool {
 function wp_json_encode( mixed $value ): string|false {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- WordPress encoder fixture.
 	return json_encode( $value );
+}
+
+function wp_make_link_relative( string $link ): string {
+	$parts = wp_parse_url( $link );
+	if ( ! is_array( $parts ) ) {
+		return $link;
+	}
+
+	return ( $parts['path'] ?? '' )
+		. ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' )
+		. ( isset( $parts['fragment'] ) ? '#' . $parts['fragment'] : '' );
 }
 
 function wp_safe_redirect( string $url ): bool {

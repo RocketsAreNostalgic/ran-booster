@@ -172,6 +172,7 @@ final class WebhookDisplayModel {
 			'provider_label'      => $providerLabel,
 			'repository_id'       => $repositoryId,
 			'repository'          => $target->repository(),
+			'return_url'          => $this->panelUrl( $returnUrl, $repositoryId ),
 			'interaction_request' => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panelUrl( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
 			'result'              => null === $resultCode ? null : array(
 				'class'   => $this->isSuccessfulResult( $resultCode ) ? 'notice-success' : 'notice-error',
@@ -423,11 +424,15 @@ final class WebhookDisplayModel {
 		$history = null === $record ? null : WebhookHistory::fromRecord( $record )->toArray();
 		$details = array(
 			array(
-				'label' => __( 'Recorded hook status', 'ran-booster' ),
-				'value' => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
-				'tone'  => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+				'key'      => 'core:webhook-recorded-status',
+				'label'    => __( 'Recorded hook status', 'ran-booster' ),
+				'value'    => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historicalStatusLabel( $history['recorded_status'] ),
+				'tone'     => null === $history ? 'warning' : $this->historicalStatusTone( $history['recorded_status'] ),
+				'recorded' => null !== $history,
+				'state'    => $statusCode,
 			),
 			array(
+				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
 				'value' => null === $history ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
@@ -436,6 +441,7 @@ final class WebhookDisplayModel {
 
 		if ( null !== $history && $statusCode !== $history['recorded_status'] ) {
 			$details[] = array(
+				'key'   => 'core:webhook-current-warning',
 				'label' => __( 'Current local warning', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $statusCode ),
 				'tone'  => $this->historicalStatusTone( $statusCode ),
@@ -446,10 +452,12 @@ final class WebhookDisplayModel {
 			$details,
 			array(
 				array(
+					'key'   => 'core:webhook-recorded-profile',
 					'label' => __( 'Recorded hook profile', 'ran-booster' ),
 					'value' => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->recordedProfileLabel( $statusCode, $record ),
 				),
 				array(
+					'key'      => 'core:webhook-last-checked',
 					'label'    => __( 'Last checked', 'ran-booster' ),
 					'value'    => null === $history ? __( 'Never', 'ran-booster' ) : $history['checked_at'],
 					'datetime' => null === $history ? '' : $history['checked_at'],
@@ -464,16 +472,19 @@ final class WebhookDisplayModel {
 
 		return array(
 			array(
+				'key'   => 'core:webhook-recorded-status',
 				'label' => __( 'Recorded hook status', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $history['recorded_status'] ),
 				'tone'  => $this->historicalStatusTone( $history['recorded_status'] ),
 			),
 			array(
+				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
 				'value' => __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
 			),
 			array(
+				'key'      => 'core:webhook-last-checked',
 				'label'    => __( 'Last checked', 'ran-booster' ),
 				'value'    => $history['checked_at'],
 				'datetime' => $history['checked_at'],
@@ -506,9 +517,12 @@ final class WebhookDisplayModel {
 	}
 
 	private function panelUrl( string $returnUrl, string $repositoryId ): string {
+		if ( 1 === preg_match( '/[?&]page=ran-booster-(?:plugins|themes)(?:&|$)/', $returnUrl ) ) {
+			return $returnUrl;
+		}
 		$url = 1 === preg_match( '/[?&]repository=/', $returnUrl ) ? $returnUrl : $returnUrl . ( str_contains( $returnUrl, '?' ) ? '&' : '?' ) . 'repository=' . rawurlencode( $repositoryId );
 
-		return $url . '#ran-booster-repository-webhook-management-operation-heading';
+		return $url;
 	}
 
 	private function operationUrl( string $operation, string $providerCode, string $repositoryId ): string {

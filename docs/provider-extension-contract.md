@@ -340,9 +340,9 @@ is the provider's bounded inspection preference. Core inspects at most the first
 two candidates in that order, continues only when the provider classifies the
 package as incompatible, and accepts only exact listing-to-inspection identity
 continuity. A vanished, corrupt or contradictory preferred release fails closed
-without falling through to an older release. The facet
-does not by itself make the complete release product available. Until those
-remaining operations have their own provider facets,
+without falling through to an older release. The facet does not by itself make
+the complete release product available. Until those remaining operations have
+their own provider facets,
 Core's complete-product projection continues to advertise only the bundled
 GitHub implementation. A provider implementing candidate listing alone remains
 available to an authorized listing consumer but receives no complete-product UI
@@ -350,6 +350,16 @@ or later-operation authority. The temporary standalone-add-on facade can project
 only positive integer release identities; opaque provider identities remain
 valid contract values but require the later hard cut before that facade can
 consume them.
+
+When a release listing or inspection read cannot be completed with the supplied
+repository access profile because of credential/access denial, rate limiting, or
+transport failure, it must throw the typed
+`RAN\RepositoryProvider\RepositoryReleaseReadUnavailable`. Core alone may use that signal to retry a
+public repository through its separately configured public lookup profile. Do
+not use this exception for an empty eligible-release list, an invalid release,
+or package incompatibility; return the relevant typed result for those cases.
+Do not catch the signal and replace it with a generic exception, and do not
+retry or switch credentials inside a provider.
 
 `RepositoryReleaseInspector` is the independent remote facet for inspecting one
 exact provider release. It accepts the package type, resolved repository,
@@ -391,8 +401,15 @@ updater construction and registration, and projects only a typed
 bounded passive value: it contains normalized availability, offered-version,
 check-time, failure and candidate-validation fields, never the provider's raw
 updater object, diagnostics array or internal runtime state. Refresh returns an
-exact boolean. Missing capabilities, failed registration, invalid status and
-failed refresh all fail closed. Release tracking requires this capability and
+exact boolean. When candidate validation describes the release behind the
+current native offer, `candidateProviderReleaseId` must contain that release's
+exact opaque provider identity—the same identity returned by candidate listing
+and inspection. It remains empty when there is no current, candidate-validated
+native offer. Core does not infer this identity from a tag or version; without
+an exact identity match, the managed browser will not hand that candidate to
+WordPress as the current native update. Missing capabilities, failed
+registration, invalid status and failed refresh all fail closed. Release
+tracking requires this capability and
 `RepositoryReleaseMetadata` on the same registered provider aggregate;
 metadata alone is not eligibility. Core retains package enumeration, metadata
 path derivation, authority snapshots, WordPress hook timing, locks, stale-offer

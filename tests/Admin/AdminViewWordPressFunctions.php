@@ -256,6 +256,13 @@ if ( ! function_exists( 'rest_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	function wp_parse_url( string $url ): array|false {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Test shim for the WordPress wrapper.
+		return parse_url( $url );
+	}
+}
+
 if ( ! function_exists( 'get_option' ) ) {
 	function get_option( $option, $default = false ) {
 		global $ran_booster_storage_test_options;

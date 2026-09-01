@@ -36,33 +36,17 @@ final class RepositoryTableRenderer {
 								<?php $this->renderManagementDetail( $row ); ?>
 							</strong>
 							<?php $this->renderConsequence( $row ); ?>
-							<?php $this->renderStatusLinks( $this->items( $row, 'status_links' ) ); ?>
-							<?php $this->renderPackageReferences( $this->strings( $row, 'package_references' ) ); ?>
 						</div>
 						<div class="ran-booster-repository-record__actions">
 							<div class="ran-booster-repository-record__action-group">
-								<?php $this->renderActions( $this->items( $row, 'actions' ) ); ?>
+								<?php $this->renderInventoryAction( $row ); ?>
 							</div>
 						</div>
 					</div>
-					<?php $this->renderDetails( $this->items( $row, 'details' ) ); ?>
+					<?php $this->renderHistoricalEvidence( $row ); ?>
 				</article>
 			<?php } ?>
 		</div>
-		<?php
-	}
-
-	/** @param list<array<string, mixed>> $links */
-	private function renderStatusLinks( array $links ): void {
-		if ( array() === $links ) {
-			return;
-		}
-		?>
-		<p class="ran-booster-repository-record__status-links">
-			<?php foreach ( $links as $link ) { ?>
-				<a href="<?php echo esc_url( (string) ( $link['url'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $link['label'] ?? '' ) ); ?></a>
-			<?php } ?>
-		</p>
 		<?php
 	}
 
@@ -84,58 +68,71 @@ final class RepositoryTableRenderer {
 		<?php
 	}
 
-	/** @param list<string> $references */
-	private function renderPackageReferences( array $references ): void {
-		$count = count( $references );
-		if ( 1 >= $count ) {
+	/** @param array<string, mixed> $row */
+	private function renderInventoryAction( array $row ): void {
+		$historical = true === ( $row['historical'] ?? false );
+		if ( $historical ) {
+			return;
+		}
+		$url = is_string( $row['detail_url'] ?? null ) ? $row['detail_url'] : '';
+		$this->renderAction(
+			array(
+				'label'         => __( 'Manage repository', 'ran-booster' ),
+				'url'           => $url,
+				'disabled'      => '' === $url,
+				'external'      => false,
+				'described_by'  => '',
+				'screen_reader' => is_string( $row['repository'] ?? null ) ? $row['repository'] : '',
+			)
+		);
+	}
+
+	/** @param array<string, mixed> $row */
+	private function renderHistoricalEvidence( array $row ): void {
+		if ( true !== ( $row['historical'] ?? false ) ) {
+			return;
+		}
+
+		$details = $this->items( $row, 'details' );
+		$actions = $this->items( $row, 'actions' );
+		if ( array() === $details && array() === $actions ) {
 			return;
 		}
 		?>
-		<details class="ran-booster-repository-record__packages-list">
-			<summary>
-				<?php
-				echo esc_html(
-					sprintf(
-						/* translators: %d is the number of managed packages using one repository. */
-						_n( '%d package uses this repository', '%d packages use this repository', $count, 'ran-booster' ),
-						$count
-					)
-				);
-				?>
-			</summary>
-			<ul>
-				<?php foreach ( $references as $reference ) { ?>
-					<li><code><?php echo esc_html( $reference ); ?></code></li>
+		<div class="ran-booster-repository-record__details">
+			<div class="ran-booster-repository-record__details-layout">
+				<?php $this->renderDetails( $details ); ?>
+				<?php if ( array() !== $actions ) { ?>
+					<div>
+						<strong><?php esc_html_e( 'Recorded actions', 'ran-booster' ); ?></strong>
+						<div class="ran-booster-repository-record__action-group">
+							<?php ( new AdminActionRenderer() )->render( $actions ); ?>
+						</div>
+					</div>
 				<?php } ?>
-			</ul>
-		</details>
+			</div>
+		</div>
 		<?php
 	}
 
-	/** @param list<array<string, mixed>> $actions */
-	private function renderActions( array $actions ): void {
-		$packageActions = array();
-		foreach ( $actions as $action ) {
-			$key = is_string( $action['key'] ?? null ) ? $action['key'] : '';
-			if ( str_starts_with( $key, 'core:package-' ) ) {
-				$packageActions[] = $action;
-				continue;
-			}
-			$this->renderAction( $action );
-		}
-
-		if ( 1 === count( $packageActions ) ) {
-			$this->renderAction( $packageActions[0] );
-		} elseif ( 1 < count( $packageActions ) ) {
+	/** @param list<array<string, mixed>> $details */
+	private function renderDetails( array $details ): void {
+		foreach ( $details as $detail ) {
+			$label    = is_string( $detail['label'] ?? null ) ? $detail['label'] : '';
+			$value    = is_string( $detail['value'] ?? null ) ? $detail['value'] : '';
+			$tone     = is_string( $detail['tone'] ?? null ) ? $detail['tone'] : '';
+			$datetime = is_string( $detail['datetime'] ?? null ) ? $detail['datetime'] : '';
 			?>
-			<details class="ran-booster-repository-record__settings-menu">
-				<summary class="button"><?php esc_html_e( 'Package settings', 'ran-booster' ); ?></summary>
-				<div>
-					<?php foreach ( $packageActions as $action ) { ?>
-						<?php $this->renderAction( $action, false ); ?>
-					<?php } ?>
-				</div>
-			</details>
+			<div>
+				<strong><?php echo esc_html( $label ); ?></strong>
+				<?php if ( '' !== $tone ) { ?>
+					<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
+				<?php } elseif ( '' !== $datetime ) { ?>
+					<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>
+				<?php } else { ?>
+					<span><?php echo esc_html( $value ); ?></span>
+				<?php } ?>
+			</div>
 			<?php
 		}
 	}
@@ -166,37 +163,6 @@ final class RepositoryTableRenderer {
 				<span class="screen-reader-text">: <?php echo esc_html( $screenReader ); ?></span>
 			<?php } ?>
 		</a>
-		<?php
-	}
-
-	/** @param list<array<string, mixed>> $details */
-	private function renderDetails( array $details ): void {
-		if ( array() === $details ) {
-			return;
-		}
-		?>
-		<div class="ran-booster-repository-record__details">
-			<div class="ran-booster-repository-record__details-layout">
-				<?php foreach ( $details as $detail ) { ?>
-					<?php
-					$label    = is_string( $detail['label'] ?? null ) ? $detail['label'] : '';
-					$value    = is_string( $detail['value'] ?? null ) ? $detail['value'] : '';
-					$tone     = is_string( $detail['tone'] ?? null ) ? $detail['tone'] : '';
-					$datetime = is_string( $detail['datetime'] ?? null ) ? $detail['datetime'] : '';
-					?>
-					<div>
-						<strong><?php echo esc_html( $label ); ?></strong>
-						<?php if ( '' !== $tone ) { ?>
-							<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
-						<?php } elseif ( '' !== $datetime ) { ?>
-							<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>
-						<?php } else { ?>
-							<span><?php echo esc_html( $value ); ?></span>
-						<?php } ?>
-					</div>
-				<?php } ?>
-			</div>
-		</div>
 		<?php
 	}
 

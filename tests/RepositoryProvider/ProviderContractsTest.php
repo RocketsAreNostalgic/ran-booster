@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\RepositoryProvider;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
@@ -63,11 +64,12 @@ final class ProviderContractsTest extends TestCase {
 			'release_identity_verified',
 			'v2.0.0',
 			'2.0.0',
-			'2.0.0'
+			'2.0.0',
+			'42'
 		);
 		self::assertTrue( $status->active );
 		self::assertSame(
-			array( 'active', 'offeredVersion', 'versionRelationship', 'lastCheck', 'nextCheck', 'failureCode', 'candidateCode', 'candidateReleaseTag', 'candidateReleaseVersion', 'candidatePackageHeaderVersion' ),
+			array( 'active', 'offeredVersion', 'versionRelationship', 'lastCheck', 'nextCheck', 'failureCode', 'candidateCode', 'candidateReleaseTag', 'candidateReleaseVersion', 'candidatePackageHeaderVersion', 'candidateProviderReleaseId' ),
 			array_map(
 				static fn ( \ReflectionProperty $property ): string => $property->name,
 				( new \ReflectionClass( RepositoryReleaseNativeTargetStatus::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC )
@@ -75,6 +77,38 @@ final class ProviderContractsTest extends TestCase {
 		);
 		$this->expectException( \InvalidArgumentException::class );
 		new RepositoryReleaseNativeTargetStatus( false, str_repeat( '1', 65 ) );
+	}
+
+	#[DataProvider( 'invalidNativeTargetProviderReleaseIdentity' )]
+	public function testReleaseNativeTargetStatusRejectsUnverifiedProviderReleaseIdentity(
+		string $candidateCode,
+		string $candidateReleaseTag,
+		string $candidateReleaseVersion,
+		string $candidatePackageHeaderVersion
+	): void {
+		$this->expectException( \InvalidArgumentException::class );
+		new RepositoryReleaseNativeTargetStatus(
+			true,
+			'2.0.0',
+			'newer',
+			1_700_000_000,
+			1_700_003_600,
+			'',
+			$candidateCode,
+			$candidateReleaseTag,
+			$candidateReleaseVersion,
+			$candidatePackageHeaderVersion,
+			'42'
+		);
+	}
+
+	/** @return array<string, array{string, string, string, string}> */
+	public static function invalidNativeTargetProviderReleaseIdentity(): array {
+		return array(
+			'missing candidate evidence'     => array( '', '', '', '' ),
+			'unverified candidate code'      => array( 'release_version_mismatch', 'v2.0.0', '2.0.0', '2.0.0' ),
+			'missing package header version' => array( 'release_identity_verified', 'v2.0.0', '2.0.0', '' ),
+		);
 	}
 
 	public function testReleaseCandidateListingIsOneExactTypedCapability(): void {

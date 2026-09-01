@@ -14,6 +14,7 @@ use RAN\Admin\AdminAddOnTab;
 use RAN\Admin\BulkPackageAction;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\AdminTabRegistry;
+use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\ProviderDocumentationPresenter;
@@ -51,6 +52,7 @@ use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
 use RAN\RepositoryProvider\RepositoryBrowseRequest;
 use RAN\RepositoryProvider\RepositoryBrowseResult;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
 use RAN\Storage\Database;
@@ -738,10 +740,189 @@ final class DashboardIndexRoutingTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h4>', $html );
-		self::assertStringContainsString( 'Back to managed repositories', $html );
+		self::assertStringContainsString( '>Repository webhook</h5>', $html );
+		self::assertStringContainsString( 'Back to repositories', $html );
+		self::assertStringContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( 'workspace/route', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $html );
+	}
+
+	public function testProviderRepositoryProjectionUnifiesPackageTypesAndSourcesByStableIdentity(): void {
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				$this->managedPackage(
+					'plugin/shared.php',
+					'Shared Plugin',
+					'repo-shared',
+					provider: 'bb',
+					repository: 'workspace/shared',
+					subdirectory: 'packages/plugin'
+				),
+			)
+		);
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn(
+			array(
+				$this->managedPackage(
+					'shared-theme',
+					'Shared Theme',
+					'repo-shared',
+					\RAN\PackageSource::RELEASE_ASSET,
+					'bb',
+					repository: 'workspace/shared'
+				),
+			)
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			themes: $themes,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertCount( 1, $data['provider_repositories']['repositories'] );
+		$repository = $data['provider_repositories']['repositories'][0];
+		self::assertSame( 'repo-shared', $repository['repository_id'] );
+		self::assertSame( 'mixed', $repository['source'] );
+		self::assertSame( array( 'plugin/shared.php' ), $repository['branch_package_references'] );
+		self::assertSame( array( 'plugin', 'theme' ), array_column( $repository['package_summaries'], 'type' ) );
+		self::assertSame( 'packages/plugin', $repository['package_summaries'][0]['subdirectory'] );
+		self::assertCount( 1, $data['managed_webhook_repositories']['repositories'] );
+		self::assertSame( 'branch', $data['managed_webhook_repositories']['repositories'][0]['source'] );
+		self::assertSame( 'Mixed sources', $data['repositoryTableRows'][0]['source_label'] );
+	}
+
+	public function testProviderRepositoryProjectionUsesNetworkPackageSettingsUrlsOnMultisite(): void {
+		$this->setMultisite( true );
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array( $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repo-example', provider: 'bb' ) )
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
+			$data['provider_repositories']['repositories'][0]['package_summaries'][0]['settings_url']
+		);
+	}
+
+	public function testProviderRepositoryProjectionKeepsWebhookSettingsUrlWhenReleasePrecedesBranch(): void {
+		$_GET            = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$releasePackages = array();
+		for ( $index = 1; $index <= 20; ++$index ) {
+			$releasePackages[] = $this->managedPackage(
+				'release-shared-' . $index . '.php',
+				'Release Shared ' . $index,
+				'repo-shared',
+				\RAN\PackageSource::RELEASE_ASSET,
+				'bb',
+				repository: 'workspace/shared'
+			);
+		}
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( $releasePackages );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn(
+			array(
+				$this->managedPackage(
+					'branch-shared',
+					'Branch Shared',
+					'repo-shared',
+					policy: \RAN\Deployment\DeploymentPolicy::AUTOMATIC,
+					provider: 'bb',
+					repository: 'workspace/shared'
+				),
+			)
+		);
+
+		$data       = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			themes: $themes,
+			providerCredentials: true
+		)->getIndex()['data'];
+		$repository = $data['provider_repositories']['repositories'][0];
+
+		self::assertSame( 'mixed', $repository['source'] );
+		self::assertSame( 'https://example.test/workspace/shared/settings/hooks', $repository['webhook_settings_url'] );
+		self::assertTrue( $repository['has_automatic_branch_consumer'] );
+		self::assertCount( 20, $repository['package_summaries'] );
+		self::assertSame( 1, $repository['package_summaries_omitted'] );
+		self::assertSame( 1, $data['repositoryIntegrationSummary']['needs_review'] );
+	}
+
+	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				$this->managedPackage( 'plugin/one.php', 'One', 'repo-conflict', provider: 'bb', repository: 'workspace/one' ),
+				$this->managedPackage( 'plugin/two.php', 'Two', 'repo-conflict', provider: 'bb', repository: 'workspace/two' ),
+				$this->managedPackage( 'plugin/three.php', 'Three', 'repo-three', provider: 'bb', repository: 'workspace/shared-locator' ),
+				$this->managedPackage( 'plugin/four.php', 'Four', 'repo-four', provider: 'bb', repository: 'workspace/shared-locator' ),
+			)
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertCount( 3, $data['repositoryTableRows'] );
+		foreach ( $data['repositoryTableRows'] as $row ) {
+			self::assertTrue( $row['historical'] );
+			self::assertSame( array(), $row['actions'] );
+			self::assertSame( '', $row['repository_url'] );
+			self::assertSame( 'Repository identity conflict', $row['statuses'][0]['label'] );
+		}
+	}
+
+	public function testProviderRepositoryProjectionDoesNotFoldOpaqueProviderLocators(): void {
+		$_GET    = array(
+			'tab'   => 'bb',
+			'panel' => 'repositories',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				$this->managedPackage( 'plugin/upper.php', 'Uppercase Locator', 'repo-upper', provider: 'bb', repository: 'Owner/Repo' ),
+				$this->managedPackage( 'plugin/lower.php', 'Lowercase Locator', 'repo-lower', provider: 'bb', repository: 'owner/repo' ),
+			)
+		);
+
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		self::assertCount( 2, $data['repositoryTableRows'] );
+		foreach ( $data['repositoryTableRows'] as $row ) {
+			self::assertFalse( $row['historical'] );
+			self::assertNotSame( '', $row['repository_url'] );
+		}
 	}
 
 	public function testSelectedAddOnUsesTheRegisteredTabAndSafeContext(): void {
@@ -1102,6 +1283,51 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function testExplicitAdvancedOpenFlagOpensTheSelectedSourceView(): void {
+		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$_GET      = array(
+			'package'                   => 'plugin/example.php',
+			'source_view'               => 'branch',
+			'ran_booster_open_advanced' => '1',
+		);
+
+		$data = $dashboard->getPlugins()['data'];
+
+		self::assertTrue( $data['packageSource']['advanced_open'] );
+		self::assertSame( 'branch', $data['packageSource']['selected'] );
+	}
+
+	public function testAdvancedSourceSummaryProjectionIncludesTheSavedBranchSubdirectory(): void {
+		$package = $this->managedPackage(
+			'plugin/example.php',
+			'Example Plugin',
+			'plugin-repository-id',
+			subdirectory: 'packages/example'
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$_GET      = array( 'package' => 'plugin/example.php' );
+
+		$data = $dashboard->getPlugins()['data'];
+
+		self::assertSame(
+			array(
+				'heading' => 'Branch deployments',
+				'badges'  => array(
+					array(
+						'label' => 'packages/example',
+					),
+				),
+				'status'  => 'Active',
+			),
+			$data['packageSource']['advanced_summary_projection']
+		);
+	}
+
 	public function testReleaseDeploymentHooksReceiveExactOuterCreateEditAndIndexArguments(): void {
 		$sourceCalls  = array();
 		$sectionCalls = array();
@@ -1216,6 +1442,102 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'release_asset', $data['packageSource']['current'] );
 		self::assertSame( 'release_asset', $data['packageSource']['selected'] );
 		self::assertTrue( $data['packageSource']['unavailable'] );
+	}
+
+	public function testReleasePackageRetainsCurrentBranchReadinessWithoutProviderOperations(): void {
+		$package  = $this->managedPackage(
+			'release/release.php',
+			'Release Package',
+			'101',
+			\RAN\PackageSource::RELEASE_ASSET,
+			'gh',
+			\RAN\Deployment\DeploymentPolicy::MANUAL,
+			'owner/repository'
+		);
+		$plugins  = new class( $package ) extends PluginRepository {
+			public function __construct( private Package $package ) {
+			}
+
+			public function boosterPluginFromFile( $file ) {
+				return 'release/release.php' === $file ? $this->package : null;
+			}
+
+			public function allBoosterPlugins(): array {
+				return array( $this->package );
+			}
+
+			public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+				return array( $this->package );
+			}
+		};
+		$themes   = new class() extends ThemeRepository {
+			public function __construct() {
+			}
+
+			public function allBoosterThemes(): array {
+				return array();
+			}
+
+			public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+				return array();
+			}
+		};
+		$secrets  = new class() extends SecretsFile {
+			public function __construct() {
+				parent::__construct( '/unused/test-secrets.php', array() );
+			}
+
+			public function assertManagedStorageReady(): void {
+			}
+
+			public function webhookProfiles( ProviderCode|string $provider ): array {
+				return array(
+					'webhook-profile' => array(
+						'scope'        => 'repository',
+						'target'       => 'owner/repository',
+						'authority_id' => '101',
+						'configured'   => true,
+					),
+				);
+			}
+		};
+		$provider = $this->createMockForIntersectionOfInterfaces(
+			array(
+				RepositoryProvider::class,
+				ProviderCredentialPolicySupplier::class,
+				\RAN\RepositoryProvider\WebhookNormalizer::class,
+			)
+		);
+		$provider->method( 'getMetadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
+		$policies = ShippedSecretPolicyCatalog::create();
+		$provider->method( 'getCredentialPolicy' )->willReturn( $policies->credentialPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->method( 'getWebhookPolicy' )->willReturn( $policies->webhookPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->expects( self::never() )->method( 'resolveRepository' );
+		$provider->expects( self::never() )->method( 'prepareArchive' );
+		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
+		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
+		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->toArray()['site']['status'] );
+		$dashboard = $this->dashboard(
+			$secrets,
+			plugins: $plugins,
+			themes: $themes,
+			database: new ReadyDashboardDatabase(),
+			providers: new ProviderRegistry( array( $provider ) ),
+			webhookAssistance: $evaluator
+		);
+		$_GET      = array(
+			'package'     => 'release/release.php',
+			'source_view' => 'branch',
+		);
+
+		$readiness = $dashboard->getPlugins()['data']['packageBranchReadiness'];
+
+		self::assertIsArray( $readiness );
+		self::assertArrayHasKey( 'retained', $readiness );
+		self::assertTrue( $readiness['retained'] );
+		self::assertSame( 'ready', $readiness['site']['status'] );
+		self::assertSame( '101', $readiness['repository']['repository_id'] );
+		self::assertSame( 'repository', $readiness['repository']['local_secret_coverage'] );
 	}
 
 	public function testTroubleshootingResultsRenderOnlyInTheSameDashboardRequest(): void {
@@ -2204,6 +2526,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?ProviderRegistry $providers = null,
 		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
 		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
 		?WordPressUpdaterLock $branchCheckLock = null
 	): RoutingDashboard {
 		$providers        = $providers ?? $this->providers( $providerCredentials );
@@ -2240,7 +2563,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$pluginRepository,
 			new Booster(),
 			$themeRepository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, null, $branchCheckEvidence, $branchCheckLock ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, $webhookAssistance, $branchCheckEvidence, $branchCheckLock ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),
@@ -2309,7 +2632,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	private function provider( ProviderCode $code, string $label, bool $withCredentials = false ): RepositoryProvider {
-		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, \RAN\RepositoryProvider\WebhookNormalizer {
+		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, \RAN\RepositoryProvider\WebhookNormalizer {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -2352,6 +2675,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function normalizeWebhook( \RAN\RepositoryProvider\WebhookRequest $request ): \RAN\RepositoryProvider\WebhookEnvelope {
 				unset( $request );
 				return \RAN\RepositoryProvider\WebhookEnvelope::ignored();
+			}
+
+			public function repositoryWebhookSettingsUrl( string $locator ): string {
+				return 'https://example.test/' . trim( $locator, '/' ) . '/settings/hooks';
 			}
 		};
 	}

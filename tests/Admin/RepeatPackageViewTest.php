@@ -89,7 +89,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertTrue( $operationPosition < $automationPosition );
 		self::assertTrue( $automationPosition < $linkPosition );
 		self::assertSame(
-			array( 'Repository configuration', 'Advanced settings', 'Package source', 'Package operation' ),
+			array( 'Repository configuration', 'Advanced settings', 'Package source', 'Branch readiness', 'Package operation' ),
 			$this->h3Headings( $html ),
 			$packageView->getType()
 		);
@@ -273,7 +273,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'id="ran-booster-advanced-source-settings"', $editForm );
 			self::assertStringNotContainsString( 'id="ran-booster-package-operation-heading"', $editForm );
 			self::assertSame(
-				array( 'Repository configuration', 'Advanced settings', 'Package source', 'Package operation', 'Danger zone' ),
+				array( 'Repository configuration', 'Advanced settings', 'Package source', 'Branch readiness', 'Package operation', 'Danger zone' ),
 				$this->h3Headings( $html ),
 				$packageView->getType()
 			);
@@ -541,9 +541,10 @@ final class RepeatPackageViewTest extends TestCase {
 
 			$packageProviderSettings = $this->providerSettings( true );
 			$packageSource           = array(
-				'current'     => PackageSource::RELEASE_ASSET->value,
-				'selected'    => PackageSource::BRANCH->value,
-				'unavailable' => false,
+				'current'           => PackageSource::RELEASE_ASSET->value,
+				'selected'          => PackageSource::BRANCH->value,
+				'unavailable'       => false,
+				'advanced_sections' => array( '<div class="ran-booster-release-return">Return action</div>' ),
 			);
 
 			ob_start();
@@ -570,12 +571,22 @@ final class RepeatPackageViewTest extends TestCase {
 				$html,
 				$packageView->getType()
 			);
+			self::assertStringContainsString( 'Branch readiness', $html, $packageView->getType() );
 			self::assertStringContainsString(
-				'Published releases remain the current source.',
+				'Published releases remain the package source and settings are retained until returning.',
 				$html,
 				$packageView->getType()
 			);
-			self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html, $packageView->getType() );
+			self::assertMatchesRegularExpression( '/ran-booster-branch-settings is-inactive[^>]*disabled="disabled"[^>]*aria-disabled="true"/', $html, $packageView->getType() );
+			self::assertSame(
+				1,
+				substr_count( $html, 'id="ran-booster-branch-readiness"' ),
+				$packageView->getType()
+			);
+			self::assertTrue(
+				strpos( $html, 'id="ran-booster-branch-readiness"' ) < strpos( $html, 'class="ran-booster-release-return"' ),
+				$packageView->getType()
+			);
 		}
 	}
 

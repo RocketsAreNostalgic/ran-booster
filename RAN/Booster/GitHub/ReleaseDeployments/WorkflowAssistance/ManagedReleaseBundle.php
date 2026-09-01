@@ -11,6 +11,16 @@ use Throwable;
 final readonly class ManagedReleaseBundle {
 	public const RECEIPT_PATH  = '.ran-booster-release-profile.json';
 	public const WORKFLOW_PATH = '.github/workflows/release-please.yml';
+	/**
+	 * Generated release contract files which must remain present for managed
+	 * assessment. Receipt verification additionally owns immutable content where appropriate.
+	 */
+	public const REQUIRED_GENERATED_CONTRACT_PATHS = array(
+		'.release-please-manifest.json',
+		'release-please-config.json',
+		'version.txt',
+		'release-contents.txt',
+	);
 
 	/** @var array<string, array{path:string,mode:string,operation:string,content:string,sha256:string,git_sha:string,managed:bool}> */
 	private array $files;

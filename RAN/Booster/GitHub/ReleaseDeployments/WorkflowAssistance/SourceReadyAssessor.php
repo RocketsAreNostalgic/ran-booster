@@ -147,6 +147,13 @@ final class SourceReadyAssessor {
 		if ( $this->hasCompetingReleaseAutomation( $snapshot ) ) {
 			return SourceReadyAssessment::refused( 'release_automation_conflict' );
 		}
+		if ( $allowKnownGeneratedPaths ) {
+			foreach ( ManagedReleaseBundle::REQUIRED_GENERATED_CONTRACT_PATHS as $path ) {
+				if ( ! $snapshot->has( $path ) ) {
+					return SourceReadyAssessment::refused( 'managed_profile_modified' );
+				}
+			}
+		}
 		if ( ! $allowKnownGeneratedPaths ) {
 			foreach ( self::GENERATED_PATHS as $path ) {
 				if ( $snapshot->has( $path ) ) {

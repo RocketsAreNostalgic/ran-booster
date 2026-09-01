@@ -11,6 +11,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingResult;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryClient;
+use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\ManagedReleaseBundle;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SourceReadyAssessor;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient;
@@ -207,6 +208,30 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		self::assertSame( '', $result['preview_key'] );
 		self::assertSame( $writes, $transport->writeCounts );
 		self::assertSame( array(), $GLOBALS['ran_booster_release_deployments_test_options'] );
+	}
+
+	public function testInspectDoesNotAdoptManagedSetupWhenARequiredGeneratedContractFileIsMissing(): void {
+		foreach ( ManagedReleaseBundle::REQUIRED_GENERATED_CONTRACT_PATHS as $missingPath ) {
+			$GLOBALS['ran_booster_release_deployments_test_options']    = array();
+			$GLOBALS['ran_booster_release_deployments_test_transients'] = array();
+			$transport   = new D23ApplicationTransport();
+			$facade      = new D23ReleaseFacade();
+			$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+			$established = $this->coordinator( $facade, $transport, new SetupRecordStore() );
+			$preview     = $established->inspect( $status, 'stable', 'nonce', 'selected-token' );
+			self::assertSame( 'workflow_setup_open', $established->setup( $status, $preview['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'selected-token' )['code'], $missingPath );
+			$transport->mergePull();
+			$transport->removeDefaultDocument( $missingPath );
+			$writes = $transport->writeCounts;
+			$GLOBALS['ran_booster_release_deployments_test_options'] = array();
+
+			$result = $this->coordinator( $facade, $transport, new SetupRecordStore() )->inspect( $status, 'stable', 'nonce', 'selected-token' );
+
+			self::assertSame( 'workflow_profile_modified', $result['code'], $missingPath );
+			self::assertFalse( $result['successful'], $missingPath );
+			self::assertSame( $writes, $transport->writeCounts, $missingPath );
+			self::assertSame( array(), $GLOBALS['ran_booster_release_deployments_test_options'], $missingPath );
+		}
 	}
 
 	public function testInspectRefusesModifiedManagedFilesAndMismatchedReceiptInputs(): void {

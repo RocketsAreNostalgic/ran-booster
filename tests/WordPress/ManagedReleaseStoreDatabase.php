@@ -8,6 +8,8 @@ final class ManagedReleaseStoreDatabase {
 
 	public string $last_error = '';
 
+	public bool $sourceGuardUnavailable = false;
+
 	/** @var list<array{0: string, 1: array<string, mixed>, 2: array<string, mixed>}> */
 	public array $updates = array();
 
@@ -39,7 +41,9 @@ final class ManagedReleaseStoreDatabase {
 
 	/** @return list<object> */
 	public function get_results( string $query ): array {
-		unset( $query );
+		if ( $this->sourceGuardUnavailable && str_contains( $query, 'provider_repository_id' ) ) {
+			return array( (object) array( 'type' => 1 ) );
+		}
 
 		return array( (object) $this->row );
 	}

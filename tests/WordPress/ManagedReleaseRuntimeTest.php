@@ -46,6 +46,7 @@ use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\ManagedReleaseConfiguration;
+use RAN\WordPress\ManagedReleaseRepositorySourceUnavailable;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
@@ -2525,6 +2526,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $registrar->target( 'plugin', 'example/example.php' )?->refreshes() );
 		self::assertSame( 1, $lock->acquires );
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+
+		$store->transitionFailure = new ManagedReleaseRepositorySourceUnavailable();
+		$unavailable              = $facade->returnToBranch( 'plugin', 'example/example.php', 1, 'nonce' );
+
+		self::assertFalse( $unavailable->successful() );
+		self::assertSame( 'release_unavailable', $unavailable->code() );
+		self::assertCount( 1, $store->transitions );
 	}
 
 	public function testChangingReleaseChannelUsesSameSourceCasAndOnlyInvalidatesNativeState(): void {

@@ -95,6 +95,10 @@ class ManagedReleaseStore {
 			);
 			if ( ! $assessment['allowed'] ) {
 				$this->database->query( 'ROLLBACK' );
+				if ( 'repository_source_unavailable' === $assessment['code'] ) {
+					throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
+				}
+
 				return false;
 			}
 			$policy     = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';

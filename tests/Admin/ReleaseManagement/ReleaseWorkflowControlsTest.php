@@ -339,6 +339,39 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'info', $rows['101']['details'][0]['tone'] );
 	}
 
+	public function testRepositoryProjectionMarksARepositoryRelationshipConflictAsBlocked(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( failureCode: 'release_repository_conflict' )
+		);
+		$rows     = $this->controls( tracking: $tracking )->enrichRepositoryRows(
+			array(
+				'101' => array(
+					'provider_code'     => 'fixture',
+					'repository_id'     => '101',
+					'repository'        => 'example/example',
+					'historical'        => false,
+					'package_summaries' => array(
+						array(
+							'type'            => 'plugin',
+							'identifier'      => 'example/example.php',
+							'source'          => 'branch',
+							'source_revision' => 3,
+						),
+					),
+					'details'           => array(),
+					'actions'           => array(),
+				),
+			),
+			'fixture',
+			array(),
+			'https://example.test/repositories'
+		);
+
+		self::assertSame( 'Blocked', $rows['101']['details'][0]['value'] );
+		self::assertSame( 'warning', $rows['101']['details'][0]['tone'] );
+		self::assertNotSame( 'Ready to assess', $rows['101']['details'][0]['value'] );
+	}
+
 	public function testReleaseWorkflowRepositoryEnrichmentHonoursRemainingRowCapacityForFullRows(): void {
 		$rows          = $this->controls()->enrichRepositoryRows(
 			array(

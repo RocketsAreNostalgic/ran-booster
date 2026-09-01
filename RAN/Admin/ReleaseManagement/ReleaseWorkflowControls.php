@@ -917,7 +917,10 @@ final class ReleaseWorkflowControls {
 			} elseif ( $this->publishedReleasesWorking( $status ) ) {
 				$value = __( 'Published releases working', 'ran-booster' );
 				$tone  = 'ok';
-			} elseif ( ! ( $workflowStatus?->recordOccupied() ?? true ) && $status->eligible() ) {
+			} elseif ( in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true ) ) {
+				$value = __( 'Blocked', 'ran-booster' );
+				$tone  = 'warning';
+			} elseif ( ! ( $workflowStatus?->recordOccupied() ?? true ) && $status->eligible() && '' === $status->failureCode() ) {
 				$value = 'branch' === $status->source()
 					? __( 'Ready to assess', 'ran-booster' )
 					: __( 'Published releases selected', 'ran-booster' );

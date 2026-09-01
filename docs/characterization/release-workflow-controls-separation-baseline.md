@@ -203,3 +203,32 @@ one coherent POST/PRG unit. Stop and return to this gate if signed creation and
 parsing split, GET presentation enters the controller, the adapter becomes a
 substantial forwarding facade, another production concept appears, or the
 measured line projection is missed.
+
+## Task 2 actual
+
+Task 2 is implemented at Core commit
+`85838eea744d4ee520dc86aa4d0ac1c1280a09e5`. The Task 1 projection above is
+retained as the decision record; the owner subsequently approved an
+intermediate ceiling of `+141` production lines, and the committed result is
+`+132`:
+
+| Gate | Task 2 actual |
+| --- | ---: |
+| Workflow production PHP | 1,899 (`+132`) |
+| Focused workflow test PHP | 1,766 (`+86`) |
+| Concrete internal production types | `+1` |
+| Public hooks, routes, provider capabilities, or extension seams | `0` |
+| Persistent state | `0` |
+
+The controller is composed privately by Controls. It owns raw POST and HTMX
+admission, the five provider operations, request-side failure containment,
+native and HTMX redirects, and signed result creation, parsing, and screen
+binding. Controls retains GET projection and HTML until the presenter and
+renderer task. The controller discards unexpected dependency output at its
+request boundary so it cannot emit provider HTML.
+
+Controller and Controls characterization passes as 33 tests with 162
+assertions. The integrated release-management and runtime slice passes as 176
+tests with 1,221 assertions; `composer check`, `pnpm check`, and the full
+CI-equivalent PHP lint command also pass. No live provider or active Local
+WordPress runtime was used.

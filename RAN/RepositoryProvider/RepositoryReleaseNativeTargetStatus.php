@@ -41,7 +41,12 @@ final readonly class RepositoryReleaseNativeTargetStatus {
 		);
 		if ( ( array() !== array_filter( $candidateValues, static fn ( string $value ): bool => '' === $value )
 			&& array() !== array_filter( $candidateValues, static fn ( string $value ): bool => '' !== $value ) )
-			|| ( '' === $candidateCode && '' !== $candidatePackageHeaderVersion ) ) {
+			|| ( '' === $candidateCode && '' !== $candidatePackageHeaderVersion )
+			|| ( '' !== $candidateProviderReleaseId
+				&& ( 'release_identity_verified' !== $candidateCode
+					|| '' === $candidateReleaseTag
+					|| '' === $candidateReleaseVersion
+					|| '' === $candidatePackageHeaderVersion ) ) ) {
 			throw new InvalidArgumentException( 'The repository release native target status is invalid.' );
 		}
 	}

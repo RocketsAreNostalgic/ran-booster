@@ -65,7 +65,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$providerUrl,
 			$taskUrls['repositories']
 		);
-		$repositorySummary         = $this->repositorySummary( $model['rows'] );
+		$repositorySummary         = $this->repositorySummary( $model['webhook_rows'], $model['rows'] );
 		$repositoryView            = in_array( $data['repositoryView'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repositoryView'] : 'status';
 		$repositoryViewUrls        = array();
 		$repositoryViewRequestUrls = array();
@@ -225,7 +225,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param list<array<string,mixed>> $repositories
 	 * @param array{by_id:array<string,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
 	 * @param callable(array<string,mixed>):string $providerUrl
-	 * @return array{requested_id:string,list_url:string,return_url:string,rows:array<string,array<string,mixed>>,selected:?array}
+	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<string,array<string,mixed>>,rows:array<string,array<string,mixed>>,selected:?array}
 	 */
 	public function project(
 		array $repositories,
@@ -501,12 +501,12 @@ final class ProviderRepositoryRowsNormalizer {
 		try {
 			$presented = apply_filters(
 				'ran_booster_provider_repository_rows',
-				$presented,
+				$webhookRows,
 				$providerCode,
 				$projections,
 				$returnUrl
 			);
-			$rows      = $this->normalize( $rows, $presented, $providerCode );
+			$rows      = $this->normalize( $webhookRows, $presented, $providerCode );
 		} catch ( Throwable $failure ) {
 			$rows = $webhookRows;
 			BoosterLogger::logException(
@@ -530,6 +530,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'requested_id' => $requestedId,
 			'list_url'     => $listUrl,
 			'return_url'   => $returnUrl,
+			'webhook_rows' => $webhookRows,
 			'rows'         => $rows,
 			'selected'     => $selected,
 		);
@@ -627,8 +628,12 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 
-	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int} */
-	private function repositorySummary( array $rows ): array {
+	/**
+	 * @param array<string,array<string,mixed>> $webhookRows Core and webhook-management rows, before provider extensions.
+	 * @param array<string,array<string,mixed>> $rows        Provider-enriched rows.
+	 * @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int}
+	 */
+	private function repositorySummary( array $webhookRows, array $rows ): array {
 		$recordedHooks                 = 0;
 		$needsReview                   = 0;
 		$releasePackages               = 0;
@@ -636,7 +641,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$releaseTotalsIncomplete       = false;
 		$releaseWorkflowsIncomplete    = false;
 		$releaseWorkflowsNeedingReview = 0;
-		foreach ( $rows as $row ) {
+		foreach ( $webhookRows as $row ) {
 			$recorded = false;
 			$healthy  = false;
 			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
@@ -654,6 +659,8 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
 				++$needsReview;
 			}
+		}
+		foreach ( $rows as $row ) {
 			if ( true === ( $row['historical'] ?? false ) ) {
 				continue;
 			}

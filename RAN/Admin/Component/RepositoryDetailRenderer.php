@@ -11,7 +11,7 @@ final class RepositoryDetailRenderer {
 	 * @param array<string, mixed> $row
 	 * @param array<string, string> $viewUrls
 	 * @param array<string, string> $viewRequestUrls
-	 * @param callable():void|null $renderWebhookPanel
+	 * @param callable():bool|null $renderWebhookPanel
 	 * @param callable():void|null $renderReleasePanel
 	 */
 	public function render(
@@ -27,12 +27,14 @@ final class RepositoryDetailRenderer {
 		?callable $renderWebhookPanel,
 		?callable $renderReleasePanel
 	): void {
-		$repository = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
-		$source     = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
-		$sourceKey  = is_string( $row['source_key'] ?? null ) ? $row['source_key'] : '';
-		$packages   = $this->packages( $row );
-		$omitted    = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
-		$activeView = in_array( $activeView, array( 'status', 'branch', 'releases' ), true ) ? $activeView : 'status';
+		$repository        = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$source            = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
+		$sourceKey         = is_string( $row['source_key'] ?? null ) ? $row['source_key'] : '';
+		$hasBranchConsumer = in_array( $sourceKey, array( 'branch', 'mixed' ), true ) || true === ( $row['has_branch_consumer'] ?? false );
+		$packages          = $this->packages( $row );
+		$omitted           = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
+		$activeView        = in_array( $activeView, array( 'status', 'branch', 'releases' ), true ) ? $activeView : 'status';
+		$webhookPanel      = 'branch' === $activeView ? $this->captureWebhookPanel( $renderWebhookPanel ) : '';
 		?>
 		<div class="ran-booster-repository-detail">
 			<p class="ran-booster-repository-detail__back"><a href="<?php echo esc_url( $listUrl ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
@@ -74,10 +76,10 @@ final class RepositoryDetailRenderer {
 					<?php } elseif ( 'branch' === $activeView && 0 < $omitted ) { ?>
 						<?php $this->renderIncompleteWorkflowControls( 'branch', $omitted ); ?>
 					<?php } elseif ( 'branch' === $activeView ) { ?>
-						<?php if ( null !== $renderWebhookPanel ) { ?>
-							<?php $renderWebhookPanel(); ?>
+						<?php if ( '' !== $webhookPanel ) { ?>
+							<?php echo $webhookPanel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured from the trusted Core renderer. ?>
 						<?php } else { ?>
-							<?php $this->renderUnavailableWebhookCards( $sourceKey, $receiverReady, $receiverMessage ); ?>
+							<?php $this->renderUnavailableWebhookCards( $hasBranchConsumer, $receiverReady, $receiverMessage, null !== $renderWebhookPanel ); ?>
 						<?php } ?>
 						<?php $this->renderProviderActions( $row ); ?>
 					<?php } elseif ( 0 < $omitted ) { ?>
@@ -156,7 +158,7 @@ final class RepositoryDetailRenderer {
 						<div><dt><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Published releases', '%d packages track Published releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
 					<?php } ?>
 					<?php foreach ( $this->integrationDetails( $row ) as $detail ) { ?>
-						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) ( $detail['value'] ?? '' ) ); ?></dd></div>
+						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php $this->renderDetailValue( $detail ); ?></dd></div>
 					<?php } ?>
 				</dl>
 			</div>
@@ -196,8 +198,21 @@ final class RepositoryDetailRenderer {
 		<?php
 	}
 
-	private function renderUnavailableWebhookCards( string $source, bool $receiverReady, string $receiverMessage ): void {
-		$hasBranchConsumer = in_array( $source, array( 'branch', 'mixed' ), true );
+	private function renderUnavailableWebhookCards( bool $hasBranchConsumer, bool $receiverReady, string $receiverMessage, bool $managementSupported ): void {
+		if ( $managementSupported ) {
+			?>
+			<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
+				<header class="ran-booster-settings-section__header">
+					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Repository webhook', 'ran-booster' ); ?></h3>
+				</header>
+				<div class="ran-booster-settings-section__body">
+					<p><?php esc_html_e( 'Repository webhook management is temporarily unavailable for this repository.', 'ran-booster' ); ?></p>
+					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
+				</div>
+			</section>
+			<?php
+			return;
+		}
 		if ( $hasBranchConsumer && $receiverReady ) {
 			?>
 			<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
@@ -308,7 +323,7 @@ final class RepositoryDetailRenderer {
 		?>
 		<dl class="ran-booster-repository-detail__facts">
 		<?php foreach ( $details as $detail ) { ?>
-			<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) ( $detail['value'] ?? '' ) ); ?></dd></div>
+			<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php $this->renderDetailValue( $detail ); ?></dd></div>
 		<?php } ?>
 		</dl>
 		<?php
@@ -363,6 +378,47 @@ final class RepositoryDetailRenderer {
 	/** @param array<string, mixed> $row @return list<array<string, mixed>> */
 	private function packages( array $row ): array {
 		return array_values( array_filter( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array(), static fn ( mixed $package ): bool => is_array( $package ) ) );
+	}
+
+	/** @param callable():bool|null $renderWebhookPanel */
+	private function captureWebhookPanel( ?callable $renderWebhookPanel ): string {
+		if ( null === $renderWebhookPanel ) {
+			return '';
+		}
+
+		$bufferLevel = ob_get_level();
+		ob_start();
+		try {
+			$rendered = $renderWebhookPanel();
+			$panel    = (string) ob_get_clean();
+		} catch ( \Throwable ) {
+			while ( ob_get_level() > $bufferLevel ) {
+				ob_end_clean();
+			}
+			return '';
+		}
+
+		return $rendered && '' !== trim( $panel ) ? $panel : '';
+	}
+
+	/** @param array<string, mixed> $detail */
+	private function renderDetailValue( array $detail ): void {
+		$value    = is_string( $detail['value'] ?? null ) ? $detail['value'] : '';
+		$tone     = is_string( $detail['tone'] ?? null ) ? $detail['tone'] : '';
+		$datetime = is_string( $detail['datetime'] ?? null ) ? $detail['datetime'] : '';
+		if ( '' !== $tone ) {
+			?>
+			<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
+			<?php
+			return;
+		}
+		if ( '' !== $datetime ) {
+			?>
+			<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>
+			<?php
+			return;
+		}
+		echo esc_html( $value );
 	}
 
 	/** @param list<array<string, mixed>> $packages */

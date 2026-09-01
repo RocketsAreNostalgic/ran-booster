@@ -49,6 +49,18 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Configured at last check',
 				),
 				array(
+					'key'   => 'core:webhook-current-warning',
+					'label' => 'Current local warning',
+					'value' => 'Needs verification',
+					'tone'  => 'warning',
+				),
+				array(
+					'key'      => 'core:webhook-last-checked',
+					'label'    => 'Last checked',
+					'value'    => 'August 20, 2026',
+					'datetime' => '2026-08-20T01:02:03Z',
+				),
+				array(
 					'key'   => 'gh:release-automation-a',
 					'label' => 'Release automation — owner/plugin.php',
 					'value' => 'Ready to assess',
@@ -89,9 +101,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'status',
 			$this->viewUrls(),
 			$this->viewRequestUrls(),
-			static function () use ( &$webhookRendered ): void {
-					$webhookRendered = true;
-					echo '<div data-test-webhook></div>';
+			static function () use ( &$webhookRendered ): bool {
+				$webhookRendered = true;
+				echo '<div data-test-webhook></div>';
+
+				return true;
 			},
 			static function () use ( &$releaseRendered ): void {
 					$releaseRendered = true;
@@ -127,6 +141,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Provider receiver', $html );
 		self::assertStringNotContainsString( 'Receiver ready.', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
+		self::assertStringContainsString( 'ran-booster-badge--warning', $html );
+		self::assertStringContainsString( '<time datetime="2026-08-20T01:02:03Z">August 20, 2026</time>', $html );
 		self::assertStringContainsString( 'Repository details', $html );
 		self::assertStringContainsString( 'Provider access', $html );
 		self::assertLessThan( strpos( $html, 'Provider access' ), strpos( $html, 'Repository details' ) );
@@ -280,6 +296,35 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Refresh repository inventory before using repository-wide workflow controls.', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Manage webhook</button>', $html );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
+	}
+
+	public function testBranchRepositoryFallsBackWhenTheSupportedWebhookPanelCannotBeProjected(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'          => 'owner/branch',
+				'repository_url'      => '',
+				'source_label'        => 'Branch',
+				'has_branch_consumer' => true,
+				'package_summaries'   => array(),
+				'details'             => array(),
+				'actions'             => array(),
+			),
+			'Fixture Forge',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			static fn (): bool => false,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Repository webhook management is temporarily unavailable for this repository.', $html );
+		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage repository webhook</button>', $html );
 	}
 
 	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {

@@ -38,9 +38,6 @@ ob_start();
 		<?php if ( $isPackageEdit && 'branch' === $packageSourceView ) { ?>
 			<?php echo $packageAdvancedSectionsMarkup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bounded add-on renderer. ?>
 		<?php } ?>
-		<header class="ran-booster-package-source-pane__header">
-			<h3><?php esc_html_e( 'Branch readiness', 'ran-booster' ); ?></h3>
-		</header>
 		<fieldset class="ran-booster-branch-settings<?php echo $branchSettingsInactive ? ' is-inactive' : ''; ?>"<?php disabled( $branchSettingsInactive ); ?><?php echo $branchSettingsInactive ? ' aria-disabled="true"' : ''; ?>>
 			<legend class="screen-reader-text"><?php echo esc_html( $branchSettingsInactive ? __( 'Inactive Branch deployment settings', 'ran-booster' ) : __( 'Branch deployment settings', 'ran-booster' ) ); ?></legend>
 			<div class="ran-booster-settings-fields">

@@ -34,7 +34,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Track verified release assets and install them through WordPress.', $html );
+		self::assertStringContainsString( 'Install published releases through WordPress.', $html );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/admin-post.php"', $html );
 		self::assertStringContainsString( 'name="action" value="ran_booster_release_enable"', $html );
 		self::assertStringContainsString( 'name="expected_type" value="plugin"', $html );
@@ -48,6 +48,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'name="release_channel" value="prerelease"', $html );
 		self::assertStringNotContainsString( 'ran_booster_release_deployments', $html );
 		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
+		self::assertStringContainsString( '<h4>Ready for releases</h4>', $html );
+		self::assertStringContainsString( 'Branch is active; releases are not tracked.', $html );
 		self::assertStringNotContainsString( '<strong>Provider</strong>', $html );
 		self::assertStringNotContainsString( '<strong>Repository</strong>', $html );
 		self::assertSame( array(), $tracking->calls );
@@ -96,6 +98,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'class="button ran-booster-release-track-option"' ) );
 		self::assertStringContainsString( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds.', $html );
 		self::assertStringContainsString( 'ran-booster-release-notices', $html );
+		self::assertStringContainsString( '<h4>Not ready for releases</h4>', $html );
 		self::assertStringContainsString( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', $html );
 		self::assertStringNotContainsString( 'This package header does not declare an Update URI for its configured repository.', $html );
 		self::assertStringContainsString( 'Add this exact header, deploy the corrected package, then check again:', $html );
@@ -163,6 +166,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser', $html );
+		self::assertStringContainsString( 'Review the latest eligible release and the installed version.', $html );
 		self::assertStringNotContainsString( 'Downgrades are unavailable because package data migrations may not be reversible.', $html );
 		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
 		self::assertStringContainsString( '<strong>Release status</strong>', $html );
@@ -593,7 +597,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertTrue( $gatePosition < $componentPosition );
 		self::assertTrue( $componentPosition < $headingPosition );
 		self::assertTrue( $headingPosition < $checklistPosition );
-		self::assertStringContainsString( 'Branch deployments currently active.', $html );
+		self::assertStringContainsString( 'Branch currently active.', $html );
 		self::assertStringContainsString( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', $html );
 		self::assertStringContainsString( $readinessMessage, $html );
 		self::assertStringContainsString( 'Update URI: https://github.com/example/example', $html );
@@ -634,8 +638,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Why this happened and how to fix it', $html );
 		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
 		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
-		self::assertStringContainsString( 'Use branch deployments', $html );
-		self::assertStringContainsString( 'class="button button-primary" aria-disabled="false">Use branch deployments', $html );
+		self::assertStringContainsString( 'Use branch', $html );
+		self::assertStringContainsString( 'class="button button-primary" aria-disabled="false">Use branch', $html );
 	}
 
 	public function testEligibleBranchTransitionAppearsAtTheTopAndSubmitsTheTrackForm(): void {
@@ -662,8 +666,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertTrue( $actionPosition < $trackFormPosition );
 		self::assertTrue( $trackFormPosition < $trackPosition );
 		self::assertStringContainsString( '<div class="ran-booster-source-transition">', $html );
-		self::assertStringContainsString( 'Branch deployments currently active.', $html );
-		self::assertStringContainsString( 'Use published releases', $html );
+		self::assertStringContainsString( 'Branch currently active.', $html );
+		self::assertStringContainsString( 'Use releases', $html );
 		self::assertStringContainsString( 'data-ran-booster-source-transition', $html );
 		self::assertStringNotContainsString( 'Uses saved package settings. Save any edits before switching.', $html );
 		self::assertStringNotContainsString( 'Automatic resets to Manual.', $html );
@@ -707,7 +711,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Use published releases', $html );
+		self::assertStringContainsString( 'Use releases', $html );
 		self::assertStringContainsString( 'form="ran-booster-release-track-form" disabled="disabled" aria-disabled="true"', $html );
 		self::assertStringContainsString( 'Published releases cannot be selected because source transition controls are temporarily unavailable.', $html );
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );

@@ -110,7 +110,7 @@ foreach ( $providerDocumentation as $providerGuide ) {
 }
 
 $addDocumentationItem( 'ran-booster-installing-and-managing-packages', __( 'Installing and managing packages', 'ran-booster' ) );
-$addDocumentationItem( 'ran-booster-push-to-deploy', __( 'Push-to-Deploy', 'ran-booster' ) );
+$addDocumentationItem( 'ran-booster-push-to-deploy', __( 'Push-to-deploy', 'ran-booster' ) );
 $preparedGlobalSections = $documentationHooks->prepareSections( 'ran_booster_documentation_sections_before_about', $documentationUrl, $documentationScope );
 $preparedGlobalSections = array_values(
 	array_filter(
@@ -385,7 +385,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 		</details>
 
 		<details id="ran-booster-push-to-deploy" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
-			<summary><?php esc_html_e( 'Push-to-Deploy', 'ran-booster' ); ?></summary>
+			<summary><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
 				<p><?php esc_html_e( 'Push-to-Deploy is optional and configured separately on every target site. Use the matching provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'The provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote provider webhook exists. Configure and verify every remote webhook separately.', 'ran-booster' ); ?></p>
@@ -397,7 +397,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 				<h3 id="ran-booster-webhook-cleanup"><?php esc_html_e( 'Retained webhook setup and cleanup', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup. That package ignores pushes while it remains release-managed, while any branch-managed package using the same repository can continue to need the webhook. Keeping the setup is useful for a temporary switch back and forth.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'For an identified GitHub hook, the verified Remove action can remove the remote hook and release only a repository secret created specifically for it. For other providers, open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'For an identified GitHub hook, the verified Remove action can remove the remote hook and release only a repository secret created specifically for it. For other providers, open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'The provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the provider, then review Deployment activity in Troubleshooting for Booster-managed results.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $troubleshootingUrl ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a>.</p>
 				<?php foreach ( $providerDocumentation as $providerGuide ) { ?>
 					<?php if ( ! empty( $providerGuide['setup_available'] ) && isset( $providerGuide['code'], $providerGuide['label'], $providerGuide['webhook'] ) && is_array( $providerGuide['webhook'] ) ) { ?>

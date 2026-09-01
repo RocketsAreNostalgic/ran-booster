@@ -14,10 +14,10 @@ final class GitHubReleaseWorkflowDisplay {
 			$html .= '<div class="ran-booster-release-workflow__notices">' . $model['notice'] . '</div>';
 		}
 		$html .= '<div class="ran-booster-release-workflow__body">';
-		$html .= '<p>' . esc_html__( 'Booster can assess this repository and prepare one atomic draft pull request. Nothing is merged automatically.', 'ran-booster' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Assess this repository before preparing a release-workflow pull request. Nothing is merged automatically.', 'ran-booster' ) . '</p>';
 		$html .= $model['inspect_form'] . $model['detail'];
 		$html .= '<hr><p><a href="' . esc_url( $this->documentationUrl() ) . '">'
-			. esc_html__( 'Booster Published releases docs', 'ran-booster' ) . '</a> · <a href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( 'Booster Releases docs', 'ran-booster' ) . '</a> · <a href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases" target="_blank" rel="noopener noreferrer">'
 			. esc_html__( 'GitHub About releases', 'ran-booster' ) . '</a> · <a href="https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases" target="_blank" rel="noopener noreferrer">'
 			. esc_html__( 'GitHub immutable releases', 'ran-booster' ) . '</a></p>';
 
@@ -208,7 +208,7 @@ final class GitHubReleaseWorkflowDisplay {
 			$write
 			? __( 'Choose a saved credential with Contents: write, Workflows: write and Pull requests: write. Its secret is never stored with this setup.', 'ran-booster' )
 			: ( $anonymous
-				? __( 'This public repository can be inspected anonymously, or with a saved credential for steadier API limits.', 'ran-booster' )
+				? __( 'Inspect anonymously, or use a saved credential to avoid anonymous API limits.', 'ran-booster' )
 				: __( 'Private repository inspection needs a saved credential.', 'ran-booster' ) )
 		) . '</p>';
 
@@ -228,35 +228,35 @@ final class GitHubReleaseWorkflowDisplay {
 			'workflow_template_update_available' => __( 'A newer compatible template pack is available. Review its exact changed paths before opening a draft.', 'ran-booster' ),
 			'workflow_partial' => __( 'GitHub may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
 			'workflow_unauthorised' => __( 'GitHub did not authorise the operation with the selected saved credential.', 'ran-booster' ),
-			'workflow_rate_limited' => __( 'GitHub has temporarily rate-limited the release automation request. Booster made no change.', 'ran-booster' ),
+			'workflow_rate_limited' => __( 'GitHub has temporarily rate-limited the release workflow request. Booster made no change.', 'ran-booster' ),
 			'workflow_invalid_response' => __( 'GitHub returned an incomplete or invalid response. Booster made no change.', 'ran-booster' ),
 			'workflow_template_unavailable' => __( 'The canonical release template source is temporarily unavailable. Booster made no change.', 'ran-booster' ),
 			'workflow_preflight_unavailable' => __( 'Booster could not validate the package release before continuing. No draft was opened.', 'ran-booster' ),
 			'workflow_remote_unavailable' => __( 'GitHub or the canonical template source did not provide trustworthy current state. Booster made no change.', 'ran-booster' ),
 			'workflow_release_ready' => __( 'Published releases are available, but Booster cannot tell whether a release workflow produced them.', 'ran-booster' ),
-			'workflow_release_automation_conflict' => __( 'Existing release automation found. Booster will not overwrite it. Review it before using Booster setup.', 'ran-booster' ),
+			'workflow_release_automation_conflict' => __( 'An existing release workflow was found. Booster will not overwrite it. Review it before using Booster setup.', 'ran-booster' ),
 			'workflow_release_automation_present' => __( 'Booster verified an exact canonical release setup in this repository. No setup pull request is needed.', 'ran-booster' ),
-			'workflow_release_path_conflict' => __( 'One or more files Booster would manage already exist. Review and reconcile them before setting up release automation.', 'ran-booster' ),
-			'workflow_package_ambiguous' => __( 'Booster could not identify exactly one WordPress package header. Resolve the ambiguity before setting up release automation.', 'ran-booster' ),
-			'workflow_version_mismatch' => __( 'The installed version does not match the repository package header. Reconcile the versions before setting up release automation.', 'ran-booster' ),
-			'workflow_version_contract_custom' => __( 'Booster found version sources it cannot safely update. Review and reconcile the version contract before setting up release automation.', 'ran-booster' ),
-			'workflow_runtime_paths_unknown' => __( 'Booster could not safely determine the package runtime files. Review and reconcile the package layout before setting up release automation.', 'ran-booster' ),
-			'workflow_prettier_contract_custom' => __( 'Booster found a Prettier ignore contract it cannot safely change. Review and reconcile it before setting up release automation.', 'ran-booster' ),
-			'workflow_repository_unsupported' => __( 'This repository does not match the supported WordPress release configuration. Review and reconcile it before setting up release automation.', 'ran-booster' ),
+			'workflow_release_path_conflict' => __( 'One or more files Booster would manage already exist. Review and reconcile them before setting up a release workflow.', 'ran-booster' ),
+			'workflow_package_ambiguous' => __( 'Booster could not identify exactly one WordPress package header. Resolve the ambiguity before setting up a release workflow.', 'ran-booster' ),
+			'workflow_version_mismatch' => __( 'The installed version does not match the repository package header. Reconcile the versions before setting up a release workflow.', 'ran-booster' ),
+			'workflow_version_contract_custom' => __( 'Booster found version sources it cannot safely update. Review and reconcile the version contract before setting up a release workflow.', 'ran-booster' ),
+			'workflow_runtime_paths_unknown' => __( 'Booster could not safely determine the package runtime files. Review and reconcile the package layout before setting up a release workflow.', 'ran-booster' ),
+			'workflow_prettier_contract_custom' => __( 'Booster found a Prettier ignore contract it cannot safely change. Review and reconcile it before setting up a release workflow.', 'ran-booster' ),
+			'workflow_repository_unsupported' => __( 'This repository does not match the supported WordPress release configuration. Review and reconcile it before setting up a release workflow.', 'ran-booster' ),
 			'workflow_profile_missing', 'workflow_profile_modified' => __( 'The managed release profile is missing or modified. Booster made no change.', 'ran-booster' ),
 			'workflow_target_changed', 'workflow_template_superseded' => __( 'The repository or template identity changed. Assess the current state again.', 'ran-booster' ),
 			'workflow_invalid_request' => __( 'Booster stopped before contacting GitHub because this request no longer matched the current page or package.', 'ran-booster' ),
-			default => __( 'The release automation request was refused, changed or expired. Assess the repository again.', 'ran-booster' ),
+			default => __( 'The release workflow request was refused, changed or expired. Assess the repository again.', 'ran-booster' ),
 		};
 	}
 
 	private function failureDiagnosticMessage( string $diagnostic, string $stage ): string {
 		return match ( $diagnostic ) {
-			'release_automation_detected' => __( 'Booster found recognizable release automation in the inspected repository. It did not verify that setup as Booster-managed or prove that it produced the available releases.', 'ran-booster' ),
-			'malformed_request' => __( 'The request was incomplete or malformed. Reload the release automation page and try again.', 'ran-booster' ),
+			'release_automation_detected' => __( 'Booster found a recognizable release workflow in the inspected repository. It did not verify that setup as Booster-managed or prove that it produced the available releases.', 'ran-booster' ),
+			'malformed_request' => __( 'The request was incomplete or malformed. Reload the release workflow page and try again.', 'ran-booster' ),
 			'permissions_unavailable' => __( 'Your current account no longer has the permissions required to manage this package. Sign in with an administrator account and try again.', 'ran-booster' ),
 			'package_source_changed' => __( 'The saved package or source changed before Booster could act. Reload the current package state and assess it again.', 'ran-booster' ),
-			'nonce_expired' => __( 'This form has expired. Reload the release automation page and try again.', 'ran-booster' ),
+			'nonce_expired' => __( 'This form has expired. Reload the release workflow page and try again.', 'ran-booster' ),
 			'provider_unavailable' => __( "Booster could not read release data using the package's saved repository access. The credential selected for workflow setup is used only after this release check.", 'ran-booster' ),
 			'preflight_contract_unavailable' => __( 'The page or request state expired or changed. Reload the page and retry.', 'ran-booster' ),
 			default => $this->failureStageMessage( $stage ),

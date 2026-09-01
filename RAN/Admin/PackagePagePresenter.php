@@ -272,7 +272,7 @@ final class PackagePagePresenter {
 			'branch'        => array(
 				'key'               => 'branch',
 				'heading'           => __( 'Branch', 'ran-booster' ),
-				'description'       => __( 'Deploy a saved repository branch manually or when a signed push webhook arrives.', 'ran-booster' ),
+				'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
 				'meta'              => __( 'Included with Booster', 'ran-booster' ),
 				'url'               => add_query_arg( 'source_view', 'branch', $pageUrl ),
 				'disabled'          => false,
@@ -281,8 +281,8 @@ final class PackagePagePresenter {
 			),
 			'release_asset' => array(
 				'key'               => 'release_asset',
-				'heading'           => __( 'Published releases', 'ran-booster' ),
-				'description'       => __( 'Install verified published packages when the selected provider supports release management.', 'ran-booster' ),
+				'heading'           => __( 'Releases', 'ran-booster' ),
+				'description'       => __( 'Install published releases through WordPress.', 'ran-booster' ),
 				'meta'              => __( 'Included with Booster', 'ran-booster' ),
 				'url'               => '',
 				'disabled'          => true,
@@ -368,7 +368,7 @@ final class PackagePagePresenter {
 	): string {
 		$sourceLabel = is_string( $choices[ $selected ]['heading'] ?? null )
 			? $choices[ $selected ]['heading']
-			: __( 'Package source', 'ran-booster' );
+			: __( 'Update source', 'ran-booster' );
 		$summary     = PackageSource::BRANCH->value === $selected
 			? sprintf(
 				/* translators: 1: source label, 2: branch. */
@@ -415,8 +415,8 @@ final class PackagePagePresenter {
 			? $package->getSource()->value
 			: $selected;
 		$heading = PackageSource::BRANCH->value === $source
-			? __( 'Branch deployments', 'ran-booster' )
-			: __( 'Published releases', 'ran-booster' );
+			? __( 'Branch', 'ran-booster' )
+			: __( 'Releases', 'ran-booster' );
 		$badges  = array();
 		$status  = '';
 		if ( 'edit' === $mode && null !== $package ) {

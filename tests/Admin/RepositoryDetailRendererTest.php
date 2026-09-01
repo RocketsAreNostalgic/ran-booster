@@ -62,9 +62,20 @@ final class RepositoryDetailRendererTest extends TestCase {
 				),
 				array(
 					'key'   => 'gh:release-automation-a',
-					'label' => 'Release automation — owner/plugin.php',
+					'label' => 'Provider workflow detail',
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
+				),
+				array(
+					'key'   => 'provider:custom-workflow-observation',
+					'kind'  => 'release_workflow',
+					'label' => 'Flux de publication — owner/theme',
+					'value' => 'Configured',
+				),
+				array(
+					'key'   => 'provider:legacy-release-workflow',
+					'label' => 'Release automation — owner/legacy.php',
+					'value' => 'Legacy',
 				),
 				array(
 					'key'   => 'fixture:repository-access',
@@ -118,7 +129,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertFalse( $releaseRendered );
 		self::assertStringContainsString( '2 packages shown; 3 more connected · Mixed sources', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
-		self::assertStringContainsString( 'Published releases', $html );
+		self::assertStringContainsString( '>Releases', $html );
 		self::assertStringContainsString( 'Ignores pushes', $html );
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
@@ -132,10 +143,22 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
 		self::assertStringContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
-		self::assertStringNotContainsString( '1 package uses Branch deployments', $html );
-		self::assertStringNotContainsString( '1 package tracks Published releases', $html );
-		self::assertStringContainsString( 'Release automation — owner/plugin.php', $html );
-		self::assertStringContainsString( '<h4>Release automation</h4>', $html );
+		self::assertStringNotContainsString( '1 package uses Branch', $html );
+		self::assertStringNotContainsString( '1 package tracks Releases', $html );
+		self::assertStringContainsString( 'Provider workflow detail', $html );
+		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
+		self::assertStringContainsString( 'Flux de publication — owner/theme', $html );
+		self::assertStringContainsString( 'Release automation — owner/legacy.php', $html );
+		$webhookHistoryPosition = strpos( $html, 'Configured at last check' );
+		$releaseHistoryPosition = strpos( $html, '<h4>Release workflow</h4>' );
+		$legacyHistoryPosition  = strpos( $html, 'Release automation — owner/legacy.php' );
+		self::assertIsInt( $webhookHistoryPosition );
+		self::assertIsInt( $releaseHistoryPosition );
+		self::assertIsInt( $legacyHistoryPosition );
+		self::assertTrue( $webhookHistoryPosition < $releaseHistoryPosition );
+		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Provider workflow detail' ) );
+		self::assertTrue( $releaseHistoryPosition < strpos( $html, 'Flux de publication — owner/theme' ) );
+		self::assertTrue( $releaseHistoryPosition < $legacyHistoryPosition );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Provider receiver', $html );
@@ -196,8 +219,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '1 package uses Branch deployments', $html );
-		self::assertStringContainsString( '1 package tracks Published releases', $html );
+		self::assertStringContainsString( '1 package uses Branch', $html );
+		self::assertStringContainsString( '1 package tracks Releases', $html );
 		self::assertStringNotContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
 	}
 
@@ -298,6 +321,41 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 	}
 
+	public function testIncompletePackageInventoryUsesTheReleaseSetupLabel(): void {
+		$releaseRendered = false;
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'                => 'owner/partial-releases',
+				'source_label'              => 'Published releases',
+				'source_key'                => 'release_asset',
+				'package_summaries_omitted' => 1,
+				'package_summaries'         => array(),
+				'details'                   => array(),
+				'actions'                   => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'releases',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			static function () use ( &$releaseRendered ): void {
+				$releaseRendered = true;
+				echo '<div data-test-release></div>';
+			}
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertFalse( $releaseRendered );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringNotContainsString( 'Assess release automation', $html );
+		self::assertStringNotContainsString( 'data-test-release', $html );
+	}
+
 	public function testBranchRepositoryFallsBackWhenTheSupportedWebhookPanelCannotBeProjected(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
@@ -324,6 +382,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Repository webhook management is temporarily unavailable for this repository.', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage repository webhook</button>', $html );
 	}
 
@@ -380,7 +439,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertSame( 3, substr_count( $html, 'aria-controls="ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Packages using this repository', $html );
-		self::assertStringContainsString( '<h4>Release automation</h4>', $html );
+		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Configured', $html );
 	}
 
@@ -422,10 +481,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Release automation is unavailable for this repository provider.', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-release-heading">Release publishing</h3>', $html );
+		self::assertStringContainsString( 'Release workflow setup is unavailable for this repository provider.', $html );
 		self::assertStringContainsString( 'Open Theme settings', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
-		self::assertStringContainsString( 'Assess release automation', $html );
+		self::assertStringContainsString( 'Assess release setup', $html );
 	}
 
 	public function testProviderActionsPreserveNormalizedDescriptions(): void {
@@ -498,7 +558,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'id="ran-booster-repository-webhook-heading"', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this provider.', $html );
 		self::assertStringContainsString( 'Use the provider webhook settings when available.', $html );
 		self::assertStringNotContainsString( 'no Branch package currently uses this repository webhook', $html );

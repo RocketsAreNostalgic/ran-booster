@@ -292,7 +292,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Package source unavailable', $html );
+		self::assertStringContainsString( 'Update source unavailable', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-advanced-source-settings', $html );
 		self::assertStringContainsString( 'Current source', $html );
 		self::assertStringContainsString( 'Updates', $html );
@@ -311,7 +311,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$withoutAddOn = (string) ob_get_clean();
 
 		self::assertStringContainsString(
-			'Package source unavailable',
+			'Update source unavailable',
 			$withoutAddOn
 		);
 		self::assertStringNotContainsString( 'release deployments add-on', $withoutAddOn );
@@ -337,15 +337,15 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'panel=repositories&amp;repository=stable-provider-id', $html );
-		self::assertStringContainsString( '>View repository webhook status</a>', $html );
+		self::assertStringContainsString( 'panel=repositories&amp;repository=stable-provider-id&amp;repository_view=branch', $html );
+		self::assertStringContainsString( '>Manage webhooks</a>', $html );
 
 		$packageSource['selected'] = PackageSource::RELEASE_ASSET->value;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$releaseView = (string) ob_get_clean();
 		self::assertStringNotContainsString( 'Webhook setup', $releaseView );
-		self::assertStringContainsString( '>View repository webhook status</a>', $releaseView );
+		self::assertStringContainsString( '>Manage webhooks</a>', $releaseView );
 	}
 
 	public function testReleaseManagedListUsesTheExistingDeploymentPositionAndReadOnlySummary(): void {
@@ -411,7 +411,10 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Published releases', $html );
+		self::assertStringContainsString( 'Releases', $html );
+		self::assertStringContainsString( 'Filter by update source', $html );
+		self::assertStringContainsString( 'All update sources', $html );
+		self::assertMatchesRegularExpression( '/<option value="release_asset"\s*>Releases<\/option>/', $html );
 		self::assertStringContainsString( 'ran-booster-package-row__update-state is-automatic', $html );
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringNotContainsString( 'Published releases · WordPress automatic updates', $html );

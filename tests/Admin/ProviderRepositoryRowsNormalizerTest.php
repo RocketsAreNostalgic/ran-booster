@@ -53,6 +53,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			$rows[ $key ]['details'][] = array(
 				'label' => 'Release automation',
 				'value' => 'Ready to assess',
+				'kind'  => 'release_workflow',
 				'tone'  => 'ok',
 			);
 			$rows[ $key ]['actions']['gh:release-automation'] = array(
@@ -118,6 +119,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$row    = array_values( $result['rows'] )[0];
 
 		self::assertSame( 'Ready to assess', $row['details'][0]['value'] );
+		self::assertSame( 'release_workflow', $row['details'][0]['kind'] );
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 
@@ -327,6 +329,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$row = $result['selected'];
 
 		self::assertIsArray( $row );
+		self::assertSame( 'Releases', $row['management_label'] );
 		$action   = $row['actions']['core:webhook-cleanup-review'];
 		$settings = $row['actions'][ 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ) ];
 		self::assertStringContainsString( 'panel=repositories', $action['url'] );
@@ -369,6 +372,19 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertTrue( $rows['fixture:historical:abc123']['historical'] );
 		self::assertArrayNotHasKey( 'review_url', $rows['fixture:historical:abc123'] );
 		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
+	}
+
+	public function testPreservesUnknownAddOnDetailKindMetadata(): void {
+		$base                         = $this->baseRows();
+		$base['repo-42']['details'][] = array(
+			'label' => 'Add-on detail',
+			'value' => 'Observed',
+			'kind'  => array( 'unbounded' => str_repeat( 'x', 128 ) ),
+		);
+
+		$rows = ( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $base, 'gh' );
+
+		self::assertSame( array( 'unbounded' => str_repeat( 'x', 128 ) ), $rows['repo-42']['details'][1]['kind'] );
 	}
 
 	public function testRejectsHistoricalPostActions(): void {
@@ -583,6 +599,13 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 				'value' => 'Unavailable',
 				'tone'  => 'warning',
 			);
+			$rows['202']['details'][] = array(
+				'key'   => 'custom:workflow-review',
+				'label' => 'Custom workflow',
+				'value' => 'Needs review',
+				'kind'  => 'release_workflow',
+				'tone'  => 'pending',
+			);
 
 			return $rows;
 		};
@@ -639,7 +662,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_repositories'] );
 		self::assertFalse( $result['repositoryIntegrationSummary']['release_totals_incomplete'] );
 		self::assertTrue( $result['repositoryIntegrationSummary']['release_workflows_inventory_incomplete'] );
-		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
+		self::assertSame( 3, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
 	}
 
 	#[RunInSeparateProcess]

@@ -16,7 +16,7 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 	$packageSourceChoices = array(
 		'branch'        => array(
 			'heading'           => __( 'Branch', 'ran-booster' ),
-			'description'       => __( 'Deploy a saved repository branch manually or when a signed push webhook arrives.', 'ran-booster' ),
+			'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
 			'meta'              => __( 'Included with Booster', 'ran-booster' ),
 			'url'               => add_query_arg( 'source_view', 'branch', $pageUrl ),
 			'disabled'          => false,
@@ -24,7 +24,7 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 			'client_hydratable' => false,
 		),
 		'release_asset' => array(
-			'heading'           => __( 'Published releases', 'ran-booster' ),
+			'heading'           => __( 'Releases', 'ran-booster' ),
 			'description'       => __( 'Install verified packages from a supported provider\'s published releases.', 'ran-booster' ),
 			'meta'              => __( 'Provider capability required', 'ran-booster' ),
 			'url'               => '',
@@ -36,24 +36,24 @@ if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) 
 }
 
 ?>
-<legend class="screen-reader-text"><?php esc_html_e( 'Package source', 'ran-booster' ); ?></legend>
+<legend class="screen-reader-text"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></legend>
 <div class="ran-booster-package-source<?php echo 'edit' === $sourceChoiceMode ? ' ran-booster-package-source--navigation' : ''; ?>" aria-labelledby="ran-booster-package-source-heading">
 	<header class="ran-booster-package-source__header">
-		<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package source', 'ran-booster' ); ?></h3>
+		<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></h3>
 		<p class="ran-booster-section__description">
 			<?php
 			echo esc_html(
 				'edit' === $sourceChoiceMode
-					? __( 'Review each source\'s settings. Opening a settings view does not change the current source.', 'ran-booster' )
-					: __( 'Choose one authority for package updates. Switching source never installs a package immediately.', 'ran-booster' )
+					? __( 'Viewing settings does not change the update source.', 'ran-booster' )
+					: __( 'Choose an update source. Selecting it does not install the package.', 'ran-booster' )
 			);
 			?>
 		</p>
 		<p class="ran-booster-package-source__guidance" data-ran-booster-source-repository-guidance <?php echo ! empty( $packageRepositoryReady ) ? 'hidden' : ''; ?>>
-			<?php esc_html_e( 'Choose or enter a repository above before configuring its package source.', 'ran-booster' ); ?>
+			<?php esc_html_e( 'Choose a repository before configuring its update source.', 'ran-booster' ); ?>
 		</p>
 	</header>
-	<div class="ran-booster-source-choices<?php echo 'edit' === $sourceChoiceMode ? ' ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix' : ''; ?>"<?php echo 'edit' === $sourceChoiceMode ? ' role="navigation" aria-label="' . esc_attr( __( 'Package source settings', 'ran-booster' ) ) . '"' : ''; ?>>
+	<div class="ran-booster-source-choices<?php echo 'edit' === $sourceChoiceMode ? ' ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix' : ''; ?>"<?php echo 'edit' === $sourceChoiceMode ? ' role="navigation" aria-label="' . esc_attr( __( 'Update source settings', 'ran-booster' ) ) . '"' : ''; ?>>
 		<?php foreach ( $packageSourceChoices as $sourceKey => $sourceChoice ) { ?>
 			<?php
 			$isSelected          = $sourceKey === $packageSourceView;

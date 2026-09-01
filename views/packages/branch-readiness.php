@@ -2,6 +2,7 @@
 
 defined( 'WPINC' ) || die;
 
+$isPackageEdit                = true === ( $isPackageEdit ?? false );
 $providerBaseUrl              = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
 $repositoryReadiness          = is_array( $packageBranchReadiness['repository'] ?? null )
 	? $packageBranchReadiness['repository']
@@ -29,8 +30,9 @@ $providerSettingsUrl          = add_query_arg(
 	),
 	$providerBaseUrl
 );
-$checkBaseUrl                 = add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl );
-$checkReturnUrl               = $checkBaseUrl . '#ran-booster-branch-readiness';
+$checkReturnUrl               = $isPackageEdit
+	? add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl ) . '#ran-booster-branch-readiness'
+	: '';
 $siteReadiness                = is_array( $packageBranchReadiness['site'] ?? null )
 	? $packageBranchReadiness['site']
 	: null;
@@ -112,21 +114,16 @@ $repositoryStateClass             = match ( true ) {
 	null !== $repositoryBranchCheckOutcome   => 'is-warning',
 	default                                  => 'is-pending',
 };
-$setupSummary = match ( true ) {
-	$publishedReleaseSource && $retainedReadiness => __( 'Published releases are active. These saved Branch facts are retained and read-only until returning.', 'ran-booster' ),
-	$needsAttention => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
-	default         => __( 'Review the requirements below.', 'ran-booster' ),
-};
 if ( in_array( $repositoryBranchCheckOutcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {
 	$savedRepositoryLabel = __( 'is accessible with the saved repository settings.', 'ran-booster' );
 } elseif ( $repositoryBranchVerified ) {
-	$savedRepositoryLabel = __( 'was accessible when Booster last checked these saved settings.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'was accessible at the last check.', 'ran-booster' );
 } elseif ( 'provider_unavailable' === ( $repositoryBranchCheckOutcome ?? null ) ) {
-	$savedRepositoryLabel = __( 'is saved, but its provider is unavailable so repository access and this branch could not be verified.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'is saved, but the provider is unavailable.', 'ran-booster' );
 } elseif ( 'unable_to_check' === ( $repositoryBranchCheckOutcome ?? null ) ) {
-	$savedRepositoryLabel = __( 'is saved, but repository access and this branch could not be verified.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'is saved, but access could not be verified.', 'ran-booster' );
 } else {
-	$savedRepositoryLabel = __( 'is saved. The repository identity is available locally; repository access and this branch have not been checked.', 'ran-booster' );
+	$savedRepositoryLabel = __( 'is saved. Access has not been checked.', 'ran-booster' );
 }
 $savedRepositoryMessage = $identityReady
 	? sprintf(
@@ -137,7 +134,7 @@ $savedRepositoryMessage = $identityReady
 	)
 	: __( 'The saved repository needs one stable provider identity.', 'ran-booster' );
 $savedSubdirectoryMessage = '' === $savedSubdirectoryValue
-	? __( 'Root is used; no repository subdirectory is configured.', 'ran-booster' )
+	? __( 'Repository root (no subdirectory).', 'ran-booster' )
 	: match ( $repositoryBranchCheckOutcome ?? null ) {
 		'verified' => sprintf(
 			/* translators: %s: configured repository subdirectory. */
@@ -174,13 +171,11 @@ $webhookStateClass     = match ( true ) {
 	default                 => 'is-warning',
 };
 $webhookMessage = match ( true ) {
-	$publishedReleaseSource => __( 'Pushes are ignored while this package uses Published releases.', 'ran-booster' ),
+	$publishedReleaseSource => __( 'Pushes are ignored while Releases is active.', 'ran-booster' ),
 	$automaticUpdatesReady  => __( 'Local webhook requirements are ready.', 'ran-booster' ),
 	default                 => __( 'Local webhook requirements need attention.', 'ran-booster' ),
 };
-$webhookActionLabel = $publishedReleaseSource
-	? __( 'View repository webhook status', 'ran-booster' )
-	: __( 'Review repository webhook settings', 'ran-booster' );
+$webhookActionLabel = __( 'Manage webhooks', 'ran-booster' );
 
 ?>
 <section id="ran-booster-branch-readiness" class="ran-booster-package-source-readiness" aria-labelledby="ran-booster-branch-readiness-heading">
@@ -188,8 +183,7 @@ $webhookActionLabel = $publishedReleaseSource
 		<div class="ran-booster-readiness-panel">
 			<div class="ran-booster-readiness-panel__top">
 				<div>
-					<h4 id="ran-booster-branch-readiness-heading"><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : ( $retainedReadiness ? __( 'Retained Branch setup', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ) ); ?></h4>
-					<p><?php echo esc_html( $setupSummary ); ?></p>
+					<h4 id="ran-booster-branch-readiness-heading"><?php esc_html_e( 'Branch readiness', 'ran-booster' ); ?></h4>
 				</div>
 				<?php if ( $needsAttention ) { ?>
 					<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></span>
@@ -261,7 +255,8 @@ $webhookActionLabel = $publishedReleaseSource
 						hidden
 					<?php } ?>
 				><p><?php echo esc_html( $repositoryBranchCheckMessage ?? '' ); ?></p></div>
-				<button
+				<?php if ( $isPackageEdit ) { ?>
+					<button
 					type="submit"
 					name="ran_booster[check_repository_branch_after_save]"
 					value="1"
@@ -278,7 +273,8 @@ $webhookActionLabel = $publishedReleaseSource
 					hx-sync="this:drop"
 					hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
 					<?php disabled( isset( $packageMutationAvailable ) && false === $packageMutationAvailable ); ?>
-				><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
+					><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
+				<?php } ?>
 				<?php if ( $repositoryDetailAvailable ) { ?>
 					<a class="button" href="<?php echo esc_url( $providerSettingsUrl ); ?>"><?php echo esc_html( $webhookActionLabel ); ?></a>
 				<?php } else { ?>

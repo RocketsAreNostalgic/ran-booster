@@ -122,13 +122,13 @@ final class ReleaseManagementControls {
 		$choices['release_asset'] = array_merge(
 			$choices['release_asset'],
 			array(
-				'heading'           => __( 'Published releases', 'ran-booster' ),
+				'heading'           => __( 'Releases', 'ran-booster' ),
 				'description'       => 'create' === $mode
 					? __( 'Choose a repository, then view its eligible published releases.', 'ran-booster' )
-					: __( 'Track verified release assets and install them through WordPress.', 'ran-booster' ),
+					: __( 'Install published releases through WordPress.', 'ran-booster' ),
 				'meta'              => 'create' === $mode
 					? __( 'Choose repository first', 'ran-booster' )
-					: __( 'Published releases', 'ran-booster' ),
+					: __( 'Releases', 'ran-booster' ),
 				'url'               => 'edit' === $mode ? add_query_arg( 'source_view', 'release_asset', $pageUrl ) : '',
 				'disabled'          => 'create' === $mode,
 				'hydrated'          => true,
@@ -183,7 +183,7 @@ final class ReleaseManagementControls {
 				aria-labelledby="ran-booster-source-tab-release_asset"
 				data-ran-booster-source-pane="release_asset"
 			>
-				<p class="ran-booster-package-source-pane__description"><?php esc_html_e( 'Track verified release assets and install them through WordPress.', 'ran-booster' ); ?></p>
+				<p class="ran-booster-package-source-pane__description"><?php esc_html_e( 'Install published releases through WordPress.', 'ran-booster' ); ?></p>
 			<?php
 		}
 
@@ -264,7 +264,7 @@ final class ReleaseManagementControls {
 		unset( $documentationUrl, $scope );
 		$sections[] = array(
 			'id'      => 'ran-booster-documentation-published-releases',
-			'summary' => __( 'Published releases', 'ran-booster' ),
+			'summary' => __( 'Releases', 'ran-booster' ),
 			'content' => array( $this, 'renderDocumentationContent' ),
 		);
 
@@ -285,9 +285,9 @@ final class ReleaseManagementControls {
 				<p><?php esc_html_e( 'Prospective installation uses the Stable track by default. Choose Preview only when alpha, beta or release-candidate builds are acceptable. Preview still excludes drafts.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'For a not-yet-managed package, candidate listing is metadata-only. Choose one of at most eight eligible releases; inspection downloads, validates and discards that exact ZIP, then binds the reviewed choice to installation with a fingerprint.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Install performs a fresh exact acquisition. Before WordPress changes files, Booster rechecks fingerprint continuity, archive shape and size, provider and local digests, headers, Update URI and package identity. WordPress installs synchronously, then Booster verifies the installed identity and unchanged target activation before adoption.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'Open the managed package settings, review eligibility and package root, then validate and switch to published releases. Enabling the source always performs a fresh exact preflight; merely viewing the page cannot authorize the transition.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Open the package settings, choose Releases, review Release readiness, then choose Use releases. Booster validates the release before switching; viewing settings does not change the source.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Switching either source preserves Disabled and Manual automation, resets Automatic to Manual, and leaves repository webhook configuration unchanged.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'Use Check published releases on the managed Plugins or Themes screen to refresh release metadata. Booster validates the candidate, but WordPress remains the installer. Open WordPress updates to use the administrator’s normal WordPress update workflow.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Use Check releases on the managed Plugins or Themes screen to refresh release metadata. Booster validates the candidate, but WordPress remains the installer. Open WordPress updates to use the administrator’s normal WordPress update workflow.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Recovery and support', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link installed or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations.', 'ran-booster' ); ?></p>

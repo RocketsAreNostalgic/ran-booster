@@ -203,6 +203,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $result['repositoryTableRows'][0]['actions'] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = true;
 		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project(

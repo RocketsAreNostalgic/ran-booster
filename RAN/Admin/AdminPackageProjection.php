@@ -10,6 +10,7 @@ use InvalidArgumentException;
  * Display-safe managed-package data exposed to trusted add-ons.
  */
 final readonly class AdminPackageProjection {
+	private string $subdirectory;
 
 	public function __construct(
 		private string $type,
@@ -20,7 +21,7 @@ final readonly class AdminPackageProjection {
 		private int $sourceRevision,
 		private string $deploymentPolicy,
 		private string $settingsUrl,
-		private string $subdirectory = ''
+		string $subdirectory = ''
 	) {
 		if ( ! in_array( $this->type, array( 'plugin', 'theme' ), true ) ) {
 			throw new InvalidArgumentException( 'Package projections require a known package type.' );
@@ -42,7 +43,8 @@ final readonly class AdminPackageProjection {
 			throw new InvalidArgumentException( 'Package projections require a valid source identity.' );
 		}
 
-		if ( strlen( trim( $this->subdirectory ) ) > 255 ) {
+		$this->subdirectory = trim( $subdirectory );
+		if ( strlen( $this->subdirectory ) > 255 ) {
 			throw new InvalidArgumentException( 'Package projections require a bounded repository subdirectory.' );
 		}
 

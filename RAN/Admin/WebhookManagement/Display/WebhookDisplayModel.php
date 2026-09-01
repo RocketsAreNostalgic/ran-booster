@@ -7,6 +7,7 @@ namespace RAN\Admin\WebhookManagement\Display;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionRequest;
+use RAN\Admin\WebhookManagement\WebhookManagementAdminUrl;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 
@@ -168,7 +169,7 @@ final class WebhookDisplayModel {
 				: ( 'local_profile_missing' === $status ? __( 'Recorded signing secret is unavailable', 'ran-booster' ) : __( 'Recorded signing secret', 'ran-booster' ) ),
 			'credentials_url'             => $this->providerSettingsUrl( $providerCode, 'credentials' ),
 			'secrets_url'                 => $this->providerSettingsUrl( $providerCode, 'secrets' ),
-			'form_action'                 => admin_url( 'admin-post.php' ),
+			'form_action'                 => WebhookManagementAdminUrl::forPath( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
 			'provider_code'               => $providerCode,
 			'provider_label'              => $providerLabel,
@@ -225,7 +226,7 @@ final class WebhookDisplayModel {
 			'management_credential_id'    => null,
 			'credentials_url'             => $this->providerSettingsUrl( $providerCode, 'credentials' ),
 			'secrets_url'                 => $this->providerSettingsUrl( $providerCode, 'secrets' ),
-			'form_action'                 => admin_url( 'admin-post.php' ),
+			'form_action'                 => WebhookManagementAdminUrl::forPath( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
 			'provider_code'               => $providerCode,
 			'provider_label'              => $providerLabel,
@@ -653,11 +654,11 @@ final class WebhookDisplayModel {
 	private function operationUrl( string $operation, string $providerCode, string $repositoryId ): string {
 		$action = 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $providerCode, $repositoryId ) );
 
-		return admin_url( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
+		return WebhookManagementAdminUrl::forPath( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
 	}
 
 	private function providerSettingsUrl( string $providerCode, string $view ): string {
-		return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&view=' . rawurlencode( $view ) );
+		return WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&view=' . rawurlencode( $view ) );
 	}
 
 	private function historicalStatusLabel( string $status ): string {

@@ -232,3 +232,43 @@ assertions. The integrated release-management and runtime slice passes as 176
 tests with 1,221 assertions; `composer check`, `pnpm check`, and the full
 CI-equivalent PHP lint command also pass. No live provider or active Local
 WordPress runtime was used.
+
+## Task 3 actual
+
+Task 3 is implemented at Core commit
+`cc955b88e1876c5f6e40ec231d4bd700fd361327`. Controls is now a 74-line
+WordPress adapter. The request controller owns raw request and signed PRG
+access, the presenter owns passive reads and display-safe projections, and the
+existing Display owns all workflow HTML.
+
+| Gate                                                            |                         Task 3 actual |
+| --------------------------------------------------------------- | ------------------------------------: |
+| Workflow production PHP                                         | `1,930` (`+163` frozen; `+31` Task 2) |
+| Focused workflow test PHP                                       | `1,848` (`+358` frozen; `+82` Task 2) |
+| Concrete internal production types                              |                                  `+2` |
+| Public hooks, routes, provider capabilities, or extension seams |                                   `0` |
+| Persistent state                                                |                                   `0` |
+
+The formatted production split is Controls 74, RequestController 570,
+Presenter 857, and Display 429 lines. It is 22 lines above the owner-approved
+1,908-line ceiling. Compressing the same implementation below the ceiling
+conflicted with the repository formatter and made the state projection harder
+to read, so the standards-compliant attempt is retained for the owner's final
+decision rather than discarded.
+
+The final move removes the unused `workflowView()`, `returnUrl()`, and
+`renderPackageAutomationObservation()` helpers. Presenter contains no raw
+request globals, provider mutation, or HTML; Display contains no provider,
+repository, facade, or raw-request dependency. RepositoryDetailRenderer
+remains the selected-repository placement owner.
+
+Focused workflow characterization passes as 59 tests with 406 assertions. The
+release workflow, provider-row normalizer, RepositoryDetailRenderer, package
+administration, release-management, runtime bootstrap, and multisite slice
+passes under PHP 8.4.4 as 217 tests with 1,441 assertions. Focused PHPCS,
+changed-file syntax checks, and `git diff --check` pass. Full repository gates
+and CI remain Task 4 work. No live provider or active Local WordPress runtime
+was used.
+
+**Decision: RETAIN for Task 4 verification and owner review of the measured
+line exception.**

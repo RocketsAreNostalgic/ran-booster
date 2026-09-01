@@ -404,9 +404,11 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 										$repositoryViewUrls,
 										$repositoryViewRequestUrls,
 										null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
-										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): void {
+										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): bool {
 											$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
 											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+
+											return true;
 										}
 											: null,
 										static function () use ( $selectedRepositoryRow, $providerReturnUrl, $repositoryViewUrls ): void {

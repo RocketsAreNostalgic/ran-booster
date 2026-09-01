@@ -65,7 +65,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$providerUrl,
 			$taskUrls['repositories']
 		);
-		$repositorySummary         = $this->repositorySummary( $model['rows'] );
+		$repositorySummary         = $this->repositorySummary( $model['webhook_rows'], $model['rows'] );
 		$repositoryView            = in_array( $data['repositoryView'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repositoryView'] : 'status';
 		$repositoryViewUrls        = array();
 		$repositoryViewRequestUrls = array();
@@ -133,7 +133,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param mixed                               $presented
 	 * @return array<string, array<string, mixed>>
 	 */
-	public function normalize( array $baseRows, mixed $presented, string $providerCode ): array {
+	public function normalize( array $baseRows, mixed $presented, string $providerCode, bool $allowCoreDetailAppend = false ): array {
 		if ( ! is_array( $presented ) ) {
 			throw new LogicException( 'Provider repository rows must be a keyed array.' );
 		}
@@ -165,7 +165,7 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( array_slice( $details, 0, count( $baseDetails ) ) !== $baseDetails ) {
 				throw new LogicException( 'Provider filters may append but not replace Core details.' );
 			}
-			$this->assertDetails( $details );
+			$this->assertDetails( $details, count( $baseDetails ), $allowCoreDetailAppend );
 
 			$baseActions = is_array( $baseRow['actions'] ?? null ) ? $baseRow['actions'] : array();
 			$actions     = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
@@ -225,7 +225,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param list<array<string,mixed>> $repositories
 	 * @param array{by_id:array<string,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
 	 * @param callable(array<string,mixed>):string $providerUrl
-	 * @return array{requested_id:string,list_url:string,return_url:string,rows:array<string,array<string,mixed>>,selected:?array}
+	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<string,array<string,mixed>>,rows:array<string,array<string,mixed>>,selected:?array}
 	 */
 	public function project(
 		array $repositories,
@@ -497,16 +497,16 @@ final class ProviderRepositoryRowsNormalizer {
 		$presented   = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
-		$webhookRows = $this->normalize( $rows, $presented, $providerCode );
+		$webhookRows = $this->normalize( $rows, $presented, $providerCode, true );
 		try {
 			$presented = apply_filters(
 				'ran_booster_provider_repository_rows',
-				$presented,
+				$webhookRows,
 				$providerCode,
 				$projections,
 				$returnUrl
 			);
-			$rows      = $this->normalize( $rows, $presented, $providerCode );
+			$rows      = $this->normalize( $webhookRows, $presented, $providerCode );
 		} catch ( Throwable $failure ) {
 			$rows = $webhookRows;
 			BoosterLogger::logException(
@@ -530,6 +530,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'requested_id' => $requestedId,
 			'list_url'     => $listUrl,
 			'return_url'   => $returnUrl,
+			'webhook_rows' => $webhookRows,
 			'rows'         => $rows,
 			'selected'     => $selected,
 		);
@@ -603,16 +604,19 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 	/** @param list<mixed> $details */
-	private function assertDetails( array $details ): void {
+	private function assertDetails( array $details, int $coreDetailCount = 0, bool $allowCoreDetailAppend = false ): void {
 		if ( count( $details ) > 20 ) {
 			throw new LogicException( 'Repository details must be bounded.' );
 		}
 
-		foreach ( $details as $detail ) {
+		foreach ( $details as $index => $detail ) {
 			if ( ! is_array( $detail ) ) {
 				throw new LogicException( 'Repository details must be display maps.' );
 			}
-			$this->boundedString( $detail['key'] ?? '', 96, true );
+			$key = $this->boundedString( $detail['key'] ?? '', 96, true );
+			if ( ! $allowCoreDetailAppend && $index >= $coreDetailCount && str_starts_with( $key, 'core:' ) ) {
+				throw new LogicException( 'Provider filters may not append Core detail keys.' );
+			}
 			$this->boundedString( $detail['label'] ?? null, 96, false );
 			$this->boundedString( $detail['value'] ?? null, 255, true );
 			$tone = $this->boundedString( $detail['tone'] ?? '', 16, true );
@@ -627,8 +631,12 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 
-	/** @param array<string,array<string,mixed>> $rows @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int} */
-	private function repositorySummary( array $rows ): array {
+	/**
+	 * @param array<string,array<string,mixed>> $webhookRows Core and webhook-management rows, before provider extensions.
+	 * @param array<string,array<string,mixed>> $rows        Provider-enriched rows.
+	 * @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int}
+	 */
+	private function repositorySummary( array $webhookRows, array $rows ): array {
 		$recordedHooks                 = 0;
 		$needsReview                   = 0;
 		$releasePackages               = 0;
@@ -636,7 +644,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$releaseTotalsIncomplete       = false;
 		$releaseWorkflowsIncomplete    = false;
 		$releaseWorkflowsNeedingReview = 0;
-		foreach ( $rows as $row ) {
+		foreach ( $webhookRows as $row ) {
 			$recorded = false;
 			$healthy  = false;
 			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
@@ -654,6 +662,8 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( ( $automaticBranch && ! $recorded ) || ( $recorded && ! $healthy ) ) {
 				++$needsReview;
 			}
+		}
+		foreach ( $rows as $row ) {
 			if ( true === ( $row['historical'] ?? false ) ) {
 				continue;
 			}

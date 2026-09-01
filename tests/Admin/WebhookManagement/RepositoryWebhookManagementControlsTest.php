@@ -107,7 +107,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			self::assertFalse( $controls->supportsProvider( $providerCode ) );
 			self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, $providerCode, array(), 'https://example.test/' ) );
 			ob_start();
-			$controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' );
+			self::assertFalse( $controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' ) );
 			self::assertSame( '', ob_get_clean() );
 		}
 
@@ -123,6 +123,35 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$controls->enqueueAdminAssets( 'toplevel_page_ran-booster' );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
+	}
+
+	public function testRepositoryPanelReportsUnavailableTargetsWithoutRenderingMarkup(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		foreach ( array( 'missing', 'throws' ) as $mode ) {
+			$facade = $this->createMock( WebhookAssistanceFacade::class );
+			$facade->expects( self::once() )->method( 'target' )->willReturnCallback(
+				static function () use ( $mode ): ?AssistanceTarget {
+					if ( 'throws' === $mode ) {
+						throw new \RuntimeException( 'Target unavailable.' );
+					}
+
+					return null;
+				}
+			);
+			$controls = new RepositoryWebhookManagementControls(
+				$facade,
+				$this->createMock( AdminInteractionFacade::class ),
+				new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+				dirname( __DIR__, 3 ) . '/',
+				'https://example.test/wp-content/plugins/ran-booster/',
+				new ManagedPackageWebhookAuthorityResolver( $this->createMock( PluginRepository::class ), $this->createMock( ThemeRepository::class ) )
+			);
+			$controls->register();
+
+			ob_start();
+			self::assertFalse( $controls->renderRepositoryPanel( 'fixture-provider', '1234', 'https://example.test/repositories' ), $mode );
+			self::assertSame( '', (string) ob_get_clean(), $mode );
+		}
 	}
 
 	public function testRepositoryPageReusesTheFixedNormalPostWebhookSection(): void {

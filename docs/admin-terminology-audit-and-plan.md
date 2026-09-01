@@ -266,7 +266,7 @@ disposable activation check as passed.
   including PHPCS and PHPStan. Core PHPUnit: 2,713 tests, 18,304 assertions
   and two skips. Isolated GitHub suite: 349 tests, 2,115 assertions and two
   skips. Characterization: 35 checks.
-- Full `pnpm check` passed, including 186 asset tests. All 30 changed PHP
+- Full `pnpm check` passed, including 186 asset tests. All 31 changed PHP
   files passed syntax checks; `git diff --check` passed.
 - A separate read-only review of the package/client diff found no issues.
   It confirmed that the changes preserve source-switch actions, routes,

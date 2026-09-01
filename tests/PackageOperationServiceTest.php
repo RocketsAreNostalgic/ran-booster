@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use InvalidArgumentException;
 use RAN\Admin\ProviderSettingsPresenter;
+use RAN\Admin\PackageAdminController;
 use RAN\Booster;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentCoordinator;
@@ -91,6 +92,60 @@ final class PackageOperationServiceTest extends TestCase {
 		$query = $this->redirectQuery( $redirect );
 		self::assertSame( 'update', $query['ran_booster_result'] );
 		self::assertSame( 'example/example.php', $query['package'] );
+	}
+
+	public function testSaveAndCheckRedirectUsesTheAuthoritativeEditedPackageWithoutASuccessNotice(): void {
+		$package   = $this->plugin();
+		$dashboard = $this->dashboard( new OperationCoordinator(), $package );
+
+		$redirect = $dashboard->postPackageOperation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'branch'                             => 'feature/verified-after-save',
+					'subdirectory'                       => 'packages/example',
+					'check_repository_branch_after_save' => '1',
+				)
+			)
+		);
+
+		self::assertIsString( $redirect );
+		self::assertSame( 'feature/verified-after-save', $package->getBranch() );
+		self::assertSame( 'packages/example', $package->getSubdirectory() );
+		$query = $this->redirectQuery( $redirect );
+		self::assertSame( 'ran-booster-plugins', $query['page'] );
+		self::assertSame( 'example/example.php', $query['package'] );
+		self::assertSame( 'branch', $query['source_view'] );
+		self::assertSame( '1', $query['ran_booster_repository_branch_check'] );
+		self::assertArrayNotHasKey( 'ran_booster_result', $query );
+		self::assertArrayNotHasKey( '_ran_booster_notice_nonce', $query );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_repository_branch_nonce'],
+				PackageAdminController::repositoryBranchCheckAction( $package, 'plugin' )
+			)
+		);
+	}
+
+	public function testFailedSaveNeverProducesARepositoryBranchCheckRedirect(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$input     = $this->input(
+			'edit-plugin',
+			array(
+				'check_repository_branch_after_save' => '1',
+				'expected_branch'                    => 'older-branch',
+			)
+		);
+
+		self::assertFalse( $dashboard->postPackageOperation( 'edit-plugin', $input ) );
+		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertSame( 'ran_booster_package_edit_conflict', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'No settings were saved and no repository check ran.', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Save settings and check again.', $dashboard->messages[0]['message'] );
+
+		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
 	public function testFailedReinstallKeepsTheSavedSettingsNoticeBesideTheDeploymentError(): void {
@@ -186,8 +241,8 @@ final class PackageOperationServiceTest extends TestCase {
 			),
 			$notice
 		);
-		self::assertSame( 'success', $dashboard->messages[0]['type'] );
-		self::assertSame( 'Plugin is already managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
+		self::assertSame( 'warning', $dashboard->messages[0]['type'] );
+		self::assertSame( 'Plugin is already installed and managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
 	}
 
 	public function testLinkKeepsMismatchedExistingManagementAsStorageFailure(): void {
@@ -490,6 +545,65 @@ final class PackageOperationServiceTest extends TestCase {
 			self::assertInstanceOf( Package::class, $result['package'] );
 		}
 		self::assertSame( 4, $coordinator->calls );
+	}
+
+	public function testAlreadyManagedInstallIsReportedAsAlreadyManaged(): void {
+		$coordinator         = new OperationCoordinator();
+		$coordinator->result = array(
+			'status'         => 'succeeded',
+			'correlation_id' => str_repeat( 'a', 32 ),
+			'outcome_code'   => 'already_managed',
+		);
+		$service             = $this->service(
+			new OperationPluginRepository( $this->plugin() ),
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			$coordinator
+		);
+
+		$result = $service->execute( PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin' ) ) );
+
+		self::assertSame( 'already-managed', $result['status'] );
+		self::assertSame( 'already_managed', $result['outcome_code'] );
+		self::assertInstanceOf( Package::class, $result['package'] );
+	}
+
+	public function testAlreadyManagedInstallRedirectsToTheSignedAlreadyManagedWarning(): void {
+		$coordinator         = new OperationCoordinator();
+		$coordinator->result = array(
+			'status'         => 'succeeded',
+			'correlation_id' => str_repeat( 'a', 32 ),
+			'outcome_code'   => 'already_managed',
+		);
+		$dashboard           = $this->dashboard( $coordinator );
+
+		$redirect = $dashboard->postPackageOperation( 'install-plugin', $this->input( 'install-plugin' ) );
+
+		self::assertIsString( $redirect );
+		$query = $this->redirectQuery( $redirect );
+		self::assertSame( 'already-managed', $query['ran_booster_result'] );
+		self::assertSame( 'example/example.php', $query['ran_booster_package'] );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_notice_nonce'],
+				'ran-booster-package-success|plugin|already-managed|example/example.php'
+			)
+		);
+		$_GET = $query;
+		self::assertSame(
+			array(
+				'operation'  => 'already-managed',
+				'identifier' => 'example/example.php',
+			),
+			$this->invokePackageSuccessNotice( $dashboard, 'plugin' )
+		);
+		self::assertSame(
+			array(
+				'type'    => 'warning',
+				'message' => 'Plugin is already installed and managed by Booster. No package settings were changed.',
+			),
+			$dashboard->messages[0]
+		);
 	}
 
 	public function testTerminalDeploymentFailureReturnsOnlyFixedSafeData(): void {
@@ -875,9 +989,9 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_active', $dashboard->messages[0]['code'] );
-		self::assertStringContainsString( 'earlier deployment for the plugin example could not be verified', $dashboard->messages[0]['message'] );
-		self::assertStringContainsString( 'not currently running', $dashboard->messages[0]['message'] );
-		self::assertStringContainsString( 'Open its recovery details', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'could not confirm how an earlier deployment of the plugin example ended', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'No deployment is currently running', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Check the package and allow another attempt', $dashboard->messages[0]['message'] );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 

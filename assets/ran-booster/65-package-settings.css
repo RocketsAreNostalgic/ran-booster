@@ -489,13 +489,13 @@
 
 .ran-booster-admin .ran-booster-readiness-icon {
 	display: grid;
-	inline-size: 16px;
-	block-size: 16px;
+	inline-size: 18px;
+	block-size: 18px;
 	place-items: center;
-	border: 1px solid currentcolor;
+	border: 2px solid currentcolor;
 	border-radius: var(--ran-booster-radius-circle);
-	font-size: 10px;
-	font-weight: 700;
+	font-size: 14px;
+	font-weight: 800;
 }
 
 .ran-booster-admin
@@ -522,6 +522,18 @@
 	content: "!";
 }
 
+.ran-booster-admin
+	.ran-booster-readiness-item.is-pending
+	.ran-booster-readiness-icon {
+	color: var(--ran-booster-status-warning);
+}
+
+.ran-booster-admin
+	.ran-booster-readiness-item.is-pending
+	.ran-booster-readiness-icon::after {
+	content: "?";
+}
+
 .ran-booster-admin .ran-booster-readiness-actions {
 	display: flex;
 	flex-wrap: wrap;
@@ -533,6 +545,11 @@
 }
 
 .ran-booster-admin .ran-booster-readiness-actions > form {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-readiness-actions > .notice {
+	flex-basis: 100%;
 	margin: 0;
 }
 

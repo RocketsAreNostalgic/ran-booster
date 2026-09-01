@@ -144,9 +144,13 @@ class CorePackageExecutor {
 		$sourceFilter    = $this->sourceSelectionFilter( $inputs['slug'], $inputs['subdirectory'], $type, 'update', $inputs['identifier'] );
 		$vcsFilter       = $this->vcsFilter( $type, $inputs['identifier'] );
 		$handoffFilter   = $this->coreReinstallHandoffFilter( $type, $inputs['identifier'], $artifact );
+		$coreAutoUpdate  = has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
 		$cronFilter      = static fn (): bool => true;
 		$completions     = array();
 		$complete        = $this->completionCollector( $completions );
+		if ( false !== $coreAutoUpdate && ! remove_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update', $coreAutoUpdate ) ) {
+			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_UNCERTAIN );
+		}
 
 		add_filter( $transientHook, $transientFilter, 10, 1 );
 		add_filter( 'upgrader_pre_download', $preDownload, 10, 4 );
@@ -170,6 +174,9 @@ class CorePackageExecutor {
 			remove_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10 );
 			remove_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX );
 			remove_action( 'upgrader_process_complete', $complete, 100 );
+			if ( false !== $coreAutoUpdate ) {
+				add_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update', $coreAutoUpdate );
+			}
 		}
 	}
 
@@ -469,14 +476,15 @@ class CorePackageExecutor {
 		?string $identifier,
 		array $completions
 	): CorePackageExecutionResult {
-		$requiresCompletion = true === $result || $this->isRestoredPluginFailure( $type, $result );
+		$successfulInstallation = $this->isCanonicalInstallationResult( $result );
+		$requiresCompletion     = true === $result || $successfulInstallation || $this->isRestoredPluginFailure( $type, $result );
 		if ( array() !== $completions || $requiresCompletion ) {
 			if ( 1 !== count( $completions ) || ! $this->completionMatches( $completions[0], $type, $action, $identifier ) ) {
 				return CorePackageExecutionResult::failed( CorePackageExecutionFailure::OPERATION_MISMATCH );
 			}
 		}
 
-		if ( true === $result ) {
+		if ( true === $result || $successfulInstallation ) {
 			return CorePackageExecutionResult::succeeded();
 		}
 		if ( false === $result ) {
@@ -490,6 +498,33 @@ class CorePackageExecutor {
 		}
 
 		return CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_UNCERTAIN );
+	}
+
+	/**
+	 * WordPress may return WP_Upgrader::install_package()'s documented result
+	 * array after a successful automatic plugin or theme update.
+	 */
+	private function isCanonicalInstallationResult( mixed $result ): bool {
+		if ( ! is_array( $result )
+			|| array_keys( $result ) !== array( 'source', 'source_files', 'destination', 'destination_name', 'local_destination', 'remote_destination', 'clear_destination' )
+			|| ! is_string( $result['source'] )
+			|| ! is_array( $result['source_files'] )
+			|| ! array_is_list( $result['source_files'] )
+			|| ! is_string( $result['destination'] )
+			|| ! is_string( $result['destination_name'] )
+			|| ! is_string( $result['local_destination'] )
+			|| ! is_string( $result['remote_destination'] )
+			|| ! is_bool( $result['clear_destination'] ) ) {
+			return false;
+		}
+
+		foreach ( $result['source_files'] as $sourceFile ) {
+			if ( ! is_string( $sourceFile ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/** @param array<string, mixed> $completion */

@@ -32,6 +32,7 @@ use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\CredentialExpiryReminder;
 use RAN\Admin\CredentialSelfDestructPurger;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
 use RAN\Admin\BackgroundDeploymentFailureMonitor;
@@ -176,7 +177,8 @@ final class BoosterServiceProvider {
 			static fn ( CoreContainer $container ): CredentialSelfDestructPurger => new CredentialSelfDestructPurger(
 				$container->make( SecretsFile::class ),
 				$container->make( CredentialExpiryObservationStore::class ),
-				$container->make( PublicRepositoryLookupProfileStore::class )
+				$container->make( PublicRepositoryLookupProfileStore::class ),
+				$container->make( RepositoryBranchCheckEvidenceStore::class )
 			)
 		);
 		$container->bind(
@@ -328,7 +330,8 @@ final class BoosterServiceProvider {
 				$container->make( ThemeRepository::class ),
 				$container->make( PackageRemovalGateway::class ),
 				$container->make( DeploymentAttemptRepository::class ),
-				$container->make( WordPressUpdaterLock::class )
+				$container->make( WordPressUpdaterLock::class ),
+				$container->make( RepositoryBranchCheckEvidenceStore::class )
 			)
 		);
 		$container->bind(

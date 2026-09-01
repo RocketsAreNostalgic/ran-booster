@@ -270,7 +270,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'id="ran-booster-advanced-source-settings"', $editForm );
 			self::assertStringNotContainsString( 'id="ran-booster-package-operation-heading"', $editForm );
 			self::assertSame(
-				array( 'Repository configuration', 'Advanced settings', 'Package source', 'Branch readiness', 'Package operation', 'Danger zone' ),
+				array( 'Repository configuration', 'Advanced settings', 'Package source', 'Branch and webhook setup', 'Package operation', 'Danger zone' ),
 				$this->h3Headings( $html ),
 				$packageView->getType()
 			);

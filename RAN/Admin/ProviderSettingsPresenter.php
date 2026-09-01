@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -17,6 +18,8 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryReference;
+use RAN\RepositoryProvider\UnknownProvider;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\Secrets\SecretsFile;
@@ -24,6 +27,7 @@ use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Storage\CredentialUsageReader;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use Throwable;
 
@@ -37,6 +41,8 @@ final readonly class ProviderSettingsPresenter {
 	private PublicRepositoryLookupProfileStore $publicLookupProfiles;
 	private CredentialExpiryObservationStore $expiryObservations;
 	private CredentialExpiryReminder $expiryReminders;
+	private RepositoryBranchCheckEvidenceStore $branchCheckEvidence;
+	private WordPressUpdaterLock $branchCheckLock;
 
 	public function __construct(
 		private ProviderRegistry $providers,
@@ -47,7 +53,9 @@ final readonly class ProviderSettingsPresenter {
 		?CredentialExpiryReminder $expiryReminders = null,
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null,
-		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null
+		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
+		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?WordPressUpdaterLock $branchCheckLock = null
 	) {
 		$this->publicLookupProfiles = $publicLookupProfiles ?? new PublicRepositoryLookupProfileStore();
 		$this->expiryObservations   = $expiryObservations ?? new CredentialExpiryObservationStore();
@@ -56,6 +64,8 @@ final readonly class ProviderSettingsPresenter {
 			$this->secrets,
 			$this->expiryObservations
 		);
+		$this->branchCheckEvidence  = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->branchCheckLock      = $branchCheckLock ?? new WordPressUpdaterLock();
 	}
 
 	/**
@@ -264,6 +274,116 @@ final readonly class ProviderSettingsPresenter {
 		} catch ( Throwable ) {
 			return null;
 		}
+	}
+
+	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
+	public function checkPackageRepositoryBranch( string $type, Package $package ): string {
+		if ( PackageSource::BRANCH !== $package->getSource() ) {
+			return 'unable_to_check';
+		}
+		try {
+			return $this->branchCheckLock->run(
+				fn (): string => $this->checkPackageRepositoryBranchWhileLocked( $type, $package ),
+				'Another package operation is in progress.',
+				'The package operation lock could not be released.'
+			);
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+	}
+
+	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
+	private function checkPackageRepositoryBranchWhileLocked( string $type, Package $package ): string {
+		$profileId          = $this->effectiveBranchCheckProfile( $package );
+		$profileFingerprint = $this->branchCheckEvidence->profileFingerprintFor( $package, $profileId );
+
+		try {
+			$provider = $this->providers->get( (string) $package->getProviderCode() );
+		} catch ( UnknownProvider ) {
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'provider_unavailable', $profileFingerprint );
+		} catch ( Throwable ) {
+			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'unable_to_check', $profileFingerprint );
+		}
+
+		$archive = null;
+		$result  = 'unable_to_check';
+		try {
+			$repository = $package->getRepository()->reference;
+			if ( ! $repository->private ) {
+				$credentialId = $provider instanceof CredentialedPublicRepositoryBrowser
+					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile
+						? $profileId
+						: null;
+
+				$repository = new RepositoryReference(
+					$repository->locator,
+					$repository->providerRepositoryId,
+					false,
+					$credentialId
+				);
+			}
+
+			$archive     = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->getBranch() ) );
+			$resolvedRef = $archive->getResolvedRef();
+			if ( '' !== trim( $resolvedRef )
+				&& strlen( $resolvedRef ) <= 191
+				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolvedRef )
+			) {
+				$result = 'verified';
+			}
+		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Provider failures intentionally map to a closed result.
+		} catch ( Throwable ) {
+			// The provider failure is intentionally not exposed to administrators.
+		} finally {
+			if ( null !== $archive ) {
+				try {
+					$archive->cleanup();
+				} catch ( Throwable ) {
+					$result = 'unable_to_check';
+				}
+			}
+		}
+
+		return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, $result, $profileFingerprint );
+	}
+
+	/** @param 'verified'|'unable_to_check'|'provider_unavailable' $outcome */
+	private function recordPackageRepositoryBranchCheck(
+		string $type,
+		Package $package,
+		?string $profileId,
+		string $outcome,
+		string $profileFingerprint
+	): string {
+		try {
+			$this->branchCheckEvidence->record( $type, $package, $profileId, $outcome, $profileFingerprint );
+		} catch ( Throwable ) {
+			return 'unable_to_check';
+		}
+
+		return $outcome;
+	}
+
+	/**
+	 * Returns the current non-secret access state for a one-time branch-check result.
+	 *
+	 * The dashboard may cache that result briefly, but credential replacement and
+	 * default public-profile changes must require a fresh remote check.
+	 */
+	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
+		return $this->branchCheckEvidence->profileFingerprintFor( $package, $this->effectiveBranchCheckProfile( $package ) );
+	}
+
+	/** @return array{outcome: 'verified', checked_at: string}|null */
+	public function packageRepositoryBranchEvidence( string $type, Package $package ): ?array {
+		return $this->branchCheckEvidence->find( $type, $package, $this->effectiveBranchCheckProfile( $package ) );
+	}
+
+	private function effectiveBranchCheckProfile( Package $package ): ?string {
+		if ( $package->isPrivate() ) {
+			return $package->getCredentialId();
+		}
+		return $this->publicLookupProfiles->get( (string) $package->getProviderCode() );
 	}
 
 	/**

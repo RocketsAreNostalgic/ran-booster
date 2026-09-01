@@ -16,7 +16,8 @@ final class CredentialSelfDestructPurger {
 	public function __construct(
 		private SecretsFile $secrets,
 		private CredentialExpiryObservationStore $observations,
-		private PublicRepositoryLookupProfileStore $publicLookupProfiles
+		private PublicRepositoryLookupProfileStore $publicLookupProfiles,
+		private RepositoryBranchCheckEvidenceStore $branchCheckEvidence
 	) {
 	}
 
@@ -26,8 +27,20 @@ final class CredentialSelfDestructPurger {
 			foreach ( $removed as $provider => $ids ) {
 				foreach ( $ids as $id ) {
 					$this->observations->clear( $provider, $id );
+					try {
+						$this->branchCheckEvidence->bumpProfileGeneration( $provider, $id );
+					} catch ( \Throwable $failure ) {
+						unset( $failure );
+						// Evidence is advisory. Continue clearing an expired default profile.
+					}
 					if ( $id === $this->publicLookupProfiles->get( $provider ) ) {
 						$this->publicLookupProfiles->set( $provider, null );
+						try {
+							$this->branchCheckEvidence->bumpProviderGeneration( $provider );
+						} catch ( \Throwable $failure ) {
+							unset( $failure );
+							// Expiry cleanup remains useful even if advisory evidence is unavailable.
+						}
 					}
 				}
 			}

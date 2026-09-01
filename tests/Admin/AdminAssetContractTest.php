@@ -199,6 +199,15 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'white-space: nowrap;', $settings );
 	}
 
+	public function testRepositoryBranchCheckNoticeSitsFlushBesideTheAction(): void {
+		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		self::assertStringContainsString(
+			".ran-booster-readiness-actions > .notice {\n\tflex-basis: 100%;\n\tmargin: 0;",
+			$settings
+		);
+	}
+
 	public function testAdminPrimitivesOwnSharedHeadingsAndCredentialDialogChrome(): void {
 		$primitives       = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$onboarding       = $this->view( 'onboarding.php' );

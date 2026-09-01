@@ -22,35 +22,27 @@ $providerSettingsUrl  = add_query_arg(
 $providerSettingsUrl .= '#ran-booster-managed-webhook-repositories-heading';
 $activityUrl          = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
 $setupUrl             = admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' );
-$refreshBaseUrl       = add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl );
-$refreshUrl           = $refreshBaseUrl . '#ran-booster-branch-readiness';
-$refreshRequestUrl    = add_query_arg( 'ran_booster_branch_readiness_check', '1', $refreshBaseUrl );
-$refreshUrlParts      = wp_parse_url( $refreshRequestUrl );
-$refreshArguments     = array();
-if ( is_array( $refreshUrlParts ) ) {
-	wp_parse_str( (string) ( $refreshUrlParts['query'] ?? '' ), $refreshArguments );
-}
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display marker for the GET refresh.
-$readinessCheckDone = isset( $_GET['ran_booster_branch_readiness_check'] ) && '1' === (string) $_GET['ran_booster_branch_readiness_check'];
-$siteReadiness      = is_array( $packageBranchReadiness['site'] ?? null )
+$checkBaseUrl         = add_query_arg( array( 'source_view' => 'branch' ), $settingsUrl );
+$checkReturnUrl       = $checkBaseUrl . '#ran-booster-branch-readiness';
+$siteReadiness        = is_array( $packageBranchReadiness['site'] ?? null )
 	? $packageBranchReadiness['site']
 	: null;
-$siteReasons        = is_array( $siteReadiness['reason_codes'] ?? null )
+$siteReasons          = is_array( $siteReadiness['reason_codes'] ?? null )
 	? $siteReadiness['reason_codes']
 	: array();
-$receiverReady      = 'ready' === ( $siteReadiness['status'] ?? null );
-$repositoryReasons  = is_array( $repositoryReadiness['reason_codes'] ?? null )
+$receiverReady        = 'ready' === ( $siteReadiness['status'] ?? null );
+$repositoryReasons    = is_array( $repositoryReadiness['reason_codes'] ?? null )
 	? $repositoryReadiness['reason_codes']
 	: array();
-$identityReady      = null !== $repositoryReadiness
+$identityReady        = null !== $repositoryReadiness
 	&& array() === array_intersect(
 		array( 'repository_locator_invalid', 'repository_identity_unavailable', 'repository_identity_conflict' ),
 		$repositoryReasons
 	);
-$providerWebhookUrl = trim( (string) ( $packageBranchReadiness['webhook_settings_url'] ?? '' ) );
-$secretCoverage     = (string) ( $repositoryReadiness['local_secret_coverage'] ?? 'unknown' );
-$secretReady        = in_array( $secretCoverage, array( 'repository', 'shared' ), true );
-$secretLabel        = match ( $secretCoverage ) {
+$providerWebhookUrl   = trim( (string) ( $packageBranchReadiness['webhook_settings_url'] ?? '' ) );
+$secretCoverage       = (string) ( $repositoryReadiness['local_secret_coverage'] ?? 'unknown' );
+$secretReady          = in_array( $secretCoverage, array( 'repository', 'shared' ), true );
+$secretLabel          = match ( $secretCoverage ) {
 	'repository' => __( 'A repository-specific signing secret is saved.', 'ran-booster' ),
 	'shared' => __( 'A shared owner signing secret covers this repository.', 'ran-booster' ),
 	'none' => __( 'No matching local signing secret is saved.', 'ran-booster' ),
@@ -79,47 +71,86 @@ if ( ! $receiverReady ) {
 		$receiverActionLabel = __( 'Review WordPress URLs', 'ran-booster' );
 	}
 }
-$needsAttention = \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deploymentPolicy
+$needsAttention                = \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deploymentPolicy
 	&& ( ! $receiverReady || ! $identityReady || ! $secretReady );
+$repositoryBranchCheckEvidence = is_array( $repositoryBranchCheckEvidence ?? null )
+	? $repositoryBranchCheckEvidence
+	: null;
+$repositoryBranchVerified      = 'verified' === ( $repositoryBranchCheckOutcome ?? null )
+	|| ( null === $repositoryBranchCheckOutcome && 'verified' === ( $repositoryBranchCheckEvidence['outcome'] ?? null ) );
+$savedSubdirectoryValue        = isset( $savedSubdirectoryValue ) && is_string( $savedSubdirectoryValue )
+	? trim( $savedSubdirectoryValue )
+	: '';
+$repositoryBranchCheckMessage  = match ( $repositoryBranchCheckOutcome ?? null ) {
+	'provider_unavailable' => __( 'The saved provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ),
+	'unable_to_check'      => __( 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.', 'ran-booster' ),
+	default                => null,
+};
+$repositoryBranchCheckNoticeClass = null !== $repositoryBranchCheckMessage ? 'notice-warning' : 'notice-error';
+$repositoryStateClass             = match ( true ) {
+	$repositoryBranchVerified                => 'is-ok',
+	! $identityReady                         => 'is-warning',
+	null !== $repositoryBranchCheckOutcome   => 'is-warning',
+	default                                  => 'is-pending',
+};
+$setupSummary = match ( true ) {
+	$needsAttention => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
+	default         => __( 'Review the saved repository, branch, and local Push-to-Deploy requirements below.', 'ran-booster' ),
+};
+if ( 'verified' === ( $repositoryBranchCheckOutcome ?? null ) ) {
+	$savedRepositoryLabel = __( 'is accessible with the saved repository settings.', 'ran-booster' );
+} elseif ( $repositoryBranchVerified ) {
+	$savedRepositoryLabel = __( 'was accessible when Booster last checked these saved settings.', 'ran-booster' );
+} elseif ( 'provider_unavailable' === ( $repositoryBranchCheckOutcome ?? null ) ) {
+	$savedRepositoryLabel = __( 'is saved, but its provider is unavailable so repository access and this branch could not be verified.', 'ran-booster' );
+} elseif ( 'unable_to_check' === ( $repositoryBranchCheckOutcome ?? null ) ) {
+	$savedRepositoryLabel = __( 'is saved, but repository access and this branch could not be verified.', 'ran-booster' );
+} else {
+	$savedRepositoryLabel = __( 'is saved. The repository identity is available locally; repository access and this branch have not been checked.', 'ran-booster' );
+}
+$savedRepositoryMessage = ( $identityReady || $repositoryBranchVerified )
+	? sprintf(
+		/* translators: 1: branch name, 2: repository check status. */
+		__( 'The branch <code>%1$s</code> %2$s', 'ran-booster' ),
+		esc_html( '' !== $branchValue ? $branchValue : __( 'The provider default branch', 'ran-booster' ) ),
+		esc_html( $savedRepositoryLabel )
+	)
+	: __( 'The saved repository needs one stable provider identity.', 'ran-booster' );
 
 ?>
 <section id="ran-booster-branch-readiness" class="ran-booster-package-source-readiness" aria-labelledby="ran-booster-branch-readiness-heading">
 	<header>
-		<h3 id="ran-booster-branch-readiness-heading" class="ran-booster-section__title"><?php esc_html_e( 'Branch readiness', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Check the saved branch and webhook requirements. Manual deployments remain available when Push-to-Deploy is incomplete.', 'ran-booster' ); ?></p>
+		<h3 id="ran-booster-branch-readiness-heading" class="ran-booster-section__title"><?php esc_html_e( 'Branch and webhook setup', 'ran-booster' ); ?></h3>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Save the current package settings, then check the repository and branch now. Booster checks them again when a deployment starts.', 'ran-booster' ); ?></p>
 	</header>
 	<div>
 		<div class="ran-booster-readiness-panel">
-			<?php if ( $readinessCheckDone ) { ?>
-				<div class="notice <?php echo is_array( $packageBranchReadiness ) ? 'notice-success' : 'notice-warning'; ?> inline"<?php echo is_array( $packageBranchReadiness ) ? ' data-ran-booster-package-success' : ''; ?> data-ran-booster-branch-readiness-check>
-					<p><strong><?php esc_html_e( 'Readiness check complete.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'The current local readiness evidence is shown below.', 'ran-booster' ); ?></p>
-				</div>
-			<?php } ?>
 			<div class="ran-booster-readiness-panel__top">
 				<div>
-					<h4><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployments need attention', 'ran-booster' ) : __( 'Branch is ready for manual deployments', 'ran-booster' ) ); ?></h4>
-					<p><?php echo esc_html( $needsAttention ? __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ) : __( 'Booster can use the saved branch for manual deployments. Remote webhook delivery is not inferred here.', 'ran-booster' ) ); ?></p>
+					<h4><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ); ?></h4>
+					<p><?php echo esc_html( $setupSummary ); ?></p>
 				</div>
 				<?php if ( $needsAttention ) { ?>
 					<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></span>
 				<?php } ?>
 			</div>
 			<ul class="ran-booster-readiness-list">
-				<li class="ran-booster-readiness-item <?php echo $identityReady ? 'is-ok' : 'is-warning'; ?>">
+				<li class="ran-booster-readiness-item <?php echo esc_attr( $repositoryStateClass ); ?>">
 					<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-					<strong><?php esc_html_e( 'Saved branch', 'ran-booster' ); ?></strong>
+					<strong><?php esc_html_e( 'Saved repository', 'ran-booster' ); ?></strong>
 					<span>
-						<?php
-						echo esc_html(
-							$identityReady
-								? sprintf(
-									/* translators: %s is a branch name. */
-									__( '%s is ready for manual deployments.', 'ran-booster' ),
-									'' !== $branchValue ? $branchValue : __( 'The provider default branch', 'ran-booster' )
-								)
-								: __( 'The saved repository needs one stable provider identity.', 'ran-booster' )
-						);
-						?>
+						<?php echo wp_kses_post( $savedRepositoryMessage ); ?>
+						<?php if ( $repositoryBranchVerified && null !== $repositoryBranchCheckEvidence ) { ?>
+							<br/><span>
+							<?php
+							/* translators: %s: UTC timestamp of the last successful repository branch check. */
+							echo esc_html( sprintf( __( 'Last checked: %s.', 'ran-booster' ), (string) $repositoryBranchCheckEvidence['checked_at'] ) );
+							?>
+							</span>
+						<?php } ?>
+						<?php if ( '' !== $savedSubdirectoryValue ) { ?>
+							<br/><span><?php esc_html_e( 'The saved subdirectory will be checked when Booster prepares the deployment archive.', 'ran-booster' ); ?></span>
+						<?php } ?>
 					</span>
 				</li>
 				<li class="ran-booster-readiness-item <?php echo $secretReady ? 'is-ok' : 'is-warning'; ?>">
@@ -154,26 +185,35 @@ $needsAttention = \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deploy
 				</li>
 			</ul>
 			<div class="ran-booster-readiness-actions">
-				<form
-					action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>"
-					method="get"
-					class="ran-booster-branch-readiness-check-form"
+				<div
+					id="ran-booster-repository-branch-check-error"
+					class="notice <?php echo esc_attr( $repositoryBranchCheckNoticeClass ); ?> inline"
+					role="alert"
+					tabindex="-1"
+					<?php if ( null !== $repositoryBranchCheckMessage ) { ?>
+						data-ran-booster-repository-branch-check
+					<?php } else { ?>
+						hidden
+					<?php } ?>
+				><p><?php echo esc_html( $repositoryBranchCheckMessage ?? '' ); ?></p></div>
+				<button
+					type="submit"
+					name="ran_booster[check_repository_branch_after_save]"
+					value="1"
+					form="ran-booster-package-edit-form"
+					class="button button-primary ran-booster-branch-readiness-check-form"
 					data-ran-booster-enhanced-mutation
-					data-ran-booster-error-target="#ran-booster-package-mutation-error"
-					hx-get="<?php echo esc_url( $refreshRequestUrl ); ?>"
+					data-ran-booster-error-target="#ran-booster-repository-branch-check-error"
+					data-ran-booster-relocate-rendered-error
+					hx-post="<?php echo esc_url( $settingsUrl ); ?>"
 					hx-target="#wpbody-content"
 					hx-select="#wpbody-content"
 					hx-swap="outerHTML show:#ran-booster-branch-readiness:top"
-					hx-push-url="<?php echo esc_url( $refreshUrl ); ?>"
+					hx-push-url="<?php echo esc_url( $checkReturnUrl ); ?>"
 					hx-sync="this:drop"
-				>
-					<?php foreach ( $refreshArguments as $name => $value ) { ?>
-						<?php if ( is_scalar( $value ) ) { ?>
-							<input type="hidden" name="<?php echo esc_attr( (string) $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
-						<?php } ?>
-					<?php } ?>
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Run readiness check', 'ran-booster' ); ?></button>
-				</form>
+					hx-include="#ran-booster-package-edit-form"
+					<?php disabled( isset( $packageMutationAvailable ) && false === $packageMutationAvailable ); ?>
+				><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
 				<a class="button" href="<?php echo esc_url( $providerSettingsUrl ); ?>"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></a>
 				<span class="ran-booster-readiness-actions__links">
 					<a href="<?php echo esc_url( $setupUrl ); ?>"><?php esc_html_e( 'Setup instructions', 'ran-booster' ); ?></a>

@@ -15,6 +15,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackageAdminController;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Dashboard;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
@@ -95,6 +96,72 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertTrue( $fixture->plugins->installed );
 		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
 		self::assertSame( array(), $fixture->gateway->events );
+	}
+
+	public function testConfirmedUnlinkClearsBranchEvidenceBeforeTheSameIdentityCanBeReused(): void {
+		$fixture  = $this->fixture();
+		$evidence = new RemovalBranchCheckEvidenceStore();
+		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
+		$service = new PackageRemovalService(
+			$fixture->plugins,
+			$fixture->themes,
+			$fixture->gateway,
+			null,
+			new RemovalUpdaterLock(),
+			$evidence
+		);
+
+		self::assertNotNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
+		self::assertSame( 'unlinked', $service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) )->status );
+		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
+	}
+
+	public function testFailedUnlinkInvalidatesBranchEvidence(): void {
+		$fixture                         = $this->fixture();
+		$evidence                        = new RemovalBranchCheckEvidenceStore();
+		$fixture->plugins->unlinkFailure = true;
+		$service                         = new PackageRemovalService(
+			$fixture->plugins,
+			$fixture->themes,
+			$fixture->gateway,
+			null,
+			new RemovalUpdaterLock(),
+			$evidence
+		);
+		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
+
+		try {
+			$service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) );
+			self::fail( 'Failed unlink should preserve the invalidated branch evidence state.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Fixture unlink failed.', $failure->getMessage() );
+		}
+		self::assertFalse( $fixture->plugins->unlinked );
+		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
+	}
+
+	public function testFailedBranchEvidenceClearLeavesPackageManagementAndEvidenceUntouched(): void {
+		$fixture              = $this->fixture();
+		$evidence             = new RemovalBranchCheckEvidenceStore();
+		$evidence->clearFails = true;
+		$service              = new PackageRemovalService(
+			$fixture->plugins,
+			$fixture->themes,
+			$fixture->gateway,
+			null,
+			new RemovalUpdaterLock(),
+			$evidence
+		);
+		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
+
+		try {
+			$service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) );
+			self::fail( 'Failed branch evidence clear should not unlink the package.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Fixture evidence clear failed.', $failure->getMessage() );
+		}
+		self::assertFalse( $fixture->plugins->unlinked );
+		self::assertNotNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
 	public function testConfirmedUnlinkUsesTheSharedUpdaterLock(): void {
@@ -589,6 +656,30 @@ final class RemovalThemeRepository extends ThemeRepository {
 		$this->unlinked = true;
 
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
+	}
+}
+
+final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+
+	/** @var array<string, mixed> */
+	private array $records  = array();
+	public bool $clearFails = false;
+
+	public function clear( string $type, \RAN\Package $package ): void {
+		if ( $this->clearFails ) {
+			throw new \RuntimeException( 'Fixture evidence clear failed.' );
+		}
+
+		parent::clear( $type, $package );
+	}
+
+	protected function readOption(): array {
+		return $this->records;
+	}
+
+	protected function writeOption( array $records ): bool {
+		$this->records = $records;
+		return true;
 	}
 }
 

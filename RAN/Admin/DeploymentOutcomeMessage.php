@@ -11,6 +11,7 @@ final class DeploymentOutcomeMessage {
 		return match ( $code ) {
 			'deployed'                       => __( 'WordPress completed and Booster verified the package deployment.', 'ran-booster' ),
 			'no_change'                      => __( 'The requested package bytes were already installed.', 'ran-booster' ),
+			'already_managed'                => __( 'Booster already manages the installed package. Its existing package settings were left unchanged.', 'ran-booster' ),
 			'provider_failed'                => __( 'The repository provider could not prepare this deployment; no more specific reason was recorded.', 'ran-booster' ),
 			'provider_request_invalid'       => __( 'The repository or credential configuration is invalid. Review the managed package settings.', 'ran-booster' ),
 			'provider_credential_rejected'   => __( 'The repository provider rejected the selected credential. Replace or update it.', 'ran-booster' ),
@@ -35,7 +36,7 @@ final class DeploymentOutcomeMessage {
 			'maintenance_remaining'          => __( 'WordPress left maintenance mode active after the deployment. Inspect the package and maintenance state before trying again.', 'ran-booster' ),
 			'installed_version_mismatch'     => __( 'WordPress completed the deployment, but the installed package version does not match the verified archive. Inspect it before trying again.', 'ran-booster' ),
 			'activation_state_changed'       => __( 'WordPress completed the deployment, but the package activation state changed. Inspect it before trying again.', 'ran-booster' ),
-			'persistence_uncertain'          => __( 'The package changed, but Booster could not verify its management record.', 'ran-booster' ),
+			'persistence_uncertain'          => __( 'The package changed, but Booster could not verify its management record. Review the deployment activity and any existing package settings before retrying.', 'ran-booster' ),
 			default                          => __( 'Booster recorded an unavailable deployment outcome.', 'ran-booster' ),
 		};
 	}

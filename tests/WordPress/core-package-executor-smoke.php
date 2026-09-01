@@ -92,14 +92,17 @@ final class RanBoosterCorePackageExecutorSmoke {
 		$this->assertPlugin( $identifier, '1.0.0', 'plugin-install', false );
 
 		$inactive = $this->artifact( 'plugin', $slug, '2.0.0', 'plugin-inactive' );
-		$this->assertScopedUpdate(
-			fn () => $this->withMaintenanceObservation(
-				'plugin',
-				$identifier,
-				false,
-				static fn () => $executor->updatePlugin( $inactive, $slug, null, $identifier )
-			),
-			WP_PLUGIN_DIR
+		$this->assertScopedSinglePluginUpdate(
+			$identifier,
+			fn () => $this->assertScopedUpdate(
+				fn () => $this->withMaintenanceObservation(
+					'plugin',
+					$identifier,
+					false,
+					static fn () => $executor->updatePlugin( $inactive, $slug, null, $identifier )
+				),
+				WP_PLUGIN_DIR
+			)
 		);
 		$this->assertPlugin( $identifier, '2.0.0', 'plugin-inactive', false );
 
@@ -363,6 +366,45 @@ final class RanBoosterCorePackageExecutorSmoke {
 			|| $this->hasAddedHooks( $before, $this->hookFingerprint() )
 		) {
 			throw new RuntimeException( 'The executor bypassed a prior download veto or leaked its scoped hooks.' );
+		}
+	}
+
+	private function assertScopedSinglePluginUpdate( string $identifier, callable $operation ): void {
+		$coreAutoUpdatePriority = has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
+		$completions            = 0;
+		$cronStates             = array();
+		$coreRunnerSuppressed   = false;
+		$observer               = static function ( object $upgrader, array $extra ) use ( $identifier, &$completions, &$cronStates ): void {
+			unset( $upgrader );
+			if ( 'plugin' === ( $extra['type'] ?? null )
+				&& 'update' === ( $extra['action'] ?? null )
+				&& $identifier === ( $extra['plugin'] ?? null )
+			) {
+				++$completions;
+				$cronStates[] = wp_doing_cron();
+			}
+		};
+		$preUpdate = static function ( string $type, object $item ) use ( $identifier, &$coreRunnerSuppressed ): void {
+			if ( 'plugin' === $type && $identifier === ( $item->plugin ?? null ) ) {
+				$coreRunnerSuppressed = wp_doing_cron()
+					&& false === has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
+			}
+		};
+		add_action( 'upgrader_process_complete', $observer, 101, 2 );
+		add_action( 'pre_auto_update', $preUpdate, 101, 3 );
+		try {
+			$operation();
+		} finally {
+			remove_action( 'upgrader_process_complete', $observer, 101 );
+			remove_action( 'pre_auto_update', $preUpdate, 101 );
+		}
+		if ( false === $coreAutoUpdatePriority
+			|| $coreAutoUpdatePriority !== has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' )
+			|| ! $coreRunnerSuppressed
+			|| 1 !== $completions
+			|| array( true ) !== $cronStates
+		) {
+			throw new RuntimeException( 'The selected plugin update did not complete exactly once inside the scoped updater context.' );
 		}
 	}
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\PackageRemoval;
 
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
@@ -25,7 +26,8 @@ final readonly class PackageRemovalService {
 		private ThemeRepository $themes,
 		private PackageRemovalGateway $wordpress,
 		private ?DeploymentAttemptRepository $attempts,
-		private WordPressUpdaterLock $updaterLock
+		private WordPressUpdaterLock $updaterLock,
+		private ?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
 	) {
 	}
 
@@ -53,7 +55,7 @@ final readonly class PackageRemovalService {
 			if ( $package->getSourceRevision() !== $operation->getExpectedSourceRevision() ) {
 				$result = PackageRemovalResult::failed( 'stale' );
 			} elseif ( 'unlink' === $operation->operation ) {
-				$this->unlink( $operation->packageType, $identifier );
+				$this->unlink( $operation->packageType, $identifier, $package );
 				$result = PackageRemovalResult::unlinked();
 			} elseif ( null !== $this->attempts
 				&& $this->attempts->hasUnresolvedPackageAttempt(
@@ -68,8 +70,8 @@ final readonly class PackageRemovalService {
 				} else {
 					$this->disable( $operation->packageType, $package );
 					$result = 'plugin' === $operation->packageType
-						? $this->deletePlugin( $identifier )
-						: $this->deleteTheme( $identifier );
+						? $this->deletePlugin( $identifier, $package )
+						: $this->deleteTheme( $identifier, $package );
 				}
 			}
 		} catch ( Throwable $failure ) {
@@ -91,7 +93,7 @@ final readonly class PackageRemovalService {
 		return $result;
 	}
 
-	private function deletePlugin( string $identifier ): PackageRemovalResult {
+	private function deletePlugin( string $identifier, Package $package ): PackageRemovalResult {
 		if ( $this->wordpress->pluginIsActive( $identifier ) ) {
 			try {
 				$this->wordpress->deactivatePlugin( $identifier );
@@ -106,14 +108,16 @@ final readonly class PackageRemovalService {
 		return $this->deleteFiles(
 			'plugin',
 			$identifier,
+			$package,
 			fn (): bool => $this->wordpress->deletePlugin( $identifier )
 		);
 	}
 
-	private function deleteTheme( string $stylesheet ): PackageRemovalResult {
+	private function deleteTheme( string $stylesheet, Package $package ): PackageRemovalResult {
 		return $this->deleteFiles(
 			'theme',
 			$stylesheet,
+			$package,
 			fn (): bool => $this->wordpress->deleteTheme( $stylesheet )
 		);
 	}
@@ -121,7 +125,7 @@ final readonly class PackageRemovalService {
 	/**
 	 * @param callable(): bool $delete
 	 */
-	private function deleteFiles( string $type, string $identifier, callable $delete ): PackageRemovalResult {
+	private function deleteFiles( string $type, string $identifier, Package $package, callable $delete ): PackageRemovalResult {
 		$reportedSuccess = false;
 		try {
 			$reportedSuccess = $delete();
@@ -134,7 +138,7 @@ final readonly class PackageRemovalService {
 		}
 
 		try {
-			$this->unlink( $type, $identifier );
+			$this->unlink( $type, $identifier, $package );
 		} catch ( Throwable $failure ) {
 			$this->logFailure( $failure, 'management_unlink_after_deletion' );
 
@@ -179,7 +183,8 @@ final readonly class PackageRemovalService {
 			: $this->themes->boosterThemeFromStylesheet( $identifier );
 	}
 
-	private function unlink( string $type, string $identifier ): void {
+	private function unlink( string $type, string $identifier, Package $package ): void {
+		$this->branchCheckEvidence?->clear( $type, $package );
 		$result = 'plugin' === $type
 			? $this->plugins->unlink( $identifier )
 			: $this->themes->unlink( $identifier );

@@ -12,6 +12,7 @@ use RAN\Deployment\PackageMutationGuard;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
+use RAN\PackageSource;
 use RAN\RepositoryProvider\{InvalidProviderCode, ProviderRegistry, UnknownProvider, UnsupportedProviderCapability};
 use RAN\Storage\{PackageStorageFailure, PluginRepository, ThemeRepository};
 use RuntimeException;
@@ -28,7 +29,8 @@ final class PackageAdminController {
 		private ?ThemeRepository $themes = null,
 		private ?ProviderRegistry $providers = null,
 		private ?DeploymentAdminPresenter $deployments = null,
-		private ?BulkPackageActionService $bulkActions = null
+		private ?BulkPackageActionService $bulkActions = null,
+		private ?PublicRepositoryLookupProfileStore $publicLookupProfiles = null
 	) {
 	}
 
@@ -74,11 +76,15 @@ final class PackageAdminController {
 			);
 			return false;
 		}
-		if ( in_array( $action, array( 'edit-plugin', 'edit-theme' ), true ) && ! $this->storedProviderAvailable( $dashboard, $action, $request ) ) {
-			return false;
+		$storedPackage = null;
+		if ( in_array( $action, array( 'edit-plugin', 'edit-theme' ), true ) ) {
+			$storedPackage = $this->storedPackageWithAvailableProvider( $dashboard, $action, $request );
+			if ( ! $storedPackage instanceof Package ) {
+				return false;
+			}
 		}
 		if ( in_array( $action, array( 'install-plugin', 'install-theme', 'edit-plugin', 'edit-theme' ), true ) ) {
-			$request = $this->resolve( $dashboard, $request );
+			$request = $this->resolve( $dashboard, $request, $this->trustedPublicLookupProfile( $request, $storedPackage ) );
 			if ( null === $request ) {
 				return false;
 			}
@@ -164,10 +170,12 @@ final class PackageAdminController {
 			if ( null === $this->operations ) {
 				throw new LogicException( 'Package operations are not configured.' );
 			}
-			$operation = PackageOperation::fromInput( $action, $request );
-			$reinstall = 'edit' === $operation->operation
+			$operation             = PackageOperation::fromInput( $action, $request );
+			$reinstall             = 'edit' === $operation->operation
 				&& $this->enabled( $request, 'reinstall_after_save' );
-			$result    = $this->operations->execute( $operation );
+			$checkRepositoryBranch = 'edit' === $operation->operation
+				&& $this->enabled( $request, 'check_repository_branch_after_save' );
+			$result                = $this->operations->execute( $operation );
 			if ( $reinstall && 'edited' === ( $result['status'] ?? null ) && ( $result['package'] ?? null ) instanceof Package ) {
 				$dashboard->addMessage(
 					array(
@@ -201,8 +209,30 @@ final class PackageAdminController {
 		$installAnother   = 'install' === $operation->operation && $this->enabled( $request, 'install_another' );
 		$returnToSettings = $reinstall || ( 'update' === $operation->operation && $this->enabled( $request, 'return_to_settings' ) );
 		$status           = $result['status'] ?? null;
+		if ( 'edited' === $status && ( $result['package'] ?? null ) instanceof Package ) {
+			$package = $result['package'];
+			\RAN\Logging\BoosterLogger::log(
+				'package settings saved',
+				array(
+					'event'        => 'package_settings_saved',
+					'operation'    => $action,
+					'outcome_code' => 'edited',
+					'package_slug' => (string) $package->getSlug(),
+					'provider'     => (string) $package->getProviderCode(),
+					'source'       => $package->getSource()->value,
+					'step'         => 'package_settings',
+				)
+			);
+		}
 		if ( 'already-managed' === $status && ( $result['package'] ?? null ) instanceof Package ) {
 			return $this->successRedirect( $operation, $result['package'], $listArguments, false, true, 'already-managed' );
+		}
+		if ( $checkRepositoryBranch
+			&& 'edited' === $status
+			&& ( $result['package'] ?? null ) instanceof Package
+			&& PackageSource::BRANCH === $result['package']->getSource()
+		) {
+			return $this->repositoryBranchCheckRedirect( $operation, $result['package'] );
 		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
 			return $this->successRedirect( $operation, $result['package'], $listArguments, $installAnother, $returnToSettings || 'edited' === $status );
@@ -212,8 +242,11 @@ final class PackageAdminController {
 		}
 		if ( 'conflict' === $status ) {
 			status_header( 409 );
+			$message = $checkRepositoryBranch
+				? 'Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again.'
+				: 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.';
 			$addContextMessage(
-				new WP_Error( 'ran_booster_package_edit_conflict', 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.' ),
+				new WP_Error( 'ran_booster_package_edit_conflict', $message ),
 				array(
 					'operation'    => $operation->operation,
 					'package_type' => $operation->packageType,
@@ -252,10 +285,10 @@ final class PackageAdminController {
 		if ( 'already-managed' === $operation ) {
 			$dashboard->addMessage(
 				array(
-					'type'    => 'success',
+					'type'    => 'warning',
 					'message' => sprintf(
 						/* translators: %s: package type, such as Plugin or Theme. */
-						__( '%s is already managed by Booster. No package settings were changed.', 'ran-booster' ),
+						__( '%s is already installed and managed by Booster. No package settings were changed.', 'ran-booster' ),
 						'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' )
 					),
 				)
@@ -452,7 +485,7 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
-	private function storedProviderAvailable( Dashboard $dashboard, string $action, array $request ): bool {
+	private function storedPackageWithAvailableProvider( Dashboard $dashboard, string $action, array $request ): ?Package {
 		try {
 			$identifier = $request[ 'edit-plugin' === $action ? 'file' : 'stylesheet' ] ?? null;
 			if ( ! is_string( $identifier ) || '' === trim( $identifier ) ) {
@@ -468,7 +501,7 @@ final class PackageAdminController {
 				throw new RuntimeException( 'The managed package repository is unavailable.' );
 			}
 			$this->providers->get( $package->getProviderCode() );
-			return true;
+			return $package;
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
 			$message = 'This package cannot be edited until its stored repository provider is registered again.';
 		} catch ( Throwable $failure ) {
@@ -482,12 +515,18 @@ final class PackageAdminController {
 				'step'      => 'package_edit_guard',
 			)
 		);
-		return false;
+		return null;
 	}
 
 	/** @param array<string, mixed> $request @return array<string, mixed>|null */
-	private function resolve( Dashboard $dashboard, array $request ): ?array {
+	/** @param array{profile_id: string|null}|null $trustedPublicLookup */
+	private function resolve( Dashboard $dashboard, array $request, ?array $trustedPublicLookup = null ): ?array {
 		try {
+			if ( null !== $trustedPublicLookup ) {
+				return $this->repositories?->resolveWithTrustedPublicLookupProfile( $request, $trustedPublicLookup['profile_id'] )
+					?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
+			}
+
 			return $this->repositories?->resolve( $request ) ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
 			$message = 'The selected repository provider is not available.';
@@ -517,6 +556,23 @@ final class PackageAdminController {
 		return null;
 	}
 
+	/** @param array<string, mixed> $request */
+	/** @return array{profile_id: string|null}|null */
+	private function trustedPublicLookupProfile( array $request, ?Package $package ): ?array {
+		if ( ! $package instanceof Package
+			|| ! $this->enabled( $request, 'check_repository_branch_after_save' )
+			|| PackageSource::BRANCH !== $package->getSource()
+			|| $package->getRepository()->reference->private
+			|| ! is_string( $request['provider'] ?? null )
+			|| $package->getProviderCode() !== trim( wp_unslash( $request['provider'] ) ) ) {
+			return null;
+		}
+
+		return array(
+			'profile_id' => $this->publicLookupProfiles?->get( $package->getProviderCode() ),
+		);
+	}
+
 	/** @param array<string, string> $listArguments */
 	private function successRedirect( PackageOperation $operation, Package|string $package, array $listArguments, bool $installAnother = false, bool $returnToSettings = false, ?string $resultOperation = null ): string {
 		$identifier = $package instanceof Package ? $package->getIdentifier() : $package;
@@ -542,6 +598,30 @@ final class PackageAdminController {
 		}
 		$adminUrl = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 		return $adminUrl . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
+	}
+
+	private function repositoryBranchCheckRedirect( PackageOperation $operation, Package $package ): string {
+		$identifier = $package->getIdentifier();
+		if ( ! is_string( $identifier ) || '' === $identifier ) {
+			throw new LogicException( 'The managed package identity is unavailable.' );
+		}
+		$type = $operation->packageType;
+		$args = array(
+			'page'                                 => 'ran-booster-' . $type . 's',
+			'package'                              => $identifier,
+			'source_view'                          => 'branch',
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => wp_create_nonce( self::repositoryBranchCheckAction( $package, $type ) ),
+		);
+		$url  = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+
+		return $url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
+	}
+
+	public static function repositoryBranchCheckAction( Package $package, string $type ): string {
+		return 'ran-booster-repository-branch-check|'
+			. $type . '|' . (string) $package->getIdentifier() . '|'
+			. $package->getSource()->value . '|' . $package->getSourceRevision();
 	}
 
 	private function enabled( array $request, string $key ): bool {

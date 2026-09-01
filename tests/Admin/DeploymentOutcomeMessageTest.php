@@ -44,4 +44,19 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringContainsString( 'version', DeploymentOutcomeMessage::forCode( 'installed_version_mismatch' ) );
 		self::assertStringContainsString( 'activation state', DeploymentOutcomeMessage::forCode( 'activation_state_changed' ) );
 	}
+
+	public function testPersistenceUncertainMessageDirectsTheOperatorToBothRecoverySurfaces(): void {
+		$message = DeploymentOutcomeMessage::forCode( 'persistence_uncertain' );
+
+		self::assertStringContainsString( 'activity', $message );
+		self::assertStringContainsString( 'existing package settings', $message );
+		self::assertStringContainsString( 'before retrying', $message );
+	}
+
+	public function testAlreadyManagedOutcomeDoesNotClaimTheRequestedBytesWereInstalled(): void {
+		$message = DeploymentOutcomeMessage::forCode( 'already_managed' );
+
+		self::assertStringContainsString( 'already manages', $message );
+		self::assertStringNotContainsString( 'requested package bytes', $message );
+	}
 }

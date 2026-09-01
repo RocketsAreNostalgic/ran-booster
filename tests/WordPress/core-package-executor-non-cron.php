@@ -23,6 +23,9 @@ function add_filter(): void {}
 function remove_filter(): void {}
 function add_action(): void {}
 function remove_action(): void {}
+function has_action(): bool {
+	return false;
+}
 
 if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 	define( 'WP_PLUGIN_DIR', sys_get_temp_dir() );

@@ -89,6 +89,7 @@ function fixture() {
 		{ id: 'ran-booster-advanced-source-settings', open: false },
 		{ id: 'ran-booster-package-danger-zone', open: false },
 	];
+	let renderedBranchCheckErrors = [];
 	let renderedErrors = [];
 	const errorAttributes = new Map();
 	const formAttributes = new Map();
@@ -133,6 +134,20 @@ function fixture() {
 		},
 		setAttribute(name, value) {
 			errorAttributes.set(name, String(value));
+		},
+		querySelector(selector) {
+			if (selector !== 'p') {
+				return null;
+			}
+
+			return {
+				get textContent() {
+					return error.textContent;
+				},
+				set textContent(value) {
+					error.textContent = String(value);
+				},
+			};
 		},
 	};
 	const form = {
@@ -276,6 +291,12 @@ function fixture() {
 			}
 			if (
 				selector ===
+				'#wpbody-content [data-ran-booster-repository-branch-check]'
+			) {
+				return renderedBranchCheckErrors;
+			}
+			if (
+				selector ===
 				'#wpbody-content .notice-error, #wpbody-content .error'
 			) {
 				return [error, ...renderedErrors];
@@ -338,6 +359,9 @@ function fixture() {
 		},
 		setRenderedErrors(errors) {
 			renderedErrors = errors;
+		},
+		setRenderedBranchCheckErrors(errors) {
+			renderedBranchCheckErrors = errors;
 		},
 		swapTarget,
 		sourceLink,
@@ -602,7 +626,7 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	]);
 });
 
-test('a package failure copies its rendered summary into the global error banner', () => {
+test('a package failure focuses and announces its rendered notice without copying it globally', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
@@ -611,21 +635,31 @@ test('a package failure copies its rendered summary into the global error banner
 	state.error.textContent = '';
 	state.form.hasAttribute = (name) =>
 		name === 'data-ran-booster-package-mutation';
-	state.setRenderedErrors([
-		{
-			hidden: false,
-			textContent:
-				'The GitHub release must contain exactly one uploaded ZIP asset. Why this happened and how to fix it.',
-			querySelector(selector) {
-				return selector === 'p'
-					? {
-							textContent:
-								'The GitHub release must contain exactly one uploaded ZIP asset.',
-						}
-					: null;
-			},
+	const renderedNotice = {
+		hidden: false,
+		textContent:
+			'The GitHub release must contain exactly one uploaded ZIP asset. Why this happened and how to fix it.',
+		focusOptions: null,
+		attributes: new Map(),
+		focus(options) {
+			this.focusOptions = options;
 		},
-	]);
+		hasAttribute(name) {
+			return this.attributes.has(name);
+		},
+		setAttribute(name, value) {
+			this.attributes.set(name, String(value));
+		},
+		querySelector(selector) {
+			return selector === 'p'
+				? {
+						textContent:
+							'The GitHub release must contain exactly one uploaded ZIP asset.',
+					}
+				: null;
+		},
+	};
+	state.setRenderedErrors([renderedNotice]);
 
 	init();
 	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
@@ -633,12 +667,99 @@ test('a package failure copies its rendered summary into the global error banner
 		detail: { elt: state.swapTarget, xhr: { status: 200 } },
 	});
 
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.error.textContent, '');
+	assert.equal(state.error.focusOptions, null);
+	assert.equal(renderedNotice.attributes.get('role'), 'alert');
+	assert.equal(renderedNotice.attributes.get('tabindex'), '-1');
+	assert.deepEqual(renderedNotice.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{
+			message:
+				'The GitHub release must contain exactly one uploaded ZIP asset.',
+			type: 'assertive',
+		},
+	]);
+});
+
+test('a branch check leaves an unrelated persistent error untouched', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	state.error.textContent = '';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-relocate-rendered-error';
+	let persistentErrorRemoved = false;
+	const persistentError = {
+		hidden: false,
+		remove() {
+			persistentErrorRemoved = true;
+		},
+		textContent: 'An unrelated persistent error.',
+	};
+	state.setRenderedErrors([persistentError]);
+
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+
+	assert.equal(persistentErrorRemoved, false);
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.error.textContent, '');
+});
+
+test('an opted-in branch check moves its rendered provider failure beside the action', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	state.error.textContent = '';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-relocate-rendered-error';
+	let removed = false;
+	const renderedNotice = {
+		hidden: false,
+		textContent:
+			'The repository provider rate limit has been reached. Try again later.',
+		remove() {
+			removed = true;
+		},
+		querySelector(selector) {
+			return selector === 'p'
+				? {
+						textContent:
+							'The repository provider rate limit has been reached. Try again later.',
+					}
+				: null;
+		},
+	};
+	state.setRenderedBranchCheckErrors([renderedNotice]);
+
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+
+	assert.equal(removed, true);
 	assert.equal(state.error.hidden, false);
 	assert.equal(
 		state.error.textContent,
-		'The GitHub release must contain exactly one uploaded ZIP asset.'
+		'The repository provider rate limit has been reached. Try again later.'
 	);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{
+			message:
+				'The repository provider rate limit has been reached. Try again later.',
+			type: 'assertive',
+		},
+	]);
 });
 
 test('a package response never reveals an empty global error banner', () => {

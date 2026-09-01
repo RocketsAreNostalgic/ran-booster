@@ -451,19 +451,26 @@ class Dashboard {
 		if ( isset( $_GET['package'] ) ) {
 			try {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package selection.
-				$identifier = sanitize_text_field( wp_unslash( $_GET['package'] ) );
-				$package    = 'plugin' === $type
+				$identifier                                = sanitize_text_field( wp_unslash( $_GET['package'] ) );
+				$package                                   = 'plugin' === $type
 					? $this->plugins->boosterPluginFromFile( $identifier )
 					: $this->themes->boosterThemeFromStylesheet( $identifier );
+				$repositoryBranchCheckOutcome              = $this->requestedPackageRepositoryBranchCheck( $package, $type );
+				$repositoryBranchCheckEvidence             = null === $repositoryBranchCheckOutcome
+					? $this->providerSettings->packageRepositoryBranchEvidence( $type, $package )
+					: null;
+				$editData                                  = $packageView->edit(
+					$package,
+					$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
+					$this->providerSettings->buildPackageBranchReadiness( $package ),
+					$this->providerSettings->buildPackageWebhookRetention( $package ),
+					$this->requestedPackageSourceView()
+				);
+				$editData['repositoryBranchCheckOutcome']  = $repositoryBranchCheckOutcome;
+				$editData['repositoryBranchCheckEvidence'] = $repositoryBranchCheckEvidence;
 				return $this->render(
 					'packages/edit',
-					$packageView->edit(
-						$package,
-						$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
-						$this->providerSettings->buildPackageBranchReadiness( $package ),
-						$this->providerSettings->buildPackageWebhookRetention( $package ),
-						$this->requestedPackageSourceView()
-					)
+					$editData
 				);
 			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
 			} catch ( PluginNotFound | ThemeNotFound $missing ) {
@@ -482,6 +489,56 @@ class Dashboard {
 		}
 
 		return $this->render( 'packages/index', $this->packageIndexData( $packages, $packageView ) );
+	}
+
+	/** @return 'verified'|'unable_to_check'|'provider_unavailable'|null */
+	private function requestedPackageRepositoryBranchCheck( Package $package, string $type ): ?string {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This boundary verifies the action-specific nonce below.
+		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
+			|| '1' !== (string) $_GET['ran_booster_repository_branch_check']
+			|| ! current_user_can( 'manage_options' )
+			|| ! isset( $_GET['_ran_booster_repository_branch_nonce'] )
+			|| ! is_string( $_GET['_ran_booster_repository_branch_nonce'] )
+		) {
+			return null;
+		}
+		$action = PackageAdminController::repositoryBranchCheckAction( $package, $type );
+		$nonce  = wp_unslash( $_GET['_ran_booster_repository_branch_nonce'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		if ( ! wp_verify_nonce( $nonce, $action ) ) {
+			return null;
+		}
+		$marker = 'ran_booster_branch_check_' . hash(
+			'sha256',
+			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0"
+			. $this->providerSettings->packageRepositoryBranchCheckAccessFingerprint( $package )
+		);
+		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
+			$completed = get_transient( $marker );
+			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
+				if ( 'verified' !== $completed || null !== $this->providerSettings->packageRepositoryBranchEvidence( $type, $package ) ) {
+					return $completed;
+				}
+			}
+		}
+
+		$outcome = $this->providerSettings->checkPackageRepositoryBranch( $type, $package );
+		if ( function_exists( __NAMESPACE__ . '\\set_transient' ) || function_exists( 'set_transient' ) ) {
+			set_transient( $marker, $outcome, 3600 );
+		}
+		BoosterLogger::log(
+			'repository branch check completed',
+			array(
+				'event'        => 'repository_branch_checked',
+				'operation'    => 'repository_branch_check',
+				'outcome_code' => $outcome,
+				'package_slug' => (string) $package->getSlug(),
+				'provider'     => (string) $package->getProviderCode(),
+				'source'       => $package->getSource()->value,
+				'step'         => 'package_branch_check',
+			)
+		);
+		return $outcome;
 	}
 
 	/**

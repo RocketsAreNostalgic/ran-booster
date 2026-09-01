@@ -88,7 +88,7 @@ final class DeploymentAdminPresenter {
 			. '&attempt=' . rawurlencode( (string) $attempt['id'] ) . '&reference=' . rawurlencode( $reference );
 		if ( 'needs_attention' === $state ) {
 			/* translators: 1: package type, 2: package slug, 3: activity record link. */
-			$message = sprintf( __( 'An earlier deployment for the %1$s %2$s could not be verified and must be acknowledged before retrying. It is not currently running. <a href="%3$s">Open its recovery details</a>.', 'ran-booster' ), esc_html( $packageType ), esc_html( $packageSlug ), esc_url( $activityUrl ) );
+			$message = sprintf( __( 'Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href="%3$s">Check the package and allow another attempt</a>.', 'ran-booster' ), esc_html( $packageType ), esc_html( $packageSlug ), esc_url( $activityUrl ) );
 		} else {
 			/* translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link. */
 			$message = sprintf( __( 'Booster is already tracking the %1$s %2$s in state %3$s. <a href="%4$s">Review this deployment activity record</a> before trying again.', 'ran-booster' ), esc_html( $packageType ), esc_html( $packageSlug ), esc_html( $state ), esc_url( $activityUrl ) );

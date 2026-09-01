@@ -250,7 +250,7 @@ class DeploymentCoordinator {
 		try {
 			BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 			PackageMutationGuard::assertFilesystemMutationAllowed();
-			$baseline = $this->assertFrozenTarget( $attempt );
+			$baseline = $this->assertFrozenTarget( $attempt, true );
 			BoosterLogger::log( 'target snapshot verified', $context + array( 'step' => 'target_verified' ) );
 			$baselineState = null === $baseline ? null : $this->packageRuntimeState( $baseline );
 			$failureCode   = DeploymentOutcome::CODE_PROVIDER_FAILED;
@@ -300,6 +300,15 @@ class DeploymentCoordinator {
 				'deployment outcome determined',
 				$context + array(
 					'step'         => 'outcome_determined',
+					'outcome_code' => $outcome->getCode(),
+				)
+			);
+		} catch ( ExistingManagedDestination ) {
+			$outcome = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_ALREADY_MANAGED );
+			BoosterLogger::log(
+				'install skipped because the destination is already managed',
+				$context + array(
+					'step'         => 'existing_managed_destination',
 					'outcome_code' => $outcome->getCode(),
 				)
 			);
@@ -512,7 +521,7 @@ class DeploymentCoordinator {
 	}
 
 	/** Return the current installed package for an update, or null for a new install. */
-	private function assertFrozenTarget( DeploymentAttempt $attempt ): ?Package {
+	private function assertFrozenTarget( DeploymentAttempt $attempt, bool $deferMatchingManagedDestination = false ): ?Package {
 		$data          = $attempt->safeData();
 		$request       = $attempt->getRequest();
 		$packageSource = $data['package_source'] ?? null;
@@ -524,6 +533,12 @@ class DeploymentCoordinator {
 				throw new RuntimeException( 'RAN Booster cannot replace its own plugin files.' );
 			}
 			if ( $this->destinationExists( (string) $data['package_type'], $request->packageSlug ) ) {
+				if ( $this->existingManagementMatchesInstallTarget( $attempt ) ) {
+					if ( $deferMatchingManagedDestination ) {
+						return null;
+					}
+					throw new ExistingManagedDestination();
+				}
 				throw new RuntimeException( 'The package destination already exists.' );
 			}
 
@@ -534,6 +549,28 @@ class DeploymentCoordinator {
 		$this->assertPackageSnapshot( $package, $data, $request );
 
 		return $package;
+	}
+
+	private function existingManagementMatchesInstallTarget( DeploymentAttempt $attempt ): bool {
+		try {
+			$data       = $attempt->safeData();
+			$request    = $attempt->getRequest();
+			$installed  = $this->installedPackage( (string) $data['package_type'], $request->packageSlug );
+			$identifier = $installed->getIdentifier();
+			if ( ! is_string( $identifier ) || '' === $identifier ) {
+				return false;
+			}
+			$existing = $this->packageFromIdentifier( (string) $data['package_type'], $identifier );
+
+			return hash_equals( $identifier, (string) $existing->getIdentifier() )
+				&& $existing->getProviderCode() === $data['provider']
+				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
+				&& hash_equals( (string) $existing->getRepository(), $request->repository )
+				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
+				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug );
+		} catch ( Throwable ) {
+			return false;
+		}
 	}
 
 	private function assertPackageSnapshot( Package $package, array $data, DeploymentRequest $request ): void {
@@ -644,7 +681,39 @@ class DeploymentCoordinator {
 			? $this->plugins->adopt( $package )
 			: $this->themes->adopt( $package );
 
-		return $result->isSuccessful();
+		if ( $result->isSuccessful() ) {
+			return true;
+		}
+
+		return 'ran_booster_storage_adoption_conflict' === $result->getDiagnosticId()
+			&& $this->existingManagementMatchesInstalledTarget( $attempt, $package );
+	}
+
+	private function existingManagementMatchesInstalledTarget( DeploymentAttempt $attempt, Package $installed ): bool {
+		$identifier = $installed->getIdentifier();
+		if ( ! is_string( $identifier ) || '' === $identifier ) {
+			return false;
+		}
+
+		try {
+			$data     = $attempt->safeData();
+			$request  = $attempt->getRequest();
+			$existing = $this->packageFromIdentifier( (string) $data['package_type'], $identifier );
+
+			return hash_equals( $identifier, (string) $existing->getIdentifier() )
+				&& PackageSource::BRANCH === $existing->getSource()
+				&& $existing->getProviderCode() === $data['provider']
+				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
+				&& hash_equals( (string) $existing->getRepository(), $request->repository )
+				&& hash_equals( (string) $existing->getBranch(), $request->configuredBranch )
+				&& hash_equals( $existing->getCredentialId(), (string) $request->credentialId )
+				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
+				&& (bool) $existing->getPrivate() === $request->private
+				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug )
+				&& $existing->getDeploymentPolicy() === $request->deploymentPolicy;
+		} catch ( Throwable ) {
+			return false;
+		}
 	}
 
 	/** @param array{version: string, active: bool} $baselineState */

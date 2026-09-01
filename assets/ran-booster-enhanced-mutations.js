@@ -232,25 +232,77 @@
 			announce(region.textContent.trim(), 'error');
 		}
 
-		function renderedFailureMessage(form) {
+		function renderedFailureNotice(form) {
 			const region = errorRegion(form);
-			const notice = Array.from(
-				document.querySelectorAll(
-					'#wpbody-content .notice-error, #wpbody-content .error'
-				)
-			).find(function (candidate) {
-				return (
-					candidate !== region &&
-					candidate.hidden !== true &&
-					(candidate.textContent || '').trim() !== ''
-				);
-			});
+			const selector = form?.hasAttribute?.(
+				'data-ran-booster-relocate-rendered-error'
+			)
+				? '#wpbody-content [data-ran-booster-repository-branch-check]'
+				: '#wpbody-content .notice-error, #wpbody-content .error';
+			return Array.from(document.querySelectorAll(selector)).find(
+				function (candidate) {
+					return (
+						candidate !== region &&
+						candidate.hidden !== true &&
+						(candidate.textContent || '').trim() !== ''
+					);
+				}
+			);
+		}
+
+		function renderedFailureMessage(notice) {
+			if (!notice) {
+				return '';
+			}
 
 			return (
 				notice?.querySelector?.('p')?.textContent ||
 				notice?.textContent ||
 				''
 			).trim();
+		}
+
+		function focusRenderedFailure(form) {
+			const notice = renderedFailureNotice(form);
+			const message = renderedFailureMessage(notice);
+			if (!message) {
+				return false;
+			}
+
+			notice.setAttribute?.('role', 'alert');
+			if (!notice.hasAttribute?.('tabindex')) {
+				notice.setAttribute?.('tabindex', '-1');
+			}
+			notice.focus?.({ preventScroll: true });
+			announce(message, 'error');
+			return true;
+		}
+
+		function relocateRenderedFailure(form) {
+			if (
+				!form?.hasAttribute?.(
+					'data-ran-booster-relocate-rendered-error'
+				)
+			) {
+				return false;
+			}
+
+			const region = errorRegion(form);
+			const notice = renderedFailureNotice(form);
+			const message = renderedFailureMessage(notice);
+			if (!region || !message) {
+				return false;
+			}
+
+			const paragraph = region.querySelector?.('p');
+			if (paragraph) {
+				paragraph.textContent = message;
+			} else {
+				region.textContent = message;
+			}
+			notice.remove?.();
+			focusError(form);
+			return true;
 		}
 
 		function hideToast(toast) {
@@ -485,13 +537,21 @@
 				return;
 			}
 
+			if (relocateRenderedFailure(form)) {
+				return;
+			}
+
 			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
-				focusError(form, renderedFailureMessage(form));
+				if (!focusRenderedFailure(form)) {
+					focusError(form);
+				}
 				return;
 			}
 
 			if (isPackageMutation(form) && errorRegion(form)) {
-				focusError(form, renderedFailureMessage(form));
+				if (!focusRenderedFailure(form)) {
+					focusError(form);
+				}
 			}
 		});
 

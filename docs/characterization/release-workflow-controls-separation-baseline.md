@@ -215,7 +215,7 @@ intermediate ceiling of `+141` production lines, and the committed result is
 | Gate | Task 2 actual |
 | --- | ---: |
 | Workflow production PHP | 1,899 (`+132`) |
-| Focused workflow test PHP | 1,766 (`+86`) |
+| Focused workflow test PHP | 1,766 (`+86` from Task 1; `+276` from the frozen baseline) |
 | Concrete internal production types | `+1` |
 | Public hooks, routes, provider capabilities, or extension seams | `0` |
 | Persistent state | `0` |

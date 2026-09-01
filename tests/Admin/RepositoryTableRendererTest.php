@@ -94,7 +94,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
 
-	public function testItRoutesHistoricalEvidenceToReviewOnly(): void {
+	public function testItKeepsHistoricalWebhookEvidenceInline(): void {
 		$html = $this->render(
 			array(
 				'provider_label' => 'GitHub',
@@ -117,13 +117,25 @@ final class RepositoryTableRendererTest extends TestCase {
 						'datetime' => '',
 					),
 				),
+				'actions'        => array(
+					array(
+						'label'         => 'Open GitHub repository',
+						'type'          => 'link',
+						'url'           => 'https://github.com/owner/repository',
+						'external'      => true,
+						'screen_reader' => 'owner/repository',
+					),
+				),
 			)
 		);
 
-		self::assertStringContainsString( 'Review record', $html );
-		self::assertStringContainsString( 'panel=activity', html_entity_decode( $html ) );
+		self::assertStringContainsString( 'ran-booster-repository-record__details', $html );
+		self::assertStringContainsString( 'Assisted hook status', $html );
+		self::assertStringContainsString( 'No assisted hook recorded', $html );
+		self::assertStringContainsString( 'Open GitHub repository', $html );
+		self::assertStringNotContainsString( 'Review record', $html );
+		self::assertStringNotContainsString( 'panel=activity', html_entity_decode( $html ) );
 		self::assertStringNotContainsString( 'Manage repository', $html );
-		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
 
 	/** @param array<string, mixed> $row */

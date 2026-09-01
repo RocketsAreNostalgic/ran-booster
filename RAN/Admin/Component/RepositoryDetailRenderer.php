@@ -196,7 +196,20 @@ final class RepositoryDetailRenderer {
 
 	private function renderUnavailableWebhookGuidance( string $source, bool $receiverReady ): void {
 		$hasBranchConsumer = in_array( $source, array( 'branch', 'mixed' ), true );
-		$message           = $hasBranchConsumer && ! $receiverReady
+		if ( $hasBranchConsumer && $receiverReady ) {
+			?>
+			<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
+				<header class="ran-booster-settings-section__header">
+					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Repository webhook', 'ran-booster' ); ?></h3>
+				</header>
+				<div class="ran-booster-settings-section__body">
+					<p><?php esc_html_e( 'Core-assisted webhook management is unavailable for this provider. Use the provider webhook settings when available.', 'ran-booster' ); ?></p>
+				</div>
+			</section>
+			<?php
+			return;
+		}
+		$message = $hasBranchConsumer && ! $receiverReady
 			? __( 'Repository webhook management is unavailable until this site can receive provider deliveries.', 'ran-booster' )
 			: ( $hasBranchConsumer ? __( 'Assisted webhook setup is unavailable for this provider.', 'ran-booster' ) : __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' ) );
 		?>

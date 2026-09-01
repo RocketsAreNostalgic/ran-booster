@@ -7,16 +7,22 @@ namespace Tests\Admin;
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageViewWordPressFunctions.php';
 require_once __DIR__ . '/../Support/DocumentationHookWordPressFunctions.php';
+require_once __DIR__ . '/WebhookManagement/WordPressInstallationStoreWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php';
 
 use LogicException;
 use PHPUnit\Framework\TestCase;
+use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
+use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
+use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\RepositoryProvider\ProviderRegistry;
 
 final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['ran_booster_documentation_test_filters'] = array();
+		$GLOBALS['ran_booster_documentation_test_filters']                 = array();
+		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
 	}
 
 	public function testProjectAppliesBoundedProviderEnrichmentBeforeNormalization(): void {
@@ -97,6 +103,47 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'Ready to assess', $row['details'][0]['value'] );
 		self::assertSame( 'release_workflow', $row['details'][0]['category'] );
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
+	}
+
+	public function testProjectRetainsCoreAndWebhookRowsWhenProviderRowExtensionThrows(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'gh:101' => array(
+				'schema_version'              => 4,
+				'provider_code'               => 'gh',
+				'repository_id'               => '101',
+				'repository'                  => 'example/example',
+				'hook_id'                     => '77',
+				'management_credential_id'    => 'credential_1',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://hooks.example.test/webhook',
+				'status'                      => 'configured',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][]                   = static function (): array {
+			throw new \RuntimeException( 'Extension unavailable.' );
+		};
+
+		$result = $this->projectSingleRepositoryPage( $this->webhookManagementControls() );
+		$row    = $result['repositoryTableRows'][0];
+
+		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $row['actions'] );
+		self::assertContains( 'Recorded hook status', array_column( $row['details'], 'label' ) );
+		self::assertContains( 'Configured at last check', array_column( $row['details'], 'value' ) );
+	}
+
+	public function testProjectRetainsCoreRowsWhenProviderRowEnrichmentIsInvalid(): void {
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static fn(): string => 'invalid enrichment';
+
+		$result = $this->projectSingleRepositoryPage();
+
+		self::assertCount( 1, $result['repositoryTableRows'] );
+		self::assertSame( 'example/example', $result['repositoryTableRows'][0]['repository'] );
+		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $result['repositoryTableRows'][0]['actions'] );
 	}
 
 	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {
@@ -566,6 +613,76 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			'branch'            => $branch,
 			'subdirectory'      => $subdirectory,
 			'deployment_policy' => $policy,
+		);
+	}
+
+	/** @return array<string,mixed> */
+	private function projectSingleRepositoryPage( ?RepositoryWebhookManagementControls $webhookManagement = null ): array {
+		return ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+			array(
+				'provider'                     => array(
+					'code'           => 'gh',
+					'label'          => 'GitHub',
+					'owner_label'    => 'Owner',
+					'capabilities'   => array( 'webhooks' => true ),
+					'webhook_scopes' => array( array( 'code' => 'repository' ) ),
+				),
+				'providerTask'                 => 'repositories',
+				'provider_repositories'        => array(
+					'available'    => true,
+					'repositories' => array(
+						array(
+							'target'               => 'example/example',
+							'repository_id'        => '101',
+							'source'               => 'branch',
+							'package_references'   => array( 'example/example.php' ),
+							'deployment_policies'  => array(
+								'automatic' => 0,
+								'manual'    => 1,
+								'disabled'  => 0,
+							),
+							'automatic_count'      => 0,
+							'repository_url'       => 'https://github.com/example/example',
+							'webhook_settings_url' => null,
+						),
+					),
+				),
+				'managed_webhook_repositories' => array(
+					'available'    => true,
+					'repositories' => array(),
+				),
+				'webhook_assistance_readiness' => array(
+					'site'         => array(
+						'status'       => 'ready',
+						'reason_codes' => array(),
+					),
+					'repositories' => array(
+						array(
+							'repository_id'         => '101',
+							'eligible'              => true,
+							'package_references'    => array( 'example/example.php' ),
+							'deployment_policies'   => array(
+								'automatic' => 0,
+								'manual'    => 1,
+								'disabled'  => 0,
+							),
+							'reason_codes'          => array(),
+							'local_secret_coverage' => 'repository',
+						),
+					),
+				),
+			),
+			$webhookManagement
+		);
+	}
+
+	private function webhookManagementControls(): RepositoryWebhookManagementControls {
+		return new RepositoryWebhookManagementControls(
+			$this->createMock( WebhookAssistanceFacade::class ),
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry(),
+			dirname( __DIR__, 2 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/'
 		);
 	}
 

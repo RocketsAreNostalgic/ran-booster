@@ -33,6 +33,8 @@ class LocalDataRemover {
 		CredentialExpiryObservationStore::OPTION_NAME,
 		PublicRepositoryLookupProfileStore::OPTION_NAME,
 		RepositoryBranchCheckEvidenceStore::OPTION_NAME,
+		'ran_booster_release_deployments_assessment_observations',
+		'ran_booster_release_deployments_failure_history',
 	);
 
 	private const USER_META_KEYS = array(

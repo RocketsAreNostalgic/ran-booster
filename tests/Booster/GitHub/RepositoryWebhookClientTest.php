@@ -330,6 +330,158 @@ final class RepositoryWebhookClientTest extends TestCase {
 		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
 	}
 
+	public function testPingAcceptanceDoesNotUseProviderDeliveryHistoryAsSigningProof(): void {
+		$hook     = $this->hook( 55, 'https://site.example/hook' );
+		$baseline = array(
+			array(
+				'id'          => 10,
+				'event'       => 'push',
+				'status_code' => 200,
+			),
+		);
+		$delivery = array(
+			array(
+				'id'          => 11,
+				'event'       => 'ping',
+				'status_code' => 204,
+			),
+			$baseline[0],
+		);
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, $baseline ),
+				$this->response( 204, array() ),
+				$this->response( 200, $delivery ),
+			)
+		);
+
+		$result   = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
+		self::assertSame( array( 'GET', 'POST' ), array_column( array_column( $requests, 'arguments' ), 'method' ) );
+		self::assertStringContainsString( '/hooks/55/pings', $requests[1]['url'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
+		self::assertStringNotContainsString( self::TOKEN, json_encode( $result->toArray(), JSON_THROW_ON_ERROR ) );
+	}
+
+	public function testPingAcceptanceWithoutANewDeliveryDoesNotClaimVerification(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, array() ),
+				$this->response( 204, array() ),
+				$this->response( 200, array() ),
+				$this->response( 200, array() ),
+				$this->response( 200, array() ),
+				$this->response( 200, array() ),
+			)
+		);
+
+		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
+	}
+
+	public function testPingAcceptanceRemainsUnverifiedWhenProviderHistoryContainsPingDeliveries(): void {
+		$hook                       = $this->hook( 55, 'https://site.example/hook' );
+		$oldPing                    = array(
+			'id'          => 10,
+			'event'       => 'ping',
+			'status_code' => 200,
+		);
+		$newPending                 = array(
+			'id'          => 11,
+			'event'       => 'ping',
+			'status_code' => null,
+		);
+		$newComplete                = $newPending;
+		$newComplete['status_code'] = 204;
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, array( $oldPing ) ),
+				$this->response( 204, array() ),
+				$this->response( 200, array( $newPending, $oldPing ) ),
+				$this->response( 200, array( $newComplete, $oldPing ) ),
+			)
+		);
+
+		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
+	}
+
+	public function testPingAcceptanceRemainsUnverifiedWhenProviderHistoryContainsFailedDeliveries(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, array() ),
+				$this->response( 204, array() ),
+				$this->response(
+					200,
+					array(
+						array(
+							'id'          => 11,
+							'event'       => 'ping',
+							'status_code' => 401,
+						),
+					)
+				),
+			)
+		);
+
+		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
+	}
+
+	public function testPingAcceptanceRemainsUnverifiedWhenProviderHistoryContainsRedirectedDeliveries(): void {
+		$hook = $this->hook( 55, 'https://site.example/hook' );
+		\RAN\Booster\GitHub\repository_resolver_http_queue(
+			array(
+				$this->response( 200, $hook ),
+				$this->response( 200, array() ),
+				$this->response( 204, array() ),
+				$this->response(
+					200,
+					array(
+						array(
+							'id'          => 11,
+							'event'       => 'ping',
+							'status_code' => 302,
+						),
+					)
+				),
+			)
+		);
+
+		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertTrue( $result->succeeded() );
+		self::assertSame( 'ping_requested', $result->code() );
+		self::assertSame( 'unknown', $result->toArray()['delivery'] );
+	}
+
+	public function testPingRefusesAMismatchedRecordedHookBeforeAnyPingRequest(): void {
+		\RAN\Booster\GitHub\repository_resolver_http_queue( array( $this->response( 200, $this->hook( 55, 'https://other.example/hook' ) ) ) );
+
+		$result = ( new RepositoryWebhookClient() )->test( 'owner/example', '55', 'https://site.example/hook', self::TOKEN );
+
+		self::assertSame( 'hook_ownership_mismatch', $result->code() );
+		self::assertCount( 1, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+	}
+
 	/** @return array<string,mixed> */
 	private function hook( int $id, string $url ): array {
 		return array(

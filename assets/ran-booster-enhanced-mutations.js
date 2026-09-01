@@ -300,6 +300,10 @@
 			} else {
 				region.textContent = message;
 			}
+			const details = notice.querySelector?.('details');
+			if (details) {
+				region.append?.(details);
+			}
 			notice.remove?.();
 			focusError(form);
 			return true;
@@ -461,6 +465,23 @@
 			return messages.join(' ');
 		}
 
+		function consumeGitHubReleaseWorkflowResult() {
+			if (
+				document.querySelector(
+					'#wpbody-content [data-ran-booster-github-release-workflow-result]'
+				) === null
+			) {
+				return;
+			}
+
+			const canonicalUrl = new URL(window.location.href);
+			'ran_booster_github_release_workflow_result ran_booster_github_release_workflow_success ran_booster_github_release_workflow_type ran_booster_github_release_workflow_package ran_booster_github_release_workflow_source_revision ran_booster_github_release_workflow_failure_stage ran_booster_github_release_workflow_diagnostic ran_booster_github_release_workflow_diagnostic_available ran_booster_github_release_workflow_reference ran_booster_github_release_workflow_channel ran_booster_github_release_workflow_preview ran_booster_github_release_workflow_result_nonce'
+				.split(' ')
+				.forEach((key) => canonicalUrl.searchParams.delete(key));
+			const history = window.history;
+			history.replaceState(history.state, '', canonicalUrl);
+		}
+
 		function dispatchSuccess(message) {
 			if (!message || typeof window.CustomEvent !== 'function') {
 				return;
@@ -483,6 +504,8 @@
 			},
 			true
 		);
+
+		consumeGitHubReleaseWorkflowResult();
 
 		document.addEventListener('click', function (event) {
 			const submitter = enhancedFormFrom(event.target);
@@ -527,6 +550,7 @@
 			}
 
 			restoreInteractionState();
+			consumeGitHubReleaseWorkflowResult();
 			const successMessage = consumeEnhancedSuccess();
 			if (successMessage) {
 				pendingInteractionState ||= {

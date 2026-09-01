@@ -4,6 +4,70 @@ declare(strict_types=1);
 
 namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 
+// phpcs:disable Universal.Files.SeparateFunctionsFromOO -- This small bootstrap deliberately combines the WordPress function shims and their option-table double.
+
+final class SetupClaimDatabase {
+	public string $options       = 'wp_options';
+	public string $last_error    = '';
+	public int $lockAcquisitions = 0;
+	private string $connectionId;
+
+	public function __construct() {
+		$this->connectionId = spl_object_hash( $this );
+	}
+
+	public function prepare( string $query, mixed ...$arguments ): string {
+		foreach ( $arguments as $argument ) {
+			$query = (string) preg_replace_callback(
+				'/%[is]/',
+				static fn ( array $match ): string => '%i' === $match[0] ? '`' . (string) $argument . '`' : "'" . addslashes( (string) $argument ) . "'",
+				$query,
+				1
+			);
+		}
+		return $query;
+	}
+
+	public function get_var( string $query ): string|null {
+		$this->last_error = '';
+		if ( str_starts_with( $query, 'SELECT GET_LOCK(' ) ) {
+			++$this->lockAcquisitions;
+			$owner = $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null;
+			if ( null !== $owner && $owner !== $this->connectionId ) {
+				return '0';
+			}
+			$GLOBALS['ran_booster_release_deployments_test_lock_owner'] = $this->connectionId;
+			$callback = $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] ?? null;
+			if ( is_callable( $callback ) ) {
+				$callback();
+			}
+			return '1';
+		}
+		if ( str_starts_with( $query, 'SELECT RELEASE_LOCK(' ) ) {
+			if ( false === ( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] ?? true ) ) {
+				$this->last_error = 'release failed';
+				return null;
+			}
+			if ( ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) !== $this->connectionId ) {
+				return '0';
+			}
+			unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+			return '1';
+		}
+		return null;
+	}
+
+	public function disconnect(): void {
+		if ( ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) === $this->connectionId ) {
+			unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+		}
+	}
+
+	public function isLockHeld(): bool {
+		return ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) === $this->connectionId;
+	}
+}
+
 if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
 	define( 'MINUTE_IN_SECONDS', 60 );
 }
@@ -26,6 +90,47 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_json_encode' ) ) {
 	}
 }
 
+function template_pack_repository_actions_reset(): void {
+	$GLOBALS['ran_booster_template_pack_repository_actions'] = array();
+}
+
+/** @return list<array{hook:string, callback:callable, priority:int, accepted_args:int}> */
+function template_pack_repository_actions( string $hook ): array {
+	return array_values(
+		array_filter(
+			$GLOBALS['ran_booster_template_pack_repository_actions'] ?? array(),
+			static fn ( array $record ): bool => $hook === $record['hook']
+		)
+	);
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\add_action' ) ) {
+	function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+		$GLOBALS['ran_booster_template_pack_repository_actions'][] = array(
+			'hook'          => $hook,
+			'callback'      => $callback,
+			'priority'      => $priority,
+			'accepted_args' => $acceptedArgs,
+		);
+
+		return true;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\remove_action' ) ) {
+	function remove_action( string $hook, callable $callback, int $priority = 10 ): bool {
+		foreach ( $GLOBALS['ran_booster_template_pack_repository_actions'] ?? array() as $index => $record ) {
+			if ( $hook === $record['hook'] && $callback === $record['callback'] && $priority === $record['priority'] ) {
+				unset( $GLOBALS['ran_booster_template_pack_repository_actions'][ $index ] );
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\wp_remote_retrieve_response_code' ) ) {
 	/** @param array<string,mixed> $response */
 	function wp_remote_retrieve_response_code( array $response ): int {
@@ -39,6 +144,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_remote_retrieve_body' ) ) {
 	function wp_remote_retrieve_body( array $response ): string {
 		$body = $response['body'] ?? '';
 		return is_string( $body ) ? $body : '';
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_remote_retrieve_header' ) ) {
+	/** @param array<string,mixed> $response */
+	function wp_remote_retrieve_header( array $response, string $header ): string {
+		$value = $response['headers'][ $header ] ?? '';
+		return is_string( $value ) ? $value : '';
 	}
 }
 
@@ -58,8 +171,35 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_option' ) ) {
 if ( ! function_exists( __NAMESPACE__ . '\\update_option' ) ) {
 	function update_option( string $option, mixed $value, mixed $autoload = null ): bool {
 		$GLOBALS['ran_booster_release_deployments_test_option_updates'][] = array( $option, $value, $autoload );
+		if ( false === ( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] ?? true ) ) {
+			return false;
+		}
 		$stored = $GLOBALS['ran_booster_release_deployments_test_option_override'] ?? $value;
 		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ] = $stored;
+		return true;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\add_option' ) ) {
+	function add_option( string $option, mixed $value = '', string $deprecated = '', bool|string $autoload = true ): bool {
+		if ( array_key_exists( $option, $GLOBALS['ran_booster_release_deployments_test_options'] ) ) {
+			return false;
+		}
+		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ] = $value;
+		$callback = $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] ?? null;
+		if ( is_callable( $callback ) ) {
+			$callback( $option, $value, $autoload );
+		}
+		return true;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\delete_option' ) ) {
+	function delete_option( string $option ): bool {
+		if ( ! array_key_exists( $option, $GLOBALS['ran_booster_release_deployments_test_options'] ) ) {
+			return false;
+		}
+		unset( $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
 		return true;
 	}
 }
@@ -86,6 +226,10 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_transient' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\delete_transient' ) ) {
 	function delete_transient( string $key ): bool {
+		$callback = $GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] ?? null;
+		if ( is_callable( $callback ) ) {
+			$callback( $key );
+		}
 		unset( $GLOBALS['ran_booster_release_deployments_test_transients'][ $key ] );
 		return true;
 	}

@@ -22,6 +22,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 			'424242',
 			'owner/repository',
 			'99',
+			'credential_1',
 			'profile_1',
 			'repository',
 			1,
@@ -41,8 +42,8 @@ final class WordPressInstallationStoreTest extends TestCase {
 	}
 
 	public function testProviderAndRepositoryFormTheStorageIdentity(): void {
-		$github = new InstallationRecord( 'gh', 'same', 'owner/repository', '99', 'profile_1', 'owner', 1, 'reused', 'https://example.test/wp-json/ran-booster/webhook', 'configured', '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
-		$other  = new InstallationRecord( 'fixture', 'same', 'workspace/repository', 'opaque-hook', 'profile_2', 'owner', 1, 'reused', 'https://example.test/wp-json/ran-booster/webhook', 'configured', '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
+		$github = new InstallationRecord( 'gh', 'same', 'owner/repository', '99', 'credential_1', 'profile_1', 'owner', 1, 'reused', 'https://example.test/wp-json/ran-booster/webhook', 'configured', '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
+		$other  = new InstallationRecord( 'fixture', 'same', 'workspace/repository', 'opaque-hook', 'credential_2', 'profile_2', 'owner', 1, 'reused', 'https://example.test/wp-json/ran-booster/webhook', 'configured', '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
 		$store  = $this->store();
 
 		self::assertSame( InstallationStore::WRITE_APPLIED, $store->saveIfCurrent( $github, null ) );
@@ -100,7 +101,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 	public function testMalformedAndFutureRecordsFailClosedWithoutRewritingTheOption(): void {
 		$valid                    = $this->record( 'gh', 'valid', 'owner/repository', '77' );
 		$future                   = $valid->toArray();
-		$future['schema_version'] = 4;
+		$future['schema_version'] = 5;
 		$raw                      = array(
 			$valid->storageKey() => $valid->toArray(),
 			'gh:future'          => $future,
@@ -136,20 +137,20 @@ final class WordPressInstallationStoreTest extends TestCase {
 	}
 
 	private function record( string $providerCode, string $repositoryId, string $repository, string $hookId, string $status = 'configured' ): InstallationRecord {
-		return new InstallationRecord( $providerCode, $repositoryId, $repository, $hookId, 'profile_1', 'repository', 1, 'created', 'https://example.test/wp-json/ran-booster/webhook', $status, '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
+		return new InstallationRecord( $providerCode, $repositoryId, $repository, $hookId, 'credential_1', 'profile_1', 'repository', 1, 'created', 'https://example.test/wp-json/ran-booster/webhook', $status, '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
 	}
 
 	/** @return array<string, array<string, int|string>> */
 	private function incompleteRaw(): array {
 		$valid                    = $this->record( 'gh', 'valid', 'owner/repository', '77' );
 		$future                   = $valid->toArray();
-		$future['schema_version'] = 4;
+		$future['schema_version'] = 5;
 
 		return array(
 			$valid->storageKey() => $valid->toArray(),
 			'gh:future'          => $future,
 			'gh:malformed'       => array(
-				'schema_version' => 3,
+				'schema_version' => 4,
 				'token'          => 'must-not-be-read',
 			),
 		);

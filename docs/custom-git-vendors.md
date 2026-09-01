@@ -173,9 +173,11 @@ them:
   repository directly to its provider-owned webhook settings screen.
 - `RAN\RepositoryProvider\RepositoryWebhookFitness` and
   `RAN\RepositoryProvider\RepositoryWebhookManagement` together for the exact
-  `repository-webhook-management/1` setup, check, reconfigure and remove
-  operation. The provider owns its fixed vendor calls; Core owns authorization,
-  binding, secret custody and bounded results. Core does not generate a
+  `repository-webhook-management/3` setup, check, reconfigure, remove and test
+  operation, with matching read-only `assessSetup`, `assessCheck`,
+  `assessReconfigure`, `assessRemove` and `assessTest` methods. The provider
+  owns its fixed vendor calls; Core owns authorization, binding, secret custody
+  and bounded results. Core does not generate a
   management form, credential schema or route from the backend capability.
 - `RAN\RepositoryProvider\RepositoryReleaseMetadata` for the provider's
   canonical Update URI and public release-details URL. This is local metadata

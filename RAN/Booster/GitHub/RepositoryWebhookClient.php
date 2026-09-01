@@ -5,7 +5,7 @@ namespace RAN\Booster\GitHub;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 use RuntimeException;
-/** Fixed-origin GitHub client for repository-webhook-management/1. */
+/** Fixed-origin GitHub client for repository-webhook-management/3. */
 final class RepositoryWebhookClient {
 	private const ORIGIN          = 'https://api.github.com';
 	private const CALL_TIMEOUT    = 8.0;
@@ -23,6 +23,9 @@ final class RepositoryWebhookClient {
 	}
 	public function assessRemove( string $repositoryId, string $repository, #[\SensitiveParameter] string $token ): RepositoryWebhookFitnessResult {
 		return $this->assess( $repositoryId, $repository, $token, 'remove' );
+	}
+	public function assessTest( string $repositoryId, string $repository, #[\SensitiveParameter] string $token ): RepositoryWebhookFitnessResult {
+		return $this->assess( $repositoryId, $repository, $token, 'test' );
 	}
 	public function setup( string $repository, string $callbackUrl, #[\SensitiveParameter] string $token, #[\SensitiveParameter] string $secret ): RepositoryWebhookOperationResult {
 		$deadline = microtime( true ) + self::TOTAL_TIMEOUT;
@@ -97,6 +100,29 @@ final class RepositoryWebhookClient {
 			'unknown',
 			in_array( 'mismatched', $configuration, true ) ? 'Reconfigure the identified hook before relying on it.' : 'A correctly signed inbound delivery is still required for verification.'
 		);
+	}
+	public function test( string $repository, string $hookId, string $callbackUrl, #[\SensitiveParameter] string $token ): RepositoryWebhookOperationResult {
+		$deadline = microtime( true ) + self::TOTAL_TIMEOUT;
+		$hookRead = $this->request( 'GET', $this->hookPath( $repository, $hookId ), $token, null, self::READ_BYTES, $deadline );
+		$hook     = 200 === $hookRead['status'] ? $this->decodeHook( $hookRead['body'] ) : null;
+		if ( null === $hook || ! hash_equals( $hookId, (string) $this->hookId( $hook ) ) ) {
+			return 404 === $hookRead['status']
+				? $this->result( 'failed', 'hook_absent', $hookId, $this->unknownConfiguration(), 'absent', 'The recorded hook no longer exists.' )
+				: $this->uncertain( 'hook_readback_unavailable', $hookId );
+		}
+		$configuration = $this->configuration( $hook, $callbackUrl );
+		if ( in_array( 'unknown', $configuration, true ) ) {
+			return $this->uncertain( 'hook_readback_invalid', $hookId );
+		}
+		if ( in_array( 'mismatched', $configuration, true ) ) {
+			return $this->result( 'failed', 'hook_ownership_mismatch', $hookId, $configuration, 'unknown', 'The recorded hook does not match this site. Reconfigure it before testing.' );
+		}
+		$ping = $this->request( 'POST', $this->hookPath( $repository, $hookId ) . '/pings', $token, array(), 0, $deadline );
+		if ( 200 > $ping['status'] || 300 <= $ping['status'] ) {
+			return $this->mutationFailure( $ping['status'], 'ping_request_failed', $hookId );
+		}
+
+		return $this->result( 'succeeded', 'ping_requested', $hookId, $configuration, 'unknown', 'GitHub accepted the ping request. Only an authenticated inbound delivery can verify the signing secret.' );
 	}
 	public function reconfigure( string $repository, string $hookId, string $callbackUrl, #[\SensitiveParameter] string $token, #[\SensitiveParameter] string $secret ): RepositoryWebhookOperationResult {
 		$deadline   = microtime( true ) + self::TOTAL_TIMEOUT;
@@ -214,6 +240,9 @@ final class RepositoryWebhookClient {
 		}
 		return $this->hooksPath( $repository ) . '/' . rawurlencode( $hookId );
 	}
+	private function deliveriesPath( string $repository, string $hookId ): string {
+		return $this->hookPath( $repository, $hookId ) . '/deliveries?per_page=100';
+	}
 	private function repositoryPath( string $repository ): string {
 		$parts = explode( '/', trim( $repository ) );
 		if ( 2 !== count( $parts ) || 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\z/D', $parts[0] ) || 1 !== preg_match( '/\A[A-Za-z0-9_.-]{1,100}\z/D', $parts[1] ) ) {
@@ -238,6 +267,52 @@ final class RepositoryWebhookClient {
 			}
 		}
 		return $data;
+	}
+	/** @return array<string,true>|null */
+	private function deliveryIds( string $body ): ?array {
+		$data = json_decode( $body, true, 32, JSON_BIGINT_AS_STRING );
+		if ( ! is_array( $data ) || ! array_is_list( $data ) ) {
+			return null;
+		}
+		$ids = array();
+		foreach ( $data as $delivery ) {
+			if ( ! is_array( $delivery ) || null === $this->deliveryId( $delivery ) ) {
+				return null;
+			}
+			$ids[ $this->deliveryId( $delivery ) ] = true;
+		}
+
+		return $ids;
+	}
+	/** @param array<string,true> $baseline @return array{status_code:?int}|false|null */
+	private function newPingDelivery( string $body, array $baseline ): array|false|null {
+		$data = json_decode( $body, true, 32, JSON_BIGINT_AS_STRING );
+		if ( ! is_array( $data ) || ! array_is_list( $data ) ) {
+			return false;
+		}
+		foreach ( $data as $delivery ) {
+			$id = is_array( $delivery ) ? $this->deliveryId( $delivery ) : null;
+			if ( ! is_array( $delivery ) || null === $id || ! is_string( $delivery['event'] ?? null ) ) {
+				return false;
+			}
+			if ( ! isset( $baseline[ $id ] ) && 'ping' === $delivery['event'] ) {
+				$statusCode = $delivery['status_code'] ?? null;
+				if ( null !== $statusCode && ! is_int( $statusCode ) ) {
+					return false;
+				}
+
+				return array( 'status_code' => $statusCode );
+			}
+		}
+
+		return null;
+	}
+	/** @param array<string,mixed> $delivery */
+	private function deliveryId( array $delivery ): ?string {
+		$id = $delivery['id'] ?? null;
+		$id = is_int( $id ) || is_string( $id ) ? trim( (string) $id ) : '';
+
+		return 1 === preg_match( '/\A[1-9][0-9]{0,18}\z/D', $id ) ? $id : null;
 	}
 	/** @param array<string,mixed>|null $hook */
 	private function hookId( ?array $hook ): ?string {

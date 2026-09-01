@@ -9,6 +9,14 @@ require_once __DIR__ . '/../Support/DocumentationHookWordPressFunctions.php';
 require_once __DIR__ . '/WebhookManagement/WordPressInstallationStoreWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php';
+require_once __DIR__ . '/ReleaseManagement/Support/ReleaseManagementWordPressFunctions.php';
+require_once dirname( __DIR__, 2 ) . '/tests/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/WorkflowAssistanceTestBootstrap.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/GitHubReleaseWorkflowWordPressFunctions.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/ReleaseWorkflowCredentialStoreDouble.php';
+require_once __DIR__ . '/ReleaseManagement/Support/ReleaseManagementFixtures.php';
+require_once __DIR__ . '/ReleaseManagement/Support/ReleaseTrackingFacadeDouble.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/PluginRepositoryDouble.php';
+require_once __DIR__ . '/ReleaseManagement/GitHub/Support/ThemeRepositoryDouble.php';
 
 use LogicException;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -18,10 +26,16 @@ use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\ProviderRepositoryRowsNormalizer;
+use RAN\Admin\ReleaseManagement\GitHub\GitHubReleaseWorkflowControls;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble;
+use Tests\Admin\ReleaseManagement\GitHub\Support\ReleaseWorkflowCredentialStoreDouble;
+use Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble;
+use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
+use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	protected function setUp(): void {
@@ -110,11 +124,12 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	public function testProjectRetainsCoreRowsWhenProviderRowExtensionThrows(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'gh:101' => array(
-				'schema_version'              => 3,
+				'schema_version'              => 4,
 				'provider_code'               => 'gh',
 				'repository_id'               => '101',
 				'repository'                  => 'example/example',
 				'hook_id'                     => '77',
+				'management_credential_id'    => 'credential_1',
 				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
 				'webhook_profile_scope'       => 'repository',
 				'webhook_profile_revision'    => 1,
@@ -134,18 +149,19 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertCount( 1, $result['repositoryTableRows'] );
 		self::assertSame( 'example/example', $result['repositoryTableRows'][0]['repository'] );
 		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $result['repositoryTableRows'][0]['actions'] );
-		self::assertSame( 'Recorded hook status', $result['repositoryTableRows'][0]['details'][0]['label'] );
-		self::assertSame( 'Configured at last check', $result['repositoryTableRows'][0]['details'][0]['value'] );
+		self::assertContains( 'Recorded hook status', array_column( $result['repositoryTableRows'][0]['details'], 'label' ) );
+		self::assertContains( 'Configured at last check', array_column( $result['repositoryTableRows'][0]['details'], 'value' ) );
 	}
 
 	public function testProjectRetainsWebhookEvidenceWhenProviderExtensionRemovesIt(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'gh:101' => array(
-				'schema_version'              => 3,
+				'schema_version'              => 4,
 				'provider_code'               => 'gh',
 				'repository_id'               => '101',
 				'repository'                  => 'example/example',
 				'hook_id'                     => '77',
+				'management_credential_id'    => 'credential_1',
 				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
 				'webhook_profile_scope'       => 'repository',
 				'webhook_profile_revision'    => 1,
@@ -198,9 +214,83 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $result['repositoryTableRows'][0]['actions'] );
 	}
 
+	public function testProjectDoesNotEnrichAnIncompleteInventoryWithPartialReleaseAutomationStatus(): void {
+		$controls = new GitHubReleaseWorkflowControls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ),
+			new PluginRepositoryDouble(),
+			new ThemeRepositoryDouble(),
+			new ReleaseWorkflowCredentialStoreDouble()
+		);
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = array( $controls, 'enrichRepositoryRows' );
+
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+			array(
+				array(
+					'target'                    => 'example/example',
+					'repository_id'             => '101',
+					'source'                    => 'branch',
+					'package_references'        => array( 'example/example.php', 'omitted/omitted.php' ),
+					'package_summaries'         => array(
+						array(
+							'type'              => 'plugin',
+							'identifier'        => 'example/example.php',
+							'display_name'      => 'Example plugin',
+							'settings_url'      => 'https://example.test/plugin-settings',
+							'source'            => 'branch',
+							'source_revision'   => 3,
+							'deployment_policy' => 'manual',
+						),
+					),
+					'package_summaries_omitted' => 1,
+					'deployment_policies'       => array(
+						'automatic' => 0,
+						'manual'    => 2,
+						'disabled'  => 0,
+					),
+					'automatic_count'           => 0,
+					'repository_url'            => 'https://github.com/example/example',
+					'webhook_settings_url'      => null,
+				),
+			),
+			'gh',
+			'GitHub',
+			'GitHub webhooks',
+			'GitHub secret',
+			'https://example.test/webhooks/gh',
+			true,
+			array(
+				'by_id'         => array(
+					'101' => array(
+						'repository_id'         => '101',
+						'eligible'              => true,
+						'package_references'    => array( 'example/example.php', 'omitted/omitted.php' ),
+						'deployment_policies'   => array(
+							'automatic' => 0,
+							'manual'    => 2,
+							'disabled'  => 0,
+						),
+						'reason_codes'          => array(),
+						'local_secret_coverage' => 'repository',
+					),
+				),
+				'by_repository' => array(),
+			),
+			null,
+			'',
+			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
+			'https://example.test/repositories'
+		);
+		$row    = $result['rows']['101'];
+
+		self::assertSame( 'Package inventory incomplete', $row['management_label'] );
+		self::assertSame( 'Workflow controls disabled', $row['management_detail'] );
+		self::assertSame( array(), $row['details'] );
+		self::assertArrayNotHasKey( 'gh:release-automation', $row['actions'] );
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testReleaseWebhookCleanupLinkSelectsTheRetainedBranchPane(): void {
+	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = true;
 		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project(
 			array(
@@ -239,10 +329,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertIsArray( $row );
 		$action   = $row['actions']['core:webhook-cleanup-review'];
 		$settings = $row['actions'][ 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ) ];
-		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $action['url'] );
-		self::assertStringContainsString( 'source_view=branch', $action['url'] );
-		self::assertStringContainsString( 'webhook_cleanup=1', $action['url'] );
-		self::assertStringEndsWith( '#ran-booster-webhook-cleanup', $action['url'] );
+		self::assertStringContainsString( 'panel=repositories', $action['url'] );
+		self::assertStringContainsString( 'repository=101', $action['url'] );
+		self::assertStringContainsString( 'repository_view=branch', $action['url'] );
+		self::assertStringEndsWith( '#ran-booster-repository-webhook-setup-heading', $action['url'] );
+		self::assertSame( $row['consequence_id'], $action['described_by'] );
 		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $settings['url'] );
 	}
 
@@ -446,6 +537,25 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'Mixed sources', $result['rows']['101']['source_label'] );
 		self::assertSame( 'packages/plugin', $result['rows']['101']['package_summaries'][0]['subdirectory'] );
 		self::assertSame( array( 'owner/plugin.php', 'owner-theme' ), $result['rows']['101']['package_references'] );
+		self::assertSame(
+			array(
+				array(
+					'label'         => 'Plugin settings',
+					'screen_reader' => 'owner/plugin.php',
+				),
+				array(
+					'label'         => 'Theme settings',
+					'screen_reader' => 'owner-theme',
+				),
+			),
+			array_map(
+				static fn ( array $action ): array => array(
+					'label'         => $action['label'],
+					'screen_reader' => $action['screen_reader'],
+				),
+				array_values( $result['rows']['101']['actions'] )
+			)
+		);
 		self::assertSame( 'Automatic: 1', $result['rows']['101']['policies'][0]['label'] );
 		self::assertSame( 'Manual: 1', $result['rows']['101']['policies'][1]['label'] );
 		self::assertSame( array( 'owner/plugin.php' ), $capturedProjections['101']['package_references'] );
@@ -457,6 +567,111 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertTrue( $result['rows']['404']['historical'] );
 		self::assertSame( array(), $result['rows']['404']['actions'] );
 		self::assertArrayNotHasKey( '404', $capturedProjections );
+	}
+
+	public function testProjectPageBuildsExactRepositoryViewUrlsAndLocalReleaseSummary(): void {
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
+			$rows['101']['details'][] = array(
+				'key'   => 'gh:release-automation-aaaaaaaaaaaaaaaa',
+				'label' => 'Release automation',
+				'value' => 'Available from Branch',
+				'tone'  => 'pending',
+			);
+			$rows['202']['details'][] = array(
+				'key'   => 'gh:release-automation-bbbbbbbbbbbbbbbb',
+				'label' => 'Release automation',
+				'value' => 'Unavailable',
+				'tone'  => 'warning',
+			);
+
+			return $rows;
+		};
+
+		$result = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+			array(
+				'provider'              => array(
+					'code'           => 'gh',
+					'label'          => 'GitHub',
+					'capabilities'   => array(),
+					'webhook_scopes' => array(),
+				),
+				'providerTask'          => 'repositories',
+				'repositoryView'        => 'releases',
+				'requestedRepositoryId' => '101',
+				'provider_repositories' => array(
+					'repositories' => array(
+						array(
+							'target'            => 'owner/release',
+							'repository_id'     => '101',
+							'source'            => 'release_asset',
+							'package_summaries' => array( $this->summary( 'plugin', 'release/plugin.php', 'Release', 'release_asset', '', '', 'manual' ) ),
+						),
+						array(
+							'target'            => 'owner/branch',
+							'repository_id'     => '202',
+							'source'            => 'branch',
+							'package_summaries' => array( $this->summary( 'plugin', 'branch/plugin.php', 'Branch', 'branch', 'main', '', 'manual' ) ),
+						),
+						array(
+							'target'            => 'owner/old',
+							'repository_id'     => '303',
+							'source'            => 'release_asset',
+							'historical'        => true,
+							'package_summaries' => array( $this->summary( 'plugin', 'old/plugin.php', 'Old', 'release_asset', '', '', 'manual' ) ),
+						),
+						array(
+							'target'                    => 'owner/partial',
+							'repository_id'             => '404',
+							'source'                    => 'release_asset',
+							'package_references'        => array( 'partial/first.php', 'partial/second.php' ),
+							'package_summaries_omitted' => 1,
+							'package_summaries'         => array( $this->summary( 'plugin', 'partial/plugin.php', 'Partial', 'release_asset', '', '', 'manual' ) ),
+						),
+					),
+				),
+			)
+		);
+
+		self::assertSame( 'releases', $result['repositoryView'] );
+		self::assertStringContainsString( 'panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repositoryViewUrls']['status'] ) );
+		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
+		self::assertSame( 3, $result['repositoryIntegrationSummary']['release_packages'] );
+		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_repositories'] );
+		self::assertFalse( $result['repositoryIntegrationSummary']['release_totals_incomplete'] );
+		self::assertTrue( $result['repositoryIntegrationSummary']['release_workflows_inventory_incomplete'] );
+		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testRepositorySubtabsUseNetworkAdminHrefsButKeepRelativeHtmxRequestsOnMultisite(): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+			array(
+				'provider'              => array(
+					'code'           => 'gh',
+					'label'          => 'GitHub',
+					'capabilities'   => array(),
+					'webhook_scopes' => array(),
+				),
+				'providerTask'          => 'repositories',
+				'repositoryView'        => 'branch',
+				'requestedRepositoryId' => '101',
+				'provider_repositories' => array(
+					'repositories' => array(
+						array(
+							'target'            => 'owner/repository',
+							'repository_id'     => '101',
+							'source'            => 'branch',
+							'package_summaries' => array( $this->summary( 'plugin', 'plugin/plugin.php', 'Plugin', 'branch', 'main', '', 'manual' ) ),
+						),
+					),
+				),
+			)
+		);
+
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repositoryViewUrls']['status'] ) );
+		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
 	}
 
 	public function testRepositorySummaryUsesAutomaticBranchAggregateBeyondPackageSummaryCap(): void {
@@ -512,8 +727,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		self::assertCount( 20, $result['repositoryTableRows'][0]['package_summaries'] );
 		self::assertSame( 1, $result['repositoryTableRows'][0]['package_summaries_omitted'] );
-		self::assertTrue( $result['repositoryTableRows'][0]['has_automatic_branch_consumer'] );
-		self::assertSame( 1, $result['repositoryIntegrationSummary']['needs_review'] );
+		self::assertFalse( $result['repositoryTableRows'][0]['has_automatic_branch_consumer'] );
+		self::assertSame( 'Package inventory incomplete', $result['repositoryTableRows'][0]['management_label'] );
+		self::assertSame( array(), $result['repositoryTableRows'][0]['actions'] );
+		self::assertSame( 0, $result['repositoryIntegrationSummary']['needs_review'] );
 	}
 
 	public function testRejectsProviderRewriteOfImmutablePackageSummaries(): void {
@@ -608,10 +825,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		return new RepositoryWebhookManagementControls(
 			$this->createMock( WebhookAssistanceFacade::class ),
 			$this->createMock( AdminInteractionFacade::class ),
-			new ManagedPackageWebhookAuthorityResolver( $this->createMock( PluginRepository::class ), $this->createMock( ThemeRepository::class ) ),
 			new ProviderRegistry(),
 			dirname( __DIR__, 2 ) . '/',
-			'https://example.test/wp-content/plugins/ran-booster/'
+			'https://example.test/wp-content/plugins/ran-booster/',
+			new ManagedPackageWebhookAuthorityResolver( $this->createMock( PluginRepository::class ), $this->createMock( ThemeRepository::class ) )
 		);
 	}
 

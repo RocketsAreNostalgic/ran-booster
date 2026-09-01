@@ -32,10 +32,10 @@ final class BoosterLogger {
 		'transition'      => true,
 	);
 
-	public static function log( string $message, array $context = array() ): void {
+	public static function log( string $message, array $context = array() ): bool {
 		$wordpressLogging = self::enabled();
 		if ( ! $wordpressLogging && null === self::$capture ) {
-			return;
+			return false;
 		}
 
 		$line           = self::PREFIX . ' ' . self::oneLine( $message );
@@ -49,12 +49,15 @@ final class BoosterLogger {
 			$line .= ' ' . $encodedContext;
 		}
 
+		$wordpressLogged = false;
 		if ( $wordpressLogging ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- This is the single gated WordPress debug-log boundary for Booster.
-			error_log( $line );
+			$wordpressLogged = error_log( $line );
 		}
 
-		self::$capture?->append( $line );
+		$captureLogged = self::$capture?->append( $line ) ?? false;
+
+		return $wordpressLogged || $captureLogged;
 	}
 
 	public static function logException( string $message, Throwable $exception, array $context = array() ): void {

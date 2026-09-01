@@ -39,17 +39,20 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	/** @var null|callable():void */
 	public $afterCandidateInspection = null;
 
-	public function __construct( private ReleaseTrackingStatus $releaseStatus ) {
+	/** @param array<string,ReleaseTrackingStatus> $releaseStatuses */
+	public function __construct(
+		private ReleaseTrackingStatus $releaseStatus,
+		private array $releaseStatuses = array()
+	) {
 	}
 
 	public function status( string $type, string $identifier ): ReleaseTrackingStatus {
-		unset( $type, $identifier );
 		++$this->statusReads;
 		if ( $this->throwOnStatus ) {
 			throw new RuntimeException( 'status-failure' );
 		}
 
-		return $this->releaseStatus;
+		return $this->releaseStatuses[ $type . '|' . $identifier ] ?? $this->releaseStatus;
 	}
 
 	public function statuses( string $type, array $identifiers ): array {
@@ -81,6 +84,12 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public function preflight( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
 		$this->calls[] = array( 'preflight', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
+
+		return $this->releaseStatus->preflight();
+	}
+
+	public function assessmentPreflight( string $type, string $identifier, int $expectedSourceRevision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
+		$this->calls[] = array( 'assessment_preflight', $type, $identifier, $expectedSourceRevision, $channel, $nonce );
 
 		return $this->releaseStatus->preflight();
 	}

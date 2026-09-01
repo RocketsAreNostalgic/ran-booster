@@ -40,6 +40,7 @@ final class D23ApplicationTransport {
 	private string $uncertainBlob = '';
 	private string $branchHead    = '';
 	private string $createdTree   = self::HEAD_TREE;
+	private int $repositoryStatus = 200;
 	/** @var array<int,string> */
 	private array $archives    = array();
 	private int $latestRelease = TemplatePackApi2Fixture::RELEASE_ID;
@@ -105,6 +106,9 @@ final class D23ApplicationTransport {
 	public function failWriteAcknowledgement( string $operation ): void {
 		$this->uncertainAt = $operation;
 	}
+	public function failRepositoryRead( int $status ): void {
+		$this->repositoryStatus = $status;
+	}
 	/** @param array<string,mixed> $args */
 	public function __invoke( string $method, string $url, array $args ): array {
 		$this->requests[] = compact( 'method', 'url', 'args' );
@@ -114,6 +118,9 @@ final class D23ApplicationTransport {
 			return $this->template( $path );
 		}
 		if ( '/repos/' . self::REPOSITORY === $path ) {
+			if ( 200 !== $this->repositoryStatus ) {
+				return $this->json( $this->repositoryStatus, array() );
+			}
 			return $this->json(
 				200,
 				array(

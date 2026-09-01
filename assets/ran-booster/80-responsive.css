@@ -107,6 +107,10 @@
 	.ran-booster-admin .ran-booster-repository-record__action-group {
 		justify-content: flex-start;
 	}
+
+	.ran-booster-admin .ran-booster-repository-integration-status {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 
 @media screen and (max-width: 960px) {
@@ -125,6 +129,14 @@
 
 	.ran-booster-admin .ran-booster-webhook-endpoint > div:last-child {
 		border-inline-end: 0;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__sidebar {
+		position: static;
 	}
 }
 
@@ -174,6 +186,10 @@
 		flex: 0 0 auto;
 	}
 
+	.ran-booster-admin .ran-booster-repository-detail__tabs {
+		margin-block-end: var(--ran-booster-space-16);
+	}
+
 	.ran-booster-admin
 		:is(
 			.ran-booster-status-summary__actions,
@@ -195,8 +211,7 @@
 	}
 
 	.ran-booster-admin .ran-booster-readiness-overview,
-	.ran-booster-admin .ran-booster-repository-integration-status,
-	.ran-booster-admin .ran-booster-webhook-steps {
+	.ran-booster-admin .ran-booster-repository-integration-status {
 		grid-template-columns: minmax(0, 1fr);
 	}
 

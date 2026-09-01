@@ -398,24 +398,24 @@ final class ProviderContractsTest extends TestCase {
 		self::assertFalse( ( new PublicRepositoryBrowseMetadata( false ) )->supportsProviderDefaultProfile );
 	}
 
-	public function testRepositoryWebhookOperationHasOnlyTheFourFixedActions(): void {
+	public function testRepositoryWebhookOperationHasOnlyTheFiveFixedActions(): void {
 		$fitnessMethods    = get_class_methods( RepositoryWebhookFitness::class );
 		$managementMethods = get_class_methods( RepositoryWebhookManagement::class );
 		sort( $fitnessMethods );
 		sort( $managementMethods );
 
-		self::assertSame( array( 'assessCheck', 'assessReconfigure', 'assessRemove', 'assessSetup' ), $fitnessMethods );
-		self::assertSame( array( 'check', 'reconfigure', 'remove', 'setup' ), $managementMethods );
+		self::assertSame( array( 'assessCheck', 'assessReconfigure', 'assessRemove', 'assessSetup', 'assessTest' ), $fitnessMethods );
+		self::assertSame( array( 'check', 'reconfigure', 'remove', 'setup', 'test' ), $managementMethods );
 		self::assertSame( 'repository-webhook-management', RepositoryWebhookFitness::OPERATION );
-		self::assertSame( 1, RepositoryWebhookFitness::VERSION );
+		self::assertSame( 3, RepositoryWebhookFitness::VERSION );
 		self::assertSame( RepositoryWebhookFitness::OPERATION, RepositoryWebhookManagement::OPERATION );
 		self::assertSame( RepositoryWebhookFitness::VERSION, RepositoryWebhookManagement::VERSION );
 		self::assertSame(
-			array( 'repositoryId', 'repository', 'credentialProfileId', 'requestCredential' ),
+			array( 'repositoryId', 'repository', 'credentialProfileId' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, ( new \ReflectionMethod( RepositoryWebhookFitness::class, 'assessSetup' ) )->getParameters() )
 		);
 		self::assertSame(
-			array( 'repositoryId', 'repository', 'credentialProfileId', 'hookId', 'requestCredential' ),
+			array( 'repositoryId', 'repository', 'credentialProfileId', 'hookId' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, ( new \ReflectionMethod( RepositoryWebhookFitness::class, 'assessRemove' ) )->getParameters() )
 		);
 
@@ -425,7 +425,7 @@ final class ProviderContractsTest extends TestCase {
 				( new \ReflectionMethod( RepositoryWebhookManagement::class, $method ) )->getParameters()
 			);
 			self::assertSame(
-				array( 'repositoryId', 'repository', 'hookId', 'callbackUrl', 'credentialProfileId', 'requestCredential' ),
+				array( 'repositoryId', 'repository', 'hookId', 'callbackUrl', 'credentialProfileId' ),
 				$names,
 				'Exact endpoint ownership requires the Core-derived callback URL.'
 			);

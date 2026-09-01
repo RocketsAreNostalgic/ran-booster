@@ -23,12 +23,21 @@
 		const taskRegion = document.getElementById(
 			'ran-booster-provider-tasks'
 		);
-		if (!taskRegion) {
+		const detailRegion = document.getElementById(
+			'ran-booster-provider-profile-region'
+		);
+		if (
+			!taskRegion &&
+			!detailRegion?.querySelector?.('.ran-booster-repository-detail')
+		) {
 			return;
 		}
 
 		function currentTaskRegion() {
-			return document.getElementById('ran-booster-provider-tasks');
+			return (
+				document.getElementById('ran-booster-provider-tasks') ||
+				document.getElementById('ran-booster-provider-profile-region')
+			);
 		}
 
 		function handlesTaskRegion(event) {
@@ -38,6 +47,12 @@
 			return (
 				target?.id === 'ran-booster-provider-task-panel' ||
 				target?.id === 'ran-booster-provider-tasks' ||
+				(target?.id === 'ran-booster-provider-profile-region' &&
+					Boolean(
+						requestElement?.closest?.(
+							'.ran-booster-repository-detail__tabs'
+						)
+					)) ||
 				Boolean(
 					requestElement?.closest?.('#ran-booster-provider-tasks')
 				)
@@ -108,6 +123,9 @@
 			region
 				.querySelectorAll('.ran-booster-provider-task-tab')
 				.forEach(function (tab) {
+					if (!tab.dataset.ranBoosterProviderTask) {
+						return;
+					}
 					const isCurrent =
 						tab.dataset.ranBoosterProviderTask === currentTask;
 					if (isCurrent) {
@@ -117,7 +135,12 @@
 						tab.removeAttribute('aria-current');
 					}
 				});
-			currentTab?.focus({ preventScroll: true });
+			const currentRepositoryTab = region.querySelector(
+				'.ran-booster-repository-detail__tabs [aria-current="page"]'
+			);
+			(currentRepositoryTab || currentTab)?.focus({
+				preventScroll: true,
+			});
 
 			region.dispatchEvent(
 				new CustomEvent('ran-booster:provider-tasks-ready', {

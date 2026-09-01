@@ -163,7 +163,7 @@ final class ReleaseManagementControls {
 		?object $package,
 		string $pageUrl
 	): void {
-		if ( null === $this->tracking || ( 'create' === $mode && null === $this->prospectiveOperations ) ) {
+		if ( 'create' === $mode && null === $this->prospectiveOperations ) {
 			return;
 		}
 
@@ -187,16 +187,19 @@ final class ReleaseManagementControls {
 			<?php
 		}
 
+		$status              = null === $package ? null : $this->packageStatus( $package );
+		$nonces              = null === $package ? array() : $this->packageNonceActions( $package, $status );
+		$operationNoticeHtml = '';
 		if ( 'edit' === $mode && '' !== $code ) {
-			$this->requestBoundary( fn () => $this->display->renderOperationNotice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], null === $package ? null : $this->packageStatus( $package ) ), null );
+			ob_start();
+			$this->requestBoundary( fn () => $this->display->renderOperationNotice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
+			$operationNoticeHtml = (string) ob_get_clean();
 		}
-		$status      = null === $package ? null : $this->packageStatus( $package );
-		$nonces      = null === $package ? array() : $this->packageNonceActions( $package, $status );
 		$prospective = $this->prospectiveProjection( $type );
 		$recheck     = isset( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI marker.
 			&& is_scalar( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			&& '1' === (string) $_GET['ran_booster_release_recheck']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$this->requestBoundary( fn () => $this->display->renderAdvancedSourceSection( $mode, $type, $selectedSource, $package, $status, $pageUrl, $result['channel'] ?? '', $nonces, $prospective, $recheck ), null );
+		$this->requestBoundary( fn () => $this->display->renderAdvancedSourceSection( $mode, $type, $selectedSource, $package, $status, $pageUrl, $result['channel'] ?? '', $nonces, $prospective, $recheck, $operationNoticeHtml ), null );
 		if ( $releasePane ) {
 			?>
 			</div>
@@ -277,6 +280,7 @@ final class ReleaseManagementControls {
 					<li><?php esc_html_e( 'Keep the release tag and canonical WordPress plugin or theme Version header aligned. A mismatch fails closed.', 'ran-booster' ); ?></li>
 					<li><?php esc_html_e( 'Declare the exact repository in the package Update URI expected by its provider. Plugins use one eligible top-level plugin header; themes use root style.css.', 'ran-booster' ); ?></li>
 				</ul>
+				<p><?php esc_html_e( 'Read GitHub’s ', 'ran-booster' ); ?><a href="<?php echo esc_url( 'https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'About releases', 'ran-booster' ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a><?php esc_html_e( ' guidance. GitHub also documents ', 'ran-booster' ); ?><a href="<?php echo esc_url( 'https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'immutable releases', 'ran-booster' ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a><?php esc_html_e( ' as optional supply-chain hardening. Booster’s setup pull request does not enable that repository setting.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Choose and operate the source', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Prospective installation uses the Stable track by default. Choose Preview only when alpha, beta or release-candidate builds are acceptable. Preview still excludes drafts.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'For a not-yet-managed package, candidate listing is metadata-only. Choose one of at most eight eligible releases; inspection downloads, validates and discards that exact ZIP, then binds the reviewed choice to installation with a fingerprint.', 'ran-booster' ); ?></p>

@@ -8,6 +8,10 @@ function __( string $text, string $domain = 'default' ): string {
 	return \RAN\Admin\ReleaseManagement\__( $text, $domain );
 }
 
+function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
+	return 1 === $number ? $single : $plural;
+}
+
 function esc_html( mixed $value ): string {
 	return \RAN\Admin\ReleaseManagement\esc_html( $value );
 }
@@ -76,6 +80,10 @@ function sanitize_text_field( mixed $value ): string {
 
 function admin_url( string $path = '' ): string {
 	return \RAN\Admin\ReleaseManagement\admin_url( $path );
+}
+
+function wp_make_link_relative( string $link ): string {
+	return \RAN\Admin\ReleaseManagement\wp_make_link_relative( $link );
 }
 
 function network_admin_url( string $path = '' ): string {

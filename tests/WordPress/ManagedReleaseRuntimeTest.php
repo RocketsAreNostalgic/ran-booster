@@ -1133,7 +1133,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $plugin );
+		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
+			static function () use ( &$plugin ) {
+				return $plugin;
+			}
+		);
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
 		$store         = new RuntimeReleaseStore();
@@ -1213,11 +1217,25 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNull( $facade->preflight( 'plugin', 'example/example.php', 1, 'preview', 'nonce' ) );
 		$allowed = false;
 		self::assertNull( $facade->preflight( 'plugin', 'example/example.php', 1, 'prerelease', $pluginNonce ) );
+		$allowed = true;
 
-		self::assertSame( array( 'plugin', 'theme' ), array_column( $listings, 'type' ) );
-		self::assertSame( array( 'prerelease', 'stable' ), array_column( $listings, 'channel' ) );
-		self::assertSame( array( '101', '102', '201' ), array_column( $inspections, 'releaseId' ) );
-		self::assertSame( array( 'prerelease', 'prerelease', 'stable' ), array_column( $inspections, 'channel' ) );
+		$plugin          = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::RELEASE_ASSET
+		);
+		$assessmentNonce = $facade->nonceAction( 'assessment_preflight', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $pluginNonce ) );
+		self::assertTrue( $facade->assessmentPreflight( 'plugin', 'example/example.php', 1, 'stable', $assessmentNonce )?->ready() );
+		self::assertNull( $facade->assessmentPreflight( 'plugin', 'example/example.php', 2, 'stable', $facade->nonceAction( 'assessment_preflight', 'plugin', 'example/example.php', 2, 'stable' ) ) );
+		self::assertNull( $facade->assessmentPreflight( 'plugin', 'example/example.php', 1, 'stable', $pluginNonce ) );
+
+		self::assertSame( array( 'plugin', 'theme', 'plugin' ), array_column( $listings, 'type' ) );
+		self::assertSame( array( 'prerelease', 'stable', 'stable' ), array_column( $listings, 'channel' ) );
+		self::assertSame( array( '101', '102', '201', '101', '102' ), array_column( $inspections, 'releaseId' ) );
+		self::assertSame( array( 'prerelease', 'prerelease', 'stable', 'stable', 'stable' ), array_column( $inspections, 'channel' ) );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( array(), $invalidations );
 		self::assertSame( 0, $lock->acquires );

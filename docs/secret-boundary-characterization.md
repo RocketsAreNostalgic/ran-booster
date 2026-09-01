@@ -97,7 +97,7 @@ characterization checks, the updater bootstrap smoke, PHP coding standards and
 
 | Tier                                   | Supported authority                                                                                                                                                                                                                                                                          | Forbidden authority                                                                                                                                                                                                                                                                                            |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ordinary add-on                        | Display-safe identifiers and projections, explicit non-secret intent, purpose-specific Core facades and bounded non-secret results. An add-on may separately own a request-only value for one confirmed operation.                                                                           | Core-held credential or webhook-secret plaintext, the Core container, provider registry or object, credential store, site key, codec, encrypted sidecar, storage path, generic resolver, Authorization material, signer, verifier, decrypter, authenticated transport or arbitrary "run with secret" callback. |
+| Ordinary add-on                        | Display-safe identifiers and projections, explicit non-secret intent, purpose-specific Core facades and bounded non-secret results.                                                                                                                               | Core-held credential or webhook-secret plaintext, the Core container, provider registry or object, credential store, site key, codec, encrypted sidecar, storage path, generic resolver, Authorization material, signer, verifier, decrypter, authenticated transport or arbitrary "run with secret" callback. |
 | Credential-bearing repository provider | The read-only `ProviderCredentialStore` supplied by `ProviderRegistry::registerWithCredentialStore()` and permanently bound to the registered provider code. It may read display-safe profiles, one selected credential in its namespace and only the boolean presence of a webhook profile. | Another provider code or record, bulk cross-provider enumeration, credential mutation, webhook material, site key, codec, encrypted sidecar, storage path, lock, general resolver or Core container. Provider registration is not publisher authentication.                                                    |
 | Core secret/storage authority          | Secret storage, site key, authenticated envelope, lifecycle, exact provider/profile binding, generated webhook-secret custody, inbound verification and bounded result composition.                                                                                                          | Publishing storage authority to an extension or describing filesystem mode, PHP visibility or namespaces as same-process isolation.                                                                                                                                                                            |
 | Host or edge                           | Pre-PHP availability, connection, request-size, timeout, cache/challenge and trusted-peer controls. A separately approved edge add-on may own its own credential.                                                                                                                            | Booster provider credentials, webhook signing material, a signing/verification oracle or a claim that headers/domain names authenticate the sender.                                                                                                                                                            |
@@ -183,9 +183,11 @@ operation checkpoint below.
 ### Fixed provider operation checkpoint
 
 Add-on API 15 replaces `withCredential()`, `provision()` and callback-based
-`reconfigure()` with explicit assess/setup/check/reconfigure/remove methods.
+`reconfigure()` with explicit `setup`, `check`, `reconfigure`, `remove` and
+`test` methods, with matching `assessSetup`, `assessCheck`,
+`assessReconfigure`, `assessRemove` and `assessTest` methods.
 Provider API 8 adds the exact optional
-`repository-webhook-management/1` fitness and management capabilities. A saved
+`repository-webhook-management/3` fitness and management capabilities. A saved
 PAT is resolved only by the matching provider through its bound credential
 store; a Core-held signing secret reaches only the provider's fixed setup or
 reconfigure call. The ordinary add-on receives neither plaintext value.
@@ -215,11 +217,12 @@ PHP prevents a hostile plugin from observing or invoking unrelated callbacks.
 These are baseline exposure facts, not current APIs or permissions for new
 consumers.
 
-## Request-only PAT exception
+## Saved credential boundary
 
-The request-only PAT remains a distinct, weaker, add-on-owned input for one
-capability- and nonce-confirmed operation. It is not a Core saved credential,
-is never assigned through `ProviderCredentialStore`, is not persisted,
+Repository webhook management accepts only a saved Core credential ID. It is
+not a plaintext input, is resolved only by the bound provider inside its fixed
+operation, and is never returned to the presentation layer. Signing-secret
+selection remains a display-safe profile ID bound by Core; no secret material is
 rendered, logged, returned in a result or converted to a reusable handle, and
 does not gain generic execution authority. Clearing a local variable after the
 call is defense in depth, not revocation or same-process erasure.
@@ -227,7 +230,7 @@ call is defense in depth, not revocation or same-process erasure.
 The saved-profile path has a different claim: an ordinary add-on may
 submit a display-safe profile ID, while Core binds and the matching provider
 uses the saved PAT inside one fixed operation. No saved plaintext crosses into
-the add-on. The request-only fallback must not be used to weaken that claim.
+the add-on.
 
 ## Frozen allowed and forbidden contracts
 

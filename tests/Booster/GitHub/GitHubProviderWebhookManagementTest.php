@@ -16,43 +16,40 @@ use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
 final class GitHubProviderWebhookManagementTest extends TestCase {
 
-	private const SAVED_TOKEN   = 'saved-token-canary';
-	private const REQUEST_TOKEN = 'request-token-canary';
-	private const SECRET        = 'signing-secret-canary';
+	private const SAVED_TOKEN = 'saved-token-canary';
+	private const SECRET      = 'signing-secret-canary';
 
-	/** @return iterable<string, array{string, bool}> */
+	/** @return iterable<string, array{string}> */
 	public static function managementCredentialSources(): iterable {
-		foreach ( array( 'setup', 'check', 'reconfigure', 'remove' ) as $operation ) {
-			yield $operation . ' with saved credential' => array( $operation, true );
-			yield $operation . ' with request-only credential' => array( $operation, false );
+		foreach ( array( 'setup', 'check', 'reconfigure', 'remove', 'test' ) as $operation ) {
+			yield $operation . ' with saved credential' => array( $operation );
 		}
 	}
 
 	#[DataProvider( 'managementCredentialSources' )]
-	public function testManagementOperationUsesExactlyTheSelectedCredentialSource( string $operation, bool $saved ): void {
+	public function testManagementOperationUsesTheSelectedSavedCredential( string $operation ): void {
 		$store    = new RepositoryResolverSecretsStub( array( 'saved-profile' => self::SAVED_TOKEN ) );
 		$provider = $this->provider( $store );
-		$token    = $saved ? self::SAVED_TOKEN : self::REQUEST_TOKEN;
-		$profile  = $saved ? 'saved-profile' : null;
-		$request  = $saved ? null : self::REQUEST_TOKEN;
+		$token    = self::SAVED_TOKEN;
+		$profile  = 'saved-profile';
 
 		\RAN\Booster\GitHub\repository_resolver_http_queue( $this->responsesFor( $operation ) );
 
-		$result   = $this->operate( $provider, $operation, $profile, $request );
+		$result   = $this->operate( $provider, $operation, $profile );
 		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
 		$expected = $this->operationExpectation( $operation );
 
 		self::assertTrue( $result->succeeded() );
 		self::assertSame( $expected['code'], $result->code() );
 		self::assertSame( $expected['methods'], array_column( array_column( $requests, 'arguments' ), 'method' ) );
-		self::assertSame( $saved ? array( 'saved-profile' ) : array(), $store->lookups );
+		self::assertSame( array( 'saved-profile' ), $store->lookups );
 		self::assertNotEmpty( $requests );
 		foreach ( $requests as $remoteRequest ) {
 			self::assertSame( 'Bearer ' . $token, $remoteRequest['arguments']['headers']['Authorization'] );
 			self::assertSame( 0, $remoteRequest['arguments']['redirection'] );
 			self::assertLessThanOrEqual( 262144, $remoteRequest['arguments']['limit_response_size'] );
 		}
-		self::assertLessThanOrEqual( 3, count( $requests ) );
+		self::assertLessThanOrEqual( 5, count( $requests ) );
 		if ( isset( $expected['mutation'] ) ) {
 			$payload = json_decode( $requests[ $expected['mutation'] ]['arguments']['body'], true, 32, JSON_THROW_ON_ERROR );
 			self::assertSame( 'https://site.example/hook', $payload['config']['url'] ?? null );
@@ -63,23 +60,18 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only secret-containment assertion.
 		$serialized = json_encode( $result->toArray(), JSON_THROW_ON_ERROR );
 		self::assertStringNotContainsString( self::SAVED_TOKEN, $serialized );
-		self::assertStringNotContainsString( self::REQUEST_TOKEN, $serialized );
 		self::assertStringNotContainsString( self::SECRET, $serialized );
 	}
 
-	/** @return iterable<string, array{string|null, string|null, string, int}> */
+	/** @return iterable<string, array{string|null, string, int}> */
 	public static function invalidCredentialSources(): iterable {
-		yield 'neither source' => array( null, null, 'Select exactly one GitHub credential source.', 0 );
-		yield 'both sources' => array( 'saved-profile', self::REQUEST_TOKEN, 'Select exactly one GitHub credential source.', 0 );
-		yield 'oversized request credential' => array( null, str_repeat( 'x', 513 ), 'The request-only GitHub credential is invalid.', 0 );
-		yield 'request credential with control byte' => array( null, "request\ncanary", 'The request-only GitHub credential is invalid.', 0 );
-		yield 'unavailable saved credential' => array( 'missing-profile', null, 'The selected GitHub credential is unavailable.', 1 );
+		yield 'no saved credential' => array( null, 'Choose a saved GitHub credential.', 0 );
+		yield 'unavailable saved credential' => array( 'missing-profile', 'The selected GitHub credential is unavailable.', 1 );
 	}
 
 	#[DataProvider( 'invalidCredentialSources' )]
 	public function testInvalidCredentialSourceFailsBeforeAnyRemoteRequest(
 		?string $profile,
-		?string $request,
 		string $message,
 		int $lookups
 	): void {
@@ -88,7 +80,7 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 		\RAN\Booster\GitHub\repository_resolver_http_queue( array() );
 
 		try {
-			$provider->check( '101', 'owner/example', '55', 'https://site.example/hook', $profile, $request );
+			$provider->check( '101', 'owner/example', '55', 'https://site.example/hook', $profile );
 			self::fail( 'Invalid credential selection must fail closed.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 400, $exception->getCode() );
@@ -109,24 +101,38 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 		return $provider;
 	}
 
-	private function operate( GitHubProvider $provider, string $operation, ?string $profile, ?string $request ): RepositoryWebhookOperationResult {
+	private function operate( GitHubProvider $provider, string $operation, ?string $profile ): RepositoryWebhookOperationResult {
 		return match ( $operation ) {
-			'setup' => $provider->setup( '101', 'owner/example', 'https://site.example/hook', $profile, $request, self::SECRET ),
-			'check' => $provider->check( '101', 'owner/example', '55', 'https://site.example/hook', $profile, $request ),
-			'reconfigure' => $provider->reconfigure( '101', 'owner/example', '55', 'https://site.example/hook', $profile, $request, self::SECRET ),
-			'remove' => $provider->remove( '101', 'owner/example', '55', 'https://site.example/hook', $profile, $request ),
+			'setup' => $provider->setup( '101', 'owner/example', 'https://site.example/hook', $profile, self::SECRET ),
+			'check' => $provider->check( '101', 'owner/example', '55', 'https://site.example/hook', $profile ),
+			'reconfigure' => $provider->reconfigure( '101', 'owner/example', '55', 'https://site.example/hook', $profile, self::SECRET ),
+			'remove' => $provider->remove( '101', 'owner/example', '55', 'https://site.example/hook', $profile ),
+			'test' => $provider->test( '101', 'owner/example', '55', 'https://site.example/hook', $profile ),
 		};
 	}
 
 	/** @return list<array<string, mixed>> */
 	private function responsesFor( string $operation ): array {
-		$hook = $this->hook();
+		$hook           = $this->hook();
+		$pingDeliveries = array(
+			array(
+				'id'          => 56,
+				'event'       => 'ping',
+				'status_code' => 204,
+			),
+		);
 
 		return match ( $operation ) {
 			'setup' => array( $this->response( 200, array() ), $this->response( 201, $hook ), $this->response( 200, $hook ) ),
 			'check' => array( $this->response( 200, $hook ) ),
 			'reconfigure' => array( $this->response( 200, $hook ), $this->response( 200, $hook ), $this->response( 200, $hook ) ),
 			'remove' => array( $this->response( 200, $hook ), $this->response( 204, array() ), $this->response( 404, array() ) ),
+			'test' => array(
+				$this->response( 200, $hook ),
+				$this->response( 200, array() ),
+				$this->response( 204, array() ),
+				$this->response( 200, $pingDeliveries ),
+			),
 		};
 	}
 
@@ -150,6 +156,10 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 			'remove' => array(
 				'code'    => 'absence_confirmed',
 				'methods' => array( 'GET', 'DELETE', 'GET' ),
+			),
+			'test' => array(
+				'code'    => 'ping_requested',
+				'methods' => array( 'GET', 'POST' ),
 			),
 		};
 	}

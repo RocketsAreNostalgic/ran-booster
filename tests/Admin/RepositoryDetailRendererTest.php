@@ -11,11 +11,12 @@ use RAN\Admin\Component\RepositoryDetailRenderer;
 
 final class RepositoryDetailRendererTest extends TestCase {
 
-	public function testItRendersMixedPackagesWithoutRepositoryMutationAuthority(): void {
+	public function testStatusRendersMixedPackagesAndIntegrationHistoryWithoutMutationAuthority(): void {
 		$row = array(
 			'repository'                => 'owner/shared',
 			'repository_url'            => 'https://github.com/owner/shared',
 			'source_label'              => 'Mixed sources',
+			'source_key'                => 'mixed',
 			'package_summaries_omitted' => 3,
 			'package_summaries'         => array(
 				array(
@@ -60,7 +61,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'datetime' => '2026-08-20T01:02:03Z',
 				),
 				array(
-					'key'   => 'fixture:release-automation-owner-plugin',
+					'key'   => 'gh:release-automation-a',
 					'label' => 'Release automation — owner/plugin.php',
 					'value' => 'Ready to assess',
 					'tone'  => 'ok',
@@ -71,38 +72,24 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'value' => 'Configured',
 				),
 			),
-			'status_links'              => array(
-				array(
-					'label'  => 'Manage signing secrets',
-					'url'    => 'https://example.test/signing-secrets',
-					'modal'  => 'webhook',
-					'scope'  => 'repository',
-					'target' => 'owner/shared',
-				),
-			),
 			'actions'                   => array(
 				array(
-					'key'          => 'fixture:provider-webhooks',
-					'label'        => 'Open fixture webhooks',
-					'type'         => 'link',
-					'url'          => 'https://example.test/provider-webhooks',
-					'disabled'     => false,
-					'external'     => true,
-					'described_by' => '',
+					'key'      => 'fixture:provider-webhooks',
+					'label'    => 'Open fixture webhooks',
+					'type'     => 'link',
+					'url'      => 'https://example.test/provider-webhooks',
+					'external' => true,
 				),
 				array(
-					'key'          => 'fixture:release-automation-a',
-					'label'        => 'Release automation: owner/plugin.php',
-					'type'         => 'post',
-					'url'          => 'https://example.test/plugins?source_view=release_asset',
-					'hidden'       => array( 'action' => 'release_automation_fixture' ),
-					'disabled'     => false,
-					'described_by' => 'release-automation-help',
+					'key'   => 'gh:release-automation-a',
+					'label' => 'Release automation: owner/plugin.php',
+					'url'   => 'https://example.test/plugins?source_view=release_asset',
 				),
 			),
 		);
 
 		$webhookRendered = false;
+		$releaseRendered = false;
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			$row,
@@ -111,16 +98,24 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'https://example.test/activity',
 			true,
 			'Receiver ready.',
+			'status',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
 			static function () use ( &$webhookRendered ): bool {
 				$webhookRendered = true;
 				echo '<div data-test-webhook></div>';
 
 				return true;
+			},
+			static function () use ( &$releaseRendered ): void {
+					$releaseRendered = true;
+					echo '<div data-test-release></div>';
 			}
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertTrue( $webhookRendered );
+		self::assertFalse( $webhookRendered );
+		self::assertFalse( $releaseRendered );
 		self::assertStringContainsString( '2 packages shown; 3 more connected · Mixed sources', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
 		self::assertStringContainsString( 'Published releases', $html );
@@ -129,24 +124,84 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Theme settings', $html );
 		self::assertStringContainsString( '>Automatic<', $html );
 		self::assertStringContainsString( '>Manual<', $html );
-		self::assertStringContainsString( 'Release automation', $html );
-		self::assertStringContainsString( '<form method="post" action="https://example.test/plugins?source_view=release_asset">', $html );
-		self::assertStringContainsString( 'name="action" value="release_automation_fixture"', $html );
-		self::assertStringContainsString( 'aria-describedby="release-automation-help"', $html );
-		self::assertStringContainsString( 'Open fixture webhooks', $html );
-		self::assertStringContainsString( 'Manage signing secrets', $html );
-		self::assertStringContainsString( 'href="https://example.test/signing-secrets"', $html );
-		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
+		self::assertStringContainsString( 'Integration status', $html );
+		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
+		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
+		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
+		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
+		self::assertStringContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
+		self::assertStringNotContainsString( '1 package uses Branch deployments', $html );
+		self::assertStringNotContainsString( '1 package tracks Published releases', $html );
+		self::assertStringContainsString( 'Release automation — owner/plugin.php', $html );
+		self::assertStringContainsString( '<h4>Release automation</h4>', $html );
+		self::assertStringNotContainsString( 'data-test-webhook', $html );
+		self::assertStringNotContainsString( 'data-test-release', $html );
+		self::assertStringNotContainsString( 'Provider receiver', $html );
+		self::assertStringNotContainsString( 'Receiver ready.', $html );
 		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
 		self::assertStringContainsString( 'ran-booster-badge--warning', $html );
 		self::assertStringContainsString( '<time datetime="2026-08-20T01:02:03Z">August 20, 2026</time>', $html );
 		self::assertStringContainsString( 'Repository details', $html );
 		self::assertStringContainsString( 'Provider access', $html );
-		self::assertLessThan( strpos( $html, 'Recorded webhook activity' ), strpos( $html, 'Provider access' ) );
+		self::assertLessThan( strpos( $html, 'Provider access' ), strpos( $html, 'Repository details' ) );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 	}
 
-	public function testReleaseOnlyRepositoryShowsDisabledWebhookContext(): void {
+	public function testStatusKeepsExactSourceCountsForCompletePackageInventory(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/complete',
+				'source_label'      => 'Mixed sources',
+				'source_key'        => 'mixed',
+				'package_summaries' => array(
+					array(
+						'type'              => 'plugin',
+						'identifier'        => 'branch/plugin.php',
+						'display_name'      => 'Branch plugin',
+						'settings_url'      => 'https://example.test/branch',
+						'source'            => 'branch',
+						'source_revision'   => 1,
+						'branch'            => 'main',
+						'subdirectory'      => '',
+						'deployment_policy' => 'manual',
+					),
+					array(
+						'type'              => 'theme',
+						'identifier'        => 'release-theme',
+						'display_name'      => 'Release theme',
+						'settings_url'      => 'https://example.test/release',
+						'source'            => 'release_asset',
+						'source_revision'   => 2,
+						'branch'            => '',
+						'subdirectory'      => '',
+						'deployment_policy' => 'manual',
+					),
+				),
+				'details'           => array(),
+				'actions'           => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'status',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '1 package uses Branch deployments', $html );
+		self::assertStringContainsString( '1 package tracks Published releases', $html );
+		self::assertStringNotContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
+	}
+
+	public function testBranchViewShowsDisabledWebhookContextForReleaseOnlyRepository(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -167,20 +222,80 @@ final class RepositoryDetailRendererTest extends TestCase {
 					),
 				),
 				'details'           => array(),
-				'actions'           => array(),
+				'actions'           => array(
+					array(
+						'key'      => 'fixture:provider-webhooks',
+						'label'    => 'Open fixture webhooks',
+						'type'     => 'link',
+						'url'      => 'https://example.test/provider-webhooks',
+						'external' => true,
+					),
+				),
 			),
 			'Bitbucket',
 			'https://example.test/repositories',
 			'https://example.test/activity',
 			false,
 			'Receiver unavailable.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
 			null
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'No eligible Branch package', $html );
+		self::assertStringContainsString( 'no Branch package currently uses this repository webhook', $html );
+		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section"' ) );
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup"', $html );
+		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section"', $html );
+		self::assertStringContainsString( 'Webhook setup', $html );
+		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
+		self::assertStringContainsString( '>Set up webhook</button>', $html );
+		self::assertStringContainsString( 'Open fixture webhooks', $html );
+		self::assertStringContainsString( 'Management history', $html );
+		self::assertStringContainsString( 'Recorded hook status', $html );
+		self::assertStringContainsString( 'Managed hook not yet set', $html );
+		self::assertStringContainsString( 'No historical observation', $html );
+		self::assertStringContainsString( 'Recorded hook profile', $html );
+		self::assertStringContainsString( 'Last checked', $html );
+		self::assertStringContainsString( 'Never', $html );
+		self::assertStringContainsString( 'View repository activity', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
+	}
+
+	public function testIncompletePackageInventoryDisablesRepositoryWorkflowControls(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'                => 'owner/partial',
+				'source_label'              => 'Branch',
+				'source_key'                => 'branch',
+				'package_summaries_omitted' => 1,
+				'package_summaries'         => array(),
+				'details'                   => array(),
+				'actions'                   => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			static function (): void {
+				echo '<div data-test-webhook></div>';
+			},
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Package inventory incomplete', $html );
+		self::assertStringContainsString( 'Refresh repository inventory before using repository-wide workflow controls.', $html );
+		self::assertStringContainsString( 'disabled aria-disabled="true">Manage webhook</button>', $html );
+		self::assertStringNotContainsString( 'data-test-webhook', $html );
 	}
 
 	public function testBranchRepositoryFallsBackWhenTheSupportedWebhookPanelCannotBeProjected(): void {
@@ -200,32 +315,185 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'https://example.test/activity',
 			true,
 			'Receiver ready.',
-			static fn (): bool => false
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			static fn (): bool => false,
+			null
 		);
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Repository webhook management is temporarily unavailable for this repository.', $html );
 		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage repository webhook</button>', $html );
-		self::assertStringNotContainsString( 'One repository webhook is shared', $html );
+	}
+
+	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {
+		$row             = array(
+			'repository'        => 'owner/releases',
+			'repository_url'    => 'https://github.com/owner/releases',
+			'source_label'      => 'Published releases',
+			'package_summaries' => array(
+				array(
+					'type'              => 'plugin',
+					'identifier'        => 'owner/plugin.php',
+					'display_name'      => 'Plugin',
+					'settings_url'      => 'https://example.test/plugins',
+					'source'            => 'release_asset',
+					'source_revision'   => 3,
+					'branch'            => '',
+					'subdirectory'      => '',
+					'deployment_policy' => 'manual',
+				),
+			),
+			'details'           => array(
+				array(
+					'key'   => 'gh:release-automation-a',
+					'label' => 'Release automation',
+					'value' => 'Configured',
+				),
+			),
+			'actions'           => array(),
+		);
+		$releaseRendered = false;
+
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			$row,
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'releases',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			static function () use ( &$releaseRendered ): void {
+				$releaseRendered = true;
+				echo '<section data-test-release>Exact package workflow controls</section>';
+			}
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertTrue( $releaseRendered );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="releases" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
+		self::assertSame( 3, substr_count( $html, 'aria-controls="ran-booster-provider-profile-region"' ) );
+		self::assertStringContainsString( 'data-test-release', $html );
+		self::assertStringNotContainsString( 'Packages using this repository', $html );
+		self::assertStringContainsString( '<h4>Release automation</h4>', $html );
+		self::assertStringContainsString( 'Configured', $html );
+	}
+
+	public function testUnsupportedProviderKeepsReleaseControlsVisibleButDisabled(): void {
+		$row = array(
+			'repository'        => 'owner/releases',
+			'repository_url'    => '',
+			'source_label'      => 'Published releases',
+			'package_summaries' => array(
+				array(
+					'type'              => 'theme',
+					'identifier'        => 'theme',
+					'display_name'      => 'Theme',
+					'settings_url'      => 'https://example.test/theme',
+					'source'            => 'release_asset',
+					'source_revision'   => 1,
+					'branch'            => '',
+					'subdirectory'      => '',
+					'deployment_policy' => 'manual',
+				),
+			),
+			'details'           => array(),
+			'actions'           => array(),
+		);
+
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			$row,
+			'Bitbucket',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			false,
+			'Receiver unavailable.',
+			'releases',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Release automation is unavailable for this repository provider.', $html );
+		self::assertStringContainsString( 'Open Theme settings', $html );
+		self::assertStringContainsString( 'disabled aria-disabled="true"', $html );
+		self::assertStringContainsString( 'Assess release automation', $html );
+	}
+
+	public function testProviderActionsPreserveNormalizedDescriptions(): void {
+		$row = array(
+			'repository'        => 'owner/branch',
+			'source_label'      => 'Branch',
+			'source_key'        => 'branch',
+			'package_summaries' => array(),
+			'details'           => array(),
+			'actions'           => array(
+				array(
+					'key'          => 'fixture:post',
+					'label'        => 'Post',
+					'type'         => 'post',
+					'url'          => 'https://example.test/wp-admin/admin-post.php',
+					'hidden'       => array(
+						'action'   => 'fixture_action',
+						'_wpnonce' => 'nonce',
+					),
+					'described_by' => 'post-help',
+				),
+				array(
+					'key'          => 'fixture:disabled',
+					'label'        => 'Disabled',
+					'type'         => 'link',
+					'url'          => '',
+					'disabled'     => true,
+					'described_by' => 'disabled-help',
+				),
+				array(
+					'key'          => 'fixture:link',
+					'label'        => 'Link',
+					'type'         => 'link',
+					'url'          => 'https://example.test/link',
+					'described_by' => 'link-help',
+				),
+			),
+		);
+		ob_start();
+		( new RepositoryDetailRenderer() )->render( $row, 'Fixture', 'https://example.test/repositories', 'https://example.test/activity', true, '', 'branch', $this->viewUrls(), $this->viewRequestUrls(), null, null );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'aria-describedby="post-help"', $html );
+		self::assertStringContainsString( 'aria-describedby="disabled-help"', $html );
+		self::assertStringContainsString( 'aria-describedby="link-help"', $html );
 	}
 
 	public function testBranchRepositoryWithoutAssistedManagementRetainsManualGuidanceWithoutInventingAnAction(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
-				'repository'          => 'owner/branch',
-				'repository_url'      => '',
-				'source_label'        => 'Branch',
-				'has_branch_consumer' => true,
-				'package_summaries'   => array(),
-				'details'             => array(),
-				'actions'             => array(),
+				'repository'        => 'owner/branch',
+				'repository_url'    => '',
+				'source_label'      => 'Branch',
+				'source_key'        => 'branch',
+				'package_summaries' => array(),
+				'details'           => array(),
+				'actions'           => array(),
 			),
 			'Bitbucket',
 			'https://example.test/repositories',
 			'https://example.test/activity',
 			true,
 			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
 			null
 		);
 		$html = (string) ob_get_clean();
@@ -233,7 +501,21 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-repository-webhook-heading"', $html );
 		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this provider.', $html );
 		self::assertStringContainsString( 'Use the provider webhook settings when available.', $html );
-		self::assertStringNotContainsString( 'No eligible Branch package', $html );
+		self::assertStringNotContainsString( 'no Branch package currently uses this repository webhook', $html );
 		self::assertStringNotContainsString( 'Manage repository webhook', $html );
+	}
+
+	/** @return array<string, string> */
+	private function viewUrls(): array {
+		return array(
+			'status'   => 'https://example.test/repository?repository_view=status',
+			'branch'   => 'https://example.test/repository?repository_view=branch',
+			'releases' => 'https://example.test/repository?repository_view=releases',
+		);
+	}
+
+	/** @return array<string, string> */
+	private function viewRequestUrls(): array {
+		return array_map( static fn ( string $url ): string => $url . '&ran_booster_provider_fragment=1', $this->viewUrls() );
 	}
 }

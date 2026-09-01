@@ -8,14 +8,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** @var array<string, mixed> $model */
 /** @var string $formAttributes */
+$disabled        = true === ( $model['disabled'] ?? false );
+$profileDisabled = $disabled || true === ( $model['webhook_profile_disabled'] ?? false );
 ?>
-<section class="ran-booster-credential-section ran-booster-repository-webhook-management" aria-labelledby="ran-booster-repository-webhook-management-operation-heading">
-	<div class="ran-booster-credential-section__header"><div>
-		<p class="ran-booster-eyebrow ran-booster-provider__eyebrow"><?php esc_html_e( 'Bundled webhook management', 'ran-booster' ); ?></p>
-		<?php /* translators: %s: repository provider name. */ ?>
-		<h5 id="ran-booster-repository-webhook-management-operation-heading"><?php echo esc_html( sprintf( __( 'Set up or manage a %s webhook', 'ran-booster' ), $model['provider_label'] ) ); ?></h5>
-		<p><?php esc_html_e( 'Use the selected repository and one permitted operation. Webhook management does not change package deployment policy.', 'ran-booster' ); ?></p>
-	</div></div>
+<div class="ran-booster-repository-webhook-management">
 
 	<?php if ( is_array( $model['result'] ) ) : ?>
 		<div class="notice <?php echo esc_attr( $model['result']['class'] ); ?> inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $model['result']['message'] ); ?></p></div>
@@ -23,61 +19,61 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php if ( is_string( $model['recovery_warning'] ) ) : ?>
 		<div class="notice notice-warning inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $model['recovery_warning'] ); ?></p></div>
 	<?php endif; ?>
-
-	<div class="ran-booster-panel ran-booster-push-deploy__panel">
-		<div class="ran-booster-public-lookup-profile__layout">
+	<div class="ran-booster-repository-webhook-management__panel">
+		<div class="ran-booster-public-lookup-profile__layout ran-booster-repository-webhook-management__layout">
 			<form method="post" action="<?php echo esc_url( $model['form_action'] ); ?>" class="ran-booster-public-lookup-profile__form ran-booster-repository-webhook-management__form"<?php echo $formAttributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Exact Core Admin Interaction facade owns these form attributes. ?>>
 				<input type="hidden" name="action" value="<?php echo esc_attr( $model['admin_action'] ); ?>">
 				<input type="hidden" name="provider_code" value="<?php echo esc_attr( $model['provider_code'] ); ?>">
 				<input type="hidden" name="repository_id" value="<?php echo esc_attr( $model['repository_id'] ); ?>">
 				<input type="hidden" name="return_url" value="<?php echo esc_url( $model['return_url'] ); ?>">
 				<div id="repository-webhook-management-error"></div>
-				<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide"><span class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label"><?php esc_html_e( 'Repository', 'ran-booster' ); ?></span><code><?php echo esc_html( $model['repository'] ); ?></code></div>
-
-				<?php if ( array() !== $model['credential_choices'] ) : ?>
 					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
-						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-saved-credential"><?php esc_html_e( 'Saved Booster credential', 'ran-booster' ); ?></label>
-						<select id="repository-webhook-management-saved-credential" name="booster_credential_id">
-							<option value=""><?php esc_html_e( 'Provide a request-only credential instead', 'ran-booster' ); ?></option>
-							<?php foreach ( $model['credential_choices'] as $choice ) : ?>
-								<option value="<?php echo esc_attr( $choice['id'] ); ?>"><?php echo esc_html( $choice['label'] ); ?></option>
-							<?php endforeach; ?>
-						</select>
-					<span class="description"><?php esc_html_e( 'The form sends only the selected profile ID; Core resolves the saved credential inside this fixed provider operation without exposing plaintext or storage access to the presentation layer.', 'ran-booster' ); ?></span>
+						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-saved-credential"><?php esc_html_e( 'Management credential', 'ran-booster' ); ?></label>
+						<div class="ran-booster-repository-webhook-management__select-action">
+							<select id="repository-webhook-management-saved-credential" name="booster_credential_id"<?php disabled( $disabled ); ?><?php echo $disabled ? '' : ' required'; ?>>
+								<option value=""><?php esc_html_e( 'Choose a saved credential', 'ran-booster' ); ?></option>
+								<?php foreach ( $model['credential_choices'] as $choice ) : ?>
+									<option value="<?php echo esc_attr( $choice['id'] ); ?>"<?php selected( $model['management_credential_id'] ?? null, $choice['id'] ); ?>><?php echo esc_html( $choice['label'] ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<a class="button" href="<?php echo esc_url( $model['credentials_url'] ); ?>"><?php esc_html_e( 'Manage credentials', 'ran-booster' ); ?></a>
+						</div>
+						<span class="description"><?php esc_html_e( 'Choose the saved credential used to manage this repository webhook. A current selection does not prove provider authority until the operation checks it.', 'ran-booster' ); ?></span>
 					</div>
-				<?php endif; ?>
 
-				<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
-					<?php /* translators: %s: repository provider name. */ ?>
-					<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-request-credential"><?php echo esc_html( sprintf( __( 'Request-only %s credential', 'ran-booster' ), $model['provider_label'] ) ); ?></label>
-					<input id="repository-webhook-management-request-credential" name="request_credential" type="password" autocomplete="off" aria-describedby="repository-webhook-management-request-credential-help">
-					<span id="repository-webhook-management-request-credential-help" class="description"><?php esc_html_e( 'Used by Core for this fixed operation only; never stored by webhook management.', 'ran-booster' ); ?></span>
-				</div>
+					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
+						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-webhook-profile"><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></label>
+						<div class="ran-booster-repository-webhook-management__select-action">
+							<select id="repository-webhook-management-webhook-profile" name="webhook_profile_id"<?php disabled( $profileDisabled ); ?><?php echo $profileDisabled ? '' : ' required'; ?>>
+								<option value="" selected disabled><?php echo esc_html( $model['webhook_profile_placeholder'] ); ?></option>
+								<option value="create_repository_secret"><?php esc_html_e( 'Create a repository signing secret', 'ran-booster' ); ?></option>
+								<?php foreach ( $model['webhook_profile_choices'] as $choice ) : ?>
+									<option value="<?php echo esc_attr( $choice['id'] ); ?>"><?php echo esc_html( $choice['label'] . ' (' . $choice['scope'] . ')' ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<a class="button" href="<?php echo esc_url( $model['secrets_url'] ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
+						</div>
+						<span class="description"><?php esc_html_e( 'Choose an applicable saved signing secret, or create one only for this repository.', 'ran-booster' ); ?></span>
+					</div>
 
 				<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions">
 					<?php foreach ( $model['operations'] as $operation ) : ?>
-						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"><?php echo esc_html( $operation['label'] ); ?></button>
+						<?php $operationDisabled = $disabled || true === ( $operation['disabled'] ?? false ); ?>
+						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( str_replace( 'disabled:', '', $operation['key'] ) ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operationDisabled ); ?> aria-disabled="<?php echo $operationDisabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
 					<?php endforeach; ?>
+					<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
+						<?php /* translators: %s: repository provider name. */ ?>
+						<a class="button" href="<?php echo esc_url( $model['webhooks_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( __( 'Open %s webhooks', 'ran-booster' ), $model['provider_label'] ) ); ?></a>
+					<?php endif; ?>
 				</div>
 				<?php if ( is_string( $model['action_help'] ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php echo esc_html( $model['action_help'] ); ?></p>
 				<?php endif; ?>
+				<?php if ( null === ( $model['management_credential_id'] ?? null ) ) : ?>
+					<p class="description ran-booster-repository-webhook-management__action-help"><?php esc_html_e( 'Test webhook is disabled until Booster has an exact recorded hook for this repository.', 'ran-booster' ); ?></p>
+				<?php endif; ?>
 			</form>
 
-			<aside class="ran-booster-public-lookup-profile__guidance">
-				<?php /* translators: %s: repository provider name. */ ?>
-				<strong><?php echo esc_html( sprintf( __( 'Required %s access', 'ran-booster' ), $model['provider_label'] ) ); ?></strong>
-				<p><?php esc_html_e( 'Use a credential authorized to manage webhooks for this repository.', 'ran-booster' ); ?></p>
-				<strong><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></strong>
-				<?php /* translators: %s: repository provider name. */ ?>
-				<p><?php echo esc_html( sprintf( __( 'Booster reuses the most specific applicable saved signing secret. If none applies, it creates a repository-scoped secret. Only Core and the bound %s provider operation receive that secret; it is not exposed to the admin presentation layer.', 'ran-booster' ), $model['provider_label'] ) ); ?></p>
-				<strong><?php esc_html_e( 'Safety boundaries', 'ran-booster' ); ?></strong>
-				<ul>
-					<li><?php esc_html_e( 'Only packages already set to Automatic can deploy.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Every operation reauthorizes this managed repository.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Unverified hooks are never adopted or deleted.', 'ran-booster' ); ?></li>
-				</ul>
-			</aside>
 		</div>
 	</div>
-</section>
+</div>

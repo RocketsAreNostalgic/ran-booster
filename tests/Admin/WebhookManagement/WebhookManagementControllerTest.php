@@ -147,7 +147,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
-		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][4]['value'] );
+		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][5]['value'] );
 		self::assertSame( 'Current local warning', $result['1234']['details'][2]['label'] );
 		self::assertSame( 'Secret needs attention', $result['1234']['details'][2]['value'] );
 		self::assertSame(
@@ -155,11 +155,36 @@ final class WebhookManagementControllerTest extends TestCase {
 				'core:webhook-recorded-status',
 				'core:webhook-observation',
 				'core:webhook-current-warning',
-				'core:webhook-recorded-profile',
+				'core:webhook-management-credential',
+				'core:webhook-signing-secret',
 				'core:webhook-last-checked',
 			),
 			array_column( $result['1234']['details'], 'key' )
 		);
+		self::assertSame( 'Recorded signing secret profile wh_0123456789abcdef01234567 is unavailable.', $result['1234']['details'][4]['value'] );
+	}
+
+	public function testCurrentRepositoryHistoryResolvesDisplaySafeManagementAndSigningLabels(): void {
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record();
+		$result        = $this->display( $this->gateway(), $store )->enrichRows(
+			array(
+				'1234' => array(
+					'details' => array(),
+					'actions' => array(),
+				),
+			),
+			'gh',
+			'GitHub',
+			'https://github.com/',
+			array( '1234' => $this->repositoryProjection() ),
+			'https://site.example/'
+		);
+
+		self::assertSame( 'Management credential', $result['1234']['details'][2]['label'] );
+		self::assertSame( 'Last managed with Temporary; provider authority has not been revalidated.', $result['1234']['details'][2]['value'] );
+		self::assertSame( 'Recorded signing secret', $result['1234']['details'][3]['label'] );
+		self::assertSame( 'Repository signing secret; current local profile metadata is available.', $result['1234']['details'][3]['value'] );
 	}
 
 	public function testUnavailableManagementHistoryOmitsProfileAndCurrentWarningDetails(): void {
@@ -178,17 +203,20 @@ final class WebhookManagementControllerTest extends TestCase {
 			array( '1234' => $this->repositoryProjection() )
 		);
 
-		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
-		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
-		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][2]['value'] );
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
 		self::assertSame(
 			array(
 				'core:webhook-recorded-status',
 				'core:webhook-observation',
+				'core:webhook-management-credential',
+				'core:webhook-signing-secret',
 				'core:webhook-last-checked',
 			),
 			array_column( $result['1234']['details'], 'key' )
 		);
+		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
+		self::assertSame( 'Last managed with saved credential profile credential_1; current availability was not checked.', $result['1234']['details'][2]['value'] );
+		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][4]['value'] );
 		self::assertSame( array(), $result['1234']['actions'] );
 	}
 
@@ -219,9 +247,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( 'kept', $result['1234']['details'][0]['value'] );
-		self::assertSame( array( 'Core detail', 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
+		self::assertSame( array( 'Core detail', 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][1]['value'] );
-		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][3]['value'] );
+		self::assertSame( '2026-07-23T17:00:00Z', $result['1234']['details'][5]['value'] );
 		self::assertSame( array(), $result['1234']['actions'] );
 	}
 
@@ -236,6 +264,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'projection-id',
 			'owner/repository',
 			'77',
+			'credential_1',
 			'wh_0123456789abcdef01234567',
 			'repository',
 			1,
@@ -250,6 +279,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			' spaced-release-id ',
 			'owner/repository',
 			'78',
+			'credential_1',
 			'wh_89abcdef0123456789abcdef',
 			'owner',
 			1,
@@ -288,27 +318,99 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame( 1, $store->allAttempts );
 		self::assertSame( 0, $store->findAttempts );
-		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['projection-row']['details'], 'label' ) );
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['projection-row']['details'], 'label' ) );
 		self::assertSame( 'Configured at last check', $result['projection-row']['details'][0]['value'] );
-		self::assertSame( array( 'Recorded hook status', 'Observation', 'Last checked' ), array_column( $result['release-row']['details'], 'label' ) );
+		self::assertSame( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['release-row']['details'], 'label' ) );
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['release-row']['details'][0]['value'] );
 		self::assertSame( array(), $result['projection-row']['actions'] );
 		self::assertSame( array(), $result['release-row']['actions'] );
 	}
 
-	public function testPanelRendersSavedIdentityAndRequestOnlyInputWithoutFetchingSecrets(): void {
+	public function testPanelRendersSavedCredentialAndSigningSecretSelectorsWithoutFetchingSecrets(): void {
 		$gateway = $this->gateway();
 		$html    = $this->renderPanel( gateway: $gateway );
 
 		self::assertStringContainsString( 'name="booster_credential_id"', $html );
-		self::assertStringContainsString( 'name="request_credential"', $html );
-		self::assertStringContainsString( 'Used by Core for this fixed operation only', $html );
-		self::assertStringContainsString( 'not exposed to the admin presentation layer', $html );
+		self::assertStringContainsString( 'name="booster_credential_id" required>', $html );
+		self::assertStringContainsString( 'name="webhook_profile_id"', $html );
+		self::assertStringContainsString( 'name="webhook_profile_id" required>', $html );
+		self::assertStringContainsString( 'Temporary (fine-grained)', $html );
+		self::assertStringContainsString( '<option value="" selected disabled>Choose a signing secret</option>', $html );
+		self::assertStringContainsString( '<option value="create_repository_secret">Create a repository signing secret</option>', $html );
+		self::assertStringContainsString( 'Create a repository signing secret', $html );
+		self::assertStringNotContainsString( 'request_credential', $html );
+		self::assertStringNotContainsString( 'presentation layer', $html );
 		self::assertStringNotContainsString( 'synthetic-request-credential', $html );
 		self::assertSame( array(), $gateway->calls, 'Rendering must not assess or execute a provider operation.' );
 	}
 
-	public function testRequestOnlySetupPassesCredentialOnceAndStoresOnlySafeRecoveryHistory(): void {
+	public function testExistingWebhookRecordPreselectsItsManagementCredentialAndKeepsItsRecordedSigningSecretVisible(): void {
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record();
+
+		$html = $this->renderPanel( store: $store );
+
+		self::assertStringContainsString( 'value="check"', $html );
+		self::assertStringContainsString( 'name="booster_credential_id" required>', $html );
+		self::assertStringContainsString( 'value="credential_1" selected="selected"', $html );
+		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
+		self::assertStringContainsString( 'Recorded signing secret', $html );
+		self::assertStringContainsString( 'Create a repository signing secret', $html );
+	}
+
+	public function testSuccessfulRecordedOperationsReplaceOnlyTheManagementCredentialId(): void {
+		$gateway       = $this->gateway();
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record();
+
+		$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->request(
+				array(
+					'repository_webhook_management_operation' => 'check',
+					'booster_credential_id' => 'credential_2',
+				)
+			),
+			'valid'
+		);
+
+		self::assertSame( 'credential_2', $store->record?->managementCredentialId() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhookProfileId() );
+
+		$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->request(
+				array(
+					'repository_webhook_management_operation' => 'reconfigure',
+					'booster_credential_id' => 'credential_3',
+				)
+			),
+			'valid'
+		);
+
+		self::assertSame( 'credential_3', $store->record?->managementCredentialId() );
+	}
+
+	public function testFailedOrAmbiguousRecordedOperationsDoNotReplaceTheManagementCredentialId(): void {
+		foreach ( array( array( 'failed', 'operation_failed' ), array( 'ambiguous', 'operation_failed' ) ) as [ $state, $code ] ) {
+			$gateway         = $this->gateway();
+			$gateway->result = $this->operationResult( $state, $code );
+			$store           = new OperationStoreFixture();
+			$store->record   = $this->record();
+
+			$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+				$this->request(
+					array(
+						'repository_webhook_management_operation' => 'check',
+						'booster_credential_id' => 'credential_2',
+					)
+				),
+				'valid'
+			);
+
+			self::assertSame( 'credential_1', $store->record?->managementCredentialId() );
+		}
+	}
+
+	public function testSetupUsesOnlyTheSavedCredentialAndStoresOnlySafeRecoveryHistory(): void {
 		$gateway    = $this->gateway();
 		$store      = new OperationStoreFixture();
 		$controller = $this->controller( gateway: $gateway, store: $store );
@@ -316,7 +418,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame(
 			array(
-				array( 'setup', null, true, 'valid' ),
+				array( 'setup', 'credential_1', null, 'valid' ),
 			),
 			$gateway->calls
 		);
@@ -328,6 +430,19 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'needs_verification', $store->record?->status() );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Test-only scalar inspection; no serialized input is consumed.
 		self::assertStringNotContainsString( 'synthetic-request-credential', serialize( $store->record?->toArray() ) );
+	}
+
+	public function testSetupRequiresAnExplicitKnownSigningSecretSelection(): void {
+		foreach ( array( '', 'wh_ffffffffffffffffffffffff' ) as $profileId ) {
+			$gateway  = $this->gateway();
+			$redirect = $this->controller( gateway: $gateway )->handleAdminPost(
+				$this->request( array( 'webhook_profile_id' => $profileId ) ),
+				'valid'
+			);
+
+			self::assertSame( array(), $gateway->calls );
+			self::assertStringContainsString( 'webhook_management_result=invalid_request', $redirect );
+		}
 	}
 
 	public function testPackageInitiatedOperationReturnsToTheAllowlistedPackageSettingsRoute(): void {
@@ -400,7 +515,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$redirect = $this->controller()->handleAdminPost(
 			$this->request(
 				array(
-					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234&unsafe=discarded',
+					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234&repository_view=branch&unsafe=discarded',
 				)
 			),
 			'valid'
@@ -410,6 +525,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'tab=gh', $redirect );
 		self::assertStringContainsString( 'panel=repositories', $redirect );
 		self::assertStringContainsString( 'repository=1234', $redirect );
+		self::assertStringContainsString( 'repository_view=branch', $redirect );
 		self::assertStringNotContainsString( 'unsafe=', $redirect );
 
 		$fallback = $this->controller()->handleAdminPost(
@@ -422,6 +538,64 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 		self::assertStringContainsString( 'repository=1234', $fallback );
 		self::assertStringNotContainsString( 'repository=other', $fallback );
+	}
+
+	public function testWebhookManagementRoutesUseNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$display                                       = $this->display();
+		$available                                     = $display->panel(
+			'gh',
+			'GitHub',
+			'1234',
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			null,
+			null,
+			true
+		);
+		$unavailable                                   = $display->unavailablePanel(
+			'gh',
+			'GitHub',
+			'1234',
+			'owner/repository',
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			'Webhook operations are unavailable.'
+		);
+
+		self::assertIsArray( $available );
+		foreach ( array( $available, $unavailable ) as $model ) {
+			self::assertSame( 'https://example.test/wp-admin/admin-post.php', $model['form_action'] );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=', $model['credentials_url'] );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=', $model['secrets_url'] );
+			foreach ( $model['operations'] as $operation ) {
+				self::assertStringStartsWith( 'https://example.test/wp-admin/admin-post.php?action=', $operation['url'] );
+			}
+		}
+
+		$redirect = $this->controller()->handleAdminPost(
+			$this->request( array( 'return_url' => 'https://untrusted.example.test/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234' ) ),
+			'valid'
+		);
+
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234', $redirect );
+	}
+
+	public function testWebhookManagementRoutesKeepSingleSiteAdminPaths(): void {
+		$display     = $this->display();
+		$unavailable = $display->unavailablePanel(
+			'gh',
+			'GitHub',
+			'1234',
+			'owner/repository',
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh',
+			'Webhook operations are unavailable.'
+		);
+
+		self::assertSame( 'https://example.test/wp-admin/admin-post.php', $unavailable['form_action'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials', $unavailable['credentials_url'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=secrets', $unavailable['secrets_url'] );
+		foreach ( $unavailable['operations'] as $operation ) {
+			self::assertStringStartsWith( 'https://example.test/wp-admin/admin-post.php?action=', $operation['url'] );
+		}
 	}
 
 	public function testCompleteNonGitHubProviderUsesTheSamePlacementAndOperationPath(): void {
@@ -455,7 +629,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$enriched      = $display->enrichRows( $repositoryRow, $providerCode, $providerLabel, 'https://fixture-provider.example.test/', $projection, 'https://site.example/provider' );
 		$model         = $display->panel( $providerCode, $providerLabel, '1234', 'https://site.example/provider', null, null, true );
 
-		self::assertSame( array( array( 'setup', null, true, 'valid' ) ), $gateway->mutationCalls );
+		self::assertSame( array( array( 'setup', 'credential_1', null, 'valid' ) ), $gateway->mutationCalls );
 		self::assertSame( $providerCode, $store->record?->providerCode() );
 		self::assertStringContainsString( 'tab=fixture-provider', $redirect );
 		self::assertFalse( $enriched['fixture-repository']['actions']['core:webhook-management']['disabled'] );
@@ -481,8 +655,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			);
 			$request    = $this->request(
 				array(
-					'provider_code'      => $providerCode,
-					'request_credential' => 'secret-canary-partial-provider',
+					'provider_code' => $providerCode,
 				)
 			);
 
@@ -504,7 +677,6 @@ final class WebhookManagementControllerTest extends TestCase {
 		$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
 			$this->request(
 				array(
-					'request_credential'    => '',
 					'booster_credential_id' => 'credential_1',
 				)
 			),
@@ -513,7 +685,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame(
 			array(
-				array( 'setup', 'credential_1', false, 'valid' ),
+				array( 'setup', 'credential_1', null, 'valid' ),
 			),
 			$gateway->calls
 		);
@@ -532,7 +704,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
 	}
 
-	public function testNullHookAmbiguityPersistsTargetScopedRecoveryAndSuppressesBlindSetup(): void {
+	public function testNullHookAmbiguityPersistsTargetScopedRecoveryAndDisablesBlindSetup(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult( 'ambiguous', 'setup_response_invalid', null );
 		$store           = new OperationStoreFixture();
@@ -552,7 +724,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		$html = $this->renderPanel( $gateway, $store );
 		self::assertStringContainsString( 'without a stable hook ID', $html );
-		self::assertStringNotContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
 	}
 
 	public function testSetupSaveFailureFallsBackToDurableOrphanEvidence(): void {
@@ -569,7 +742,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=orphaned', $redirect );
 	}
 
-	public function testRepeatedSetupSaveFailureReturnsBoundedRecoveryReferencesAndSuppressesRetryView(): void {
+	public function testRepeatedSetupSaveFailureReturnsBoundedRecoveryReferencesAndDisablesRetryView(): void {
 		$gateway                      = $this->gateway();
 		$store                        = new OperationStoreFixture();
 		$store->saveFailuresRemaining = 2;
@@ -588,7 +761,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->renderPanel( $gateway, $store );
 		self::assertStringContainsString( 'provider hook reference 77', $html );
 		self::assertStringContainsString( 'Core signing profile wh_0123456789abcdef01234567', $html );
-		self::assertStringNotContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'value="setup"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
 	}
 
 	public function testCoreAuthoritativeFitnessBlockMakesNoRemoteMutationAndLeavesRecordsUnchanged(): void {
@@ -599,7 +773,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'unsupported'  => $this->fitnessResult( support: 'unsupported' ),
 		);
 		foreach ( $blocked as $fitnessLabel => $fitness ) {
-			foreach ( array( 'setup', 'check', 'reconfigure', 'remove' ) as $operation ) {
+			foreach ( array( 'setup', 'check', 'reconfigure', 'remove', 'test' ) as $operation ) {
 				$gateway          = $this->gateway();
 				$gateway->fitness = $fitness;
 				$store            = new OperationStoreFixture();
@@ -643,16 +817,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'recovery_profile=wh_0123456789abcdef01234567', $redirect );
 	}
 
-	public function testItRejectsMissingMixedOrUnauthorizedCredentialsBeforeCoreExecution(): void {
+	public function testItRejectsMissingOrUnauthorizedSavedCredentialsBeforeCoreExecution(): void {
 		foreach ( array(
-			array(
-				'request_credential'    => '',
-				'booster_credential_id' => '',
-			),
-			array(
-				'request_credential'    => 'one-request',
-				'booster_credential_id' => 'credential_1',
-			),
+			array( 'booster_credential_id' => '' ),
 		) as $changes ) {
 			$gateway  = $this->gateway();
 			$redirect = $this->controller( gateway: $gateway )->handleAdminPost( $this->request( $changes ), 'valid' );
@@ -666,6 +833,35 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array(), $gateway->calls );
 	}
 
+	public function testSavedCredentialAbsenceKeepsEveryWebhookMutationControlVisibleAndDisabled(): void {
+		$gateway                       = $this->gateway();
+		$gateway->credentialsAvailable = false;
+		$store                         = new OperationStoreFixture();
+		$store->record                 = $this->record();
+		$model                         = $this->display( $gateway, $store )->panel(
+			'gh',
+			'GitHub',
+			'1234',
+			'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh',
+			null,
+			null,
+			true
+		);
+
+		self::assertIsArray( $model );
+		self::assertSame( array(), $model['credential_choices'] );
+		self::assertSame(
+			array( 'setup', 'check', 'reconfigure', 'test', 'remove' ),
+			array_column( $model['operations'], 'key' )
+		);
+		self::assertSame( array( true, true, true, true, true ), array_column( $model['operations'], 'disabled' ) );
+
+		$html = $this->renderPanel( $gateway, $store );
+		foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $label ) {
+			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
+		}
+	}
+
 	public function testCheckRecordsConfigurationWithoutClaimingSignedDelivery(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult( 'succeeded', 'configured_pending_delivery', '77' );
@@ -676,9 +872,111 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( array( array( 'check', null, true, '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutationCalls );
+		self::assertSame( array( array( 'check', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutationCalls );
 		self::assertSame( 'needs_verification', $store->record?->status() );
 		self::assertStringContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
+	}
+
+	public function testLegacyVerifiedPingStaysNeedsVerificationAndIsPresentedAsPending(): void {
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operationResult( 'succeeded', 'ping_verified', '77' );
+		$store           = new OperationStoreFixture();
+		$store->record   = $this->record( status: 'needs_verification', managementCredentialId: 'credential_old' );
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
+			'valid'
+		);
+
+		self::assertSame( array( array( 'test', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutationCalls );
+		self::assertSame( 'needs_verification', $store->record?->status() );
+		self::assertSame( 'credential_1', $store->record?->managementCredentialId() );
+		self::assertStringContainsString( 'webhook_management_result=ping_requested', $redirect );
+	}
+
+	public function testAcceptedPingWithoutReadbackStaysPendingAndRendersAWarning(): void {
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operationResult( 'succeeded', 'ping_requested', '77' );
+		$store           = new OperationStoreFixture();
+		$store->record   = $this->record( status: 'configured' );
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
+			'valid'
+		);
+
+		self::assertSame( 'needs_verification', $store->record?->status() );
+		self::assertStringContainsString( 'webhook_management_result=ping_requested', $redirect );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
+		$html = $this->renderPanel( $gateway, $store );
+
+		self::assertStringContainsString( 'notice notice-warning inline ran-booster-repository-webhook-management__notice', $html );
+		self::assertStringContainsString( 'does not prove an authenticated inbound delivery', $html );
+	}
+
+	public function testAuthoritativeTestReadbackPersistsAbsentAndConfigurationDrift(): void {
+		foreach ( array(
+			'absent' => $this->operationResult( 'succeeded', 'hook_absent', '77' ),
+			'drift'  => $this->operationResult(
+				'succeeded',
+				'configured_pending_delivery',
+				'77',
+				true,
+				array(
+					'endpoint'     => 'mismatched',
+					'events'       => 'matched',
+					'content_type' => 'matched',
+					'active'       => 'matched',
+				)
+			),
+		) as $expected => $result ) {
+			$gateway         = $this->gateway();
+			$gateway->result = $result;
+			$store           = new OperationStoreFixture();
+			$store->record   = $this->record( status: 'configured' );
+			$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+				$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
+				'valid'
+			);
+
+			self::assertSame( 'absent' === $expected ? 'remote_missing' : 'configuration_drift', $store->record?->status() );
+			self::assertStringContainsString( 'webhook_management_result=' . ( 'absent' === $expected ? 'remote_missing' : 'configuration_drift' ), $redirect );
+		}
+	}
+
+	public function testFailedPingRecordsAuthoritativeAbsenceAndConfigurationDrift(): void {
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operationResult(
+			'failed',
+			'ping_delivery_failed',
+			'77',
+			true,
+			array(
+				'endpoint'     => 'mismatched',
+				'events'       => 'matched',
+				'content_type' => 'matched',
+				'active'       => 'matched',
+			)
+		);
+		$store           = new OperationStoreFixture();
+		$store->record   = $this->record( status: 'configured' );
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
+			'valid'
+		);
+
+		self::assertSame( 'configuration_drift', $store->record?->status() );
+		self::assertStringContainsString( 'webhook_management_result=configuration_drift', $redirect );
+
+		$gateway->result = $this->operationResult( 'failed', 'ping_delivery_failed', '77', delivery: 'absent' );
+		$store->record   = $this->record( status: 'configured' );
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
+			'valid'
+		);
+
+		self::assertSame( 'remote_missing', $store->record?->status() );
+		self::assertStringContainsString( 'webhook_management_result=remote_missing', $redirect );
 	}
 
 	public function testAmbiguousRemovalRetainsRecoveryEvidenceAndNeverRetries(): void {
@@ -693,7 +991,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( array( array( 'remove', null, true, '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutationCalls );
+		self::assertSame( array( array( 'remove', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutationCalls );
 		self::assertSame( 'removal_pending', $store->record?->status() );
 		self::assertStringContainsString( 'webhook_management_result=remove_outcome_unknown', $redirect );
 
@@ -703,7 +1001,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'could not confirm whether the remote hook was removed', $html );
 		self::assertStringContainsString( 'value="check"', $html );
-		self::assertStringNotContainsString( 'value="remove"', $html );
+		self::assertStringContainsString( 'value="remove"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Remove webhook</button>', $html );
 	}
 
 	public function testConfirmedAbsenceDeletesOnlyTheLocalRecoveryRecord(): void {
@@ -782,7 +1081,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
 		self::assertStringContainsString( 'Run Check or inspect the hook at the provider before retrying an update', $html );
 		self::assertStringContainsString( 'value="check"', $html );
-		self::assertStringNotContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
 	}
 
 	public function testAmbiguousProviderRemediationSurvivesOnlyItsSignedRedirect(): void {
@@ -892,7 +1192,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'then run Check before retrying', $html );
 		self::assertStringContainsString( 'value="check"', $html );
-		self::assertStringNotContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'value="reconfigure"', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
 	}
 
 	public function testVerifiedResultCopyDoesNotClaimThatCheckProvedSignedDelivery(): void {
@@ -993,7 +1294,8 @@ final class WebhookManagementControllerTest extends TestCase {
 				'repository_webhook_management_operation' => 'setup',
 				'provider_code'                           => 'gh',
 				'repository_id'                           => '1234',
-				'request_credential'                      => 'synthetic-request-credential',
+				'booster_credential_id'                   => 'credential_1',
+				'webhook_profile_id'                      => WebhookManagementController::CREATE_REPOSITORY_SECRET,
 			),
 			$changes
 		);
@@ -1053,14 +1355,16 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 	}
 
-	private function record( string $status = 'configured', string $endpoint = 'https://hooks.example.test/webhook' ): InstallationRecord {
-		return new InstallationRecord( 'gh', '1234', 'owner/repository', '77', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', $endpoint, $status, '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
+	private function record( string $status = 'configured', string $endpoint = 'https://hooks.example.test/webhook', string $managementCredentialId = 'credential_1' ): InstallationRecord {
+		return new InstallationRecord( 'gh', '1234', 'owner/repository', '77', $managementCredentialId, 'wh_0123456789abcdef01234567', 'repository', 1, 'created', $endpoint, $status, '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
 	}
 
 	/** @param array<string, string>|null $configuration */
-	private function operationResult( string $state = 'succeeded', string $code = 'configured_pending_delivery', ?string $hookId = '77', bool $withProfile = true, ?array $configuration = null, string $providerCode = 'gh', string $remediation = 'Review the bounded operation result.' ): RepositoryWebhookOperationResult {
-		$delivery = match ( $code ) {
-			'verified' => 'verified',
+	private function operationResult( string $state = 'succeeded', string $code = 'configured_pending_delivery', ?string $hookId = '77', bool $withProfile = true, ?array $configuration = null, string $providerCode = 'gh', string $remediation = 'Review the bounded operation result.', ?string $delivery = null ): RepositoryWebhookOperationResult {
+		$delivery ??= match ( $code ) {
+			'verified', 'ping_verified' => 'verified',
+			'ping_delivery_failed' => 'unverified',
+			'ping_requested' => 'unknown',
 			'absent', 'hook_absent' => 'absent',
 			default => 'succeeded' === $state ? 'configured_pending_delivery' : 'unknown',
 		};
@@ -1129,6 +1433,7 @@ final class WebhookManagementControllerTest extends TestCase {
 					'ran_booster_repository_webhook_check_' . $providerCode . '_1234',
 					'ran_booster_repository_webhook_reconfigure_' . $providerCode . '_1234',
 					'ran_booster_repository_webhook_remove_' . $providerCode . '_1234',
+					'ran_booster_repository_webhook_test_' . $providerCode . '_1234',
 				),
 				true
 			) ) || ( str_starts_with( $action, 'ran_booster_repository_webhook_result_' )
@@ -1257,8 +1562,9 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	/** @var list<array<mixed>> */
 	public array $mutationCalls = array();
 	public RepositoryWebhookFitnessResult $fitness;
-	public bool $throwOnReadiness = false;
-	public bool $profileAbsent    = false;
+	public bool $throwOnReadiness     = false;
+	public bool $profileAbsent        = false;
+	public bool $credentialsAvailable = true;
 
 	public function __construct(
 		private readonly AssistanceReadiness $readinessResult,
@@ -1282,12 +1588,21 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	}
 
 	public function credentialChoices( string $providerCode ): array {
-		return hash_equals( $this->targetResult->providerCode(), $providerCode ) ? array(
+		return $this->credentialsAvailable && hash_equals( $this->targetResult->providerCode(), $providerCode ) ? array(
 			array(
-				'id'         => 'credential_1',
-				'label'      => 'Temporary',
-				'kind'       => 'fine-grained',
-				'destroy_on' => null,
+				'id'    => 'credential_1',
+				'label' => 'Temporary',
+				'kind'  => 'fine-grained',
+			),
+		) : array();
+	}
+
+	public function webhookProfileChoices( string $providerCode, string $repositoryId ): array {
+		return hash_equals( $this->targetResult->providerCode(), $providerCode ) && hash_equals( $this->targetResult->repositoryId(), $repositoryId ) ? array(
+			array(
+				'id'    => 'wh_0123456789abcdef01234567',
+				'label' => 'Repository signing secret',
+				'scope' => 'repository',
 			),
 		) : array();
 	}
@@ -1304,69 +1619,86 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 			: null;
 	}
 
-	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assessSetup', $credentialProfileId, null !== $requestCredential, $nonce );
+		$call                    = array( 'assessSetup', $credentialProfileId, $nonce );
 		$this->calls[]           = $call;
 		$this->assessmentCalls[] = $call;
 
 		return $this->fitness;
 	}
 
-	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assessCheck', $credentialProfileId, null !== $requestCredential, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$call                    = array( 'assessCheck', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
 		$this->calls[]           = $call;
 		$this->assessmentCalls[] = $call;
 
 		return $this->fitness;
 	}
 
-	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assessReconfigure', $credentialProfileId, null !== $requestCredential, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$call                    = array( 'assessReconfigure', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
 		$this->calls[]           = $call;
 		$this->assessmentCalls[] = $call;
 
 		return $this->fitness;
 	}
 
-	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookFitnessResult {
+	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assessRemove', $credentialProfileId, null !== $requestCredential, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$call                    = array( 'assessRemove', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
 		$this->calls[]           = $call;
 		$this->assessmentCalls[] = $call;
 
 		return $this->fitness;
 	}
 
-	public function setup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function assessTest( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call          = array( 'setup', $credentialProfileId, null !== $requestCredential, $nonce );
+		$call                    = array( 'assessTest', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$this->calls[]           = $call;
+		$this->assessmentCalls[] = $call;
+
+		return $this->fitness;
+	}
+
+	public function setup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, ?string $webhookProfileId = null ): RepositoryWebhookOperationResult {
+		unset( $target );
+		$call          = array( 'setup', $credentialProfileId, $webhookProfileId, $nonce );
 		$this->calls[] = $call;
 
 		return $this->authoritativeOperation( $call );
 	}
 
-	public function check( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function check( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
 		unset( $target );
-		$call          = array( 'check', $credentialProfileId, null !== $requestCredential, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$call          = array( 'check', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
 		$this->calls[] = $call;
 
 		return $this->authoritativeOperation( $call );
 	}
 
-	public function reconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function reconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
 		unset( $target );
-		$call          = array( 'reconfigure', $credentialProfileId, null !== $requestCredential, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$call          = array( 'reconfigure', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
 		$this->calls[] = $call;
 
 		return $this->authoritativeOperation( $call );
 	}
 
-	public function remove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce, #[\SensitiveParameter] ?string $requestCredential = null ): RepositoryWebhookOperationResult {
+	public function remove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
 		unset( $target );
-		$call          = array( 'remove', $credentialProfileId, null !== $requestCredential, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$call          = array( 'remove', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
+		$this->calls[] = $call;
+
+		return $this->authoritativeOperation( $call );
+	}
+
+	public function test( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $webhookProfileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
+		unset( $target );
+		$call          = array( 'test', $credentialProfileId, $hookId, $webhookProfileId, $profileRevision, $nonce );
 		$this->calls[] = $call;
 
 		return $this->authoritativeOperation( $call );

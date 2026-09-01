@@ -81,17 +81,18 @@ capabilities and state.
 
 A provider may implement both `RepositoryWebhookFitness` and
 `RepositoryWebhookManagement` for the exact operation
-`repository-webhook-management/1`. These interfaces expose only the four
-closed actions `setup`, `check`, `reconfigure` and `remove`, with matching
-read-only `assess*` methods. There is no operation dispatcher, callable,
-provider client, transport or credential handle in the public contract.
+`repository-webhook-management/3`. These interfaces expose only the five
+closed actions `setup`, `check`, `reconfigure`, `remove` and `test`, with
+matching read-only `assessSetup`, `assessCheck`, `assessReconfigure`,
+`assessRemove` and `assessTest` methods. There is no operation dispatcher,
+callable, provider client, transport or credential handle in the public contract.
 
 Saved credential IDs are display-safe inputs. The provider resolves their
 plaintext only through its already-bound `ProviderCredentialStore` and only
-inside the selected fixed call. A request-only credential is a separate
-explicit sensitive parameter for both assessment and execution of that call and
-is never persisted or returned. Exactly one saved ID or request-only value is
-accepted. Only setup and reconfigure receive the Core-held signing secret.
+inside the selected fixed call. Webhook management accepts one saved credential
+ID. Setup may select one applicable saved signing-secret profile or request a
+new repository-scoped secret; only setup and reconfigure receive the Core-held
+signing secret.
 The fixed management placement also requires `WebhookNormalizer` on that same
 aggregate, proving that provider registration supplied the signing policy Core
 needs to create and retain webhook profiles. Operation facets without that
@@ -128,7 +129,7 @@ single registered aggregate implements both webhook operation facets and the
 signing-policy normalizer. Core derives only
 the bounded provider code and label from metadata; providers cannot supply
 fields, HTML, callbacks or route behavior. The fixed host owns authorization,
-credential-source choice, result bounds and the schema-3 recovery record, while
+credential-source choice, result bounds and the schema-4 recovery record, while
 the provider facets own credential use, remote behavior and bounded plain-text
 remediation. Core publishes no renderer registry, callable transport, generic
 dispatcher or raw credential handle.

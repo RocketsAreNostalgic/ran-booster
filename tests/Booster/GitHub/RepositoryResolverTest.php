@@ -62,6 +62,10 @@ final class RepositoryResolverTest extends TestCase {
 		self::assertStringContainsString( 'limited to one user or organisation', $setup->credentialSummary );
 		self::assertStringContainsString( 'select the project repositories once', $setup->credentialSummary );
 		self::assertStringContainsString( 'Booster does not change that GitHub repository selection', $setup->credentialSummary );
+		self::assertStringContainsString( 'Contents to Read-only', $setup->credentialSummary );
+		self::assertStringContainsString( 'admin:repo_hook', $setup->credentialSummary );
+		self::assertStringContainsString( 'Webhooks: Read and write', $setup->credentialSummary );
+		self::assertStringContainsString( 'Workflows: Read and write', $setup->credentialSummary );
 	}
 
 	public function testAnonymousLookupResolvesCanonicalPublicRepositoryMetadata(): void {

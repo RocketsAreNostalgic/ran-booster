@@ -370,6 +370,9 @@ final class GitHubRepositoryClient {
 		if ( isset( $special[ $status ] ) ) {
 			return $this->error( $special[ $status ] );
 		}
+		if ( 403 === $status && '0' === wp_remote_retrieve_header( $response, 'x-ratelimit-remaining' ) ) {
+			return $this->error( 'rate_limited' );
+		}
 		if ( in_array( $status, array( 401, 403 ), true ) ) {
 			return $this->error( 'unauthorised' );
 		}

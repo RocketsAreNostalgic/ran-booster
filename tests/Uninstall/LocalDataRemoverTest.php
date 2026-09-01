@@ -57,6 +57,8 @@ final class LocalDataRemoverTest extends TestCase {
 			Database::VERSION_OPTION                      => '5.0',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),
+			'ran_booster_release_deployments_assessment_observations' => array( array( 'kind' => 'existing_automation_detected' ) ),
+			'ran_booster_release_deployments_failure_history' => array( array( 'correlation_reference' => str_repeat( 'a', 32 ) ) ),
 			$this->updaterAuthorityOption()               => 'owned-updater-state',
 			SiteKeyStore::OPTION_NAME                     => 'encoded-key',
 			'ran_booster_assisted_hooks_installations'    => array( 'owned-by-addon' ),

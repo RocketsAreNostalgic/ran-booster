@@ -593,20 +593,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testProviderRouteSelectsFocusedViewsTasksAndBoundedListState(): void {
 		$_GET = array(
-			'tab'     => 'bb',
-			'view'    => 'secrets',
-			'panel'   => 'setup',
-			's'       => ' workspace ',
-			'scope'   => 'owner',
-			'status'  => 'ready',
-			'orderby' => 'usage',
-			'order'   => 'desc',
+			'tab'             => 'bb',
+			'view'            => 'secrets',
+			'panel'           => 'setup',
+			'repository_view' => 'releases',
+			's'               => ' workspace ',
+			'scope'           => 'owner',
+			'status'          => 'ready',
+			'orderby'         => 'usage',
+			'order'           => 'desc',
 		);
 
 		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->getIndex()['data'];
 
 		self::assertSame( 'secrets', $data['providerView'] );
 		self::assertSame( 'setup', $data['providerTask'] );
+		self::assertSame( 'releases', $data['repositoryView'] );
 		self::assertSame(
 			array(
 				'search'   => 'workspace',
@@ -621,14 +623,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$data['providerListState']
 		);
 
-		$_GET['view']    = 'unknown';
-		$_GET['panel']   = 'unknown';
-		$_GET['orderby'] = 'unknown';
+		$_GET['view']            = 'unknown';
+		$_GET['panel']           = 'unknown';
+		$_GET['repository_view'] = 'unknown';
+		$_GET['orderby']         = 'unknown';
 
 		$fallback = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->getIndex()['data'];
 
 		self::assertSame( 'overview', $fallback['providerView'] );
 		self::assertSame( 'status', $fallback['providerTask'] );
+		self::assertSame( 'status', $fallback['repositoryView'] );
 		self::assertSame( 'name', $fallback['providerListState']['orderby'] );
 	}
 
@@ -740,11 +744,61 @@ final class DashboardIndexRoutingTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Repository webhook</h5>', $html );
+		self::assertStringContainsString( 'Integration status', $html );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="branch"', $html );
 		self::assertStringContainsString( 'Back to repositories', $html );
 		self::assertStringContainsString( 'Packages using this repository', $html );
+		self::assertStringContainsString( 'ran-booster-repository-detail__layout', $html );
+		self::assertStringContainsString( 'ran-booster-repository-detail__sidebar', $html );
+		self::assertStringContainsString( 'Management history', $html );
 		self::assertStringContainsString( 'workspace/route', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $html );
+		self::assertStringNotContainsString( 'Repository access', $html );
+		self::assertStringNotContainsString( 'Public repository lookup', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-provider-task="status"', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider__footer', $html );
+	}
+
+	public function testRepositoryReleaseCallbackUsesTheExactPublishedReleasesReturnUrl(): void {
+		$_GET    = array(
+			'tab'             => 'bb',
+			'panel'           => 'repositories',
+			'repository'      => 'repo-route',
+			'repository_view' => 'releases',
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+			array(
+				'plugin/route.php' => $this->managedPackage(
+					'plugin/route.php',
+					'Route Plugin',
+					'repo-route',
+					\RAN\PackageSource::RELEASE_ASSET,
+					'bb',
+					repository: 'workspace/route'
+				),
+			)
+		);
+		$data = $this->dashboard(
+			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
+			plugins: $plugins,
+			providerCredentials: true
+		)->getIndex()['data'];
+
+		$releaseReturnUrl = '';
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_repository_release_sections'][] = static function ( array $row, string $returnUrl ) use ( &$releaseReturnUrl ): void {
+			unset( $row );
+			$releaseReturnUrl = $returnUrl;
+		};
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed route model is rendered through the production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		ob_end_clean();
+
+		self::assertSame( 'releases', $data['repositoryView'] );
+		self::assertStringContainsString( 'repository=repo-route', $releaseReturnUrl );
+		self::assertStringContainsString( 'repository_view=releases', $releaseReturnUrl );
 	}
 
 	public function testProviderRepositoryProjectionUnifiesPackageTypesAndSourcesByStableIdentity(): void {
@@ -866,7 +920,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $repository['has_automatic_branch_consumer'] );
 		self::assertCount( 20, $repository['package_summaries'] );
 		self::assertSame( 1, $repository['package_summaries_omitted'] );
-		self::assertSame( 1, $data['repositoryIntegrationSummary']['needs_review'] );
+		self::assertSame( 0, $data['repositoryIntegrationSummary']['needs_review'] );
 	}
 
 	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {
@@ -1656,7 +1710,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 			array(
 				'packageProviderSettings',
 				'packageBranchReadiness',
-				'packageWebhookCleanup',
 				'package',
 				'packageView',
 				'packageExtensionPanels',

@@ -151,6 +151,25 @@ function add_action( string $hook, callable $callback, int $priority = 10, int $
 	return true;
 }
 
+function do_action( string $hook, mixed ...$args ): void {
+	$callbacks = $GLOBALS['ran_booster_release_management_test_actions'][ $hook ] ?? array();
+	if ( ! is_array( $callbacks ) ) {
+		return;
+	}
+
+	usort(
+		$callbacks,
+		static fn ( array $left, array $right ): int => (int) ( $left['priority'] ?? 10 ) <=> (int) ( $right['priority'] ?? 10 )
+	);
+	foreach ( $callbacks as $registered ) {
+		if ( ! is_array( $registered ) || ! is_callable( $registered['callback'] ?? null ) ) {
+			continue;
+		}
+		$acceptedArgs = max( 0, (int) ( $registered['accepted_args'] ?? 1 ) );
+		call_user_func_array( $registered['callback'], array_slice( $args, 0, $acceptedArgs ) );
+	}
+}
+
 function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
 	$GLOBALS['ran_booster_release_management_test_filters'][ $hook ][] = array(
 		'callback'      => $callback,

@@ -1,6 +1,14 @@
 const managedReleaseBrowsers = new WeakSet();
 
 const initializeManagedReleaseBrowser = (managedBrowser) => {
+	if (
+		managedBrowser.dataset.ranBoosterManagedReleaseBrowserDisabled ===
+			'true' ||
+		!managedBrowser.dataset.ranBoosterManagedReleaseListNonce ||
+		!managedBrowser.dataset.ranBoosterManagedReleaseInspectNonce
+	) {
+		return;
+	}
 	if (managedReleaseBrowsers.has(managedBrowser)) {
 		return;
 	}

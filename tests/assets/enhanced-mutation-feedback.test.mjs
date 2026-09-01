@@ -122,6 +122,7 @@ function fixture() {
 		},
 	};
 	const error = {
+		appendedChildren: [],
 		attributes: errorAttributes,
 		focusOptions: null,
 		hidden: true,
@@ -131,6 +132,9 @@ function fixture() {
 		},
 		hasAttribute(name) {
 			return errorAttributes.has(name);
+		},
+		append(child) {
+			this.appendedChildren.push(child);
 		},
 		setAttribute(name, value) {
 			errorAttributes.set(name, String(value));
@@ -712,7 +716,7 @@ test('a branch check leaves an unrelated persistent error untouched', () => {
 	assert.equal(state.error.textContent, '');
 });
 
-test('an opted-in branch check moves its rendered provider failure beside the action', () => {
+test('an opted-in mutation moves its rendered failure disclosure into the global error banner', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
@@ -730,14 +734,17 @@ test('an opted-in branch check moves its rendered provider failure beside the ac
 			removed = true;
 		},
 		querySelector(selector) {
-			return selector === 'p'
-				? {
-						textContent:
-							'The repository provider rate limit has been reached. Try again later.',
-					}
-				: null;
+			if (selector === 'p') {
+				return {
+					textContent:
+						'The repository provider rate limit has been reached. Try again later.',
+				};
+			}
+
+			return selector === 'details' ? failureDetails : null;
 		},
 	};
+	const failureDetails = { tagName: 'DETAILS' };
 	state.setRenderedBranchCheckErrors([renderedNotice]);
 
 	init();
@@ -752,6 +759,7 @@ test('an opted-in branch check moves its rendered provider failure beside the ac
 		state.error.textContent,
 		'The repository provider rate limit has been reached. Try again later.'
 	);
+	assert.deepEqual(state.error.appendedChildren, [failureDetails]);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
 	assert.deepEqual(state.announcements, [
 		{
@@ -1041,6 +1049,43 @@ test('a package mutation converts its swapped success notice into the shared toa
 			url: 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php',
 		},
 	]);
+});
+
+test('a rendered GitHub release workflow result consumes only its signed PRG query values', () => {
+	const state = fixture();
+	state.window.location.href =
+		'https://example.test/wp-admin/admin.php?page=ran-booster&keep=present&ran_booster_github_release_workflow_result=workflow_preflight_unavailable&ran_booster_github_release_workflow_success=0&ran_booster_github_release_workflow_type=plugin&ran_booster_github_release_workflow_package=example%2Fexample.php&ran_booster_github_release_workflow_source_revision=3&ran_booster_github_release_workflow_failure_stage=release_preflight&ran_booster_github_release_workflow_diagnostic=provider_unavailable&ran_booster_github_release_workflow_diagnostic_available=1&ran_booster_github_release_workflow_reference=abc&ran_booster_github_release_workflow_channel=github&ran_booster_github_release_workflow_preview=none&ran_booster_github_release_workflow_result_nonce=signed&unrelated=retained';
+	state.document.querySelector = (selector) =>
+		selector ===
+		'#wpbody-content [data-ran-booster-github-release-workflow-result]'
+			? {}
+			: null;
+
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+
+	assert.deepEqual(state.replacedUrls, [
+		{
+			state: { htmx: true },
+			title: '',
+			url: 'https://example.test/wp-admin/admin.php?page=ran-booster&keep=present&unrelated=retained',
+		},
+	]);
+});
+
+test('an ordinary visit does not rewrite a GitHub release workflow result URL', () => {
+	const state = fixture();
+	state.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_github_release_workflow_result=workflow_inspected';
+
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+
+	assert.deepEqual(state.replacedUrls, []);
 });
 
 test('an enhanced read action converts an explicit success notice into the shared toast', () => {

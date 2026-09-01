@@ -481,6 +481,22 @@ plain-text badge labels of no more than 255 characters each, and a plain-text
 status of no more than 40 characters. An invalid or throwing projection falls
 back to the Core baseline; invalid badge labels and status values are dropped.
 
+Repository-scoped release automation belongs on the selected repository page:
+
+```php
+do_action(
+	'ran_booster_admin_repository_release_sections',
+	$repositoryRow,
+	$returnUrl
+);
+```
+
+Core owns the repository tabs and passes one normalized exact repository row.
+Providers may render bounded package-specific workflow status and forms, but
+must reauthorize the exact provider, repository ID, package identity and source
+revision before mutation. Rendering must use local evidence only; remote
+inspection requires an explicit administrator action.
+
 ## Structured administration actions
 
 Provider-row and package-management actions use a keyed structure:

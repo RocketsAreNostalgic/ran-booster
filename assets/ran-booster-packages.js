@@ -46,6 +46,7 @@
 		initPackageMutationForms();
 		initPackageOperationControls();
 		initPackageSourceControls();
+		initPackageSourceUnsavedGuard();
 
 		document
 			.querySelectorAll('.button-update-package')
@@ -218,6 +219,105 @@
 						selectTab(tab);
 					});
 				});
+			});
+	}
+
+	function initPackageSourceUnsavedGuard() {
+		const settingsForm = document.querySelector(
+			'#ran-booster-package-edit-form'
+		);
+		const sourceShell = document.querySelector(
+			'[data-ran-booster-source-controls]'
+		);
+
+		if (
+			!settingsForm ||
+			!sourceShell ||
+			settingsForm.dataset?.ranBoosterSourceUnsavedGuardBound === 'true'
+		) {
+			return;
+		}
+
+		settingsForm.dataset.ranBoosterSourceUnsavedGuardBound = 'true';
+
+		const controls = Array.from(settingsForm.elements || []).filter(
+			function (control) {
+				return (
+					!control.disabled &&
+					![
+						'button',
+						'hidden',
+						'image',
+						'reset',
+						'submit',
+						'radio',
+					].includes(control.type)
+				);
+			}
+		);
+		const baseline = new Map(
+			controls.map(function (control) {
+				return [control, settingValue(control)];
+			})
+		);
+		const isDirty = function () {
+			return controls.some(function (control) {
+				return baseline.get(control) !== settingValue(control);
+			});
+		};
+		function settingValue(control) {
+			return ['checkbox', 'radio'].includes(control.type)
+				? control.checked
+				: control.value;
+		}
+		const notice = sourceShell.querySelector(
+			'[data-ran-booster-source-unsaved-notice]'
+		);
+		const hideNoticeIfClean = function () {
+			if (!isDirty() && notice) {
+				notice.hidden = true;
+			}
+		};
+		const blockIfDirty = function (event) {
+			if (!isDirty()) {
+				hideNoticeIfClean();
+				return false;
+			}
+
+			event.preventDefault();
+			event.stopImmediatePropagation?.();
+			if (notice) {
+				notice.hidden = false;
+			}
+			return true;
+		};
+		controls.forEach(function (control) {
+			control.addEventListener('input', hideNoticeIfClean);
+			control.addEventListener('change', hideNoticeIfClean);
+		});
+
+		sourceShell
+			.querySelectorAll('[data-ran-booster-source-choice]')
+			.forEach(function (choice) {
+				if (
+					choice.getAttribute('href') === null ||
+					choice.disabled ||
+					choice.getAttribute('aria-disabled') === 'true'
+				) {
+					return;
+				}
+				choice.addEventListener('click', blockIfDirty, true);
+			});
+
+		document
+			.querySelectorAll('form[data-ran-booster-source-transition]')
+			.forEach(function (transitionForm) {
+				transitionForm.addEventListener('submit', blockIfDirty, true);
+				transitionForm.addEventListener(
+					'htmx:beforeRequest',
+					blockIfDirty,
+					true
+				);
 			});
 	}
 

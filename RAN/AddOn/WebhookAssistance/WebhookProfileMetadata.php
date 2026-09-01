@@ -6,6 +6,7 @@ namespace RAN\AddOn\WebhookAssistance;
 
 use InvalidArgumentException;
 use RAN\RepositoryProvider\ProviderCode;
+use RAN\Secrets\SecretsFile;
 
 /** Immutable, display-safe metadata for one Core-owned webhook profile. */
 final readonly class WebhookProfileMetadata {
@@ -29,13 +30,14 @@ final readonly class WebhookProfileMetadata {
 			throw new InvalidArgumentException( 'Webhook profile metadata is invalid.' );
 		}
 
-		if ( 1 !== preg_match( '/^wh_[a-f0-9]{24}$/', $this->id )
+		if ( ( SecretsFile::CONSTANT_PROFILE !== $this->id && 1 !== preg_match( '/^wh_[a-f0-9]{24}$/', $this->id ) )
 			|| ! in_array( $this->scope, array( 'owner', 'repository' ), true )
 			|| $this->revision < 1
 			|| ! in_array( $this->disposition, array( 'created', 'reused' ), true )
 			|| ( 'created' === $this->disposition && 'repository' !== $this->scope )
-			|| 'file' !== $this->source
-			|| $this->immutable
+			|| ! in_array( $this->source, array( 'file', 'constant' ), true )
+			|| ( 'file' === $this->source && $this->immutable )
+			|| ( 'constant' === $this->source && ! $this->immutable )
 			|| ! $this->validTarget()
 			|| ! $this->validAuthority()
 		) {

@@ -90,7 +90,13 @@ final class ReleaseWorkflowContractTest extends TestCase {
 	}
 
 	public function testQualityMaterializesTheExactLockedUpdaterForFreshArchives(): void {
-		$workflow = $this->workflow( 'quality.yml' );
+		$workflow    = $this->workflow( 'quality.yml' );
+		$runtimeCopy = json_decode(
+			(string) file_get_contents( dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/runtime-copy.json' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local workflow contract.
+			true,
+			512,
+			JSON_THROW_ON_ERROR
+		);
 
 		self::assertSame( 2, substr_count( $workflow, 'Check out locked neutral updater source' ) );
 		self::assertStringContainsString( 'git show "${source_commit}:composer.lock"', $workflow );
@@ -99,7 +105,9 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"', $workflow );
 		self::assertSame( 2, substr_count( $workflow, 'git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"' ) );
 		self::assertStringContainsString( 'test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"', $workflow );
-		self::assertStringContainsString( '"package_revision" => "7490388dd650ae604e5e4004f7d3e88fd6c78767dd350da47b6b7bfad8b0a88e"', $workflow );
+		self::assertIsArray( $runtimeCopy );
+		self::assertMatchesRegularExpression( '/^[0-9a-f]{64}$/', $runtimeCopy['package_revision'] ?? '' );
+		self::assertStringContainsString( '"package_revision" => "' . $runtimeCopy['package_revision'] . '"', $workflow );
 		self::assertStringNotContainsString( '0b506753fb45115f946bf01253ab76b893b3804e33d0f5b6f8a14c2026d59516', $workflow );
 		self::assertStringNotContainsString( '320fb89e1a93813907419cecab7e05892b6d9419', $workflow );
 	}

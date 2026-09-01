@@ -685,13 +685,9 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( 0 < $packageSummariesOmitted ) {
 				continue;
 			}
-			$providerReleaseDetailPrefix = is_string( $row['provider_code'] ?? null )
-				? $row['provider_code'] . ':release-automation-'
-				: '';
 			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
 				if ( ! is_array( $detail )
-					|| '' === $providerReleaseDetailPrefix
-					|| ! str_starts_with( (string) ( $detail['key'] ?? '' ), $providerReleaseDetailPrefix )
+					|| ! $this->isReleaseWorkflowDetail( $detail )
 					|| ! in_array( $detail['tone'] ?? null, array( 'pending', 'warning' ), true ) ) {
 					continue;
 				}
@@ -709,6 +705,12 @@ final class ProviderRepositoryRowsNormalizer {
 			'release_workflows_inventory_incomplete' => $releaseWorkflowsIncomplete,
 			'release_workflows_needing_review'       => $releaseWorkflowsNeedingReview,
 		);
+	}
+
+	/** @param array<string, mixed> $detail */
+	private function isReleaseWorkflowDetail( array $detail ): bool {
+		return 'release_workflow' === ( $detail['kind'] ?? null )
+			|| ( is_string( $detail['key'] ?? null ) && 1 === preg_match( '/\\A[a-z][a-z0-9_-]{0,63}:release-automation-/', $detail['key'] ) );
 	}
 
 	/**

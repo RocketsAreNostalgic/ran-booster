@@ -283,11 +283,14 @@ disposable activation check as passed.
   only source labels and their accessible text.
   No concrete types, public seams or persistent fields were added.
 - README, stylesheets, dependencies, source/policy behavior and remote state
-  are unchanged. The exact `4d67176dfde21c43598539e5e57169a699ec4fec`
-  release archive passed its WordPress activation smoke check on the disposable
-  `booster-test-no-links` site: version `1.0.0-beta.27` remained active, the
-  `RAN\Booster` runtime class loaded and the installed release manifest retained
-  that source commit. No PNS package or database mutation was performed.
+  are unchanged. The recorded `4d67176dfde21c43598539e5e57169a699ec4fec`
+  archive smoke applies only to that older source commit; it is not activation
+  evidence for the reviewed `5938020d172f2d903d40cc61652fb2e90e41ab32` tree.
+  Before merge, build and verify an archive from that exact reviewed commit,
+  then install and activate it only on a marked disposable WordPress site.
+  Record the archive checksum, embedded `source_commit`, active version and
+  `RAN\Booster` runtime-class result. No PNS package or database mutation was
+  performed.
 - No live save, source switch, workflow assessment, push, PR, merge, release or
   Dex/workbench operation was performed.
 - Desktop views were inspected at 1,422 pixels with no horizontal overflow.

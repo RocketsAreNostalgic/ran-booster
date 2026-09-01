@@ -548,6 +548,13 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 				'value' => 'Unavailable',
 				'tone'  => 'warning',
 			);
+			$rows['202']['details'][] = array(
+				'key'   => 'custom:workflow-review',
+				'label' => 'Custom workflow',
+				'value' => 'Needs review',
+				'kind'  => 'release_workflow',
+				'tone'  => 'pending',
+			);
 
 			return $rows;
 		};
@@ -604,7 +611,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_repositories'] );
 		self::assertFalse( $result['repositoryIntegrationSummary']['release_totals_incomplete'] );
 		self::assertTrue( $result['repositoryIntegrationSummary']['release_workflows_inventory_incomplete'] );
-		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
+		self::assertSame( 3, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
 	}
 
 	#[RunInSeparateProcess]

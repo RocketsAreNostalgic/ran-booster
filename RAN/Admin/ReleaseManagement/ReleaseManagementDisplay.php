@@ -565,7 +565,7 @@ final class ReleaseManagementDisplay {
 					<h4 data-ran-booster-release-status-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 					<p>
 						<span data-ran-booster-release-status-message><?php esc_html_e( 'Choose a repository above, then select Releases to load eligible stable releases.', 'ran-booster' ); ?></span>
-						<button type="button" class="button-link" data-ran-booster-release-switch-branch hidden><?php esc_html_e( 'Use Branch tracking instead', 'ran-booster' ); ?></button>
+						<button type="button" class="button-link" data-ran-booster-release-switch-branch hidden><?php esc_html_e( 'Use branch', 'ran-booster' ); ?></button>
 					</p>
 				</div>
 				<button type="button" class="button" data-ran-booster-release-retry hidden><?php esc_html_e( 'Retry release check', 'ran-booster' ); ?></button>

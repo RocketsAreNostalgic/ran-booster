@@ -143,6 +143,8 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'name="expected_type" value="plugin"', $html );
+		self::assertStringContainsString( 'data-ran-booster-release-switch-branch hidden>Use branch</button>', $html );
+		self::assertStringNotContainsString( 'Use Branch tracking instead', $html );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local interaction conformance read.
 		$script = file_get_contents( dirname( __DIR__, 3 ) . '/assets/ran-booster-release-management.js' );
 		self::assertIsString( $script );

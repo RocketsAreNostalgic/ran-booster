@@ -371,6 +371,7 @@ $package->displayName();
 $package->providerCode();
 $package->source();           // "branch" or "release_asset".
 $package->sourceRevision();
+$package->subdirectory();     // Repository subdirectory, or "" for the root; at most 255 characters.
 $package->deploymentPolicy(); // "disabled", "manual" or "automatic".
 $package->settingsUrl();
 ```

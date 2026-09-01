@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;
+use RAN\PackageSubdirectory;
 use RAN\PackageSource;
 use RAN\Runtime\RuntimeSupport;
 use RAN\WordPress\ManagedReleaseConfiguration;
@@ -164,6 +165,9 @@ abstract class AbstractPackageRepository {
 		if ( ! $this->packageExists( (string) $model->package ) ) {
 			return $this->invalidPackageIdentityResult( PackageStorageOperation::UPDATE );
 		}
+		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source && null !== $model->subdirectory ) {
+			return $this->sourceConflictResult();
+		}
 		$data = array(
 			'repository'        => $model->repository,
 			'branch'            => $model->branch,
@@ -178,15 +182,33 @@ abstract class AbstractPackageRepository {
 		$data['provider']               = $model->provider;
 		$data['provider_repository_id'] = $model->provider_repository_id;
 
+		$where = array(
+			'package'         => $model->package,
+			'type'            => $this->packageType(),
+			'source'          => $expectedSource->source,
+			'source_revision' => $expectedSource->source_revision,
+		);
+		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source ) {
+			try {
+				$rows = $this->packageRows( $model->package );
+				if ( 1 !== count( $rows )
+					|| null !== PackageSubdirectory::normalize( $this->valueFromRow( $rows[0], 'subdirectory' ) ) ) {
+					return $this->sourceConflictResult();
+				}
+			} catch ( InvalidArgumentException ) {
+				return $this->sourceConflictResult();
+			} catch ( PackageStorageFailure $failure ) {
+				return $this->failureResult( $failure );
+			}
+
+			// Preserve the stored root representation in the CAS predicate. Legacy
+			// records may use either NULL or an empty string for the repository root.
+			$where['subdirectory'] = $this->valueFromRow( $rows[0], 'subdirectory' );
+		}
 		$result = $wpdb->update(
 			ran_booster_table_name(),
 			$data,
-			array(
-				'package'         => $model->package,
-				'type'            => $this->packageType(),
-				'source'          => $expectedSource->source,
-				'source_revision' => $expectedSource->source_revision,
-			)
+			$where
 		);
 
 		return $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
@@ -244,6 +266,15 @@ abstract class AbstractPackageRepository {
 				$rows = $this->lockedPackageRows( $identifier );
 				if ( 1 !== count( $rows ) || ! $this->rowMatches( $rows[0], $snapshot ) ) {
 					throw PackageStorageFailure::duplicatePackageRows();
+				}
+				try {
+					$subdirectory = PackageSubdirectory::normalize( $rows[0]->subdirectory ?? null );
+				} catch ( InvalidArgumentException ) {
+					throw PackageStorageFailure::writeFailed();
+				}
+				if ( PackageSource::RELEASE_ASSET->value === ( $rows[0]->source ?? null )
+					&& null !== $subdirectory ) {
+					throw PackageStorageFailure::writeFailed();
 				}
 
 				if ( $policy->value === (string) ( $rows[0]->deployment_policy ?? '' ) ) {
@@ -446,6 +477,7 @@ abstract class AbstractPackageRepository {
 			: $configuration->packageRoot();
 		if ( PackageSource::RELEASE_ASSET !== $package->getSource()
 			|| 1 !== $package->getSourceRevision()
+			|| null !== $package->getSubdirectory()
 			|| ! hash_equals( $expected, $identifier )
 			|| $userId < 0 ) {
 			return $this->sourceConflictResult();

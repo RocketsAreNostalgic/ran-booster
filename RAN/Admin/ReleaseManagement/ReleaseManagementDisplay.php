@@ -47,15 +47,16 @@ final class ReleaseManagementDisplay {
 			? ( $this->normalizeReleaseChannel( $selectedChannel ) ?? 'stable' )
 			: $status->channel();
 
-		$eligibility       = $status->eligibility();
-		$eligibilityCode   = $eligibility->code();
-		$expectedUpdateUri = $eligibility->expectedUpdateUri();
-		$repositoryLabel   = '';
-		$repositoryPath    = wp_parse_url( $expectedUpdateUri, PHP_URL_PATH );
+		$eligibility              = $status->eligibility();
+		$eligibilityCode          = $eligibility->code();
+		$subdirectoryIncompatible = 'subdirectory_not_supported' === $eligibilityCode;
+		$expectedUpdateUri        = $eligibility->expectedUpdateUri();
+		$repositoryLabel          = '';
+		$repositoryPath           = wp_parse_url( $expectedUpdateUri, PHP_URL_PATH );
 		if ( is_string( $repositoryPath ) ) {
 			$repositoryLabel = trim( $repositoryPath, '/' );
 		}
-		$providerReady    = 'unsupported_provider' !== $eligibilityCode;
+		$providerReady    = ! $subdirectoryIncompatible && 'unsupported_provider' !== $eligibilityCode;
 		$repositoryReady  = $providerReady && 'invalid_repository' !== $eligibilityCode;
 		$updateUriReady   = in_array( $eligibilityCode, array( 'eligible', 'target_already_uses_ran_updater' ), true );
 		$releaseViewUrl   = add_query_arg( array( 'source_view' => 'release_asset' ), $settingsUrl );
@@ -72,7 +73,7 @@ final class ReleaseManagementDisplay {
 		$refreshNonceAction   = null;
 		if ( $eligibility->eligible() && 'branch' === $status->source() ) {
 			$trackNonceAction = $nonceActions['enable'] ?? null;
-		} elseif ( 'release_asset' === $status->source() ) {
+		} elseif ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) {
 			$trackNonceAction   = $nonceActions['change_channel'] ?? null;
 			$refreshNonceAction = $nonceActions['refresh'] ?? null;
 		}
@@ -82,6 +83,8 @@ final class ReleaseManagementDisplay {
 				<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Published release readiness', 'ran-booster' ); ?></h3>
 				<?php if ( 'branch' === $status->source() ) { ?>
 					<p><strong><?php esc_html_e( 'Current source remains Branch.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Check eligibility before changing source; nothing changes until you validate and confirm the switch.', 'ran-booster' ); ?></p>
+				<?php } elseif ( $subdirectoryIncompatible ) { ?>
+					<p><strong><?php esc_html_e( 'Published releases are quarantined for this package.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Return to Branch to preserve its configured repository subdirectory.', 'ran-booster' ); ?></p>
 				<?php } else { ?>
 					<p><strong><?php esc_html_e( 'Published releases are the package source.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Review package identity and release status. WordPress Updates installs validated releases.', 'ran-booster' ); ?></p>
 				<?php } ?>
@@ -95,29 +98,37 @@ final class ReleaseManagementDisplay {
 				<div class="ran-booster-readiness-panel__top">
 					<div>
 						<h4><?php echo esc_html( $eligibility->eligible() ? __( 'Published release tracking is eligible', 'ran-booster' ) : __( 'Published releases are not eligible yet', 'ran-booster' ) ); ?></h4>
-						<p><?php echo esc_html( $eligibility->eligible() ? __( 'The installed package identity matches its configured repository.', 'ran-booster' ) : $this->eligibilityMessage( $eligibility ) ); ?></p>
+						<p><?php echo esc_html( $eligibility->eligible() ? __( 'The installed package identity matches its configured repository.', 'ran-booster' ) : $this->eligibilityMessage( $eligibility, $status->source() ) ); ?></p>
 					</div>
 					<?php if ( ! $eligibility->eligible() ) { ?>
 						<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Unavailable', 'ran-booster' ); ?></span>
 					<?php } ?>
 				</div>
 				<ul class="ran-booster-readiness-list">
-					<li class="ran-booster-readiness-item <?php echo $providerReady ? 'is-ok' : 'is-warning'; ?>">
-						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-						<strong><?php esc_html_e( 'Provider', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( $providerReady ? __( 'The repository provider supports published releases.', 'ran-booster' ) : __( 'The repository provider does not support published releases.', 'ran-booster' ) ); ?></span>
-					</li>
-					<li class="ran-booster-readiness-item <?php echo $repositoryReady ? 'is-ok' : 'is-warning'; ?>">
-						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-						<strong><?php esc_html_e( 'Repository', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( $repositoryReady && '' !== $repositoryLabel ? $repositoryLabel : __( 'The saved repository needs attention.', 'ran-booster' ) ); ?></span>
-					</li>
-					<li class="ran-booster-readiness-item <?php echo $updateUriReady ? 'is-ok' : 'is-warning'; ?>">
-						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-						<strong><?php esc_html_e( 'Update URI', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( $updateUriReady ? __( 'Matches the configured repository.', 'ran-booster' ) : $this->updateUriReadinessMessage( $eligibilityCode ) ); ?></span>
-					</li>
-					<?php if ( 'release_asset' === $status->source() ) { ?>
+					<?php if ( $subdirectoryIncompatible ) { ?>
+						<li class="ran-booster-readiness-item is-warning">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Package location', 'ran-booster' ); ?></strong>
+							<span><?php esc_html_e( 'This package uses a repository subdirectory. Published releases require the repository root.', 'ran-booster' ); ?></span>
+						</li>
+					<?php } else { ?>
+						<li class="ran-booster-readiness-item <?php echo $providerReady ? 'is-ok' : 'is-warning'; ?>">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Provider', 'ran-booster' ); ?></strong>
+							<span><?php echo esc_html( $providerReady ? __( 'The repository provider supports published releases.', 'ran-booster' ) : __( 'The repository provider does not support published releases.', 'ran-booster' ) ); ?></span>
+						</li>
+						<li class="ran-booster-readiness-item <?php echo $repositoryReady ? 'is-ok' : 'is-warning'; ?>">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Repository', 'ran-booster' ); ?></strong>
+							<span><?php echo esc_html( $repositoryReady && '' !== $repositoryLabel ? $repositoryLabel : __( 'The saved repository needs attention.', 'ran-booster' ) ); ?></span>
+						</li>
+						<li class="ran-booster-readiness-item <?php echo $updateUriReady ? 'is-ok' : 'is-warning'; ?>">
+							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+							<strong><?php esc_html_e( 'Update URI', 'ran-booster' ); ?></strong>
+							<span><?php echo esc_html( $updateUriReady ? __( 'Matches the configured repository.', 'ran-booster' ) : $this->updateUriReadinessMessage( $eligibilityCode ) ); ?></span>
+						</li>
+					<?php } ?>
+					<?php if ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) { ?>
 						<li class="ran-booster-readiness-item is-ok">
 							<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 							<strong><?php esc_html_e( 'Package root', 'ran-booster' ); ?></strong>
@@ -180,6 +191,8 @@ final class ReleaseManagementDisplay {
 							<?php } ?>
 							<button type="submit" class="button button-primary"><?php esc_html_e( 'Recheck eligibility', 'ran-booster' ); ?></button>
 						</form>
+					<?php } elseif ( $subdirectoryIncompatible ) { ?>
+						<?php $this->renderReturnToBranch( $package, $nonceActions['return_to_branch'] ?? null ); ?>
 					<?php } else { ?>
 						<?php if ( null !== $refreshNonceAction ) { ?>
 							<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" data-ran-booster-package-mutation>
@@ -211,7 +224,7 @@ final class ReleaseManagementDisplay {
 						<?php $this->renderManagedReleaseTrack( $selectedChannel ); ?>
 					<?php } ?>
 				</form>
-			<?php } elseif ( $eligibility->eligible() || 'release_asset' === $status->source() ) { ?>
+			<?php } elseif ( $eligibility->eligible() || ( 'release_asset' === $status->source() && ! $subdirectoryIncompatible ) ) { ?>
 				<?php $this->renderControlsUnavailable(); ?>
 			<?php } else { ?>
 				<?php $this->renderIneligibleReleaseTrack( $selectedChannel ); ?>
@@ -731,6 +744,7 @@ final class ReleaseManagementDisplay {
 
 	private function diagnosticMessage( string $code ): string {
 		return match ( $code ) {
+			'subdirectory_not_supported' => __( 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.', 'ran-booster' ),
 			'release_configuration_invalid',
 			'target_registration_failed' => __( 'This package uses retired published-release settings, so Booster could not start its release checker. Return it to Branch, then validate and switch it back to Published releases.', 'ran-booster' ),
 			'release_version_mismatch' => __( 'Release version mismatch — check published releases.', 'ran-booster' ),
@@ -762,11 +776,12 @@ final class ReleaseManagementDisplay {
 	private function isDiagnosticCode( string $code ): bool {
 		return str_starts_with( $code, 'package_' )
 			|| str_starts_with( $code, 'release_' )
-			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'target_registration_failed' ), true );
+			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed' ), true );
 	}
 
 	private function diagnosticAction( string $code ): string {
 		return match ( $code ) {
+			'subdirectory_not_supported' => __( 'Return the package to Branch to keep its configured repository subdirectory.', 'ran-booster' ),
 			'release_unavailable' => __( 'Publish a release for the selected Stable or Preview track, then recheck eligibility.', 'ran-booster' ),
 			'package_update_uri_missing',
 			'package_update_uri_invalid' => __( 'Correct the Update URI in the packaged plugin or theme header, publish a new ZIP, then recheck.', 'ran-booster' ),
@@ -832,8 +847,11 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	private function eligibilityMessage( object $eligibility ): string {
+	private function eligibilityMessage( object $eligibility, string $source ): string {
 		return match ( $eligibility->code() ) {
+			'subdirectory_not_supported' => 'branch' === $source
+				? __( 'Published releases require this plugin or theme to be at the repository root. This package can continue using its configured repository subdirectory with Branch deployments.', 'ran-booster' )
+				: __( 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.', 'ran-booster' ),
 			'missing_update_uri' => __( 'This package header does not declare an Update URI for its configured repository.', 'ran-booster' ),
 			'mismatched_update_uri' => __( 'This package header Update URI does not match its configured repository.', 'ran-booster' ),
 			'unsupported_provider' => __( 'The repository provider does not support published release tracking.', 'ran-booster' ),
@@ -845,6 +863,7 @@ final class ReleaseManagementDisplay {
 
 	private function updateUriReadinessMessage( string $eligibilityCode ): string {
 		return match ( $eligibilityCode ) {
+			'subdirectory_not_supported' => __( 'Published releases require the repository root.', 'ran-booster' ),
 			'missing_update_uri' => __( 'Missing from the installed package header.', 'ran-booster' ),
 			'mismatched_update_uri' => __( 'Does not match the configured repository.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'Matches, but this package already registers its own updater.', 'ran-booster' ),
@@ -854,7 +873,7 @@ final class ReleaseManagementDisplay {
 
 	private function requiresUpdateUriRemediation( object $eligibility ): bool {
 		return '' !== $eligibility->expectedUpdateUri()
-			&& 'target_already_uses_ran_updater' !== $eligibility->code();
+			&& in_array( $eligibility->code(), array( 'missing_update_uri', 'mismatched_update_uri' ), true );
 	}
 
 	private function isProjection( object $package ): bool {

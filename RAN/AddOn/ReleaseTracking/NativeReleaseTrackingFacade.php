@@ -23,6 +23,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
+use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
 use Throwable;
@@ -32,6 +33,7 @@ use Throwable;
  */
 final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	private const SOURCE_CHANGED_MESSAGE = 'Package settings changed after this browser page was opened. Refresh this browser page, review the current settings, then try again.';
+	private const SUBDIRECTORY_MESSAGE   = 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.';
 
 	/** @var \Closure(string): bool */
 	private \Closure $canManage;
@@ -131,26 +133,27 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $identifier
 	): ReleaseTrackingStatus {
 		$package       = $this->package( $type, $identifier );
+		$eligibility   = $this->eligibility( $type, $identifier, $package );
+		$incompatible  = ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $eligibility->code();
 		$configuration = null;
-		$failureCode   = '';
+		$failureCode   = $incompatible ? ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED : '';
 		if ( PackageSource::RELEASE_ASSET === $package->getSource() ) {
 			try {
 				$configuration = $this->store->configuration( $type, $identifier );
 				if ( null === $configuration ) {
-					$failureCode = 'release_configuration_invalid';
+					$failureCode = $incompatible ? $failureCode : 'release_configuration_invalid';
 				}
 			} catch ( Throwable ) {
-				$failureCode = 'release_configuration_invalid';
+				$failureCode = $incompatible ? $failureCode : 'release_configuration_invalid';
 			}
 		}
-		$eligibility   = $this->eligibility( $type, $identifier, $package );
 		$packageRoot   = $configuration?->packageRoot() ?? $eligibility->packageRoot();
 		$preflight     = null;
-		$targetStatus  = null === $configuration
+		$targetStatus  = $incompatible || null === $configuration
 			? null
 			: $this->registrar->status( $type, $identifier );
 		$latestVersion = $targetStatus?->offeredVersion ?? '';
-		if ( PackageSource::RELEASE_ASSET === $package->getSource() && null !== $configuration ) {
+		if ( ! $incompatible && PackageSource::RELEASE_ASSET === $package->getSource() && null !== $configuration ) {
 			$preflight = $this->projectCandidateValidation(
 				$packageRoot,
 				$package,
@@ -261,6 +264,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		try {
 			$package     = $this->package( $type, $identifier );
 			$eligibility = $this->eligibility( $type, $identifier, $package );
+			if ( ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $eligibility->code() ) {
+				return $this->subdirectoryNotSupported();
+			}
 			if ( ReleaseTrackingEligibility::TARGET_ALREADY_USES_RAN_UPDATER === $eligibility->code() ) {
 				return ReleaseTrackingResult::failed(
 					'target_already_uses_ran_updater',
@@ -291,8 +297,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$headerFile,
 				$channel
 			);
+			$incompatible  = false;
 			$changed       = $this->mutateWithUpdaterLock(
-				function () use ( $type, $identifier, $expectedSourceRevision, $configuration ): bool {
+				function () use ( $type, $identifier, $expectedSourceRevision, $configuration, &$incompatible ): bool {
+					if ( ! $this->releaseSourceSupported( $this->package( $type, $identifier ) ) ) {
+						$incompatible = true;
+
+						return false;
+					}
 					$changed = $this->store->transition(
 						$type,
 						$identifier,
@@ -309,8 +321,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					return $changed;
 				}
 			);
+			if ( $changed instanceof ManagedReleaseSubdirectoryNotSupported ) {
+				return $this->subdirectoryNotSupported();
+			}
 			if ( null === $changed ) {
 				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
+			}
+			if ( $incompatible ) {
+				return $this->subdirectoryNotSupported();
 			}
 
 			return $changed
@@ -340,7 +358,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The release track could not be changed.' );
 		}
 		try {
-			$package       = $this->package( $type, $identifier );
+			$package = $this->package( $type, $identifier );
+			if ( ! $this->releaseSourceSupported( $package ) ) {
+				return $this->subdirectoryNotSupported();
+			}
 			$configuration = $this->store->configuration( $type, $identifier );
 			if ( PackageSource::RELEASE_ASSET !== $package->getSource()
 				|| $expectedSourceRevision !== $package->getSourceRevision()
@@ -351,8 +372,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$track = 'stable' === $channel ? 'Stable' : 'Preview';
 				return ReleaseTrackingResult::succeeded( 'release_channel_current', $track . ' is already the active release track. No settings were changed.' );
 			}
-			$changed = $this->mutateWithUpdaterLock(
-				function () use ( $type, $identifier, $expectedSourceRevision, $channel ): bool {
+			$incompatible = false;
+			$changed      = $this->mutateWithUpdaterLock(
+				function () use ( $type, $identifier, $expectedSourceRevision, $channel, &$incompatible ): bool {
+					if ( ! $this->releaseSourceSupported( $this->package( $type, $identifier ) ) ) {
+						$incompatible = true;
+
+						return false;
+					}
 					$changed = $this->store->changeChannel(
 						$type,
 						$identifier,
@@ -367,8 +394,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					return $changed;
 				}
 			);
+			if ( $changed instanceof ManagedReleaseSubdirectoryNotSupported ) {
+				return $this->subdirectoryNotSupported();
+			}
 			if ( null === $changed ) {
 				return ReleaseTrackingResult::failed( 'release_unavailable', 'The release track could not be changed.' );
+			}
+			if ( $incompatible ) {
+				return $this->subdirectoryNotSupported();
 			}
 
 			return $changed
@@ -400,6 +433,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 		try {
 			$package = $this->package( $type, $identifier );
+			if ( ! $this->releaseSourceSupported( $package ) ) {
+				return $this->subdirectoryNotSupported();
+			}
 			try {
 				$configuration = $this->store->configuration( $type, $identifier );
 			} catch ( InvalidArgumentException ) {
@@ -487,10 +523,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	/**
 	 * @param callable(): bool $mutation
+	 * @return bool|ManagedReleaseSubdirectoryNotSupported|null
 	 */
-	private function mutateWithUpdaterLock( callable $mutation ): ?bool {
+	private function mutateWithUpdaterLock( callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|null {
 		try {
 			return $this->updaterLock->run( $mutation );
+		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
+			return $failure;
 		} catch ( Throwable ) {
 			return null;
 		}
@@ -508,6 +547,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private function eligibility( string $type, string $identifier, Package $package ): ReleaseTrackingEligibility {
+		if ( ! $this->releaseSourceSupported( $package ) ) {
+			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED );
+		}
 		$providerCode = $package->getProviderCode();
 		if ( null === $providerCode ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::UNSUPPORTED_PROVIDER );
@@ -582,6 +624,17 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		} catch ( Throwable ) {
 			return false;
 		}
+	}
+
+	private function releaseSourceSupported( Package $package ): bool {
+		return null === $package->getSubdirectory();
+	}
+
+	private function subdirectoryNotSupported(): ReleaseTrackingResult {
+		return ReleaseTrackingResult::failed(
+			ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED,
+			self::SUBDIRECTORY_MESSAGE
+		);
 	}
 
 	private function targetIdentity( string $type, string $identifier ): string {

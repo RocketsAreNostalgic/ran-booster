@@ -142,6 +142,107 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertFalse( $release['release_asset']['disabled'] );
 	}
 
+	public function testNestedBranchDisablesPublishedReleaseChoiceWithoutOfferingBranchRecovery(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$choices  = array(
+			'release_asset' => array(
+				'heading'     => 'Published releases',
+				'description' => '',
+				'meta'        => '',
+				'url'         => '',
+				'disabled'    => false,
+			),
+		);
+
+		$choice = $controls->filterSourceChoices(
+			$choices,
+			'edit',
+			'plugin',
+			new PackageProjection(),
+			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php'
+		);
+
+		self::assertTrue( $choice['release_asset']['disabled'] );
+		self::assertStringContainsString( 'repository root', $choice['release_asset']['description'] );
+		self::assertStringContainsString( 'continue using Branch deployments', $choice['release_asset']['description'] );
+		self::assertStringNotContainsString( 'Return to Branch', $choice['release_asset']['description'] );
+	}
+
+	public function testNestedBranchReadinessExplainsThatBranchRemainsAvailable(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status(
+				'branch',
+				'plugin',
+				ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Current source remains Branch.', $html );
+		self::assertStringContainsString( 'continue using its configured repository subdirectory with Branch deployments', $html );
+		self::assertStringContainsString( '<strong>Package location</strong>', $html );
+		self::assertStringContainsString( 'This package uses a repository subdirectory.', $html );
+		self::assertStringNotContainsString( 'Return to Branch', $html );
+		self::assertStringNotContainsString( 'Add this exact header', $html );
+		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
+		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
+		self::assertStringNotContainsString( '<strong>Update URI</strong>', $html );
+		self::assertStringContainsString( 'Recheck eligibility', $html );
+	}
+
+	public function testMissingUpdateUriStillOffersTheExactHeaderRemediation(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status(
+				'branch',
+				'plugin',
+				ReleaseTrackingEligibility::MISSING_UPDATE_URI
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Add this exact header', $html );
+		self::assertStringContainsString( 'Update URI: https://github.com/example/example', $html );
+	}
+
+	public function testNestedPublishedReleaseRendersOnlyTheReturnToBranchRecovery(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status(
+				'release_asset',
+				'plugin',
+				ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED,
+				false,
+				'stable',
+				'subdirectory_not_supported'
+			)
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'Installation route', $html );
+		self::assertStringNotContainsString( 'Native WordPress Updates.', $html );
+		self::assertStringContainsString( '<strong>Package location</strong>', $html );
+		self::assertStringNotContainsString( 'The repository provider does not support published releases.', $html );
+		self::assertStringNotContainsString( 'The saved repository needs attention.', $html );
+		self::assertStringContainsString( 'Return to branch deployments', $html );
+	}
+
 	public function testEveryMutationForwardsExactAuthorityRevisionChannelAndNonce(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$controls = ReleaseManagementFixture::controls( $tracking );

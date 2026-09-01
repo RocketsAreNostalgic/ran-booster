@@ -132,6 +132,95 @@ test('Core source events drive release discovery without duplicating tab state',
 	);
 });
 
+test('a configured subdirectory makes Published releases unavailable and keeps Branch usable', () => {
+	assert.match(
+		declaration('hasSubdirectory'),
+		/\[name="ran_booster\[subdirectory\]"\][\s\S]*\.value\?\.trim\(\)/
+	);
+	assert.match(
+		declaration('setChoiceState'),
+		/state === 'subdirectory'[\s\S]*'is-unavailable'[\s\S]*state === 'subdirectory'/
+	);
+	assert.match(
+		declaration('showSubdirectoryUnsupported'),
+		/Published releases require the repository root\. Branch supports the configured subdirectory\./
+	);
+	assert.match(
+		declaration('forceBranchForSubdirectory'),
+		/branchChoice\.focus\(\);[\s\S]*branchChoice\.click\(\);/
+	);
+	assert.match(
+		declaration('listCandidates'),
+		/if \(hasSubdirectory\(\)\) \{\s*forceBranchForSubdirectory\(\);\s*return;/
+	);
+	assert.match(
+		declaration('scheduleDiscovery'),
+		/if \(hasSubdirectory\(\)\) \{\s*forceBranchForSubdirectory\(\);\s*return;/
+	);
+
+	const hasSubdirectory = Function(
+		'form',
+		`"use strict"; ${declaration('hasSubdirectory')} return hasSubdirectory;`
+	);
+	assert.equal(
+		hasSubdirectory({
+			querySelector: () => ({ value: ' packages/example ' }),
+		})(),
+		true
+	);
+	assert.equal(
+		hasSubdirectory({ querySelector: () => ({ value: '   ' }) })(),
+		false
+	);
+	assert.equal(hasSubdirectory({ querySelector: () => null })(), false);
+});
+
+test('an active Published releases choice returns to Branch when a subdirectory appears', () => {
+	let focused = 0;
+	let clicked = 0;
+	let unavailable = 0;
+	const releaseChoice = {
+		getAttribute: (name) => (name === 'aria-pressed' ? 'true' : null),
+	};
+	const branchChoice = {
+		focus: () => {
+			focused += 1;
+		},
+		click: () => {
+			clicked += 1;
+		},
+	};
+	const forceBranch = Function(
+		'releaseChoice',
+		'branchChoice',
+		'showSubdirectoryUnsupported',
+		`"use strict";
+		let releaseSelected = true;
+		${declaration('forceBranchForSubdirectory')}
+		return forceBranchForSubdirectory;`
+	)(releaseChoice, branchChoice, () => {
+		unavailable += 1;
+	});
+
+	forceBranch();
+
+	assert.equal(unavailable, 1);
+	assert.equal(focused, 1);
+	assert.equal(clicked, 1);
+});
+
+test('subdirectory input and change events refresh published-release availability', () => {
+	assert.match(source, /\[name="ran_booster\[subdirectory\]"\]/);
+	assert.match(
+		source,
+		/form\.addEventListener\('input', repositoryContextChanged\)/
+	);
+	assert.match(
+		source,
+		/form\.addEventListener\('change', repositoryContextChanged\)/
+	);
+});
+
 test('changing channel invalidates the exact candidate and ignores a stale candidate list', async () => {
 	const requests = [];
 	const requestChannels = [];
@@ -179,6 +268,8 @@ test('changing channel invalidates the exact candidate and ignores a stale candi
 		'showUnavailable',
 		'showIdle',
 		'updateAdvancedSummary',
+		'hasSubdirectory',
+		'forceBranchForSubdirectory',
 		'providerSupported',
 		'forceBranchForUnsupportedProvider',
 		`"use strict";
@@ -214,6 +305,8 @@ test('changing channel invalidates the exact candidate and ignores a stale candi
 		() => {},
 		() => {},
 		() => {},
+		() => {},
+		() => false,
 		() => {},
 		() => true,
 		() => {}
@@ -291,6 +384,8 @@ test('unsupported providers do not schedule discovery and supported providers re
 		'candidates',
 		'candidateList',
 		'updateAdvancedSummary',
+		'hasSubdirectory',
+		'forceBranchForSubdirectory',
 		'providerSupported',
 		'forceBranchForUnsupportedProvider',
 		'showWaitingForRepository',
@@ -315,6 +410,8 @@ test('unsupported providers do not schedule discovery and supported providers re
 		},
 		{ hidden: false },
 		null,
+		() => {},
+		() => false,
 		() => {},
 		() => supported,
 		() => {
@@ -399,6 +496,6 @@ test('unsupported server responses use the provider state without retrying', () 
 	);
 	assert.match(
 		declaration('listCandidates'),
-		/^\tconst listCandidates = async \(\) => \{\s*if \(!providerSupported\(\)\) \{\s*forceBranchForUnsupportedProvider\(\);\s*return;/
+		/if \(!providerSupported\(\)\) \{\s*forceBranchForUnsupportedProvider\(\);\s*return;/
 	);
 });

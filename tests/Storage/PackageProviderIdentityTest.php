@@ -10,6 +10,7 @@ use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\AbstractPackageRepository;
+use RAN\Storage\Database;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageMutationStatus;
 use RAN\Storage\PackageStorageFailure;
@@ -175,6 +176,89 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			'provider_repository_id' => 'repository-id',
 			'private'                => 1,
 			'credential_id'          => 'old-access',
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::MANUAL->value,
+			'source'                 => PackageSource::RELEASE_ASSET->value,
+			'source_revision'        => 4,
+		);
+
+		$result = $this->storage()->editForTest(
+			'example/example.php',
+			array(
+				'repository'               => new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'stable', true, 'new-access' ),
+				'branch'                   => 'stable',
+				'deployment_policy'        => DeploymentPolicy::AUTOMATIC->value,
+				'subdirectory'             => null,
+				'private'                  => true,
+				'credential_id'            => 'new-access',
+				'expected_source'          => PackageSource::RELEASE_ASSET->value,
+				'expected_source_revision' => 4,
+			)
+		);
+
+		self::assertSame( PackageMutationStatus::CHANGED, $result->getStatus() );
+		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][1]['source'] );
+		self::assertSame( 5, $wpdb->updates[0][1]['source_revision'] );
+		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][2]['source'] );
+		self::assertSame( 4, $wpdb->updates[0][2]['source_revision'] );
+		self::assertSame( 'new-access', $wpdb->updates[0][1]['credential_id'] );
+		self::assertSame( DeploymentPolicy::AUTOMATIC->value, $wpdb->updates[0][1]['deployment_policy'] );
+		self::assertSame( 'owner/example', $wpdb->rows[0]['repository'] );
+		self::assertSame( 'repository-id', $wpdb->rows[0]['provider_repository_id'] );
+		self::assertSame( 'stable', $wpdb->rows[0]['branch'] );
+		self::assertNull( $wpdb->rows[0]['subdirectory'] );
+	}
+
+	public function testReleaseManagedEditAcceptsLegacyEmptyRootSubdirectory(): void {
+		global $wpdb;
+
+		$wpdb->rows[] = array(
+			'id'                     => 1,
+			'package'                => 'example/example.php',
+			'type'                   => 1,
+			'repository'             => 'owner/example',
+			'branch'                 => 'stable',
+			'provider'               => 'gh',
+			'provider_repository_id' => 'repository-id',
+			'private'                => 1,
+			'credential_id'          => 'old-access',
+			'subdirectory'           => '',
+			'deployment_policy'      => DeploymentPolicy::MANUAL->value,
+			'source'                 => PackageSource::RELEASE_ASSET->value,
+			'source_revision'        => 4,
+		);
+
+		$result = $this->storage()->editForTest(
+			'example/example.php',
+			array(
+				'repository'               => new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'stable', true, 'new-access' ),
+				'deployment_policy'        => DeploymentPolicy::AUTOMATIC->value,
+				'subdirectory'             => null,
+				'expected_source'          => PackageSource::RELEASE_ASSET->value,
+				'expected_source_revision' => 4,
+			)
+		);
+
+		self::assertSame( PackageMutationStatus::CHANGED, $result->getStatus() );
+		self::assertSame( '', $wpdb->updates[0][2]['subdirectory'] );
+		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][2]['source'] );
+		self::assertSame( 4, $wpdb->updates[0][2]['source_revision'] );
+		self::assertNull( $wpdb->rows[0]['subdirectory'] );
+	}
+
+	public function testLegacyReleaseManagedEditWithSubdirectoryDoesNotWrite(): void {
+		global $wpdb;
+
+		$wpdb->rows[] = array(
+			'id'                     => 1,
+			'package'                => 'example/example.php',
+			'type'                   => 1,
+			'repository'             => 'owner/example',
+			'branch'                 => 'stable',
+			'provider'               => 'gh',
+			'provider_repository_id' => 'repository-id',
+			'private'                => 1,
+			'credential_id'          => 'old-access',
 			'subdirectory'           => 'packages/example',
 			'deployment_policy'      => DeploymentPolicy::MANUAL->value,
 			'source'                 => PackageSource::RELEASE_ASSET->value,
@@ -195,16 +279,47 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			)
 		);
 
-		self::assertSame( PackageMutationStatus::CHANGED, $result->getStatus() );
-		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][1]['source'] );
-		self::assertSame( 5, $wpdb->updates[0][1]['source_revision'] );
-		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][2]['source'] );
-		self::assertSame( 4, $wpdb->updates[0][2]['source_revision'] );
-		self::assertSame( 'new-access', $wpdb->updates[0][1]['credential_id'] );
-		self::assertSame( DeploymentPolicy::AUTOMATIC->value, $wpdb->updates[0][1]['deployment_policy'] );
-		self::assertSame( 'owner/example', $wpdb->rows[0]['repository'] );
-		self::assertSame( 'repository-id', $wpdb->rows[0]['provider_repository_id'] );
-		self::assertSame( 'stable', $wpdb->rows[0]['branch'] );
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
+		self::assertSame( 'ran_booster_storage_source_conflict', $result->getDiagnosticId() );
+		self::assertSame( array(), $wpdb->updates );
+		self::assertSame( 'packages/example', $wpdb->rows[0]['subdirectory'] );
+	}
+
+	public function testLegacyReleaseManagedEditCannotSilentlyClearItsSubdirectory(): void {
+		global $wpdb;
+
+		$wpdb->rows[] = array(
+			'id'                     => 1,
+			'package'                => 'example/example.php',
+			'type'                   => 1,
+			'repository'             => 'owner/example',
+			'branch'                 => 'stable',
+			'provider'               => 'gh',
+			'provider_repository_id' => 'repository-id',
+			'private'                => 1,
+			'credential_id'          => 'old-access',
+			'subdirectory'           => 'packages/example',
+			'deployment_policy'      => DeploymentPolicy::MANUAL->value,
+			'source'                 => PackageSource::RELEASE_ASSET->value,
+			'source_revision'        => 4,
+		);
+
+		$result = $this->storage()->editForTest(
+			'example/example.php',
+			array(
+				'repository'               => new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'stable', true, 'new-access' ),
+				'branch'                   => 'stable',
+				'deployment_policy'        => DeploymentPolicy::AUTOMATIC->value,
+				'subdirectory'             => null,
+				'private'                  => true,
+				'credential_id'            => 'new-access',
+				'expected_source'          => PackageSource::RELEASE_ASSET->value,
+				'expected_source_revision' => 4,
+			)
+		);
+
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
+		self::assertSame( array(), $wpdb->updates );
 		self::assertSame( 'packages/example', $wpdb->rows[0]['subdirectory'] );
 	}
 
@@ -353,7 +468,12 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 	}
 
 	private function storage(): AbstractPackageRepository {
-		return new class() extends AbstractPackageRepository {
+		$lifecycle = new class() extends Database {
+			public function requireReady(): void {
+			}
+		};
+
+		return new class( $lifecycle ) extends AbstractPackageRepository {
 
 			public function storeForTest( Package $package ): PackageMutationResult {
 				return $this->storePackage( $package );

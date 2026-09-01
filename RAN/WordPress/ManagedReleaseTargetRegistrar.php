@@ -325,6 +325,11 @@ final class ManagedReleaseTargetRegistrar {
 			}
 			$identifier = (string) $package->getIdentifier();
 			$key        = self::key( $type, $identifier );
+			if ( null !== $package->getSubdirectory() ) {
+				$this->failures[ $key ] = 'subdirectory_not_supported';
+
+				continue;
+			}
 			try {
 				$this->targets[ $key ] = $this->registerPackage( $type, $package );
 			} catch ( Throwable ) {
@@ -424,6 +429,12 @@ final class ManagedReleaseTargetRegistrar {
 				'authority' => null,
 			);
 		}
+		if ( null !== $package->getSubdirectory() ) {
+			return array(
+				'release'   => true,
+				'authority' => null,
+			);
+		}
 		$configuration = $this->store->configuration( $type, $identifier );
 		$repositoryId  = $package->getProviderRepositoryId();
 		$providerCode  = $package->getProviderCode();
@@ -472,9 +483,19 @@ final class ManagedReleaseTargetRegistrar {
 				: $this->themes->allDeploymentThemes();
 		} catch ( Throwable ) {
 			$prefix = $type . "\0";
-			foreach ( array_keys( $this->registeredAuthorities ) as $key ) {
+			$keys   = array_unique(
+				array_merge(
+					array_keys( $this->registeredAuthorities ),
+					array_keys( $this->targets ),
+					array_keys( $this->failures )
+				)
+			);
+			foreach ( $keys as $key ) {
 				if ( str_starts_with( $key, $prefix ) ) {
-					unset( $transient->response[ substr( $key, strlen( $prefix ) ) ] );
+					$identifier = substr( $key, strlen( $prefix ) );
+					if ( '*' !== $identifier ) {
+						unset( $transient->response[ $identifier ] );
+					}
 				}
 			}
 

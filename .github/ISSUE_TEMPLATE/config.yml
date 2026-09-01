@@ -1,8 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-    - name: Confidential vulnerability report
-      url: https://github.com/RocketsAreNostalgic/ran-booster/security/advisories/new
-      about: Report a security vulnerability privately. Do not disclose it in a public issue.
-    - name: Support and reporting guidance
-      url: https://github.com/RocketsAreNostalgic/ran-booster/blob/main/SUPPORT.md
-      about: Check supported versions, useful evidence, and information that must remain private.
+  - name: Confidential vulnerability report
+    url: https://github.com/RocketsAreNostalgic/ran-booster/security/advisories/new
+    about: Report a security vulnerability privately. Do not disclose it in a public issue.

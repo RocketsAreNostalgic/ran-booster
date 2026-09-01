@@ -104,6 +104,13 @@
 
 	const providerSupported = () => supportedProviders.has(selectedProvider());
 
+	const hasSubdirectory = () =>
+		Boolean(
+			form
+				.querySelector('[name="ran_booster[subdirectory]"]')
+				?.value?.trim()
+		);
+
 	const updateAdvancedSummary = () => {
 		if (!advancedSummary) {
 			return;
@@ -149,7 +156,10 @@
 	};
 
 	const setChoiceState = (state, description, meta) => {
-		const disabled = state === 'waiting' || state === 'unsupported';
+		const disabled =
+			state === 'waiting' ||
+			state === 'unsupported' ||
+			state === 'subdirectory';
 		releaseChoice.classList.remove(
 			'is-checking',
 			'is-available',
@@ -168,7 +178,9 @@
 		releaseChoice.classList.toggle('is-available', state === 'available');
 		releaseChoice.classList.toggle(
 			'is-unavailable',
-			state === 'unavailable' || state === 'unsupported'
+			state === 'unavailable' ||
+				state === 'unsupported' ||
+				state === 'subdirectory'
 		);
 		releaseChoice.disabled = disabled;
 		releaseChoice.setAttribute(
@@ -241,11 +253,43 @@
 		updateAdvancedSummary();
 	};
 
+	const showSubdirectoryUnsupported = () => {
+		selectedRelease = null;
+		releaseSelected = false;
+		setChoiceState(
+			'subdirectory',
+			'Published releases require the repository root. Branch supports the configured subdirectory.',
+			'Repository root required'
+		);
+		setStatus(
+			'Published releases are unavailable',
+			'Published releases require the repository root. Branch supports the configured subdirectory.'
+		);
+		setHidden(candidates, true);
+		setHidden(details, true);
+		setHidden(install, true);
+		if (candidateList) {
+			candidateList.replaceChildren();
+		}
+		updateAdvancedSummary();
+	};
+
 	const forceBranchForUnsupportedProvider = () => {
 		const releaseWasSelected =
 			releaseChoice.getAttribute('aria-pressed') === 'true' ||
 			releaseSelected;
 		showUnsupportedProvider();
+		if (releaseWasSelected) {
+			branchChoice.focus();
+			branchChoice.click();
+		}
+	};
+
+	const forceBranchForSubdirectory = () => {
+		const releaseWasSelected =
+			releaseChoice.getAttribute('aria-pressed') === 'true' ||
+			releaseSelected;
+		showSubdirectoryUnsupported();
 		if (releaseWasSelected) {
 			branchChoice.focus();
 			branchChoice.click();
@@ -391,6 +435,10 @@
 	};
 
 	const listCandidates = async () => {
+		if (hasSubdirectory()) {
+			forceBranchForSubdirectory();
+			return;
+		}
 		if (!providerSupported()) {
 			forceBranchForUnsupportedProvider();
 			return;
@@ -557,6 +605,10 @@
 		if (discoveryTimer) {
 			window.clearTimeout(discoveryTimer);
 		}
+		if (hasSubdirectory()) {
+			forceBranchForSubdirectory();
+			return;
+		}
 		if (!providerSupported()) {
 			forceBranchForUnsupportedProvider();
 			return;
@@ -598,7 +650,7 @@
 	const repositoryContextChanged = (event) => {
 		if (
 			event.target?.matches(
-				'.ran-booster-provider-input, .ran-booster-credential-input, .ran-booster-repository-input, .ran-booster-branch-input'
+				'.ran-booster-provider-input, .ran-booster-credential-input, .ran-booster-repository-input, .ran-booster-branch-input, [name="ran_booster[subdirectory]"]'
 			)
 		) {
 			scheduleDiscovery();

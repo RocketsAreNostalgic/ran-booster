@@ -10,10 +10,14 @@ final class ReleaseWorkflowCredentialStoreDouble implements ProviderCredentialSt
 	public int $profileReads  = 0;
 	public int $materialReads = 0;
 
+	/** @param array<string,array<string,mixed>>|null $profiles */
+	public function __construct( private readonly ?array $profiles = null ) {
+	}
+
 	public function credentialProfiles(): array {
 		++$this->profileReads;
 
-		return array(
+		return $this->profiles ?? array(
 			'credential_1' => array(
 				'id'         => 'credential_1',
 				'label'      => 'Release automation',

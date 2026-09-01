@@ -51,7 +51,8 @@ final class SetupRecordStore {
 	private const FAILURE_STAGES           = array( 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' );
 	private const FAILURE_DIAGNOSTIC_CODES = array( 'diagnostic_detail_unavailable', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
 
-	private ?string $claimToken = null;
+	private ?string $claimToken      = null;
+	private ?string $claimConnection = null;
 	/** @return array<string,int|string>|null */
 	public function find( string $repositoryId ): ?array {
 		$raw = $this->raw( $repositoryId );
@@ -71,6 +72,7 @@ final class SetupRecordStore {
 	}
 	/** Serialize setup and the shared record write before any provider mutation. @return string|null Opaque exact-owner claim. */
 	public function claim( string $repositoryId, string $type, string $identifier, int $revision, bool $allowExistingRecord = false ): ?string {
+		$this->hasActiveClaim();
 		if ( ! $this->number( $repositoryId ) || ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ! $this->text( $identifier, 255 ) || $revision < 1 || null !== $this->claimToken ) {
 			return null;
@@ -79,7 +81,8 @@ final class SetupRecordStore {
 		if ( ! $this->acquireClaimLock() ) {
 			return null;
 		}
-		$this->claimToken = $claim;
+		$this->claimToken      = $claim;
+		$this->claimConnection = $this->connectionFingerprint();
 		if ( function_exists( 'wp_cache_delete' ) ) {
 			wp_cache_delete( self::OPTION, 'options' );
 		}
@@ -96,15 +99,42 @@ final class SetupRecordStore {
 
 	/** Release only the exact connection-local lock held by this store instance. */
 	public function releaseClaim( string $repositoryId, string $claim ): bool {
-		if ( ! $this->number( $repositoryId ) || null === $this->claimToken || ! hash_equals( $this->claimToken, $claim ) ) {
+		if ( ! $this->number( $repositoryId ) || ! $this->hasActiveClaim() || ! hash_equals( $this->claimToken, $claim ) ) {
 			return false;
 		}
 		$released = $this->releaseClaimLock();
-		// A failed RELEASE_LOCK can mean the connection has already dropped and
-		// released its advisory lock. Never carry a stale in-memory ownership claim
-		// into a later local evidence write.
-		$this->claimToken = null;
+		if ( $released ) {
+			$this->claimToken      = null;
+			$this->claimConnection = null;
+		}
 		return $released;
+	}
+
+	/** Keep a failed release claim only while its original database connection remains current. */
+	private function hasActiveClaim(): bool {
+		if ( null === $this->claimToken ) {
+			return false;
+		}
+		if ( null !== $this->claimConnection && hash_equals( $this->claimConnection, $this->connectionFingerprint() ) ) {
+			return true;
+		}
+		$this->claimToken      = null;
+		$this->claimConnection = null;
+		return false;
+	}
+
+	private function connectionFingerprint(): string {
+		global $wpdb;
+		if ( ! is_object( $wpdb ) ) {
+			return '';
+		}
+		$fingerprint = (string) spl_object_id( $wpdb );
+		if ( isset( $wpdb->dbh ) && is_object( $wpdb->dbh ) ) {
+			$fingerprint .= ':' . spl_object_id( $wpdb->dbh );
+		} elseif ( isset( $wpdb->dbh ) && is_resource( $wpdb->dbh ) ) {
+			$fingerprint .= ':' . get_resource_id( $wpdb->dbh );
+		}
+		return $fingerprint;
 	}
 
 	private function acquireClaimLock(): bool {
@@ -134,7 +164,7 @@ final class SetupRecordStore {
 	}
 	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
 	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
-		$acquired = null === $this->claimToken;
+		$acquired = ! $this->hasActiveClaim();
 		if ( $acquired && ! $this->acquireClaimLock() ) {
 			return null;
 		}
@@ -182,7 +212,7 @@ final class SetupRecordStore {
 		if ( null === $record ) {
 			return false;
 		}
-		$acquired = null === $this->claimToken;
+		$acquired = ! $this->hasActiveClaim();
 		if ( $acquired && ! $this->acquireClaimLock() ) {
 			return false;
 		}
@@ -240,7 +270,7 @@ final class SetupRecordStore {
 		if ( null === $observation ) {
 			return false;
 		}
-		$acquired = null === $this->claimToken;
+		$acquired = ! $this->hasActiveClaim();
 		if ( $acquired && ! $this->acquireClaimLock() ) {
 			return false;
 		}
@@ -304,7 +334,7 @@ final class SetupRecordStore {
 		if ( null === $failure ) {
 			return false;
 		}
-		$acquired = null === $this->claimToken;
+		$acquired = ! $this->hasActiveClaim();
 		if ( $acquired && ! $this->acquireClaimLock() ) {
 			return false;
 		}

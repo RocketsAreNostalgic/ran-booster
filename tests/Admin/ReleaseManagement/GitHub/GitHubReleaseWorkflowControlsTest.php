@@ -229,6 +229,28 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
+	public function testPrivateRepositoryWorkflowReadsAreDisabledWithoutSavedCredentials(): void {
+		$controls = $this->controls(
+			plugins: new PluginRepositoryDouble( private: true ),
+			credentials: new ReleaseWorkflowCredentialStoreDouble( array() )
+		);
+		$status   = ReleaseManagementFixture::status();
+		$method   = new ReflectionMethod( $controls, 'workflowForm' );
+
+		foreach ( array( 'inspect', 'outcome', 'update_inspect' ) as $operation ) {
+			$form = $method->invoke( $controls, $operation, $status, '', '', 'stable', array(), false );
+
+			self::assertIsArray( $form, $operation );
+			self::assertTrue( $form['disabled'], $operation );
+		}
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $this->repositoryRows()['101'], 'https://example.test/return' );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html );
+		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+	}
+
 	public function testRepositoryReleaseLifecycleFailsClosedOnPackageEligibilityWithoutConflatingWorkflowReadiness(): void {
 		$controls = $this->controls(
 			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( eligibilityCode: ReleaseTrackingEligibility::MISSING_UPDATE_URI ) )
@@ -1207,6 +1229,23 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			);
 		}
 		self::assertSame( array(), ( new SetupRecordStore() )->failureHistory( '101', 'plugin', 'example/example.php', 3 ) );
+	}
+
+	public function testPersistedAssessmentObservationStillEmitsThePrgResultMarker(): void {
+		$controls = $this->controls();
+		$result   = $this->workflowResultFixture( 'workflow_inspected', true );
+		$preserve = new ReflectionMethod( $controls, 'preserveWorkflowObservation' );
+		$query    = new ReflectionMethod( $controls, 'resultQueryArguments' );
+
+		self::assertTrue( $preserve->invoke( $controls, ReleaseManagementFixture::status(), $result ) );
+		$_GET = $query->invoke( $controls, $result, 'stable', 3 );
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $this->repositoryRows()['101'], 'https://example.test/return' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<div data-ran-booster-github-release-workflow-result hidden></div>', $html );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-github-release-workflow-result' ) );
 	}
 
 	public function testMergedOutcomeKeepsTheExactSetupRecordAsTheOnlyDurableState(): void {

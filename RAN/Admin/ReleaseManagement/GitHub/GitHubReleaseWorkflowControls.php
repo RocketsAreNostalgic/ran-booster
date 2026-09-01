@@ -280,6 +280,8 @@ final class GitHubReleaseWorkflowControls {
 				$resultObservationKind = $this->observationKindForResult( $matchingResult['code'] );
 				if ( '' === $resultObservationKind || ! is_array( $observation ) || ! hash_equals( $resultObservationKind, (string) ( $observation['kind'] ?? '' ) ) ) {
 					$workflowResultNotice = $this->display->resultNotice( $view );
+				} elseif ( '' === $workflowResultNotice ) {
+					$workflowResultNotice = $this->display->resultMarker( $view );
 				}
 			}
 			$packagesForReleaseAutomation[] = array(
@@ -1436,7 +1438,7 @@ final class GitHubReleaseWorkflowControls {
 			'credentials'          => $credentials,
 			'anonymous_inspection' => $anonymousInspection,
 			'credentials_url'      => $this->credentialsUrl(),
-			'disabled'             => in_array( $operation, array( 'setup', 'update_setup' ), true ) && array() === $credentials,
+			'disabled'             => array() === $credentials && ( in_array( $operation, array( 'setup', 'update_setup' ), true ) || ! $anonymousInspection ),
 		);
 	}
 

@@ -90,7 +90,35 @@ final class SetupRecordStoreTest extends TestCase {
 		self::assertTrue( $store->releaseClaim( '123456789', $claim ) );
 		self::assertNotNull( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
 	}
-	public function testFailedClaimReleaseDoesNotSkipFailureHistorySerializationAfterConnectionLoss(): void {
+	public function testFailedClaimReleaseKeepsTheCurrentConnectionClaimForFailureHistory(): void {
+		$store      = new SetupRecordStore();
+		$connection = $GLOBALS['wpdb'];
+		$claim      = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNotNull( $claim );
+		$GLOBALS['ran_booster_release_deployments_test_lock_release_result'] = false;
+		self::assertFalse( $store->releaseClaim( '123456789', $claim ) );
+		$failure = array(
+			'operation'             => 'setup',
+			'outcome_code'          => 'workflow_local_persistence_unavailable',
+			'failure_stage'         => 'local_persistence',
+			'package_type'          => 'plugin',
+			'package_identifier'    => 'example-plugin/example-plugin.php',
+			'source_revision'       => 3,
+			'repository_id'         => '123456789',
+			'diagnostic_code'       => 'local_persistence_unavailable',
+			'diagnostic_available'  => true,
+			'correlation_reference' => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+			'recorded_at'           => '2026-09-01T12:34:56Z',
+		);
+
+		self::assertTrue( $store->recordFailure( $failure ) );
+		self::assertSame( array( $failure ), $store->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertTrue( $connection->isLockHeld() );
+		self::assertSame( 1, $connection->lockAcquisitions );
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] );
+		self::assertTrue( $store->releaseClaim( '123456789', $claim ) );
+	}
+	public function testConnectionReplacementDropsAStaleClaimBeforeFailureHistorySerialization(): void {
 		$store      = new SetupRecordStore();
 		$connection = $GLOBALS['wpdb'];
 		$claim      = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
@@ -99,7 +127,7 @@ final class SetupRecordStoreTest extends TestCase {
 		self::assertFalse( $store->releaseClaim( '123456789', $claim ) );
 		$connection->disconnect();
 		unset( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] );
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused database double simulates the replacement connection after a dropped release request.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused database double simulates a new connection after the failed release.
 		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
 		$failure         = array(
 			'operation'             => 'setup',
@@ -116,6 +144,7 @@ final class SetupRecordStoreTest extends TestCase {
 		);
 
 		self::assertTrue( $store->recordFailure( $failure ) );
+		self::assertSame( 1, $GLOBALS['wpdb']->lockAcquisitions );
 		self::assertSame( array( $failure ), $store->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
 	}
 	public function testOneGlobalClaimSerializesDistinctRepositoryRecords(): void {

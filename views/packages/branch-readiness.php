@@ -14,9 +14,10 @@ $readinessRepositoryId        = is_string( $repositoryReadiness['repository_id']
 	: '';
 $persistedRepositoryId        = trim( (string) ( $providerRepositoryId ?? '' ) );
 $identityConflict             = in_array( 'repository_identity_conflict', $repositoryReasons, true );
+$repositoryLocatorInvalid     = in_array( 'repository_locator_invalid', $repositoryReasons, true );
 $repositoryId                 = '' !== $readinessRepositoryId
 	? $readinessRepositoryId
-	: ( ! $identityConflict ? $persistedRepositoryId : '' );
+	: ( ! $identityConflict && ! $repositoryLocatorInvalid ? $persistedRepositoryId : '' );
 $providerSettingsUrl          = add_query_arg(
 	array_filter(
 		array(
@@ -41,6 +42,7 @@ $repositoryBranchCheckOutcome = isset( $repositoryBranchCheckOutcome ) && is_str
 	? $repositoryBranchCheckOutcome
 	: null;
 $savedIdentityReady           = ! $identityConflict
+	&& ! $repositoryLocatorInvalid
 	&& '' !== $persistedRepositoryId
 	&& '' !== trim( (string) ( $repositoryValue ?? '' ) );
 $identityReady                = $savedIdentityReady || ( null !== $repositoryReadiness

@@ -82,6 +82,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			array(
 				'ran_booster_admin_package_release_readiness_actions',
 				'ran_booster_admin_repository_release_sections',
+				'admin_notices',
+				'network_admin_notices',
 				'admin_post_ran_booster_github_release_workflow_inspect',
 				'admin_post_ran_booster_github_release_workflow_setup',
 				'admin_post_ran_booster_github_release_workflow_outcome',
@@ -459,6 +461,58 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			self::assertNotContains( 'credential_1', $GLOBALS['ran_booster_github_release_workflow_test_unslashed'] ?? array(), $diagnostic );
 			self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array(), $diagnostic );
 		}
+	}
+
+	public function testChangedSourceRevisionReturnsToRepositoryAndRendersSignedResultWithoutBindingItToCurrentForms(): void {
+		$currentStatus = $this->statusAtRevision( ReleaseManagementFixture::status(), 4 );
+		$credentials   = new ReleaseWorkflowCredentialStoreDouble();
+		$plugins       = new PluginRepositoryDouble( sourceRevision: 4 );
+		$controls      = $this->controls( new ReleaseTrackingFacadeDouble( $currentStatus ), $plugins, credentials: $credentials );
+		$url           = $controls->processWorkflowRequest( 'inspect', $this->request( 'inspect' ) );
+
+		self::assertStringContainsString( 'panel=repositories', $url );
+		self::assertStringContainsString( 'repository=101', $url );
+		self::assertStringContainsString( 'repository_view=releases', $url );
+		self::assertSame( 0, $credentials->profileReads );
+		self::assertSame( 0, $credentials->materialReads );
+
+		$_GET = $this->query( $url );
+		$row  = $this->repositoryRows()['101'];
+		$row['package_summaries'][0]['source_revision'] = 4;
+		$renderCredentials                              = new ReleaseWorkflowCredentialStoreDouble();
+		ob_start();
+		$this->controls( new ReleaseTrackingFacadeDouble( $currentStatus ), new PluginRepositoryDouble( sourceRevision: 4 ), credentials: $renderCredentials )
+			->renderRepositoryReleaseSections( $row, 'https://example.test/return' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-github-release-workflow-result', $html );
+		self::assertStringContainsString( 'Booster stopped before contacting GitHub because this request no longer matched the current page or package.', $html );
+		self::assertStringContainsString( 'The saved package or source changed before Booster could act.', $html );
+		self::assertStringContainsString( 'name="expected_source_revision" value="4"', $html );
+		self::assertStringContainsString( '<button type="submit" class="button">Assess release setup</button>', $html );
+		self::assertSame( 0, $renderCredentials->materialReads );
+		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
+	}
+
+	public function testMissingCurrentPackageRendersSignedSourceChangedResultOnPackageSurface(): void {
+		$credentials = new ReleaseWorkflowCredentialStoreDouble();
+		$controls    = $this->controls( plugins: new PluginRepositoryDouble( missing: true ), credentials: $credentials );
+		$url         = $controls->processWorkflowRequest( 'inspect', $this->request( 'inspect' ) );
+
+		self::assertStringContainsString( 'page=ran-booster-plugins', $url );
+		self::assertStringContainsString( 'package=example%2Fexample.php', $url );
+		self::assertStringNotContainsString( 'panel=repositories', $url );
+		$_GET = $this->query( $url );
+
+		ob_start();
+		$controls->renderPackageFallbackResultNotice();
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-github-release-workflow-result', $html );
+		self::assertStringContainsString( 'The saved package or source changed before Booster could act.', $html );
+		self::assertSame( 0, $credentials->profileReads );
+		self::assertSame( 0, $credentials->materialReads );
+		self::assertSame( array(), $GLOBALS['ran_booster_github_release_workflow_test_remote'] ?? array() );
 	}
 
 	public function testRequestBoundaryLoggingContainsOnlyTheBoundedDiagnosticAndReference(): void {

@@ -198,7 +198,7 @@ final class WebhookManagementController {
 	}
 
 	private function safeReturnUrl( string $candidate, string $providerCode, string $repositoryId ): string {
-		$fallback = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories'
+		$fallback = WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories'
 			. ( '' === $repositoryId ? '' : '&repository=' . rawurlencode( $repositoryId ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Reconstructs an allowlisted same-admin route; the candidate is never returned directly.
 		$parts = parse_url( $candidate );
@@ -217,7 +217,7 @@ final class WebhookManagementController {
 			&& 'repositories' === $panel
 			&& '' !== $repositoryId
 			&& hash_equals( $repositoryId, $target ) ) {
-			return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
+			return WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
 		}
 		if ( ! in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
 			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package )
@@ -225,7 +225,7 @@ final class WebhookManagementController {
 			return $fallback;
 		}
 
-		return ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1';
+		return WebhookManagementAdminUrl::forPath( 'admin.php' ) . '?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1';
 	}
 
 	/** Prove that a package-settings return URL belongs to this signed repository operation. */

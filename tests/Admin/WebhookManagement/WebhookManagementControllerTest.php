@@ -540,6 +540,64 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'repository=other', $fallback );
 	}
 
+	public function testWebhookManagementRoutesUseNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$display                                       = $this->display();
+		$available                                     = $display->panel(
+			'gh',
+			'GitHub',
+			'1234',
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			null,
+			null,
+			true
+		);
+		$unavailable                                   = $display->unavailablePanel(
+			'gh',
+			'GitHub',
+			'1234',
+			'owner/repository',
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			'Webhook operations are unavailable.'
+		);
+
+		self::assertIsArray( $available );
+		foreach ( array( $available, $unavailable ) as $model ) {
+			self::assertSame( 'https://example.test/wp-admin/network/admin-post.php', $model['form_action'] );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=', $model['credentials_url'] );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=', $model['secrets_url'] );
+			foreach ( $model['operations'] as $operation ) {
+				self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin-post.php?action=', $operation['url'] );
+			}
+		}
+
+		$redirect = $this->controller()->handleAdminPost(
+			$this->request( array( 'return_url' => 'https://untrusted.example.test/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234' ) ),
+			'valid'
+		);
+
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234', $redirect );
+	}
+
+	public function testWebhookManagementRoutesKeepSingleSiteAdminPaths(): void {
+		$display     = $this->display();
+		$unavailable = $display->unavailablePanel(
+			'gh',
+			'GitHub',
+			'1234',
+			'owner/repository',
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh',
+			'Webhook operations are unavailable.'
+		);
+
+		self::assertSame( 'https://example.test/wp-admin/admin-post.php', $unavailable['form_action'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials', $unavailable['credentials_url'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=secrets', $unavailable['secrets_url'] );
+		foreach ( $unavailable['operations'] as $operation ) {
+			self::assertStringStartsWith( 'https://example.test/wp-admin/admin-post.php?action=', $operation['url'] );
+		}
+	}
+
 	public function testCompleteNonGitHubProviderUsesTheSamePlacementAndOperationPath(): void {
 		$providerCode  = 'fixture-provider';
 		$providerLabel = 'Fixture Forge';

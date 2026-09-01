@@ -140,6 +140,8 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_release_deployments_test_options']    = array();
 		$GLOBALS['ran_booster_release_deployments_test_transients'] = array();
+		unset( $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] );
 	}
 
 	public function testCompleteApiTwoBootstrapUsesExactPreviewGitObjectsReadbackAndSchemaTwo(): void {
@@ -638,7 +640,8 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 			$transport = new D23ApplicationTransport();
 			$transport->failWriteAcknowledgement( $operation );
 			$facade      = new D23ReleaseFacade();
-			$coordinator = $this->coordinator( $facade, $transport, new SetupRecordStore() );
+			$records     = new SetupRecordStore();
+			$coordinator = $this->coordinator( $facade, $transport, $records );
 			$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
 			$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
 			$first       = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
@@ -648,7 +651,31 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 			$retry  = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
 			self::assertSame( 'workflow_invalid_request', $retry['code'], $operation );
 			self::assertSame( $counts, $transport->writeCounts, $operation );
+			self::assertTrue( $records->claim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ), $operation );
+			self::assertTrue( $records->releaseClaim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ), $operation );
 		}
+	}
+
+	public function testClaimIsReleasedWhenSetupThrowsAfterAdmission(): void {
+		$transport   = new D23ApplicationTransport();
+		$facade      = new D23ReleaseFacade();
+		$records     = new SetupRecordStore();
+		$coordinator = $this->coordinator( $facade, $transport, $records );
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] = static function (): void {
+			throw new \RuntimeException( 'expected test failure' );
+		};
+
+		try {
+			$coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+			self::fail( 'Expected the test transient deletion to throw.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'expected test failure', $exception->getMessage() );
+		}
+
+		self::assertTrue( $records->claim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertTrue( $records->releaseClaim( '101', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
 	}
 
 
@@ -681,6 +708,39 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact raw scalar value bytes are the compatibility subject under test.
 			self::assertSame( $before, serialize( $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_setup_records'] ), $name );
 		}
+	}
+
+	public function testConcurrentSetupLosesTheAtomicClaimBeforeItCanStartProviderWrites(): void {
+		$transport   = new D23ApplicationTransport();
+		$facade      = new D23ReleaseFacade();
+		$records     = new SetupRecordStore();
+		$coordinator = $this->coordinator( $facade, $transport, $records );
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+		$competing   = null;
+
+		$GLOBALS['ran_booster_release_deployments_test_option_add_callback'] = static function ( string $option ) use ( &$competing, $coordinator, $status, $inspect, $transport ): void {
+			if ( 'ran_booster_release_deployments_setup_claim_101' !== $option ) {
+				return;
+			}
+			$competing = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+			self::assertSame(
+				array(
+					'blob'   => 0,
+					'tree'   => 0,
+					'commit' => 0,
+					'ref'    => 0,
+					'pull'   => 0,
+				),
+				$transport->writeCounts
+			);
+		};
+
+		$winner = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+
+		self::assertSame( 'workflow_invalid_request', $competing['code'] );
+		self::assertSame( 'workflow_setup_open', $winner['code'] );
+		self::assertNotNull( $records->find( '101' ) );
 	}
 
 	public function testDoesNotAdoptStandaloneBetaEightPreviewKeys(): void {

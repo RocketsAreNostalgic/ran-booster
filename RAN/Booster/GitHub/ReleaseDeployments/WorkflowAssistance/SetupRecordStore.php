@@ -7,6 +7,7 @@ namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 /** Stores exact, bounded, non-secret setup pull-request evidence. */
 final class SetupRecordStore {
 	private const OPTION                   = 'ran_booster_release_deployments_setup_records';
+	private const CLAIM_PREFIX             = 'ran_booster_release_deployments_setup_claim_';
 	private const ASSESSMENT_OPTION        = 'ran_booster_release_deployments_assessment_observations';
 	private const FAILURE_OPTION           = 'ran_booster_release_deployments_failure_history';
 	private const MAX_RECORDS              = 100;
@@ -67,6 +68,43 @@ final class SetupRecordStore {
 		$all = get_option( self::OPTION, array() );
 		return is_array( $all ) && array_key_exists( $repositoryId, $all );
 	}
+	/** Atomically reserve one exact package setup before any provider mutation. */
+	public function claim( string $repositoryId, string $type, string $identifier, int $revision, bool $allowExistingRecord = false ): bool {
+		if ( ! $this->number( $repositoryId ) || ! in_array( $type, array( 'plugin', 'theme' ), true )
+			|| ! $this->text( $identifier, 255 ) || $revision < 1 ) {
+			return false;
+		}
+		$existing = $this->find( $repositoryId );
+		if ( $allowExistingRecord
+			? null === $existing || ! hash_equals( $type, $existing['package_type'] )
+				|| ! hash_equals( $identifier, $existing['package_identifier'] ) || $revision !== $existing['source_revision']
+			: $this->occupied( $repositoryId ) ) {
+			return false;
+		}
+		return add_option(
+			self::CLAIM_PREFIX . $repositoryId,
+			array(
+				'repository_id'      => $repositoryId,
+				'package_type'       => $type,
+				'package_identifier' => $identifier,
+				'source_revision'    => $revision,
+			),
+			'',
+			false
+		);
+	}
+
+	/** Release only the exact reservation held by this setup attempt. */
+	public function releaseClaim( string $repositoryId, string $type, string $identifier, int $revision ): bool {
+		$claim = array(
+			'repository_id'      => $repositoryId,
+			'package_type'       => $type,
+			'package_identifier' => $identifier,
+			'source_revision'    => $revision,
+		);
+		return $claim === get_option( self::CLAIM_PREFIX . $repositoryId, null )
+			&& delete_option( self::CLAIM_PREFIX . $repositoryId );
+	}
 	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
 	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
 		$record = $this->find( $repositoryId );
@@ -112,7 +150,9 @@ final class SetupRecordStore {
 		}
 		if ( array_key_exists( $record['repo_id'], $all ) ) {
 			$existing = is_array( $all[ $record['repo_id'] ] ) ? $this->normalize( $all[ $record['repo_id'] ] ) : null;
-			if ( null === $existing || ! hash_equals( $record['repo_id'], $existing['repo_id'] ) ) {
+			if ( null === $existing || ! hash_equals( $record['repo_id'], $existing['repo_id'] )
+				|| ! hash_equals( $record['package_type'], $existing['package_type'] )
+				|| ! hash_equals( $record['package_identifier'], $existing['package_identifier'] ) ) {
 				return false;
 			}
 		}

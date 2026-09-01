@@ -16,6 +16,9 @@ final class SetupRecordStoreTest extends TestCase {
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_override'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_claim_delete_callback'] );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused option-table double exercises compare-and-delete claim ownership.
+		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
 	}
 	public function testSchemaTwoIsExactBoundedAndNonAutoloaded(): void {
 		$store  = new SetupRecordStore();
@@ -73,22 +76,51 @@ final class SetupRecordStoreTest extends TestCase {
 			self::assertSame( $before, serialize( $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_setup_records'] ), $name );
 		}
 	}
-	public function testClaimIsAtomicAndReleaseRequiresTheExactBinding(): void {
+	public function testClaimIsAtomicAndReleaseRequiresTheExactOwner(): void {
 		$store = new SetupRecordStore();
-		self::assertTrue( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
-		self::assertFalse( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
-		self::assertFalse( $store->releaseClaim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
-		self::assertTrue( $store->releaseClaim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
-		self::assertTrue( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
+		$claim = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNotNull( $claim );
+		self::assertNull( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertFalse( $store->releaseClaim( '123456789', $claim . 'tampered' ) );
+		self::assertTrue( $store->releaseClaim( '123456789', $claim ) );
+		self::assertNotNull( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
+	}
+	public function testExpiredClaimIsRecoveredAndAnOldOwnerCannotReleaseItsSuccessor(): void {
+		$store  = new SetupRecordStore();
+		$option = 'ran_booster_release_deployments_setup_claim_123456789';
+		$old    = 'v1:1:' . str_repeat( 'a', 32 ) . ':' . str_repeat( 'b', 64 ) . ':123456789';
+		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ] = $old;
+
+		$new = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNotNull( $new );
+		self::assertNotSame( $old, $new );
+		self::assertFalse( $store->releaseClaim( '123456789', $old ) );
+		self::assertSame( $new, $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
+		self::assertTrue( $store->releaseClaim( '123456789', $new ) );
+	}
+	public function testOnlyOneContenderCanReplaceAnExpiredClaim(): void {
+		$store     = new SetupRecordStore();
+		$option    = 'ran_booster_release_deployments_setup_claim_123456789';
+		$old       = 'v1:1:' . str_repeat( 'a', 32 ) . ':' . str_repeat( 'b', 64 ) . ':123456789';
+		$competing = null;
+		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ]    = $old;
+		$GLOBALS['ran_booster_release_deployments_test_claim_delete_callback'] = static function () use ( &$competing, $store ): void {
+			$competing = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		};
+
+		$first = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNull( $first );
+		self::assertNotNull( $competing );
+		self::assertSame( $competing, $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
 	}
 	public function testExistingRecordClaimRequiresItsExactPackageAndRevision(): void {
 		$store = new SetupRecordStore();
 		self::assertTrue( $store->save( $this->record() ) );
-		self::assertFalse( $store->claim( '987654321', 'plugin', 'example-plugin/example-plugin.php', 3, true ) );
-		self::assertFalse( $store->claim( '123456789', 'theme', 'example-plugin/example-plugin.php', 3, true ) );
-		self::assertFalse( $store->claim( '123456789', 'plugin', 'other/other.php', 3, true ) );
-		self::assertFalse( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4, true ) );
-		self::assertTrue( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3, true ) );
+		self::assertNull( $store->claim( '987654321', 'plugin', 'example-plugin/example-plugin.php', 3, true ) );
+		self::assertNull( $store->claim( '123456789', 'theme', 'example-plugin/example-plugin.php', 3, true ) );
+		self::assertNull( $store->claim( '123456789', 'plugin', 'other/other.php', 3, true ) );
+		self::assertNull( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4, true ) );
+		self::assertNotNull( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3, true ) );
 	}
 	public function testSaveNeverTransfersARepositoryRecordToAnotherPackage(): void {
 		$store = new SetupRecordStore();

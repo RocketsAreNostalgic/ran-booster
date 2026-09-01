@@ -357,7 +357,8 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	private function openDraft( ReleaseTrackingStatus $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
-		if ( ! $this->records->claim( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision(), 'template_update' === $operation ) ) {
+		$claim = $this->records->claim( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision(), 'template_update' === $operation );
+		if ( null === $claim ) {
 			return $this->result( $status, 'invalid_request', false, $previewKey );
 		}
 		try {
@@ -400,12 +401,12 @@ final class WorkflowApplicationCoordinator {
 			}
 			return $this->result( $status, $recovered ? 'setup_recovered' : 'setup_open', true );
 		} finally {
-			$this->releaseClaim( $status );
+			$this->releaseClaim( $status, $claim );
 		}
 	}
 
-	private function releaseClaim( ReleaseTrackingStatus $status ): void {
-		$this->records->releaseClaim( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() );
+	private function releaseClaim( ReleaseTrackingStatus $status, string $claim ): void {
+		$this->records->releaseClaim( $status->providerRepositoryId(), $claim );
 	}
 
 	private function createAtomicCommit( array $remote, ManagedReleaseBundle $bundle, string $branch, string $operation, string $token ): ?string {

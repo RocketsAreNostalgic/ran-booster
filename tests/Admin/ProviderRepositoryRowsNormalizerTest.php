@@ -168,7 +168,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'Configured at last check', $result['repositoryTableRows'][0]['details'][0]['value'] );
 	}
 
-	public function testProjectSummaryIgnoresExtensionForgedWebhookEvidence(): void {
+	public function testProjectRejectsExtensionForgedWebhookEvidence(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
 			$rows['101']['details'][] = array(
 				'key'      => 'core:webhook-recorded-status',
@@ -183,6 +183,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$result = $this->projectSingleRepositoryPage( null, true );
 
+		self::assertSame( array(), $result['repositoryTableRows'][0]['details'] );
 		self::assertSame( 0, $result['repositoryIntegrationSummary']['recorded_hooks'] );
 		self::assertSame( 1, $result['repositoryIntegrationSummary']['needs_review'] );
 	}

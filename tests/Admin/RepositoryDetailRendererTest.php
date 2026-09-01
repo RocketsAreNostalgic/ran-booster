@@ -115,10 +115,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
 		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
-		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
-		self::assertStringContainsString( '1 package uses Branch deployments', $html );
-		self::assertStringContainsString( '1 package tracks Published releases', $html );
+		self::assertStringContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
+		self::assertStringNotContainsString( '1 package uses Branch deployments', $html );
+		self::assertStringNotContainsString( '1 package tracks Published releases', $html );
 		self::assertStringContainsString( 'Release automation — owner/plugin.php', $html );
 		self::assertStringContainsString( '<h4>Release automation</h4>', $html );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
@@ -130,6 +131,58 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Provider access', $html );
 		self::assertLessThan( strpos( $html, 'Provider access' ), strpos( $html, 'Repository details' ) );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
+	}
+
+	public function testStatusKeepsExactSourceCountsForCompletePackageInventory(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/complete',
+				'source_label'      => 'Mixed sources',
+				'source_key'        => 'mixed',
+				'package_summaries' => array(
+					array(
+						'type'              => 'plugin',
+						'identifier'        => 'branch/plugin.php',
+						'display_name'      => 'Branch plugin',
+						'settings_url'      => 'https://example.test/branch',
+						'source'            => 'branch',
+						'source_revision'   => 1,
+						'branch'            => 'main',
+						'subdirectory'      => '',
+						'deployment_policy' => 'manual',
+					),
+					array(
+						'type'              => 'theme',
+						'identifier'        => 'release-theme',
+						'display_name'      => 'Release theme',
+						'settings_url'      => 'https://example.test/release',
+						'source'            => 'release_asset',
+						'source_revision'   => 2,
+						'branch'            => '',
+						'subdirectory'      => '',
+						'deployment_policy' => 'manual',
+					),
+				),
+				'details'           => array(),
+				'actions'           => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'status',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '1 package uses Branch deployments', $html );
+		self::assertStringContainsString( '1 package tracks Published releases', $html );
+		self::assertStringNotContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
 	}
 
 	public function testBranchViewShowsDisabledWebhookContextForReleaseOnlyRepository(): void {
@@ -278,7 +331,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertTrue( $releaseRendered );
-		self::assertStringContainsString( 'data-ran-booster-repository-view="releases" aria-controls="ran-booster-provider-task-panel" aria-current="page"', $html );
+		self::assertStringContainsString( 'data-ran-booster-repository-view="releases" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
+		self::assertSame( 3, substr_count( $html, 'aria-controls="ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( '<h4>Release automation</h4>', $html );

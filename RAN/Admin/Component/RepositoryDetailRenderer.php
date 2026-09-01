@@ -60,7 +60,7 @@ final class RepositoryDetailRenderer {
 					$hasSource  = ( 'branch' === $view && in_array( $sourceKey, array( 'branch', 'mixed' ), true ) )
 						|| ( 'releases' === $view && in_array( $sourceKey, array( 'release_asset', 'mixed' ), true ) );
 					?>
-					<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $requestUrl ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $activeView === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $hasSource ) { ?>
+					<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $requestUrl ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $activeView === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $hasSource ) { ?>
 						<span class="ran-booster-provider-task-tab__source-indicator" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Active for one or more packages in this repository.', 'ran-booster' ); ?></span>
 					<?php } ?></a>
 				<?php } ?>
@@ -69,7 +69,7 @@ final class RepositoryDetailRenderer {
 			<div class="ran-booster-repository-detail__layout">
 				<main class="ran-booster-repository-detail__main">
 					<?php if ( 'status' === $activeView ) { ?>
-						<?php $this->renderStatus( $row, $packages ); ?>
+						<?php $this->renderStatus( $row, $packages, $omitted ); ?>
 						<?php $this->renderStatusLinks( $row ); ?>
 					<?php } elseif ( 'branch' === $activeView && 0 < $omitted ) { ?>
 						<?php $this->renderIncompleteWorkflowControls( 'branch', $omitted ); ?>
@@ -123,7 +123,7 @@ final class RepositoryDetailRenderer {
 	}
 
 	/** @param array<string, mixed> $row @param list<array<string, mixed>> $packages */
-	private function renderStatus( array $row, array $packages ): void {
+	private function renderStatus( array $row, array $packages, int $omitted ): void {
 		$branchCount  = count( array_filter( $packages, static fn ( array $package ): bool => 'branch' === ( $package['source'] ?? null ) ) );
 		$releaseCount = count( $packages ) - $branchCount;
 		?>
@@ -149,8 +149,12 @@ final class RepositoryDetailRenderer {
 			</header>
 			<div class="ran-booster-settings-section__body">
 				<dl class="ran-booster-repository-detail__facts">
-					<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Branch packages. */ _n( '%d package uses Branch deployments', '%d packages use Branch deployments', $branchCount, 'ran-booster' ), $branchCount ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Published releases', '%d packages track Published releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
+					<?php if ( 0 < $omitted ) { ?>
+						<div><dt><?php esc_html_e( 'Package sources', 'ran-booster' ); ?></dt><dd><?php esc_html_e( 'Exact counts are unavailable while package inventory is incomplete.', 'ran-booster' ); ?></dd></div>
+					<?php } else { ?>
+						<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Branch packages. */ _n( '%d package uses Branch deployments', '%d packages use Branch deployments', $branchCount, 'ran-booster' ), $branchCount ) ); ?></dd></div>
+						<div><dt><?php esc_html_e( 'Published releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Published releases', '%d packages track Published releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
+					<?php } ?>
 					<?php foreach ( $this->integrationDetails( $row ) as $detail ) { ?>
 						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) ( $detail['value'] ?? '' ) ); ?></dd></div>
 					<?php } ?>

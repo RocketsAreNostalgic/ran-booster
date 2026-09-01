@@ -99,11 +99,12 @@ final class SetupRecordStore {
 		if ( ! $this->number( $repositoryId ) || null === $this->claimToken || ! hash_equals( $this->claimToken, $claim ) ) {
 			return false;
 		}
-		if ( ! $this->releaseClaimLock() ) {
-			return false;
-		}
+		$released = $this->releaseClaimLock();
+		// A failed RELEASE_LOCK can mean the connection has already dropped and
+		// released its advisory lock. Never carry a stale in-memory ownership claim
+		// into a later local evidence write.
 		$this->claimToken = null;
-		return true;
+		return $released;
 	}
 
 	private function acquireClaimLock(): bool {

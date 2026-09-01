@@ -172,6 +172,30 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( array(), $database->updates );
 	}
 
+	public function testChangingReleaseChannelDistinguishesAnUnavailableRepositorySourceGuardFromStaleState(): void {
+		$database                         = new ManagedReleaseStoreDatabase(
+			array(
+				'type'                  => 1,
+				'package'               => 'installed/example.php',
+				'source'                => 'release_asset',
+				'source_revision'       => 4,
+				'deployment_policy'     => 'manual',
+				'release_configuration' => ( new ManagedReleaseConfiguration( 'example', 'example.php', 'stable' ) )->toJson(),
+			)
+		);
+		$database->sourceGuardUnavailable = true;
+		$store                            = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+
+		try {
+			$store->changeChannel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			self::fail( 'An unavailable repository source guard must not be reported as a stale channel change.' );
+		} catch ( ManagedReleaseRepositorySourceUnavailable $failure ) {
+			self::assertStringContainsString( 'repository source relationship', $failure->getMessage() );
+		}
+
+		self::assertSame( array(), $database->updates );
+	}
+
 	public function testReleaseTransitionAndChannelChangeRejectNestedRowsWithoutWriting(): void {
 		$database = new ManagedReleaseStoreDatabase(
 			array(

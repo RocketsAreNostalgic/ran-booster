@@ -176,17 +176,26 @@ class ManagedReleaseStore {
 			return false;
 		}
 		try {
-			$before = $this->row( $type, $identifier, true );
-			if ( ! is_string( $before->provider ?? null ) || ! is_string( $before->provider_repository_id ?? null )
-			|| ! ( new RepositorySourceGuard( $this->database, $this->lifecycle ) )->assess(
-				$before->provider,
-				$before->provider_repository_id,
-				self::typeId( $type ),
-				$identifier,
-				PackageSource::RELEASE_ASSET,
-				true
-			)['allowed'] ) {
+			$before     = $this->row( $type, $identifier, true );
+			$assessment = ! is_string( $before->provider ?? null ) || ! is_string( $before->provider_repository_id ?? null )
+				? array(
+					'allowed' => false,
+					'code'    => 'repository_source_unavailable',
+				)
+				: ( new RepositorySourceGuard( $this->database, $this->lifecycle ) )->assess(
+					$before->provider,
+					$before->provider_repository_id,
+					self::typeId( $type ),
+					$identifier,
+					PackageSource::RELEASE_ASSET,
+					true
+				);
+			if ( ! $assessment['allowed'] ) {
 				$this->database->query( 'ROLLBACK' );
+				if ( 'repository_source_unavailable' === $assessment['code'] ) {
+					throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
+				}
+
 				return false;
 			}
 			$this->assertReleaseSubdirectory( $before );

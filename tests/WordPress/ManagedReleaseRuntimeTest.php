@@ -2635,6 +2635,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertCount( 1, $store->channelChanges );
 		$store->channelChangeFailure = null;
 
+		$store->channelChangeFailure = new ManagedReleaseRepositorySourceUnavailable();
+		$unavailable                 = $facade->changeChannel( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertFalse( $unavailable->successful() );
+		self::assertSame( 'release_unavailable', $unavailable->code() );
+		self::assertCount( 1, $store->channelChanges );
+		$store->channelChangeFailure = null;
+
 		$lock->releaseSucceeds = false;
 		$releaseFailed         = $facade->changeChannel(
 			'plugin',
@@ -2646,8 +2653,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $releaseFailed->successful() );
 		self::assertSame( 'release_unavailable', $releaseFailed->code() );
 		self::assertCount( 2, $store->channelChanges );
-		self::assertSame( 4, $lock->acquires );
-		self::assertSame( array( 'runtime-lock', 'runtime-lock', 'runtime-lock', 'runtime-lock' ), $lock->releases );
+		self::assertSame( 5, $lock->acquires );
+		self::assertSame( array( 'runtime-lock', 'runtime-lock', 'runtime-lock', 'runtime-lock', 'runtime-lock' ), $lock->releases );
 
 		$invalid = $facade->changeChannel(
 			'plugin',

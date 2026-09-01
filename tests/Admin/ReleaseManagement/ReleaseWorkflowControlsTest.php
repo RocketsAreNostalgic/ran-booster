@@ -254,6 +254,29 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( $rows, $this->controls( provider: new RepositoryReleaseWorkflowProviderDouble( adminSurface: false ) )->enrichRepositoryRows( $rows, 'fixture', array(), 'https://example.test/return' ) );
 	}
 
+	public function testIncompleteRepositoryInventoryReceivesNoWorkflowEnrichment(): void {
+		$rows = array(
+			'101' => array(
+				'provider_code'             => 'fixture',
+				'repository_id'             => '101',
+				'repository'                => 'example/example',
+				'package_summaries_omitted' => 1,
+				'package_summaries'         => array(
+					array(
+						'type'            => 'plugin',
+						'identifier'      => 'example/example.php',
+						'source'          => 'branch',
+						'source_revision' => 3,
+					),
+				),
+				'details'                   => array(),
+				'actions'                   => array(),
+			),
+		);
+
+		self::assertSame( $rows, $this->controls()->enrichRepositoryRows( $rows, 'fixture', array(), 'https://example.test/return' ) );
+	}
+
 	public function testUnavailableRepositorySourceKeepsItsDiagnosticCode(): void {
 		$controls = $this->controls( sourceGuard: $this->unavailableSourceGuard() );
 		$url      = $controls->processWorkflowRequest( $this->request( 'inspect' ) );

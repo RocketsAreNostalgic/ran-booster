@@ -99,7 +99,9 @@ final class ReleaseWorkflowControls {
 		}
 
 		foreach ( $rows as &$row ) {
-			if ( ! is_array( $row ) || true === ( $row['historical'] ?? false ) ) {
+			if ( ! is_array( $row )
+				|| true === ( $row['historical'] ?? false )
+				|| 0 < (int) ( $row['package_summaries_omitted'] ?? 0 ) ) {
 				continue;
 			}
 			$rowDetails     = is_array( $row['details'] ?? null ) ? $row['details'] : array();

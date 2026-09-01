@@ -362,7 +362,7 @@ final class ReleaseWorkflowRequestController {
 			$provider = $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagement::class );
 			$release  = $this->providers->get( $providerCode );
 			return 1 === $provider::RELEASE_WORKFLOW_API_VERSION
-				&& null !== ( $this->providers->metadata()[ $providerCode ]?->admin ?? null )
+				&& null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null )
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseMetadata
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseCandidateListing
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseInspector

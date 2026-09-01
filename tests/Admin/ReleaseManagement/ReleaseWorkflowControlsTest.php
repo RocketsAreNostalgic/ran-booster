@@ -84,6 +84,36 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 	}
 
+	public function testRegisteredWorkflowProviderWithoutMetadataLeavesRepositoryRowsUntouchedWithoutWarningOrOutput(): void {
+		$provider = new RepositoryReleaseWorkflowProviderDouble();
+		$rows     = array(
+			'101' => array(
+				'provider_code' => 'fixture',
+				'repository_id' => '101',
+				'details'       => array(),
+				'actions'       => array(),
+			),
+		);
+		$output   = '';
+		ob_start();
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes missing-metadata warnings to exceptions.
+		set_error_handler(
+			static function ( int $severity, string $message ): never {
+				throw new \ErrorException( $message, 0, $severity );
+			}
+		);
+		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		try {
+			$actual = $this->controls( provider: $provider, providers: $this->registryWithoutMetadata( $provider ) )->enrichRepositoryRows( $rows, 'fixture', array(), 'https://example.test/return' );
+		} finally {
+			$output = (string) ob_get_clean();
+			restore_error_handler();
+		}
+
+		self::assertSame( $rows, $actual );
+		self::assertSame( '', $output );
+	}
+
 	public function testCapableEditKeepsReleaseAssetSelectableWhileOtherContextsRemainUnchanged(): void {
 		$choices = array( 'release_asset' => array( 'disabled' => true ) );
 		$package = new class() { public function providerCode(): string {
@@ -700,9 +730,15 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
 	}
 
-	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowControls {
+	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowControls {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+	}
+
+	private function registryWithoutMetadata( RepositoryProvider $provider ): ProviderRegistry {
+		$providers = new ProviderRegistry( array( $provider ) );
+		( new \ReflectionProperty( ProviderRegistry::class, 'providerMetadata' ) )->setValue( $providers, array() );
+		return $providers;
 	}
 
 	private function presenter( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowPresenter {

@@ -116,6 +116,30 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertStringContainsString( 'provider_unavailable', $url );
 	}
 
+	public function testRegisteredWorkflowProviderWithoutMetadataFailsClosedWithoutWarningOrOutput(): void {
+		$provider = new RepositoryReleaseWorkflowProviderDouble();
+		$output   = '';
+		ob_start();
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes missing-metadata warnings to exceptions.
+		set_error_handler(
+			static function ( int $severity, string $message ): never {
+				throw new \ErrorException( $message, 0, $severity );
+			}
+		);
+		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		try {
+			$url = $this->controller( provider: $provider, providers: $this->registryWithoutMetadata( $provider ) )->processWorkflowRequest( $this->request( 'inspect' ) );
+		} finally {
+			$output = (string) ob_get_clean();
+			restore_error_handler();
+		}
+
+		self::assertStringContainsString( 'workflow_invalid_request', $url );
+		self::assertStringContainsString( 'provider_unavailable', $url );
+		self::assertSame( array(), $provider->calls );
+		self::assertSame( '', $output );
+	}
+
 	public function testMalformedAuthorityFieldsAndExpiredNonceDoNotReachAProviderOperation(): void {
 		$cases = array(
 			'operation'  => array( 'workflow_operation', 'retired_operation' ),
@@ -315,9 +339,15 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( array(), $provider->calls );
 	}
 
-	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowRequestController {
+	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+	}
+
+	private function registryWithoutMetadata( RepositoryProvider $provider ): ProviderRegistry {
+		$providers = new ProviderRegistry( array( $provider ) );
+		( new \ReflectionProperty( ProviderRegistry::class, 'providerMetadata' ) )->setValue( $providers, array() );
+		return $providers;
 	}
 
 	private function providerFor( string $operation, string $previewKey ): RepositoryReleaseWorkflowProviderDouble {

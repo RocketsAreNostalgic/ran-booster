@@ -785,7 +785,7 @@ final class ReleaseWorkflowPresenter {
 
 	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
 		$provider = $this->workflowCapability( $providerCode );
-		return null !== $provider && 1 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( $this->providers->metadata()[ $providerCode ]?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
+		return null !== $provider && 1 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
 	}
 
 	private function releaseProviderSupported( string $providerCode ): bool {

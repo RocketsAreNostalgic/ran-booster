@@ -65,7 +65,7 @@ Paths below identify the implementation, not additional sources of policy.
 | Collapsed summaries, package lists and repository rows repeat the longer names. | [ReleaseManagementDisplay](../RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php), [package index](../views/packages/index.php), [ProviderRepositoryRowsNormalizer](../RAN/Admin/ProviderRepositoryRowsNormalizer.php), [provider view](../views/provider.php) | Align compact labels with the tabs, including source-switch rows and buttons. |
 | Branch readiness has an outer heading and a nested "Saved branch setup" heading. | [source settings](../views/packages/source-settings.php), [branch readiness](../views/packages/branch-readiness.php) | Resolve in the content-hierarchy slice. Merely renaming the nested heading creates two adjacent "Branch readiness" headings. |
 | Repository section titles mix an outcome (releases) with a mechanism (webhook). Both provider content and Core fallback content supply titles. | [RepositoryWebhookManagementControls](../RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php), [GitHubReleaseWorkflowControls](../RAN/Admin/ReleaseManagement/GitHub/GitHubReleaseWorkflowControls.php), [RepositoryDetailRenderer](../RAN/Admin/Component/RepositoryDetailRenderer.php) | Use Push-to-deploy and Release publishing for section purposes; retain the specific setup/checklist labels inside them. Change fallback and capable-provider paths together. |
-| Release history classification partly depends on the English label prefix "Release automation." | `RepositoryDetailRenderer::isReleaseDetail()` and `GitHubReleaseWorkflowControls::enrichRepositoryRows()` | Coordinate the visible rename with history grouping tests. Preserve stable `gh:release-automation-*` keys and any existing legacy-label handling. Do not accidentally move release facts into webhook history. |
+| Release history classification uses stable category/kind or normalized detail keys; English labels are display text only. | `RepositoryDetailRenderer::isReleaseDetail()` and `GitHubReleaseWorkflowControls::enrichRepositoryRows()` | Coordinate the visible rename with metadata-based history grouping tests. Preserve stable `gh:release-automation-*` keys and the `release_workflow` kind; do not classify through current or legacy labels or accidentally move release facts into webhook history. |
 | Eligibility, current source, transition consequences and workflow evidence appear in several neighboring explanations. | ReleaseManagementDisplay, GitHubReleaseWorkflowDisplay, provider view and branch-readiness template | Reduce repetition after labels stabilize. Keep exact remediation, failure details and facts with different meanings. |
 | Documentation has its own navigation titles and technical terminology. | `ReleaseManagementControls::filterDocumentationSections()`, README, package update guides | Reconcile reader-facing names last. Preserve technical identifiers, historical evidence and the owner's unrelated copy. |
 | The prospective-install JavaScript restores the old source title, accessible name and collapsed summary after PHP renders the new labels. | `assets/ran-booster-release-management.js` | Align these literal labels with Releases; retain descriptive error messages and every interaction predicate. |
@@ -283,8 +283,13 @@ disposable activation check as passed.
   only source labels and their accessible text.
   No concrete types, public seams or persistent fields were added.
 - README, stylesheets, dependencies, source/policy behavior and remote state
-  are unchanged. No live save, source switch, workflow assessment, activation,
-  push, PR, merge, release or Dex/workbench operation was performed.
+  are unchanged. The exact `4d67176dfde21c43598539e5e57169a699ec4fec`
+  release archive passed its WordPress activation smoke check on the disposable
+  `booster-test-no-links` site: version `1.0.0-beta.27` remained active, the
+  `RAN\Booster` runtime class loaded and the installed release manifest retained
+  that source commit. No PNS package or database mutation was performed.
+- No live save, source switch, workflow assessment, push, PR, merge, release or
+  Dex/workbench operation was performed.
 - Desktop views were inspected at 1,422 pixels with no horizontal overflow.
   Narrow-viewport and JavaScript-disabled browser sessions were not run;
   responsive/navigation asset contracts and ordinary URL loads passed.

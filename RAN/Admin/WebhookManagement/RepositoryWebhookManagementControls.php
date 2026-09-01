@@ -42,7 +42,8 @@ final class RepositoryWebhookManagementControls {
 		$this->controller  = new WebhookManagementController(
 			new WebhookOperationCoordinator( $facade, $store ),
 			$this->display,
-			$providers
+			$providers,
+			$authorities
 		);
 		$this->controller->useAdminInteractionFacade( $adminInteraction );
 	}

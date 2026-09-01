@@ -207,6 +207,31 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, 'partial', array(), 'https://example.test/return' ) );
 	}
 
+	public function testIncompleteWorkflowProviderDoesNotPresentRepositoryAutomationAsReadyToAssess(): void {
+		$controls = $this->controls( provider: new PartialRepositoryReleaseWorkflowProviderDouble(), sourceGuard: $this->sourceGuard( 'partial' ) );
+		$row      = array(
+			'provider_code'     => 'partial',
+			'repository_id'     => '101',
+			'repository'        => 'example/example',
+			'package_summaries' => array(
+				array(
+					'type'            => 'plugin',
+					'identifier'      => 'example/example.php',
+					'source'          => 'branch',
+					'source_revision' => 3,
+				),
+			),
+		);
+
+		ob_start();
+		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/repositories' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Unavailable<', $html );
+		self::assertStringNotContainsString( 'Ready to assess', $html );
+		self::assertStringContainsString( 'button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+	}
+
 	public function testPassiveRowsRemainUntouchedWhenTheCapableProviderHasNoRegisteredAdminSurface(): void {
 		$rows = array(
 			'101' => array(
@@ -755,8 +780,9 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		return $request;
 	}
 
-	private function sourceGuard(): RepositorySourceGuard {
-		$database  = new class() { public string $last_error = '';
+	private function sourceGuard( string $providerCode = 'fixture' ): RepositorySourceGuard {
+		$database  = new class( $providerCode ) { public string $last_error = '';
+			public function __construct( private string $providerCode ) {}
 			public function prepare( string $query, mixed ...$arguments ): string {
 				return $query;
 			} public function get_results( string $query ): array {
@@ -765,7 +791,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 						'type'                   => 1,
 						'package'                => 'example/example.php',
 						'source'                 => 'branch',
-						'provider'               => 'fixture',
+						'provider'               => $this->providerCode,
 						'provider_repository_id' => '101',
 					),
 				);

@@ -136,6 +136,20 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( '<ul class="ul-disc">', $html );
 	}
 
+	public function testUnavailableBranchReleaseSourceDisablesTheReleaseTransition(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( failureCode: 'release_unavailable' )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+
+		ob_start();
+		$controls->renderAdvancedSourceSection( 'edit', 'plugin', 'release_asset', $package, $package->settingsUrl() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'form="ran-booster-release-track-form" disabled="disabled" aria-disabled="true">Use releases</button>', $html );
+	}
+
 	public function testConflictRemainsBlockedWhenListIsUnavailableAndDoesNotDuplicateTheResult(): void {
 		foreach ( array( false, true ) as $unavailable ) {
 			$controls = $this->conflictControls( $unavailable );

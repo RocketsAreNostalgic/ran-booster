@@ -199,6 +199,7 @@ final class ReleaseWorkflowControls {
 			&& is_object( $package )
 			&& is_callable( array( $package, 'getRepository' ) )
 			&& hash_equals( $repository, (string) $package->getRepository() );
+		$workflowAvailable = null !== $this->workflowProvider( $providerCode );
 		$workflowStatus   = $exact ? $this->workflowProviderStatus( $status ) : null;
 		$result           = $this->requestedResult();
 		$matchingResult   = $exact && is_array( $result )
@@ -242,11 +243,11 @@ final class ReleaseWorkflowControls {
 		$observationKind  = is_array( $observation ) && is_string( $observation['kind'] ?? null ) ? $observation['kind'] : 'unassessed';
 		$automationState  = $this->repositoryReleaseAutomationState(
 			$exact && $this->recordMatchesPackageStatus( $workflowStatus, $status ) ? $identifier : '',
-			$exact && $status->eligible() && 'branch' === $status->source(),
+			$workflowAvailable && $exact && $status->eligible() && 'branch' === $status->source(),
 			$exact && $this->publishedReleasesWorking( $status ),
 			$workflowStatus?->recordOccupied() ?? false,
 			$observationKind,
-			$sharedBranch
+			$sharedBranch || ! $workflowAvailable
 		);
 		$automationNotice = '';
 		if ( ! $sharedBranch && ! $conflicted ) {
@@ -287,7 +288,7 @@ final class ReleaseWorkflowControls {
 				<?php } elseif ( $exact && ! $status->eligible() ) { ?>
 					<div class="notice notice-warning inline ran-booster-repository-release-section__notice"><p><?php echo esc_html( $this->repositoryPackageReadinessMessage( $status ) ); ?></p></div>
 				<?php } ?>
-				<?php $this->renderRepositoryReleaseLifecycle( $exact && $status->eligible(), $exact && 'release_asset' === $status->source(), $exact && $this->recordMatchesStatus( $workflowStatus, $status ), $exact && $status->eligible() && 'branch' === $status->source(), $exact && $this->publishedReleasesWorking( $status ), $observationKind, null !== $this->workflowProvider( $providerCode ) ); ?>
+				<?php $this->renderRepositoryReleaseLifecycle( $exact && $status->eligible(), $exact && 'release_asset' === $status->source(), $exact && $this->recordMatchesStatus( $workflowStatus, $status ), $workflowAvailable && $exact && $status->eligible() && 'branch' === $status->source(), $exact && $this->publishedReleasesWorking( $status ), $observationKind, $workflowAvailable ); ?>
 				<?php $this->renderRepositoryReadiness( $repository, $guard['relationship_count'], $packageReadiness, $this->releaseProviderSupported( $providerCode ) ); ?>
 				<?php if ( null !== $this->workflowProvider( $providerCode ) || null !== $this->workflowCapability( $providerCode ) ) { ?>
 				<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">
@@ -444,7 +445,7 @@ final class ReleaseWorkflowControls {
 		if ( $unavailable ) {
 			$state   = __( 'Unavailable', 'ran-booster' );
 			$tone    = 'ran-booster-badge--info';
-			$message = __( 'Release workflow is unavailable for this shared repository.', 'ran-booster' );
+			$message = __( 'Release workflow is unavailable for this repository.', 'ran-booster' );
 			$notice  = 'notice-info';
 		} elseif ( '' !== $workflowOwner ) {
 			$state   = __( 'Setup recorded', 'ran-booster' );

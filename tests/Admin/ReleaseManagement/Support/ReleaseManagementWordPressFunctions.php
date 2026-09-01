@@ -12,6 +12,12 @@ function __( string $text, string $domain = 'default' ): string {
 	return $text;
 }
 
+function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
+	unset( $domain );
+
+	return 1 === $number ? $single : $plural;
+}
+
 function esc_html( mixed $value ): string {
 	return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 }

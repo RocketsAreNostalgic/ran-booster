@@ -187,8 +187,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'no Branch package currently uses this repository webhook', $html );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section"' ) );
 		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section"', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-repository-webhook-setup-heading">Webhook setup</h4>', $html );
 		self::assertStringNotContainsString( '<details', $html );
-		self::assertStringNotContainsString( 'Webhook setup', $html );
 		self::assertStringNotContainsString( '>Set up webhook</button>', $html );
 		self::assertStringContainsString( 'Management history', $html );
 		self::assertStringContainsString( 'Recorded hook status', $html );

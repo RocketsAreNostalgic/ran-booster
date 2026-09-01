@@ -68,7 +68,9 @@ final class ReleaseManagementDisplay {
 		$trackMode               = 'branch' === $source ? 'branch' : 'managed';
 		$failureCode             = $statusAvailable ? $status->failureCode() : '';
 		$repositoryConflictCode  = $statusAvailable && in_array( $failureCode, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true );
-		$repositorySourceBlocked = $statusAvailable && 'repository_source_unavailable' === $failureCode;
+		$repositorySourceBlocked = $statusAvailable
+			&& ( 'repository_source_unavailable' === $failureCode
+				|| ( 'branch' === $source && 'release_unavailable' === $failureCode ) );
 		$repositoryBlocked       = $repositoryConflictCode || $repositorySourceBlocked;
 		$trackDisabled           = null === $trackNonceAction || $repositoryBlocked;
 		$repositoryStatusHeading = $repositorySourceBlocked ? __( 'Storage unavailable', 'ran-booster' ) : __( 'Repository shared', 'ran-booster' );

@@ -206,6 +206,7 @@ final class RepositoryDetailRenderer {
 				<p class="description"><?php esc_html_e( 'Local readiness and the last recorded remote state.', 'ran-booster' ); ?></p>
 			</header>
 			<div class="ran-booster-settings-section__body">
+				<h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4>
 				<p><?php echo esc_html( $message ); ?></p>
 				<?php if ( $hasBranchConsumer && ! $receiverReady ) { ?>
 					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>

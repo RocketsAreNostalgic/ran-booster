@@ -423,6 +423,32 @@ subdirectory, release track and exact candidate selection. Add-ons may filter
 selected source and projection arguments, but must return one bounded
 plain-text summary.
 
+Add-ons may filter the structured advanced-source summary projection:
+
+```php
+apply_filters(
+	'ran_booster_admin_package_advanced_source_summary_projection',
+	array(
+		'heading' => __( 'Published releases', 'ran-booster' ),
+		'badges'  => array(
+			array( 'label' => __( 'Stable', 'ran-booster' ) ),
+		),
+		'status'  => __( 'Active', 'ran-booster' ),
+	),
+	$mode,
+	$type,
+	$selectedSource,
+	$projection // ?\RAN\Admin\AdminPackageProjection
+);
+```
+
+The baseline has a heading, a list of badge arrays with a `label`, and a
+status. Core trims and strips tags. A heading is required and must be plain
+text, non-empty and no more than 80 characters. Core keeps at most three
+plain-text badge labels of no more than 255 characters each, and a plain-text
+status of no more than 40 characters. An invalid or throwing projection falls
+back to the Core baseline; invalid badge labels and status values are dropped.
+
 Repository-scoped release automation belongs on the selected repository page:
 
 ```php

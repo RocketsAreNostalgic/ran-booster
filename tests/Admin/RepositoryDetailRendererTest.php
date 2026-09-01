@@ -374,6 +374,38 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'aria-describedby="link-help"', $html );
 	}
 
+	public function testBranchRepositoryWithoutAssistedManagementRetainsManualGuidanceWithoutInventingAnAction(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/branch',
+				'repository_url'    => '',
+				'source_label'      => 'Branch',
+				'source_key'        => 'branch',
+				'package_summaries' => array(),
+				'details'           => array(),
+				'actions'           => array(),
+			),
+			'Bitbucket',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->viewUrls(),
+			$this->viewRequestUrls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'id="ran-booster-repository-webhook-heading"', $html );
+		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this provider.', $html );
+		self::assertStringContainsString( 'Use the provider webhook settings when available.', $html );
+		self::assertStringNotContainsString( 'no Branch package currently uses this repository webhook', $html );
+		self::assertStringNotContainsString( 'Manage repository webhook', $html );
+	}
+
 	/** @return array<string, string> */
 	private function viewUrls(): array {
 		return array(

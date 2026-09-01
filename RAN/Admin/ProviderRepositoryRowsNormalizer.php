@@ -7,6 +7,8 @@ namespace RAN\Admin;
 use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
+use RAN\Logging\BoosterLogger;
+use Throwable;
 
 /**
  * Builds and protects Core-owned provider repository rows.
@@ -487,18 +489,32 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$presented = null !== $webhookManagement
+		$presented   = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
-		$presented = apply_filters(
-			'ran_booster_provider_repository_rows',
-			$presented,
-			$providerCode,
-			$projections,
-			$returnUrl
-		);
-		$rows      = $this->normalize( $rows, $presented, $providerCode );
-		$selected  = null;
+		$webhookRows = $this->normalize( $rows, $presented, $providerCode );
+		try {
+			$presented = apply_filters(
+				'ran_booster_provider_repository_rows',
+				$presented,
+				$providerCode,
+				$projections,
+				$returnUrl
+			);
+			$rows      = $this->normalize( $rows, $presented, $providerCode );
+		} catch ( Throwable $failure ) {
+			$rows = $webhookRows;
+			BoosterLogger::logException(
+				'provider repository row enrichment unavailable',
+				$failure,
+				array(
+					'source'   => 'admin',
+					'step'     => 'provider_repository_row_enrichment',
+					'provider' => $providerCode,
+				)
+			);
+		}
+		$selected = null;
 		foreach ( $rows as $row ) {
 			if ( '' !== $requestedId && false === ( $row['historical'] ?? false ) && $requestedId === ( $row['repository_id'] ?? null ) ) {
 				$selected = $row;

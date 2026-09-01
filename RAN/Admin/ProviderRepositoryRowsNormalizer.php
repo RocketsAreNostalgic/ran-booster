@@ -133,7 +133,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param mixed                               $presented
 	 * @return array<string, array<string, mixed>>
 	 */
-	public function normalize( array $baseRows, mixed $presented, string $providerCode ): array {
+	public function normalize( array $baseRows, mixed $presented, string $providerCode, bool $allowCoreDetailAppend = false ): array {
 		if ( ! is_array( $presented ) ) {
 			throw new LogicException( 'Provider repository rows must be a keyed array.' );
 		}
@@ -165,7 +165,7 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( array_slice( $details, 0, count( $baseDetails ) ) !== $baseDetails ) {
 				throw new LogicException( 'Provider filters may append but not replace Core details.' );
 			}
-			$this->assertDetails( $details );
+			$this->assertDetails( $details, count( $baseDetails ), $allowCoreDetailAppend );
 
 			$baseActions = is_array( $baseRow['actions'] ?? null ) ? $baseRow['actions'] : array();
 			$actions     = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
@@ -497,7 +497,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$presented   = null !== $webhookManagement
 			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $returnUrl )
 			: $rows;
-		$webhookRows = $this->normalize( $rows, $presented, $providerCode );
+		$webhookRows = $this->normalize( $rows, $presented, $providerCode, true );
 		try {
 			$presented = apply_filters(
 				'ran_booster_provider_repository_rows',
@@ -604,16 +604,19 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 	}
 	/** @param list<mixed> $details */
-	private function assertDetails( array $details ): void {
+	private function assertDetails( array $details, int $coreDetailCount = 0, bool $allowCoreDetailAppend = false ): void {
 		if ( count( $details ) > 20 ) {
 			throw new LogicException( 'Repository details must be bounded.' );
 		}
 
-		foreach ( $details as $detail ) {
+		foreach ( $details as $index => $detail ) {
 			if ( ! is_array( $detail ) ) {
 				throw new LogicException( 'Repository details must be display maps.' );
 			}
-			$this->boundedString( $detail['key'] ?? '', 96, true );
+			$key = $this->boundedString( $detail['key'] ?? '', 96, true );
+			if ( ! $allowCoreDetailAppend && $index >= $coreDetailCount && str_starts_with( $key, 'core:' ) ) {
+				throw new LogicException( 'Provider filters may not append Core detail keys.' );
+			}
 			$this->boundedString( $detail['label'] ?? null, 96, false );
 			$this->boundedString( $detail['value'] ?? null, 255, true );
 			$tone = $this->boundedString( $detail['tone'] ?? '', 16, true );

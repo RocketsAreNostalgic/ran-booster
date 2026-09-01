@@ -47,6 +47,7 @@ committed_entries=(
 	'assets'
 	'autoload.php'
 	'index.php'
+	'languages'
 	'license.txt'
 	'ran-booster.php'
 	'readme.txt'

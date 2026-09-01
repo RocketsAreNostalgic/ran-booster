@@ -157,8 +157,18 @@ final class RepositoryDetailRenderer {
 					<?php if ( 0 < $omitted ) { ?>
 						<div><dt><?php esc_html_e( 'Package sources', 'ran-booster' ); ?></dt><dd><?php esc_html_e( 'Exact counts are unavailable while package inventory is incomplete.', 'ran-booster' ); ?></dd></div>
 					<?php } else { ?>
-						<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Branch packages. */ _n( '%d package uses Branch', '%d packages use Branch', $branchCount, 'ran-booster' ), $branchCount ) ); ?></dd></div>
-						<div><dt><?php esc_html_e( 'Releases', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Releases', '%d packages track Releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
+						<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd>
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %d is the number of Branch packages. */
+									_n( '%d package uses Branch', '%d packages use Branch', $branchCount, 'ran-booster' ),
+									$branchCount
+								)
+							);
+							?>
+						</dd></div>
+						<div><dt><?php echo esc_html( _x( 'Releases', 'Repository integration status label', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Releases', '%d packages track Releases', $releaseCount, 'ran-booster' ), $releaseCount ) ); ?></dd></div>
 					<?php } ?>
 					<?php foreach ( $this->integrationDetails( $row ) as $detail ) { ?>
 						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php $this->renderDetailValue( $detail ); ?></dd></div>
@@ -179,7 +189,7 @@ final class RepositoryDetailRenderer {
 			<div class="ran-booster-settings-section__body">
 				<p><?php esc_html_e( 'Release workflow setup is unavailable for this repository provider. Package release settings remain available.', 'ran-booster' ); ?></p>
 				<?php foreach ( $packages as $package ) { ?>
-					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ __( 'Open %s settings', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
+					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ _x( 'Open %s settings', 'Managed package settings link', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
 			</div>
 		</section>

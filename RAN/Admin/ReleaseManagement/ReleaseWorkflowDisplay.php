@@ -44,7 +44,7 @@ final class ReleaseWorkflowDisplay {
 					$html .= ' <a href="' . esc_url( (string) $package['settings_url'] ) . '">' . esc_html(
 						sprintf(
 						/* translators: %s is a managed package name. */
-							__( 'Open %s settings', 'ran-booster' ),
+							_x( 'Open %s settings', 'Managed package settings link', 'ran-booster' ),
 							$name
 						)
 					) . '</a>';

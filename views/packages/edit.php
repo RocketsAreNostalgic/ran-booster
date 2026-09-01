@@ -204,7 +204,7 @@ $packageSettingsSaveLabel    = 'plugin' === $packageView->getType()
 	: __( 'Save theme settings', 'ran-booster' );
 $sourceSummary               = 'branch' === $packageCurrentSource
 	? sprintf(
-		/* translators: %s is the saved repository branch. */
+		/* translators: %s is the repository branch name. */
 		__( 'Branch · %s', 'ran-booster' ),
 		'' !== (string) $package->getBranch() ? (string) $package->getBranch() : __( 'provider default', 'ran-booster' )
 	)

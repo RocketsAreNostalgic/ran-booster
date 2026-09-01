@@ -12,10 +12,26 @@ function __( string $text, string $domain = 'default' ): string {
 	return $text;
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\_x' ) ) {
+	function _x( string $text, string $context, string $domain = 'default' ): string {
+		unset( $context, $domain );
+
+		return $text;
+	}
+}
+
 function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
 	unset( $domain );
 
 	return 1 === $number ? $single : $plural;
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\_nx' ) ) {
+	function _nx( string $single, string $plural, int $number, string $context, string $domain = 'default' ): string {
+		unset( $context, $domain );
+
+		return 1 === $number ? $single : $plural;
+	}
 }
 
 function esc_html( mixed $value ): string {

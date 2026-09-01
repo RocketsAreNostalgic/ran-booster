@@ -20,7 +20,7 @@ $portabilityProtectedSummary = __( 'Create a Transporter Blueprint for %1$s usin
 /* translators: %s: selected package count and noun. */
 $portabilityPackageOnlySummary = __( 'Create a Transporter Blueprint for %s without repository credentials.', 'ran-booster' );
 /* translators: %d: number of selected managed packages. */
-$portabilityInitialPackageCount = sprintf( _n( '%d package', '%d packages', $portabilityExportPackageCount, 'ran-booster' ), $portabilityExportPackageCount );
+$portabilityInitialPackageCount = sprintf( _nx( '%d package', '%d packages', $portabilityExportPackageCount, 'Selected managed packages', 'ran-booster' ), $portabilityExportPackageCount );
 $renderPortabilityExtension     = static function ( string $hook, string $step ): void {
 	$bufferLevel = ob_get_level();
 	ob_start();

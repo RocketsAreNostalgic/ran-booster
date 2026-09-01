@@ -307,7 +307,7 @@ $policyLabels = array(
 			$sourceLabel   = $releaseManaged
 				? __( 'Releases', 'ran-booster' )
 				: sprintf(
-					/* translators: %s is a branch name. */
+					/* translators: %s is the repository branch name. */
 					__( 'Branch: %s', 'ran-booster' ),
 					$package->getBranch()
 				);
@@ -377,7 +377,7 @@ $policyLabels = array(
 			$managementLine = $releaseManaged
 				? __( 'Releases', 'ran-booster' )
 				: sprintf(
-					/* translators: %s is a branch name. */
+					/* translators: %s is the repository branch name. */
 					__( 'Branch · %s', 'ran-booster' ),
 					'' !== $package->getBranch() ? $package->getBranch() : __( 'provider default', 'ran-booster' )
 				);

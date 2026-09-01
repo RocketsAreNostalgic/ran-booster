@@ -174,7 +174,7 @@ final class RepositoryTableRenderer {
 		$countLabel = 0 < $count
 			? sprintf(
 				/* translators: %d is the number of managed packages using a repository. */
-				_n( '%d package', '%d packages', $count, 'ran-booster' ),
+				_nx( '%d package', '%d packages', $count, 'Managed packages using a repository', 'ran-booster' ),
 				$count
 			)
 			: '';

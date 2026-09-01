@@ -50,8 +50,8 @@ final class ProviderRepositoryRowsNormalizer {
 			);
 		}
 		$counts                    = $this->counts( $managed['repositories'] );
-		$sharedLabel               = sprintf( __( '%s secret', 'ran-booster' ), $ownerLabel );
-		$webhookLabel              = sprintf( __( '%s webhooks', 'ran-booster' ), $providerLabel );
+		$sharedLabel               = sprintf( /* translators: %s is the repository owner label. */ __( '%s secret', 'ran-booster' ), $ownerLabel );
+		$webhookLabel              = sprintf( /* translators: %s is the repository provider name. */ __( '%s webhooks', 'ran-booster' ), $providerLabel );
 		$model                     = $this->project(
 			$repositories['repositories'],
 			$providerCode,
@@ -124,7 +124,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'repositoryListUrl'                => $model['list_url'],
 			'providerReturnUrl'                => $model['return_url'],
 			'repositoryTableRows'              => array_values( $model['rows'] ),
-			'repositoryRowCountLabel'          => sprintf( _n( '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'ran-booster' ), count( $model['rows'] ) ),
+			'repositoryRowCountLabel'          => sprintf( _nx( /* translators: %d is the number of repositories shown. */ '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'Provider table repository count', 'ran-booster' ), count( $model['rows'] ) ),
 			'selectedRepositoryRow'            => $model['selected'],
 			'activityUrl'                      => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 		) + $this->copy( $providerLabel, is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null, $counts, $sharedLabel );
@@ -304,15 +304,15 @@ final class ProviderRepositoryRowsNormalizer {
 			$disabled                = (int) ( $policies['disabled'] ?? 0 );
 			$policyBadges            = array(
 				array(
-					'label' => sprintf( __( 'Automatic: %d', 'ran-booster' ), $automatic ),
+					'label' => sprintf( /* translators: %d is the number of packages with Automatic updates. */ __( 'Automatic: %d', 'ran-booster' ), $automatic ),
 					'tone'  => 'neutral',
 				),
 				array(
-					'label' => sprintf( __( 'Manual: %d', 'ran-booster' ), $manual ),
+					'label' => sprintf( /* translators: %d is the number of packages with Manual updates. */ __( 'Manual: %d', 'ran-booster' ), $manual ),
 					'tone'  => 'neutral',
 				),
 				array(
-					'label' => sprintf( __( 'Disabled: %d', 'ran-booster' ), $disabled ),
+					'label' => sprintf( /* translators: %d is the number of packages with Disabled updates. */ __( 'Disabled: %d', 'ran-booster' ), $disabled ),
 					'tone'  => 'neutral',
 				),
 			);
@@ -406,7 +406,7 @@ final class ProviderRepositoryRowsNormalizer {
 				$managementLabel  = __( 'Package inventory incomplete', 'ran-booster' );
 				$managementDetail = __( 'Workflow controls disabled', 'ran-booster' );
 				$managementTone   = 'warning';
-				$consequence      = sprintf( __( '%d package summary is not shown. Refresh the repository inventory before relying on aggregate deployment state or workflow controls.', 'ran-booster' ), $packageSummariesOmitted );
+				$consequence      = sprintf( /* translators: %d is the number of omitted package summaries. */ __( '%d package summary is not shown. Refresh the repository inventory before relying on aggregate deployment state or workflow controls.', 'ran-booster' ), $packageSummariesOmitted );
 			}
 			$releaseReasonId = ( $isRelease || $sourceConflict ) && '' !== $consequence ? $reasonId . '-release-source' : '';
 			$describedBy     = array_filter( array( $releaseReasonId, '' !== ( $issues[0] ?? '' ) ? $reasonId : '', ! $siteReady && ! $isRelease ? $reasonId . '-site' : '' ) );
@@ -1004,21 +1004,29 @@ final class ProviderRepositoryRowsNormalizer {
 	/** @param array{repositories:int,packages:int,automatic:int} $counts */
 	private function copy( string $label, ?array $setup, array $counts, string $sharedSecretLabel ): array {
 		$automaticLabel = 0 < $counts['automatic']
-			? sprintf( _n( '%d package is Automatic', '%d packages are Automatic', $counts['automatic'], 'ran-booster' ), $counts['automatic'] )
+			? sprintf( _n( /* translators: %d is the number of packages with Automatic updates. */ '%d package is Automatic', '%d packages are Automatic', $counts['automatic'], 'ran-booster' ), $counts['automatic'] )
 			: __( 'None set to Automatic', 'ran-booster' );
 
 		return array(
-			'providerPushDescription'      => sprintf( __( '%s push webhooks can trigger managed branch deployments whose Updates setting is Automatic.', 'ran-booster' ), $label ),
+			'providerPushDescription'      => sprintf( /* translators: %s is the repository provider name. */ __( '%s push webhooks can trigger managed branch deployments whose Updates setting is Automatic.', 'ran-booster' ), $label ),
 			'automaticPackageLabel'        => $automaticLabel,
-			'managedPackageDescription'    => sprintf( _n( '%1$d repository contains %2$d managed package.', '%1$d repositories contain %2$d managed packages.', $counts['repositories'], 'ran-booster' ), $counts['repositories'], $counts['packages'] ),
-			'providerInstructionsLabel'    => sprintf( __( 'Open %s instructions', 'ran-booster' ), $label ),
-			'secretChoiceDescription'      => sprintf( __( 'Use a saved %s or create a repository-scoped secret when isolation is required.', 'ran-booster' ), strtolower( $sharedSecretLabel ) ),
-			'createProviderWebhookLabel'   => sprintf( __( 'Create the %s webhook', 'ran-booster' ), $label ),
-			'manualSetupDescription'       => null === $setup ? '' : sprintf( __( 'In %1$s, go to %2$s and create the remote webhook.', 'ran-booster' ), $label, $setup['location'] ),
-			'repositoryWebhookDescription' => sprintf( __( 'Each repository needs its own %s webhook. A saved shared secret may serve multiple repositories.', 'ran-booster' ), $label ),
-			'repositoryCountSingular'      => __( '%d repository shown', 'ran-booster' ),
-			'repositoryCountPlural'        => __( '%d repositories shown', 'ran-booster' ),
-			'emptyRepositoryDescription'   => sprintf( __( 'No managed %s repositories are available yet. Install a package to add its repository.', 'ran-booster' ), $label ),
+			'managedPackageDescription'    => sprintf( _n( /* translators: 1: number of repositories, 2: number of managed packages. */ '%1$d repository contains %2$d managed package.', '%1$d repositories contain %2$d managed packages.', $counts['repositories'], 'ran-booster' ), $counts['repositories'], $counts['packages'] ),
+			'providerInstructionsLabel'    => sprintf( /* translators: %s is the repository provider name. */ __( 'Open %s instructions', 'ran-booster' ), $label ),
+			'secretChoiceDescription'      => sprintf( /* translators: %s is the shared secret label. */ __( 'Use a saved %s or create a repository-scoped secret when isolation is required.', 'ran-booster' ), strtolower( $sharedSecretLabel ) ),
+			'createProviderWebhookLabel'   => sprintf( /* translators: %s is the repository provider name. */ __( 'Create the %s webhook', 'ran-booster' ), $label ),
+			'manualSetupDescription'       => null === $setup ? '' : sprintf( /* translators: 1: repository provider name, 2: provider webhook settings location. */ __( 'In %1$s, go to %2$s and create the remote webhook.', 'ran-booster' ), $label, $setup['location'] ),
+			'repositoryWebhookDescription' => sprintf(
+				/* translators: %s is the repository provider name. */
+				__( 'Each repository needs its own %s webhook. A saved shared secret may serve multiple repositories.', 'ran-booster' ),
+				$label
+			),
+			'repositoryCountSingular'      => _x( /* translators: %d is the number of repositories shown. */ '%d repository shown', 'Provider table fallback repository count', 'ran-booster' ),
+			'repositoryCountPlural'        => _x( /* translators: %d is the number of repositories shown. */ '%d repositories shown', 'Provider table fallback repository count', 'ran-booster' ),
+			'emptyRepositoryDescription'   => sprintf(
+				/* translators: %s is the repository provider name. */
+				__( 'No managed %s repositories are available yet. Install a package to add its repository.', 'ran-booster' ),
+				$label
+			),
 		);
 	}
 	// phpcs:enable WordPress.WP.I18n.MissingTranslatorsComment

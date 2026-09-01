@@ -316,7 +316,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 							<p><a class="button" href="<?php echo esc_url( $settingsUrl ); ?>">
 								<?php
 								/* translators: %s: Repository provider name. */
-								echo esc_html( sprintf( __( 'Open %s settings', 'ran-booster' ), $providerLabel ) );
+								echo esc_html( sprintf( _x( 'Open %s settings', 'Repository provider settings link', 'ran-booster' ), $providerLabel ) );
 								?>
 							</a></p>
 						<?php } ?>

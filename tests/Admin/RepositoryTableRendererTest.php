@@ -94,7 +94,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
 
-	public function testItRendersNormalizedHistoricalPostActionsAsForms(): void {
+	public function testItRendersNormalizedHistoricalLinkEvidenceInline(): void {
 		$html = $this->render(
 			array(
 				'provider_label' => 'GitHub',
@@ -128,20 +128,6 @@ final class RepositoryTableRendererTest extends TestCase {
 						'described_by'  => '',
 						'screen_reader' => 'owner/repository',
 					),
-					array(
-						'key'           => 'github:recorded-retry',
-						'label'         => 'Retry recorded hook',
-						'type'          => 'post',
-						'url'           => 'https://example.test/wp-admin/admin-post.php',
-						'hidden'        => array(
-							'action'   => 'github_recorded_hook_retry',
-							'_wpnonce' => 'historical-nonce',
-						),
-						'disabled'      => false,
-						'external'      => false,
-						'described_by'  => '',
-						'screen_reader' => 'owner/repository',
-					),
 				),
 			)
 		);
@@ -150,10 +136,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'Assisted hook status', $html );
 		self::assertStringContainsString( 'No assisted hook recorded', $html );
 		self::assertStringContainsString( 'Open GitHub repository', $html );
-		self::assertStringContainsString( '<form action="https://example.test/wp-admin/admin-post.php" method="post"', $html );
-		self::assertStringContainsString( 'name="action" value="github_recorded_hook_retry"', $html );
-		self::assertStringContainsString( 'name="_wpnonce" value="historical-nonce"', $html );
-		self::assertStringNotContainsString( 'href="https://example.test/wp-admin/admin-post.php"', $html );
+		self::assertStringNotContainsString( '<form ', $html );
 		self::assertStringNotContainsString( 'Review record', $html );
 		self::assertStringNotContainsString( 'panel=activity', html_entity_decode( $html ) );
 		self::assertStringNotContainsString( 'Manage repository', $html );

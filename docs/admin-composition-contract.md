@@ -321,7 +321,7 @@ cannot claim `core:webhook-management`; Core removes their detail and review
 URLs, then renders bounded evidence and actions inline. A row may contain at most 20 details. Detail keys
 and labels are limited to 96 characters, values to 255, and optional date and
 state values to 64; tones use the fixed Core set and `recorded` is Boolean.
-Actions follow the structured action contract below. Other historical fields
+Historical actions are link-only. Other historical fields
 are normalized through the same bounded row schema before rendering.
 
 Core contains a throwing callback, a non-array result or any invalid rewrite.

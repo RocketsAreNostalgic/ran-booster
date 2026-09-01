@@ -209,7 +209,12 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Historical rows must not claim Core actions.' );
 			}
 			$row['actions'] = $normalizer->normalize( $rowActions );
-			$rows[ $key ]   = $this->normalizeHistoricalRow( $key, $row, $providerCode );
+			foreach ( $row['actions'] as $action ) {
+				if ( 'post' === $action['type'] ) {
+					throw new LogicException( 'Historical rows may contain link actions only.' );
+				}
+			}
+			$rows[ $key ] = $this->normalizeHistoricalRow( $key, $row, $providerCode );
 		}
 
 		return $rows;

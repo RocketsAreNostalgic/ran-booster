@@ -308,7 +308,25 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'type'  => 'link',
 					'url'   => 'https://example.test/history/old-42',
 				),
-				'fixture:retry'   => array(
+			),
+		);
+
+		$rows = ( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $presented, 'gh' );
+
+		self::assertFalse( $rows['repo-42']['actions']['core:webhook-management']['disabled'] );
+		self::assertCount( 2, $rows['repo-42']['details'] );
+		self::assertTrue( $rows['fixture:historical:abc123']['historical'] );
+		self::assertArrayNotHasKey( 'review_url', $rows['fixture:historical:abc123'] );
+		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
+	}
+
+	public function testRejectsHistoricalPostActions(): void {
+		$presented                              = $this->baseRows();
+		$presented['fixture:historical:abc123'] = array(
+			'provider_code' => 'gh',
+			'historical'    => true,
+			'actions'       => array(
+				'fixture:retry' => array(
 					'label'  => 'Retry recorded hook',
 					'type'   => 'post',
 					'url'    => admin_url( 'admin-post.php' ),
@@ -320,15 +338,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			),
 		);
 
-		$rows = ( new ProviderRepositoryRowsNormalizer() )->normalize( $base, $presented, 'gh' );
+		$this->expectException( LogicException::class );
+		$this->expectExceptionMessage( 'Historical rows may contain link actions only.' );
 
-		self::assertFalse( $rows['repo-42']['actions']['core:webhook-management']['disabled'] );
-		self::assertCount( 2, $rows['repo-42']['details'] );
-		self::assertTrue( $rows['fixture:historical:abc123']['historical'] );
-		self::assertArrayNotHasKey( 'review_url', $rows['fixture:historical:abc123'] );
-		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
-		self::assertSame( 'post', $rows['fixture:historical:abc123']['actions']['fixture:retry']['type'] );
-		self::assertSame( 'historical-nonce', $rows['fixture:historical:abc123']['actions']['fixture:retry']['hidden']['_wpnonce'] );
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
 	}
 
 	public function testRequiresEveryCoreRow(): void {

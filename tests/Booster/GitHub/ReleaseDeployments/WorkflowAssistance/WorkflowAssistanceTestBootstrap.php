@@ -9,7 +9,11 @@ namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 final class SetupClaimDatabase {
 	public string $options    = 'wp_options';
 	public string $last_error = '';
-	private bool $lockHeld    = false;
+	private string $connectionId;
+
+	public function __construct() {
+		$this->connectionId = spl_object_hash( $this );
+	}
 
 	public function prepare( string $query, mixed ...$arguments ): string {
 		foreach ( $arguments as $argument ) {
@@ -25,11 +29,12 @@ final class SetupClaimDatabase {
 
 	public function get_var( string $query ): string|null {
 		if ( str_starts_with( $query, 'SELECT GET_LOCK(' ) ) {
-			if ( $this->lockHeld ) {
+			$owner = $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null;
+			if ( null !== $owner && $owner !== $this->connectionId ) {
 				return '0';
 			}
-			$this->lockHeld = true;
-			$callback       = $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] ?? null;
+			$GLOBALS['ran_booster_release_deployments_test_lock_owner'] = $this->connectionId;
+			$callback = $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] ?? null;
 			if ( is_callable( $callback ) ) {
 				$callback();
 			}
@@ -40,21 +45,23 @@ final class SetupClaimDatabase {
 				$this->last_error = 'release failed';
 				return null;
 			}
-			if ( ! $this->lockHeld ) {
+			if ( ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) !== $this->connectionId ) {
 				return '0';
 			}
-			$this->lockHeld = false;
+			unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
 			return '1';
 		}
 		return null;
 	}
 
 	public function disconnect(): void {
-		$this->lockHeld = false;
+		if ( ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) === $this->connectionId ) {
+			unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+		}
 	}
 
 	public function isLockHeld(): bool {
-		return $this->lockHeld;
+		return ( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] ?? null ) === $this->connectionId;
 	}
 }
 

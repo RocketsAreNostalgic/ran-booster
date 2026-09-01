@@ -69,6 +69,9 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		ReleaseManagementFixture::resetWordPress();
 		$GLOBALS['ran_booster_release_deployments_test_options']    = array();
 		$GLOBALS['ran_booster_release_deployments_test_transients'] = array();
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The workflow store requires the focused advisory-lock database double.
+		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
 		foreach ( array( 'unslashed', 'events', 'remote' ) as $suffix ) {
 			unset( $GLOBALS[ 'ran_booster_github_release_workflow_test_' . $suffix ] );
 		}

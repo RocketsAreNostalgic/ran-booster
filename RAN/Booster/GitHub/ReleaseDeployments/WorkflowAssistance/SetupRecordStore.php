@@ -133,14 +133,26 @@ final class SetupRecordStore {
 	}
 	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
 	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
-		$record = $this->find( $repositoryId );
-		if ( null === $record || $revision <= $record['source_revision']
-			|| ! hash_equals( $type, $record['package_type'] ) || ! hash_equals( $identifier, $record['package_identifier'] ) ) {
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
 			return null;
 		}
-
-		$record['source_revision'] = $revision;
-		return $this->save( $record ) ? $this->find( $repositoryId ) : null;
+		$readback = null;
+		$released = true;
+		try {
+			$this->refreshRecordCache();
+			$record = $this->find( $repositoryId );
+			if ( null !== $record && $revision > $record['source_revision']
+				&& hash_equals( $type, $record['package_type'] ) && hash_equals( $identifier, $record['package_identifier'] ) ) {
+				$record['source_revision'] = $revision;
+				$readback                  = $this->persistRecord( $record ) ? $this->find( $repositoryId ) : null;
+			}
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $released ? $readback : null;
 	}
 	/** Schema 1 is display-only evidence and never mutation authority. @return array<string,int|string>|null */
 	public function legacyEvidence( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
@@ -169,6 +181,25 @@ final class SetupRecordStore {
 		if ( null === $record ) {
 			return false;
 		}
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$saved    = false;
+		$released = true;
+		try {
+			$this->refreshRecordCache();
+			$saved = $this->persistRecord( $record );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $saved && $released;
+	}
+
+	/** @param array<string,int|string> $record */
+	private function persistRecord( array $record ): bool {
 		$all = get_option( self::OPTION, array() );
 		if ( ! is_array( $all ) || count( $all ) > self::MAX_RECORDS
 			|| ( ! array_key_exists( $record['repo_id'], $all ) && count( $all ) >= self::MAX_RECORDS ) ) {
@@ -185,6 +216,12 @@ final class SetupRecordStore {
 		$all[ $record['repo_id'] ] = $record;
 		update_option( self::OPTION, $all, false );
 		return $this->find( $record['repo_id'] ) === $record;
+	}
+
+	private function refreshRecordCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::OPTION, 'options' );
+		}
 	}
 	/** @param array<string,mixed> $observation */
 	public function saveAssessmentObservation( array $observation ): bool {

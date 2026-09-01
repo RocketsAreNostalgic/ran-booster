@@ -522,8 +522,8 @@ final class GitHubReleaseWorkflowControls {
 						$typeLabel = 'plugin' === $packageFact['type'] ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' );
 						/* translators: 1: package type, 2: package display name. */
 						$readinessLabel = sprintf( __( '%1$s readiness — %2$s', 'ran-booster' ), $typeLabel, $packageFact['name'] );
-						/* translators: 1: package type, 2: package display name. */
-						$sourceLabel = sprintf( __( '%1$s source — %2$s', 'ran-booster' ), $typeLabel, $packageFact['name'] );
+						/* translators: %s: package display name. */
+						$sourceLabel = sprintf( __( 'Update source — %s', 'ran-booster' ), $packageFact['name'] );
 						$trackLabel  = 'prerelease' === $packageFact['channel'] ? __( 'Preview', 'ran-booster' ) : __( 'Stable', 'ran-booster' );
 						/* translators: %s: Stable or Preview release track. */
 						$sourceMessage = $packageFact['tracking'] ? sprintf( __( 'Releases · %s track.', 'ran-booster' ), $trackLabel ) : __( 'Branch. Change source and track in package settings.', 'ran-booster' );
@@ -541,7 +541,7 @@ final class GitHubReleaseWorkflowControls {
 							<strong><?php echo esc_html( $sourceLabel ); ?></strong>
 							<span><?php echo esc_html( $sourceMessage ); ?>
 							<?php if ( ! $packageFact['tracking'] && '' !== $packageFact['settings_url'] ) { ?>
-								<a href="<?php echo esc_url( $packageFact['settings_url'] ); ?>"><?php echo esc_html__( 'Open package source settings', 'ran-booster' ); ?></a>
+								<a href="<?php echo esc_url( $packageFact['settings_url'] ); ?>"><?php echo esc_html__( 'Open update source settings', 'ran-booster' ); ?></a>
 							<?php } ?></span>
 						</li>
 					<?php } ?>

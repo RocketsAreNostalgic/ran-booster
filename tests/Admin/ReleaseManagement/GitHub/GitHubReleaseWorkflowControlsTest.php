@@ -176,7 +176,8 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'Repository relationship', $html );
 		self::assertStringContainsString( '1 exact package relationship is recorded for example/example.', $html );
 		self::assertStringContainsString( 'Installed identity and Update URI match the configured repository.', $html );
-		self::assertStringContainsString( 'Plugin source — Example plugin', $html );
+		self::assertStringContainsString( 'Update source — Example plugin', $html );
+		self::assertStringContainsString( 'Open update source settings', $html );
 		self::assertStringContainsString( 'Branch. Change source and track in package settings.', $html );
 		self::assertStringContainsString( 'No package uses Published releases yet.', $html );
 		self::assertStringContainsString( 'Saved repository facts; no live provider check.', $html );

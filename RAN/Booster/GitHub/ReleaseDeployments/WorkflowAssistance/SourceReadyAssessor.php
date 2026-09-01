@@ -114,6 +114,28 @@ final class SourceReadyAssessor {
 		string $installedVersion,
 		string $expectedUpdateUri
 	): SourceReadyAssessment {
+		return $this->assessSnapshot( $snapshot, $type, $packageSlug, $installedVersion, $expectedUpdateUri, false );
+	}
+
+	/** Validate an existing managed setup while ignoring only Booster's known generated paths. */
+	public function assessManaged(
+		RepositorySnapshot $snapshot,
+		string $type,
+		string $packageSlug,
+		string $installedVersion,
+		string $expectedUpdateUri
+	): SourceReadyAssessment {
+		return $this->assessSnapshot( $snapshot, $type, $packageSlug, $installedVersion, $expectedUpdateUri, true );
+	}
+
+	private function assessSnapshot(
+		RepositorySnapshot $snapshot,
+		string $type,
+		string $packageSlug,
+		string $installedVersion,
+		string $expectedUpdateUri,
+		bool $allowKnownGeneratedPaths
+	): SourceReadyAssessment {
 		$expectedUpdateUri = rtrim( $expectedUpdateUri, '/' );
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| 1 !== preg_match( '/\A[a-z0-9](?:[a-z0-9-]{0,198}[a-z0-9])?\z/D', $packageSlug )
@@ -125,9 +147,11 @@ final class SourceReadyAssessor {
 		if ( $this->hasCompetingReleaseAutomation( $snapshot ) ) {
 			return SourceReadyAssessment::refused( 'release_automation_conflict' );
 		}
-		foreach ( self::GENERATED_PATHS as $path ) {
-			if ( $snapshot->has( $path ) ) {
-				return SourceReadyAssessment::refused( 'release_path_conflict' );
+		if ( ! $allowKnownGeneratedPaths ) {
+			foreach ( self::GENERATED_PATHS as $path ) {
+				if ( $snapshot->has( $path ) ) {
+					return SourceReadyAssessment::refused( 'release_path_conflict' );
+				}
 			}
 		}
 
@@ -146,7 +170,7 @@ final class SourceReadyAssessor {
 			return SourceReadyAssessment::refused( 'prettier_contract_custom' );
 		}
 
-		$releaseFiles = $this->releaseFiles( $snapshot, $type, $header['path'] );
+		$releaseFiles = $this->releaseFiles( $snapshot, $type, $header['path'], $allowKnownGeneratedPaths );
 		if ( null === $releaseFiles ) {
 			return SourceReadyAssessment::refused( 'runtime_paths_unknown' );
 		}
@@ -429,11 +453,14 @@ final class SourceReadyAssessor {
 	}
 
 	/** @return list<string>|null */
-	private function releaseFiles( RepositorySnapshot $snapshot, string $type, string $headerPath ): ?array {
+	private function releaseFiles( RepositorySnapshot $snapshot, string $type, string $headerPath, bool $allowKnownGeneratedPaths ): ?array {
 		$runtimeRoots = 'plugin' === $type ? self::PLUGIN_RUNTIME_ROOTS : self::THEME_RUNTIME_ROOTS;
 		$files        = array();
 		foreach ( $snapshot->entries() as $path => $entry ) {
 			if ( 'blob' !== $entry['type'] ) {
+				continue;
+			}
+			if ( $allowKnownGeneratedPaths && in_array( $path, self::GENERATED_PATHS, true ) ) {
 				continue;
 			}
 			$parts = explode( '/', $path, 2 );

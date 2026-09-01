@@ -24,6 +24,7 @@ final class RepositoryTableRendererTest extends TestCase {
 				'management_detail'  => 'Owner secret',
 				'management_tone'    => 'ok',
 				'consequence'        => 'Push-to-Deploy disabled; pushes are ignored.',
+				'consequence_id'     => 'reason-id',
 				'types'              => array(
 					array(
 						'label' => 'Plugin',
@@ -81,7 +82,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'Plugin · Branch · 2 packages', $html );
 		self::assertStringContainsString( 'Disabled', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--ok">Owner secret</span>', $html );
-		self::assertStringContainsString( '<p>Push-to-Deploy disabled; pushes are ignored.</p>', $html );
+		self::assertStringContainsString( '<p id="reason-id">Push-to-Deploy disabled; pushes are ignored.</p>', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__policies', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__status-badges', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );

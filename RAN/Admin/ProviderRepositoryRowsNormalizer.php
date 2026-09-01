@@ -435,7 +435,7 @@ final class ProviderRepositoryRowsNormalizer {
 				)
 				: '';
 			if ( ! $inventoryIncomplete && ! $historical ) {
-				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $reasonId, $locator, $detailUrl );
+				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator, $detailUrl );
 			}
 			$rows[ $rowKey ] = array(
 				'key'                           => $rowKey,

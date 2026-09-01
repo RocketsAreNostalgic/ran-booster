@@ -242,6 +242,26 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		}
 	}
 
+	public function testInspectRefusesAnExistingManagedSetupWhenThePackageHeaderIsMissing(): void {
+		$transport   = new D23ApplicationTransport();
+		$facade      = new D23ReleaseFacade();
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$established = $this->coordinator( $facade, $transport, new SetupRecordStore() );
+		$preview     = $established->inspect( $status, 'stable', 'nonce', 'token' );
+		self::assertSame( 'workflow_setup_open', $established->setup( $status, $preview['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' )['code'] );
+		$transport->mergePull();
+		$transport->removeDefaultDocument( 'example-plugin.php' );
+		$writes = $transport->writeCounts;
+		$GLOBALS['ran_booster_release_deployments_test_options'] = array();
+
+		$result = $this->coordinator( $facade, $transport, new SetupRecordStore() )->inspect( $status, 'stable', 'nonce', 'token' );
+
+		self::assertSame( 'workflow_package_ambiguous', $result['code'] );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( '', $result['preview_key'] );
+		self::assertSame( $writes, $transport->writeCounts );
+	}
+
 	public function testInspectRejectsAdditionalReleaseAutomationBesideAnExactCanonicalSetup(): void {
 		$transport   = new D23ApplicationTransport();
 		$facade      = new D23ReleaseFacade();

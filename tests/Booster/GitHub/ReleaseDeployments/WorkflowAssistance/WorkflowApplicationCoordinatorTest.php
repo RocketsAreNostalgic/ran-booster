@@ -614,6 +614,42 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		self::assertNotNull( $records->find( '101' ) );
 	}
 
+	public function testNewDraftSetupReportsPartialWhenItsClaimReleaseFails(): void {
+		$transport   = new D23ApplicationTransport();
+		$facade      = new D23ReleaseFacade();
+		$records     = new SetupRecordStore();
+		$coordinator = $this->coordinator( $facade, $transport, $records );
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+
+		$GLOBALS['ran_booster_release_deployments_test_lock_release_result'] = false;
+		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+
+		self::assertSame( 'workflow_partial', $result['code'] );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( 'local_persistence', $result['failure_stage'] );
+		self::assertNotNull( $records->find( '101' ) );
+		self::assertSame( 1, $transport->writeCounts['pull'] );
+	}
+
+	public function testRecoveredDraftSetupReportsPartialWhenItsClaimReleaseFails(): void {
+		$transport   = new D23ApplicationTransport( true );
+		$facade      = new D23ReleaseFacade();
+		$records     = new SetupRecordStore();
+		$coordinator = $this->coordinator( $facade, $transport, $records );
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+
+		$GLOBALS['ran_booster_release_deployments_test_lock_release_result'] = false;
+		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+
+		self::assertSame( 'workflow_partial', $result['code'] );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( 'local_persistence', $result['failure_stage'] );
+		self::assertNotNull( $records->find( '101' ) );
+		self::assertSame( 1, $transport->writeCounts['pull'] );
+	}
+
 	public function testClosedWrongBaseAndDuplicateDeterministicPullsStopBeforeObjectWrites(): void {
 		foreach ( array( 'closed', 'wrong_base', 'duplicate' ) as $scenario ) {
 			$GLOBALS['ran_booster_release_deployments_test_options']    = array();

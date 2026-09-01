@@ -4,8 +4,9 @@ Date: August 27, 2026.
 
 Reachable rollback checkpoint: `e1364c9608017c0bea0351fc098eee2f79f1087e`
 (`fix(admin): checkpoint repository integration rehearsal`). Checkpoint-relative
-check results and worktree state are not claimed here because the earlier
-checkpoint object is no longer reachable.
+check results and worktree state from the original recorded checkpoint
+`0585f3c89a8559abf34150e994ff96f742d6eea6` are not claimed here because that
+object is no longer reachable.
 
 ## Purpose
 
@@ -279,7 +280,8 @@ disposable activation check as passed.
   provenance line and documentation links. The Update URI remedy now points
   to package settings, where the exact header is actually displayed.
 - Checkpoint-relative token and line-count comparisons are not reproduced here
-  because the original checkpoint object is unreachable. JavaScript changes
+  because the original recorded checkpoint
+  `0585f3c89a8559abf34150e994ff96f742d6eea6` is unreachable. JavaScript changes
   only source labels and their accessible text.
   No concrete types, public seams or persistent fields were added.
 - README, stylesheets, dependencies, source/policy behavior and remote state
@@ -296,8 +298,8 @@ disposable activation check as passed.
   responsive/navigation asset contracts and ordinary URL loads passed.
 
 All implementation slices are complete. The rollback checkpoint remains
-separate from this terminology pass. Next: owner wording review before
-committing this terminology pass.
+separate from this terminology pass. Next: finish exact-SHA pull-request
+review, resolve any findings, then request owner authority for integration.
 
 ## Copy reductions
 

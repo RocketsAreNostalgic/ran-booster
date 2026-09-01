@@ -105,8 +105,22 @@ copied_mo="$languages_target/$(basename "$fixture_mo")"
 copied_json="$languages_target/$(basename "${json_fixtures[0]}")"
 cp "$fixture_mo" "$copied_mo"
 cp "${json_fixtures[0]}" "$copied_json"
-"$php_bin" "$wp_cli" option update WPLANG fr_FR --path="$wordpress" >/dev/null
 wplang_changed='true'
+"$php_bin" "$wp_cli" eval '
+add_filter(
+	"get_available_languages",
+	static function ( array $languages ): array {
+		$languages[] = "fr_FR";
+		return array_values( array_unique( $languages ) );
+	}
+);
+if ( ! update_option( "WPLANG", "fr_FR" ) && "fr_FR" !== get_option( "WPLANG", "" ) ) {
+	throw new RuntimeException( "The installed localisation proof could not set WPLANG." );
+}
+if ( "fr_FR" !== get_option( "WPLANG", "" ) ) {
+	throw new RuntimeException( "The installed localisation proof did not retain WPLANG." );
+}
+' --path="$wordpress" >/dev/null
 "$php_bin" "$wp_cli" eval-file "$proof" --user=admin --path="$wordpress"
 
 echo 'Installed localisation proof passed: French PHP and Jed translations loaded from the archive fixture.'

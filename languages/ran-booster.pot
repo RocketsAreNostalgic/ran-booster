@@ -962,6 +962,11 @@ msgstr ""
 msgid "An add-on guide is temporarily unavailable. Check plugin compatibility and the error log."
 msgstr ""
 
+#: RAN/Admin/Interaction/AdminInteractionOutcome.php:51
+#: assets/ran-booster-enhanced-mutations.js:630
+msgid "We could not complete that request. Please try again."
+msgstr ""
+
 #: RAN/Admin/ManagedPluginFailureRows.php:66
 msgid "RAN Booster automatic deployment failed."
 msgstr ""
@@ -977,6 +982,14 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:184
 msgid "Package settings were saved before the reinstall."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:247
+msgid "Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:248
+msgid "Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
@@ -1134,8 +1147,137 @@ msgstr ""
 msgid "Changed %1$d %2$s to %3$s. Already in that state: %4$d."
 msgstr ""
 
+#: RAN/Admin/PackageAdminController.php:507
+msgid "This package cannot be edited until its stored repository provider is registered again."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:509
+msgid "Booster could not verify the managed package provider. No changes were made."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:533
+#: RAN/Admin/RepositoryPickerController.php:123
+msgid "The selected repository provider is not available."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:535
+msgid "The selected repository provider does not yet support this package operation."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:537
+msgid "Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:539
+msgid "Check the repository provider, account, repository, and credential fields."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:542
+msgid "The repository provider rejected the selected credential."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:543
+msgid "The repository provider denied access. Check credential permissions or rate limits."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:544
+msgid "The repository could not be found, or the selected credential cannot access it."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:545
+#: RAN/Admin/RepositoryPickerController.php:180
+msgid "The repository provider rate limit has been reached. Try again later."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:546
+#: RAN/Admin/PackageAdminController.php:549
+msgid "Booster could not verify the repository. Please try again."
+msgstr ""
+
 #: RAN/Admin/PackageAdminController.php:675
 msgid "RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:691
+msgctxt "package type"
+msgid "Plugin"
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:692
+msgctxt "package type"
+msgid "Theme"
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:694
+msgid "Plugin was not removed because an active plugin depends on it."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:695
+msgid "Plugin was disabled in Booster, but WordPress could not deactivate it. No files were deleted."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:698
+#, php-format
+msgid "%s was disabled in Booster, but WordPress could not delete it."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:703
+#, php-format
+msgid "%s was disabled in Booster, but its files are still present."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:708
+#, php-format
+msgid "%s files were deleted, but Booster could not verify removal of its management record."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:713
+#, php-format
+msgid "%s was not removed because another Booster operation still owns it."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:718
+#, php-format
+msgid "%s removal could not safely acquire or release the WordPress updater lock."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:721
+msgid "Plugin was not removed because its directory contains another registered plugin."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:724
+#, php-format
+msgid "%s settings changed before this request. Refresh the package settings and try again."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:727
+msgid "Theme was not removed because it is the active theme."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:728
+msgid "Theme was not removed because an installed child theme depends on it."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:729
+msgid "Theme was not removed because the active theme depends on it."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:732
+#, php-format
+msgid "%s was not removed because WordPress could not verify a safe installed path."
+msgstr ""
+
+#. translators: %s: package type, such as Plugin or Theme.
+#: RAN/Admin/PackageAdminController.php:737
+#, php-format
+msgid "%s removal could not be completed safely."
 msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:275
@@ -3105,6 +3247,75 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:714
 msgid "Resolve Release readiness before assessing a workflow."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:39
+msgid "You are not allowed to browse repository providers."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:48
+msgid "The repository picker session expired. Reload this page and try again."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:116
+msgid "Encrypted credential storage is unavailable. Restore the matching sidecar and site key, then try again."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:129
+msgid "The selected repository provider does not support authenticated public repository browsing."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:130
+msgid "The selected repository provider does not support repository browsing."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:165
+#: RAN/Admin/RepositoryPickerController.php:182
+msgid "Repository browsing failed. Please try again."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:174
+msgid "The repository request is invalid. Check the selected provider and repository details."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:175
+msgid "The repository provider rejected the saved credentials."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:176
+msgid "The repository provider denied this request. Check repository access and credential permissions."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:177
+msgid "The requested repository owner could not be found."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:178
+msgid "The repository provider returned too much data. Enter the repository manually or narrow the account."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:179
+msgid "The repository provider returned an invalid response. Try again or enter the repository manually."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:181
+msgid "Repository browsing took too long. Try again or enter the repository manually."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:246
+msgid "Some repositories are shown, but the selected credential stopped authorizing the request."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:247
+msgid "Some repositories are shown. The provider rate limit was reached; try again later for a complete list."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:248
+msgid "The first available repositories are shown. Enter a repository manually if it is not listed."
+msgstr ""
+
+#: RAN/Admin/RepositoryPickerController.php:249
+msgid "Some repositories are shown, but the provider could not complete the list."
 msgstr ""
 
 #: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:38
@@ -7332,8 +7543,4 @@ msgstr ""
 
 #: views/troubleshooting.php:269
 msgid "This report contains only the safe, displayed result fields. Review it before sharing."
-msgstr ""
-
-#: assets/ran-booster-enhanced-mutations.js:630
-msgid "We could not complete that request. Please try again."
 msgstr ""

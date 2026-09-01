@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
-function __( string $text, string $domain = 'default' ): string {
-	unset( $domain );
+if ( ! function_exists( __NAMESPACE__ . '\\__' ) ) {
+	function __( string $text, string $domain = 'default' ): string {
+		unset( $domain );
 
-	return $text;
+		return $text;
+	}
 }
 
 function esc_html_e( string $text, string $domain = 'default' ): void {

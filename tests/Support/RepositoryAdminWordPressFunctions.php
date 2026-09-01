@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+function __( string $text, string $domain = 'default' ): string {
+	return $GLOBALS['ran_booster_repository_admin_translations'][ $domain ][ $text ] ?? $text;
+}
+
+function _x( string $text, string $context, string $domain = 'default' ): string {
+	return $GLOBALS['ran_booster_repository_admin_translations'][ $domain ][ $context . "\4" . $text ] ?? $text;
+}
+
 function current_user_can( string $capability ): bool {
 	if ( array_key_exists( 'ran_booster_test_capabilities', $GLOBALS ) ) {
 		$GLOBALS['ran_booster_test_capability_checks'][] = $capability;

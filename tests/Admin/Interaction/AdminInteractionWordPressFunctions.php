@@ -6,6 +6,10 @@ namespace RAN\Admin\Interaction;
 
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Focused Core facade fixture.
 
+function __( string $text, string $domain = 'default' ): string {
+	return $GLOBALS['ran_booster_interaction_test_translations'][ $domain ][ $text ] ?? $text;
+}
+
 function admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 }

@@ -8,6 +8,7 @@ namespace Tests;
 
 require_once __DIR__ . '/Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/Support/PackageOperationGlobalWordPressFunctions.php';
+require_once __DIR__ . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/Support/WPError.php';
 require_once __DIR__ . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
@@ -37,12 +38,14 @@ final class PackageRemovalServiceTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
+		$GLOBALS['ran_booster_repository_admin_translations']    = array();
 	}
 
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_package_mutation_guard_file_mods'],
-			$GLOBALS['ran_booster_package_mutation_guard_multisite']
+			$GLOBALS['ran_booster_package_mutation_guard_multisite'],
+			$GLOBALS['ran_booster_repository_admin_translations']
 		);
 	}
 
@@ -497,6 +500,30 @@ final class PackageRemovalServiceTest extends TestCase {
 				$dashboard->messages[0]['message']
 			);
 		}
+	}
+
+	public function testDashboardRemovalFailureUsesContextualPackageTypeTranslation(): void {
+		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
+		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
+		$method     = new \ReflectionMethod( PackageAdminController::class, 'removalFailure' );
+		$operation  = PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() );
+		$GLOBALS['ran_booster_repository_admin_translations'] = array(
+			'ran-booster' => array(
+				"package type\4Plugin" => 'Extension',
+				'%s was disabled in Booster, but WordPress could not delete it.' => '%s a été désactivée dans Booster, mais WordPress n’a pas pu la supprimer.',
+			),
+		);
+
+		$method->invoke(
+			$controller,
+			$operation,
+			'deletion_failed',
+			static function ( WP_Error $message ) use ( $dashboard ): void {
+				$dashboard->messages[] = array( 'message' => $message->get_error_message() );
+			}
+		);
+
+		self::assertSame( 'Extension a été désactivée dans Booster, mais WordPress n’a pas pu la supprimer.', $dashboard->messages[0]['message'] );
 	}
 
 	/** @param array<string, string> $overrides */

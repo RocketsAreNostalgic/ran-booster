@@ -42,7 +42,8 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$this->statuses  = array();
 		$this->redirects = array();
 
-		$GLOBALS['ran_booster_interaction_test_actions'] = array();
+		$GLOBALS['ran_booster_interaction_test_actions']      = array();
+		$GLOBALS['ran_booster_interaction_test_translations'] = array();
 		$_GET  = array();
 		$_POST = array();
 		unset( $_SERVER['HTTP_HX_REQUEST'], $_SERVER['HTTP_HX_TARGET'] );
@@ -83,6 +84,17 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$failure = AdminInteractionOutcome::unexpectedFailure( $request );
 		self::assertSame( 500, $failure->status() );
 		self::assertSame( 'We could not complete that request. Please try again.', $failure->message() );
+	}
+
+	public function testUnexpectedFailureUsesThePluginTranslationDomain(): void {
+		$source = 'We could not complete that request. Please try again.';
+		$GLOBALS['ran_booster_interaction_test_translations'] = array(
+			'ran-booster' => array( $source => 'Nous n’avons pas pu effectuer cette demande. Veuillez réessayer.' ),
+		);
+
+		$failure = AdminInteractionOutcome::unexpectedFailure( $this->request() );
+
+		self::assertSame( 'Nous n’avons pas pu effectuer cette demande. Veuillez réessayer.', $failure->message() );
 	}
 
 	public function testCoreRendersOnlyTheAllowlistedProviderPanelContract(): void {

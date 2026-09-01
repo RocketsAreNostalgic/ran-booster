@@ -36,7 +36,7 @@ final class RepositoryPickerController {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return wp_send_json_error(
 				array(
-					'message' => 'You are not allowed to browse repository providers.',
+					'message' => __( 'You are not allowed to browse repository providers.', 'ran-booster' ),
 				),
 				403
 			);
@@ -45,7 +45,7 @@ final class RepositoryPickerController {
 		if ( ! check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
 			return wp_send_json_error(
 				array(
-					'message' => 'The repository picker session expired. Reload this page and try again.',
+					'message' => __( 'The repository picker session expired. Reload this page and try again.', 'ran-booster' ),
 				),
 				403
 			);
@@ -113,21 +113,21 @@ final class RepositoryPickerController {
 		} catch ( SecretsStorageUnavailable ) {
 			return wp_send_json_error(
 				array(
-					'message' => 'Encrypted credential storage is unavailable. Restore the matching sidecar and site key, then try again.',
+					'message' => __( 'Encrypted credential storage is unavailable. Restore the matching sidecar and site key, then try again.', 'ran-booster' ),
 				),
 				409
 			);
 		} catch ( InvalidProviderCode | UnknownProvider ) {
 			return wp_send_json_error(
 				array(
-					'message' => 'The selected repository provider is not available.',
+					'message' => __( 'The selected repository provider is not available.', 'ran-booster' ),
 				),
 				400
 			);
 		} catch ( UnsupportedProviderCapability ) {
 			$message = 'public' === $mode && $publicLookupRequested
-				? 'The selected repository provider does not support authenticated public repository browsing.'
-				: 'The selected repository provider does not support repository browsing.';
+				? __( 'The selected repository provider does not support authenticated public repository browsing.', 'ran-booster' )
+				: __( 'The selected repository provider does not support repository browsing.', 'ran-booster' );
 
 			return wp_send_json_error(
 				array(
@@ -162,7 +162,7 @@ final class RepositoryPickerController {
 		} catch ( Throwable ) {
 			return wp_send_json_error(
 				array(
-					'message' => 'Repository browsing failed. Please try again.',
+					'message' => __( 'Repository browsing failed. Please try again.', 'ran-booster' ),
 				),
 				500
 			);
@@ -171,15 +171,15 @@ final class RepositoryPickerController {
 
 	private function errorMessageForStatus( int $status ): string {
 		return match ( $status ) {
-			400 => 'The repository request is invalid. Check the selected provider and repository details.',
-			401 => 'The repository provider rejected the saved credentials.',
-			403 => 'The repository provider denied this request. Check repository access and credential permissions.',
-			404 => 'The requested repository owner could not be found.',
-			413 => 'The repository provider returned too much data. Enter the repository manually or narrow the account.',
-			422 => 'The repository provider returned an invalid response. Try again or enter the repository manually.',
-			429 => 'The repository provider rate limit has been reached. Try again later.',
-			503, 504 => 'Repository browsing took too long. Try again or enter the repository manually.',
-			default => 'Repository browsing failed. Please try again.',
+			400 => __( 'The repository request is invalid. Check the selected provider and repository details.', 'ran-booster' ),
+			401 => __( 'The repository provider rejected the saved credentials.', 'ran-booster' ),
+			403 => __( 'The repository provider denied this request. Check repository access and credential permissions.', 'ran-booster' ),
+			404 => __( 'The requested repository owner could not be found.', 'ran-booster' ),
+			413 => __( 'The repository provider returned too much data. Enter the repository manually or narrow the account.', 'ran-booster' ),
+			422 => __( 'The repository provider returned an invalid response. Try again or enter the repository manually.', 'ran-booster' ),
+			429 => __( 'The repository provider rate limit has been reached. Try again later.', 'ran-booster' ),
+			503, 504 => __( 'Repository browsing took too long. Try again or enter the repository manually.', 'ran-booster' ),
+			default => __( 'Repository browsing failed. Please try again.', 'ran-booster' ),
 		};
 	}
 
@@ -243,10 +243,10 @@ final class RepositoryPickerController {
 
 	private function partialMessage( RepositoryBrowseResult $result ): ?string {
 		return match ( $result->partialReason ) {
-			RepositoryBrowseResult::AUTHORIZATION => 'Some repositories are shown, but the selected credential stopped authorizing the request.',
-			RepositoryBrowseResult::RATE_LIMIT => 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.',
-			RepositoryBrowseResult::LIMIT => 'The first available repositories are shown. Enter a repository manually if it is not listed.',
-			RepositoryBrowseResult::PROVIDER => 'Some repositories are shown, but the provider could not complete the list.',
+			RepositoryBrowseResult::AUTHORIZATION => __( 'Some repositories are shown, but the selected credential stopped authorizing the request.', 'ran-booster' ),
+			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),
+			RepositoryBrowseResult::LIMIT => __( 'The first available repositories are shown. Enter a repository manually if it is not listed.', 'ran-booster' ),
+			RepositoryBrowseResult::PROVIDER => __( 'Some repositories are shown, but the provider could not complete the list.', 'ran-booster' ),
 			default => null,
 		};
 	}

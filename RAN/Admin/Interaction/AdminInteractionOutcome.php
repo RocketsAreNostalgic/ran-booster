@@ -20,8 +20,6 @@ final readonly class AdminInteractionOutcome {
 
 	public const UNEXPECTED_FAILURE = 'unexpected_failure';
 
-	private const GENERIC_FAILURE_MESSAGE = 'We could not complete that request. Please try again.';
-
 	private function __construct(
 		private AdminInteractionRequest $request,
 		private string $kind,
@@ -50,7 +48,7 @@ final readonly class AdminInteractionOutcome {
 	}
 
 	public static function unexpectedFailure( AdminInteractionRequest $request ): self {
-		return new self( $request, self::UNEXPECTED_FAILURE, self::GENERIC_FAILURE_MESSAGE );
+		return new self( $request, self::UNEXPECTED_FAILURE, __( 'We could not complete that request. Please try again.', 'ran-booster' ) );
 	}
 
 	public function request(): AdminInteractionRequest {

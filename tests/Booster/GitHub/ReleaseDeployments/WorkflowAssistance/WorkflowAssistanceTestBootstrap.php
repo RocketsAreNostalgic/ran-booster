@@ -7,7 +7,9 @@ namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 // phpcs:disable Universal.Files.SeparateFunctionsFromOO -- This small bootstrap deliberately combines the WordPress function shims and their option-table double.
 
 final class SetupClaimDatabase {
-	public string $options = 'wp_options';
+	public string $options    = 'wp_options';
+	public string $last_error = '';
+	private bool $lockHeld    = false;
 
 	public function prepare( string $query, mixed ...$arguments ): string {
 		foreach ( $arguments as $argument ) {
@@ -21,22 +23,38 @@ final class SetupClaimDatabase {
 		return $query;
 	}
 
-	public function query( string $query ): int|false {
-		if ( 1 !== preg_match( "/\\ADELETE FROM `[^`]+` WHERE option_name = '([^']+)' AND option_value = '([^']+)'\\z/", $query, $matches ) ) {
-			return false;
+	public function get_var( string $query ): string|null {
+		if ( str_starts_with( $query, 'SELECT GET_LOCK(' ) ) {
+			if ( $this->lockHeld ) {
+				return '0';
+			}
+			$this->lockHeld = true;
+			$callback       = $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] ?? null;
+			if ( is_callable( $callback ) ) {
+				$callback();
+			}
+			return '1';
 		}
-		$option = stripslashes( $matches[1] );
-		$claim  = stripslashes( $matches[2] );
-		if ( ! array_key_exists( $option, $GLOBALS['ran_booster_release_deployments_test_options'] )
-			|| $claim !== $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] ) {
-			return 0;
+		if ( str_starts_with( $query, 'SELECT RELEASE_LOCK(' ) ) {
+			if ( false === ( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] ?? true ) ) {
+				$this->last_error = 'release failed';
+				return null;
+			}
+			if ( ! $this->lockHeld ) {
+				return '0';
+			}
+			$this->lockHeld = false;
+			return '1';
 		}
-		unset( $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
-		$callback = $GLOBALS['ran_booster_release_deployments_test_claim_delete_callback'] ?? null;
-		if ( is_callable( $callback ) ) {
-			$callback( $option, $claim );
-		}
-		return 1;
+		return null;
+	}
+
+	public function disconnect(): void {
+		$this->lockHeld = false;
+	}
+
+	public function isLockHeld(): bool {
+		return $this->lockHeld;
 	}
 }
 

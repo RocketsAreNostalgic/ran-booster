@@ -140,10 +140,10 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_release_deployments_test_options']    = array();
 		$GLOBALS['ran_booster_release_deployments_test_transients'] = array();
-		unset( $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] );
-		unset( $GLOBALS['ran_booster_release_deployments_test_claim_delete_callback'] );
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused option-table double exercises compare-and-delete claim ownership.
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused database double exercises connection-local advisory-lock ownership.
 		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
 	}
 
@@ -724,10 +724,7 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
 		$competing   = null;
 
-		$GLOBALS['ran_booster_release_deployments_test_option_add_callback'] = static function ( string $option ) use ( &$competing, $coordinator, $status, $inspect, $transport ): void {
-			if ( 'ran_booster_release_deployments_setup_claim_101' !== $option ) {
-				return;
-			}
+		$GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] = static function () use ( &$competing, $coordinator, $status, $inspect, $transport ): void {
 			$competing = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
 			self::assertSame(
 				array(

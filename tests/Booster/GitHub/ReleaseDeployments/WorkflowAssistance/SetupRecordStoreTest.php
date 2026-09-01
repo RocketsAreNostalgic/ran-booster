@@ -15,9 +15,9 @@ final class SetupRecordStoreTest extends TestCase {
 		$GLOBALS['ran_booster_release_deployments_test_option_updates'] = array();
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_override'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] );
-		unset( $GLOBALS['ran_booster_release_deployments_test_option_add_callback'] );
-		unset( $GLOBALS['ran_booster_release_deployments_test_claim_delete_callback'] );
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused option-table double exercises compare-and-delete claim ownership.
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused database double exercises connection-local advisory-lock ownership.
 		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
 	}
 	public function testSchemaTwoIsExactBoundedAndNonAutoloaded(): void {
@@ -85,33 +85,53 @@ final class SetupRecordStoreTest extends TestCase {
 		self::assertTrue( $store->releaseClaim( '123456789', $claim ) );
 		self::assertNotNull( $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 4 ) );
 	}
-	public function testExpiredClaimIsRecoveredAndAnOldOwnerCannotReleaseItsSuccessor(): void {
-		$store  = new SetupRecordStore();
-		$option = 'ran_booster_release_deployments_setup_claim_123456789';
-		$old    = 'v1:1:' . str_repeat( 'a', 32 ) . ':' . str_repeat( 'b', 64 ) . ':123456789';
-		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ] = $old;
+	public function testOneGlobalClaimSerializesDistinctRepositoryRecords(): void {
+		$first  = new SetupRecordStore();
+		$second = new SetupRecordStore();
+		$claim  = $first->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNotNull( $claim );
+		self::assertNull( $second->claim( '987654321', 'theme', 'example-theme', 2 ) );
+		self::assertTrue( $first->save( $this->record() ) );
+		self::assertTrue( $first->releaseClaim( '123456789', $claim ) );
 
-		$new = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
-		self::assertNotNull( $new );
-		self::assertNotSame( $old, $new );
-		self::assertFalse( $store->releaseClaim( '123456789', $old ) );
-		self::assertSame( $new, $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
-		self::assertTrue( $store->releaseClaim( '123456789', $new ) );
+		$otherClaim = $second->claim( '987654321', 'theme', 'example-theme', 2 );
+		self::assertNotNull( $otherClaim );
+		self::assertTrue(
+			$second->save(
+				array_replace(
+					$this->record(),
+					array(
+						'repo_id'            => '987654321',
+						'repository'         => 'owner/example-theme',
+						'package_type'       => 'theme',
+						'package_identifier' => 'example-theme',
+						'source_revision'    => 2,
+					)
+				)
+			)
+		);
+		self::assertTrue( $second->releaseClaim( '987654321', $otherClaim ) );
+		self::assertNotNull( $second->find( '123456789' ) );
+		self::assertNotNull( $second->find( '987654321' ) );
+		self::assertCount( 2, $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_setup_records'] );
 	}
-	public function testOnlyOneContenderCanReplaceAnExpiredClaim(): void {
-		$store     = new SetupRecordStore();
-		$option    = 'ran_booster_release_deployments_setup_claim_123456789';
-		$old       = 'v1:1:' . str_repeat( 'a', 32 ) . ':' . str_repeat( 'b', 64 ) . ':123456789';
-		$competing = null;
-		$GLOBALS['ran_booster_release_deployments_test_options'][ $option ]    = $old;
-		$GLOBALS['ran_booster_release_deployments_test_claim_delete_callback'] = static function () use ( &$competing, $store ): void {
-			$competing = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
-		};
+	public function testConnectionCloseRecoversAnAbandonedClaimWithoutPersistentState(): void {
+		$first = new SetupRecordStore();
+		self::assertNotNull( $first->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+		self::assertTrue( $GLOBALS['wpdb']->isLockHeld() );
+		$GLOBALS['wpdb']->disconnect();
 
-		$first = $store->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
-		self::assertNull( $first );
-		self::assertNotNull( $competing );
-		self::assertSame( $competing, $GLOBALS['ran_booster_release_deployments_test_options'][ $option ] );
+		$second = new SetupRecordStore();
+		$claim  = $second->claim( '987654321', 'theme', 'example-theme', 2 );
+		self::assertNotNull( $claim );
+		self::assertTrue( $second->releaseClaim( '987654321', $claim ) );
+		self::assertSame(
+			array(),
+			array_filter(
+				array_keys( $GLOBALS['ran_booster_release_deployments_test_options'] ),
+				static fn ( string $key ): bool => str_contains( $key, 'setup_claim' )
+			)
+		);
 	}
 	public function testExistingRecordClaimRequiresItsExactPackageAndRevision(): void {
 		$store = new SetupRecordStore();

@@ -12,6 +12,58 @@ use RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay;
 use ReflectionMethod;
 
 final class ReleaseWorkflowDisplayTest extends TestCase {
+	public function testRepositorySectionEscapesPresenterFields(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->repositorySection(
+			array(
+				'settings_url'      => 'https://example.test/settings?a=1&b=2',
+				'settings_label'    => '<script>settings</script>',
+				'conflicted'        => true,
+				'conflict_packages' => array(
+					array(
+						'settings_url' => 'https://example.test/package?a=1&b=2',
+						'display_name' => '<script>package</script>',
+					),
+				),
+				'lifecycle'         => array(),
+				'readiness'         => array(),
+				'show_automation'   => false,
+			)
+		);
+
+		self::assertStringContainsString( '&lt;script&gt;settings&lt;/script&gt;', $html );
+		self::assertStringContainsString( '&lt;script&gt;package&lt;/script&gt;', $html );
+		self::assertStringContainsString( 'settings?a=1&amp;b=2', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+	}
+
+	public function testWorkflowOwnersKeepTheSeparatedSourceBoundaries(): void {
+		$root = dirname( __DIR__, 3 ) . '/RAN/Admin/ReleaseManagement/';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local source boundary under test.
+		$controls = file_get_contents( $root . 'ReleaseWorkflowControls.php' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local source boundary under test.
+		$presenter = file_get_contents( $root . 'ReleaseWorkflowPresenter.php' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local source boundary under test.
+		$display = file_get_contents( $root . 'ReleaseWorkflowDisplay.php' );
+
+		self::assertIsString( $controls );
+		self::assertIsString( $presenter );
+		self::assertIsString( $display );
+		self::assertDoesNotMatchRegularExpression( '/\$_(?:GET|POST|SERVER)|\becho\b|<section|<form/', $presenter );
+		self::assertDoesNotMatchRegularExpression( '/\$_(?:GET|POST|SERVER)|ProviderRegistry|PluginRepository|ThemeRepository|ReleaseTrackingFacade/', $display );
+		self::assertSame(
+			array( '__construct', 'register', 'keepReleaseSettingsDiscoverable', 'enrichRepositoryRows', 'renderPackageReleaseAutomationLink', 'renderRepositoryReleaseSections', 'handleWorkflow' ),
+			array_values(
+				array_map(
+					static fn ( \ReflectionMethod $method ): string => $method->getName(),
+					array_filter(
+						( new \ReflectionClass( \RAN\Admin\ReleaseManagement\ReleaseWorkflowControls::class ) )->getMethods( \ReflectionMethod::IS_PUBLIC ),
+						static fn ( \ReflectionMethod $method ): bool => \RAN\Admin\ReleaseManagement\ReleaseWorkflowControls::class === $method->getDeclaringClass()->getName()
+					)
+				)
+			)
+		);
+	}
+
 	public function testSourceReadyRefusalsExplainWhatMustBeReviewedBeforeSetup(): void {
 		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(

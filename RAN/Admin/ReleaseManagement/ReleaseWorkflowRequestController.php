@@ -521,6 +521,14 @@ final class ReleaseWorkflowRequestController {
 		);
 	}
 
+	/** Return the normalized opaque preview key for GET-side projection. */
+	public function requestedPreviewKey(): string {
+		$value = $_GET['ran_booster_release_workflow_preview'] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Opaque read-only preview lookup.
+		$value = is_string( $value ) ? sanitize_key( wp_unslash( $value ) ) : '';
+
+		return 1 === preg_match( '/\\A[a-f0-9]{32}\\z/D', $value ) ? $value : '';
+	}
+
 	private function resultNonceAction( string $code, bool $successful, string $type, string $identifier, int $sourceRevision, string $channel, string $stage = '', string $diagnostic = '', bool $diagnosticAvailable = false, string $reference = '', string $providerCode = '', string $repositoryId = '', string $message = '', string $remediation = '' ): string {
 		$payload = wp_json_encode( array( $code, $successful, $type, $identifier, $sourceRevision, $channel, $stage, $diagnostic, $diagnosticAvailable, $reference, $providerCode, $repositoryId, $message, $remediation ) );
 

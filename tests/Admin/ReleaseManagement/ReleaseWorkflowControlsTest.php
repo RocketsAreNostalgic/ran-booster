@@ -16,6 +16,7 @@ require_once __DIR__ . '/../../Storage/StorageTestEnvironment.php';
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
+use RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowRequestController;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryProvider;
@@ -64,6 +65,23 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( array( $controls, 'handleWorkflow' ), $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['callback'] );
 		self::assertSame( 10, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['priority'] );
 		self::assertSame( 1, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['accepted_args'] );
+	}
+
+	public function testPresenterOmitsRepositorySectionsWithoutACurrentProviderRow(): void {
+		$presenter = $this->presenter();
+
+		self::assertNull( $presenter->repositorySectionProjection( array(), 'https://example.test/return', '', null ) );
+		self::assertNull(
+			$presenter->repositorySectionProjection(
+				array(
+					'provider_code' => 'fixture',
+					'historical'    => true,
+				),
+				'https://example.test/return',
+				'',
+				null
+			)
+		);
 	}
 
 	public function testCapableEditKeepsReleaseAssetSelectableWhileOtherContextsRemainUnchanged(): void {
@@ -338,15 +356,15 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	}
 
 	public function testUnavailableRepositorySourceKeepsItsDiagnosticCode(): void {
-		$controls = $this->controls( sourceGuard: $this->unavailableSourceGuard() );
-		$url      = $this->controller( sourceGuard: $this->unavailableSourceGuard() )->processWorkflowRequest( $this->request( 'inspect' ) );
+		$presenter = $this->presenter( sourceGuard: $this->unavailableSourceGuard() );
+		$url       = $this->controller( sourceGuard: $this->unavailableSourceGuard() )->processWorkflowRequest( $this->request( 'inspect' ) );
 
 		self::assertStringContainsString( 'workflow_invalid_request', $url );
 		self::assertStringContainsString( 'repository_source_unavailable', $url );
 		self::assertStringNotContainsString( 'repository_release_owner_exists', $url );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowControls::class, 'workflowViewFor' );
-		$view            = $workflowViewFor->invoke( $controls, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
+		$view            = $workflowViewFor->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 		self::assertTrue( $view['unavailable'] );
 		self::assertSame( 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.', $view['unavailable_reason'] );
@@ -631,9 +649,9 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'Provider-specific workflow message.', $result['message'] );
 		self::assertSame( 'Provider-specific remediation.', $result['remediation'] );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowControls::class, 'workflowViewFor' );
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
 		$view            = $workflowViewFor->invoke(
-			$this->controls( provider: $provider ),
+			$this->presenter( provider: $provider ),
 			'plugin',
 			'example/example.php',
 			3,
@@ -654,7 +672,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	}
 
 	public function testEmptyProviderWriteGuidanceUsesTheCoreFallback(): void {
-		$status   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+		$status    = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 			'fixture',
 			'101',
 			false,
@@ -666,10 +684,10 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 				),
 			)
 		);
-		$controls = $this->controls( provider: new RepositoryReleaseWorkflowProviderDouble( status: $status ) );
+		$presenter = $this->presenter( provider: new RepositoryReleaseWorkflowProviderDouble( status: $status ) );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowControls::class, 'workflowViewFor' );
-		$view            = $workflowViewFor->invoke( $controls, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
+		$view            = $workflowViewFor->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 		self::assertSame(
 			'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.',
@@ -685,6 +703,18 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowControls {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
 		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+	}
+
+	private function presenter( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowPresenter {
+		$provider    ??= new RepositoryReleaseWorkflowProviderDouble();
+		$tracking    ??= new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$sourceGuard ??= $this->sourceGuard();
+		$plugins       = new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value );
+		$themes        = new ThemeRepositoryDouble();
+		$providers     = new ProviderRegistry( $registered ? array( $provider ) : array() );
+		$requests      = new ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $providers, $sourceGuard );
+
+		return new ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $providers, $requests, $sourceGuard );
 	}
 
 	/** @return array<string,string> */

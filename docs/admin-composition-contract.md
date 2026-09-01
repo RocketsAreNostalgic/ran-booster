@@ -317,8 +317,8 @@ canonical selected-repository or repository-list destination.
 
 New rows are review-only history. Their key must be namespaced, `historical`
 must be `true`, and `provider_code` must match the selected provider. They
-cannot claim `core:webhook-management`; Core removes their detail URL and
-routes review to Activity. A row may contain at most 20 details. Detail keys
+cannot claim `core:webhook-management`; Core removes their detail and review
+URLs, then renders bounded evidence and actions inline. A row may contain at most 20 details. Detail keys
 and labels are limited to 96 characters, values to 255, and optional date and
 state values to 64; tones use the fixed Core set and `recorded` is Boolean.
 Actions follow the structured action contract below. Other historical fields

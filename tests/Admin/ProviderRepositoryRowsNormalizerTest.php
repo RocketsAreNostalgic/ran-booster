@@ -308,6 +308,15 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'type'  => 'link',
 					'url'   => 'https://example.test/history/old-42',
 				),
+				'fixture:retry'   => array(
+					'label'  => 'Retry recorded hook',
+					'type'   => 'post',
+					'url'    => admin_url( 'admin-post.php' ),
+					'hidden' => array(
+						'action'   => 'fixture_retry_recorded_hook',
+						'_wpnonce' => 'historical-nonce',
+					),
+				),
 			),
 		);
 
@@ -316,7 +325,10 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertFalse( $rows['repo-42']['actions']['core:webhook-management']['disabled'] );
 		self::assertCount( 2, $rows['repo-42']['details'] );
 		self::assertTrue( $rows['fixture:historical:abc123']['historical'] );
+		self::assertArrayNotHasKey( 'review_url', $rows['fixture:historical:abc123'] );
 		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
+		self::assertSame( 'post', $rows['fixture:historical:abc123']['actions']['fixture:retry']['type'] );
+		self::assertSame( 'historical-nonce', $rows['fixture:historical:abc123']['actions']['fixture:retry']['hidden']['_wpnonce'] );
 	}
 
 	public function testRequiresEveryCoreRow(): void {

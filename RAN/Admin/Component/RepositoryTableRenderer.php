@@ -106,9 +106,7 @@ final class RepositoryTableRenderer {
 					<div>
 						<strong><?php esc_html_e( 'Recorded actions', 'ran-booster' ); ?></strong>
 						<div class="ran-booster-repository-record__action-group">
-							<?php foreach ( $actions as $action ) { ?>
-								<?php $this->renderAction( $action ); ?>
-							<?php } ?>
+							<?php ( new AdminActionRenderer() )->render( $actions ); ?>
 						</div>
 					</div>
 				<?php } ?>

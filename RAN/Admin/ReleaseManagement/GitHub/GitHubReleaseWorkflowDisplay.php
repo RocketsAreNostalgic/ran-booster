@@ -16,12 +16,18 @@ final class GitHubReleaseWorkflowDisplay {
 		$html .= '<div class="ran-booster-release-workflow__body">';
 		$html .= '<p>' . esc_html__( 'Booster can assess this repository and prepare one atomic draft pull request. Nothing is merged automatically.', 'ran-booster' ) . '</p>';
 		$html .= $model['inspect_form'] . $model['detail'];
-		$html .= '<hr><p><a href="' . esc_url( admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-documentation-published-releases' ) ) . '">'
+		$html .= '<hr><p><a href="' . esc_url( $this->documentationUrl() ) . '">'
 			. esc_html__( 'Booster Published releases docs', 'ran-booster' ) . '</a> · <a href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases" target="_blank" rel="noopener noreferrer">'
 			. esc_html__( 'GitHub About releases', 'ran-booster' ) . '</a> · <a href="https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases" target="_blank" rel="noopener noreferrer">'
 			. esc_html__( 'GitHub immutable releases', 'ran-booster' ) . '</a></p>';
 
 		return $html . '</div></div>';
+	}
+
+	private function documentationUrl(): string {
+		$path = 'admin.php?page=ran-booster&tab=documentation#ran-booster-documentation-published-releases';
+
+		return is_multisite() ? network_admin_url( $path ) : admin_url( $path );
 	}
 
 	/** @return array{notice:string,inspect_form:string,detail:string} */

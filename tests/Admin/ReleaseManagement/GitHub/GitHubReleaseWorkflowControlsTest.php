@@ -732,6 +732,28 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		}
 	}
 
+	public function testWorkflowCredentialNavigationUsesNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
+		$controls = $this->controls();
+
+		$workflowForm = new ReflectionMethod( $controls, 'workflowForm' );
+		$form         = $workflowForm->invoke( $controls, 'inspect', ReleaseManagementFixture::status(), '', '', 'stable' );
+
+		self::assertIsArray( $form );
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=credentials',
+			$form['credentials_url']
+		);
+
+		$unavailableWorkflowView = new ReflectionMethod( $controls, 'unavailableWorkflowView' );
+		$unavailable             = $unavailableWorkflowView->invoke( $controls, 'Release workflow management is unavailable.' );
+
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&view=credentials',
+			$unavailable['forms']['inspect']['credentials_url']
+		);
+	}
+
 	public function testVerifiedResultFromAnotherPackageIsNotRenderedOnCurrentScreen(): void {
 		$status   = $this->workflowStatus( 'other/other.php' );
 		$facade   = new ReleaseTrackingFacadeDouble( $status );

@@ -1358,7 +1358,7 @@ final class GitHubReleaseWorkflowControls {
 					'fields'               => array(),
 					'credentials'          => $this->credentialChoices(),
 					'anonymous_inspection' => $anonymousInspection,
-					'credentials_url'      => admin_url( 'admin.php?page=ran-booster&tab=gh&view=credentials' ),
+					'credentials_url'      => $this->credentialsUrl(),
 					'disabled'             => true,
 				),
 			),
@@ -1434,7 +1434,7 @@ final class GitHubReleaseWorkflowControls {
 			'confirm'              => $confirmation,
 			'credentials'          => $credentials,
 			'anonymous_inspection' => $anonymousInspection,
-			'credentials_url'      => admin_url( 'admin.php?page=ran-booster&tab=gh&view=credentials' ),
+			'credentials_url'      => $this->credentialsUrl(),
 		);
 	}
 
@@ -1501,6 +1501,17 @@ final class GitHubReleaseWorkflowControls {
 				'panel'           => 'repositories',
 				'repository'      => $repositoryId,
 				'repository_view' => 'releases',
+			),
+			is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
+		);
+	}
+
+	private function credentialsUrl(): string {
+		return add_query_arg(
+			array(
+				'page' => 'ran-booster',
+				'tab'  => 'gh',
+				'view' => 'credentials',
 			),
 			is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
 		);

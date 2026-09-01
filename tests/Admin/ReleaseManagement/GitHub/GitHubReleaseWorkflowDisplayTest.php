@@ -204,6 +204,20 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
+	public function testPublishedReleaseDocumentationUsesNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
+		try {
+			$html = ( new GitHubReleaseWorkflowDisplay() )->workflow( array() );
+		} finally {
+			unset( $GLOBALS['ran_booster_release_management_test_multisite'] );
+		}
+
+		self::assertStringContainsString(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&amp;tab=documentation#ran-booster-documentation-published-releases',
+			$html
+		);
+	}
+
 	public function testPreviewAndFormValuesAreEscapedWithoutLeakingRawMarkup(): void {
 		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
 			array(

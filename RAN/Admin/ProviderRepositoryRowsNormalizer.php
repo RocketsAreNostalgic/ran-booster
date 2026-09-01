@@ -405,7 +405,6 @@ final class ProviderRepositoryRowsNormalizer {
 				'repository'                    => $locator,
 				'repository_url'                => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
 				'detail_url'                    => $detailUrl,
-				'review_url'                    => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 				'package_type_label'            => $typeLabel,
 				'source_key'                    => $source,
 				'source_label'                  => match ( $source ) {
@@ -640,7 +639,6 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository'         => $this->boundedString( $row['repository'] ?? null, 255, false ),
 			'repository_url'     => $this->safeUrl( $row['repository_url'] ?? '' ),
 			'detail_url'         => '',
-			'review_url'         => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 			'historical'         => true,
 			'types'              => $this->badges( $row['types'] ?? array() ),
 			'package_message'    => $this->boundedString( $row['package_message'] ?? '', 255, true ),

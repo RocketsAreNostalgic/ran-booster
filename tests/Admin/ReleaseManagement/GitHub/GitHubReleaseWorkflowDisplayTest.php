@@ -456,6 +456,39 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
+	public function testCredentiallessWriteFormsRemainInTheStableShellButAreDisabled(): void {
+		$display = new GitHubReleaseWorkflowDisplay();
+
+		foreach ( array(
+			'setup'        => 'Open draft pull request',
+			'update_setup' => 'Open template update draft pull request',
+		) as $operation => $label ) {
+			$form                = $this->form( $operation, 'owner/example' );
+			$form['credentials'] = array();
+			$form['disabled']    = true;
+			$html                = $display->workflow(
+				array(
+					'preview' => array(
+						'kind'                  => 'update_setup' === $operation ? 'template_update' : 'bootstrap',
+						'repository'            => 'owner/example',
+						'default_branch'        => 'main',
+						'base_sha'              => str_repeat( 'a', 40 ),
+						'pack_version'          => '1.2.3',
+						'new_template_identity' => array( 'asset_sha256' => str_repeat( 'b', 64 ) ),
+						'changes'               => array(),
+					),
+					'forms'   => array( $operation => $form ),
+				)
+			);
+
+			self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $html, $operation );
+			self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html, $operation );
+			self::assertStringContainsString( '>Manage credentials</a>', $html, $operation );
+			self::assertStringContainsString( '>' . $label . '</button>', $html, $operation );
+			self::assertStringContainsString( '<button type="submit" class="button button-primary" disabled aria-disabled="true">', $html, $operation );
+		}
+	}
+
 	public function testAdapterSourcesContainNoRetiredRoutesProductTextOrTextDomain(): void {
 		$root = dirname( __DIR__, 4 ) . '/RAN/Admin/ReleaseManagement/GitHub/';
 		foreach ( array( 'GitHubReleaseWorkflowControls.php', 'GitHubReleaseWorkflowDisplay.php' ) as $file ) {

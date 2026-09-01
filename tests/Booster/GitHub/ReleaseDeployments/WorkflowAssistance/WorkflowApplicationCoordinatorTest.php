@@ -143,8 +143,13 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		unset( $GLOBALS['ran_booster_release_deployments_test_transient_delete_callback'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] );
 		unset( $GLOBALS['ran_booster_release_deployments_test_lock_release_result'] );
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused database double exercises connection-local advisory-lock ownership.
 		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
+	}
+	protected function tearDown(): void {
+		$GLOBALS['wpdb']->disconnect();
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
 	}
 
 	public function testCompleteApiTwoBootstrapUsesExactPreviewGitObjectsReadbackAndSchemaTwo(): void {
@@ -609,6 +614,42 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		self::assertNotNull( $records->find( '101' ) );
 	}
 
+	public function testNewDraftSetupReportsPartialWhenItsClaimReleaseFails(): void {
+		$transport   = new D23ApplicationTransport();
+		$facade      = new D23ReleaseFacade();
+		$records     = new SetupRecordStore();
+		$coordinator = $this->coordinator( $facade, $transport, $records );
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+
+		$GLOBALS['ran_booster_release_deployments_test_lock_release_result'] = false;
+		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+
+		self::assertSame( 'workflow_partial', $result['code'] );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( 'local_persistence', $result['failure_stage'] );
+		self::assertNotNull( $records->find( '101' ) );
+		self::assertSame( 1, $transport->writeCounts['pull'] );
+	}
+
+	public function testRecoveredDraftSetupReportsPartialWhenItsClaimReleaseFails(): void {
+		$transport   = new D23ApplicationTransport( true );
+		$facade      = new D23ReleaseFacade();
+		$records     = new SetupRecordStore();
+		$coordinator = $this->coordinator( $facade, $transport, $records );
+		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
+
+		$GLOBALS['ran_booster_release_deployments_test_lock_release_result'] = false;
+		$result = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+
+		self::assertSame( 'workflow_partial', $result['code'] );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( 'local_persistence', $result['failure_stage'] );
+		self::assertNotNull( $records->find( '101' ) );
+		self::assertSame( 1, $transport->writeCounts['pull'] );
+	}
+
 	public function testClosedWrongBaseAndDuplicateDeterministicPullsStopBeforeObjectWrites(): void {
 		foreach ( array( 'closed', 'wrong_base', 'duplicate' ) as $scenario ) {
 			$GLOBALS['ran_booster_release_deployments_test_options']    = array();
@@ -723,9 +764,15 @@ final class WorkflowApplicationCoordinatorTest extends TestCase {
 		$status      = $facade->status( 'plugin', 'example-plugin/example-plugin.php' );
 		$inspect     = $coordinator->inspect( $status, 'stable', 'nonce', 'token' );
 		$competing   = null;
+		$connection  = $GLOBALS['wpdb'];
 
-		$GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] = static function () use ( &$competing, $coordinator, $status, $inspect, $transport ): void {
-			$competing = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+		$GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] = static function () use ( &$competing, $coordinator, $status, $inspect, $transport, $connection ): void {
+			unset( $GLOBALS['ran_booster_release_deployments_test_lock_acquired_callback'] );
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The callback models a competing request with a distinct database connection.
+			$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
+			$competing       = $coordinator->setup( $status, $inspect['preview_key'], 'owner/example-plugin', array( 'stable' => 'fresh' ), 'token' );
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the request connection after the competing setup attempt.
+			$GLOBALS['wpdb'] = $connection;
 			self::assertSame(
 				array(
 					'blob'   => 0,

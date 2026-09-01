@@ -99,11 +99,12 @@ final class SetupRecordStore {
 		if ( ! $this->number( $repositoryId ) || null === $this->claimToken || ! hash_equals( $this->claimToken, $claim ) ) {
 			return false;
 		}
-		if ( ! $this->releaseClaimLock() ) {
-			return false;
-		}
+		$released = $this->releaseClaimLock();
+		// A failed RELEASE_LOCK can mean the connection has already dropped and
+		// released its advisory lock. Never carry a stale in-memory ownership claim
+		// into a later local evidence write.
 		$this->claimToken = null;
-		return true;
+		return $released;
 	}
 
 	private function acquireClaimLock(): bool {
@@ -133,14 +134,26 @@ final class SetupRecordStore {
 	}
 	/** Refresh only the monotonic Core source revision for the same exact package record. @return array<string,int|string>|null */
 	public function refreshSourceRevision( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
-		$record = $this->find( $repositoryId );
-		if ( null === $record || $revision <= $record['source_revision']
-			|| ! hash_equals( $type, $record['package_type'] ) || ! hash_equals( $identifier, $record['package_identifier'] ) ) {
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
 			return null;
 		}
-
-		$record['source_revision'] = $revision;
-		return $this->save( $record ) ? $this->find( $repositoryId ) : null;
+		$readback = null;
+		$released = true;
+		try {
+			$this->refreshRecordCache();
+			$record = $this->find( $repositoryId );
+			if ( null !== $record && $revision > $record['source_revision']
+				&& hash_equals( $type, $record['package_type'] ) && hash_equals( $identifier, $record['package_identifier'] ) ) {
+				$record['source_revision'] = $revision;
+				$readback                  = $this->persistRecord( $record ) ? $this->find( $repositoryId ) : null;
+			}
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $released ? $readback : null;
 	}
 	/** Schema 1 is display-only evidence and never mutation authority. @return array<string,int|string>|null */
 	public function legacyEvidence( string $repositoryId, string $type, string $identifier, int $revision ): ?array {
@@ -169,6 +182,25 @@ final class SetupRecordStore {
 		if ( null === $record ) {
 			return false;
 		}
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$saved    = false;
+		$released = true;
+		try {
+			$this->refreshRecordCache();
+			$saved = $this->persistRecord( $record );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $saved && $released;
+	}
+
+	/** @param array<string,int|string> $record */
+	private function persistRecord( array $record ): bool {
 		$all = get_option( self::OPTION, array() );
 		if ( ! is_array( $all ) || count( $all ) > self::MAX_RECORDS
 			|| ( ! array_key_exists( $record['repo_id'], $all ) && count( $all ) >= self::MAX_RECORDS ) ) {
@@ -186,12 +218,46 @@ final class SetupRecordStore {
 		update_option( self::OPTION, $all, false );
 		return $this->find( $record['repo_id'] ) === $record;
 	}
+
+	private function refreshRecordCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::OPTION, 'options' );
+		}
+	}
+	private function refreshFailureCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::FAILURE_OPTION, 'options' );
+		}
+	}
+	private function refreshAssessmentCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::ASSESSMENT_OPTION, 'options' );
+		}
+	}
 	/** @param array<string,mixed> $observation */
 	public function saveAssessmentObservation( array $observation ): bool {
 		$observation = $this->normalizeObservation( $observation );
 		if ( null === $observation ) {
 			return false;
 		}
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$saved    = false;
+		$released = true;
+		try {
+			$this->refreshAssessmentCache();
+			$saved = $this->persistAssessmentObservation( $observation );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $saved && $released;
+	}
+	/** @param array<string,int|string> $observation */
+	private function persistAssessmentObservation( array $observation ): bool {
 		$all = $this->assessmentObservations();
 		if ( null === $all ) {
 			return false;
@@ -238,6 +304,24 @@ final class SetupRecordStore {
 		if ( null === $failure ) {
 			return false;
 		}
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$recorded = false;
+		$released = true;
+		try {
+			$this->refreshFailureCache();
+			$recorded = $this->persistFailure( $failure );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $recorded && $released;
+	}
+	/** @param array<string,int|string> $failure */
+	private function persistFailure( array $failure ): bool {
 		$history = get_option( self::FAILURE_OPTION, array() );
 		if ( ! is_array( $history ) || ! array_is_list( $history ) || count( $history ) > self::MAX_FAILURES ) {
 			return false;

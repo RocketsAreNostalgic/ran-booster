@@ -69,6 +69,9 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		ReleaseManagementFixture::resetWordPress();
 		$GLOBALS['ran_booster_release_deployments_test_options']    = array();
 		$GLOBALS['ran_booster_release_deployments_test_transients'] = array();
+		unset( $GLOBALS['ran_booster_release_deployments_test_lock_owner'] );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The workflow store requires the focused advisory-lock database double.
+		$GLOBALS['wpdb'] = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
 		foreach ( array( 'unslashed', 'events', 'remote' ) as $suffix ) {
 			unset( $GLOBALS[ 'ran_booster_github_release_workflow_test_' . $suffix ] );
 		}
@@ -722,6 +725,20 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( $preview, $query['ran_booster_github_release_workflow_preview'] );
 		self::assertArrayNotHasKey( 'ran_booster_release_workflow_preview', $query );
 		self::assertArrayNotHasKey( 'ran_booster_release_deployments_preview', $query );
+	}
+
+	public function testWriteFormsAreDisabledWhenNoSavedCredentialChoicesExist(): void {
+		$controls = $this->controls();
+		$status   = ReleaseManagementFixture::status();
+		$method   = new ReflectionMethod( $controls, 'workflowForm' );
+
+		foreach ( array( 'setup', 'update_setup' ) as $operation ) {
+			$form = $method->invoke( $controls, $operation, $status, str_repeat( 'a', 32 ), 'example/example', 'stable', array() );
+
+			self::assertIsArray( $form, $operation );
+			self::assertSame( array(), $form['credentials'], $operation );
+			self::assertTrue( $form['disabled'], $operation );
+		}
 	}
 
 	public function testAllWorkflowPostReturnsUseNetworkAdminOnMultisite(): void {

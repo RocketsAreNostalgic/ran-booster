@@ -362,51 +362,56 @@ final class WorkflowApplicationCoordinator {
 			return $this->result( $status, 'invalid_request', false, $previewKey );
 		}
 		try {
-			if ( ! delete_transient( self::PREVIEW_PREFIX . $previewKey ) ) {
-				return $this->result( $status, 'invalid_request', false, $previewKey );
-			}
-			$bundle = $remote['bundle'];
-			$branch = 'bootstrap' === $operation
-				? sprintf( 'ran-booster/release-setup-v2-%s-%s', substr( $remote['base_sha'], 0, 12 ), substr( $bundle->hash(), 0, 8 ) )
-				: sprintf( 'ran-booster/release-setup-v2-%s-%s-to-%s-%s', substr( $remote['base_sha'], 0, 12 ), str_replace( '.', '-', $oldPackVersion ), str_replace( '.', '-', $bundle->packVersion() ), substr( $bundle->hash(), 0, 8 ) );
-			$lookup = $this->findPull( $remote['repository'], $branch, $remote['default_branch'], $token );
-			if ( 'ok' !== $lookup['code'] ) {
-				return $this->result( $status, $lookup['code'], false, $previewKey );
-			}
-			$pull = $lookup['pull'];
-			$head = null === $pull ? $this->createAtomicCommit( $remote, $bundle, $branch, $operation, $token ) : $pull['head_sha'];
-			if ( null === $head || ! $this->verifyBranch( $remote, $branch, $head, $bundle, $token ) ) {
-				return $this->result( $status, 'partial', false, $previewKey, 'repository_mutation' );
-			}
-			$recovered = null !== $pull;
-			if ( null === $pull ) {
-				$title     = 'bootstrap' === $operation ? 'Bootstrap source-ready releases' : 'Update the RAN Booster release template pack';
-				$body      = sprintf( "Draft only. Review every generated file before merging.\n\nTemplate pack: `%s` (`%s`)\nConsumer API: `%d`\nBundle: `%s`\n", $bundle->packVersion(), $bundle->packIdentity()['release_tag'], TemplatePack::CONSUMER_API, $bundle->hash() );
-				$created   = $this->github->createDraftPullRequest( $remote['repository'], $branch, $remote['default_branch'], $title, $body, $token );
-				$recovered = 'ok' !== $created['code'];
-				$lookup    = 'ok' === $created['code'] ? array(
-					'code' => 'ok',
-					'pull' => $created['pull'],
-				) : $this->findPull( $remote['repository'], $branch, $remote['default_branch'], $token );
-				$pull      = 'ok' === $lookup['code'] ? $lookup['pull'] : null;
-			}
-			$files = null !== $pull ? $this->github->pullRequestFileSet( $remote['repository'], $pull['number'], $token ) : array( 'code' => 'invalid_request' );
-			if ( null === $pull || ! $pull['draft'] || 'open' !== $pull['state'] || ! hash_equals( $head, $pull['head_sha'] )
-				|| ! hash_equals( $remote['base_sha'], $pull['base_sha'] ) || 'ok' !== $files['code'] || $files['files'] !== $bundle->expectedPullFiles() ) {
-				return $this->result( $status, 'partial', false, $previewKey, 'repository_mutation' );
-			}
-			$record = $this->record( $status, $remote, $bundle, $operation, $branch, $head, $pull['number'] );
-			if ( ! $this->records->save( $record ) ) {
-				return $this->result( $status, 'partial', false, $previewKey, 'local_persistence' );
-			}
-			return $this->result( $status, $recovered ? 'setup_recovered' : 'setup_open', true );
+			$outcome = $this->openClaimedDraft( $status, $previewKey, $remote, $operation, $oldPackVersion, $token );
 		} finally {
-			$this->releaseClaim( $status, $claim );
+			$released = $this->releaseClaim( $status, $claim );
 		}
+		return $released || ! $outcome['successful'] ? $outcome : $this->result( $status, 'partial', false, '', 'local_persistence' );
 	}
 
-	private function releaseClaim( ReleaseTrackingStatus $status, string $claim ): void {
-		$this->records->releaseClaim( $status->providerRepositoryId(), $claim );
+	private function releaseClaim( ReleaseTrackingStatus $status, string $claim ): bool {
+		return $this->records->releaseClaim( $status->providerRepositoryId(), $claim );
+	}
+
+	private function openClaimedDraft( ReleaseTrackingStatus $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
+		if ( ! delete_transient( self::PREVIEW_PREFIX . $previewKey ) ) {
+			return $this->result( $status, 'invalid_request', false, $previewKey );
+		}
+		$bundle = $remote['bundle'];
+		$branch = 'bootstrap' === $operation
+			? sprintf( 'ran-booster/release-setup-v2-%s-%s', substr( $remote['base_sha'], 0, 12 ), substr( $bundle->hash(), 0, 8 ) )
+			: sprintf( 'ran-booster/release-setup-v2-%s-%s-to-%s-%s', substr( $remote['base_sha'], 0, 12 ), str_replace( '.', '-', $oldPackVersion ), str_replace( '.', '-', $bundle->packVersion() ), substr( $bundle->hash(), 0, 8 ) );
+		$lookup = $this->findPull( $remote['repository'], $branch, $remote['default_branch'], $token );
+		if ( 'ok' !== $lookup['code'] ) {
+			return $this->result( $status, $lookup['code'], false, $previewKey );
+		}
+		$pull = $lookup['pull'];
+		$head = null === $pull ? $this->createAtomicCommit( $remote, $bundle, $branch, $operation, $token ) : $pull['head_sha'];
+		if ( null === $head || ! $this->verifyBranch( $remote, $branch, $head, $bundle, $token ) ) {
+			return $this->result( $status, 'partial', false, $previewKey, 'repository_mutation' );
+		}
+		$recovered = null !== $pull;
+		if ( null === $pull ) {
+			$title     = 'bootstrap' === $operation ? 'Bootstrap source-ready releases' : 'Update the RAN Booster release template pack';
+			$body      = sprintf( "Draft only. Review every generated file before merging.\n\nTemplate pack: `%s` (`%s`)\nConsumer API: `%d`\nBundle: `%s`\n", $bundle->packVersion(), $bundle->packIdentity()['release_tag'], TemplatePack::CONSUMER_API, $bundle->hash() );
+			$created   = $this->github->createDraftPullRequest( $remote['repository'], $branch, $remote['default_branch'], $title, $body, $token );
+			$recovered = 'ok' !== $created['code'];
+			$lookup    = 'ok' === $created['code'] ? array(
+				'code' => 'ok',
+				'pull' => $created['pull'],
+			) : $this->findPull( $remote['repository'], $branch, $remote['default_branch'], $token );
+			$pull      = 'ok' === $lookup['code'] ? $lookup['pull'] : null;
+		}
+		$files = null !== $pull ? $this->github->pullRequestFileSet( $remote['repository'], $pull['number'], $token ) : array( 'code' => 'invalid_request' );
+		if ( null === $pull || ! $pull['draft'] || 'open' !== $pull['state'] || ! hash_equals( $head, $pull['head_sha'] )
+			|| ! hash_equals( $remote['base_sha'], $pull['base_sha'] ) || 'ok' !== $files['code'] || $files['files'] !== $bundle->expectedPullFiles() ) {
+			return $this->result( $status, 'partial', false, $previewKey, 'repository_mutation' );
+		}
+		$record = $this->record( $status, $remote, $bundle, $operation, $branch, $head, $pull['number'] );
+		if ( ! $this->records->save( $record ) ) {
+			return $this->result( $status, 'partial', false, $previewKey, 'local_persistence' );
+		}
+		return $this->result( $status, $recovered ? 'setup_recovered' : 'setup_open', true );
 	}
 
 	private function createAtomicCommit( array $remote, ManagedReleaseBundle $bundle, string $branch, string $operation, string $token ): ?string {

@@ -20,6 +20,9 @@ ob_start();
 		data-ran-booster-branch-fields
 		<?php echo $isPackageEdit && ! $showBranchSettings ? 'hidden' : ''; ?>
 	>
+		<?php if ( $isPackageEdit && $showBranchSettings && isset( $packageSourceChoices['branch']['description'] ) ) { ?>
+			<p class="ran-booster-package-source-pane__description"><?php echo esc_html( (string) $packageSourceChoices['branch']['description'] ); ?></p>
+		<?php } ?>
 		<div class="ran-booster-settings-fields">
 			<?php require __DIR__ . '/fields/branch.php'; ?>
 			<?php require __DIR__ . '/fields/subdirectory.php'; ?>

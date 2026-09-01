@@ -247,17 +247,15 @@ final class BoosterServiceProvider {
 				$container->make( ProviderRegistry::class )
 			)
 		);
-		$container->bind(
-			RepositoryWebhookManagementControls::class,
-			static fn ( CoreContainer $container ): RepositoryWebhookManagementControls => new RepositoryWebhookManagementControls(
-				$container->make( WebhookAssistanceFacade::class ),
-				$container->make( AdminInteractionFacade::class ),
-				new ManagedPackageWebhookAuthorityResolver( $container->make( PluginRepository::class ), $container->make( ThemeRepository::class ) ),
-				$container->make( ProviderRegistry::class ),
-				(string) $runtime->boosterPath,
-				(string) $runtime->boosterUrl
-			)
+		$webhookControls = new RepositoryWebhookManagementControls(
+			$container->make( WebhookAssistanceFacade::class ),
+			$container->make( AdminInteractionFacade::class ),
+			new ManagedPackageWebhookAuthorityResolver( $container->make( PluginRepository::class ), $container->make( ThemeRepository::class ) ),
+			$container->make( ProviderRegistry::class ),
+			(string) $runtime->boosterPath,
+			(string) $runtime->boosterUrl
 		);
+		$container->bind( RepositoryWebhookManagementControls::class, $webhookControls );
 		$expiryReminders = new CredentialExpiryReminder(
 			$container->make( ProviderRegistry::class ),
 			$secrets,

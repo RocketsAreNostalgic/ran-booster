@@ -75,6 +75,8 @@ final readonly class PackageRepositoryRequestResolver {
 		if ( ! is_string( $repositoryInput ) ) {
 			throw new InvalidArgumentException( 'Enter a repository account and name.' );
 		}
+		$subdirectoryInput = $request['subdirectory'] ?? null;
+		$subdirectory      = PackageSubdirectory::normalize( is_string( $subdirectoryInput ) ? wp_unslash( $subdirectoryInput ) : $subdirectoryInput );
 
 		$credentialInput = $request['credential_id'] ?? null;
 		$credentialId    = is_string( $credentialInput ) ? trim( wp_unslash( $credentialInput ) ) : '';
@@ -128,9 +130,6 @@ final readonly class PackageRepositoryRequestResolver {
 
 		$branchInput = $request['branch'] ?? '';
 		$branch      = is_string( $branchInput ) ? trim( sanitize_text_field( wp_unslash( $branchInput ) ) ) : '';
-
-		$subdirectoryInput = $request['subdirectory'] ?? null;
-		$subdirectory      = PackageSubdirectory::normalize( is_string( $subdirectoryInput ) ? wp_unslash( $subdirectoryInput ) : $subdirectoryInput );
 
 		$request['provider']                            = $provider->value;
 		$request['repository']                          = $repository->locator;

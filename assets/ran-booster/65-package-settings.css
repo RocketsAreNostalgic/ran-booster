@@ -179,7 +179,7 @@
 	background: var(--ran-booster-surface-subtle);
 	color: var(--ran-booster-text-subtle);
 	cursor: not-allowed;
-	opacity: 0.58;
+	opacity: 1;
 }
 
 .ran-booster-source-choice.is-disabled:hover {
@@ -198,6 +198,56 @@
 	padding: calc(var(--ran-booster-space-16) - 1px);
 	border: 2px solid var(--ran-booster-link-strong);
 	background: var(--ran-booster-surface-info);
+}
+
+.ran-booster-source-choice--navigation {
+	grid-template-columns: minmax(0, 1fr);
+	flex: 0 1 260px;
+	min-block-size: 42px;
+	padding: var(--ran-booster-space-10) var(--ran-booster-space-14);
+	box-sizing: border-box;
+	margin-block-end: -1px;
+	display: flex;
+	align-items: center;
+	border-color: var(--ran-booster-strong-divider);
+	border-radius: var(--ran-booster-radius-control)
+		var(--ran-booster-radius-control) 0 0;
+	border-block-end-color: var(--ran-booster-border);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-source-choice--navigation > .ran-booster-source-choice__content {
+	margin-inline-end: var(--ran-booster-space-10);
+	min-inline-size: 0;
+	flex: 1 1 auto;
+}
+
+.ran-booster-source-choice--navigation.is-selected {
+	position: relative;
+	z-index: 1;
+	padding: var(--ran-booster-space-10) var(--ran-booster-space-14);
+	border-color: var(--ran-booster-link-strong);
+	border-block-end-color: var(--ran-booster-surface);
+	background: var(--ran-booster-surface);
+	cursor: default;
+}
+
+.ran-booster-admin .ran-booster-source-choices--navigation {
+	display: flex;
+	align-items: stretch;
+	gap: var(--ran-booster-space-4);
+	margin-block-end: -1px;
+	position: relative;
+	z-index: 1;
+}
+
+.ran-booster-admin
+	.ran-booster-package-source--navigation
+	+ .ran-booster-package-source-pane {
+	margin-block-start: 0;
+	padding: var(--ran-booster-space-20);
+	border: 1px solid var(--ran-booster-link-strong);
+	background: var(--ran-booster-surface);
 }
 
 .ran-booster-source-choice__radio {
@@ -227,6 +277,19 @@
 .ran-booster-source-choice small,
 .ran-booster-source-choice__meta {
 	display: block;
+}
+
+.ran-booster-source-choice__current-source {
+	margin-inline-start: auto;
+	flex: 0 0 auto;
+	display: inline-block;
+	padding: 2px var(--ran-booster-space-8);
+	border: 1px solid var(--ran-booster-status-ok-border);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-status-ok-background);
+	color: var(--ran-booster-status-ok);
+	font-size: 11px;
+	font-weight: 700;
 }
 
 .ran-booster-source-choice strong {
@@ -324,7 +387,7 @@
 
 .ran-booster-admin .ran-booster-package-operation-settings__body--split {
 	display: grid;
-	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 	align-items: start;
 	gap: var(--ran-booster-space-18);
 }
@@ -333,6 +396,7 @@
 	position: relative;
 	display: grid;
 	align-content: start;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: var(--ran-booster-space-8);
 	min-inline-size: 0;
 	padding-block-start: var(--ran-booster-space-24);
@@ -362,7 +426,7 @@
 		.ran-booster-package-operation-settings__body--split
 		.notice {
 		box-sizing: border-box;
-		inline-size: calc(150% + var(--ran-booster-space-18));
+		inline-size: calc(200% + var(--ran-booster-space-18));
 	}
 
 	.ran-booster-admin
@@ -371,7 +435,7 @@
 		position: absolute;
 		inset-block-end: 0;
 		inset-inline-end: 0;
-		inline-size: calc(300% + var(--ran-booster-space-18));
+		inline-size: calc(200% + var(--ran-booster-space-18));
 		white-space: nowrap;
 	}
 }
@@ -718,7 +782,21 @@
 
 	.ran-booster-admin .ran-booster-package-operation-settings__actions {
 		padding-block-start: 0;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		text-align: start;
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-operation-settings__actions
+		.button {
+		inline-size: 100%;
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-operation-settings__actions
+		.description {
+		white-space: normal;
+		inline-size: auto;
 	}
 
 	.ran-booster-admin .ran-booster-settings-actions .button {
@@ -760,5 +838,11 @@
 		align-items: flex-start;
 		flex-direction: column;
 		white-space: normal;
+	}
+}
+
+@media screen and (max-width: 420px) {
+	.ran-booster-admin .ran-booster-package-operation-settings__actions {
+		grid-template-columns: minmax(0, 1fr);
 	}
 }

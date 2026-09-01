@@ -38,8 +38,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Branch and webhook setup', $html );
-		self::assertStringContainsString( 'Save the current package settings, then check the repository and branch now.', $html );
+		self::assertStringContainsString( 'Saved branch setup', $html );
+		self::assertStringContainsString( 'Review the requirements below.', $html );
 		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
 		self::assertStringContainsString( 'Remote webhook', $html );
 		self::assertStringContainsString( 'Booster cannot verify the remote webhook here.', $html );
@@ -67,11 +67,57 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $html );
 		self::assertStringContainsString( 'id="ran-booster-repository-branch-check-error"', $html );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-repository-branch-check-error"', $html );
+		self::assertStringContainsString( 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"', $html );
 		self::assertStringContainsString( 'data-ran-booster-relocate-rendered-error', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-package-mutation', $html );
 		self::assertStringNotContainsString( 'remote webhook is configured', strtolower( $html ) );
 		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
+	}
+
+	#[DataProvider( 'subdirectoryChecklistProvider' )]
+	public function testSubdirectoryHasItsOwnReadinessChecklistRow( ?string $outcome, string $class, string $message ): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$savedSubdirectoryValue   = 'packages/example';
+		$packageMutationAvailable = true;
+		$packageBranchReadiness   = array(
+			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
+			'site'                 => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository'           => array(
+				'repository_id'         => 'repo-42',
+				'repository'            => 'owner/example',
+				'status'                => 'ready',
+				'reason_codes'          => array(),
+				'local_secret_coverage' => 'repository',
+			),
+		);
+		if ( null !== $outcome ) {
+			$repositoryBranchCheckOutcome = $outcome;
+		}
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item ' . $class . '">\s*<span[^>]*><\/span>\s*<strong>Repository subdirectory<\/strong>/s', $html );
+		self::assertStringContainsString( $message, $html );
+	}
+
+	/** @return array<string, array{string|null, string, string}> */
+	public static function subdirectoryChecklistProvider(): array {
+		return array(
+			'not checked'       => array( null, 'is-pending', 'The subdirectory <code>packages/example</code> will be checked when Booster prepares the deployment archive.' ),
+			'accessed'          => array( 'verified', 'is-ok', 'The subdirectory <code>packages/example</code> is accessible at this branch.' ),
+			'not found'         => array( 'subdirectory_unavailable', 'is-warning', 'The subdirectory <code>packages/example</code> was not found at this branch.' ),
+			'check unavailable' => array( 'subdirectory_unverified', 'is-warning', 'The subdirectory <code>packages/example</code> could not be checked.' ),
+		);
 	}
 
 	public function testSiteReadinessDoesNotMislabelAValidRepositoryIdentity(): void {
@@ -141,7 +187,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Saved repository', $html );
 		self::assertStringContainsString( 'The branch <code>test</code> is saved. The repository identity is available locally; repository access and this branch have not been checked.', $html );
-		self::assertStringContainsString( 'Review the saved repository, branch, and local Push-to-Deploy requirements below.', $html );
+		self::assertStringContainsString( 'Review the requirements below.', $html );
 		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-pending">\s*<span[^>]*><\/span>\s*<strong>Saved repository<\/strong>/s', $html );
 		self::assertStringNotContainsString( 'test is ready', $html );
 		self::assertStringNotContainsString( 'ready for manual deployments', strtolower( $html ) );
@@ -180,6 +226,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			'verified'             => array( 'verified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
 			'unable to check'      => array( 'unable_to_check', 'is-warning', 'The branch <code>test</code> is saved, but repository access and this branch could not be verified.' ),
 			'provider unavailable' => array( 'provider_unavailable', 'is-warning', 'The branch <code>test</code> is saved, but its provider is unavailable' ),
+			'subdirectory missing' => array( 'subdirectory_unavailable', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
+			'subdirectory unknown' => array( 'subdirectory_unverified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
 		);
 	}
 
@@ -308,7 +356,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'notice notice-success inline', $html );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-repository-branch-check' ) );
 		self::assertStringContainsString( 'The branch <code>main</code> is accessible with the saved repository settings.', $html );
-		self::assertStringContainsString( 'The saved subdirectory will be checked when Booster prepares the deployment archive.', $html );
+		self::assertStringContainsString( 'The subdirectory <code>packages/example</code> is accessible at this branch.', $html );
 		self::assertStringNotContainsString( 'main is saved.', $html );
 		self::assertStringNotContainsString( 'Local evidence refreshed.', $html );
 		self::assertMatchesRegularExpression( '/hx-push-url="[^"]*source_view=branch[^"]*#ran-booster-branch-readiness"/', $html );

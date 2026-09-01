@@ -18,7 +18,7 @@ $packageFieldForm = isset( $packageFieldForm ) && is_string( $packageFieldForm )
 		<td>
 <?php } ?>
 		<input id="ran-booster-repository-branch" name="ran_booster[branch]" type="text" class="regular-text ran-booster-branch-input" placeholder="main, development etc." value="<?php echo esc_attr( $branchValue ); ?>"<?php echo '' !== $packageFieldForm ? ' form="' . esc_attr( $packageFieldForm ) . '"' : ''; ?> <?php disabled( $branchReadOnly ); ?>>
-		<p class="description">Leave blank to use the repository provider's default branch.</p>
+		<p class="description"><?php esc_html_e( 'Leave blank to use the repository provider\'s default branch.', 'ran-booster' ); ?></p>
 <?php if ( $packageFieldGrid ) { ?>
 	</div>
 <?php } else { ?>

@@ -491,7 +491,7 @@ class Dashboard {
 		return $this->render( 'packages/index', $this->packageIndexData( $packages, $packageView ) );
 	}
 
-	/** @return 'verified'|'unable_to_check'|'provider_unavailable'|null */
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
 	private function requestedPackageRepositoryBranchCheck( Package $package, string $type ): ?string {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This boundary verifies the action-specific nonce below.
 		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
@@ -515,7 +515,7 @@ class Dashboard {
 		);
 		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
 			$completed = get_transient( $marker );
-			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
+			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
 				if ( 'verified' !== $completed || null !== $this->providerSettings->packageRepositoryBranchEvidence( $type, $package ) ) {
 					return $completed;
 				}

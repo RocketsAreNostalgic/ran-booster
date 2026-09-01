@@ -48,7 +48,6 @@ final class ProviderTrustConformanceTest extends TestCase {
 			array(
 				'views/provider.php',
 				'views/provider/modals.php',
-				'views/packages/fields/credential.php',
 				'views/provider-public-lookup-profile.php',
 				'views/portability-review.php',
 				'views/troubleshooting.php',

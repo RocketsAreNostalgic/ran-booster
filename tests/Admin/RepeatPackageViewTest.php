@@ -108,6 +108,8 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'role="tab"', $html );
 		self::assertStringContainsString( 'data-ran-booster-source-choice="branch"', $html );
 		self::assertStringContainsString( 'data-ran-booster-source-pane="branch"', $html );
+		self::assertStringContainsString( 'ran-booster-source-choice__radio', $html );
+		self::assertStringNotContainsString( 'ran-booster-source-choice--navigation', $html );
 		self::assertStringContainsString( 'id="ran-booster-package-configuration-heading"', $form );
 		self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $form );
 		self::assertStringContainsString( 'id="ran-booster-package-operation-heading"', $form );
@@ -261,6 +263,7 @@ final class RepeatPackageViewTest extends TestCase {
 			);
 			self::assertStringNotContainsString( 'id="ran-booster-package-reinstall-heading"', $html );
 			self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $html );
+			self::assertStringContainsString( 'Deploy a saved repository branch manually or when a signed push webhook arrives.', $html );
 			self::assertStringContainsString(
 				'id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation',
 				$html
@@ -270,7 +273,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'id="ran-booster-advanced-source-settings"', $editForm );
 			self::assertStringNotContainsString( 'id="ran-booster-package-operation-heading"', $editForm );
 			self::assertSame(
-				array( 'Repository configuration', 'Advanced settings', 'Package source', 'Branch and webhook setup', 'Package operation', 'Danger zone' ),
+				array( 'Repository configuration', 'Advanced settings', 'Package source', 'Package operation', 'Danger zone' ),
 				$this->h3Headings( $html ),
 				$packageView->getType()
 			);
@@ -434,6 +437,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$identifierValue      = 'plugin' === $packageView->getType() ? 'example/example.php' : 'example-theme';
 			$packageSourceMode    = 'edit';
 			$packageSourceView    = 'branch';
+			$packageCurrentSource = 'release_asset';
 			$packageSourceChoices = array();
 			foreach (
 				array(
@@ -455,13 +459,79 @@ final class RepeatPackageViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
 			$html = (string) ob_get_clean();
 
-			self::assertSame( 2, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $packageView->getType() );
 			self::assertStringNotContainsString( 'https://example.test', $html, $packageView->getType() );
-			self::assertSame( 2, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $packageView->getType() );
+			self::assertStringContainsString( '>Branch</strong>', $html, $packageView->getType() );
+			self::assertStringContainsString( '>Published releases</strong>', $html, $packageView->getType() );
+			self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $packageView->getType() );
+			self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $packageView->getType() );
+			self::assertStringContainsString( ' nav-tab ', $html, $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'nav-tab-active' ), $packageView->getType() );
+			self::assertStringContainsString( 'role="navigation" aria-label="Package source settings"', $html, $packageView->getType() );
+			self::assertStringContainsString( 'Opening a settings view does not change the current source.', $html, $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, '>Active</span>' ), $packageView->getType() );
+			self::assertMatchesRegularExpression(
+				'/<span[^>]*class="ran-booster-source-choice__current-source"[^>]*>Active<\\/span>/',
+				$html,
+				$packageView->getType()
+			);
+			self::assertStringContainsString( 'ran-booster-source-choice__content', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'Current source', $html, $packageView->getType() );
+			self::assertMatchesRegularExpression(
+				'/data-ran-booster-source-choice="release_asset"[^>]*>[\\s\\S]*?ran-booster-source-choice__current-source[^>]*>Active<\\/span>/',
+				$html,
+				$packageView->getType()
+			);
+			self::assertStringNotContainsString( 'Branch description', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'Published releases meta', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'ran-booster-source-choice__navigation-cue', $html, $packageView->getType() );
+			self::assertMatchesRegularExpression(
+				'/<span[^>]*aria-current="page"[^>]*data-ran-booster-source-choice="branch"|<span[^>]*data-ran-booster-source-choice="branch"[^>]*aria-current="page"/',
+				$html,
+				$packageView->getType()
+			);
 		}
+	}
+
+	public function testDisabledSourceChoiceRemainsReadableFocusableAndExplainsItself(): void {
+		$packageView          = PackagePagePresenter::plugin();
+		$packageSourceMode    = 'create';
+		$packageSourceView    = 'branch';
+		$packageSourceChoices = array(
+			'branch'        => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy the configured branch.',
+				'meta'              => 'Available',
+				'url'               => '',
+				'disabled'          => false,
+				'client_hydratable' => false,
+			),
+			'release_asset' => array(
+				'heading'           => 'Published releases',
+				'description'       => 'Published releases require the repository root.',
+				'meta'              => 'Repository root required',
+				'url'               => '',
+				'disabled'          => true,
+				'client_hydratable' => false,
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
+		$html = (string) ob_get_clean();
+
+		self::assertMatchesRegularExpression(
+			'/data-ran-booster-source-choice="release_asset"[^>]*aria-disabled="true"|aria-disabled="true"[^>]*data-ran-booster-source-choice="release_asset"/',
+			$html
+		);
+		self::assertStringContainsString( 'title="Published releases require the repository root."', $html );
+		self::assertStringNotContainsString( ' disabled=', $html );
 	}
 
 	public function testReleaseManagedBranchViewShowsRetainedTargetWithoutBranchOperations(): void {

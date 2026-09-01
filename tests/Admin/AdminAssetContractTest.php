@@ -199,6 +199,19 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'white-space: nowrap;', $settings );
 	}
 
+	public function testPackageSourceNavigationPushesCurrentSourceStatusBadgeInlineAndRightAligned(): void {
+		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		self::assertStringContainsString( '.ran-booster-source-choice--navigation {', $settings );
+		self::assertStringContainsString( "\tbox-sizing: border-box;\n\tmargin-block-end: -1px;\n\tdisplay: flex;\n\talign-items: center;", $settings );
+		self::assertStringContainsString( '.ran-booster-source-choice--navigation > .ran-booster-source-choice__content {', $settings );
+		self::assertStringContainsString( "\tmargin-inline-end: var(--ran-booster-space-10);\n\tmin-inline-size: 0;\n\tflex: 1 1 auto;", $settings );
+		self::assertStringContainsString( '.ran-booster-source-choice__current-source {', $settings );
+		self::assertStringContainsString( "\tmargin-inline-start: auto;\n\tflex: 0 0 auto;", $settings );
+		self::assertStringContainsString( "\tpadding: 2px var(--ran-booster-space-8);\n\tborder: 1px solid var(--ran-booster-status-ok-border);", $settings );
+		self::assertStringContainsString( "\tbackground: var(--ran-booster-status-ok-background);\n\tcolor: var(--ran-booster-status-ok);", $settings );
+	}
+
 	public function testRepositoryBranchCheckNoticeSitsFlushBesideTheAction(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
@@ -515,11 +528,11 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-webhook-url input \\{\\s+flex: 0 1 auto;\\s+\\}[\\s\\S]+\\.ran-booster-credential-table td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+justify-content: flex-start;[\\s\\S]+white-space: normal;/',
+			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-webhook-url input \\{\\s+flex: 0 1 auto;\\s+inline-size: 100%;\\s+\\}[\\s\\S]+\\.ran-booster-credential-table td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+justify-content: flex-start;[\\s\\S]+white-space: normal;/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider-management__header > \\.button \\{\\s+align-self: flex-end;\\s+\\}/',
+			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider \\.button \\{\\s+inline-size: auto;\\s+align-self: flex-start;\\s+text-align: center;\\s+\\}/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
@@ -530,7 +543,7 @@ final class AdminAssetContractTest extends TestCase {
 			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> tbody\\s+> tr\\s+> td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;/',
 			$css
 		);
-		self::assertMatchesRegularExpression(
+		self::assertDoesNotMatchRegularExpression(
 			'/@media screen and \\(max-width: 480px\\)[\\s\\S]+\\.ran-booster-provider-management__header > \\.button \\{\\s+align-self: stretch;\\s+inline-size: 100%;/',
 			$css
 		);

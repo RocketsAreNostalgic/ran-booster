@@ -76,7 +76,7 @@ $needsAttention                = \RAN\Deployment\DeploymentPolicy::AUTOMATIC->va
 $repositoryBranchCheckEvidence = is_array( $repositoryBranchCheckEvidence ?? null )
 	? $repositoryBranchCheckEvidence
 	: null;
-$repositoryBranchVerified      = 'verified' === ( $repositoryBranchCheckOutcome ?? null )
+$repositoryBranchVerified      = in_array( $repositoryBranchCheckOutcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true )
 	|| ( null === $repositoryBranchCheckOutcome && 'verified' === ( $repositoryBranchCheckEvidence['outcome'] ?? null ) );
 $savedSubdirectoryValue        = isset( $savedSubdirectoryValue ) && is_string( $savedSubdirectoryValue )
 	? trim( $savedSubdirectoryValue )
@@ -84,6 +84,8 @@ $savedSubdirectoryValue        = isset( $savedSubdirectoryValue ) && is_string( 
 $repositoryBranchCheckMessage  = match ( $repositoryBranchCheckOutcome ?? null ) {
 	'provider_unavailable' => __( 'The saved provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ),
 	'unable_to_check'      => __( 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.', 'ran-booster' ),
+	'subdirectory_unavailable' => __( 'The saved branch is accessible, but Booster could not find the configured subdirectory. Check the path and try again.', 'ran-booster' ),
+	'subdirectory_unverified'  => __( 'The saved branch is accessible, but Booster could not check the configured subdirectory. Try again later.', 'ran-booster' ),
 	default                => null,
 };
 $repositoryBranchCheckNoticeClass = null !== $repositoryBranchCheckMessage ? 'notice-warning' : 'notice-error';
@@ -95,9 +97,9 @@ $repositoryStateClass             = match ( true ) {
 };
 $setupSummary = match ( true ) {
 	$needsAttention => __( 'Local Push-to-Deploy requirements are incomplete. Confirm the remote repository webhook separately.', 'ran-booster' ),
-	default         => __( 'Review the saved repository, branch, and local Push-to-Deploy requirements below.', 'ran-booster' ),
+	default         => __( 'Review the requirements below.', 'ran-booster' ),
 };
-if ( 'verified' === ( $repositoryBranchCheckOutcome ?? null ) ) {
+if ( in_array( $repositoryBranchCheckOutcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {
 	$savedRepositoryLabel = __( 'is accessible with the saved repository settings.', 'ran-booster' );
 } elseif ( $repositoryBranchVerified ) {
 	$savedRepositoryLabel = __( 'was accessible when Booster last checked these saved settings.', 'ran-booster' );
@@ -116,18 +118,41 @@ $savedRepositoryMessage = ( $identityReady || $repositoryBranchVerified )
 		esc_html( $savedRepositoryLabel )
 	)
 	: __( 'The saved repository needs one stable provider identity.', 'ran-booster' );
+$savedSubdirectoryMessage = match ( $repositoryBranchCheckOutcome ?? null ) {
+	'verified' => sprintf(
+		/* translators: %s: configured repository subdirectory. */
+		__( 'The subdirectory <code>%s</code> is accessible at this branch.', 'ran-booster' ),
+		esc_html( $savedSubdirectoryValue )
+	),
+	'subdirectory_unavailable' => sprintf(
+		/* translators: %s: configured repository subdirectory. */
+		__( 'The subdirectory <code>%s</code> was not found at this branch.', 'ran-booster' ),
+		esc_html( $savedSubdirectoryValue )
+	),
+	'subdirectory_unverified' => sprintf(
+		/* translators: %s: configured repository subdirectory. */
+		__( 'The subdirectory <code>%s</code> could not be checked.', 'ran-booster' ),
+		esc_html( $savedSubdirectoryValue )
+	),
+	default => sprintf(
+		/* translators: %s: configured repository subdirectory. */
+		__( 'The subdirectory <code>%s</code> will be checked when Booster prepares the deployment archive.', 'ran-booster' ),
+		esc_html( $savedSubdirectoryValue )
+	),
+};
+$subdirectoryStateClass = match ( $repositoryBranchCheckOutcome ?? null ) {
+	'verified' => 'is-ok',
+	'subdirectory_unavailable', 'subdirectory_unverified' => 'is-warning',
+	default => 'is-pending',
+};
 
 ?>
 <section id="ran-booster-branch-readiness" class="ran-booster-package-source-readiness" aria-labelledby="ran-booster-branch-readiness-heading">
-	<header>
-		<h3 id="ran-booster-branch-readiness-heading" class="ran-booster-section__title"><?php esc_html_e( 'Branch and webhook setup', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Save the current package settings, then check the repository and branch now. Booster checks them again when a deployment starts.', 'ran-booster' ); ?></p>
-	</header>
 	<div>
 		<div class="ran-booster-readiness-panel">
 			<div class="ran-booster-readiness-panel__top">
 				<div>
-					<h4><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ); ?></h4>
+					<h4 id="ran-booster-branch-readiness-heading"><?php echo esc_html( $needsAttention ? __( 'Automatic branch deployment setup needs attention', 'ran-booster' ) : __( 'Saved branch setup', 'ran-booster' ) ); ?></h4>
 					<p><?php echo esc_html( $setupSummary ); ?></p>
 				</div>
 				<?php if ( $needsAttention ) { ?>
@@ -148,11 +173,15 @@ $savedRepositoryMessage = ( $identityReady || $repositoryBranchVerified )
 							?>
 							</span>
 						<?php } ?>
-						<?php if ( '' !== $savedSubdirectoryValue ) { ?>
-							<br/><span><?php esc_html_e( 'The saved subdirectory will be checked when Booster prepares the deployment archive.', 'ran-booster' ); ?></span>
-						<?php } ?>
 					</span>
 				</li>
+				<?php if ( '' !== $savedSubdirectoryValue ) { ?>
+					<li class="ran-booster-readiness-item <?php echo esc_attr( $subdirectoryStateClass ); ?>">
+						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
+						<strong><?php esc_html_e( 'Repository subdirectory', 'ran-booster' ); ?></strong>
+						<span><?php echo wp_kses_post( $savedSubdirectoryMessage ); ?></span>
+					</li>
+				<?php } ?>
 				<li class="ran-booster-readiness-item <?php echo $secretReady ? 'is-ok' : 'is-warning'; ?>">
 					<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 					<strong><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></strong>
@@ -211,7 +240,7 @@ $savedRepositoryMessage = ( $identityReady || $repositoryBranchVerified )
 					hx-swap="outerHTML show:#ran-booster-branch-readiness:top"
 					hx-push-url="<?php echo esc_url( $checkReturnUrl ); ?>"
 					hx-sync="this:drop"
-					hx-include="#ran-booster-package-edit-form"
+					hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
 					<?php disabled( isset( $packageMutationAvailable ) && false === $packageMutationAvailable ); ?>
 				><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
 				<a class="button" href="<?php echo esc_url( $providerSettingsUrl ); ?>"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></a>

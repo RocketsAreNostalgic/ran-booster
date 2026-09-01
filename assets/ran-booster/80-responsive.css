@@ -174,6 +174,26 @@
 		flex: 0 0 auto;
 	}
 
+	.ran-booster-admin
+		:is(
+			.ran-booster-status-summary__actions,
+			.ran-booster-provider-next-step,
+			.ran-booster-provider-task-panel__heading,
+			.ran-booster-provider-repository-tools,
+			.ran-booster-webhook-url,
+			.ran-booster-repository-record__action-group,
+			.ran-booster-provider-management__header,
+			.ran-booster-public-lookup-profile__controls
+		) {
+		align-items: flex-start;
+	}
+
+	.ran-booster-admin .ran-booster-provider .button {
+		inline-size: auto;
+		align-self: flex-start;
+		text-align: center;
+	}
+
 	.ran-booster-admin .ran-booster-readiness-overview,
 	.ran-booster-admin .ran-booster-webhook-steps {
 		grid-template-columns: minmax(0, 1fr);
@@ -228,10 +248,6 @@
 		padding-inline: var(--ran-booster-space-18);
 	}
 
-	.ran-booster-admin .ran-booster-provider-management__header > .button {
-		align-self: flex-end;
-	}
-
 	.ran-booster-admin .ran-booster-webhook-setup__settings {
 		flex-direction: column;
 	}
@@ -248,13 +264,9 @@
 		flex-direction: column;
 	}
 
-	.ran-booster-admin .ran-booster-webhook-url input,
-	.ran-booster-admin .ran-booster-webhook-url .button {
-		inline-size: 100%;
-	}
-
 	.ran-booster-admin .ran-booster-webhook-url input {
 		flex: 0 1 auto;
+		inline-size: 100%;
 	}
 
 	.ran-booster-admin .ran-booster-public-lookup-profile__layout {
@@ -372,14 +384,9 @@
 	}
 
 	.ran-booster-admin .ran-booster-repository-record__action-group {
-		align-items: stretch;
+		align-items: flex-start;
 		flex-direction: column;
 		justify-content: flex-start;
-	}
-
-	.ran-booster-admin .ran-booster-repository-record__action-group .button {
-		inline-size: 100%;
-		text-align: center;
 	}
 
 	.ran-booster-admin .ran-booster-repository-record__settings-menu > div {
@@ -419,8 +426,7 @@
 		margin-inline-start: var(--ran-booster-table-cell-padding-inline);
 	}
 
-	.ran-booster-admin .ran-booster-repository-field .regular-text,
-	.ran-booster-admin .ran-booster-repository-field .button {
+	.ran-booster-admin .ran-booster-repository-field .regular-text {
 		inline-size: 100%;
 	}
 
@@ -496,18 +502,11 @@
 }
 
 @media screen and (max-width: 480px) {
-	.ran-booster-admin .ran-booster-provider-management__header > .button {
-		align-self: stretch;
-		inline-size: 100%;
-		text-align: center;
-	}
-
 	.ran-booster-admin .ran-booster-public-lookup-profile__controls {
 		flex-wrap: wrap;
 	}
 
-	.ran-booster-admin .ran-booster-public-lookup-profile__controls select,
-	.ran-booster-admin .ran-booster-public-lookup-profile__controls .button {
+	.ran-booster-admin .ran-booster-public-lookup-profile__controls select {
 		flex-basis: 100%;
 		inline-size: 100%;
 	}

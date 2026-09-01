@@ -20,7 +20,7 @@ $repositoryReadOnly = isset( $repositoryReadOnly ) && true === $repositoryReadOn
 				<option value="<?php echo esc_attr( $providerOption['code'] ); ?>" data-label="<?php echo esc_attr( $providerOption['label'] ); ?>" data-browse="<?php echo $providerOption['browse'] ? '1' : '0'; ?>" data-deploy="<?php echo $providerOption['deploy'] ? '1' : '0'; ?>" data-webhooks="<?php echo $providerOption['webhooks'] ? '1' : '0'; ?>" data-repository-url-base="<?php echo esc_attr( $providerOption['repository_url_base'] ); ?>" <?php selected( $providerCode, $providerOption['code'] ); ?> <?php disabled( ! $providerOption['deploy'] && $providerCode !== $providerOption['code'] ); ?>><?php echo esc_html( $providerOption['label'] . $providerStatus ); ?></option>
 			<?php } ?>
 		</select>
-		<p class="description ran-booster-provider-description">Choose the service that hosts this repository.</p>
+		<p class="description ran-booster-provider-description"><?php esc_html_e( 'Choose the Git service.', 'ran-booster' ); ?></p>
 <?php if ( $packageFieldGrid ) { ?>
 	</div>
 <?php } else { ?>

@@ -17,6 +17,7 @@ use RAN\RepositoryProvider\CredentialValidator;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowser;
+use RAN\RepositoryProvider\RepositoryPathInspector;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\UnknownProvider;
@@ -276,7 +277,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 	}
 
-	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
 	public function checkPackageRepositoryBranch( string $type, Package $package ): string {
 		if ( PackageSource::BRANCH !== $package->getSource() ) {
 			return 'unable_to_check';
@@ -329,7 +330,22 @@ final readonly class ProviderSettingsPresenter {
 				&& strlen( $resolvedRef ) <= 191
 				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolvedRef )
 			) {
-				$result = 'verified';
+				$subdirectory = $package->getSubdirectory();
+				if ( is_string( $subdirectory ) && '' !== $subdirectory
+					&& $provider instanceof RepositoryPathInspector
+				) {
+					try {
+						$result = $provider->repositoryPathExists( $repository, $resolvedRef, $subdirectory )
+							? 'verified'
+							: 'subdirectory_unavailable';
+					} catch ( Throwable ) {
+						$result = 'subdirectory_unverified';
+					}
+				} elseif ( is_string( $subdirectory ) && '' !== $subdirectory ) {
+					$result = 'subdirectory_unverified';
+				} else {
+					$result = 'verified';
+				}
 			}
 		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Provider failures intentionally map to a closed result.
 		} catch ( Throwable ) {

@@ -32,7 +32,8 @@ final class ProviderRepositoryRowsNormalizer {
 		$siteEndpoint  = is_string( $site['callback_url'] ?? null ) ? $site['callback_url'] : $endpoint;
 		$reasonCodes   = is_array( $site['reason_codes'] ?? null ) ? $site['reason_codes'] : array();
 		$siteReady     = null !== $site && 'ready' === ( $site['status'] ?? null );
-		$baseUrl       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
+		$baseUrl       = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) )
+			. '?page=ran-booster&tab=' . rawurlencode( $providerCode );
 		$providerUrl   = static fn ( array $args = array() ): string => add_query_arg( $args, $baseUrl );
 		$taskUrls      = array();
 		$taskRequests  = array();
@@ -209,7 +210,12 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Historical rows must not claim Core actions.' );
 			}
 			$row['actions'] = $normalizer->normalize( $rowActions );
-			$rows[ $key ]   = $this->normalizeHistoricalRow( $key, $row, $providerCode );
+			foreach ( $row['actions'] as $action ) {
+				if ( 'post' === $action['type'] ) {
+					throw new LogicException( 'Historical rows may contain link actions only.' );
+				}
+			}
+			$rows[ $key ] = $this->normalizeHistoricalRow( $key, $row, $providerCode );
 		}
 
 		return $rows;
@@ -435,7 +441,7 @@ final class ProviderRepositoryRowsNormalizer {
 				)
 				: '';
 			if ( ! $inventoryIncomplete && ! $historical ) {
-				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $reasonId, $locator, $detailUrl );
+				$this->appendRepositoryActions( $actions, $repository, $references, $isRelease, $coverage, $providerWebhookSettingsLabel, $releaseReasonId, $locator, $detailUrl );
 			}
 			$rows[ $rowKey ] = array(
 				'key'                           => $rowKey,
@@ -446,7 +452,6 @@ final class ProviderRepositoryRowsNormalizer {
 				'repository'                    => $locator,
 				'repository_url'                => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
 				'detail_url'                    => $detailUrl,
-				'review_url'                    => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 				'package_type_label'            => $typeLabel,
 				'source_key'                    => $source,
 				'source_label'                  => match ( $source ) {
@@ -580,7 +585,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$isPlugin = str_ends_with( strtolower( $reference ), '.php' );
 			if ( ! $isPlugin && 1 !== preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) {
 				continue; }
-			$url = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) );
+			$url = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference );
 			if ( ! $isRelease ) {
 				$url = add_query_arg( 'source_view', 'branch', $url ) . '#ran-booster-branch-readiness'; }
 			$key             = 'core:package-' . substr( hash( 'sha256', $reference ), 0, 16 );
@@ -723,7 +728,6 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository'         => $this->boundedString( $row['repository'] ?? null, 255, false ),
 			'repository_url'     => $this->safeUrl( $row['repository_url'] ?? '' ),
 			'detail_url'         => '',
-			'review_url'         => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 			'historical'         => true,
 			'types'              => $this->badges( $row['types'] ?? array() ),
 			'package_message'    => $this->boundedString( $row['package_message'] ?? '', 255, true ),

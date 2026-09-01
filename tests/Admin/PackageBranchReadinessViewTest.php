@@ -464,6 +464,35 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
+	public function testBranchPackageDoesNotUsePersistedIdentityWhenRepositoryLocatorIsInvalid(): void {
+		$providerCode             = 'gh';
+		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$providerWebhookAvailable = true;
+		$branchValue              = 'main';
+		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$providerRepositoryId     = '1315521150';
+		$repositoryValue          = 'owner/booster-fixture-plugin';
+		$releaseManaged           = false;
+		$packageBranchReadiness   = array(
+			'site'       => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+			),
+			'repository' => array(
+				'repository'            => 'owner/booster-fixture-plugin',
+				'reason_codes'          => array( 'repository_locator_invalid' ),
+				'local_secret_coverage' => 'unknown',
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'panel=repositories', $html );
+		self::assertMatchesRegularExpression( '/<button type="button" class="button" disabled aria-disabled="true">Review repository webhook settings<\\/button>/', $html );
+	}
+
 	#[DataProvider( 'repositoryBranchCheckOutcomeProvider' )]
 	public function testSavedRepositoryStateReflectsTheExplicitRemoteCheck( string $outcome, string $class, string $message ): void {
 		$providerCode                 = 'gh';

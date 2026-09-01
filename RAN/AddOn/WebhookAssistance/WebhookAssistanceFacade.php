@@ -7,7 +7,7 @@ namespace RAN\AddOn\WebhookAssistance;
 use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 
-/** Fixed ordinary-add-on surface for repository-webhook-management/2. */
+/** Fixed ordinary-add-on surface for repository-webhook-management/3. */
 interface WebhookAssistanceFacade {
 
 	public function readiness( string $providerCode ): AssistanceReadiness;

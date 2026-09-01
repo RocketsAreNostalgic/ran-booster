@@ -86,6 +86,14 @@ function wp_make_link_relative( string $link ): string {
 	return \RAN\Admin\ReleaseManagement\wp_make_link_relative( $link );
 }
 
+function network_admin_url( string $path = '' ): string {
+	return \RAN\Admin\ReleaseManagement\network_admin_url( $path );
+}
+
+function is_multisite(): bool {
+	return \RAN\Admin\ReleaseManagement\is_multisite();
+}
+
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {
 	return \RAN\Admin\ReleaseManagement\add_query_arg( $key, $value, $url );
 }

@@ -103,6 +103,14 @@ function admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 }
 
+function network_admin_url( string $path = '' ): string {
+	return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
+}
+
+function is_multisite(): bool {
+	return true === ( $GLOBALS['ran_booster_release_management_test_multisite'] ?? false );
+}
+
 function self_admin_url( string $path = '' ): string {
 	return admin_url( $path );
 }

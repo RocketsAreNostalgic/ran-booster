@@ -24,6 +24,7 @@ final class RepositoryTableRendererTest extends TestCase {
 				'management_detail'  => 'Owner secret',
 				'management_tone'    => 'ok',
 				'consequence'        => 'Push-to-Deploy disabled; pushes are ignored.',
+				'consequence_id'     => 'reason-id',
 				'types'              => array(
 					array(
 						'label' => 'Plugin',
@@ -81,7 +82,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'Plugin · Branch · 2 packages', $html );
 		self::assertStringContainsString( 'Disabled', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--ok">Owner secret</span>', $html );
-		self::assertStringContainsString( '<p>Push-to-Deploy disabled; pushes are ignored.</p>', $html );
+		self::assertStringContainsString( '<p id="reason-id">Push-to-Deploy disabled; pushes are ignored.</p>', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__policies', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__status-badges', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
@@ -93,13 +94,12 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
 
-	public function testItRoutesHistoricalEvidenceToReviewOnly(): void {
+	public function testItRendersNormalizedHistoricalLinkEvidenceInline(): void {
 		$html = $this->render(
 			array(
 				'provider_label' => 'GitHub',
 				'repository'     => 'owner/repository',
 				'historical'     => true,
-				'review_url'     => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting&panel=activity',
 				'details'        => array(
 					array(
 						'label' => 'Assisted hook status',
@@ -116,13 +116,30 @@ final class RepositoryTableRendererTest extends TestCase {
 						'datetime' => '',
 					),
 				),
+				'actions'        => array(
+					array(
+						'key'           => 'github:open-repository',
+						'label'         => 'Open GitHub repository',
+						'type'          => 'link',
+						'url'           => 'https://github.com/owner/repository',
+						'hidden'        => array(),
+						'disabled'      => false,
+						'external'      => true,
+						'described_by'  => '',
+						'screen_reader' => 'owner/repository',
+					),
+				),
 			)
 		);
 
-		self::assertStringContainsString( 'Review record', $html );
-		self::assertStringContainsString( 'panel=activity', html_entity_decode( $html ) );
+		self::assertStringContainsString( 'ran-booster-repository-record__details', $html );
+		self::assertStringContainsString( 'Assisted hook status', $html );
+		self::assertStringContainsString( 'No assisted hook recorded', $html );
+		self::assertStringContainsString( 'Open GitHub repository', $html );
+		self::assertStringNotContainsString( '<form ', $html );
+		self::assertStringNotContainsString( 'Review record', $html );
+		self::assertStringNotContainsString( 'panel=activity', html_entity_decode( $html ) );
 		self::assertStringNotContainsString( 'Manage repository', $html );
-		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
 
 	/** @param array<string, mixed> $row */

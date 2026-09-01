@@ -77,6 +77,7 @@ final class ReleaseManagementFixture {
 			'redirect',
 			'header',
 			'json',
+			'multisite',
 		) as $suffix ) {
 			unset( $GLOBALS[ 'ran_booster_release_management_test_' . $suffix ] );
 		}

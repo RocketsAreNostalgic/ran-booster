@@ -12,7 +12,7 @@ use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 use RAN\Secrets\SecretsFile;
 
-/** Core-governed repository-webhook-management/2 facade. */
+/** Core-governed repository-webhook-management/3 facade. */
 final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 	/** @var \Closure(): bool */

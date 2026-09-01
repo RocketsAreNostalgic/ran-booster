@@ -297,8 +297,9 @@ final class WorkflowApplicationCoordinator {
 			|| ! hash_equals( 'https://github.com/' . $target['repository'], $inputs['update_uri'] ) ) {
 			return array( 'code' => 'managed_profile_modified' );
 		}
-		if ( $this->assessor->hasCompetingReleaseAutomation( $target['snapshot'] ) ) {
-			return array( 'code' => 'release_automation_conflict' );
+		$assessment = $this->assessor->assessManaged( $target['snapshot'], $status->type(), $status->packageRoot(), $status->installedVersion(), $status->eligibility()->expectedUpdateUri() );
+		if ( ! $assessment->readyForBootstrap() ) {
+			return array( 'code' => $assessment->code() );
 		}
 		$historical = $this->templates->exact( array_slice( $receipt['template'], 2, null, true ), $token );
 		if ( 'ok' !== $historical['code'] ) {

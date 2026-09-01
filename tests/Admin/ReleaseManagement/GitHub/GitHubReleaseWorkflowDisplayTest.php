@@ -140,6 +140,20 @@ final class GitHubReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'cccccccccccccccccccccccccccccccc', $withoutReference );
 	}
 
+	public function testCompatibilityMetadataFailureRetainsItsConcreteDiagnosticCode(): void {
+		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
+			array(
+				'result_code'       => 'workflow_preflight_unavailable',
+				'result_successful' => false,
+				'failure_stage'     => 'release_preflight',
+				'diagnostic_code'   => 'package_compatibility_invalid',
+			)
+		);
+
+		self::assertStringContainsString( '<details><summary>Failure details</summary>', $html );
+		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
+	}
+
 	public function testImmediatePreflightContractFailureExplainsThatTheRequestStateMustBeReloaded(): void {
 		$html = ( new GitHubReleaseWorkflowDisplay() )->workflow(
 			array(

@@ -534,7 +534,7 @@ final class WebhookDisplayModel {
 
 		if ( null !== $history && $statusCode !== $history['recorded_status'] ) {
 			$details[] = array(
-				'key'   => 'core:webhook-current-local-warning',
+				'key'   => 'core:webhook-current-warning',
 				'label' => __( 'Current local warning', 'ran-booster' ),
 				'value' => $this->historicalStatusLabel( $statusCode ),
 				'tone'  => $this->historicalStatusTone( $statusCode ),
@@ -610,6 +610,9 @@ final class WebhookDisplayModel {
 
 	/** @return array<string, string> */
 	private function availableOperations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, string $providerLabel, bool $hasCredential ): array {
+		if ( ! $hasCredential ) {
+			return array();
+		}
 		if ( null === $record ) {
 			/* translators: %s: repository provider name. */
 			return array(
@@ -628,12 +631,8 @@ final class WebhookDisplayModel {
 		}
 		/* translators: %s: repository provider name. */
 		$operations['check'] = sprintf( __( 'Check %s', 'ran-booster' ), $providerLabel );
-		if ( $hasCredential ) {
-			/* translators: %s: repository provider name. */
-			$operations['test'] = sprintf( __( 'Test %s webhook', 'ran-booster' ), $providerLabel );
-		} else {
-			$operations['disabled:test'] = __( 'Test webhook', 'ran-booster' );
-		}
+		/* translators: %s: repository provider name. */
+		$operations['test'] = sprintf( __( 'Test %s webhook', 'ran-booster' ), $providerLabel );
 		if ( ! in_array( $status, array( 'local_profile_missing', 'remote_missing', 'removal_pending' ), true ) ) {
 			/* translators: %s: repository provider name. */
 			$operations['remove'] = sprintf( __( 'Remove from %s', 'ran-booster' ), $providerLabel );

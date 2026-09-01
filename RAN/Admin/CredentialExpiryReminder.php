@@ -71,7 +71,7 @@ final class CredentialExpiryReminder {
 				'stage'                => 'unknown',
 				'days'                 => null,
 				'badge_class'          => 'ran-booster-badge--neutral',
-				'badge_label'          => 'Expiry unknown',
+				'badge_label'          => __( 'Expiry unknown', 'ran-booster' ),
 			);
 		}
 
@@ -84,19 +84,23 @@ final class CredentialExpiryReminder {
 		if ( $remaining <= 0 ) {
 			$stage      = 'expired';
 			$badgeClass = 'ran-booster-badge--error';
-			$badgeLabel = 'Expired ' . $date;
+			/* translators: %s is the credential expiry date in YYYY-MM-DD format. */
+			$badgeLabel = sprintf( __( 'Expired %s', 'ran-booster' ), $date );
 		} elseif ( $remaining <= self::URGENT_SECONDS ) {
 			$stage      = 'urgent';
 			$badgeClass = 'ran-booster-badge--error';
-			$badgeLabel = sprintf( 'Expires in %d %s', $days, 1 === $days ? 'day' : 'days' );
+			/* translators: %d is the number of days until the credential expires. */
+			$badgeLabel = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
 		} elseif ( $remaining <= self::WARNING_SECONDS ) {
 			$stage      = 'warning';
 			$badgeClass = 'ran-booster-badge--warning';
-			$badgeLabel = sprintf( 'Expires in %d %s', $days, 1 === $days ? 'day' : 'days' );
+			/* translators: %d is the number of days until the credential expires. */
+			$badgeLabel = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
 		} else {
 			$stage      = 'future';
 			$badgeClass = 'ran-booster-badge--neutral';
-			$badgeLabel = 'Expires ' . $date;
+			/* translators: %s is the credential expiry date in YYYY-MM-DD format. */
+			$badgeLabel = sprintf( __( 'Expires %s', 'ran-booster' ), $date );
 		}
 
 		return array(

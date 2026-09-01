@@ -42,13 +42,13 @@ if ( ! function_exists( __NAMESPACE__ . '\\sanitize_text_field' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\esc_html' ) ) {
 	function esc_html( string $text ): string {
-		return \RAN\esc_html( $text );
+		return htmlspecialchars( $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 	}
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\esc_url' ) ) {
 	function esc_url( string $url ): string {
-		return \RAN\esc_url( $url );
+		return str_replace( '&', '&amp;', $url );
 	}
 }
 
@@ -72,13 +72,13 @@ if ( ! function_exists( __NAMESPACE__ . '\\is_multisite' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\admin_url' ) ) {
 	function admin_url( string $path = '' ): string {
-		return \RAN\admin_url( $path );
+		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 	}
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\network_admin_url' ) ) {
 	function network_admin_url( string $path = '' ): string {
-		return \RAN\network_admin_url( $path );
+		return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
 	}
 }
 

@@ -11,6 +11,18 @@ use RAN\Secrets\SecretsStorageProvisioner;
 
 final class SecretsStorageSetupPresenterTest extends TestCase {
 
+	protected function setUp(): void {
+		parent::setUp();
+		$GLOBALS['ran_booster_admin_test_translations']       = array();
+		$GLOBALS['ran_booster_repository_admin_translations'] = array();
+	}
+
+	protected function tearDown(): void {
+		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_repository_admin_translations'] );
+
+		parent::tearDown();
+	}
+
 	public function testBuildsExactOwnerOnlyManualFallbackForTheProtectedOverview(): void {
 		$candidate = "/srv/private site/.ran-booster/0123456789abcdef/secrets'file.json";
 		$root      = (string) realpath( dirname( __DIR__, 2 ) );
@@ -38,6 +50,22 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 			$payload['config_alternatives']
 		);
 		self::assertStringContainsString( 'not a symbolic link', (string) $payload['manual_preflight'] );
+	}
+
+	public function testBuildsTranslatedManualPreflightWithoutChangingCommandsOrPaths(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']       = array(
+			'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.' => 'Translated preflight guidance.',
+		);
+		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'] = $GLOBALS['ran_booster_admin_test_translations']['ran-booster'];
+
+		$payload = ( new SecretsStorageSetupPresenter() )->build(
+			SecretsStorageProvisioningResult::setupAvailable( '/private/.ran-booster/0123456789abcdef/secrets.json' ),
+			'/admin'
+		);
+
+		self::assertSame( 'Translated preflight guidance.', $payload['manual_preflight'] );
+		self::assertSame( '/private/.ran-booster/0123456789abcdef/secrets.json', $payload['candidate_path'] );
+		self::assertSame( 1, count( $payload['directory_commands'] ) );
 	}
 
 	public function testUnsupportedStatusContainsNoPathOrManualCommand(): void {

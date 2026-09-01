@@ -24,9 +24,7 @@ if ( ! function_exists( 'esc_html' ) ) {
 
 if ( ! function_exists( '__' ) ) {
 	function __( string $text, string $domain = 'default' ): string {
-		unset( $domain );
-
-		return $text;
+		return $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ] ?? $text;
 	}
 }
 

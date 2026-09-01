@@ -551,31 +551,43 @@ msgid_plural "%d credentials need attention."
 msgstr[0] ""
 msgstr[1] ""
 
+#. translators: 1: credential label. 2: repository provider label. 3: credential expiry status.
+#: RAN/Admin/CredentialExpiryNotice.php:92
+#, php-format
+msgid "%1$s (%2$s): %3$s."
+msgstr ""
+
+#. translators: %s is a repository provider label.
 #: RAN/Admin/CredentialExpiryNotice.php:97
+#, php-format
+msgid "Review %s credentials"
+msgstr ""
+
+#: RAN/Admin/CredentialExpiryNotice.php:100
 #: RAN/Admin/DeploymentAdminPresenter.php:55
 #: RAN/Admin/ManagedPluginFailureRows.php:70
 msgid "Replace credential"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:99
+#: RAN/Admin/CredentialExpiryNotice.php:102
 msgid "This credential is managed by deployment configuration; update it there."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:127
+#: RAN/Admin/CredentialExpiryNotice.php:130
 #: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:36
 msgid "RAN Booster encrypted credentials are unavailable:"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:128
+#: RAN/Admin/CredentialExpiryNotice.php:131
 msgid "The encrypted sidecar and its site key are missing, incomplete, or do not match. Credential-backed operations remain paused."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:131
+#: RAN/Admin/CredentialExpiryNotice.php:134
 #: views/provider.php:157
 msgid "Restore the matching sidecar and site key from the same backup before changing credentials."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:132
+#: RAN/Admin/CredentialExpiryNotice.php:135
 msgid "Review encrypted storage"
 msgstr ""
 
@@ -603,6 +615,31 @@ msgstr ""
 #: RAN/Admin/DeploymentAdminController.php:38
 #: RAN/Admin/DevelopmentSafetyNoticeController.php:39
 msgid "RAN Booster could not remember the notice dismissal."
+msgstr ""
+
+#: RAN/Admin/CredentialExpiryReminder.php:74
+msgid "Expiry unknown"
+msgstr ""
+
+#. translators: %s is the credential expiry date in YYYY-MM-DD format.
+#: RAN/Admin/CredentialExpiryReminder.php:88
+#, php-format
+msgid "Expired %s"
+msgstr ""
+
+#. translators: %d is the number of days until the credential expires.
+#: RAN/Admin/CredentialExpiryReminder.php:93
+#: RAN/Admin/CredentialExpiryReminder.php:98
+#, php-format
+msgid "Expires in %d day"
+msgid_plural "Expires in %d days"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s is the credential expiry date in YYYY-MM-DD format.
+#: RAN/Admin/CredentialExpiryReminder.php:103
+#, php-format
+msgid "Expires %s"
 msgstr ""
 
 #: RAN/Admin/DatabaseCompatibilityNotice.php:38
@@ -1440,12 +1477,178 @@ msgstr ""
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:402
-msgid "You do not have sufficient permissions to manage Booster provider settings."
+#: RAN/Admin/ProviderProfileAdminController.php:54
+msgid "Enter a label for this credential."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:76
+msgid "Choose a repository credential to validate."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:81
+msgid "Credential validation is unavailable for this repository provider."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:100
+msgid "Repository credential validated successfully."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:134
+#: RAN/Admin/ProviderProfileAdminController.php:137
+msgid "A default public repository lookup profile is unavailable for this provider."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:140
+#: RAN/Admin/ProviderProfileAdminController.php:144
+#: RAN/Admin/ProviderProfileAdminController.php:149
+msgid "Choose Anonymous or a saved repository credential."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:155
+msgid "Public repository lookup will use anonymous access."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:156
+msgid "Default public repository lookup profile saved."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:177
+msgid "Choose a supported credential type."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:187
+msgid "Complete every required credential field."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:190
+msgid "Enter a valid account email address."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:195
+msgid "Enter the credential secret."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:201
+msgid "Enter a valid credential expiry date."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:208
+msgid "Enter a valid expiry / removal date."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:225
+msgid "The expiry / removal date cannot be later than the expiry reported by the provider."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:229
+msgid "Enter an expiry / removal date before enabling automatic removal."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:269
+msgid "Booster could not verify that the repository credential was saved."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:278
+msgid "Repository credential saved with automatic removal enabled."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:280
+msgid "Repository credential replaced. Validate it to refresh provider expiry information."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:281
+msgid "Repository credential saved."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:298
+msgid "Choose a supported Push-to-Deploy scope."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:301
+msgid "Enter the target for this Push-to-Deploy scope."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:304
+msgid "Enter the Push-to-Deploy secret."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:332
+msgid "Booster could not verify that the Push-to-Deploy secret was saved."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:334
+msgid "Push-to-Deploy secret saved."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:338
+msgid "Choose a repository credential to remove."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:344
+msgid "Choose a saved repository credential to remove."
+msgstr ""
+
+#. translators: %d is the number of managed packages using this repository credential.
+#: RAN/Admin/ProviderProfileAdminController.php:351
+#, php-format
+msgid "This repository credential is used by %d managed package. Assign another credential before deleting it."
+msgid_plural "This repository credential is used by %d managed packages. Assign another credential before deleting it."
+msgstr[0] ""
+msgstr[1] ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:358
+msgid "Booster could not verify that the repository credential was removed."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:382
+msgid "Repository credential removed. Public repository lookup now uses anonymous access."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:383
+msgid "Repository credential removed."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:389
+msgid "Choose a Push-to-Deploy secret to remove."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:393
+msgid "Choose a saved Push-to-Deploy secret to remove."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:396
+msgid "Booster could not verify that the Push-to-Deploy secret was removed."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:398
+msgid "Push-to-Deploy secret removed."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:403
+msgid "You do not have sufficient permissions to manage Booster provider settings."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:404
 msgid "You do not have sufficient permissions to manage Booster credentials."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:414
+#: RAN/Admin/ProviderProfileAdminController.php:418
+msgid "Choose a valid credential profile."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:460
+msgid "Booster could not complete the credential request."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:465
+#: RAN/Admin/ProviderProfileAdminController.php:471
+#: RAN/Admin/ProviderProfileAdminController.php:478
+msgid "Choose a supported repository provider."
+msgstr ""
+
+#: RAN/Admin/ProviderProfileAdminController.php:481
+msgid "Repository provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:27
@@ -3320,6 +3523,10 @@ msgstr ""
 
 #: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:38
 msgid "Public repositories and package-only Transporter Blueprints remain available; credential-backed operations and webhooks are paused."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:62
+msgid "Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link."
 msgstr ""
 
 #. translators: %s: repository provider name.

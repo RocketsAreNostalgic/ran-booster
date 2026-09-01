@@ -59,7 +59,7 @@ final readonly class SecretsStorageSetupPresenter {
 			$phpPath   = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $directory );
 			$root      = realpath( $wordpressRoot );
 
-			$manualPreflight    = 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.';
+			$manualPreflight    = __( 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.', 'ran-booster' );
 			$directoryCommands  = array(
 				'test ! -L ' . escapeshellarg( $parent )
 					. ' && test ! -L ' . escapeshellarg( $directory )

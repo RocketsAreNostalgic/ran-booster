@@ -13,6 +13,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 use RAN\Admin\Interaction\{CoreAdminInteractionFacade, SignedAdminInteractionRequest};
 
 /** @internal Core provider-profile request and response owner. */
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated messages are escaped by the controller response boundaries.
 class ProviderProfileAdminController {
 	public const TARGET_KEY      = 'core_provider_profiles';
 	public const TARGET_SELECTOR = '#ran-booster-provider-profile-region';
@@ -50,7 +51,7 @@ class ProviderProfileAdminController {
 					? sanitize_text_field( wp_unslash( $request['label'] ) )
 					: '';
 				if ( '' === trim( $label ) ) {
-					throw new CredentialRequestException( 'Enter a label for this credential.' );
+					throw new CredentialRequestException( __( 'Enter a label for this credential.', 'ran-booster' ) );
 				}
 				$message = 'save-access-profile' === $action
 					? $this->saveAccessProfile( $request, $provider, $id, $label )
@@ -72,12 +73,12 @@ class ProviderProfileAdminController {
 			$provider = $this->providerCode( $request );
 			$id       = $this->profileId( $request );
 			if ( null === $id ) {
-				throw new CredentialRequestException( 'Choose a repository credential to validate.' );
+				throw new CredentialRequestException( __( 'Choose a repository credential to validate.', 'ran-booster' ) );
 			}
 			try {
 				$validator = $this->providers->requireCapability( $provider, CredentialValidator::class );
 			} catch ( UnsupportedProviderCapability ) {
-				throw new CredentialRequestException( 'Credential validation is unavailable for this repository provider.' );
+				throw new CredentialRequestException( __( 'Credential validation is unavailable for this repository provider.', 'ran-booster' ) );
 			}
 			$result = $validator->validateCredential( $id );
 			if ( $result->isValid() ) {
@@ -96,7 +97,7 @@ class ProviderProfileAdminController {
 						);
 					}
 				}
-				$message = 'Repository credential validated successfully.';
+				$message = __( 'Repository credential validated successfully.', 'ran-booster' );
 				if ( ! $htmxRequest ) {
 					$this->dashboard->addMessage( $message );
 				}
@@ -130,29 +131,29 @@ class ProviderProfileAdminController {
 			try {
 				$browser = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
 			} catch ( UnsupportedProviderCapability ) {
-				throw new CredentialRequestException( 'A default public repository lookup profile is unavailable for this provider.' );
+				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
 			}
 			if ( ! $browser->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
-				throw new CredentialRequestException( 'A default public repository lookup profile is unavailable for this provider.' );
+				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
 			}
 			if ( ! array_key_exists( 'profile_id', $request ) || ! is_string( $request['profile_id'] ) ) {
-				throw new CredentialRequestException( 'Choose Anonymous or a saved repository credential.' );
+				throw new CredentialRequestException( __( 'Choose Anonymous or a saved repository credential.', 'ran-booster' ) );
 			}
 			$profileId = wp_unslash( $request['profile_id'] );
 			if ( '' !== $profileId && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $profileId ) ) {
-				throw new CredentialRequestException( 'Choose Anonymous or a saved repository credential.' );
+				throw new CredentialRequestException( __( 'Choose Anonymous or a saved repository credential.', 'ran-booster' ) );
 			}
 			if ( '' !== $profileId ) {
 				$profile = $this->secrets->credentialProfiles( $provider )[ $profileId ] ?? null;
 				if ( ! is_array( $profile ) || empty( $profile['configured'] ) ) {
-					throw new CredentialRequestException( 'Choose Anonymous or a saved repository credential.' );
+					throw new CredentialRequestException( __( 'Choose Anonymous or a saved repository credential.', 'ran-booster' ) );
 				}
 			}
 			$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
 			$this->publicLookupProfiles->set( $provider->value, '' === $profileId ? null : $profileId );
 			$message = '' === $profileId
-				? 'Public repository lookup will use anonymous access.'
-				: 'Default public repository lookup profile saved.';
+				? __( 'Public repository lookup will use anonymous access.', 'ran-booster' )
+				: __( 'Default public repository lookup profile saved.', 'ran-booster' );
 			if ( ! $htmxRequest ) {
 				$this->dashboard->addMessage( $message );
 			}
@@ -173,7 +174,7 @@ class ProviderProfileAdminController {
 		$kind         = is_string( $request['kind'] ?? null ) ? sanitize_key( wp_unslash( $request['kind'] ) ) : '';
 		$kindMetadata = $this->providerAdmin( $provider )->getCredentialKind( $kind );
 		if ( null === $kindMetadata ) {
-			throw new CredentialRequestException( 'Choose a supported credential type.' );
+			throw new CredentialRequestException( __( 'Choose a supported credential type.', 'ran-booster' ) );
 		}
 		$submittedConfiguration = is_array( $request['configuration'] ?? null )
 			? wp_unslash( $request['configuration'] )
@@ -183,28 +184,28 @@ class ProviderProfileAdminController {
 			$value                        = $submittedConfiguration[ $field->key ] ?? '';
 			$configuration[ $field->key ] = is_string( $value ) ? sanitize_text_field( $value ) : '';
 			if ( $field->required && '' === trim( $configuration[ $field->key ] ) ) {
-				throw new CredentialRequestException( 'Complete every required credential field.' );
+				throw new CredentialRequestException( __( 'Complete every required credential field.', 'ran-booster' ) );
 			}
 			if ( 'email' === $field->type && false === filter_var( $configuration[ $field->key ], FILTER_VALIDATE_EMAIL ) ) {
-				throw new CredentialRequestException( 'Enter a valid account email address.' );
+				throw new CredentialRequestException( __( 'Enter a valid account email address.', 'ran-booster' ) );
 			}
 		}
 		$secret = is_string( $request['secret'] ?? null ) ? trim( wp_unslash( $request['secret'] ) ) : '';
 		if ( null === $id && '' === $secret ) {
-			throw new CredentialRequestException( 'Enter the credential secret.' );
+			throw new CredentialRequestException( __( 'Enter the credential secret.', 'ran-booster' ) );
 		}
 		$manualExpirySubmitted = array_key_exists( 'expires_on', $request );
 		$manualExpiry          = null;
 		if ( $manualExpirySubmitted ) {
 			if ( ! is_string( $request['expires_on'] ) ) {
-				throw new CredentialRequestException( 'Enter a valid credential expiry date.' );
+				throw new CredentialRequestException( __( 'Enter a valid credential expiry date.', 'ran-booster' ) );
 			}
 			$manualExpiry = trim( wp_unslash( $request['expires_on'] ) );
 			$manualExpiry = '' === $manualExpiry ? null : $manualExpiry;
 			if ( null !== $manualExpiry
 				&& ( 1 !== preg_match( '/\A(\d{4})-(\d{2})-(\d{2})\z/D', $manualExpiry, $expiryParts )
 					|| ! checkdate( (int) $expiryParts[2], (int) $expiryParts[3], (int) $expiryParts[1] ) ) ) {
-				throw new CredentialRequestException( 'Enter a valid expiry / removal date.' );
+				throw new CredentialRequestException( __( 'Enter a valid expiry / removal date.', 'ran-booster' ) );
 			}
 		}
 		$existingManualExpiry = null;
@@ -221,11 +222,11 @@ class ProviderProfileAdminController {
 			}
 		}
 		if ( '' === $secret && null !== $manualExpiry && null !== $providerExpiry && $manualExpiry > $providerExpiry ) {
-			throw new CredentialRequestException( 'The expiry / removal date cannot be later than the expiry reported by the provider.' );
+			throw new CredentialRequestException( __( 'The expiry / removal date cannot be later than the expiry reported by the provider.', 'ran-booster' ) );
 		}
 		$selfDestruct = isset( $request['self_destruct'] ) && '1' === $request['self_destruct'];
 		if ( $selfDestruct && null === $manualExpiry ) {
-			throw new CredentialRequestException( 'Enter an expiry / removal date before enabling automatic removal.' );
+			throw new CredentialRequestException( __( 'Enter an expiry / removal date before enabling automatic removal.', 'ran-booster' ) );
 		}
 		$manualExpiryIsProviderFallback = '' === $secret
 			&& null === $existingManualExpiry
@@ -265,7 +266,7 @@ class ProviderProfileAdminController {
 					|| $selfDestruct !== ( $savedProfile['self_destruct'] ?? null )
 					|| ( $selfDestruct ? $manualExpiry : null ) !== ( $savedProfile['destroy_on'] ?? null )
 					|| empty( $savedProfile['configured'] ) ) {
-					throw new CredentialRequestException( 'Booster could not verify that the repository credential was saved.' );
+					throw new CredentialRequestException( __( 'Booster could not verify that the repository credential was saved.', 'ran-booster' ) );
 				}
 				if ( $isReplacement ) {
 					$this->expiryObservations->clear( $provider->value, $savedId );
@@ -274,10 +275,10 @@ class ProviderProfileAdminController {
 					$this->expiryObservations->setManualExpiry( $provider->value, $savedId, $manualExpiry );
 				}
 				return $selfDestruct
-					? 'Repository credential saved with automatic removal enabled.'
+						? __( 'Repository credential saved with automatic removal enabled.', 'ran-booster' )
 					: ( $isReplacement
-						? 'Repository credential replaced. Validate it to refresh provider expiry information.'
-						: 'Repository credential saved.' );
+							? __( 'Repository credential replaced. Validate it to refresh provider expiry information.', 'ran-booster' )
+							: __( 'Repository credential saved.', 'ran-booster' ) );
 			}
 		);
 	}
@@ -294,13 +295,13 @@ class ProviderProfileAdminController {
 		$secret        = is_string( $request['secret'] ?? null ) ? trim( wp_unslash( $request['secret'] ) ) : '';
 		$scopeMetadata = $admin->getWebhookScope( $scope );
 		if ( null === $scopeMetadata ) {
-			throw new CredentialRequestException( 'Choose a supported Push-to-Deploy scope.' );
+			throw new CredentialRequestException( __( 'Choose a supported Push-to-Deploy scope.', 'ran-booster' ) );
 		}
 		if ( $scopeMetadata->requiresTarget && '' === trim( $target ) ) {
-			throw new CredentialRequestException( 'Enter the target for this Push-to-Deploy scope.' );
+			throw new CredentialRequestException( __( 'Enter the target for this Push-to-Deploy scope.', 'ran-booster' ) );
 		}
 		if ( null === $id && '' === $secret ) {
-			throw new CredentialRequestException( 'Enter the Push-to-Deploy secret.' );
+			throw new CredentialRequestException( __( 'Enter the Push-to-Deploy secret.', 'ran-booster' ) );
 		}
 		$authorityId = '';
 		if ( 'repository' === $scope ) {
@@ -328,33 +329,33 @@ class ProviderProfileAdminController {
 			|| $authorityId !== ( $savedProfile['authority_id'] ?? null )
 			|| 'manual' !== ( $savedProfile['origin'] ?? null )
 			|| empty( $savedProfile['configured'] ) ) {
-			throw new CredentialRequestException( 'Booster could not verify that the Push-to-Deploy secret was saved.' );
+			throw new CredentialRequestException( __( 'Booster could not verify that the Push-to-Deploy secret was saved.', 'ran-booster' ) );
 		}
-		return 'Push-to-Deploy secret saved.';
+		return __( 'Push-to-Deploy secret saved.', 'ran-booster' );
 	}
 	private function deleteAccessProfile( ProviderCode $provider, ?string $id ): string {
 		if ( null === $id ) {
-			throw new CredentialRequestException( 'Choose a repository credential to remove.' );
+			throw new CredentialRequestException( __( 'Choose a repository credential to remove.', 'ran-booster' ) );
 		}
 		return $this->updaterLock->run(
 			function () use ( $provider, $id ): string {
 				$profile = $this->secrets->credentialProfiles( $provider )[ $id ] ?? null;
 				if ( ! is_array( $profile ) || ! empty( $profile['immutable'] ) || 'file' !== ( $profile['source'] ?? null ) ) {
-					throw new CredentialRequestException( 'Choose a saved repository credential to remove.' );
+					throw new CredentialRequestException( __( 'Choose a saved repository credential to remove.', 'ran-booster' ) );
 				}
 				$usageCount = $this->credentialUsage->read( $provider, $id )['total'];
 				if ( $usageCount > 0 ) {
 					throw new CredentialRequestException(
 						sprintf(
-							'This repository credential is used by %d managed package%s. Assign another credential before deleting it.',
-							$usageCount, // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal count is escaped at the response boundary.
-							1 === $usageCount ? '' : 's'
+							/* translators: %d is the number of managed packages using this repository credential. */
+							_n( 'This repository credential is used by %d managed package. Assign another credential before deleting it.', 'This repository credential is used by %d managed packages. Assign another credential before deleting it.', $usageCount, 'ran-booster' ),
+							$usageCount // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal count is escaped at the response boundary.
 						)
 					);
 				}
 				$clearedDefault = $id === $this->publicLookupProfiles->get( $provider->value );
 				if ( ! $this->secrets->deleteCredential( $provider, $id ) || isset( $this->secrets->credentialProfiles( $provider )[ $id ] ) ) {
-					throw new CredentialRequestException( 'Booster could not verify that the repository credential was removed.' );
+					throw new CredentialRequestException( __( 'Booster could not verify that the repository credential was removed.', 'ran-booster' ) );
 				}
 				if ( $clearedDefault ) {
 					$this->publicLookupProfiles->set( $provider->value, null );
@@ -378,23 +379,23 @@ class ProviderProfileAdminController {
 					);
 				}
 				return $clearedDefault
-					? 'Repository credential removed. Public repository lookup now uses anonymous access.'
-					: 'Repository credential removed.';
+						? __( 'Repository credential removed. Public repository lookup now uses anonymous access.', 'ran-booster' )
+						: __( 'Repository credential removed.', 'ran-booster' );
 			}
 		);
 	}
 	private function deleteWebhookProfile( ProviderCode $provider, ?string $id ): string {
 		if ( null === $id ) {
-			throw new CredentialRequestException( 'Choose a Push-to-Deploy secret to remove.' );
+			throw new CredentialRequestException( __( 'Choose a Push-to-Deploy secret to remove.', 'ran-booster' ) );
 		}
 		$profile = $this->secrets->webhookProfiles( $provider )[ $id ] ?? null;
 		if ( ! is_array( $profile ) || ! empty( $profile['immutable'] ) || 'file' !== ( $profile['source'] ?? null ) ) {
-			throw new CredentialRequestException( 'Choose a saved Push-to-Deploy secret to remove.' );
+			throw new CredentialRequestException( __( 'Choose a saved Push-to-Deploy secret to remove.', 'ran-booster' ) );
 		}
 		if ( ! $this->secrets->deleteWebhook( $provider, $id ) || isset( $this->secrets->webhookProfiles( $provider )[ $id ] ) ) {
-			throw new CredentialRequestException( 'Booster could not verify that the Push-to-Deploy secret was removed.' );
+			throw new CredentialRequestException( __( 'Booster could not verify that the Push-to-Deploy secret was removed.', 'ran-booster' ) );
 		}
-		return 'Push-to-Deploy secret removed.';
+		return __( 'Push-to-Deploy secret removed.', 'ran-booster' );
 	}
 	private function authorize( string $nonce ): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -410,11 +411,11 @@ class ProviderProfileAdminController {
 			return null;
 		}
 		if ( ! is_string( $request['id'] ) ) {
-			throw new CredentialRequestException( 'Choose a valid credential profile.' );
+			throw new CredentialRequestException( __( 'Choose a valid credential profile.', 'ran-booster' ) );
 		}
 		$id = trim( wp_unslash( $request['id'] ) );
 		if ( '' !== $id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $id ) ) {
-			throw new CredentialRequestException( 'Choose a valid credential profile.' );
+			throw new CredentialRequestException( __( 'Choose a valid credential profile.', 'ran-booster' ) );
 		}
 		return '' === $id ? null : $id;
 	}
@@ -456,28 +457,28 @@ class ProviderProfileAdminController {
 			|| $exception instanceof InvalidCredentialInput
 			|| $exception instanceof InvalidWebhookInput
 				? $exception->getMessage()
-				: 'Booster could not complete the credential request.';
+				: __( 'Booster could not complete the credential request.', 'ran-booster' );
 	}
 	private function providerCode( array $request ): ProviderCode {
 		try {
 			if ( ! is_string( $request['provider'] ?? null ) ) {
-				throw new CredentialRequestException( 'Choose a supported repository provider.' );
+					throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
 			}
 			$provider = ProviderCode::parse( wp_unslash( $request['provider'] ) );
 			$this->providers->get( $provider );
 			return $provider;
 		} catch ( \Throwable ) {
-			throw new CredentialRequestException( 'Choose a supported repository provider.' );
+			throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
 		}
 	}
 	private function providerAdmin( ProviderCode $provider ): ProviderAdminMetadata {
 		try {
 			$admin = $this->providers->get( $provider )->getMetadata()->admin;
 		} catch ( \Throwable ) {
-			throw new CredentialRequestException( 'Choose a supported repository provider.' );
+			throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
 		}
 		if ( null === $admin ) {
-			throw new CredentialRequestException( 'Repository provider settings are unavailable.' );
+			throw new CredentialRequestException( __( 'Repository provider settings are unavailable.', 'ran-booster' ) );
 		}
 		return $admin;
 	}
@@ -503,3 +504,4 @@ class ProviderProfileAdminController {
 		}
 	}
 }
+// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped

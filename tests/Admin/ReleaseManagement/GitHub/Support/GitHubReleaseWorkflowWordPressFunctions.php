@@ -78,6 +78,14 @@ function admin_url( string $path = '' ): string {
 	return \RAN\Admin\ReleaseManagement\admin_url( $path );
 }
 
+function network_admin_url( string $path = '' ): string {
+	return \RAN\Admin\ReleaseManagement\network_admin_url( $path );
+}
+
+function is_multisite(): bool {
+	return \RAN\Admin\ReleaseManagement\is_multisite();
+}
+
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {
 	return \RAN\Admin\ReleaseManagement\add_query_arg( $key, $value, $url );
 }

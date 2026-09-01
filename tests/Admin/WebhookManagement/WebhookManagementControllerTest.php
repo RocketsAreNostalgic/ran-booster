@@ -326,8 +326,9 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function testPackageInitiatedOperationReturnsToTheAllowlistedPackageSettingsRoute(): void {
-		$interaction = new CapturingAdminInteractionFacade();
-		$redirect    = $this->controller( adminInteraction: $interaction )->handleAdminPost(
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$interaction                                   = new CapturingAdminInteractionFacade();
+		$redirect                                      = $this->controller( adminInteraction: $interaction )->handleAdminPost(
 			$this->request(
 				array(
 					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&source_view=branch&ran_booster_open_advanced=1&unsafe=discarded',
@@ -337,6 +338,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'page=ran-booster-plugins', $redirect );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $redirect );
 		self::assertStringContainsString( 'package=example%2Fexample.php', $redirect );
 		self::assertStringContainsString( 'source_view=branch', $redirect );
 		self::assertStringContainsString( 'ran_booster_open_advanced=1', $redirect );
@@ -933,6 +935,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 	protected function tearDown(): void {
 		$_GET = array();
+		unset( $GLOBALS['ran_booster_package_view_multisite'] );
 	}
 
 	/** @param array<string, mixed> $changes @return array<string, mixed> */

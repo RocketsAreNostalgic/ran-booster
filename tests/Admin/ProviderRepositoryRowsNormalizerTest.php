@@ -10,8 +10,10 @@ require_once __DIR__ . '/WebhookManagement/WordPressInstallationStoreWordPressFu
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php';
 
-use PHPUnit\Framework\TestCase;
 use LogicException;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
@@ -25,6 +27,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']                 = array();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
+		unset( $GLOBALS['ran_booster_package_view_multisite'] );
 	}
 
 	public function testProjectAppliesBoundedProviderEnrichmentBeforeNormalization(): void {
@@ -145,8 +148,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $result['repositoryTableRows'][0]['actions'] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testReleaseWebhookCleanupLinkSelectsTheRetainedBranchPane(): void {
-		$result = ( new ProviderRepositoryRowsNormalizer() )->project(
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project(
 			array(
 				array(
 					'target'              => 'example/example',
@@ -178,13 +184,16 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			static fn ( array $arguments = array() ): string => 'https://example.test/provider?' . http_build_query( $arguments ),
 			'https://example.test/repositories'
 		);
-		$row    = $result['selected'];
+		$row = $result['selected'];
 
 		self::assertIsArray( $row );
-		$action = $row['actions']['core:webhook-cleanup-review'];
+		$action   = $row['actions']['core:webhook-cleanup-review'];
+		$settings = $row['actions'][ 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ) ];
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $action['url'] );
 		self::assertStringContainsString( 'source_view=branch', $action['url'] );
 		self::assertStringContainsString( 'webhook_cleanup=1', $action['url'] );
 		self::assertStringEndsWith( '#ran-booster-webhook-cleanup', $action['url'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $settings['url'] );
 	}
 
 	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {

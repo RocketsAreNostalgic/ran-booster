@@ -401,7 +401,7 @@ final class GitHubReleaseWorkflowControls {
 			}
 		}
 
-		$settingsUrl = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) );
+		$settingsUrl = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference );
 		$settingsUrl = add_query_arg(
 			array(
 				'source_view'               => 'release_asset',
@@ -644,7 +644,7 @@ final class GitHubReleaseWorkflowControls {
 			$args['package'] = $identifier;
 		}
 
-		return add_query_arg( $args, admin_url( 'admin.php' ) );
+		return add_query_arg( $args, is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) );
 	}
 
 	/**

@@ -786,7 +786,7 @@ final class ReleaseManagementControls {
 			$args['package'] = $identifier;
 		}
 
-		return add_query_arg( $args, admin_url( 'admin.php' ) );
+		return add_query_arg( $args, is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) );
 	}
 
 	/**

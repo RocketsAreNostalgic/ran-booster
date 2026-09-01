@@ -518,7 +518,7 @@ final class ProviderRepositoryRowsNormalizer {
 						'source_view'     => 'branch',
 						'webhook_cleanup' => 1,
 					),
-					admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) )
+					( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference )
 				) . '#ran-booster-webhook-cleanup';
 			}
 			$key             = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'core:webhook-cleanup-review' : 'core:provider-webhooks';
@@ -550,7 +550,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$isPlugin = str_ends_with( strtolower( $reference ), '.php' );
 			if ( ! $isPlugin && 1 !== preg_match( '/^[A-Za-z0-9_.-]+$/', $reference ) ) {
 				continue; }
-			$url = admin_url( 'admin.php?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference ) );
+			$url = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . ( $isPlugin ? 'ran-booster-plugins' : 'ran-booster-themes' ) . '&package=' . rawurlencode( $reference );
 			if ( ! $isRelease ) {
 				$url = add_query_arg( 'source_view', 'branch', $url ) . '#ran-booster-branch-readiness'; }
 			$key             = 'core:package-' . substr( hash( 'sha256', $reference ), 0, 16 );

@@ -226,7 +226,7 @@ final class WebhookManagementController {
 			return $fallback;
 		}
 
-		return admin_url( 'admin.php?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1' );
+		return ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1';
 	}
 
 	private function capableProviderMetadata( string $providerCode ): ?ProviderMetadata {

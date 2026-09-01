@@ -104,6 +104,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		foreach ( $cases as $name => $case ) {
 			list( $status, $expected, $tone, $source ) = $case;
 			$this->resetWordPress();
+			$GLOBALS['ran_booster_release_management_test_multisite'] = true;
 			$rows   = $this->controls( new ReleaseTrackingFacadeDouble( $status ) )->enrichRepositoryRows(
 				$this->repositoryRows( $source ),
 				'gh',
@@ -117,6 +118,7 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 			self::assertSame( $expected, $detail['value'], $name );
 			self::assertSame( $tone, $detail['tone'], $name );
 			self::assertFalse( $action['disabled'], $name );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $action['url'], $name );
 			self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=', htmlspecialchars( $action['url'] ), $name );
 			self::assertStringContainsString( 'source_view=release_asset', $action['url'], $name );
 			self::assertStringContainsString( 'ran_booster_open_advanced=1', $action['url'], $name );
@@ -346,6 +348,20 @@ final class GitHubReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( $preview, $query['ran_booster_github_release_workflow_preview'] );
 		self::assertArrayNotHasKey( 'ran_booster_release_workflow_preview', $query );
 		self::assertArrayNotHasKey( 'ran_booster_release_deployments_preview', $query );
+	}
+
+	public function testAllWorkflowPostReturnsUseNetworkAdminOnMultisite(): void {
+		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
+		$controls = $this->controls();
+
+		foreach ( array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ) as $operation ) {
+			$preview = in_array( $operation, array( 'setup', 'update_setup' ), true ) ? str_repeat( 'a', 32 ) : '';
+			$url     = $controls->processWorkflowRequest( $operation, $this->request( $operation, $preview ) );
+
+			self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $url, $operation );
+			self::assertStringContainsString( 'page=ran-booster-plugins', $url, $operation );
+			self::assertStringContainsString( 'package=example%2Fexample.php', $url, $operation );
+		}
 	}
 
 	public function testVerifiedResultFromAnotherPackageIsNotRenderedOnCurrentScreen(): void {

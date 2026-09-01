@@ -260,6 +260,27 @@ final class SetupRecordStoreTest extends TestCase {
 		self::assertCount( 1, $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_assessment_observations'] );
 		self::assertFalse( $GLOBALS['ran_booster_release_deployments_test_option_updates'][0][2] );
 	}
+	public function testAssessmentObservationUsesTheSameCrossConnectionLock(): void {
+		$first           = new SetupRecordStore();
+		$firstConnection = $GLOBALS['wpdb'];
+		$claim           = $first->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNotNull( $claim );
+		$observation      = $this->observation();
+		$secondConnection = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused database double switches to a distinct connection.
+		$GLOBALS['wpdb'] = $secondConnection;
+		$second          = new SetupRecordStore();
+		self::assertFalse( $second->saveAssessmentObservation( $observation ) );
+		self::assertNull( $second->assessmentObservation( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the original connection to release its claim.
+		$GLOBALS['wpdb'] = $firstConnection;
+		self::assertTrue( $first->releaseClaim( '123456789', $claim ) );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the second connection to prove it can save after release.
+		$GLOBALS['wpdb'] = $secondConnection;
+		self::assertTrue( $second->saveAssessmentObservation( $observation ) );
+		self::assertSame( $observation, $second->assessmentObservation( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+	}
 	public function testMalformedAssessmentObservationOptionFailsClosed(): void {
 		$observation = $this->observation();
 		$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_assessment_observations'] = array( $observation, $observation );
@@ -353,6 +374,39 @@ final class SetupRecordStoreTest extends TestCase {
 		$GLOBALS['ran_booster_release_deployments_test_option_update_result'] = false;
 		self::assertFalse( $store->recordFailure( array_replace( $failure, array( 'correlation_reference' => str_repeat( 'b', 32 ) ) ) ) );
 		unset( $GLOBALS['ran_booster_release_deployments_test_option_update_result'] );
+	}
+	public function testFailureHistoryAppendUsesTheSameCrossConnectionLock(): void {
+		$first           = new SetupRecordStore();
+		$firstConnection = $GLOBALS['wpdb'];
+		$claim           = $first->claim( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 );
+		self::assertNotNull( $claim );
+		$failure          = array(
+			'operation'             => 'inspect',
+			'outcome_code'          => 'workflow_remote_unavailable',
+			'failure_stage'         => 'repository_snapshot',
+			'package_type'          => 'plugin',
+			'package_identifier'    => 'example-plugin/example-plugin.php',
+			'source_revision'       => 3,
+			'repository_id'         => '123456789',
+			'diagnostic_code'       => 'provider_unavailable',
+			'diagnostic_available'  => true,
+			'correlation_reference' => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+			'recorded_at'           => '2026-08-27T12:34:56Z',
+		);
+		$secondConnection = new \RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupClaimDatabase();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The focused database double switches to a distinct connection.
+		$GLOBALS['wpdb'] = $secondConnection;
+		$second          = new SetupRecordStore();
+		self::assertFalse( $second->recordFailure( $failure ) );
+		self::assertSame( array(), $second->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the original connection to release its claim.
+		$GLOBALS['wpdb'] = $firstConnection;
+		self::assertTrue( $first->releaseClaim( '123456789', $claim ) );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the second connection to prove it can append after release.
+		$GLOBALS['wpdb'] = $secondConnection;
+		self::assertTrue( $second->recordFailure( $failure ) );
+		self::assertSame( array( $failure ), $second->failureHistory( '123456789', 'plugin', 'example-plugin/example-plugin.php', 3 ) );
 	}
 	public function testLegacyFailureHistoryIsRetainedAndUpgradedWhenRecordingANewFailure(): void {
 		$legacy = array(

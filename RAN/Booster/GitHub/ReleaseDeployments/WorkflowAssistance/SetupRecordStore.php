@@ -223,12 +223,40 @@ final class SetupRecordStore {
 			wp_cache_delete( self::OPTION, 'options' );
 		}
 	}
+	private function refreshFailureCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::FAILURE_OPTION, 'options' );
+		}
+	}
+	private function refreshAssessmentCache(): void {
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::ASSESSMENT_OPTION, 'options' );
+		}
+	}
 	/** @param array<string,mixed> $observation */
 	public function saveAssessmentObservation( array $observation ): bool {
 		$observation = $this->normalizeObservation( $observation );
 		if ( null === $observation ) {
 			return false;
 		}
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$saved    = false;
+		$released = true;
+		try {
+			$this->refreshAssessmentCache();
+			$saved = $this->persistAssessmentObservation( $observation );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $saved && $released;
+	}
+	/** @param array<string,int|string> $observation */
+	private function persistAssessmentObservation( array $observation ): bool {
 		$all = $this->assessmentObservations();
 		if ( null === $all ) {
 			return false;
@@ -275,6 +303,24 @@ final class SetupRecordStore {
 		if ( null === $failure ) {
 			return false;
 		}
+		$acquired = null === $this->claimToken;
+		if ( $acquired && ! $this->acquireClaimLock() ) {
+			return false;
+		}
+		$recorded = false;
+		$released = true;
+		try {
+			$this->refreshFailureCache();
+			$recorded = $this->persistFailure( $failure );
+		} finally {
+			if ( $acquired ) {
+				$released = $this->releaseClaimLock();
+			}
+		}
+		return $recorded && $released;
+	}
+	/** @param array<string,int|string> $failure */
+	private function persistFailure( array $failure ): bool {
 		$history = get_option( self::FAILURE_OPTION, array() );
 		if ( ! is_array( $history ) || ! array_is_list( $history ) || count( $history ) > self::MAX_FAILURES ) {
 			return false;

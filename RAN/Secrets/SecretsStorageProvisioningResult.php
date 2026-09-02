@@ -37,7 +37,7 @@ final readonly class SecretsStorageProvisioningResult {
 		return new self(
 			self::PATH_CONFIGURED,
 			'path_configured',
-			'The private storage path is configured. Booster will initialize it when you save the first credential.',
+			__( 'The private storage path is configured. Booster will initialize it when you save the first credential.', 'ran-booster' ),
 			$candidatePath,
 			$pathSource
 		);
@@ -47,7 +47,7 @@ final readonly class SecretsStorageProvisioningResult {
 		return new self(
 			self::STORAGE_HEALTHY,
 			'storage_healthy',
-			'Encrypted secrets storage is configured and authenticated.',
+			__( 'Encrypted secrets storage is configured and authenticated.', 'ran-booster' ),
 			$candidatePath,
 			$pathSource
 		);
@@ -57,7 +57,7 @@ final readonly class SecretsStorageProvisioningResult {
 		return new self(
 			self::PATH_CONFIGURED,
 			'storage_reset',
-			'Incomplete credential storage was reset. Booster will initialize fresh encrypted storage when you next save or import a credential.',
+			__( 'Incomplete credential storage was reset. Booster will initialize fresh encrypted storage when you next save or import a credential.', 'ran-booster' ),
 			$candidatePath,
 			$pathSource
 		);
@@ -69,6 +69,10 @@ final readonly class SecretsStorageProvisioningResult {
 		string $code = 'storage_needs_attention',
 		string $message = 'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.'
 	): self {
+		$message = 'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.' === $message
+			? __( 'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.', 'ran-booster' )
+			: $message;
+
 		return new self(
 			self::STORAGE_NEEDS_ATTENTION,
 			$code,
@@ -82,7 +86,7 @@ final readonly class SecretsStorageProvisioningResult {
 		return new self(
 			self::SETUP_AVAILABLE,
 			'setup_available',
-			'Booster can create secure encrypted secrets storage.',
+			__( 'Booster can create secure encrypted secrets storage.', 'ran-booster' ),
 			$candidatePath,
 			self::PATH_SOURCE_AUTOMATIC
 		);
@@ -106,7 +110,7 @@ final readonly class SecretsStorageProvisioningResult {
 		return new self(
 			self::PENDING_VERIFICATION,
 			'pending_verification',
-			'WordPress must reload before the encrypted secrets path can be trusted.',
+			__( 'WordPress must reload before the encrypted secrets path can be trusted.', 'ran-booster' ),
 			$candidatePath,
 			self::PATH_SOURCE_AUTOMATIC
 		);

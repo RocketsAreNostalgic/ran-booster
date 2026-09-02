@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Secrets;
 
+require_once __DIR__ . '/SecretsStorageWordPressFunctions.php';
+
 // Native local filesystem behavior is part of this focused composition test.
 // phpcs:disable WordPress.WP.AlternativeFunctions
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
@@ -31,6 +33,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	private string $temporaryBoundary;
 
 	protected function setUp(): void {
+		$GLOBALS['ran_booster_secrets_test_translations'] = array();
 		$suffix                  = bin2hex( random_bytes( 8 ) );
 		$this->root              = sys_get_temp_dir() . '/ran-booster-provisioner-' . $suffix;
 		$this->temporaryBoundary = sys_get_temp_dir() . '/ran-booster-temporary-boundary-' . $suffix;
@@ -55,6 +58,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
+		unset( $GLOBALS['ran_booster_secrets_test_translations'] );
 		$this->removeTree( $this->root );
 		$this->removeTree( $this->temporaryBoundary );
 	}
@@ -70,6 +74,29 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertFalse( $provisioner->probeCalled );
 		self::assertFalse( $provisioner->writerCalled );
 		self::assertDirectoryDoesNotExist( dirname( $this->candidate ) );
+	}
+
+	public function testLocalizesFactoryStatusAndPendingMessagesWithoutChangingCodesOrPaths(): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+			'Booster can create secure encrypted secrets storage.' => 'Stockage sécurisé prêt.',
+			'WordPress must reload before the encrypted secrets path can be trusted.' => 'WordPress doit recharger.',
+			'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.' => 'Stockage chiffré incomplet.',
+		);
+		$provisioner = $this->provisioner();
+		$status      = $provisioner->status();
+		$pending     = $provisioner->provision();
+		$attention   = SecretsStorageProvisioningResult::storageNeedsAttention(
+			$this->candidate,
+			SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+		);
+
+		self::assertSame( 'Stockage sécurisé prêt.', $status->message() );
+		self::assertSame( 'setup_available', $status->code() );
+		self::assertSame( $this->candidate, $status->candidatePath() );
+		self::assertSame( 'WordPress doit recharger.', $pending->message() );
+		self::assertSame( 'pending_verification', $pending->code() );
+		self::assertSame( $this->candidate, $pending->candidatePath() );
+		self::assertSame( 'Stockage chiffré incomplet.', $attention->message() );
 	}
 
 	public function testUnavailableLocationRetainsBoundedDiscardedCandidateDiagnostics(): void {
@@ -499,6 +526,10 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	public function testExplicitResetIsOfferedOnlyForTheOrphanedKeyStateAndRequiresTypedConfirmation(): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+			'Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store.' => 'Clé de stockage orpheline.',
+			'Incomplete credential storage was reset. Booster will initialize fresh encrypted storage when you next save or import a credential.' => 'Stockage réinitialisé.',
+		);
 		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
 		$provisioner                         = $this->provisioner();
@@ -511,6 +542,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$offer = $provisioner->recoveryState( $status );
 		self::assertIsArray( $offer );
 		self::assertSame( 'reset_available', $offer['state'] );
+		self::assertSame( 'Clé de stockage orpheline.', $offer['message'] );
 		self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $offer['confirmation'] );
 
 		$invalid = $provisioner->resetOrphanedStorage( 'reset storage' );
@@ -520,6 +552,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$reset = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $reset->status() );
 		self::assertSame( 'storage_reset', $reset->code() );
+		self::assertSame( 'Stockage réinitialisé.', $reset->message() );
 		self::assertSame( array( $this->candidate ), $provisioner->resetCandidates );
 
 		$replay = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );

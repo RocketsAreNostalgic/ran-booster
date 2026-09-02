@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 require_once __DIR__ . '/CredentialExpiryWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Secrets/SecretsStorageWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\SecretsStorageSetupPresenter;
@@ -17,10 +18,11 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		parent::setUp();
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
+		$GLOBALS['ran_booster_secrets_test_translations']     = array();
 	}
 
 	protected function tearDown(): void {
-		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_repository_admin_translations'] );
+		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_repository_admin_translations'], $GLOBALS['ran_booster_secrets_test_translations'] );
 
 		parent::tearDown();
 	}
@@ -86,6 +88,21 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertSame( array(), $payload['discarded_candidates'] );
 		self::assertSame( array(), $payload['directory_commands'] );
 		self::assertNull( $payload['config_alternatives'] );
+	}
+
+	public function testPresentsTranslatedStorageResultWithoutChangingItsProtectedCodeOrPath(): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+			'Booster can create secure encrypted secrets storage.' => 'Stockage sécurisé disponible.',
+		);
+		$candidate = '/private/canary/secrets.json';
+		$payload   = ( new SecretsStorageSetupPresenter() )->build(
+			SecretsStorageProvisioningResult::setupAvailable( $candidate ),
+			'/admin'
+		);
+
+		self::assertSame( 'Stockage sécurisé disponible.', $payload['message'] );
+		self::assertSame( 'setup_available', $payload['reason_code'] );
+		self::assertSame( $candidate, $payload['candidate_path'] );
 	}
 
 	public function testConfiguredStatusesKeepTheProtectedPathWithoutOfferingSetupCommands(): void {

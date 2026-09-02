@@ -41,7 +41,7 @@ class SecretsStorageProvisioner {
 		if ( false === $configured ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'configured_path_invalid',
-				'The encrypted secrets path constant is not a valid absolute path.'
+				__( 'The encrypted secrets path constant is not a valid absolute path.', 'ran-booster' )
 			);
 		}
 		if ( is_string( $configured ) ) {
@@ -52,7 +52,7 @@ class SecretsStorageProvisioner {
 					$configured,
 					$source,
 					'configured_path_unsafe',
-					'The resolved configured storage directory is not a verified private location. It may be inside the public web root, use a symbolic link or cross another unsafe path boundary. Choose a real local directory outside the public web root.'
+					__( 'The resolved configured storage directory is not a verified private location. It may be inside the public web root, use a symbolic link or cross another unsafe path boundary. Choose a real local directory outside the public web root.', 'ran-booster' )
 				);
 			}
 
@@ -87,7 +87,7 @@ class SecretsStorageProvisioner {
 		if ( ! $this->supportedAutomaticPlatform() ) {
 			return SecretsStorageProvisioningResult::unsupported(
 				'local_posix_unavailable',
-				'Automatic secure storage setup requires a direct local POSIX filesystem.'
+				__( 'Automatic secure storage setup requires a direct local POSIX filesystem.', 'ran-booster' )
 			);
 		}
 
@@ -97,7 +97,7 @@ class SecretsStorageProvisioner {
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'location_unavailable',
-				'Booster could not determine a safe private storage location.',
+				__( 'Booster could not determine a safe private storage location.', 'ran-booster' ),
 				null,
 				$discarded
 			);
@@ -105,7 +105,7 @@ class SecretsStorageProvisioner {
 		if ( null === $candidate ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'location_unavailable',
-				'Booster could not determine a safe private storage location.',
+				__( 'Booster could not determine a safe private storage location.', 'ran-booster' ),
 				null,
 				$discarded
 			);
@@ -114,7 +114,7 @@ class SecretsStorageProvisioner {
 		if ( null === $this->loadedWpConfigPath() ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'wp_config_unavailable',
-				'Booster could not safely identify the wp-config.php loaded by WordPress.',
+				__( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ),
 				$candidate
 			);
 		}
@@ -133,7 +133,7 @@ class SecretsStorageProvisioner {
 		if ( null === $candidate || null === $config ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'wp_config_unavailable',
-				'Booster could not safely identify the wp-config.php loaded by WordPress.',
+				__( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ),
 				$candidate
 			);
 		}
@@ -146,14 +146,14 @@ class SecretsStorageProvisioner {
 		if ( ! $passed ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'filesystem_probe_failed',
-				'The private storage filesystem did not pass Booster\'s safety checks.',
+				__( 'The private storage filesystem did not pass Booster\'s safety checks.', 'ran-booster' ),
 				$candidate
 			);
 		}
 		if ( ! $this->validateConfiguredCandidate( $candidate ) ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'candidate_path_unsafe',
-				'The private storage location changed or did not pass Booster\'s final path-safety check.',
+				__( 'The private storage location changed or did not pass Booster\'s final path-safety check.', 'ran-booster' ),
 				$candidate
 			);
 		}
@@ -161,7 +161,7 @@ class SecretsStorageProvisioner {
 		if ( ! $this->sameFilesystemDevice( dirname( $candidate ), $config ) ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'filesystem_device_mismatch',
-				'The private storage location and WordPress configuration are not on one verified local filesystem.',
+				__( 'The private storage location and WordPress configuration are not on one verified local filesystem.', 'ran-booster' ),
 				$candidate
 			);
 		}
@@ -177,7 +177,7 @@ class SecretsStorageProvisioner {
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'wp_config_write_failed',
-				'The WordPress configuration could not be updated safely.',
+				__( 'The WordPress configuration could not be updated safely.', 'ran-booster' ),
 				$candidate
 			);
 		}
@@ -185,7 +185,7 @@ class SecretsStorageProvisioner {
 		if ( ! $result->requiresNextRequestVerification() ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				'wp_config_verification_unavailable',
-				'Booster could not require a fresh WordPress configuration check.',
+				__( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ),
 				$candidate
 			);
 		}
@@ -220,7 +220,10 @@ class SecretsStorageProvisioner {
 		if ( ! $scanComplete ) {
 			return array(
 				'state'          => 'blocked',
-				'message'        => 'Booster found plausible prior storage material that it could not inspect completely. Restore or review that material manually before resetting credential storage.',
+				'message'        => __(
+					'Booster found plausible prior storage material that it could not inspect completely. Restore or review that material manually before resetting credential storage.',
+					'ran-booster'
+				),
 				'candidate_path' => null,
 				'token'          => null,
 				'confirmation'   => null,
@@ -231,7 +234,10 @@ class SecretsStorageProvisioner {
 				if ( $missingKey && $this->orphanedCiphertextResetAvailable( $current ) ) {
 					return array(
 						'state'          => 'reset_available',
-						'message'        => 'Booster found encrypted credential storage without its matching database key. Restore the matching database key if possible, or explicitly discard the unauthenticated ciphertext and start with empty credential storage.',
+						'message'        => __(
+							'Booster found encrypted credential storage without its matching database key. Restore the matching database key if possible, or explicitly discard the unauthenticated ciphertext and start with empty credential storage.',
+							'ran-booster'
+						),
 						'candidate_path' => null,
 						'token'          => null,
 						'confirmation'   => self::RESET_CONFIRMATION,
@@ -240,7 +246,10 @@ class SecretsStorageProvisioner {
 				if ( $missingCiphertext && $this->orphanedKeyResetAvailable( $current ) ) {
 					return array(
 						'state'          => 'reset_available',
-						'message'        => 'Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store.',
+						'message'        => __(
+							'Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store.',
+							'ran-booster'
+						),
 						'candidate_path' => null,
 						'token'          => null,
 						'confirmation'   => self::RESET_CONFIRMATION,
@@ -255,7 +264,10 @@ class SecretsStorageProvisioner {
 		if ( $missingKey ) {
 			return array(
 				'state'          => 'blocked',
-				'message'        => 'Booster found prior storage material, but no database key is available to authenticate it. Restore the matching database key before adopting or resetting storage.',
+				'message'        => __(
+					'Booster found prior storage material, but no database key is available to authenticate it. Restore the matching database key before adopting or resetting storage.',
+					'ran-booster'
+				),
 				'candidate_path' => null,
 				'token'          => null,
 				'confirmation'   => null,
@@ -264,7 +276,10 @@ class SecretsStorageProvisioner {
 		if ( 1 !== count( $candidates ) ) {
 			return array(
 				'state'          => 'ambiguous',
-				'message'        => 'Booster found more than one authenticated prior storage set. Choose and configure the correct private location manually.',
+				'message'        => __(
+					'Booster found more than one authenticated prior storage set. Choose and configure the correct private location manually.',
+					'ran-booster'
+				),
 				'candidate_path' => null,
 				'token'          => null,
 				'confirmation'   => null,
@@ -284,10 +299,10 @@ class SecretsStorageProvisioner {
 
 		if ( ! $candidate['safe'] || ! $candidate['fit'] || ! $owned || ! $sameDevice ) {
 			$message = match ( true ) {
-				! $candidate['safe'] => 'Booster authenticated prior credential storage, but its location does not pass the current private-path policy. Move the matching storage set to a verified private location before using it.',
-				! $candidate['fit'] => 'Booster authenticated prior credential storage, but one or more credentials do not pass their current provider policy. Review or restore the matching storage set before using it.',
-				! $owned => 'Booster authenticated prior credential storage, but the active wp-config.php definition is operator-managed. Configure the verified private path manually.',
-				default => 'Booster authenticated prior credential storage, but it crosses an unsupported filesystem boundary. Configure the verified private path manually.',
+				! $candidate['safe'] => __( 'Booster authenticated prior credential storage, but its location does not pass the current private-path policy. Move the matching storage set to a verified private location before using it.', 'ran-booster' ),
+				! $candidate['fit'] => __( 'Booster authenticated prior credential storage, but one or more credentials do not pass their current provider policy. Review or restore the matching storage set before using it.', 'ran-booster' ),
+				! $owned => __( 'Booster authenticated prior credential storage, but the active wp-config.php definition is operator-managed. Configure the verified private path manually.', 'ran-booster' ),
+				default => __( 'Booster authenticated prior credential storage, but it crosses an unsupported filesystem boundary. Configure the verified private path manually.', 'ran-booster' ),
 			};
 
 			return array(
@@ -301,7 +316,7 @@ class SecretsStorageProvisioner {
 
 		return array(
 			'state'          => 'available',
-			'message'        => 'Booster found one prior storage set that authenticates with this site\'s database key and whose credentials pass their current provider policies.',
+			'message'        => __( 'Booster found one prior storage set that authenticates with this site\'s database key and whose credentials pass their current provider policies.', 'ran-booster' ),
 			'candidate_path' => $candidate['candidate_path'],
 			'token'          => $candidate['token'],
 			'confirmation'   => null,
@@ -316,12 +331,12 @@ class SecretsStorageProvisioner {
 			|| null === $source
 			|| ! hash_equals( self::RESET_CONFIRMATION, $confirmation )
 		) {
-			return $this->resetFailure( $status, 'storage_reset_request_invalid', 'The empty-storage reset request is invalid. Review the current storage state and try again.' );
+			return $this->resetFailure( $status, 'storage_reset_request_invalid', __( 'The empty-storage reset request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
 		}
 
 		$offer = $this->recoveryState( $status );
 		if ( null === $offer || 'reset_available' !== $offer['state'] ) {
-			return $this->resetFailure( $status, 'storage_reset_state_changed', 'The credential storage state changed and was not reset. Review it again before continuing.' );
+			return $this->resetFailure( $status, 'storage_reset_state_changed', __( 'The credential storage state changed and was not reset. Review it again before continuing.', 'ran-booster' ) );
 		}
 
 		try {
@@ -331,7 +346,7 @@ class SecretsStorageProvisioner {
 				$this->resetOrphanedKey( $current );
 			}
 		} catch ( Throwable ) {
-			return $this->resetFailure( $status, 'storage_reset_failed', 'The incomplete credential storage could not be reset safely. No storage reset was confirmed.' );
+			return $this->resetFailure( $status, 'storage_reset_failed', __( 'The incomplete credential storage could not be reset safely. No storage reset was confirmed.', 'ran-booster' ) );
 		}
 
 		return SecretsStorageProvisioningResult::storageReset( $current, $source );
@@ -341,7 +356,7 @@ class SecretsStorageProvisioner {
 		$status  = $this->status();
 		$current = $status->candidatePath();
 		if ( 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $token ) || null === $current ) {
-			return $this->recoveryFailure( $current, 'recovery_request_invalid', 'The storage recovery request is invalid. Review the current storage state and try again.' );
+			return $this->recoveryFailure( $current, 'recovery_request_invalid', __( 'The storage recovery request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
 		}
 
 		$offer = $this->recoveryState( $status );
@@ -351,12 +366,12 @@ class SecretsStorageProvisioner {
 			|| ! is_string( $offer['token'] )
 			|| ! hash_equals( $offer['token'], $token )
 		) {
-			return $this->recoveryFailure( $current, 'recovery_candidate_changed', 'The recoverable storage candidate is no longer uniquely safe and authenticated. Review the current storage state again.' );
+			return $this->recoveryFailure( $current, 'recovery_candidate_changed', __( 'The recoverable storage candidate is no longer uniquely safe and authenticated. Review the current storage state again.', 'ran-booster' ) );
 		}
 
 		$config = $this->loadedWpConfigPath();
 		if ( null === $config ) {
-			return $this->recoveryFailure( $current, 'wp_config_unavailable', 'Booster could not safely identify the wp-config.php loaded by WordPress.' );
+			return $this->recoveryFailure( $current, 'wp_config_unavailable', __( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ) );
 		}
 
 		try {
@@ -368,12 +383,12 @@ class SecretsStorageProvisioner {
 				$exception->getMessage()
 			);
 		} catch ( Throwable ) {
-			return $this->recoveryFailure( $current, 'recovery_write_failed', 'The recoverable storage path could not be adopted safely.' );
+			return $this->recoveryFailure( $current, 'recovery_write_failed', __( 'The recoverable storage path could not be adopted safely.', 'ran-booster' ) );
 		}
 
 		return false !== $result && $result->requiresNextRequestVerification()
 			? SecretsStorageProvisioningResult::pendingVerification( $offer['candidate_path'] )
-			: $this->recoveryFailure( $current, 'wp_config_verification_unavailable', 'Booster could not require a fresh WordPress configuration check.' );
+			: $this->recoveryFailure( $current, 'wp_config_verification_unavailable', __( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ) );
 	}
 
 	/** @param list<array{directory:string,code:string,reason:string,component:string|null}>|null $discarded */

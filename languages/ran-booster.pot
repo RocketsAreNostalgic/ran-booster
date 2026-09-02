@@ -1319,6 +1319,26 @@ msgstr ""
 msgid "%s removal could not be completed safely."
 msgstr ""
 
+#: RAN/Admin/PackagePagePresenter.php:33
+msgctxt "Managed package type singular label"
+msgid "Plugin"
+msgstr ""
+
+#: RAN/Admin/PackagePagePresenter.php:34
+msgctxt "Managed package type plural label"
+msgid "Plugins"
+msgstr ""
+
+#: RAN/Admin/PackagePagePresenter.php:43
+msgctxt "Managed package type singular label"
+msgid "Theme"
+msgstr ""
+
+#: RAN/Admin/PackagePagePresenter.php:44
+msgctxt "Managed package type plural label"
+msgid "Themes"
+msgstr ""
+
 #: RAN/Admin/PackagePagePresenter.php:275
 #: views/packages/source-choices.php:19
 msgid "Deploy the saved branch manually or on a signed push."
@@ -6325,8 +6345,28 @@ msgstr ""
 msgid "Independent of package source"
 msgstr ""
 
+#: views/packages/fields/branch.php:14
+#: views/packages/fields/branch.php:17
+msgid "Repository branch"
+msgstr ""
+
+#: views/packages/fields/branch.php:20
+msgid "main, development etc."
+msgstr ""
+
 #: views/packages/fields/branch.php:21
 msgid "Leave blank to use the repository provider's default branch."
+msgstr ""
+
+#: views/packages/fields/credential.php:10
+#: views/packages/fields/credential.php:13
+#: views/provider.php:135
+#: views/provider.php:195
+msgid "Repository access"
+msgstr ""
+
+#: views/packages/fields/credential.php:17
+msgid "Default / public repository"
 msgstr ""
 
 #: views/packages/fields/credential.php:32
@@ -6383,6 +6423,12 @@ msgstr ""
 msgid "Read the Push-to-Deploy guide."
 msgstr ""
 
+#: views/packages/fields/provider.php:11
+#: views/packages/fields/provider.php:14
+#: views/provider.php:127
+msgid "Repository provider"
+msgstr ""
+
 #: views/packages/fields/provider.php:19
 msgid " — Provider unavailable"
 msgstr ""
@@ -6393,6 +6439,23 @@ msgstr ""
 
 #: views/packages/fields/provider.php:23
 msgid "Choose the Git service."
+msgstr ""
+
+#. translators: %1$s: Package type label, such as Plugin or Theme.
+#: views/packages/fields/repository.php:12
+#: views/packages/fields/repository.php:15
+#, php-format
+msgid "%1$s repository"
+msgstr ""
+
+#. translators: %1$s: Package type label, such as Plugin or Theme.
+#: views/packages/fields/repository.php:20
+#, php-format
+msgid "Pick %1$s repository"
+msgstr ""
+
+#: views/packages/fields/repository.php:22
+msgid "Repository locator supplied by the selected provider."
 msgstr ""
 
 #. translators: %s: package type, such as plugin or theme.
@@ -7275,17 +7338,8 @@ msgstr ""
 msgid "(not installed)"
 msgstr ""
 
-#: views/provider.php:127
-msgid "Repository provider"
-msgstr ""
-
 #: views/provider.php:129
 msgid "Manage repository access, integrations and the packages connected to this site."
-msgstr ""
-
-#: views/provider.php:135
-#: views/provider.php:195
-msgid "Repository access"
 msgstr ""
 
 #: views/provider.php:135

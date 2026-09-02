@@ -30,8 +30,8 @@ final class PackagePagePresenter {
 	public static function plugin(): self {
 		return new self(
 			'plugin',
-			'Plugin',
-			'Plugins',
+			_x( 'Plugin', 'Managed package type singular label', 'ran-booster' ),
+			_x( 'Plugins', 'Managed package type plural label', 'ran-booster' ),
 			'file',
 			'ran-booster-plugins'
 		);
@@ -40,8 +40,8 @@ final class PackagePagePresenter {
 	public static function theme(): self {
 		return new self(
 			'theme',
-			'Theme',
-			'Themes',
+			_x( 'Theme', 'Managed package type singular label', 'ran-booster' ),
+			_x( 'Themes', 'Managed package type plural label', 'ran-booster' ),
 			'stylesheet',
 			'ran-booster-themes'
 		);

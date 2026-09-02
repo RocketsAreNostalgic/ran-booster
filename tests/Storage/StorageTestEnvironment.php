@@ -19,7 +19,9 @@ namespace {
 
 	if ( ! function_exists( '__' ) ) {
 		function __( $text, $domain = 'default' ) {
-			return (string) $text;
+			return $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $text ]
+				?? $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ]
+				?? (string) $text;
 		}
 	}
 

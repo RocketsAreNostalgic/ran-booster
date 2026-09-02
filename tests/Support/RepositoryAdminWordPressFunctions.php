@@ -11,7 +11,10 @@ if ( ! function_exists( __NAMESPACE__ . '\\__' ) ) {
 }
 
 function _x( string $text, string $context, string $domain = 'default' ): string {
-	return $GLOBALS['ran_booster_repository_admin_translations'][ $domain ][ $context . "\4" . $text ] ?? $text;
+	return $GLOBALS['ran_booster_repository_admin_translations'][ $domain ][ $context . "\4" . $text ]
+		?? $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $context . "\4" . $text ]
+		?? $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $context . "\4" . $text ]
+		?? $text;
 }
 
 function current_user_can( string $capability ): bool {

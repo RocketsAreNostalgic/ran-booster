@@ -79,6 +79,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\RepositoryReleaseNativeTarget',
 		'RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus',
 		'RAN\RepositoryProvider\RepositoryReleaseNativeTargets',
+		'RAN\RepositoryProvider\RepositoryReleaseReadUnavailable',
 		'RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement',
 		'RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview',
 		'RAN\RepositoryProvider\RepositoryReleaseWorkflowResult',
@@ -97,6 +98,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\WebhookRequest',
 		'RAN\WPReleaseUpdater\V1\Archive\TemporaryArtifact',
 		'RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver',
+		'RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseReadUnavailable',
 		'RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseService',
 		'RAN\WPReleaseUpdater\V1\Provider\GitHub\ProspectiveReleaseArtifact',
 	);

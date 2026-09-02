@@ -30,18 +30,23 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 	public function testCoreSelfTargetUsesTheSealedGitHubReleaseCapability(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$seal       = strpos( $bootstrap, '$providerRegistry->seal()' );
-		$capability = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
-		$reference  = strpos( $bootstrap, "new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null )" );
-		$statusBind = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )' );
+		$seal        = strpos( $bootstrap, '$providerRegistry->seal()' );
+		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allowsNativeDiscovery() )' );
+		$capability  = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
+		$reference   = strpos( $bootstrap, "new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null )" );
+		$statusBind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )' );
 
 		self::assertIsInt( $seal );
+		self::assertIsInt( $policyGuard );
 		self::assertIsInt( $capability );
 		self::assertIsInt( $reference );
 		self::assertIsInt( $statusBind );
-		self::assertLessThan( $capability, $seal );
+		self::assertLessThan( $policyGuard, $seal );
+		self::assertLessThan( $capability, $policyGuard );
 		self::assertLessThan( $reference, $capability );
 		self::assertLessThan( $statusBind, $reference );
+		self::assertStringContainsString( "\t\t\t\t\t\t'forced-off'", $bootstrap );
+		self::assertStringNotContainsString( "? 'forced-off' : 'disabled'", $bootstrap );
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}
 

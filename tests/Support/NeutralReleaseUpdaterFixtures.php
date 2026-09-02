@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace Tests\Booster\GitHub\Support;
 
 require_once __DIR__ . '/NeutralReleaseUpdaterWordPressFunctions.php';
-require_once dirname( __DIR__, 2 ) . '/../ran-wp-release-updater/runtime.php';
+$ran_booster_updater_test_root = getenv( 'RAN_BOOSTER_UPDATER_TEST_ROOT' );
+if ( ! is_string( $ran_booster_updater_test_root ) || '' === $ran_booster_updater_test_root ) {
+	$ran_booster_updater_test_root = dirname( __DIR__, 2 ) . '/../ran-wp-release-updater';
+}
+require_once $ran_booster_updater_test_root . '/runtime.php';
+unset( $ran_booster_updater_test_root );
 
 final class NeutralReleaseUpdaterFixtures {
 	public static function reset(): void {

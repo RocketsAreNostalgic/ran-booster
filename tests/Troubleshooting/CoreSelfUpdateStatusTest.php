@@ -81,6 +81,22 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		rmdir( $directory );
 	}
 
+	public function testDisabledPolicyWithoutTargetReportsNativeDiscoveryDisabled(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-self-update-status-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$policy = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.2.3' );
+
+		$status = ( new CoreSelfUpdateStatus( $policy, null ) )->diagnostics();
+
+		self::assertSame( 'disabled', $status['effective_mode'] );
+		self::assertSame( 'inactive', $status['updater_state'] );
+		self::assertSame( 'native_discovery_disabled', $status['updater_code'] );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.
+		rmdir( $directory );
+	}
+
 	public function testNormalizesTheNeutralNativeTargetStatus(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-update-status-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.

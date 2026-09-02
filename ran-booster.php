@@ -129,27 +129,29 @@ $ran_booster_core_development_notice->register();
 			ReleaseUpdaterBootstrap::activate();
 			$coreVersion       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 			$coreReleaseTarget = null;
-			try {
-				$coreReleaseTarget = $providerRegistry
-					->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )
-					->createNativeTarget(
-						'plugin',
-						new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null ),
-						__FILE__,
-						'ran-booster',
-						plugin_basename( __FILE__ ),
-						str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
-						$ran_booster_self_update_policy->allowsNativeDiscovery() ? 'forced-off' : 'disabled'
+			if ( $ran_booster_self_update_policy->allowsNativeDiscovery() ) {
+				try {
+					$coreReleaseTarget = $providerRegistry
+						->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )
+						->createNativeTarget(
+							'plugin',
+							new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null ),
+							__FILE__,
+							'ran-booster',
+							plugin_basename( __FILE__ ),
+							str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
+							'forced-off'
+						);
+					if ( ! $coreReleaseTarget->register() ) {
+						$coreReleaseTarget = null;
+					}
+				} catch ( Throwable $exception ) {
+					\RAN\Logging\BoosterLogger::logException(
+						'core self-update target registration unavailable',
+						$exception,
+						array( 'step' => 'core_self_update_target_registration' )
 					);
-				if ( ! $coreReleaseTarget->register() ) {
-					$coreReleaseTarget = null;
 				}
-			} catch ( Throwable $exception ) {
-				\RAN\Logging\BoosterLogger::logException(
-					'core self-update target registration unavailable',
-					$exception,
-					array( 'step' => 'core_self_update_target_registration' )
-				);
 			}
 			$ran_booster_container->bind(
 				CoreSelfUpdateStatus::class,

@@ -47,6 +47,7 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
@@ -69,6 +70,7 @@ use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SourceReadyAssessor
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;
 use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver;
+use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseReadUnavailable;
 use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseService;
 use RuntimeException;
 
@@ -441,12 +443,16 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		try {
 			$service  = $this->releaseService( $packageType, $repository, $channel );
 			$releases = $service->listReleases();
+		} catch ( GitHubReleaseReadUnavailable ) {
+			throw new RepositoryReleaseReadUnavailable( 'GitHub release candidate access is unavailable.', 503 );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'GitHub release candidate listing is unavailable.', 503 );
 		}
+		if ( ! empty( $releases['rate_limit']['limited'] ) ) {
+			throw new RepositoryReleaseReadUnavailable( 'GitHub release candidate access is unavailable.', 502 );
+		}
 		if ( ! is_array( $releases['candidates'] ?? null )
-			|| ! empty( $releases['not_modified'] )
-			|| ! empty( $releases['rate_limit']['limited'] ) ) {
+			|| ! empty( $releases['not_modified'] ) ) {
 			throw new RuntimeException( 'GitHub returned invalid release candidates.', 502 );
 		}
 
@@ -498,6 +504,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			$inspection = $service->inspectProspective( $providerReleaseId, $tag );
 		} catch ( InvalidArgumentException ) {
 			throw RepositoryReleaseInspectionRejected::invalidRelease();
+		} catch ( GitHubReleaseReadUnavailable ) {
+			throw new RepositoryReleaseReadUnavailable( 'GitHub release inspection access is unavailable.', 502 );
 		} catch ( RuntimeException $exception ) {
 			if ( 'The GitHub release package is invalid.' === $exception->getMessage() ) {
 				throw RepositoryReleaseInspectionRejected::incompatible();

@@ -13,6 +13,7 @@ use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RuntimeException;
 use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
@@ -83,6 +84,20 @@ final class ReleaseInspectionTest extends TestCase {
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'GitHub could not inspect the selected release.' );
+		$this->provider()->inspectRelease(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'42',
+			'v1.2.3',
+			'stable'
+		);
+	}
+
+	public function testRepositoryAccessFailurePreservesFallbackSignal(): void {
+		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::response( 404, array( 'message' => 'upstream-secret-message' ) ) ) );
+
+		$this->expectException( RepositoryReleaseReadUnavailable::class );
+		$this->expectExceptionMessage( 'GitHub release inspection access is unavailable.' );
 		$this->provider()->inspectRelease(
 			'plugin',
 			new RepositoryReference( 'owner/example', '123456789', false, null ),

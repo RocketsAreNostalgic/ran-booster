@@ -21,7 +21,17 @@ use RAN\RepositoryProvider\SignedWebhookVerification;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 
+require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
+
 final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
+
+	protected function setUp(): void {
+		$GLOBALS['ran_booster_repository_admin_translations'] = array();
+	}
+
+	protected function tearDown(): void {
+		unset( $GLOBALS['ran_booster_repository_admin_translations'] );
+	}
 
 	public function testItReturnsTheOnlyProviderOwnedStableRepositoryIdentity(): void {
 		$resolver = $this->resolver(
@@ -47,13 +57,14 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 	}
 
 	public function testItRejectsConflictingStableIdentitiesForOneLocator(): void {
+		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret.'] = 'Identité unique traduite.';
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' ) ),
 			array( AuthorityPackage::make( 'example-theme', 'owner/example', 'gh', 'repository-99' ) )
 		);
 
 		$this->expectException( CredentialRequestException::class );
-		$this->expectExceptionMessage( 'exactly one stable provider identity' );
+		$this->expectExceptionMessage( 'Identité unique traduite.' );
 		$resolver->resolve( ProviderCode::parse( 'gh' ), new AuthorityWebhookPolicy(), 'owner/example' );
 	}
 
@@ -90,12 +101,13 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 	}
 
 	public function testItRejectsOwnersWithoutAManagedRepository(): void {
+		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['Choose an account owner from the managed repositories before creating an owner-scoped webhook secret.'] = 'Propriétaire traduit.';
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' ) )
 		);
 
 		$this->expectException( CredentialRequestException::class );
-		$this->expectExceptionMessage( 'owner from the managed repositories' );
+		$this->expectExceptionMessage( 'Propriétaire traduit.' );
 		$resolver->resolveOwner( ProviderCode::parse( 'gh' ), 'other-owner' );
 	}
 

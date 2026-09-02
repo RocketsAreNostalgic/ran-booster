@@ -218,13 +218,13 @@ class Booster {
 
 	public function adminMenu() {
 		add_menu_page( $this->getName(), $this->getName(), 'manage_options', 'ran-booster', null, $this->getMenuIcon() );
-		add_submenu_page( 'ran-booster', $this->getName(), 'Overview', 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ) );
-		add_submenu_page( 'ran-booster', 'Install Plugin', 'Install Plugin', 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
-		add_submenu_page( 'ran-booster', 'Managed Plugins', 'Plugins', 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
-		add_submenu_page( 'ran-booster', 'Install Theme', 'Install Theme', 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
-		add_submenu_page( 'ran-booster', 'Managed Themes', 'Themes', 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
-		add_submenu_page( 'ran-booster', 'Transporter', 'Transporter', 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'getTransporter' ) );
-		add_submenu_page( 'ran-booster', 'Extensions', 'Extensions', 'manage_options', 'ran-booster-extensions', array( $this, 'renderExtensionsPage' ) );
+		add_submenu_page( 'ran-booster', $this->getName(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Plugin', 'ran-booster' ), __( 'Install Plugin', 'ran-booster' ), 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Plugins', 'ran-booster' ), __( 'Plugins', 'ran-booster' ), 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Theme', 'ran-booster' ), __( 'Install Theme', 'ran-booster' ), 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
+		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'getTransporter' ) );
+		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'renderExtensionsPage' ) );
 	}
 
 	/**

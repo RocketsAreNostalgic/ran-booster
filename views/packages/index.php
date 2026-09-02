@@ -94,7 +94,7 @@ $policyLabels = array(
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 );
 
-?><h2 class="wp-heading-inline ran-booster-package-heading">Managed <?php echo esc_html( $packageView->getPluralLabel() ); ?></h2>
+?><h2 class="wp-heading-inline ran-booster-package-heading"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></h2>
 <?php if ( $packageListTotal > 0 ) { ?>
 	<a class="page-title-action" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
 <?php } ?>

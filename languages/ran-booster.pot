@@ -4200,6 +4200,48 @@ msgstr ""
 msgid "RAN Booster could not complete its database setup, so WordPress left the plugin inactive. Confirm that WordPress can create and update plugin tables, then try again or contact your hosting provider."
 msgstr ""
 
+#: RAN/Booster.php:221
+msgid "Overview"
+msgstr ""
+
+#: RAN/Booster.php:222
+msgid "Install Plugin"
+msgstr ""
+
+#: RAN/Booster.php:223
+msgid "Managed Plugins"
+msgstr ""
+
+#: RAN/Booster.php:223
+#: views/base.php:37
+msgid "Plugins"
+msgstr ""
+
+#: RAN/Booster.php:224
+msgid "Install Theme"
+msgstr ""
+
+#: RAN/Booster.php:225
+msgid "Managed Themes"
+msgstr ""
+
+#: RAN/Booster.php:225
+#: views/base.php:42
+msgid "Themes"
+msgstr ""
+
+#: RAN/Booster.php:226
+#: views/portability.php:43
+#: views/portability.php:71
+#: views/portability.php:266
+msgid "Transporter"
+msgstr ""
+
+#: RAN/Booster.php:227
+#: views/extensions.php:11
+msgid "Extensions"
+msgstr ""
+
 #: RAN/Booster.php:258
 msgid "RAN Booster Extensions"
 msgstr ""
@@ -4777,14 +4819,6 @@ msgstr ""
 
 #: views/attempts/index.php:142
 msgid "Older activity"
-msgstr ""
-
-#: views/base.php:37
-msgid "Plugins"
-msgstr ""
-
-#: views/base.php:42
-msgid "Themes"
 msgstr ""
 
 #: views/base.php:68
@@ -5599,10 +5633,6 @@ msgstr ""
 
 #: views/extensions.php:10
 msgid "Add-ons"
-msgstr ""
-
-#: views/extensions.php:11
-msgid "Extensions"
 msgstr ""
 
 #: views/extensions.php:12
@@ -6500,6 +6530,12 @@ msgid_plural "%1$d of %2$d items"
 msgstr[0] ""
 msgstr[1] ""
 
+#. translators: %s: Managed package type plural label, such as Plugins or Themes.
+#: views/packages/index.php:97
+#, php-format
+msgid "Managed %s"
+msgstr ""
+
 #: views/packages/index.php:104
 msgid "Review package health, deploy saved branches and hand published releases to WordPress."
 msgstr ""
@@ -7041,12 +7077,6 @@ msgid "%d package"
 msgid_plural "%d packages"
 msgstr[0] ""
 msgstr[1] ""
-
-#: views/portability.php:43
-#: views/portability.php:71
-#: views/portability.php:266
-msgid "Transporter"
-msgstr ""
 
 #: views/portability.php:44
 msgid "Transport Booster-managed packages"

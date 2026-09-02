@@ -58,12 +58,13 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 	}
 
 	public function testItRejectsAMatchingPackageWithoutStableIdentity(): void {
+		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['This managed package does not have a stable repository identity. Re-save its repository settings before creating a repository-scoped webhook secret.'] = 'Identité traduite.';
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', null ) )
 		);
 
 		$this->expectException( CredentialRequestException::class );
-		$this->expectExceptionMessage( 'does not have a stable repository identity' );
+		$this->expectExceptionMessage( 'Identité traduite.' );
 		$resolver->resolve( ProviderCode::parse( 'gh' ), new AuthorityWebhookPolicy(), 'owner/example' );
 	}
 

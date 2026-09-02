@@ -137,7 +137,7 @@ $addDocumentationItem( 'ran-booster-about', __( 'About RAN Booster', 'ran-booste
 </aside>
 <section class="ran-booster-page-shell ran-booster-panel ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
 	<header class="ran-booster-page-shell__header ran-booster-documentation__header">
-		<p class="ran-booster-eyebrow">Guidance</p>
+		<p class="ran-booster-eyebrow"><?php esc_html_e( 'Guidance', 'ran-booster' ); ?></p>
 		<h2 id="ran-booster-documentation-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', 'ran-booster' ); ?></p>
 	</header>

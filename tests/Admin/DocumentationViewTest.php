@@ -16,10 +16,21 @@ final class DocumentationViewTest extends TestCase {
 		$GLOBALS['ran_booster_documentation_test_actions'] = array();
 		$GLOBALS['ran_booster_documentation_test_filters'] = array();
 		$GLOBALS['ran_booster_admin_view_filters']         = array();
+		$GLOBALS['ran_booster_admin_test_translations']    = array();
 	}
 
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_documentation_test_actions'], $GLOBALS['ran_booster_documentation_test_filters'], $GLOBALS['ran_booster_admin_view_filters'] );
+	}
+
+	public function testTranslatesTheGuidanceEyebrowWithoutChangingDocumentationNavigation(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Guidance'] = 'Conseils';
+
+		$html = $this->renderView( $this->providerDocumentation() );
+
+		self::assertStringContainsString( '<p class="ran-booster-eyebrow">Conseils</p>', $html );
+		self::assertStringContainsString( 'class="ran-booster-documentation__index-link"', $html );
+		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
 	}
 
 	public function testRendersTenNativeDisclosureSectionsWithOnlyQuickStartOpen(): void {

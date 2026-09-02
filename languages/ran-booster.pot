@@ -1006,6 +1006,18 @@ msgstr ""
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
+#: RAN/Admin/ManagedPackageWebhookAuthorityResolver.php:45
+msgid "This managed package does not have a stable repository identity. Re-save its repository settings before creating a repository-scoped webhook secret."
+msgstr ""
+
+#: RAN/Admin/ManagedPackageWebhookAuthorityResolver.php:55
+msgid "Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret."
+msgstr ""
+
+#: RAN/Admin/ManagedPackageWebhookAuthorityResolver.php:84
+msgid "Choose an account owner from the managed repositories before creating an owner-scoped webhook secret."
+msgstr ""
+
 #: RAN/Admin/ManagedPluginFailureRows.php:66
 msgid "RAN Booster automatic deployment failed."
 msgstr ""
@@ -4196,6 +4208,10 @@ msgstr ""
 msgid "Extensions are temporarily unavailable. Reload the page or check the Booster installation."
 msgstr ""
 
+#: RAN/Booster.php:385
+msgid "Manage with RAN Booster"
+msgstr ""
+
 #: RAN/Booster.php:644
 #: views/attempts/index.php:34
 #: views/packages/index.php:53
@@ -4950,6 +4966,10 @@ msgstr ""
 #: views/documentation.php:158
 #: views/documentation.php:454
 msgid "or"
+msgstr ""
+
+#: views/documentation.php:140
+msgid "Guidance"
 msgstr ""
 
 #: views/documentation.php:141
@@ -5707,6 +5727,10 @@ msgstr ""
 
 #: views/onboarding.php:38
 msgid "Custom wp-config.php path"
+msgstr ""
+
+#: views/onboarding.php:68
+msgid "Ignition"
 msgstr ""
 
 #: views/onboarding.php:69
@@ -7840,6 +7864,7 @@ msgid "Save webhook secret"
 msgstr ""
 
 #: views/troubleshooting.php:18
+#: views/troubleshooting.php:77
 msgid "Diagnostics"
 msgstr ""
 

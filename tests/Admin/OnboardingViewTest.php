@@ -10,6 +10,20 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class OnboardingViewTest extends TestCase {
 
+	protected function setUp(): void {
+		$GLOBALS['ran_booster_admin_test_translations'] = array();
+	}
+
+	public function testTranslatesTheIgnitionEyebrowWithoutChangingTheOnboardingDestinations(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Ignition'] = 'Allumage';
+
+		$html = $this->renderView();
+
+		self::assertStringContainsString( '<p class="ran-booster-eyebrow">Allumage</p>', $html );
+		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
+		self::assertStringContainsString( 'page=ran-booster-themes-create', $html );
+	}
+
 	public function testLeadsWithPublicInstallationBeforeOptionalAccessAndAutomation(): void {
 		$html = $this->renderView();
 

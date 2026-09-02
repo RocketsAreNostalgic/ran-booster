@@ -52,8 +52,9 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	protected function setUp(): void {
-		$GLOBALS['ran_booster_admin_view_filters'] = array();
-		$GLOBALS['ran_booster_admin_view_actions'] = array();
+		$GLOBALS['ran_booster_admin_view_filters']      = array();
+		$GLOBALS['ran_booster_admin_view_actions']      = array();
+		$GLOBALS['ran_booster_admin_test_translations'] = array();
 	}
 
 	protected function tearDown(): void {
@@ -61,6 +62,23 @@ final class TroubleshootingViewTest extends TestCase {
 			$GLOBALS['ran_booster_admin_view_filters'],
 			$GLOBALS['ran_booster_admin_view_actions']
 		);
+	}
+
+	public function testTranslatesTheDiagnosticsEyebrowWithoutChangingTheActivePanel(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Diagnostics'] = 'Diagnostic traduit';
+		$troubleshootingPanel = 'diagnostics';
+		$troubleshooting      = array();
+		$debugCapture         = array(
+			'state'    => 'inactive',
+			'filename' => 'ran-booster-debug.php',
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<p class="ran-booster-eyebrow">Diagnostic traduit</p>', $html );
+		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
 	}
 
 	public function testLoggingFollowsDeploymentActivityInAccessibleSecondaryNavigation(): void {

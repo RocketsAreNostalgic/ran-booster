@@ -382,7 +382,7 @@ class Booster {
 			? 'network_admin_plugin_action_links_'
 			: 'plugin_action_links_';
 
-		$link = '<a href="' . $url . '">Manage with RAN Booster</a>';
+		$link = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Manage with RAN Booster', 'ran-booster' ) . '</a>';
 
 		foreach ( $plugins as $plugin ) {
 			add_filter(

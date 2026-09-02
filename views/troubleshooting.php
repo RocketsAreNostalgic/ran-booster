@@ -74,7 +74,7 @@ $repositoryPlaceholder = array() === $locatorExamples
 ?>
 <section id="ran-booster-troubleshooting-diagnostics-region" class="ran-booster-page-shell ran-booster-panel ran-booster-troubleshooting" aria-labelledby="ran-booster-troubleshooting-heading">
 	<header class="ran-booster-page-shell__header ran-booster-troubleshooting__header">
-		<p class="ran-booster-eyebrow">Diagnostics</p>
+		<p class="ran-booster-eyebrow"><?php esc_html_e( 'Diagnostics', 'ran-booster' ); ?></p>
 		<h2 id="ran-booster-troubleshooting-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Troubleshooting', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Run protected checks, temporarily capture Booster events, or review recent update activity.', 'ran-booster' ); ?></p>
 	</header>

@@ -6,9 +6,7 @@ namespace RAN;
 
 if ( ! function_exists( __NAMESPACE__ . '\\__' ) ) {
 	function __( string $text, string $domain = 'default' ): string {
-		unset( $domain );
-
-		return $text;
+		return $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ] ?? $text;
 	}
 }
 

@@ -30,6 +30,7 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_extensions_active_plugins']         = array();
 		$GLOBALS['ran_booster_extensions_network_active_plugins'] = array();
 		$GLOBALS['ran_booster_extensions_plugins_failure']        = null;
+		$GLOBALS['ran_booster_admin_test_translations']           = array();
 	}
 
 	protected function tearDown(): void {
@@ -43,7 +44,8 @@ final class ExtensionsPageTest extends TestCase {
 			$GLOBALS['ran_booster_extensions_plugins'],
 			$GLOBALS['ran_booster_extensions_active_plugins'],
 			$GLOBALS['ran_booster_extensions_network_active_plugins'],
-			$GLOBALS['ran_booster_extensions_plugins_failure']
+			$GLOBALS['ran_booster_extensions_plugins_failure'],
+			$GLOBALS['ran_booster_admin_test_translations']
 		);
 	}
 
@@ -97,6 +99,51 @@ final class ExtensionsPageTest extends TestCase {
 			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][6], array( 'callback' => true ) )
 		);
 		self::assertSame( array( $booster, 'renderExtensionsPage' ), $GLOBALS['ran_booster_extensions_page_submenus'][6]['callback'] );
+	}
+
+	public function testRegistersTranslatedMenuCopyWithoutChangingItsWordPressRouteContract(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
+			'Overview'        => 'Vue d’ensemble',
+			'Install Plugin'  => 'Installer une extension',
+			'Managed Plugins' => 'Extensions gérées',
+			'Plugins'         => 'Extensions',
+			'Install Theme'   => 'Installer une apparence',
+			'Managed Themes'  => 'Apparences gérées',
+			'Themes'          => 'Apparences',
+			'Transporter'     => 'Transfert',
+			'Extensions'      => 'Modules',
+		);
+
+		$booster = $this->booster();
+		$booster->adminMenu();
+
+		self::assertSame( 'RAN Booster', $GLOBALS['ran_booster_extensions_page_menus'][0]['page_title'] );
+		self::assertSame( 'RAN Booster', $GLOBALS['ran_booster_extensions_page_menus'][0]['menu_title'] );
+		self::assertSame( 'manage_options', $GLOBALS['ran_booster_extensions_page_menus'][0]['capability'] );
+		self::assertSame( 'ran-booster', $GLOBALS['ran_booster_extensions_page_menus'][0]['menu_slug'] );
+
+		self::assertSame(
+			array(
+				array( 'ran-booster', 'RAN Booster', 'Vue d’ensemble', 'manage_options', 'ran-booster', 'getIndex' ),
+				array( 'ran-booster', 'Installer une extension', 'Installer une extension', 'manage_options', 'ran-booster-plugins-create', 'getPluginsCreate' ),
+				array( 'ran-booster', 'Extensions gérées', 'Extensions', 'manage_options', 'ran-booster-plugins', 'getPlugins' ),
+				array( 'ran-booster', 'Installer une apparence', 'Installer une apparence', 'manage_options', 'ran-booster-themes-create', 'getThemesCreate' ),
+				array( 'ran-booster', 'Apparences gérées', 'Apparences', 'manage_options', 'ran-booster-themes', 'getThemes' ),
+				array( 'ran-booster', 'Transfert', 'Transfert', 'manage_options', 'ran-booster-transporter', 'getTransporter' ),
+				array( 'ran-booster', 'Modules', 'Modules', 'manage_options', 'ran-booster-extensions', 'renderExtensionsPage' ),
+			),
+			array_map(
+				static fn ( array $submenu ): array => array(
+					$submenu['parent_slug'],
+					$submenu['page_title'],
+					$submenu['menu_title'],
+					$submenu['capability'],
+					$submenu['menu_slug'],
+					$submenu['callback'][1],
+				),
+				$GLOBALS['ran_booster_extensions_page_submenus']
+			)
+		);
 	}
 
 	public function testDashboardRoutesExtensionsThroughTheSharedPageFrame(): void {

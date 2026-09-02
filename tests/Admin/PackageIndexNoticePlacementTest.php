@@ -12,6 +12,15 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PackageIndexNoticePlacementTest extends TestCase {
 
+	protected function setUp(): void {
+		$GLOBALS['ran_booster_admin_test_translations']   = array();
+		$GLOBALS['ran_booster_package_view_translations'] = array();
+	}
+
+	protected function tearDown(): void {
+		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_package_view_translations'] );
+	}
+
 	public function testStructuredContentionInfoNoticeKeepsItsProtectedActivityLink(): void {
 		$messages = array(
 			array(
@@ -28,6 +37,33 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( 'notice notice-info inline', $html );
 		self::assertStringContainsString( 'attempt=42', $html );
 		self::assertStringContainsString( 'Review activity', $html );
+	}
+
+	public function testPackageIndexCanReorderTheCompleteManagedPackageHeadingWithoutChangingPackageIdentity(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Managed %s'] = '%s administrés';
+		$packageView             = PackagePagePresenter::plugin();
+		$messages                = array();
+		$name                    = 'RAN Booster';
+		$view                    = 'packages/index';
+		$developmentSafetyNotice = false;
+		$packages                = array();
+		$packageProviders        = array();
+		$packageActivity         = array(
+			'items'       => array(),
+			'unavailable' => false,
+		);
+		$tabs                    = array();
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/base.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Plugins administrés</h2>', $html );
+		self::assertStringNotContainsString( '>Managed Plugins</h2>', $html );
+		self::assertSame( 'plugin', $packageView->getType() );
+		self::assertSame( 'ran-booster-plugins', $packageView->getPageSlug() );
+		self::assertStringContainsString( 'ran-booster-admin--packages', $html );
+		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
 	}
 
 	/** @return array<string, array{PackagePagePresenter, string}> */

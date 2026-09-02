@@ -110,13 +110,13 @@ msgid "Name"
 msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:93
-#: views/provider/modals.php:35
+#: views/provider/modals.php:47
 msgid "Credential type"
 msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:99
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:134
-#: views/provider/modals.php:136
+#: views/provider/modals.php:148
 msgid "Scope"
 msgstr ""
 
@@ -7516,7 +7516,7 @@ msgid "Trigger a delivery and confirm the provider records a successful response
 msgstr ""
 
 #: views/provider.php:387
-#: views/provider/modals.php:153
+#: views/provider/modals.php:165
 msgid "Managed repositories"
 msgstr ""
 
@@ -7590,198 +7590,194 @@ msgstr ""
 msgid "Saved credentials use Booster encrypted local storage outside the plugin directory and WordPress database. Deployment constants appear as immutable profiles and always take precedence."
 msgstr ""
 
-#: views/provider/modals.php:24
-msgid "Add repository credential"
-msgstr ""
-
-#: views/provider/modals.php:25
-#: views/provider/modals.php:85
-#: views/provider/modals.php:128
-msgid "Close"
-msgstr ""
-
 #. translators: 1: provider label, 2: provider code.
-#: views/provider/modals.php:32
+#: views/provider/modals.php:22
 #, php-format
 msgid "Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#. translators: 1: provider label, 2: provider code.
-#: views/provider/modals.php:33
-#: views/provider/modals.php:135
+#. translators: 1: credential label.
+#: views/provider/modals.php:28
+#, php-format
+msgid "You are about to delete %1$s from this site. This removes its saved secret and cannot be undone."
+msgstr ""
+
+#: views/provider/modals.php:36
+msgid "Add repository credential"
+msgstr ""
+
+#: views/provider/modals.php:37
+#: views/provider/modals.php:97
+#: views/provider/modals.php:140
+msgid "Close"
+msgstr ""
+
+#: views/provider/modals.php:45
+#: views/provider/modals.php:147
 msgid "Label"
 msgstr ""
 
-#. translators: 1: provider label, 2: provider code.
-#: views/provider/modals.php:33
+#: views/provider/modals.php:45
 msgid "e.g. Deployment access"
 msgstr ""
 
-#: views/provider/modals.php:41
+#: views/provider/modals.php:53
 msgid "Expiry / removal date"
 msgstr ""
 
-#: views/provider/modals.php:64
+#: views/provider/modals.php:76
 msgid "Automatically remove this saved credential after this date"
 msgstr ""
 
-#: views/provider/modals.php:66
+#: views/provider/modals.php:78
 msgid "Enter the provider expiry date, or choose an earlier one. If automatic removal is enabled, Booster removes the saved credential after this date. A known provider expiry is the latest date allowed."
 msgstr ""
 
-#: views/provider/modals.php:68
+#: views/provider/modals.php:80
 msgid "Credential secret"
 msgstr ""
 
-#: views/provider/modals.php:71
+#: views/provider/modals.php:83
 msgid "Show credential secret"
 msgstr ""
 
-#: views/provider/modals.php:71
+#: views/provider/modals.php:83
 msgid "Hide credential secret"
 msgstr ""
 
-#: views/provider/modals.php:73
+#: views/provider/modals.php:85
 msgid "Required when adding."
 msgstr ""
 
-#: views/provider/modals.php:73
+#: views/provider/modals.php:85
 msgid "A credential secret is already saved. Leave this field unchanged to keep it, or enter a replacement."
 msgstr ""
 
-#: views/provider/modals.php:76
+#: views/provider/modals.php:88
 msgid "Save credential"
 msgstr ""
 
-#: views/provider/modals.php:76
-#: views/provider/modals.php:103
-#: views/provider/modals.php:192
+#: views/provider/modals.php:88
+#: views/provider/modals.php:115
+#: views/provider/modals.php:204
 msgid "Cancel"
 msgstr ""
 
-#: views/provider/modals.php:84
+#: views/provider/modals.php:96
 msgid "Delete repository credential?"
 msgstr ""
 
-#: views/provider/modals.php:92
-msgid "You are about to delete"
-msgstr ""
-
-#: views/provider/modals.php:92
-msgid "from this site. This removes its saved secret and cannot be undone."
-msgstr ""
-
-#: views/provider/modals.php:93
+#: views/provider/modals.php:105
 msgid "Booster has verified that no managed package currently uses this credential."
 msgstr ""
 
-#: views/provider/modals.php:96
+#: views/provider/modals.php:108
 msgid "Connected packages"
 msgstr ""
 
-#. translators: %s: provider label.
-#: views/provider/modals.php:99
+#. translators: 1: provider label.
+#: views/provider/modals.php:111
 #, php-format
-msgid "This credential is the default for public repository lookup. Deleting it returns %s public lookup to Anonymous and the provider’s public API limits."
+msgid "This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the provider’s public API limits."
 msgstr ""
 
-#: views/provider/modals.php:102
+#: views/provider/modals.php:114
 msgid "Yes, delete credential"
 msgstr ""
 
-#: views/provider/modals.php:127
+#: views/provider/modals.php:139
 msgid "Add Push-to-Deploy secret"
 msgstr ""
 
-#: views/provider/modals.php:135
+#: views/provider/modals.php:147
 msgid "e.g. Organisation webhooks"
 msgstr ""
 
-#: views/provider/modals.php:142
+#: views/provider/modals.php:154
 msgid "Target"
 msgstr ""
 
-#: views/provider/modals.php:144
+#: views/provider/modals.php:156
 msgid "Managed owners"
 msgstr ""
 
-#: views/provider/modals.php:145
+#: views/provider/modals.php:157
 msgid "No managed owners available"
 msgstr ""
 
-#: views/provider/modals.php:145
+#: views/provider/modals.php:157
 msgid "Choose a managed owner"
 msgstr ""
 
-#. translators: %s: configured webhook target.
-#: views/provider/modals.php:150
-#: views/provider/modals.php:160
+#. translators: 1: configured webhook target.
+#: views/provider/modals.php:162
+#: views/provider/modals.php:172
 #, php-format
-msgid "%s — already configured"
+msgid "%1$s — already configured"
 msgstr ""
 
-#: views/provider/modals.php:154
+#: views/provider/modals.php:166
 msgid "No managed repositories available"
 msgstr ""
 
-#: views/provider/modals.php:154
+#: views/provider/modals.php:166
 msgid "Choose a managed repository"
 msgstr ""
 
-#: views/provider/modals.php:168
+#: views/provider/modals.php:180
 msgid "Webhook secret"
 msgstr ""
 
-#: views/provider/modals.php:171
+#: views/provider/modals.php:183
 msgid "Long random secret"
 msgstr ""
 
-#: views/provider/modals.php:172
+#: views/provider/modals.php:184
 msgid "Show secret"
 msgstr ""
 
-#: views/provider/modals.php:172
+#: views/provider/modals.php:184
 msgid "Hide secret"
 msgstr ""
 
-#: views/provider/modals.php:175
+#: views/provider/modals.php:187
 msgid "Generate secret"
 msgstr ""
 
-#: views/provider/modals.php:176
-#: views/provider/modals.php:184
+#: views/provider/modals.php:188
+#: views/provider/modals.php:196
 msgid "Copy secret"
 msgstr ""
 
-#: views/provider/modals.php:176
+#: views/provider/modals.php:188
 msgid "Secret copied"
 msgstr ""
 
-#: views/provider/modals.php:188
+#: views/provider/modals.php:200
 msgid "Copy the secret before saving."
 msgstr ""
 
-#: views/provider/modals.php:188
+#: views/provider/modals.php:200
 msgid "Paste the same value into the provider webhook. Booster will not reveal a saved secret again, and saving it here does not create or verify the remote webhook. On edit, leave the field unchanged to retain the saved secret."
 msgstr ""
 
-#: views/provider/modals.php:189
+#: views/provider/modals.php:201
 msgid "A secure 64-character webhook secret was generated."
 msgstr ""
 
-#: views/provider/modals.php:189
+#: views/provider/modals.php:201
 msgid "Webhook secret copied to the clipboard."
 msgstr ""
 
-#: views/provider/modals.php:189
+#: views/provider/modals.php:201
 msgid "Booster could not generate a webhook secret securely in this browser. Enter one manually."
 msgstr ""
 
-#: views/provider/modals.php:189
+#: views/provider/modals.php:201
 msgid "Clipboard access failed. The webhook secret is selected; use your browser’s copy command."
 msgstr ""
 
-#: views/provider/modals.php:192
+#: views/provider/modals.php:204
 msgid "Save webhook secret"
 msgstr ""
 

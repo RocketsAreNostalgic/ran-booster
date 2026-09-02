@@ -29,12 +29,11 @@ final class ModalLocalisationTest extends TestCase {
 				'Save webhook secret'           => 'Enregistrer le secret webhook',
 				'Cancel'                        => 'Annuler',
 				'Delete repository credential?' => 'Supprimer l’identifiant de depot ?',
-				'You are about to delete'       => 'Vous allez supprimer',
-				'from this site. This removes its saved secret and cannot be undone.' => 'de ce site. Son secret enregistre sera supprime sans possibilite de retour.',
+				'You are about to delete %1$s from this site. This removes its saved secret and cannot be undone.' => 'Cette suppression ne peut pas etre annulee : %1$s sera retire de ce site avec son secret.',
 				'Booster has verified that no managed package currently uses this credential.' => 'Booster a verifie qu’aucun paquet gere n’utilise cet identifiant.',
-				'This credential is the default for public repository lookup. Deleting it returns %s public lookup to Anonymous and the provider’s public API limits.' => 'Cet identifiant est celui de la recherche publique par defaut. Le supprimer rend la recherche publique de %s a Anonymous et aux limites de l’API publique du fournisseur.',
+				'This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the provider’s public API limits.' => 'Cet identifiant est celui de la recherche publique par defaut. Le supprimer rend la recherche publique de %1$s a Anonymous et aux limites de l’API publique du fournisseur.',
 				'Yes, delete credential'        => 'Oui, supprimer l’identifiant',
-				'%s — already configured'       => '%s — deja configure',
+				'%1$s — already configured'     => '%1$s — deja configure',
 			),
 		);
 	}
@@ -59,6 +58,7 @@ final class ModalLocalisationTest extends TestCase {
 		self::assertStringContainsString( '>Enregistrer l’identifiant</button>', $html );
 		self::assertStringContainsString( '>Enregistrer le secret webhook</button>', $html );
 		self::assertStringContainsString( '>Oui, supprimer l’identifiant</button>', $html );
+		self::assertStringContainsString( 'id="ran-booster-delete-access-modal-description">Cette suppression ne peut pas etre annulee : <strong data-delete-credential-label></strong> sera retire de ce site avec son secret.</p>', $html );
 		self::assertStringContainsString( 'Booster a verifie qu’aucun paquet gere n’utilise cet identifiant.', $html );
 		self::assertStringContainsString( 'recherche publique de Provider &lt;data&gt; a Anonymous', $html );
 		self::assertStringContainsString( 'workspace — deja configure</option>', $html );
@@ -74,6 +74,7 @@ final class ModalLocalisationTest extends TestCase {
 		self::assertStringContainsString( 'value="workspace/example" data-webhook-profile-id="repository-hook" disabled', $html );
 
 		self::assertStringContainsString( 'id="ran-booster-access-modal-title"', $html );
+		self::assertStringContainsString( 'data-delete-credential-label', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="save-access-profile"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="delete-access-profile"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="save-webhook-profile"', $html );

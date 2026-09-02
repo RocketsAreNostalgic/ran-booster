@@ -17,6 +17,18 @@ $providerProfileInteractionValues = static function ( string $action ): string {
 };
 
 if ( $hasCredentialSettings ) {
+	$credentialAuthorisationDescription = sprintf(
+		/* translators: 1: provider label, 2: provider code. */
+		__( 'Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher.', 'ran-booster' ),
+		$provider['label'],
+		$provider['code']
+	);
+	$deleteCredentialDescription =
+		/* translators: 1: credential label. */
+		__(
+			'You are about to delete %1$s from this site. This removes its saved secret and cannot be undone.',
+			'ran-booster'
+		);
 	?>
 	<div class="ran-booster-credential-modal ran-booster-dialog" data-credential-modal="access" data-provider-label="<?php echo esc_attr( $provider['label'] ); ?>" hidden>
 		<div class="ran-booster-credential-modal__dialog ran-booster-dialog__surface" role="dialog" aria-modal="true" aria-labelledby="ran-booster-access-modal-title">
@@ -29,7 +41,7 @@ if ( $hasCredentialSettings ) {
 					<input type="hidden" name="ran_booster[action]" value="save-access-profile">
 					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
 					<input type="hidden" name="ran_booster[id]" value="">
-					<p class="description"><?php echo esc_html( sprintf( /* translators: 1: provider label, 2: provider code. */ __( 'Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider['label'], $provider['code'] ) ); ?></p>
+					<p class="description"><?php echo esc_html( $credentialAuthorisationDescription ); ?></p>
 					<p><label><?php esc_html_e( 'Label', 'ran-booster' ); ?> <input type="text" name="ran_booster[label]" class="regular-text" required placeholder="<?php esc_attr_e( 'e.g. Deployment access', 'ran-booster' ); ?>"></label></p>
 				<div class="ran-booster-credential-modal__field-row">
 					<p><label><?php esc_html_e( 'Credential type', 'ran-booster' ); ?> <select name="ran_booster[kind]" class="ran-booster-credential-kind">
@@ -89,14 +101,14 @@ if ( $hasCredentialSettings ) {
 				<input type="hidden" name="ran_booster[action]" value="delete-access-profile">
 				<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
 				<input type="hidden" name="ran_booster[id]" value="">
-				<p id="ran-booster-delete-access-modal-description"><?php esc_html_e( 'You are about to delete', 'ran-booster' ); ?> <strong data-delete-credential-label></strong> <?php esc_html_e( 'from this site. This removes its saved secret and cannot be undone.', 'ran-booster' ); ?></p>
+				<p id="ran-booster-delete-access-modal-description"><?php printf( esc_html( $deleteCredentialDescription ), '<strong data-delete-credential-label></strong>' ); ?></p>
 				<p data-delete-credential-unused><?php esc_html_e( 'Booster has verified that no managed package currently uses this credential.', 'ran-booster' ); ?></p>
 				<p data-delete-credential-in-use hidden></p>
 				<div class="ran-booster-delete-credential-packages" data-delete-credential-packages aria-labelledby="ran-booster-delete-credential-packages-title" hidden>
 					<p id="ran-booster-delete-credential-packages-title" class="ran-booster-delete-credential-packages__title"><strong><?php esc_html_e( 'Connected packages', 'ran-booster' ); ?></strong></p>
 					<div data-delete-credential-package-list></div>
 				</div>
-				<p data-delete-credential-public-default hidden><?php echo esc_html( sprintf( /* translators: %s: provider label. */ __( 'This credential is the default for public repository lookup. Deleting it returns %s public lookup to Anonymous and the provider’s public API limits.', 'ran-booster' ), $provider['label'] ) ); ?></p>
+				<p data-delete-credential-public-default hidden><?php echo esc_html( sprintf( /* translators: 1: provider label. */ __( 'This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the provider’s public API limits.', 'ran-booster' ), $provider['label'] ) ); ?></p>
 				<div id="ran-booster-delete-access-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
 				<div class="ran-booster-credential-modal__actions">
 					<button type="submit" class="button button-delete" data-delete-credential-confirm><?php esc_html_e( 'Yes, delete credential', 'ran-booster' ); ?></button>
@@ -147,7 +159,7 @@ if ( $hasWebhookSettings ) {
 								foreach ( $managedRepositories['owners'] ?? array() as $owner ) {
 									$configuredId = $configuredWebhookTargets[ 'owner:' . strtolower( trim( $owner, " \t\n\r\0\x0B/" ) ) ] ?? '';
 									?>
-									<option value="<?php echo esc_attr( $owner ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configuredId ? sprintf( /* translators: %s: configured webhook target. */ __( '%s — already configured', 'ran-booster' ), $owner ) : $owner ); ?></option>
+									<option value="<?php echo esc_attr( $owner ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configuredId ? sprintf( /* translators: 1: configured webhook target. */ __( '%1$s — already configured', 'ran-booster' ), $owner ) : $owner ); ?></option>
 								<?php } ?>
 							</optgroup>
 							<optgroup label="<?php esc_attr_e( 'Managed repositories', 'ran-booster' ); ?>" data-webhook-target-options="repository">
@@ -157,7 +169,7 @@ if ( $hasWebhookSettings ) {
 									$repositoryTarget = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
 									$configuredId     = $configuredWebhookTargets[ 'repository:' . strtolower( trim( $repositoryTarget, " \t\n\r\0\x0B/" ) ) ] ?? '';
 									?>
-									<option value="<?php echo esc_attr( $repositoryTarget ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configuredId ? sprintf( /* translators: %s: configured webhook target. */ __( '%s — already configured', 'ran-booster' ), $repositoryTarget ) : $repositoryTarget ); ?></option>
+									<option value="<?php echo esc_attr( $repositoryTarget ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configuredId ? sprintf( /* translators: 1: configured webhook target. */ __( '%1$s — already configured', 'ran-booster' ), $repositoryTarget ) : $repositoryTarget ); ?></option>
 								<?php } ?>
 							</optgroup>
 						</select>

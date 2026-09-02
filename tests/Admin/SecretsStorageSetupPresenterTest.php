@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Admin;
 
+require_once __DIR__ . '/CredentialExpiryWordPressFunctions.php';
+
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Secrets\SecretsStorageProvisioningResult;

@@ -6448,6 +6448,10 @@ msgstr ""
 msgid "%1$s repository"
 msgstr ""
 
+#: views/packages/fields/repository.php:19
+msgid "repo-name/package-name"
+msgstr ""
+
 #. translators: %1$s: Package type label, such as Plugin or Theme.
 #: views/packages/fields/repository.php:20
 #, php-format

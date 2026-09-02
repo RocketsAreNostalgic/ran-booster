@@ -20,6 +20,7 @@ final class PackageFieldsLocalisationTest extends TestCase {
 				"Managed package type singular label\004Theme" => 'Habillage',
 				'%1$s repository'             => 'Dépôt %1$s',
 				'Pick %1$s repository'        => 'Choisir le dépôt %1$s',
+				'repo-name/package-name'      => 'nom-du-dépôt/nom-du-paquet',
 				'Repository locator supplied by the selected provider.' => 'Localisateur de dépôt fourni par le fournisseur sélectionné.',
 				'Repository provider'         => 'Fournisseur de dépôt',
 				'Choose the Git service.'     => 'Choisissez le service Git.',
@@ -101,6 +102,7 @@ final class PackageFieldsLocalisationTest extends TestCase {
 
 		self::assertStringContainsString( 'grid' === $layout ? 'Dépôt Extension' : 'Dépôt Habillage', $repository );
 		self::assertStringContainsString( 'grid' === $layout ? 'Choisir le dépôt Extension' : 'Choisir le dépôt Habillage', $repository );
+		self::assertStringContainsString( 'placeholder="nom-du-dépôt/nom-du-paquet"', $repository );
 		self::assertStringContainsString( 'name="ran_booster[repository]"', $repository );
 		self::assertStringContainsString( 'data-package-type="' . ( 'grid' === $layout ? 'plugin' : 'theme' ) . '"', $repository );
 		self::assertStringContainsString( 'Fournisseur de dépôt', $provider );

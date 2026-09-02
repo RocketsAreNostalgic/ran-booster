@@ -168,7 +168,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:56
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:38
 #: views/debug-capture.php:67
-#: views/extensions.php:129
+#: views/extensions.php:138
 #: views/provider.php:276
 #: views/provider.php:296
 #: views/troubleshooting.php:228
@@ -1390,7 +1390,8 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:435
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:440
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:451
-#: views/extensions.php:42
+#: views/extensions.php:11
+#: views/extensions.php:50
 #: views/packages/source-choices.php:91
 msgid "Active"
 msgstr ""
@@ -4238,7 +4239,7 @@ msgid "Transporter"
 msgstr ""
 
 #: RAN/Booster.php:227
-#: views/extensions.php:11
+#: views/extensions.php:18
 msgid "Extensions"
 msgstr ""
 
@@ -4248,6 +4249,75 @@ msgstr ""
 
 #: RAN/Booster.php:259
 msgid "Extensions are temporarily unavailable. Reload the page or check the Booster installation."
+msgstr ""
+
+#: RAN/Booster.php:273
+msgid "Connect Booster to Bitbucket Cloud repositories for managed deployments."
+msgstr ""
+
+#: RAN/Booster.php:274
+msgid "Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy."
+msgstr ""
+
+#: RAN/Booster.php:276
+msgid "Connect and configure Bitbucket Cloud repositories in Booster."
+msgstr ""
+
+#: RAN/Booster.php:277
+msgid "Use provider-specific package and credential guidance."
+msgstr ""
+
+#: RAN/Booster.php:278
+msgid "Carry eligible file-stored credentials through Transporter for explicit import on the target site."
+msgstr ""
+
+#: RAN/Booster.php:281
+msgid "WordPress 7.0 or later and PHP 8.2 or later."
+msgstr ""
+
+#: RAN/Booster.php:282
+msgid "A version of Booster compatible with this extension."
+msgstr ""
+
+#: RAN/Booster.php:283
+msgid "Manual Bitbucket webhook setup for Push-to-Deploy."
+msgstr ""
+
+#: RAN/Booster.php:287
+#: RAN/Booster.php:312
+msgid "Free"
+msgstr ""
+
+#: RAN/Booster.php:298
+msgid "Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them."
+msgstr ""
+
+#: RAN/Booster.php:299
+msgid "Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision."
+msgstr ""
+
+#: RAN/Booster.php:301
+msgid "Review retained WP Pusher package records before migration."
+msgstr ""
+
+#: RAN/Booster.php:302
+msgid "Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter."
+msgstr ""
+
+#: RAN/Booster.php:303
+msgid "Keep the source records in place until you verify the result and remove them yourself."
+msgstr ""
+
+#: RAN/Booster.php:306
+msgid "WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster."
+msgstr ""
+
+#: RAN/Booster.php:307
+msgid "A single site with WP Pusher 3.0.13 installed but inactive."
+msgstr ""
+
+#: RAN/Booster.php:308
+msgid "Existing Booster credentials for private repositories; GitLab packages are not supported."
 msgstr ""
 
 #: RAN/Booster.php:385
@@ -4836,7 +4906,7 @@ msgid "Copyright © %s"
 msgstr ""
 
 #: views/debug-capture.php:40
-#: views/extensions.php:44
+#: views/extensions.php:52
 msgid "Inactive"
 msgstr ""
 
@@ -5007,7 +5077,7 @@ msgid "Guidance"
 msgstr ""
 
 #: views/documentation.php:141
-#: views/extensions.php:137
+#: views/extensions.php:146
 msgid "Documentation"
 msgstr ""
 
@@ -5631,95 +5701,107 @@ msgstr ""
 msgid "Booster delegates package replacement to WordPress Core. It does not build, test or make untrusted repository code safe."
 msgstr ""
 
+#: views/extensions.php:9
+msgid "Not installed"
+msgstr ""
+
 #: views/extensions.php:10
-msgid "Add-ons"
+msgid "Incompatible"
 msgstr ""
 
 #: views/extensions.php:12
+msgid "Installed, inactive"
+msgstr ""
+
+#: views/extensions.php:17
+msgid "Add-ons"
+msgstr ""
+
+#: views/extensions.php:19
 msgid "Add focused capabilities to Booster."
 msgstr ""
 
-#: views/extensions.php:21
-#: views/extensions.php:91
+#: views/extensions.php:29
+#: views/extensions.php:100
 msgid "Compatible with your version of Booster"
 msgstr ""
 
-#: views/extensions.php:21
-#: views/extensions.php:91
+#: views/extensions.php:29
+#: views/extensions.php:100
 msgid "Requires a different version of Booster"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:24
+#: views/extensions.php:32
 #, php-format
 msgid "More details about %s"
 msgstr ""
 
-#: views/extensions.php:46
+#: views/extensions.php:54
 msgid "Install"
 msgstr ""
 
-#: views/extensions.php:50
+#: views/extensions.php:58
 msgid "More Details"
 msgstr ""
 
-#: views/extensions.php:52
+#: views/extensions.php:60
 msgid "Open Plugins"
 msgstr ""
 
-#: views/extensions.php:61
+#: views/extensions.php:69
 msgid "By"
 msgstr ""
 
-#: views/extensions.php:64
-#: views/extensions.php:138
+#: views/extensions.php:72
+#: views/extensions.php:147
 msgid "Support"
 msgstr ""
 
-#: views/extensions.php:72
-#: views/extensions.php:128
+#: views/extensions.php:80
+#: views/extensions.php:137
 msgid "Beta"
 msgstr ""
 
-#: views/extensions.php:77
+#: views/extensions.php:85
 msgid "Compatible"
 msgstr ""
 
-#: views/extensions.php:77
+#: views/extensions.php:85
 msgid "with your version of Booster"
 msgstr ""
 
-#: views/extensions.php:103
+#: views/extensions.php:112
 #: views/troubleshooting.php:230
 #: views/troubleshooting.php:258
 msgid "Details"
 msgstr ""
 
-#: views/extensions.php:107
+#: views/extensions.php:116
 msgid "About this extension"
 msgstr ""
 
-#: views/extensions.php:109
+#: views/extensions.php:118
 msgid "What it adds"
 msgstr ""
 
-#: views/extensions.php:115
+#: views/extensions.php:124
 msgid "Before you install"
 msgstr ""
 
-#: views/extensions.php:123
+#: views/extensions.php:132
 msgid "Extension details"
 msgstr ""
 
-#: views/extensions.php:125
+#: views/extensions.php:134
 msgid "Availability"
 msgstr ""
 
-#: views/extensions.php:127
+#: views/extensions.php:136
 msgid "Maturity"
 msgstr ""
 
-#: views/extensions.php:131
+#: views/extensions.php:140
 msgid "Compatibility"
 msgstr ""
 

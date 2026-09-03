@@ -48,6 +48,14 @@ msgid_plural "%d repositories"
 msgstr[0] "%d dépôt"
 msgstr[1] "%d dépôts"
 
+#. translators: %d is the number of repositories shown.
+#: assets/ran-booster.js:283
+msgctxt "Provider table repository count"
+msgid "%d repository shown"
+msgid_plural "%d repositories shown"
+msgstr[0] "%d dépôt affiché"
+msgstr[1] "%d dépôts affichés"
+
 #: assets/ran-booster-secure-inputs.js
 #. translators: %s is the item being added.
 msgid "Add %s"

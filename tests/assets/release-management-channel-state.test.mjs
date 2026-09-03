@@ -71,6 +71,17 @@ test('client hydration normalizes the release source label', () => {
 	);
 });
 
+test('release management stays parseable beside another WordPress i18n alias user', () => {
+	assert.doesNotThrow(() => {
+		new Function('wp', 'const { __, sprintf } = wp.i18n;\n' + source);
+	});
+	assert.doesNotMatch(source, /^const \{ __, sprintf \} = wp\.i18n;/m);
+	assert.match(
+		source,
+		/const initializeManagedReleaseBrowser = \(managedBrowser\) => \{\n\tconst \{ __, sprintf \} = wp\.i18n;/
+	);
+});
+
 test('selected release track maps to the stored release channel', () => {
 	assert.match(
 		declaration('releaseChannel'),

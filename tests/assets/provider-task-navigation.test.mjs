@@ -223,3 +223,69 @@ test('provider task request failures retain the view and expose its alert', () =
 	assert.equal(state.error.hidden, false);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
 });
+
+test('provider repository filter formats contextual plural translations in JavaScript', () => {
+	const listeners = new Map();
+	const input = {
+		dataset: {},
+		value: '',
+		addEventListener(name, listener) {
+			listeners.set(name, listener);
+		},
+	};
+	const count = { textContent: '' };
+	const rows = [
+		{
+			hidden: false,
+			getAttribute() {
+				return 'first';
+			},
+		},
+		{
+			hidden: false,
+			getAttribute() {
+				return 'second';
+			},
+		},
+	];
+	const root = {
+		querySelector(selector) {
+			return selector.includes('filter') ? input : count;
+		},
+		querySelectorAll() {
+			return rows;
+		},
+	};
+	const calls = [];
+	const filter = loadFunction('initProviderRepositoryFilter', {
+		document: root,
+		wp: {
+			i18n: {
+				_nx(single, plural, visible, context, domain) {
+					calls.push([single, plural, visible, context, domain]);
+					return visible === 1
+						? '%d dépôt affiché'
+						: '%d dépôts affichés';
+				},
+				sprintf(template, visible) {
+					return template.replace('%d', String(visible));
+				},
+			},
+		},
+	});
+
+	filter(root);
+	listeners.get('input')();
+
+	assert.equal(count.textContent, '2 dépôts affichés');
+	assert.deepEqual(calls, [
+		[
+			'%d repository shown',
+			'%d repositories shown',
+			2,
+			'Provider table repository count',
+			'ran-booster',
+		],
+	]);
+	assert.equal(input.dataset.ranBoosterRepositoryFilterBound, 'true');
+});

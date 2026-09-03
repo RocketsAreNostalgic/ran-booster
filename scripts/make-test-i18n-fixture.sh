@@ -26,6 +26,10 @@ php_runner=( php -n )
 if ! "${php_runner[@]}" "$wp_cli" --info >/dev/null 2>&1; then
 	php_runner=( php )
 fi
+wp_cli_version="$("${php_runner[@]}" "$wp_cli" --version)" \
+	|| fail 'WP-CLI 2.12.0 is required.'
+grep -qx 'WP-CLI 2.12.0' <<< "$wp_cli_version" \
+	|| fail "WP-CLI 2.12.0 is required; found ${wp_cli_version}."
 fixture_dir='tests/fixtures/i18n'
 fixture_po="$fixture_dir/ran-booster-fr_FR.po"
 fixture_mo="$fixture_dir/ran-booster-fr_FR.mo"

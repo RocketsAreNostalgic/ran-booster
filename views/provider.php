@@ -427,8 +427,6 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 									<input id="ran-booster-provider-repository-search" type="search" placeholder="<?php esc_attr_e( 'Search managed repositories…', 'ran-booster' ); ?>" data-ran-booster-provider-repository-filter>
 									<span
 										data-ran-booster-provider-repository-count
-										data-singular="<?php echo esc_attr( $repositoryCountSingular ); ?>"
-										data-plural="<?php echo esc_attr( $repositoryCountPlural ); ?>"
 										aria-live="polite"
 									>
 										<?php echo esc_html( $repositoryRowCountLabel ); ?>

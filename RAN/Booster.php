@@ -542,7 +542,8 @@ class Booster {
 			wp_enqueue_script( 'ran-booster-extension-details' );
 			return;
 		}
-		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', $scriptDependencies, $scriptVersion, true );
+		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', array_merge( $scriptDependencies, array( 'wp-i18n' ) ), $scriptVersion, true );
+		wp_set_script_translations( 'ran-booster-js', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-secure-inputs',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-secure-inputs.js',

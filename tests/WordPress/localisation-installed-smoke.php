@@ -66,6 +66,7 @@ $scripts = wp_scripts();
 foreach (
 	array(
 		'ran-booster-enhanced-mutations' => array( 'ran-booster-enhanced-mutations.js', 'Nous n’avons pas pu effectuer cette demande. Veuillez réessayer.' ),
+		'ran-booster-js'                 => array( 'ran-booster.js', '%d dépôt affiché' ),
 		'ran-booster-packages'           => array( 'ran-booster-packages.js', 'Réinstallation annulée.' ),
 		'ran-booster-portability'        => array( 'ran-booster-portability.js', 'Examen du plan…' ),
 		'ran-booster-release-management' => array( 'ran-booster-release-management.js', 'Installer %s maintenant' ),
@@ -88,4 +89,4 @@ foreach (
 	}
 }
 
-WP_CLI::success( 'Installed French PHP and all six Jed translations passed.' );
+WP_CLI::success( 'Installed French PHP and all seven Jed translations passed.' );

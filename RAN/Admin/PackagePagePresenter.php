@@ -20,8 +20,6 @@ final class PackagePagePresenter {
 
 	private function __construct(
 		private readonly string $type,
-		private readonly string $singularLabel,
-		private readonly string $pluralLabel,
 		private readonly string $identifierField,
 		private readonly string $pageSlug
 	) {
@@ -30,8 +28,6 @@ final class PackagePagePresenter {
 	public static function plugin(): self {
 		return new self(
 			'plugin',
-			_x( 'Plugin', 'Managed package type singular label', 'ran-booster' ),
-			_x( 'Plugins', 'Managed package type plural label', 'ran-booster' ),
 			'file',
 			'ran-booster-plugins'
 		);
@@ -40,8 +36,6 @@ final class PackagePagePresenter {
 	public static function theme(): self {
 		return new self(
 			'theme',
-			_x( 'Theme', 'Managed package type singular label', 'ran-booster' ),
-			_x( 'Themes', 'Managed package type plural label', 'ran-booster' ),
 			'stylesheet',
 			'ran-booster-themes'
 		);
@@ -52,11 +46,15 @@ final class PackagePagePresenter {
 	}
 
 	public function getSingularLabel(): string {
-		return $this->singularLabel;
+		return 'plugin' === $this->type
+			? _x( 'Plugin', 'Managed package type singular label', 'ran-booster' )
+			: _x( 'Theme', 'Managed package type singular label', 'ran-booster' );
 	}
 
 	public function getPluralLabel(): string {
-		return $this->pluralLabel;
+		return 'plugin' === $this->type
+			? _x( 'Plugins', 'Managed package type plural label', 'ran-booster' )
+			: _x( 'Themes', 'Managed package type plural label', 'ran-booster' );
 	}
 
 	public function getIdentifierField(): string {

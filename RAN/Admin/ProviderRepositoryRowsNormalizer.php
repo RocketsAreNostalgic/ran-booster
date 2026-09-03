@@ -1020,8 +1020,6 @@ final class ProviderRepositoryRowsNormalizer {
 				__( 'Each repository needs its own %s webhook. A saved shared secret may serve multiple repositories.', 'ran-booster' ),
 				$label
 			),
-			'repositoryCountSingular'      => _x( /* translators: %d is the number of repositories shown. */ '%d repository shown', 'Provider table fallback repository count', 'ran-booster' ),
-			'repositoryCountPlural'        => _x( /* translators: %d is the number of repositories shown. */ '%d repositories shown', 'Provider table fallback repository count', 'ran-booster' ),
 			'emptyRepositoryDescription'   => sprintf(
 				/* translators: %s is the repository provider name. */
 				__( 'No managed %s repositories are available yet. Install a package to add its repository.', 'ran-booster' ),

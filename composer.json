@@ -59,6 +59,7 @@
         "test:release-capability-installed": "bash tests/WordPress/release-capability-installed-smoke.sh",
         "test:github-release-updater-bootstrap": "@php tests/WordPress/github-release-updater-bootstrap-smoke.php",
         "test:database-storage-smoke": "bash tests/WordPress/database-storage-smoke.sh",
+        "test:localisation-installed-safety": "bash tests/localisation-installed-smoke-contract.sh",
         "test": [
             "@test:characterization",
             "@test:github-module",
@@ -79,6 +80,7 @@
         "check": [
             "@i18n:check",
             "@i18n:fixture:check",
+            "@test:localisation-installed-safety",
             "@test",
             "@test:release-candidate-marker",
             "@test:release-state-contracts",

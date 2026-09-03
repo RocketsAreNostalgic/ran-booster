@@ -73,6 +73,23 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertSame( 'ran-booster-themes', $theme->getPageSlug() );
 	}
 
+	public function testPackageTypeLabelsResolveTranslationsAvailableAfterConstruction(): void {
+		$plugin = PackagePagePresenter::plugin();
+		$theme  = PackagePagePresenter::theme();
+
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
+			"Managed package type singular label\004Plugin" => 'Extension',
+			"Managed package type plural label\004Plugins" => 'Extensions',
+			"Managed package type singular label\004Theme" => 'Habillage',
+			"Managed package type plural label\004Themes"  => 'Habillages',
+		);
+
+		self::assertSame( 'Extension', $plugin->getSingularLabel() );
+		self::assertSame( 'Extensions', $plugin->getPluralLabel() );
+		self::assertSame( 'Habillage', $theme->getSingularLabel() );
+		self::assertSame( 'Habillages', $theme->getPluralLabel() );
+	}
+
 	public function testUnsupportedActionsAreRejected(): void {
 		$this->expectException( InvalidArgumentException::class );
 

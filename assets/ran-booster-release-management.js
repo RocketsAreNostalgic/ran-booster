@@ -1,7 +1,7 @@
 const managedReleaseBrowsers = new WeakSet();
-const { __, sprintf } = wp.i18n;
 
 const initializeManagedReleaseBrowser = (managedBrowser) => {
+	const { __, sprintf } = wp.i18n;
 	if (
 		managedBrowser.dataset.ranBoosterManagedReleaseBrowserDisabled ===
 			'true' ||
@@ -546,7 +546,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	retry?.addEventListener('click', list);
 	list();
 };
-
 (() => {
 	'use strict';
 

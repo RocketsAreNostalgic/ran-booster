@@ -26,6 +26,10 @@ php_runner=( php -n )
 if ! "${php_runner[@]}" "$wp_cli" --info >/dev/null 2>&1; then
 	php_runner=( php )
 fi
+wp_cli_version="$("${php_runner[@]}" "$wp_cli" --version)" \
+	|| fail 'WP-CLI 2.12.0 is required.'
+grep -qx 'WP-CLI 2.12.0' <<< "$wp_cli_version" \
+	|| fail "WP-CLI 2.12.0 is required; found ${wp_cli_version}."
 pot='languages/ran-booster.pot'
 temporary_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster.pot.XXXXXX") \
 	|| fail 'could not create a temporary catalogue.'
@@ -48,7 +52,9 @@ if ! output=$("${php_runner[@]}" -d memory_limit=512M -d 'error_reporting=E_ALL 
 	--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts \
 	--skip-block-json \
 	--skip-theme-json \
-	--headers='{"POT-Creation-Date":"2026-09-01T00:00:00+00:00","Report-Msgid-Bugs-To":"https://wordpress.org/support/plugin/ran-booster/"}' 2>&1); then
+	--package-name='RAN Booster' \
+	--file-comment=$'Copyright (C) 2026 Rockets Are Nostalgic\nThis file is distributed under the GPL-2.0-only.' \
+	--headers='{"Project-Id-Version":"RAN Booster","POT-Creation-Date":"2026-09-01T00:00:00+00:00","Report-Msgid-Bugs-To":"https://wordpress.org/support/plugin/ran-booster/"}' 2>&1); then
 	printf '%s\n' "$output" >&2
 	fail 'WP-CLI could not generate the catalogue.'
 fi
@@ -64,7 +70,9 @@ if ! all_domains_output=$("${php_runner[@]}" -d memory_limit=512M -d 'error_repo
 	--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts \
 	--skip-block-json \
 	--skip-theme-json \
-	--headers='{"POT-Creation-Date":"2026-09-01T00:00:00+00:00","Report-Msgid-Bugs-To":"https://wordpress.org/support/plugin/ran-booster/"}' 2>&1); then
+	--package-name='RAN Booster' \
+	--file-comment=$'Copyright (C) 2026 Rockets Are Nostalgic\nThis file is distributed under the GPL-2.0-only.' \
+	--headers='{"Project-Id-Version":"RAN Booster","POT-Creation-Date":"2026-09-01T00:00:00+00:00","Report-Msgid-Bugs-To":"https://wordpress.org/support/plugin/ran-booster/"}' 2>&1); then
 	printf '%s\n' "$all_domains_output" >&2
 	fail 'WP-CLI could not generate the all-domain catalogue.'
 fi

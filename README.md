@@ -200,9 +200,13 @@ Provider authors should start with the
 
 ## Development
 
-For Core development, use PHP 8.2, Composer 2, Node.js 24.11.0, and pnpm 11.7.0:
+For Core development, use PHP 8.2, Composer 2, WP-CLI 2.12.0, Node.js 24.11.0,
+and pnpm 11.7.0. Install WP-CLI 2.12.0 as `wp` on your `PATH` using the
+[official installation instructions](https://wp-cli.org/#installing), then verify
+`wp --version` reports exactly `WP-CLI 2.12.0`:
 
 ```sh
+wp --version
 composer validate --strict --no-check-publish
 composer install --no-interaction --prefer-dist --no-progress
 pnpm install --frozen-lockfile

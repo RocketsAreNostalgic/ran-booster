@@ -277,9 +277,17 @@
 				}
 			});
 
-			const template =
-				visible === 1 ? count.dataset.singular : count.dataset.plural;
-			count.textContent = (template || '%d').replace('%d', visible);
+			count.textContent = wp.i18n.sprintf(
+				/* translators: %d is the number of repositories shown. */
+				wp.i18n._nx(
+					'%d repository shown',
+					'%d repositories shown',
+					visible,
+					'Provider table repository count',
+					'ran-booster'
+				),
+				visible
+			);
 		}
 
 		input.addEventListener('input', update);

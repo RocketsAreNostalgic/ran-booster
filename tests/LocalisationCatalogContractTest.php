@@ -31,7 +31,12 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertStringContainsString( 'php_runner=( php -n )', $script );
 		self::assertStringContainsString( '"$wp_cli" --info >/dev/null 2>&1', $script );
 		self::assertStringContainsString( 'php_runner=( php )', $script );
+		self::assertStringContainsString( "grep -qx 'WP-CLI 2.12.0' <<< \"\$wp_cli_version\"", $script );
 		self::assertStringContainsString( '"${php_runner[@]}" -d memory_limit=512M', $script );
+		self::assertSame( 2, substr_count( $script, "--package-name='RAN Booster'" ) );
+		self::assertSame( 2, substr_count( $script, "--file-comment=\$'Copyright (C) 2026 Rockets Are Nostalgic\\nThis file is distributed under the GPL-2.0-only.'" ) );
+		self::assertSame( 2, substr_count( $script, '"Project-Id-Version":"RAN Booster"' ) );
+		self::assertStringContainsString( '"Project-Id-Version: RAN Booster\\n"', (string) file_get_contents( dirname( __DIR__ ) . '/languages/ran-booster.pot' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
 		self::assertStringContainsString( '--include=ran-booster.php,autoload.php,index.php,uninstall.php,RAN,views,assets', $script );
 		self::assertStringContainsString( '--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts', $script );
 
@@ -40,7 +45,15 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertStringContainsString( 'php_runner=( php -n )', $fixtureScript );
 		self::assertStringContainsString( '"$wp_cli" --info >/dev/null 2>&1', $fixtureScript );
 		self::assertStringContainsString( 'php_runner=( php )', $fixtureScript );
+		self::assertStringContainsString( "grep -qx 'WP-CLI 2.12.0' <<< \"\$wp_cli_version\"", $fixtureScript );
 		self::assertStringContainsString( '"${php_runner[@]}" "$wp_cli" i18n make-mo', $fixtureScript );
+
+		$workflow = file_get_contents( dirname( __DIR__ ) . '/.github/workflows/quality.yml' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
+		$readme   = file_get_contents( dirname( __DIR__ ) . '/README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
+		self::assertIsString( $workflow );
+		self::assertSame( 3, substr_count( $workflow, 'tools: composer:v2, wp-cli:2.12.0' ) );
+		self::assertIsString( $readme );
+		self::assertStringContainsString( 'WP-CLI 2.12.0', $readme );
 	}
 
 	public function testReleaseAllowlistContainsOnlyTheRuntimeCatalogue(): void {

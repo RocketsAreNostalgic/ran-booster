@@ -6,6 +6,20 @@ wordpress="${RAN_BOOSTER_WORDPRESS_PATH:-}"
 wp_cli="${WP_CLI_BIN:-wp}"
 php_bin="${PHP_BIN:-php}"
 
+has_symlink_component() {
+	local candidate parent
+
+	candidate="$1"
+	while :; do
+		if [[ -L "$candidate" ]]; then
+			return 0
+		fi
+		parent="$(dirname -- "$candidate")"
+		[[ "$parent" == "$candidate" ]] && return 1
+		candidate="$parent"
+	done
+}
+
 if [[ "${RAN_BOOSTER_LOCALISATION_TEST_DISPOSABLE:-}" != '1' ]]; then
 	echo 'Set RAN_BOOSTER_LOCALISATION_TEST_DISPOSABLE=1 only for an isolated disposable WordPress installation.' >&2
 	exit 2
@@ -18,8 +32,12 @@ if [[ "${RAN_BOOSTER_LOCALISATION_TEST_URL:-}" != 'http://localhost' ]]; then
 	echo 'The installed localisation proof requires the exact CI site URL.' >&2
 	exit 2
 fi
-if ! command -v "$wp_cli" >/dev/null 2>&1 || ! command -v "$php_bin" >/dev/null 2>&1; then
-	echo 'WP-CLI and PHP are required for the installed localisation proof.' >&2
+if has_symlink_component "$wordpress"; then
+	echo 'The installed localisation proof refuses symlinked WordPress roots.' >&2
+	exit 2
+fi
+if ! command -v "$wp_cli" >/dev/null 2>&1 || ! command -v "$php_bin" >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+	echo 'WP-CLI, PHP, and jq are required for the installed localisation proof.' >&2
 	exit 2
 fi
 
@@ -38,7 +56,7 @@ if [[ -L "$wordpress" || -L "$wordpress/wp-content" || -L "$wordpress/wp-content
 	echo 'The installed localisation proof refuses symlinked WordPress roots.' >&2
 	exit 2
 fi
-if [[ -L "$marker" || ! -f "$marker" ]] || [[ "$(<"$marker")" != 'RAN Booster disposable test site' ]]; then
+if [[ -L "$marker" || ! -f "$marker" ]] || ! cmp -s "$marker" <(printf '%s\n' 'RAN Booster disposable test site'); then
 	echo "The installed localisation proof requires $marker with the expected disposable-site marker." >&2
 	exit 2
 fi
@@ -58,8 +76,8 @@ fi
 shopt -s nullglob
 json_fixtures=( "$fixture_languages"/ran-booster-fr_FR-*.json )
 shopt -u nullglob
-if [[ ${#json_fixtures[@]} -ne 6 ]]; then
-	echo 'The installed localisation proof requires one source-hashed French Jed JSON fixture for each translated Core script.' >&2
+if [[ ${#json_fixtures[@]} -ne 7 ]]; then
+	echo 'The installed localisation proof requires seven source-hashed French Jed JSON fixtures.' >&2
 	exit 2
 fi
 if [[ "$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != '8.2' ]]; then
@@ -128,4 +146,4 @@ if ( "fr_FR" !== get_option( "WPLANG", "" ) ) {
 ' --path="$wordpress" >/dev/null
 "$php_bin" "$wp_cli" eval-file "$proof" --user=admin --path="$wordpress"
 
-echo 'Installed localisation proof passed: French PHP and all six Jed translations loaded from the archive fixture.'
+echo 'Installed localisation proof passed: French PHP and all seven Jed translations loaded from the archive fixture.'

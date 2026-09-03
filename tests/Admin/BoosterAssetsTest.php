@@ -163,7 +163,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx' ),
+			array( 'ran-booster-htmx', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
@@ -195,6 +195,11 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['footer'] );
 		self::assertSame(
 			array(
+				array(
+					'handle' => 'ran-booster-js',
+					'domain' => 'ran-booster',
+					'path'   => dirname( __DIR__, 2 ) . '/languages',
+				),
 				array(
 					'handle' => 'ran-booster-secure-inputs',
 					'domain' => 'ran-booster',
@@ -354,7 +359,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx' ),
+			array( 'ran-booster-htmx', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
@@ -442,7 +447,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx' ),
+			array( 'ran-booster-htmx', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
@@ -485,7 +490,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
-			array(),
+			array( 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
@@ -515,7 +520,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx' ),
+			array( 'ran-booster-htmx', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(

@@ -729,13 +729,13 @@ class SecretsStorageProvisioner {
 		if ( ! file_exists( $directory ) && ! is_link( $directory ) ) {
 			return $this->pathFailure(
 				'storage_directory_unavailable',
-				'PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700.'
+				__( 'PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700.', 'ran-booster' )
 			);
 		}
 		if ( is_link( $directory ) || ! is_dir( $directory ) || ! stream_is_local( $directory ) ) {
 			return $this->pathFailure(
 				'storage_directory_invalid',
-				'The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link.'
+				__( 'The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link.', 'ran-booster' )
 			);
 		}
 
@@ -743,7 +743,7 @@ class SecretsStorageProvisioner {
 		if ( false === $stat || 0040000 !== ( $stat['mode'] & 0170000 ) ) {
 			return $this->pathFailure(
 				'storage_directory_inspection_failed',
-				'Booster could not verify the configured secrets directory.'
+				__( 'Booster could not verify the configured secrets directory.', 'ran-booster' )
 			);
 		}
 		$issues = $this->accessIssues( $directory, $stat, 0700, 'directory' );
@@ -760,19 +760,19 @@ class SecretsStorageProvisioner {
 		if ( is_link( $candidate ) || ! is_file( $candidate ) ) {
 			return $this->pathFailure(
 				'storage_file_invalid',
-				'The configured secrets file must be a regular file, not a symbolic link.'
+				__( 'The configured secrets file must be a regular file, not a symbolic link.', 'ran-booster' )
 			);
 		}
 		$file = lstat( $candidate );
 		if ( false === $file || 0100000 !== ( $file['mode'] & 0170000 ) ) {
 			return $this->pathFailure(
 				'storage_file_inspection_failed',
-				'Booster could not verify the configured secrets file.'
+				__( 'Booster could not verify the configured secrets file.', 'ran-booster' )
 			);
 		}
 		$issues = $this->accessIssues( $candidate, $file, 0600, 'file' );
 		if ( 1 !== $file['nlink'] ) {
-			$issues[] = 'The configured secrets file has additional hard links.';
+			$issues[] = __( 'The configured secrets file has additional hard links.', 'ran-booster' );
 		}
 		if ( array() !== $issues ) {
 			return $this->pathFailure(
@@ -785,25 +785,25 @@ class SecretsStorageProvisioner {
 		if ( ! file_exists( $lock ) && ! is_link( $lock ) ) {
 			return $this->pathFailure(
 				'storage_lock_missing',
-				'The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup.'
+				__( 'The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup.', 'ran-booster' )
 			);
 		}
 		if ( is_link( $lock ) || ! is_file( $lock ) ) {
 			return $this->pathFailure(
 				'storage_lock_invalid',
-				'The configured secrets lock must be a regular file, not a symbolic link.'
+				__( 'The configured secrets lock must be a regular file, not a symbolic link.', 'ran-booster' )
 			);
 		}
 		$lockStat = lstat( $lock );
 		if ( false === $lockStat || 0100000 !== ( $lockStat['mode'] & 0170000 ) ) {
 			return $this->pathFailure(
 				'storage_lock_inspection_failed',
-				'Booster could not verify the configured secrets lock file.'
+				__( 'Booster could not verify the configured secrets lock file.', 'ran-booster' )
 			);
 		}
 		$issues = $this->accessIssues( $lock, $lockStat, 0600, 'lock file' );
 		if ( 1 !== $lockStat['nlink'] ) {
-			$issues[] = 'The configured secrets lock file has additional hard links.';
+			$issues[] = __( 'The configured secrets lock file has additional hard links.', 'ran-booster' );
 		}
 		if ( array() !== $issues ) {
 			return $this->pathFailure(
@@ -820,19 +820,43 @@ class SecretsStorageProvisioner {
 	 * @return list<string>
 	 */
 	private function accessIssues( string $path, array $stat, int $requiredMode, string $label ): array {
+		$displayLabel = match ( $label ) {
+			'directory' => _x( 'directory', 'Configured secrets storage item', 'ran-booster' ),
+			'file' => _x( 'file', 'Configured secrets storage item', 'ran-booster' ),
+			'lock file' => _x( 'lock file', 'Configured secrets storage item', 'ran-booster' ),
+			default => $label,
+		};
 		$issues = array();
 		$mode   = $stat['mode'] & 0777;
 		if ( $requiredMode !== $mode ) {
-			$issues[] = sprintf( 'The configured secrets %s uses mode %04o; mode %04o is required.', $label, $mode, $requiredMode );
+			$issues[] = sprintf(
+				/* translators: 1: configured secrets storage item, 2: current octal mode, 3: required octal mode. */
+				__( 'The configured secrets %1$s uses mode %2$04o; mode %3$04o is required.', 'ran-booster' ),
+				$displayLabel,
+				$mode,
+				$requiredMode
+			);
 		}
 		if ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() !== $stat['uid'] ) {
-			$issues[] = sprintf( 'The configured secrets %s is not owned by the PHP process user.', $label );
+			$issues[] = sprintf(
+				/* translators: %s: configured secrets storage item. */
+				__( 'The configured secrets %s is not owned by the PHP process user.', 'ran-booster' ),
+				$displayLabel
+			);
 		}
 		if ( ! is_readable( $path ) ) {
-			$issues[] = sprintf( 'The configured secrets %s is not readable by PHP.', $label );
+			$issues[] = sprintf(
+				/* translators: %s: configured secrets storage item. */
+				__( 'The configured secrets %s is not readable by PHP.', 'ran-booster' ),
+				$displayLabel
+			);
 		}
 		if ( ! is_writable( $path ) ) {
-			$issues[] = sprintf( 'The configured secrets %s is not writable by PHP.', $label );
+			$issues[] = sprintf(
+				/* translators: %s: configured secrets storage item. */
+				__( 'The configured secrets %s is not writable by PHP.', 'ran-booster' ),
+				$displayLabel
+			);
 		}
 
 		return $issues;
@@ -849,23 +873,23 @@ class SecretsStorageProvisioner {
 			return match ( $failure->reason() ) {
 				'storage_key_missing' => $this->pathFailure(
 					'storage_key_missing',
-					'secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.'
+					__( 'secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.', 'ran-booster' )
 				),
 				'storage_file_missing' => $this->pathFailure(
 					'storage_file_missing',
-					'The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.'
+					__( 'The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.', 'ran-booster' )
 				),
 				'storage_orphan_lock' => $this->pathFailure(
 					'storage_orphan_lock',
-					'Only secrets.json.lock remains; no secrets file or database encryption key was found.'
+					__( 'Only secrets.json.lock remains; no secrets file or database encryption key was found.', 'ran-booster' )
 				),
 				'storage_lock_missing' => $this->pathFailure(
 					'storage_lock_missing',
-					'Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup.'
+					__( 'Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup.', 'ran-booster' )
 				),
 				default => $this->pathFailure(
 					$failure->reason(),
-					'Booster could not safely use the encrypted secrets store.'
+					__( 'Booster could not safely use the encrypted secrets store.', 'ran-booster' )
 				),
 			};
 		}
@@ -875,26 +899,26 @@ class SecretsStorageProvisioner {
 			'The encrypted Booster secrets store is incomplete because its lock is missing.',
 			'The encrypted Booster secrets store is missing its lock.' => $this->pathFailure(
 				'storage_incomplete',
-				'The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage.'
+				__( 'The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage.', 'ran-booster' )
 			),
 			'The encrypted Booster secrets document could not be authenticated.' => $this->pathFailure(
 				'storage_authentication_failed',
-				'The secrets file could not be authenticated with this site\'s database key. Restore both from the same backup.'
+				__( 'The secrets file could not be authenticated with this site\'s database key. Restore both from the same backup.', 'ran-booster' )
 			),
 			'The encrypted Booster secrets payload is invalid.',
 			'The encrypted Booster secrets payload is not canonical.' => $this->pathFailure(
 				'storage_document_invalid',
-				'The secrets file authenticated but its encrypted document is invalid.'
+				__( 'The secrets file authenticated but its encrypted document is invalid.', 'ran-booster' )
 			),
 			'The Booster site key is unavailable.' => $this->pathFailure(
 				'storage_key_unavailable',
-				'Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup.'
+				__( 'Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup.', 'ran-booster' )
 			),
 			'The encrypted Booster secrets file is not readable.',
 			'The encrypted Booster secrets file is not a secure bounded file.',
 			'The encrypted Booster secrets file could not be read safely.' => $this->pathFailure(
 				'storage_file_unusable',
-				'The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file.'
+				__( 'The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file.', 'ran-booster' )
 			),
 			'Refusing to use an invalid encrypted Booster secrets lock.',
 			'Could not open the encrypted Booster secrets lock.',
@@ -902,11 +926,11 @@ class SecretsStorageProvisioner {
 			'Could not secure the encrypted Booster secrets lock.',
 			'Could not lock the encrypted Booster secrets store.' => $this->pathFailure(
 				'storage_lock_unusable',
-				'The secrets lock file could not be used safely. Verify its ownership and mode 0600.'
+				__( 'The secrets lock file could not be used safely. Verify its ownership and mode 0600.', 'ran-booster' )
 			),
 			default => $this->pathFailure(
 				'storage_unavailable',
-				'Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600.'
+				__( 'Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600.', 'ran-booster' )
 			),
 		};
 	}

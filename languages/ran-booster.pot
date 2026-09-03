@@ -4669,6 +4669,133 @@ msgstr ""
 msgid "The recoverable storage path could not be adopted safely."
 msgstr ""
 
+#: RAN/Secrets/SecretsStorageProvisioner.php:732
+msgid "PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:738
+msgid "The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:746
+msgid "Booster could not verify the configured secrets directory."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:763
+msgid "The configured secrets file must be a regular file, not a symbolic link."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:770
+msgid "Booster could not verify the configured secrets file."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:775
+msgid "The configured secrets file has additional hard links."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:788
+msgid "The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:794
+msgid "The configured secrets lock must be a regular file, not a symbolic link."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:801
+msgid "Booster could not verify the configured secrets lock file."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:806
+msgid "The configured secrets lock file has additional hard links."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:824
+msgctxt "Configured secrets storage item"
+msgid "directory"
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:825
+msgctxt "Configured secrets storage item"
+msgid "file"
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:826
+msgctxt "Configured secrets storage item"
+msgid "lock file"
+msgstr ""
+
+#. translators: 1: configured secrets storage item, 2: current octal mode, 3: required octal mode.
+#: RAN/Secrets/SecretsStorageProvisioner.php:834
+#, php-format
+msgid "The configured secrets %1$s uses mode %2$04o; mode %3$04o is required."
+msgstr ""
+
+#. translators: %s: configured secrets storage item.
+#: RAN/Secrets/SecretsStorageProvisioner.php:843
+#, php-format
+msgid "The configured secrets %s is not owned by the PHP process user."
+msgstr ""
+
+#. translators: %s: configured secrets storage item.
+#: RAN/Secrets/SecretsStorageProvisioner.php:850
+#, php-format
+msgid "The configured secrets %s is not readable by PHP."
+msgstr ""
+
+#. translators: %s: configured secrets storage item.
+#: RAN/Secrets/SecretsStorageProvisioner.php:857
+#, php-format
+msgid "The configured secrets %s is not writable by PHP."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:876
+msgid "secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:880
+msgid "The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:884
+msgid "Only secrets.json.lock remains; no secrets file or database encryption key was found."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:888
+msgid "Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:892
+msgid "Booster could not safely use the encrypted secrets store."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:902
+msgid "The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:906
+msgid "The secrets file could not be authenticated with this site's database key. Restore both from the same backup."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:911
+msgid "The secrets file authenticated but its encrypted document is invalid."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:915
+msgid "Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:921
+msgid "The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:929
+msgid "The secrets lock file could not be used safely. Verify its ownership and mode 0600."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:933
+msgid "Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600."
+msgstr ""
+
 #: RAN/Secrets/SecretsStorageProvisioningResult.php:40
 msgid "The private storage path is configured. Booster will initialize it when you save the first credential."
 msgstr ""

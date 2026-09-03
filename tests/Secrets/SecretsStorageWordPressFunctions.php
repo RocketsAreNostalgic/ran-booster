@@ -9,3 +9,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\__' ) ) {
 		return $GLOBALS['ran_booster_secrets_test_translations'][ $domain ][ $text ] ?? $text;
 	}
 }
+
+if ( ! function_exists( __NAMESPACE__ . '\\_x' ) ) {
+	function _x( string $text, string $context, string $domain = 'default' ): string {
+		return $GLOBALS['ran_booster_secrets_test_translations'][ $domain ][ $context . "\004" . $text ] ?? $text;
+	}
+}

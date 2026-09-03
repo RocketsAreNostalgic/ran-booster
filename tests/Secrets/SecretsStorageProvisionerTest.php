@@ -640,7 +640,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 			'config_changed'               => 'The WordPress configuration changed before it could be edited.',
 			'lock_permissions_failed'      => 'Could not secure the WordPress configuration edit lock.',
 			'lock_failed'                  => 'Could not lock the WordPress configuration for editing.',
-			'config_file_invalid'          => 'The WordPress configuration is not a writable regular file.',
+			'config_file_invalid'          => 'The WordPress configuration does not pass Booster\'s writable private regular-file checks.',
 			'config_permissions_unsafe'    => 'The WordPress configuration is group- or world-writable.',
 			'config_size_unsupported'      => 'The WordPress configuration has an unsupported size.',
 			'config_owner_invalid'         => 'The WordPress configuration is not owned by the current process owner.',

@@ -1037,7 +1037,7 @@ class SecretsStorageProvisioner {
 			'config_changed' => __( 'The WordPress configuration changed before it could be edited.', 'ran-booster' ),
 			'lock_permissions_failed' => __( 'Could not secure the WordPress configuration edit lock.', 'ran-booster' ),
 			'lock_failed' => __( 'Could not lock the WordPress configuration for editing.', 'ran-booster' ),
-			'config_file_invalid' => __( 'The WordPress configuration is not a writable regular file.', 'ran-booster' ),
+			'config_file_invalid' => __( 'The WordPress configuration does not pass Booster\'s writable private regular-file checks.', 'ran-booster' ),
 			'config_permissions_unsafe' => __( 'The WordPress configuration is group- or world-writable.', 'ran-booster' ),
 			'config_size_unsupported' => __( 'The WordPress configuration has an unsupported size.', 'ran-booster' ),
 			'config_owner_invalid' => __( 'The WordPress configuration is not owned by the current process owner.', 'ran-booster' ),

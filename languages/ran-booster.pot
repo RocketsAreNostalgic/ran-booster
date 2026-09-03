@@ -4899,7 +4899,7 @@ msgid "Could not lock the WordPress configuration for editing."
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:1040
-msgid "The WordPress configuration is not a writable regular file."
+msgid "The WordPress configuration does not pass Booster's writable private regular-file checks."
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:1041

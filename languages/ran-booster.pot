@@ -4395,12 +4395,36 @@ msgstr ""
 msgid "You do not have sufficient permissions to configure Booster storage."
 msgstr ""
 
+#: RAN/Dispatcher.php:256
+msgid "Automatic secure storage setup is unavailable."
+msgstr ""
+
+#: RAN/Dispatcher.php:275
+msgid "Automatic secure storage setup could not be completed."
+msgstr ""
+
 #: RAN/Dispatcher.php:300
 msgid "You do not have sufficient permissions to recover Booster storage."
 msgstr ""
 
+#: RAN/Dispatcher.php:314
+msgid "Automatic storage recovery is unavailable."
+msgstr ""
+
+#: RAN/Dispatcher.php:333
+msgid "Automatic storage recovery could not be completed."
+msgstr ""
+
 #: RAN/Dispatcher.php:356
 msgid "You do not have sufficient permissions to reset Booster storage."
+msgstr ""
+
+#: RAN/Dispatcher.php:370
+msgid "Empty credential storage reset is unavailable."
+msgstr ""
+
+#: RAN/Dispatcher.php:389
+msgid "Empty credential storage could not be reset safely."
 msgstr ""
 
 #: RAN/Dispatcher.php:411

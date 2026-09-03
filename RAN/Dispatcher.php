@@ -253,7 +253,7 @@ class Dispatcher {
 			$result = null === $this->secretsStorage
 				? SecretsStorageProvisioningResult::manualRequired(
 					'provisioner_unavailable',
-					'Automatic secure storage setup is unavailable.'
+					__( 'Automatic secure storage setup is unavailable.', 'ran-booster' )
 				)
 				: $this->secretsStorage->provision();
 		} catch ( \Throwable $failure ) {
@@ -272,7 +272,7 @@ class Dispatcher {
 			);
 			$result = SecretsStorageProvisioningResult::manualRequired(
 				'provisioning_failed',
-				'Automatic secure storage setup could not be completed.'
+				__( 'Automatic secure storage setup could not be completed.', 'ran-booster' )
 			);
 		}
 
@@ -311,7 +311,7 @@ class Dispatcher {
 			$result = null === $this->secretsStorage
 				? SecretsStorageProvisioningResult::manualRequired(
 					'provisioner_unavailable',
-					'Automatic storage recovery is unavailable.'
+					__( 'Automatic storage recovery is unavailable.', 'ran-booster' )
 				)
 				: $this->secretsStorage->adoptRecovery( $token );
 		} catch ( \Throwable $failure ) {
@@ -330,7 +330,7 @@ class Dispatcher {
 			);
 			$result = SecretsStorageProvisioningResult::manualRequired(
 				'recovery_failed',
-				'Automatic storage recovery could not be completed.'
+				__( 'Automatic storage recovery could not be completed.', 'ran-booster' )
 			);
 		}
 
@@ -367,7 +367,7 @@ class Dispatcher {
 			$result = null === $this->secretsStorage
 				? SecretsStorageProvisioningResult::manualRequired(
 					'provisioner_unavailable',
-					'Empty credential storage reset is unavailable.'
+					__( 'Empty credential storage reset is unavailable.', 'ran-booster' )
 				)
 				: $this->secretsStorage->resetOrphanedStorage( $confirmation );
 		} catch ( \Throwable $failure ) {
@@ -386,7 +386,7 @@ class Dispatcher {
 			);
 			$result = SecretsStorageProvisioningResult::manualRequired(
 				'storage_reset_failed',
-				'Empty credential storage could not be reset safely.'
+				__( 'Empty credential storage could not be reset safely.', 'ran-booster' )
 			);
 		}
 

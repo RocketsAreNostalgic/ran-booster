@@ -4383,7 +4383,7 @@ msgstr ""
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster/GitHub/GitHubProvider.php:118
+#: RAN/Booster/GitHub/GitHubProvider.php:121
 msgid "Bundled GitHub webhook management is inactive because a pre-retirement RAN Booster Assisted Hooks release is active. Deactivate that add-on to use the bundled feature."
 msgstr ""
 

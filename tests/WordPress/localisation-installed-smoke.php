@@ -52,14 +52,15 @@ if ( ! is_textdomain_loaded( 'ran-booster' ) || $expectedPhpTranslation !== $php
 	throw new RuntimeException( 'The installed plugin init path did not load the expected PHP translation.' );
 }
 
-$booster              = new RAN\Booster();
-$booster->boosterPath = plugin_dir_path( $pluginFile );
-$booster->boosterUrl  = plugin_dir_url( $pluginFile );
-$booster->loadScripts( 'ran-booster_page_ran-booster-plugins' );
-$_GET['tab'] = 'portability'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route fixture.
-$booster->loadScripts( 'toplevel_page_ran-booster' );
 $_GET = array( 'page' => 'ran-booster-plugins' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route fixture.
+set_current_screen( 'ran-booster_page_ran-booster-plugins' );
 do_action( 'admin_enqueue_scripts', 'ran-booster_page_ran-booster-plugins' );
+$_GET = array( // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route fixture.
+	'page' => 'ran-booster',
+	'tab'  => 'portability',
+);
+set_current_screen( 'toplevel_page_ran-booster' );
+do_action( 'admin_enqueue_scripts', 'toplevel_page_ran-booster' );
 
 $scripts = wp_scripts();
 foreach (

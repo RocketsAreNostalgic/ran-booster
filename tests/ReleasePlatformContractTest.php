@@ -67,6 +67,16 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertArrayNotHasKey( 'source', $package );
 	}
 
+	public function testDisposableLifecycleFixtureUsesTheVendoredUpdatersStableUserAgent(): void {
+		$updater = file_get_contents( dirname( __DIR__ ) . '/' . self::UPDATER_PATH . '/src/Provider/GitHub/GitHubReleaseService.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Vendored release contract.
+		$fixture = file_get_contents( dirname( __DIR__ ) . '/tests/Integration/phase-4.4-core-disposable-harness.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable lifecycle fixture contract.
+
+		self::assertIsString( $updater );
+		self::assertIsString( $fixture );
+		self::assertStringContainsString( "'User-Agent' => 'ran-wp-release-updater',", $updater );
+		self::assertStringContainsString( "'ran-wp-release-updater' !== ( \$headers['User-Agent'] ?? null )", $fixture );
+	}
+
 	public function testReleaseVerifierRequiresTheSupportedCoreAndNeutralRuntimeMarkers(): void {
 		$script = file_get_contents( dirname( __DIR__ ) . '/scripts/verify-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
 		self::assertIsString( $script );

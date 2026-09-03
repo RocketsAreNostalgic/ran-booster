@@ -18,7 +18,7 @@
             "options": {
                 "symlink": false,
                 "versions": {
-                    "ran/wp-release-updater": "0.1.0-beta.1"
+                    "ran/wp-release-updater": "0.1.0-beta.2"
                 }
             }
         }
@@ -39,7 +39,7 @@
         "php": "^8.2",
         "ext-sodium": "*",
         "ext-zip": "*",
-        "ran/wp-release-updater": "0.1.0-beta.1"
+        "ran/wp-release-updater": "0.1.0-beta.2"
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",

@@ -7,10 +7,10 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleasePlatformContractTest extends TestCase {
-	private const UPDATER_COMMIT  = '8058377d48f6d68ff221ee6f8321af7ed26ce3bd';
+	private const UPDATER_COMMIT  = 'd1e67116492116b3001d34f4fe40129c13f9cf7e';
 	private const UPDATER_PACKAGE = 'ran/wp-release-updater';
 	private const UPDATER_PATH    = 'vendor/ran/wp-release-updater';
-	private const UPDATER_VERSION = '0.1.0-beta.1';
+	private const UPDATER_VERSION = '0.1.0-beta.2';
 
 	public function testComposerDeclaresTheZipRuntimeRequirement(): void {
 		$composer = json_decode(

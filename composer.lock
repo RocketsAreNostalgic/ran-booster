@@ -4,15 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b3da17c34fbc33f7c44db5dd587bda0d",
+    "content-hash": "8c4005e6124ec578e2565eaca9b542c8",
     "packages": [
         {
             "name": "ran/wp-release-updater",
-            "version": "0.1.0-beta.1",
+            "version": "0.1.0-beta.2",
             "dist": {
                 "type": "path",
                 "url": "../ran-wp-release-updater",
-                "reference": "8058377d48f6d68ff221ee6f8321af7ed26ce3bd"
+                "reference": "d1e67116492116b3001d34f4fe40129c13f9cf7e"
             },
             "require": {
                 "ext-hash": "*",

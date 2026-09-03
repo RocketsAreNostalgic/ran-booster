@@ -117,7 +117,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 
 		self::assertStringContainsString( 'Read back the neutral updater runtime contract', $workflow );
 		self::assertStringContainsString( 'WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater"', $workflow );
-		self::assertStringContainsString( '"package_version" => "0.1.0-beta.1"', $workflow );
+		self::assertStringContainsString( '"package_version" => "0.1.0-beta.2"', $workflow );
 		self::assertStringContainsString( '"runtime_protocol" => 1', $workflow );
 		self::assertStringContainsString( 'RAN\\\\\\\\WPReleaseUpdater\\\\\\\\V1\\\\\\\\WordPress\\\\\\\\NativePluginUpdater', $workflow );
 		self::assertStringNotContainsString( 'ran_booster_release_updater', $workflow );

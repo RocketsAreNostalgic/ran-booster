@@ -7,10 +7,10 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleasePlatformContractTest extends TestCase {
-	private const UPDATER_COMMIT  = '8058377d48f6d68ff221ee6f8321af7ed26ce3bd';
+	private const UPDATER_COMMIT  = 'd1e67116492116b3001d34f4fe40129c13f9cf7e';
 	private const UPDATER_PACKAGE = 'ran/wp-release-updater';
 	private const UPDATER_PATH    = 'vendor/ran/wp-release-updater';
-	private const UPDATER_VERSION = '0.1.0-beta.1';
+	private const UPDATER_VERSION = '0.1.0-beta.2';
 
 	public function testComposerDeclaresTheZipRuntimeRequirement(): void {
 		$composer = json_decode(
@@ -65,6 +65,16 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertSame( '../ran-wp-release-updater', $package['dist']['url'] ?? null );
 		self::assertSame( self::UPDATER_COMMIT, $package['dist']['reference'] ?? null );
 		self::assertArrayNotHasKey( 'source', $package );
+	}
+
+	public function testDisposableLifecycleFixtureUsesTheVendoredUpdatersStableUserAgent(): void {
+		$updater = file_get_contents( dirname( __DIR__ ) . '/' . self::UPDATER_PATH . '/src/Provider/GitHub/GitHubReleaseService.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Vendored release contract.
+		$fixture = file_get_contents( dirname( __DIR__ ) . '/tests/Integration/phase-4.4-core-disposable-harness.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable lifecycle fixture contract.
+
+		self::assertIsString( $updater );
+		self::assertIsString( $fixture );
+		self::assertStringContainsString( "'User-Agent' => 'ran-wp-release-updater',", $updater );
+		self::assertStringContainsString( "'ran-wp-release-updater' !== ( \$headers['User-Agent'] ?? null )", $fixture );
 	}
 
 	public function testReleaseVerifierRequiresTheSupportedCoreAndNeutralRuntimeMarkers(): void {

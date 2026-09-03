@@ -43,8 +43,9 @@
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",
-        "test:github-module": "phpunit --configuration phpunit.github-module.xml",
-        "test:unit": "phpunit --configuration phpunit.xml",
+        "test:github-module": "phpunit --configuration phpunit.github-module.xml --fail-on-phpunit-deprecation",
+        "test:unit": "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation",
+        "test:published-template-pack": "bash tests/published-template-pack.sh",
         "analyze": "phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=2G",
         "test:delivery-intake-race": "bash tests/WordPress/delivery-intake-race.sh",
         "test:worker-hard-stop": "bash tests/WordPress/worker-hard-stop.sh",

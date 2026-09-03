@@ -2,17 +2,17 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
 	bootstrap="vendor/autoload.php"
-	cacheDirectory=".phpunit.cache"
+	cacheDirectory=".phpunit.cache/published-template-pack"
 	colors="true"
 	backupGlobals="false">
 	<testsuites>
-		<testsuite name="Unit Tests">
-			<directory suffix="Test.php">tests</directory>
+		<testsuite name="Published Template Pack">
+			<file>tests/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/TemplatePackApi2ContractTest.php</file>
 		</testsuite>
 	</testsuites>
 	<groups>
-		<exclude>
+		<include>
 			<group>published-template-pack</group>
-		</exclude>
+		</include>
 	</groups>
 </phpunit>

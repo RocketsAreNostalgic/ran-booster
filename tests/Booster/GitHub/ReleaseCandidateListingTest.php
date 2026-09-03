@@ -6,6 +6,7 @@ namespace Tests\Booster\GitHub;
 
 require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php';
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
@@ -93,7 +94,7 @@ final class ReleaseCandidateListingTest extends TestCase {
 		);
 	}
 
-	/** @dataProvider unavailableStatusProvider */
+	#[DataProvider( 'unavailableStatusProvider' )]
 	public function testRepositoryAccessFailurePreservesFallbackSignal( int $status ): void {
 		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::response( $status, array( 'message' => 'upstream-secret-message' ) ) ) );
 

@@ -3564,6 +3564,54 @@ msgstr ""
 msgid "Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link."
 msgstr ""
 
+#: RAN/Admin/SecretsStorageSetupPresenter.php:133
+msgid "The candidate is not a valid absolute secrets.json path."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:134
+msgid "The candidate is inside the operating system temporary directory."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:135
+msgid "The candidate is inside a public web or version-control directory."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:136
+msgid "The private account directory is missing, is not a directory or is a symbolic link."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:137
+msgid "A path component is a symbolic link or could not be inspected."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:138
+msgid "The existing storage target is not a regular file."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:139
+msgid "The existing storage target has more than one hard link."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:140
+msgid "A path component is not a directory."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:141
+msgid "A host directory is writable by every local user, so the private account path could be replaced."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:142
+msgid "A group-writable host directory is owned by, writable by or grouped with the PHP process, so the private account path could be replaced."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:143
+msgid "A private path component is writable by its group or by other users."
+msgstr ""
+
+#: RAN/Admin/SecretsStorageSetupPresenter.php:144
+msgid "The private account directory is not writable and owned by the PHP process user."
+msgstr ""
+
 #. translators: %s: repository provider name.
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:149
 #, php-format

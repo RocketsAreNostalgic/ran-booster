@@ -7,6 +7,7 @@ namespace Tests\Admin;
 require_once __DIR__ . '/CredentialExpiryWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Secrets/SecretsStorageWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\SecretsStorageSetupPresenter;
 use RAN\Secrets\SecretsStorageProvisioningResult;
@@ -169,12 +170,20 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertNull( $payload['recovery'] );
 	}
 
-	public function testPrivilegedOverviewReceivesDiscardedCandidateReasons(): void {
+	#[DataProvider( 'discardedCandidateReasonCases' )]
+	public function testPrivilegedOverviewLocalizesKnownDiscardedCandidateReasonsWithoutChangingDiagnostics(
+		string $code,
+		?string $sourceMessage,
+		string $expectedReason
+	): void {
+		if ( null !== $sourceMessage ) {
+			$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $expectedReason;
+		}
 		$discarded = array(
 			array(
 				'directory' => '/var/www/account/.ran-booster/0123456789abcdef',
-				'code'      => 'php_accessible_group_writable_ancestor',
-				'reason'    => 'A PHP-accessible group-writable ancestor can replace the account path.',
+				'code'      => $code,
+				'reason'    => 'Original resolver reason.',
 				'component' => '/var/www',
 			),
 		);
@@ -188,7 +197,39 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 			'/admin'
 		);
 
-		self::assertSame( $discarded, $payload['discarded_candidates'] );
+		self::assertSame(
+			array(
+				array(
+					'directory' => '/var/www/account/.ran-booster/0123456789abcdef',
+					'code'      => $code,
+					'reason'    => $expectedReason,
+					'component' => '/var/www',
+				),
+			),
+			$payload['discarded_candidates']
+		);
+	}
+
+	/** @return iterable<string, array{string, string|null, string}> */
+	public static function discardedCandidateReasonCases(): iterable {
+		$reasons = array(
+			'invalid_candidate_path'                 => 'The candidate is not a valid absolute secrets.json path.',
+			'temporary_storage'                      => 'The candidate is inside the operating system temporary directory.',
+			'inside_unsafe_boundary'                 => 'The candidate is inside a public web or version-control directory.',
+			'private_anchor_unavailable'             => 'The private account directory is missing, is not a directory or is a symbolic link.',
+			'symlink_or_unreadable_component'        => 'A path component is a symbolic link or could not be inspected.',
+			'storage_file_not_regular'               => 'The existing storage target is not a regular file.',
+			'storage_file_hard_linked'               => 'The existing storage target has more than one hard link.',
+			'path_component_not_directory'           => 'A path component is not a directory.',
+			'world_writable_host_ancestor'           => 'A host directory is writable by every local user, so the private account path could be replaced.',
+			'php_accessible_group_writable_ancestor' => 'A group-writable host directory is owned by, writable by or grouped with the PHP process, so the private account path could be replaced.',
+			'broad_private_path_permissions'         => 'A private path component is writable by its group or by other users.',
+			'private_anchor_not_owned'               => 'The private account directory is not writable and owned by the PHP process user.',
+		);
+		foreach ( $reasons as $code => $reason ) {
+			yield $code => array( $code, $reason, 'Translated reason: ' . $code );
+		}
+		yield 'unknown code' => array( 'future_reason', null, 'Original resolver reason.' );
 	}
 
 	public function testBuildsAnAdoptionOfferOnlyForAnAvailableRecoveryState(): void {

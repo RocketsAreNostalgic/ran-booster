@@ -14,6 +14,7 @@
  * License: GPL-2.0-only
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: ran-booster
+ * Domain Path: /languages
  * Update URI: https://github.com/RocketsAreNostalgic/ran-booster
  */
 
@@ -79,6 +80,12 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 $ran_booster_version            = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 $ran_booster_self_update_policy = CoreSelfUpdatePolicy::detect( __FILE__, $ran_booster_version );
 ReleaseUpdaterBootstrap::register();
+add_action(
+	'init',
+	static function (): void {
+		load_plugin_textdomain( 'ran-booster', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+	}
+);
 
 $ran_booster_runtime_support = RuntimeSupport::current();
 if ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) ) {

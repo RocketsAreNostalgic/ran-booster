@@ -53,7 +53,7 @@ $hasCredentialDecisions    = array() !== array_filter(
 		$recoveryCount    = max( 0, (int) ( $credential['recovery_count'] ?? 0 ) );
 		$packageLabel     = sprintf(
 			/* translators: %d: number of packages using the credential. */
-			_n( '%d package', '%d packages', $packageCount, 'ran-booster' ),
+			_nx( '%d package', '%d packages', $packageCount, 'Packages using a credential', 'ran-booster' ),
 			$packageCount
 		);
 		$recoveryLabel = sprintf(

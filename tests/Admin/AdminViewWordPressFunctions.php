@@ -24,9 +24,17 @@ if ( ! function_exists( 'esc_html' ) ) {
 
 if ( ! function_exists( '__' ) ) {
 	function __( string $text, string $domain = 'default' ): string {
-		unset( $domain );
+		return $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ]
+			?? $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $text ]
+			?? $text;
+	}
+}
 
-		return $text;
+if ( ! function_exists( '_x' ) ) {
+	function _x( string $text, string $context, string $domain = 'default' ): string {
+		return $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $context . "\004" . $text ]
+			?? $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $context . "\004" . $text ]
+			?? $text;
 	}
 }
 
@@ -47,6 +55,14 @@ if ( ! function_exists( 'add_query_arg' ) ) {
 if ( ! function_exists( '_n' ) ) {
 	function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
 		unset( $domain );
+
+		return 1 === $number ? $single : $plural;
+	}
+}
+
+if ( ! function_exists( '_nx' ) ) {
+	function _nx( string $single, string $plural, int $number, string $context, string $domain = 'default' ): string {
+		unset( $context, $domain );
 
 		return 1 === $number ? $single : $plural;
 	}

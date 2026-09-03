@@ -519,7 +519,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'name="ran_booster[repository]"', $html );
-		self::assertStringContainsString( '>Pick plugin repository</button>', $html );
+		self::assertStringContainsString( '>Pick Plugin repository</button>', $html );
 		self::assertStringNotContainsString( 'hidden disabled="disabled"', $html );
 	}
 

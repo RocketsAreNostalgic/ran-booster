@@ -43,6 +43,10 @@
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",
+        "i18n:pot": "bash scripts/make-pot.sh",
+        "i18n:check": "bash scripts/make-pot.sh --check",
+        "i18n:fixture": "bash scripts/make-test-i18n-fixture.sh",
+        "i18n:fixture:check": "bash scripts/make-test-i18n-fixture.sh --check",
         "test:github-module": "phpunit --configuration phpunit.github-module.xml --fail-on-phpunit-deprecation",
         "test:unit": "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation",
         "test:published-template-pack": "bash tests/published-template-pack.sh",
@@ -55,6 +59,7 @@
         "test:release-capability-installed": "bash tests/WordPress/release-capability-installed-smoke.sh",
         "test:github-release-updater-bootstrap": "@php tests/WordPress/github-release-updater-bootstrap-smoke.php",
         "test:database-storage-smoke": "bash tests/WordPress/database-storage-smoke.sh",
+        "test:localisation-installed-safety": "bash tests/localisation-installed-smoke-contract.sh",
         "test": [
             "@test:characterization",
             "@test:github-module",
@@ -73,6 +78,9 @@
         "build:release": "bash scripts/build-release.sh",
         "verify:release": "bash scripts/verify-release.sh",
         "check": [
+            "@i18n:check",
+            "@i18n:fixture:check",
+            "@test:localisation-installed-safety",
             "@test",
             "@test:release-candidate-marker",
             "@test:release-state-contracts",

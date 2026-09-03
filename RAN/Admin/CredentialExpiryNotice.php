@@ -87,11 +87,14 @@ final class CredentialExpiryNotice {
 					)
 				);
 				?>
-				<?php echo esc_html( $primary['label'] . ' (' . $primary['provider_label'] . '): ' . $primary['badge_label'] . '.' ); ?>
+				<?php
+				/* translators: 1: credential label. 2: repository provider label. 3: credential expiry status. */
+				echo esc_html( sprintf( __( '%1$s (%2$s): %3$s.', 'ran-booster' ), $primary['label'], $primary['provider_label'], $primary['badge_label'] ) );
+				?>
 			</p>
 			<p>
 				<?php foreach ( $providers as $provider => $label ) { ?>
-					<a href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=' . rawurlencode( $provider ) ); ?>"><?php echo esc_html( sprintf( 'Review %s credentials', $label ) ); ?></a>
+					<a href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=' . rawurlencode( $provider ) ); ?>"><?php /* translators: %s is a repository provider label. */ echo esc_html( sprintf( __( 'Review %s credentials', 'ran-booster' ), $label ) ); ?></a>
 				<?php } ?>
 				<?php if ( null !== $replacement ) { ?>
 					<a class="button button-primary" href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=' . rawurlencode( $replacement['provider'] ) . '&replace_credential=' . rawurlencode( $replacement['id'] ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>

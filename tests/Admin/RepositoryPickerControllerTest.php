@@ -32,10 +32,12 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		$_POST                      = array();
 		$this->publicLookupProfiles = new InMemoryPublicRepositoryLookupProfileStore();
+		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
 
 	protected function tearDown(): void {
 		$_POST = array();
+		unset( $GLOBALS['ran_booster_repository_admin_translations'] );
 
 		parent::tearDown();
 	}
@@ -456,6 +458,35 @@ final class RepositoryPickerControllerTest extends TestCase {
 			'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.',
 			$result['data']['message']
 		);
+	}
+
+	public function testPartialResultDisplayCopyUsesThePluginTranslationDomain(): void {
+		$source = 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.';
+		$GLOBALS['ran_booster_repository_admin_translations'] = array(
+			'ran-booster' => array( $source => 'Les dépôts affichés sont incomplets.' ),
+		);
+		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
+
+			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+			public function getMetadata(): ProviderMetadata {
+				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+			}
+
+			public function browseRepositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+				return new \RAN\RepositoryProvider\RepositoryBrowseResult( array(), \RAN\RepositoryProvider\RepositoryBrowseResult::RATE_LIMIT );
+			}
+		};
+		$_POST    = array(
+			'provider'      => 'gh',
+			'mode'          => 'accessible',
+			'credential_id' => 'profile',
+		);
+
+		$result = $this->controller( $provider )->handle();
+
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'Les dépôts affichés sont incomplets.', $result['data']['message'] );
 	}
 
 	/**

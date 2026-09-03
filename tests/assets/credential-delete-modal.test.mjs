@@ -7,7 +7,7 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
-function loadPopulateDeleteCredentialModal() {
+function loadPopulateDeleteCredentialModal(translations = {}) {
 	const signature =
 		'\tfunction populateDeleteCredentialModal(modal, button) {';
 	const start = source.indexOf(signature);
@@ -42,7 +42,32 @@ function loadPopulateDeleteCredentialModal() {
 		'The credential deletion modal population function must be complete.'
 	);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	const i18n = {
+		__(text) {
+			return translations[text] || text;
+		},
+		_n(singular, plural, count) {
+			return (
+				translations[count === 1 ? singular : plural] ||
+				(count === 1 ? singular : plural)
+			);
+		},
+		sprintf(template, ...values) {
+			let index = 0;
+			return template.replace(/%(?:\d+\$)?[ds]/g, function () {
+				const value = values[index];
+				index += 1;
+				return String(value);
+			});
+		},
+	};
+
+	return Function(
+		'__',
+		'_n',
+		'sprintf',
+		`"use strict"; return (${source.slice(start, end)});`
+	)(i18n.__, i18n._n, i18n.sprintf);
 }
 
 function modalFixture() {
@@ -230,5 +255,30 @@ test('unverifiable usage fails closed', () => {
 	assert.equal(fixture.elements.inUse.hidden, true);
 	assert.equal(fixture.elements.packages.hidden, true);
 	assert.deepEqual(fixture.elements.packageList.children, []);
+	assert.equal(fixture.elements.confirm.disabled, true);
+});
+
+test('translated in-use warning preserves the deletion interlock', () => {
+	const populateDeleteCredentialModal = loadPopulateDeleteCredentialModal({
+		'This credential is still used by %d managed packages. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it.':
+			'Cet identifiant est encore utilisé par %d paquets gérés. Attribuez un autre identifiant ou un accès public, le cas échéant, à chaque paquet de la liste Utilisation et enregistrez ces réglages avant de le supprimer.',
+	});
+	const fixture = modalFixture();
+
+	populateDeleteCredentialModal(
+		fixture.modal,
+		deleteButton({
+			'data-id': 'deployment',
+			'data-label': 'Deployment',
+			'data-usage-total': '2',
+			'data-usage-listed': '0',
+			'data-public-lookup-default': '0',
+		})
+	);
+
+	assert.equal(
+		fixture.elements.inUse.textContent,
+		'Cet identifiant est encore utilisé par 2 paquets gérés. Attribuez un autre identifiant ou un accès public, le cas échéant, à chaque paquet de la liste Utilisation et enregistrez ces réglages avant de le supprimer.'
+	);
 	assert.equal(fixture.elements.confirm.disabled, true);
 });

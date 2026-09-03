@@ -1,5 +1,6 @@
 (function () {
 	'use strict';
+	const { __, _n, sprintf } = wp.i18n;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -194,7 +195,10 @@
 					const payload = await response.json().catch(() => null);
 					throw new Error(
 						payload?.data?.message ||
-							'Booster could not export this Blueprint. Please try again.'
+							__(
+								'Booster could not export this Blueprint. Please try again.',
+								'ran-booster'
+							)
 					);
 				}
 
@@ -206,12 +210,17 @@
 				link.click();
 				link.remove();
 				window.URL.revokeObjectURL(url);
-				announceSuccess('Transporter Blueprint download started.');
+				announceSuccess(
+					__('Transporter Blueprint download started.', 'ran-booster')
+				);
 			} catch (error) {
 				showMessage(
 					error instanceof Error
 						? error.message
-						: 'Booster could not export this Blueprint. Please try again.'
+						: __(
+								'Booster could not export this Blueprint. Please try again.',
+								'ran-booster'
+							)
 				);
 			} finally {
 				submit.disabled = false;
@@ -574,25 +583,66 @@
 							'data-portability-credential-recovery'
 						) !== 'true'
 				).length;
-				applySummary.textContent = selected
-					? 'Apply ' +
-						packageChanges +
-						' package change' +
-						(packageChanges === 1 ? '' : 's') +
-						', import ' +
-						imports.size +
-						' repository credential' +
-						(imports.size === 1 ? '' : 's') +
-						' and use ' +
-						targets.size +
-						' saved credential' +
-						(targets.size === 1 ? '' : 's') +
-						'. ' +
-						(packageChanges
-							? 'Deployment will remain Disabled. '
-							: 'Managed package settings will remain unchanged. ') +
-						'Credential permissions have not been assessed.'
-					: 'No changes selected.';
+				if (!selected) {
+					applySummary.textContent = __(
+						'No changes selected.',
+						'ran-booster'
+					);
+					return;
+				}
+				const packageChangesLabel = sprintf(
+					/* translators: %d: number of managed package changes. */
+					_n(
+						'%d package change',
+						'%d package changes',
+						packageChanges,
+						'ran-booster'
+					),
+					packageChanges
+				);
+				const importsLabel = sprintf(
+					/* translators: %d: number of repository credentials to import. */
+					_n(
+						'%d repository credential',
+						'%d repository credentials',
+						imports.size,
+						'ran-booster'
+					),
+					imports.size
+				);
+				const targetsLabel = sprintf(
+					/* translators: %d: number of saved credentials to use. */
+					_n(
+						'%d saved credential',
+						'%d saved credentials',
+						targets.size,
+						'ran-booster'
+					),
+					targets.size
+				);
+				applySummary.textContent =
+					sprintf(
+						/* translators: 1: package changes, 2: repository credentials to import, 3: saved credentials to use. */
+						__(
+							'Apply %1$s, import %2$s and use %3$s.',
+							'ran-booster'
+						),
+						packageChangesLabel,
+						importsLabel,
+						targetsLabel
+					) +
+					' ' +
+					(packageChanges
+						? __('Deployment will remain Disabled.', 'ran-booster')
+						: __(
+								'Managed package settings will remain unchanged.',
+								'ran-booster'
+							)) +
+					' ' +
+					__(
+						'Credential permissions have not been assessed.',
+						'ran-booster'
+					);
 			}
 		}
 
@@ -635,31 +685,44 @@
 			const credentialText =
 				rendered?.credentialText || document.createElement('p');
 			const type =
-				row?.getAttribute('data-portability-package-type') || 'Package';
+				row?.getAttribute('data-portability-package-type') ||
+				__('Package', 'ran-booster');
 			const name =
 				row?.getAttribute('data-portability-package-name') ||
 				row?.getAttribute('data-portability-package-identifier') ||
-				'Unknown';
+				__('Unknown', 'ran-booster');
 			const identifier =
 				row?.getAttribute('data-portability-package-identifier') || '';
-			const shortLabel = type + ' “' + name + '”';
+			const shortLabel = sprintf(
+				/* translators: 1: package type, 2: package name. */
+				__('%1$s “%2$s”', 'ran-booster'),
+				type,
+				name
+			);
 			const label = identifier
 				? shortLabel + ' (' + identifier + ')'
 				: shortLabel;
 			const resultMessage =
-				result.message || 'Package result unavailable.';
+				result.message ||
+				__('Package result unavailable.', 'ran-booster');
 
 			item.className =
 				'notice inline notice-' +
 				resultType +
 				' ran-booster-portability__apply-result';
 			const credentialMessages = {
-				transferred_available:
+				transferred_available: __(
 					'Transferred credential is available on this site.',
-				target_selected:
+					'ran-booster'
+				),
+				target_selected: __(
 					'Selected saved credential was verified for this repository.',
-				unavailable:
+					'ran-booster'
+				),
+				unavailable: __(
 					'Repository credential was not made available on this site.',
+					'ran-booster'
+				),
 			};
 			credentialText.textContent =
 				credentialMessages[result.credential_state] || '';
@@ -699,7 +762,7 @@
 				setPreviewBusy(true);
 			}
 			resetReview(clearResults);
-			showMessage('Reviewing blueprint…', 'info');
+			showMessage(__('Reviewing blueprint…', 'ran-booster'), 'info');
 
 			try {
 				const response = await window.fetch(settings.ajaxUrl, {
@@ -717,7 +780,10 @@
 				) {
 					throw new Error(
 						payload?.data?.message ||
-							'Unable to review this blueprint.'
+							__(
+								'Unable to review this blueprint.',
+								'ran-booster'
+							)
 					);
 				}
 				review.innerHTML = payload.data.html;
@@ -748,14 +814,16 @@
 				showReviewError(false);
 				showMessage('', 'info');
 				if (announceCompletion) {
-					announceSuccess('Transporter Blueprint reviewed.');
+					announceSuccess(
+						__('Transporter Blueprint reviewed.', 'ran-booster')
+					);
 				}
 			} catch (error) {
 				reviewConfirmed = false;
 				showMessage(
 					error instanceof Error
 						? error.message
-						: 'Unable to review this blueprint.',
+						: __('Unable to review this blueprint.', 'ran-booster'),
 					'error'
 				);
 			} finally {
@@ -946,7 +1014,10 @@
 
 				for (const row of rows) {
 					const rendered = renderResult(
-						{ status: 'pending', message: 'Applying…' },
+						{
+							status: 'pending',
+							message: __('Applying…', 'ran-booster'),
+						},
 						row
 					);
 					const data = new FormData(form);
@@ -980,7 +1051,10 @@
 									status: 'failed',
 									message:
 										payload?.data?.message ||
-										'Package apply failed.',
+										__(
+											'Package apply failed.',
+											'ran-booster'
+										),
 								};
 						if (
 							!result ||
@@ -998,8 +1072,10 @@
 						renderResult(
 							{
 								status: 'failed',
-								message:
+								message: __(
 									'Package apply failed. Review the blueprint again.',
+									'ran-booster'
+								),
 							},
 							row,
 							rendered
@@ -1010,7 +1086,10 @@
 				await preview(false, false);
 				if (appliedEverySelection) {
 					announceSuccess(
-						'All selected Transporter Blueprint changes were applied.'
+						__(
+							'All selected Transporter Blueprint changes were applied.',
+							'ran-booster'
+						)
 					);
 				}
 			} finally {

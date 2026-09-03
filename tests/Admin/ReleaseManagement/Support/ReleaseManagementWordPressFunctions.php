@@ -12,10 +12,26 @@ function __( string $text, string $domain = 'default' ): string {
 	return $text;
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\_x' ) ) {
+	function _x( string $text, string $context, string $domain = 'default' ): string {
+		unset( $context, $domain );
+
+		return $text;
+	}
+}
+
 function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
 	unset( $domain );
 
 	return 1 === $number ? $single : $plural;
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\_nx' ) ) {
+	function _nx( string $single, string $plural, int $number, string $context, string $domain = 'default' ): string {
+		unset( $context, $domain );
+
+		return 1 === $number ? $single : $plural;
+	}
 }
 
 function esc_html( mixed $value ): string {
@@ -195,6 +211,12 @@ function plugins_url( string $path, string $plugin ): string {
 /** @param list<string> $dependencies */
 function wp_enqueue_script( string $handle, string $source = '', array $dependencies = array(), string|bool|null $version = false, bool $footer = false ): void {
 	$GLOBALS['ran_booster_release_management_test_scripts'][ $handle ] = compact( 'source', 'dependencies', 'version', 'footer' );
+}
+
+function wp_set_script_translations( string $handle, string $domain, string $path = '' ): bool {
+	$GLOBALS['ran_booster_release_management_test_script_translations'][] = compact( 'handle', 'domain', 'path' );
+
+	return true;
 }
 
 /** @param list<string> $dependencies */

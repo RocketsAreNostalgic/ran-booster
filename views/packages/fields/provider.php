@@ -8,10 +8,10 @@ $repositoryReadOnly = isset( $repositoryReadOnly ) && true === $repositoryReadOn
 ?>
 <?php if ( $packageFieldGrid ) { ?>
 	<div class="ran-booster-settings-field">
-		<label for="ran-booster-provider">Repository provider</label>
+		<label for="ran-booster-provider"><?php esc_html_e( 'Repository provider', 'ran-booster' ); ?></label>
 <?php } else { ?>
 	<tr>
-		<th scope="row"><label for="ran-booster-provider">Repository provider</label></th>
+		<th scope="row"><label for="ran-booster-provider"><?php esc_html_e( 'Repository provider', 'ran-booster' ); ?></label></th>
 		<td>
 <?php } ?>
 		<select id="ran-booster-provider" name="ran_booster[provider]" class="ran-booster-provider-input" <?php disabled( ! $packageMutationAvailable || $repositoryReadOnly ); ?>>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once __DIR__ . '/Interaction/AdminInteractionWordPressFunctions.php';

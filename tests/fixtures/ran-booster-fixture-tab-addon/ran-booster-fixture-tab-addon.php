@@ -28,17 +28,20 @@ add_action(
 					return;
 				}
 
+				// phpcs:ignore WordPress.WP.I18n.TextDomainMismatch -- The external fixture owns its text domain.
+				$label = __( 'Fixture Tab', 'ran-booster-fixture-tab-addon' );
+
 				$registry->register(
 					new \RAN\Admin\AdminAddOnTab(
 						'ran-booster-fixture-tab-addon',
 						'fixture-tab',
-						'Fixture Tab',
-						static function ( \RAN\Admin\AdminAddOnContext $context ): void {
+						$label,
+						static function ( \RAN\Admin\AdminAddOnContext $context ) use ( $label ): void {
 							printf(
 								'<div id="ran-booster-fixture-tab" data-scope="%s" data-url="%s">%s</div>',
 								esc_attr( $context->scope() ),
 								esc_attr( $context->boosterUrl() ),
-								esc_html( 'Fixture Tab' )
+								esc_html( $label )
 							);
 						},
 						7,

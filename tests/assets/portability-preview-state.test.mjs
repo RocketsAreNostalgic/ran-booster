@@ -7,7 +7,16 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
-function loadFunction(name) {
+function sprintf(format, ...values) {
+	let next = 0;
+
+	return format.replace(/%(?:(\d+)\$)?[ds]/g, (match, position) => {
+		const index = position ? Number(position) - 1 : next++;
+		return String(values[index] ?? match);
+	});
+}
+
+function loadFunction(name, translations = {}) {
 	const signature = `\tfunction ${name}() {`;
 	const start = source.indexOf(signature);
 
@@ -33,7 +42,18 @@ function loadFunction(name) {
 
 	assert.notEqual(end, -1, `The ${name} function must be complete.`);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	return Function(
+		'__',
+		'_n',
+		'sprintf',
+		`"use strict"; return (${source.slice(start, end)});`
+	)(
+		(message) => translations[message] || message,
+		(single, plural, count) =>
+			translations[count === 1 ? single : plural] ||
+			(count === 1 ? single : plural),
+		sprintf
+	);
 }
 
 function checkbox(selector, checked = true, exportIndex = null) {
@@ -1062,7 +1082,20 @@ test('target action without an ID only reveals and focuses its select', async ()
 	);
 
 	try {
-		loadFunction('initPortabilityPreview')();
+		loadFunction('initPortabilityPreview', {
+			'%d package change': '%d modification de paquet',
+			'%d package changes': '%d modifications de paquet',
+			'%d repository credential': '%d identifiant de dépôt',
+			'%d repository credentials': '%d identifiants de dépôt',
+			'%d saved credential': '%d identifiant enregistré',
+			'%d saved credentials': '%d identifiants enregistrés',
+			'Apply %1$s, import %2$s and use %3$s.':
+				'Appliquer %1$s, importer %2$s et utiliser %3$s.',
+			'Deployment will remain Disabled.':
+				'Le déploiement restera désactivé.',
+			'Credential permissions have not been assessed.':
+				'Les autorisations des identifiants n’ont pas été évaluées.',
+		})();
 		state.listeners.get('form:submit')({ preventDefault() {} });
 		await tick();
 		const formCount = state.forms.length;
@@ -1079,7 +1112,7 @@ test('target action without an ID only reveals and focuses its select', async ()
 		assert.equal(state.apply.disabled, true);
 		assert.equal(
 			state.applySummary.textContent,
-			'Apply 1 package change, import 0 repository credentials and use 0 saved credentials. Deployment will remain Disabled. Credential permissions have not been assessed.'
+			'Appliquer 1 modification de paquet, importer 0 identifiants de dépôt et utiliser 0 identifiants enregistrés. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées.'
 		);
 
 		state.credentialTarget.value = 'target-profile';
@@ -1092,7 +1125,7 @@ test('target action without an ID only reveals and focuses its select', async ()
 		assert.equal(state.apply.disabled, true);
 		assert.equal(
 			state.applySummary.textContent,
-			'Apply 1 package change, import 0 repository credentials and use 1 saved credential. Deployment will remain Disabled. Credential permissions have not been assessed.'
+			'Appliquer 1 modification de paquet, importer 0 identifiants de dépôt et utiliser 1 identifiant enregistré. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées.'
 		);
 	} finally {
 		cleanup();

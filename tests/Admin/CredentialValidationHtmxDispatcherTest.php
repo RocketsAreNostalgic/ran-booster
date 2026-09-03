@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 
@@ -31,10 +32,12 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 	protected function setUp(): void {
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$GLOBALS['ran_booster_test_capability_checks'] = array();
-		$GLOBALS['ran_booster_test_nonce_checks']      = array();
-		$GLOBALS['ran_booster_test_capabilities']      = array();
-		$GLOBALS['ran_booster_test_nonce_valid']       = true;
+		$GLOBALS['ran_booster_test_capability_checks']        = array();
+		$GLOBALS['ran_booster_test_nonce_checks']             = array();
+		$GLOBALS['ran_booster_test_capabilities']             = array();
+		$GLOBALS['ran_booster_test_nonce_valid']              = true;
+		$GLOBALS['ran_booster_admin_test_translations']       = array();
+		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
 
 	protected function tearDown(): void {
@@ -45,7 +48,9 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			$GLOBALS['ran_booster_test_capability_checks'],
 			$GLOBALS['ran_booster_test_nonce_checks'],
 			$GLOBALS['ran_booster_test_capabilities'],
-			$GLOBALS['ran_booster_test_nonce_valid']
+			$GLOBALS['ran_booster_test_nonce_valid'],
+			$GLOBALS['ran_booster_admin_test_translations'],
+			$GLOBALS['ran_booster_repository_admin_translations']
 		);
 	}
 
@@ -77,6 +82,30 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		} catch ( HtmxCredentialValidationResponse $response ) {
 			self::assertSame( 'credential_1', $response->credentialId );
 			self::assertSame( 'Repository credential validated successfully.', $response->toastMessage );
+			self::assertNull( $response->error );
+			self::assertSame( 200, $response->status );
+		}
+	}
+
+	public function testHtmxSuccessToastUsesTheTranslatedCredentialValidationMessage(): void {
+		$translations = array(
+			'Repository credential validated successfully.' => 'Translated credential validation success.',
+		);
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']       = $translations;
+		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'] = $translations;
+
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::valid() );
+		$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		$_POST['ran_booster']       = $this->request();
+
+		try {
+			$dispatcher->dispatchPostRequests();
+			self::fail( 'An HTMX response must end the request after rendering its bounded fragment.' );
+		} catch ( HtmxCredentialValidationResponse $response ) {
+			self::assertSame( 'credential_1', $response->credentialId );
+			self::assertSame( 'Translated credential validation success.', $response->toastMessage );
 			self::assertNull( $response->error );
 			self::assertSame( 200, $response->status );
 		}

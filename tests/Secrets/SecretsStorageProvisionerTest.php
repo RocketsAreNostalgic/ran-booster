@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Secrets;
 
+require_once __DIR__ . '/SecretsStorageWordPressFunctions.php';
+
 // Native local filesystem behavior is part of this focused composition test.
 // phpcs:disable WordPress.WP.AlternativeFunctions
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -31,6 +34,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	private string $temporaryBoundary;
 
 	protected function setUp(): void {
+		$GLOBALS['ran_booster_secrets_test_translations'] = array();
 		$suffix                  = bin2hex( random_bytes( 8 ) );
 		$this->root              = sys_get_temp_dir() . '/ran-booster-provisioner-' . $suffix;
 		$this->temporaryBoundary = sys_get_temp_dir() . '/ran-booster-temporary-boundary-' . $suffix;
@@ -55,6 +59,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
+		unset( $GLOBALS['ran_booster_secrets_test_translations'] );
 		$this->removeTree( $this->root );
 		$this->removeTree( $this->temporaryBoundary );
 	}
@@ -70,6 +75,167 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertFalse( $provisioner->probeCalled );
 		self::assertFalse( $provisioner->writerCalled );
 		self::assertDirectoryDoesNotExist( dirname( $this->candidate ) );
+	}
+
+	public function testLocalizesFactoryStatusAndPendingMessagesWithoutChangingCodesOrPaths(): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+			'Booster can create secure encrypted secrets storage.' => 'Stockage sécurisé prêt.',
+			'WordPress must reload before the encrypted secrets path can be trusted.' => 'WordPress doit recharger.',
+			'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.' => 'Stockage chiffré incomplet.',
+		);
+		$provisioner = $this->provisioner();
+		$status      = $provisioner->status();
+		$pending     = $provisioner->provision();
+		$attention   = SecretsStorageProvisioningResult::storageNeedsAttention(
+			$this->candidate,
+			SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+		);
+
+		self::assertSame( 'Stockage sécurisé prêt.', $status->message() );
+		self::assertSame( 'setup_available', $status->code() );
+		self::assertSame( $this->candidate, $status->candidatePath() );
+		self::assertSame( 'WordPress doit recharger.', $pending->message() );
+		self::assertSame( 'pending_verification', $pending->code() );
+		self::assertSame( $this->candidate, $pending->candidatePath() );
+		self::assertSame( 'Stockage chiffré incomplet.', $attention->message() );
+	}
+
+	public function testLocalizesConfiguredStorageItemDiagnosticsWithoutChangingCodesModesOrPaths(): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+			"Configured secrets storage item\004directory" => 'répertoire',
+			"Configured secrets storage item\004file"      => 'fichier',
+			"Configured secrets storage item\004lock file" => 'fichier verrou',
+			'The configured secrets %1$s uses mode %2$04o; mode %3$04o is required.' => 'Le secret %1$s utilise le mode %2$04o ; le mode %3$04o est requis.',
+		);
+
+		$directory = $this->root . '/translated-directory';
+		self::assertTrue( mkdir( $directory, 0755 ) );
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $directory . '/secrets.json';
+		$directoryResult         = $provisioner->status();
+
+		self::assertSame( 'storage_directory_unusable', $directoryResult->code() );
+		self::assertSame( $provisioner->configured, $directoryResult->candidatePath() );
+		self::assertStringContainsString( 'répertoire', $directoryResult->message() );
+		self::assertStringContainsString( '0755', $directoryResult->message() );
+		self::assertStringContainsString( '0700', $directoryResult->message() );
+
+		self::assertTrue( chmod( $directory, 0700 ) );
+		$file = $provisioner->configured;
+		self::assertNotFalse( file_put_contents( $file, '{}' ) );
+		self::assertTrue( chmod( $file, 0644 ) );
+		$fileResult = $provisioner->status();
+
+		self::assertSame( 'storage_file_unusable', $fileResult->code() );
+		self::assertSame( $file, $fileResult->candidatePath() );
+		self::assertStringContainsString( 'fichier', $fileResult->message() );
+		self::assertStringContainsString( '0644', $fileResult->message() );
+		self::assertStringContainsString( '0600', $fileResult->message() );
+
+		self::assertTrue( chmod( $file, 0600 ) );
+		$lock = $file . '.lock';
+		self::assertNotFalse( file_put_contents( $lock, '' ) );
+		self::assertTrue( chmod( $lock, 0644 ) );
+		$lockResult = $provisioner->status();
+
+		self::assertSame( 'storage_lock_unusable', $lockResult->code() );
+		self::assertSame( $file, $lockResult->candidatePath() );
+		self::assertStringContainsString( 'fichier verrou', $lockResult->message() );
+		self::assertStringContainsString( '0644', $lockResult->message() );
+		self::assertStringContainsString( '0600', $lockResult->message() );
+	}
+
+	public function testLocalizesModeOwnershipReadabilityAndWritabilityIssues(): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+			"Configured secrets storage item\004file" => 'fichier',
+			'The configured secrets %1$s uses mode %2$04o; mode %3$04o is required.' => 'Mode : %1$s, %2$04o au lieu de %3$04o.',
+			'The configured secrets %s is not owned by the PHP process user.' => 'Propriétaire PHP incorrect : %s.',
+			'The configured secrets %s is not readable by PHP.' => 'PHP ne peut pas lire : %s.',
+			'The configured secrets %s is not writable by PHP.' => 'PHP ne peut pas écrire : %s.',
+		);
+		$method = new \ReflectionMethod( SecretsStorageProvisioner::class, 'accessIssues' );
+		$issues = $method->invoke(
+			$this->provisioner(),
+			$this->root . '/does-not-exist',
+			array(
+				'mode' => 0644,
+				'uid'  => -1,
+			),
+			0600,
+			'file'
+		);
+
+		self::assertSame(
+			array(
+				'Mode : fichier, 0644 au lieu de 0600.',
+				'Propriétaire PHP incorrect : fichier.',
+				'PHP ne peut pas lire : fichier.',
+				'PHP ne peut pas écrire : fichier.',
+			),
+			$issues
+		);
+
+		$fallbackIssues = $method->invoke(
+			$this->provisioner(),
+			$this->root . '/does-not-exist',
+			array(
+				'mode' => 0644,
+				'uid'  => -1,
+			),
+			0600,
+			'unexpected item'
+		);
+
+		self::assertSame( 'Mode : unexpected item, 0644 au lieu de 0600.', $fallbackIssues[0] );
+	}
+
+	public function testLocalizesManagedStorageDiagnosticBranchesWithoutChangingMatchRouting(): void {
+		$directory = $this->root . '/translated-managed-diagnostics';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$provisioner                = $this->provisioner();
+		$provisioner->configured    = $directory . '/secrets.json';
+		$provisioner->healthFailure = true;
+		$generic                    = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
+		$cases                      = array(
+			array( 'storage_key_missing', 'Fixture storage failure.', 'storage_key_missing' ),
+			array( 'storage_file_missing', 'Fixture storage failure.', 'storage_file_missing' ),
+			array( 'storage_orphan_lock', 'Fixture storage failure.', 'storage_orphan_lock' ),
+			array( 'storage_lock_missing', 'Fixture storage failure.', 'storage_lock_missing' ),
+			array( 'unexpected_reason', 'Fixture storage failure.', 'unexpected_reason' ),
+			array( $generic, 'The encrypted Booster secrets store is incomplete.', 'storage_incomplete' ),
+			array( $generic, 'The encrypted Booster secrets store is incomplete because its lock is missing.', 'storage_incomplete' ),
+			array( $generic, 'The encrypted Booster secrets store is missing its lock.', 'storage_incomplete' ),
+			array( $generic, 'The encrypted Booster secrets document could not be authenticated.', 'storage_authentication_failed' ),
+			array( $generic, 'The encrypted Booster secrets payload is invalid.', 'storage_document_invalid' ),
+			array( $generic, 'The encrypted Booster secrets payload is not canonical.', 'storage_document_invalid' ),
+			array( $generic, 'The Booster site key is unavailable.', 'storage_key_unavailable' ),
+			array( $generic, 'The encrypted Booster secrets file is not readable.', 'storage_file_unusable' ),
+			array( $generic, 'The encrypted Booster secrets file is not a secure bounded file.', 'storage_file_unusable' ),
+			array( $generic, 'The encrypted Booster secrets file could not be read safely.', 'storage_file_unusable' ),
+			array( $generic, 'Refusing to use an invalid encrypted Booster secrets lock.', 'storage_lock_unusable' ),
+			array( $generic, 'Could not open the encrypted Booster secrets lock.', 'storage_lock_unusable' ),
+			array( $generic, 'Could not inspect the encrypted Booster secrets lock.', 'storage_lock_unusable' ),
+			array( $generic, 'Could not secure the encrypted Booster secrets lock.', 'storage_lock_unusable' ),
+			array( $generic, 'Could not lock the encrypted Booster secrets store.', 'storage_lock_unusable' ),
+			array( $generic, 'An unclassified fixture failure.', 'storage_unavailable' ),
+		);
+
+		foreach ( $cases as $case ) {
+			$reason                            = $case[0];
+			$message                           = $case[1];
+			$code                              = $case[2];
+			$provisioner->healthFailureReason  = $reason;
+			$provisioner->healthFailureMessage = $message;
+			$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+				$this->managedDiagnosticMessageForCode( $code ) => 'Diagnostic traduit : ' . $code,
+			);
+
+			$result = $provisioner->status();
+
+			self::assertSame( $code, $result->code(), $message );
+			self::assertSame( $provisioner->configured, $result->candidatePath(), $message );
+			self::assertSame( 'Diagnostic traduit : ' . $code, $result->message(), $message );
+		}
 	}
 
 	public function testUnavailableLocationRetainsBoundedDiscardedCandidateDiagnostics(): void {
@@ -445,15 +611,65 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 	}
 
-	public function testWriterFailureIsReducedToItsStableNonPathBearingReason(): void {
-		$provisioner                    = $this->provisioner();
-		$provisioner->writerFailureCode = 'config_changed';
+	#[DataProvider( 'wpConfigWriteFailureCases' )]
+	public function testWriterFailureIsReducedToItsStableCodeAndTranslatedDisplayMessage(
+		string $reason,
+		string $sourceMessage
+	): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'][ $sourceMessage ] = 'Translated writer failure: ' . $reason;
+		$provisioner                       = $this->provisioner();
+		$provisioner->writerFailureCode    = $reason;
+		$provisioner->writerFailureMessage = 'Raw writer canary: /private/leaked/wp-config.php';
 
 		$result = $provisioner->provision();
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
-		self::assertSame( 'config_changed', $result->code() );
+		self::assertSame( $reason, $result->code() );
+		self::assertSame( 'Translated writer failure: ' . $reason, $result->message() );
+		self::assertStringNotContainsString( 'Raw writer canary', $result->message() );
 		self::assertStringNotContainsString( $this->root, $result->message() );
+	}
+
+	/** @return iterable<string, array{string, string}> */
+	public static function wpConfigWriteFailureCases(): iterable {
+		$messages = array(
+			'sidecar_path_unchanged'       => 'The encrypted secrets path is already configured.',
+			'config_directory_invalid'     => 'The WordPress configuration directory is not safe and writable.',
+			'sidecar_path_invalid'         => 'The encrypted secrets path is not safe for automatic configuration.',
+			'config_path_invalid'          => 'The supplied WordPress configuration path is not an absolute safe POSIX file path.',
+			'config_changed'               => 'The WordPress configuration changed before it could be edited.',
+			'lock_permissions_failed'      => 'Could not secure the WordPress configuration edit lock.',
+			'lock_failed'                  => 'Could not lock the WordPress configuration for editing.',
+			'config_file_invalid'          => 'The WordPress configuration does not pass Booster\'s writable private regular-file checks.',
+			'config_permissions_unsafe'    => 'The WordPress configuration is group- or world-writable.',
+			'config_size_unsupported'      => 'The WordPress configuration has an unsupported size.',
+			'config_owner_invalid'         => 'The WordPress configuration is not owned by the current process owner.',
+			'config_read_failed'           => 'Could not read the complete WordPress configuration.',
+			'marker_invalid'               => 'The WordPress configuration must contain one standard stop-editing marker.',
+			'constant_exists'              => 'The encrypted secrets path constant is already defined.',
+			'owned_definition_ambiguous'   => 'The automatic encrypted secrets definition is ambiguous.',
+			'candidate_parse_failed'       => 'The edited WordPress configuration did not pass the expected definition check.',
+			'temporary_permissions_failed' => 'Could not secure the temporary WordPress configuration.',
+			'temporary_ownership_failed'   => 'Could not preserve WordPress configuration ownership.',
+			'temporary_flush_failed'       => 'Could not flush the edited WordPress configuration.',
+			'temporary_sync_failed'        => 'Could not synchronize the edited WordPress configuration.',
+			'temporary_readback_failed'    => 'The edited WordPress configuration failed its read-back check.',
+			'temporary_metadata_invalid'   => 'The edited WordPress configuration metadata could not be verified.',
+			'replace_failed'               => 'Could not atomically replace the WordPress configuration.',
+			'replacement_readback_failed'  => 'The installed WordPress configuration failed verification.',
+			'filesystem_failure'           => 'The WordPress configuration could not be updated safely.',
+			'config_parse_failed'          => 'The WordPress configuration does not parse as supported PHP.',
+			'line_endings_unsupported'     => 'The WordPress configuration uses unsupported line endings.',
+			'lock_invalid'                 => 'The WordPress configuration edit lock is not safe.',
+			'temporary_write_failed'       => 'Could not write the complete edited WordPress configuration.',
+			'temporary_file_invalid'       => 'The temporary WordPress configuration is not safe.',
+			'lock_open_failed'             => 'Could not open the WordPress configuration edit lock.',
+			'temporary_create_failed'      => 'Could not create a private temporary WordPress configuration.',
+			'future_writer_failure'        => 'The WordPress configuration could not be updated safely.',
+		);
+		foreach ( $messages as $reason => $message ) {
+			yield $reason => array( $reason, $message );
+		}
 	}
 
 	public function testUniqueAuthenticatedProviderFitSiblingCanBeAdoptedByOpaqueRevision(): void {
@@ -480,6 +696,29 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
 	}
 
+	public function testRecoveryWriterFailureUsesTheSameTranslatedDisplayBoundary(): void {
+		$old = $this->recoveryStore( 'abcdef0123456789' );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster']['The WordPress configuration changed before it could be edited.'] = 'Configuration changed translation.';
+		$provisioner                       = $this->provisioner();
+		$provisioner->configured           = $this->candidate;
+		$provisioner->healthFailure        = true;
+		$provisioner->healthFailureReason  = 'storage_file_missing';
+		$provisioner->writerFailureCode    = 'config_changed';
+		$provisioner->writerFailureMessage = 'Raw recovery writer canary: /private/leaked/wp-config.php';
+		$status                            = $provisioner->status();
+		$recovery                          = $provisioner->recoveryState( $status );
+		self::assertIsArray( $recovery );
+
+		$result = $provisioner->adoptRecovery( (string) $recovery['token'] );
+
+		self::assertSame( 'config_changed', $result->code() );
+		self::assertSame( 'Configuration changed translation.', $result->message() );
+		self::assertStringNotContainsString( 'Raw recovery writer canary', $result->message() );
+		self::assertSame( $this->candidate, $result->candidatePath() );
+		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
+	}
+
 	public function testExistingManagedLockDoesNotHideAnAuthenticatedSibling(): void {
 		$old = $this->recoveryStore( 'abcdef0123456789' );
 		self::assertTrue( mkdir( dirname( $this->candidate ), 0700 ) );
@@ -499,6 +738,10 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	public function testExplicitResetIsOfferedOnlyForTheOrphanedKeyStateAndRequiresTypedConfirmation(): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
+			'Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store.' => 'Clé de stockage orpheline.',
+			'Incomplete credential storage was reset. Booster will initialize fresh encrypted storage when you next save or import a credential.' => 'Stockage réinitialisé.',
+		);
 		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
 		$provisioner                         = $this->provisioner();
@@ -511,6 +754,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$offer = $provisioner->recoveryState( $status );
 		self::assertIsArray( $offer );
 		self::assertSame( 'reset_available', $offer['state'] );
+		self::assertSame( 'Clé de stockage orpheline.', $offer['message'] );
 		self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $offer['confirmation'] );
 
 		$invalid = $provisioner->resetOrphanedStorage( 'reset storage' );
@@ -520,6 +764,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$reset = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $reset->status() );
 		self::assertSame( 'storage_reset', $reset->code() );
+		self::assertSame( 'Stockage réinitialisé.', $reset->message() );
 		self::assertSame( array( $this->candidate ), $provisioner->resetCandidates );
 
 		$replay = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
@@ -679,6 +924,23 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringContainsString( 'do not pass their current provider policy', $recovery['message'] );
 	}
 
+	private function managedDiagnosticMessageForCode( string $code ): string {
+		return array(
+			'storage_key_missing'           => 'secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.',
+			'storage_file_missing'          => 'The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.',
+			'storage_orphan_lock'           => 'Only secrets.json.lock remains; no secrets file or database encryption key was found.',
+			'storage_lock_missing'          => 'Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup.',
+			'unexpected_reason'             => 'Booster could not safely use the encrypted secrets store.',
+			'storage_incomplete'            => 'The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage.',
+			'storage_authentication_failed' => 'The secrets file could not be authenticated with this site\'s database key. Restore both from the same backup.',
+			'storage_document_invalid'      => 'The secrets file authenticated but its encrypted document is invalid.',
+			'storage_key_unavailable'       => 'Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup.',
+			'storage_file_unusable'         => 'The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file.',
+			'storage_lock_unusable'         => 'The secrets lock file could not be used safely. Verify its ownership and mode 0600.',
+			'storage_unavailable'           => 'Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600.',
+		)[ $code ];
+	}
+
 	private function provisioner(): TestSecretsStorageProvisioner {
 		$provisioner                = new TestSecretsStorageProvisioner( $this->temporaryBoundary );
 		$provisioner->root          = $this->wordpressRoot;
@@ -737,6 +999,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public bool $writerCalled                     = false;
 	public bool $probeFails                       = false;
 	public ?string $writerFailureCode             = null;
+	public string $writerFailureMessage           = 'Raw writer failure.';
 	public bool $healthy                          = false;
 	public bool $healthFailure                    = false;
 	public string $healthFailureMessage           = 'Fixture storage failure.';
@@ -821,11 +1084,30 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 			throw new \RAN\Secrets\WpConfigPathWriteException(
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws a stable fixture code, never rendered output.
 				$this->writerFailureCode,
-				'The WordPress configuration changed before it could be edited.'
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws raw fixture text to prove it is not rendered.
+				$this->writerFailureMessage
 			);
 		}
 
 		return parent::writeConfiguration( $config, $candidate );
+	}
+
+	protected function retargetConfiguration(
+		string $config,
+		string $current,
+		string $replacement
+	): WpConfigPathWriteResult|false {
+		$this->writerCalled = true;
+		if ( null !== $this->writerFailureCode ) {
+			throw new \RAN\Secrets\WpConfigPathWriteException(
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws a stable fixture code, never rendered output.
+				$this->writerFailureCode,
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws raw fixture text to prove it is not rendered.
+				$this->writerFailureMessage
+			);
+		}
+
+		return parent::retargetConfiguration( $config, $current, $replacement );
 	}
 
 	protected function wordpressRoot(): string {

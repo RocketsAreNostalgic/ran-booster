@@ -10,9 +10,9 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 
 if ( ! function_exists( '__' ) ) {
 	function __( string $text, string $domain = 'default' ): string {
-		unset( $domain );
-
-		return $text;
+		return $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $text ]
+			?? $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ]
+			?? $text;
 	}
 }
 

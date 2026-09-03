@@ -218,13 +218,13 @@ class Booster {
 
 	public function adminMenu() {
 		add_menu_page( $this->getName(), $this->getName(), 'manage_options', 'ran-booster', null, $this->getMenuIcon() );
-		add_submenu_page( 'ran-booster', $this->getName(), 'Overview', 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ) );
-		add_submenu_page( 'ran-booster', 'Install Plugin', 'Install Plugin', 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
-		add_submenu_page( 'ran-booster', 'Managed Plugins', 'Plugins', 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
-		add_submenu_page( 'ran-booster', 'Install Theme', 'Install Theme', 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
-		add_submenu_page( 'ran-booster', 'Managed Themes', 'Themes', 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
-		add_submenu_page( 'ran-booster', 'Transporter', 'Transporter', 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'getTransporter' ) );
-		add_submenu_page( 'ran-booster', 'Extensions', 'Extensions', 'manage_options', 'ran-booster-extensions', array( $this, 'renderExtensionsPage' ) );
+		add_submenu_page( 'ran-booster', $this->getName(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Plugin', 'ran-booster' ), __( 'Install Plugin', 'ran-booster' ), 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Plugins', 'ran-booster' ), __( 'Plugins', 'ran-booster' ), 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Theme', 'ran-booster' ), __( 'Install Theme', 'ran-booster' ), 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
+		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'getTransporter' ) );
+		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'renderExtensionsPage' ) );
 	}
 
 	/**
@@ -270,21 +270,21 @@ class Booster {
 			array(
 				'id'            => 'ran-booster-bitbucket',
 				'name'          => 'Bitbucket Cloud',
-				'description'   => 'Connect Booster to Bitbucket Cloud repositories for managed deployments.',
-				'details'       => 'Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy.',
+				'description'   => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
+				'details'       => __( 'Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
 				'features'      => array(
-					'Connect and configure Bitbucket Cloud repositories in Booster.',
-					'Use provider-specific package and credential guidance.',
-					'Carry eligible file-stored credentials through Transporter for explicit import on the target site.',
+					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
+					__( 'Use provider-specific package and credential guidance.', 'ran-booster' ),
+					__( 'Carry eligible file-stored credentials through Transporter for explicit import on the target site.', 'ran-booster' ),
 				),
 				'requirements'  => array(
-					'WordPress 7.0 or later and PHP 8.2 or later.',
-					'A version of Booster compatible with this extension.',
-					'Manual Bitbucket webhook setup for Push-to-Deploy.',
+					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
+					__( 'A version of Booster compatible with this extension.', 'ran-booster' ),
+					__( 'Manual Bitbucket webhook setup for Push-to-Deploy.', 'ran-booster' ),
 				),
 				'plugin'        => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
 				'image'         => 'bitbucket-cloud.svg',
-				'availability'  => 'Free',
+				'availability'  => __( 'Free', 'ran-booster' ),
 				'required_apis' => array(
 					'RAN_BOOSTER_PROVIDER_API_VERSION' => 10,
 					'RAN_BOOSTER_ADDON_API_VERSION'    => 16,
@@ -295,21 +295,21 @@ class Booster {
 			array(
 				'id'            => 'ran-booster-wp-pusher-migrator',
 				'name'          => 'WP Pusher Migrator',
-				'description'   => 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.',
-				'details'       => 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision.',
+				'description'   => __( 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.', 'ran-booster' ),
+				'details'       => __( 'Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision.', 'ran-booster' ),
 				'features'      => array(
-					'Review retained WP Pusher package records before migration.',
-					'Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter.',
-					'Keep the source records in place until you verify the result and remove them yourself.',
+					__( 'Review retained WP Pusher package records before migration.', 'ran-booster' ),
+					__( 'Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter.', 'ran-booster' ),
+					__( 'Keep the source records in place until you verify the result and remove them yourself.', 'ran-booster' ),
 				),
 				'requirements'  => array(
-					'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.',
-					'A single site with WP Pusher 3.0.13 installed but inactive.',
-					'Existing Booster credentials for private repositories; GitLab packages are not supported.',
+					__( 'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.', 'ran-booster' ),
+					__( 'A single site with WP Pusher 3.0.13 installed but inactive.', 'ran-booster' ),
+					__( 'Existing Booster credentials for private repositories; GitLab packages are not supported.', 'ran-booster' ),
 				),
 				'plugin'        => 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php',
 				'image'         => 'wp-pusher-migrator.svg',
-				'availability'  => 'Free',
+				'availability'  => __( 'Free', 'ran-booster' ),
 				'required_apis' => array(
 					'RAN_BOOSTER_PORTABILITY_API_VERSION' => 2,
 					'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 2,
@@ -382,7 +382,7 @@ class Booster {
 			? 'network_admin_plugin_action_links_'
 			: 'plugin_action_links_';
 
-		$link = '<a href="' . $url . '">Manage with RAN Booster</a>';
+		$link = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Manage with RAN Booster', 'ran-booster' ) . '</a>';
 
 		foreach ( $plugins as $plugin ) {
 			add_filter(
@@ -542,35 +542,40 @@ class Booster {
 			wp_enqueue_script( 'ran-booster-extension-details' );
 			return;
 		}
-		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', $scriptDependencies, $scriptVersion, true );
+		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', array_merge( $scriptDependencies, array( 'wp-i18n' ) ), $scriptVersion, true );
+		wp_set_script_translations( 'ran-booster-js', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-secure-inputs',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-secure-inputs.js',
-			array( 'ran-booster-js' ),
+			array( 'ran-booster-js', 'wp-i18n' ),
 			$secureInputsScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-secure-inputs', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-enhanced-mutations.js',
-			array( 'ran-booster-js', 'wp-a11y' ),
+			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
 			$enhancedMutationScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-enhanced-mutations', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-packages',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-packages.js',
-			array( 'ran-booster-enhanced-mutations' ),
+			array( 'ran-booster-enhanced-mutations', 'wp-i18n' ),
 			$packageScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-packages', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-repository-picker',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-repository-picker.js',
-			array( 'ran-booster-js' ),
+			array( 'ran-booster-js', 'wp-i18n' ),
 			$repositoryPickerScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-repository-picker', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 
 		if ( 'toplevel_page_ran-booster' === $hook || $isTransporterPage ) {
 			$onboardingPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-onboarding.css';
@@ -589,10 +594,11 @@ class Booster {
 				wp_register_script(
 					'ran-booster-portability',
 					trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-portability.js',
-					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
+					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'wp-i18n' ),
 					$portabilityScriptVersion,
 					true
 				);
+				wp_set_script_translations( 'ran-booster-portability', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 				wp_localize_script(
 					'ran-booster-portability',
 					'ranBoosterPortability',

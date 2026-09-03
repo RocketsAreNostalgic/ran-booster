@@ -10,6 +10,7 @@ RAN
 assets
 autoload.php
 index.php
+languages
 license.txt
 ran-booster.php
 ran-booster-release.json

@@ -1,5 +1,6 @@
 (function () {
 	'use strict';
+	const { __, _n, sprintf } = wp.i18n;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -72,12 +73,18 @@
 		button.hidden = !supported;
 		button.title = supported
 			? ''
-			: 'Repository browsing is not available for this provider.';
+			: __(
+					'Repository browsing is not available for this provider.',
+					'ran-booster'
+				);
 	}
 
 	function repositoryResultStatus(count, partialMessage) {
-		const countMessage =
-			count + (count === 1 ? ' repository' : ' repositories');
+		const countMessage = sprintf(
+			/* translators: %d is the number of repositories. */
+			_n('%d repository', '%d repositories', count, 'ran-booster'),
+			count
+		);
 
 		return partialMessage
 			? countMessage + '. ' + partialMessage
@@ -370,8 +377,11 @@
 		providerList.forEach(function (provider) {
 			if (provider && typeof provider.code === 'string') {
 				providers[provider.code] = Object.assign({}, provider, {
-					label: provider.label || 'Repository provider',
-					owner_label: provider.owner_label || 'owner',
+					label:
+						provider.label ||
+						__('Repository provider', 'ran-booster'),
+					owner_label:
+						provider.owner_label || __('owner', 'ran-booster'),
 					credential_profiles: Array.isArray(
 						provider.credential_profiles
 					)
@@ -532,12 +542,23 @@
 				writeRepositoryPickerState(pickerStorage, pickerState);
 				configurePicker(activeProvider);
 				title.textContent =
-					'Pick a ' +
-					(this.getAttribute('data-package-type') === 'theme'
-						? 'theme'
-						: 'plugin') +
-					' repository from ' +
-					activeProvider.label;
+					this.getAttribute('data-package-type') === 'theme'
+						? sprintf(
+								/* translators: %s: repository provider label. */
+								__(
+									'Pick a theme repository from %s',
+									'ran-booster'
+								),
+								activeProvider.label
+							)
+						: sprintf(
+								/* translators: %s: repository provider label. */
+								__(
+									'Pick a plugin repository from %s',
+									'ran-booster'
+								),
+								activeProvider.label
+							);
 				modal.removeAttribute('hidden');
 				document.body.classList.add(
 					'ran-booster-repository-picker-open'
@@ -586,9 +607,11 @@
 				search.disabled = true;
 				list.replaceChildren();
 				setStatus(
-					'Enter the ' +
-						activeProvider.owner_label.toLowerCase() +
-						' to search.'
+					sprintf(
+						/* translators: %s: provider-specific repository owner label. */
+						__('Enter the %s to search.', 'ran-booster'),
+						activeProvider.owner_label.toLowerCase()
+					)
 				);
 				ownerInput.focus();
 				return;
@@ -651,46 +674,142 @@
 			overlay.innerHTML =
 				'<div class="ran-booster-repository-picker__dialog ran-booster-dialog__surface" role="dialog" aria-modal="true" aria-labelledby="ran-booster-repository-picker-title">' +
 				'<div class="ran-booster-repository-picker__header ran-booster-dialog__header">' +
-				'<h2 id="ran-booster-repository-picker-title" class="ran-booster-repository-picker__title ran-booster-dialog__title">Pick a repository</h2>' +
-				'<button type="button" class="ran-booster-repository-picker__close ran-booster-dialog__close" aria-label="Close repository picker"><span aria-hidden="true">&times;</span></button>' +
+				'<h2 id="ran-booster-repository-picker-title" class="ran-booster-repository-picker__title ran-booster-dialog__title"></h2>' +
+				'<button type="button" class="ran-booster-repository-picker__close ran-booster-dialog__close"><span aria-hidden="true">&times;</span></button>' +
 				'</div>' +
 				'<div class="ran-booster-repository-picker__body">' +
-				'<div class="ran-booster-repository-picker__modes" role="group" aria-label="Repository source">' +
+				'<div class="ran-booster-repository-picker__modes" role="group">' +
 				'<button type="button" class="ran-booster-source-choice ran-booster-repository-picker__mode" data-mode="public" aria-pressed="false">' +
 				'<span class="ran-booster-source-choice__radio" aria-hidden="true"></span>' +
-				'<span><strong>Public repositories</strong><small>Find public repositories by owner using anonymous or saved access.</small><span class="ran-booster-source-choice__meta">Public only</span></span>' +
+				'<span><strong></strong><small></small><span class="ran-booster-source-choice__meta"></span></span>' +
 				'</button>' +
 				'<button type="button" class="ran-booster-source-choice ran-booster-repository-picker__mode" data-mode="accessible" aria-pressed="false">' +
 				'<span class="ran-booster-source-choice__radio" aria-hidden="true"></span>' +
-				'<span><strong>Accessible repositories</strong><small>Browse repositories available to a saved access profile.</small><span class="ran-booster-source-choice__meta">Saved access required</span></span>' +
+				'<span><strong></strong><small></small><span class="ran-booster-source-choice__meta"></span></span>' +
 				'</button>' +
 				'</div>' +
 				'<div class="ran-booster-repository-picker__profile-options ran-booster-repository-picker__accessible-options" hidden>' +
-				'<label for="ran-booster-repository-picker-credential">Repository access profile</label>' +
+				'<label for="ran-booster-repository-picker-credential"></label>' +
 				'<select id="ran-booster-repository-picker-credential" class="ran-booster-repository-picker__credential"></select>' +
 				'</div>' +
 				'<form class="ran-booster-repository-picker__public-search" hidden>' +
 				'<div class="ran-booster-repository-picker__profile-options">' +
-				'<label for="ran-booster-repository-picker-public-profile">Repository access profile</label>' +
+				'<label for="ran-booster-repository-picker-public-profile"></label>' +
 				'<select id="ran-booster-repository-picker-public-profile" class="ran-booster-repository-picker__public-profile"></select>' +
 				'</div>' +
 				'<div class="notice notice-info inline ran-booster-repository-picker__public-limit-notice" hidden>' +
-				'<p>Anonymous API requests have lower rate limits. <a class="ran-booster-repository-picker__public-limit-link" href="#">Manage credentials</a> to add a search credential for more reliable repository lookup.</p>' +
+				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a></p>' +
 				'</div>' +
-				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label">Repository owner</label>' +
+				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label"></label>' +
 				'<div class="ran-booster-repository-picker__public-search-fields">' +
-				'<input id="ran-booster-repository-picker-owner" class="regular-text ran-booster-repository-picker__owner" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. organisation-or-user">' +
-				'<button type="submit" class="button button-primary">Search</button>' +
+				'<input id="ran-booster-repository-picker-owner" class="regular-text ran-booster-repository-picker__owner" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">' +
+				'<button type="submit" class="button button-primary"></button>' +
 				'</div>' +
 				'</form>' +
 				'<div class="ran-booster-repository-picker__filter">' +
-				'<label for="ran-booster-repository-picker-search" class="screen-reader-text">Filter repository results</label>' +
-				'<input id="ran-booster-repository-picker-search" class="regular-text ran-booster-repository-picker__search" type="search" placeholder="Filter repository results&hellip;" autocomplete="off">' +
+				'<label for="ran-booster-repository-picker-search" class="screen-reader-text"></label>' +
+				'<input id="ran-booster-repository-picker-search" class="regular-text ran-booster-repository-picker__search" type="search" autocomplete="off">' +
 				'</div>' +
 				'<p class="ran-booster-repository-picker__status" role="status" aria-live="polite"></p>' +
 				'<div class="ran-booster-repository-picker__list"></div>' +
 				'</div>' +
 				'</div>';
+			const modeOptions = overlay.querySelectorAll(
+				'.ran-booster-repository-picker__mode'
+			);
+			const limitCopy = overlay.querySelector(
+				'.ran-booster-repository-picker__public-limit-notice p span'
+			);
+			const credentialsLink = overlay.querySelector(
+				'.ran-booster-repository-picker__public-limit-link'
+			);
+
+			overlay.querySelector(
+				'.ran-booster-repository-picker__title'
+			).textContent = __('Pick a repository', 'ran-booster');
+			overlay
+				.querySelector('.ran-booster-repository-picker__close')
+				.setAttribute(
+					'aria-label',
+					__('Close repository picker', 'ran-booster')
+				);
+			overlay
+				.querySelector('.ran-booster-repository-picker__modes')
+				.setAttribute(
+					'aria-label',
+					__('Repository source', 'ran-booster')
+				);
+			modeOptions[0].querySelector('strong').textContent = __(
+				'Public repositories',
+				'ran-booster'
+			);
+			modeOptions[0].querySelector('small').textContent = __(
+				'Find public repositories by owner using anonymous or saved access.',
+				'ran-booster'
+			);
+			modeOptions[0].querySelector(
+				'.ran-booster-source-choice__meta'
+			).textContent = __('Public only', 'ran-booster');
+			modeOptions[1].querySelector('strong').textContent = __(
+				'Accessible repositories',
+				'ran-booster'
+			);
+			modeOptions[1].querySelector('small').textContent = __(
+				'Browse repositories available to a saved access profile.',
+				'ran-booster'
+			);
+			modeOptions[1].querySelector(
+				'.ran-booster-source-choice__meta'
+			).textContent = __('Saved access required', 'ran-booster');
+			overlay
+				.querySelectorAll(
+					'.ran-booster-repository-picker__profile-options label'
+				)
+				.forEach(function (label) {
+					label.textContent = __(
+						'Repository access profile',
+						'ran-booster'
+					);
+				});
+			limitCopy.textContent = __(
+				'Anonymous API requests have lower rate limits.',
+				'ran-booster'
+			);
+			const linkPlaceholder = '__ran_booster_credentials_link__';
+			const credentialsGuidance = sprintf(
+				/* translators: %s: Manage credentials link. */
+				__(
+					'%s to add a search credential for more reliable repository lookup.',
+					'ran-booster'
+				),
+				linkPlaceholder
+			);
+			const [beforeLink, afterLink = ''] =
+				credentialsGuidance.split(linkPlaceholder);
+			credentialsLink.textContent = __(
+				'Manage credentials',
+				'ran-booster'
+			);
+			credentialsLink.replaceWith(
+				document.createTextNode(beforeLink),
+				credentialsLink,
+				document.createTextNode(afterLink)
+			);
+			overlay.querySelector(
+				'.ran-booster-repository-picker__owner-label'
+			).textContent = __('Repository owner', 'ran-booster');
+			overlay.querySelector(
+				'.ran-booster-repository-picker__owner'
+			).placeholder = __('e.g. organisation-or-user', 'ran-booster');
+			overlay.querySelector(
+				'.ran-booster-repository-picker__public-search button'
+			).textContent = __('Search', 'ran-booster');
+			overlay.querySelector(
+				'.ran-booster-repository-picker__filter label'
+			).textContent = __('Filter repository results', 'ran-booster');
+			overlay.querySelector(
+				'.ran-booster-repository-picker__search'
+			).placeholder = __('Filter repository results…', 'ran-booster');
 			return overlay;
 		}
 
@@ -741,7 +860,7 @@
 					.join(' — ');
 				credentialSelect.appendChild(
 					new window.Option(
-						details || 'Repository credential',
+						details || __('Repository credential', 'ran-booster'),
 						profile.id || ''
 					)
 				);
@@ -772,8 +891,12 @@
 				'is-disabled',
 				accessibleProfiles.length === 0
 			);
-			ownerLabel.textContent =
-				provider.label + ' ' + provider.owner_label;
+			ownerLabel.textContent = sprintf(
+				/* translators: 1: repository provider label, 2: provider-specific repository owner label. */
+				__('%1$s %2$s', 'ran-booster'),
+				provider.label,
+				provider.owner_label
+			);
 			ownerInput.value = providerState.public.owner;
 			configurePublicLookup(provider, profiles);
 			persistPickerState();
@@ -787,7 +910,7 @@
 					? provider.public_lookup
 					: null;
 			publicProfileSelect.replaceChildren(
-				new window.Option('Anonymous', '')
+				new window.Option(__('Anonymous', 'ran-booster'), '')
 			);
 
 			const configuredProfiles = repositoryPickerPublicProfiles(
@@ -804,7 +927,7 @@
 					.join(' — ');
 				publicProfileSelect.appendChild(
 					new window.Option(
-						details || 'Repository credential',
+						details || __('Repository credential', 'ran-booster'),
 						profile.id || ''
 					)
 				);
@@ -884,11 +1007,15 @@
 					);
 				} else {
 					setStatus(
-						'Enter the ' +
-							activeProvider.owner_label.toLowerCase() +
-							' to find public repositories on ' +
-							activeProvider.label +
-							'.'
+						sprintf(
+							/* translators: 1: provider-specific repository owner label, 2: repository provider label. */
+							__(
+								'Enter the %1$s to find public repositories on %2$s.',
+								'ran-booster'
+							),
+							activeProvider.owner_label.toLowerCase(),
+							activeProvider.label
+						)
 					);
 				}
 
@@ -904,9 +1031,14 @@
 			if (!activeProvider.credential_profiles.length) {
 				search.disabled = true;
 				setStatus(
-					'Add a repository access credential for ' +
-						activeProvider.label +
-						' to browse accessible repositories.'
+					sprintf(
+						/* translators: %s: repository provider label. */
+						__(
+							'Add a repository access credential for %s to browse accessible repositories.',
+							'ran-booster'
+						),
+						activeProvider.label
+					)
 				);
 				if (moveFocus) {
 					modeButtons[0].focus();
@@ -934,7 +1066,10 @@
 		) {
 			if (!activeProvider || !activeProvider.browse) {
 				showError(
-					'This repository provider does not support browsing.'
+					__(
+						'This repository provider does not support browsing.',
+						'ran-booster'
+					)
 				);
 				return;
 			}
@@ -943,7 +1078,7 @@
 			const providerCode = activeProvider.code;
 			partialResultMessage = '';
 			setRepositoryPickerLoading(list, true);
-			setStatus('Loading repositories…');
+			setStatus(__('Loading repositories…', 'ran-booster'));
 			list.replaceChildren();
 			search.disabled = true;
 
@@ -988,7 +1123,10 @@
 						})
 					) {
 						showError(
-							'The repository provider returned invalid results.'
+							__(
+								'The repository provider returned invalid results.',
+								'ran-booster'
+							)
 						);
 						return;
 					}
@@ -1068,16 +1206,25 @@
 			list.replaceChildren();
 
 			if (!filtered.length) {
-				let emptyMessage =
-					'No repositories are available to the selected access profile.';
+				let emptyMessage = __(
+					'No repositories are available to the selected access profile.',
+					'ran-booster'
+				);
 
 				if (needle) {
-					emptyMessage = 'No repositories match your filter.';
+					emptyMessage = __(
+						'No repositories match your filter.',
+						'ran-booster'
+					);
 				} else if (activeMode === 'public') {
-					emptyMessage =
-						'No public repositories were found for this ' +
-						activeProvider.owner_label.toLowerCase() +
-						'.';
+					emptyMessage = sprintf(
+						/* translators: %s: provider-specific repository owner label. */
+						__(
+							'No public repositories were found for this %s.',
+							'ran-booster'
+						),
+						activeProvider.owner_label.toLowerCase()
+					);
 				}
 
 				setStatus(
@@ -1104,7 +1251,9 @@
 					'ran-booster-repository-picker__repository-details';
 				name.textContent = repository.locator;
 				details.textContent =
-					(repository.private ? 'Private' : 'Public') +
+					(repository.private
+						? __('Private', 'ran-booster')
+						: __('Public', 'ran-booster')) +
 					(repository.default_branch
 						? ' · ' + repository.default_branch
 						: '') +
@@ -1214,7 +1363,9 @@
 			partialResultMessage = '';
 			search.disabled = true;
 			list.replaceChildren();
-			status.textContent = message || 'Repositories could not be loaded.';
+			status.textContent =
+				message ||
+				__('Repositories could not be loaded.', 'ran-booster');
 			status.classList.add(
 				'ran-booster-repository-picker__status--error'
 			);
@@ -1228,19 +1379,29 @@
 			search.disabled = true;
 			list.replaceChildren();
 			setStatus(
-				'Enter the ' +
-					activeProvider.owner_label.toLowerCase() +
-					' to find public repositories on ' +
-					activeProvider.label +
-					'.'
+				sprintf(
+					/* translators: 1: provider-specific repository owner label, 2: repository provider label. */
+					__(
+						'Enter the %1$s to find public repositories on %2$s.',
+						'ran-booster'
+					),
+					activeProvider.owner_label.toLowerCase(),
+					activeProvider.label
+				)
 			);
 		}
 
 		function getErrorMessage(response) {
 			const fallback =
 				activeMode === 'public'
-					? 'Public repositories could not be loaded. Check the owner name and try again.'
-					: 'Repositories could not be loaded. Check the selected access profile and try again.';
+					? __(
+							'Public repositories could not be loaded. Check the owner name and try again.',
+							'ran-booster'
+						)
+					: __(
+							'Repositories could not be loaded. Check the selected access profile and try again.',
+							'ran-booster'
+						);
 
 			if (!response || !response.data) {
 				return fallback;

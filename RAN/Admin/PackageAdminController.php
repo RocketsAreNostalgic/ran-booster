@@ -244,8 +244,8 @@ final class PackageAdminController {
 		if ( 'conflict' === $status ) {
 			status_header( 409 );
 			$message = $checkRepositoryBranch
-				? 'Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again.'
-				: 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.';
+				? __( 'Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again.', 'ran-booster' )
+				: __( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', 'ran-booster' );
 			$addContextMessage(
 				new WP_Error( 'ran_booster_package_edit_conflict', $message ),
 				array(
@@ -504,9 +504,9 @@ final class PackageAdminController {
 			$this->providers->get( $package->getProviderCode() );
 			return $package;
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
-			$message = 'This package cannot be edited until its stored repository provider is registered again.';
+			$message = __( 'This package cannot be edited until its stored repository provider is registered again.', 'ran-booster' );
 		} catch ( Throwable $failure ) {
-			$message = 'Booster could not verify the managed package provider. No changes were made.';
+			$message = __( 'Booster could not verify the managed package provider. No changes were made.', 'ran-booster' );
 		}
 		$dashboard->addFailureMessage(
 			new WP_Error( 'ran_booster_unavailable_package_provider', $message ),
@@ -530,23 +530,23 @@ final class PackageAdminController {
 
 			return $this->repositories?->resolve( $request ) ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
-			$message = 'The selected repository provider is not available.';
+			$message = __( 'The selected repository provider is not available.', 'ran-booster' );
 		} catch ( UnsupportedProviderCapability $failure ) {
-			$message = 'The selected repository provider does not yet support this package operation.';
+			$message = __( 'The selected repository provider does not yet support this package operation.', 'ran-booster' );
 		} catch ( InvalidPackageSubdirectory $failure ) {
-			$message = 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.';
+			$message = __( 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.', 'ran-booster' );
 		} catch ( InvalidArgumentException $failure ) {
-			$message = 'Check the repository provider, account, repository, and credential fields.';
+			$message = __( 'Check the repository provider, account, repository, and credential fields.', 'ran-booster' );
 		} catch ( RuntimeException $failure ) {
 			$message = match ( $failure->getCode() ) {
-				401 => 'The repository provider rejected the selected credential.',
-				403 => 'The repository provider denied access. Check credential permissions or rate limits.',
-				404 => 'The repository could not be found, or the selected credential cannot access it.',
-				429 => 'The repository provider rate limit has been reached. Try again later.',
-				default => 'Booster could not verify the repository. Please try again.',
+				401 => __( 'The repository provider rejected the selected credential.', 'ran-booster' ),
+				403 => __( 'The repository provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
+				404 => __( 'The repository could not be found, or the selected credential cannot access it.', 'ran-booster' ),
+				429 => __( 'The repository provider rate limit has been reached. Try again later.', 'ran-booster' ),
+				default => __( 'Booster could not verify the repository. Please try again.', 'ran-booster' ),
 			};
 		} catch ( Throwable $failure ) {
-			$message = 'Booster could not verify the repository. Please try again.';
+			$message = __( 'Booster could not verify the repository. Please try again.', 'ran-booster' );
 		}
 		$context = array(
 			'operation' => is_string( $request['action'] ?? null ) ? sanitize_key( wp_unslash( $request['action'] ) ) : '',
@@ -687,22 +687,56 @@ final class PackageAdminController {
 
 	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $addContextMessage */
 	private function removalFailure( PackageOperation $operation, string $code, \Closure $addContextMessage ): void {
-		$type    = 'plugin' === $operation->packageType ? 'Plugin' : 'Theme';
+		$type    = 'plugin' === $operation->packageType
+			? _x( 'Plugin', 'package type', 'ran-booster' )
+			: _x( 'Theme', 'package type', 'ran-booster' );
 		$message = match ( $code ) {
-			'active_dependents' => 'Plugin was not removed because an active plugin depends on it.',
-			'deactivation_failed' => 'Plugin was disabled in Booster, but WordPress could not deactivate it. No files were deleted.',
-			'deletion_failed' => sprintf( '%s was disabled in Booster, but WordPress could not delete it.', $type ),
-			'files_still_present' => sprintf( '%s was disabled in Booster, but its files are still present.', $type ),
-			'management_state_uncertain' => sprintf( '%s files were deleted, but Booster could not verify removal of its management record.', $type ),
-			'operation_in_progress' => sprintf( '%s was not removed because another Booster operation still owns it.', $type ),
-			'operation_lock_failed' => sprintf( '%s removal could not safely acquire or release the WordPress updater lock.', $type ),
-			'shared_plugin_directory' => 'Plugin was not removed because its directory contains another registered plugin.',
-			'stale' => sprintf( '%s settings changed before this request. Refresh the package settings and try again.', $type ),
-			'theme_active' => 'Theme was not removed because it is the active theme.',
-			'theme_has_children' => 'Theme was not removed because an installed child theme depends on it.',
-			'theme_parent_in_use' => 'Theme was not removed because the active theme depends on it.',
-			'unsafe_path' => sprintf( '%s was not removed because WordPress could not verify a safe installed path.', $type ),
-			default => sprintf( '%s removal could not be completed safely.', $type ),
+			'active_dependents' => __( 'Plugin was not removed because an active plugin depends on it.', 'ran-booster' ),
+			'deactivation_failed' => __( 'Plugin was disabled in Booster, but WordPress could not deactivate it. No files were deleted.', 'ran-booster' ),
+			'deletion_failed' => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s was disabled in Booster, but WordPress could not delete it.', 'ran-booster' ),
+				$type
+			),
+			'files_still_present' => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s was disabled in Booster, but its files are still present.', 'ran-booster' ),
+				$type
+			),
+			'management_state_uncertain' => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s files were deleted, but Booster could not verify removal of its management record.', 'ran-booster' ),
+				$type
+			),
+			'operation_in_progress' => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s was not removed because another Booster operation still owns it.', 'ran-booster' ),
+				$type
+			),
+			'operation_lock_failed' => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s removal could not safely acquire or release the WordPress updater lock.', 'ran-booster' ),
+				$type
+			),
+			'shared_plugin_directory' => __( 'Plugin was not removed because its directory contains another registered plugin.', 'ran-booster' ),
+			'stale' => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s settings changed before this request. Refresh the package settings and try again.', 'ran-booster' ),
+				$type
+			),
+			'theme_active' => __( 'Theme was not removed because it is the active theme.', 'ran-booster' ),
+			'theme_has_children' => __( 'Theme was not removed because an installed child theme depends on it.', 'ran-booster' ),
+			'theme_parent_in_use' => __( 'Theme was not removed because the active theme depends on it.', 'ran-booster' ),
+			'unsafe_path' => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s was not removed because WordPress could not verify a safe installed path.', 'ran-booster' ),
+				$type
+			),
+			default => sprintf(
+				/* translators: %s: package type, such as Plugin or Theme. */
+				__( '%s removal could not be completed safely.', 'ran-booster' ),
+				$type
+			),
 		};
 		status_header( 400 );
 		$addContextMessage(

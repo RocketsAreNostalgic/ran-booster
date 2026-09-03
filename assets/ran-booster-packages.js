@@ -1,5 +1,6 @@
 (function () {
 	'use strict';
+	const { __, _n, sprintf } = wp.i18n;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -560,9 +561,11 @@
 			);
 		});
 		const singular =
-			form.getAttribute('data-package-type-singular') || 'package';
+			form.getAttribute('data-package-type-singular') ||
+			__('package', 'ran-booster');
 		const plural =
-			form.getAttribute('data-package-type-label') || 'packages';
+			form.getAttribute('data-package-type-label') ||
+			__('packages', 'ran-booster');
 		const reinstallConfirmSingular =
 			form.getAttribute('data-reinstall-confirm-singular') || '';
 		const reinstallConfirmPlural =
@@ -571,7 +574,11 @@
 		if (!checkboxes.length) {
 			selectAll.disabled = true;
 			apply.disabled = true;
-			status.textContent = '0 ' + plural + ' selected';
+			status.textContent = sprintf(
+				/* translators: %s is plugins or themes. */
+				__('0 %s selected', 'ran-booster'),
+				plural
+			);
 			return;
 		}
 
@@ -593,18 +600,30 @@
 			selectAll.checked = selected === checkboxes.length;
 			selectAll.indeterminate =
 				selected > 0 && selected < checkboxes.length;
-			const selectionMessage =
-				selected +
-				' ' +
-				(selected === 1 ? singular : plural) +
-				' selected';
+			const packageType = selected === 1 ? singular : plural;
+			const selectionMessage = sprintf(
+				/* translators: 1: number of selected packages, 2: package type label. */
+				_n(
+					'%1$d %2$s selected',
+					'%1$d %2$s selected',
+					selected,
+					'ran-booster'
+				),
+				selected,
+				packageType
+			);
 			status.textContent =
 				action.value === 'queue-update' &&
 				selected > eligibleForReinstall
-					? selectionMessage +
-						'. ' +
-						String(eligibleForReinstall) +
-						' eligible for branch Reinstall.'
+					? sprintf(
+							/* translators: 1: selected-package summary, 2: number eligible for branch reinstall. */
+							__(
+								'%1$s. %2$d eligible for branch Reinstall.',
+								'ran-booster'
+							),
+							selectionMessage,
+							eligibleForReinstall
+						)
 					: selectionMessage;
 			apply.disabled =
 				selected < 1 ||
@@ -631,7 +650,11 @@
 			const selected = selection.selected;
 			if (selected < 1) {
 				event.preventDefault();
-				status.textContent = 'Select at least one ' + singular + '.';
+				status.textContent = sprintf(
+					/* translators: %s: package type label. */
+					__('Select at least one %s.', 'ran-booster'),
+					singular
+				);
 				checkboxes[0].focus();
 				return;
 			}
@@ -639,8 +662,10 @@
 			if (action.value === 'queue-update') {
 				if (selection.eligibleForReinstall < 1) {
 					event.preventDefault();
-					status.textContent =
-						'Select at least one branch package eligible for Reinstall.';
+					status.textContent = __(
+						'Select at least one branch package eligible for Reinstall.',
+						'ran-booster'
+					);
 					return;
 				}
 				const message =
@@ -653,7 +678,10 @@
 				// eslint-disable-next-line no-alert -- Bulk reinstall intentionally requires one count-aware confirmation.
 				if (message && !window.confirm(message)) {
 					event.preventDefault();
-					status.textContent = 'Reinstall cancelled.';
+					status.textContent = __(
+						'Reinstall cancelled.',
+						'ran-booster'
+					);
 				}
 			}
 		});
@@ -819,7 +847,11 @@
 				badge.hidden = false;
 				badge.className =
 					'ran-booster-badge ran-booster-badge--' + variants[state];
-				badge.textContent = 'Deployment: ' + stateLabels[state];
+				badge.textContent = sprintf(
+					/* translators: %s: deployment state label. */
+					__('Deployment: %s', 'ran-booster'),
+					stateLabels[state]
+				);
 			}
 
 			const activityState = row.nextElementSibling?.querySelector(

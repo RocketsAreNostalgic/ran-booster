@@ -7,14 +7,14 @@ $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayo
 ?>
 <?php if ( $packageFieldGrid ) { ?>
 	<div class="ran-booster-settings-field">
-		<label for="ran-booster-credential-id">Repository access</label>
+		<label for="ran-booster-credential-id"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></label>
 <?php } else { ?>
 	<tr>
-		<th scope="row"><label for="ran-booster-credential-id">Repository access</label></th>
+		<th scope="row"><label for="ran-booster-credential-id"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></label></th>
 		<td>
 <?php } ?>
 		<select id="ran-booster-credential-id" name="ran_booster[credential_id]" class="ran-booster-credential-input">
-			<option value="" <?php selected( $selectedCredentialId, '' ); ?>>Default / public repository</option>
+			<option value="" <?php selected( $selectedCredentialId, '' ); ?>><?php esc_html_e( 'Default / public repository', 'ran-booster' ); ?></option>
 			<?php
 			foreach ( $providerOptions as $providerOption ) {
 				foreach ( $providerOption['credential_profiles'] as $profile ) {

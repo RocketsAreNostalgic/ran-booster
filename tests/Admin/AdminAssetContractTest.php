@@ -348,6 +348,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'box-shadow: var(--ran-booster-shadow-modal);', $credentialStyles );
 		self::assertStringContainsString( 'ran-booster-repository-picker ran-booster-dialog', $pickerScript );
 		self::assertStringContainsString( 'ran-booster-repository-picker__dialog ran-booster-dialog__surface', $pickerScript );
+		self::assertStringContainsString( "'%s to add a search credential for more reliable repository lookup.'", $pickerScript );
+		self::assertStringContainsString( 'credentialsLink.replaceWith(', $pickerScript );
+		self::assertStringNotContainsString( "'to add a search credential for more reliable repository lookup.'", $pickerScript );
 		self::assertStringNotContainsString( '.ran-booster-repository-picker {', $pickerStyles );
 	}
 

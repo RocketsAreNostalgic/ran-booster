@@ -9,6 +9,7 @@ namespace Tests\Admin;
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageAdminController;
@@ -30,11 +31,12 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			'ran_booster' => array( 'action' => 'create-secure-storage' ),
 		);
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$GLOBALS['ran_booster_test_capability_checks'] = array();
-		$GLOBALS['ran_booster_test_nonce_checks']      = array();
-		$GLOBALS['ran_booster_test_capabilities']      = array();
-		$GLOBALS['ran_booster_test_nonce_valid']       = true;
-		$GLOBALS['ran_booster_package_view_multisite'] = false;
+		$GLOBALS['ran_booster_test_capability_checks']  = array();
+		$GLOBALS['ran_booster_test_nonce_checks']       = array();
+		$GLOBALS['ran_booster_test_capabilities']       = array();
+		$GLOBALS['ran_booster_test_nonce_valid']        = true;
+		$GLOBALS['ran_booster_package_view_multisite']  = false;
+		$GLOBALS['ran_booster_admin_test_translations'] = array();
 	}
 
 	protected function tearDown(): void {
@@ -45,7 +47,103 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			$GLOBALS['ran_booster_test_nonce_checks'],
 			$GLOBALS['ran_booster_test_capabilities'],
 			$GLOBALS['ran_booster_test_nonce_valid'],
-			$GLOBALS['ran_booster_package_view_multisite']
+			$GLOBALS['ran_booster_package_view_multisite'],
+			$GLOBALS['ran_booster_admin_test_translations']
+		);
+	}
+
+	#[DataProvider( 'unavailableActionCases' )]
+	public function testUnavailableStorageActionsLocalizeFallbacksWithoutChangingCodes(
+		string $action,
+		string $code,
+		string $sourceMessage,
+		string $translatedMessage
+	): void {
+		$_POST['ran_booster']['action'] = $action;
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $translatedMessage;
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'setSecretsStorageProvisioningResult' )
+			->with(
+				self::callback(
+					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
+						&& $translatedMessage === $result->message()
+						&& null === $result->candidatePath()
+				)
+			);
+
+		$this->dispatcher( $dashboard, null )->dispatchPostRequests();
+	}
+
+	/** @return iterable<string, array{string, string, string, string}> */
+	public static function unavailableActionCases(): iterable {
+		yield 'create' => array(
+			'create-secure-storage',
+			'provisioner_unavailable',
+			'Automatic secure storage setup is unavailable.',
+			'Configuration automatique indisponible.',
+		);
+		yield 'recover' => array(
+			'adopt-secure-storage',
+			'provisioner_unavailable',
+			'Automatic storage recovery is unavailable.',
+			'Récupération automatique indisponible.',
+		);
+		yield 'reset' => array(
+			'reset-empty-storage',
+			'provisioner_unavailable',
+			'Empty credential storage reset is unavailable.',
+			'Réinitialisation du stockage indisponible.',
+		);
+	}
+
+	#[DataProvider( 'unexpectedFailureActionCases' )]
+	public function testUnexpectedStorageActionFailuresLocalizeFallbacksWithoutLeakingTheThrowable(
+		string $action,
+		string $code,
+		string $sourceMessage,
+		string $translatedMessage
+	): void {
+		$_POST['ran_booster']['action'] = $action;
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $translatedMessage;
+		$provisioner = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::setupAvailable( '/private/canary/secrets.json' ),
+			true
+		);
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'setSecretsStorageProvisioningResult' )
+			->with(
+				self::callback(
+					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
+						&& $translatedMessage === $result->message()
+						&& null === $result->candidatePath()
+						&& ! str_contains( $result->message(), 'canary' )
+				)
+			);
+
+		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
+	}
+
+	/** @return iterable<string, array{string, string, string, string}> */
+	public static function unexpectedFailureActionCases(): iterable {
+		yield 'create' => array(
+			'create-secure-storage',
+			'provisioning_failed',
+			'Automatic secure storage setup could not be completed.',
+			'Configuration automatique interrompue.',
+		);
+		yield 'recover' => array(
+			'adopt-secure-storage',
+			'recovery_failed',
+			'Automatic storage recovery could not be completed.',
+			'Récupération automatique interrompue.',
+		);
+		yield 'reset' => array(
+			'reset-empty-storage',
+			'storage_reset_failed',
+			'Empty credential storage could not be reset safely.',
+			'Réinitialisation sécurisée interrompue.',
 		);
 	}
 
@@ -318,7 +416,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
 	}
 
-	private function dispatcher( Dashboard $dashboard, SecretsStorageProvisioner $provisioner ): Dispatcher {
+	private function dispatcher( Dashboard $dashboard, ?SecretsStorageProvisioner $provisioner ): Dispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
@@ -366,6 +464,9 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 
 	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
 		$this->adoptTokens[] = $token;
+		if ( $this->throw ) {
+			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );
+		}
 
 		return $this->result;
 	}

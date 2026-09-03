@@ -627,7 +627,10 @@
 					pendingInteractionState = null;
 					focusError(
 						form,
-						'We could not complete that request. Please try again.'
+						wp.i18n.__(
+							'We could not complete that request. Please try again.',
+							'ran-booster'
+						)
 					);
 				}
 			});

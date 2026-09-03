@@ -1428,7 +1428,7 @@ final readonly class ProviderSettingsPresenter {
 			'hasCredentialSettings'          => $hasCredentials,
 			'providerHasWebhookSettings'     => $providerHasWebhooks,
 			'hasWebhookSettings'             => ! $storageUnavailable && $providerHasWebhooks,
-			'providerTrustDescription'       => sprintf( __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $providerLabel, $providerCode ),
+			'providerTrustDescription'       => sprintf( /* translators: 1: repository provider name, 2: repository provider code. */ __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $providerLabel, $providerCode ),
 			'packageTypeLabels'              => array(
 				'plugin' => __( 'Plugin', 'ran-booster' ),
 				'theme'  => __( 'Theme', 'ran-booster' ),
@@ -1491,7 +1491,7 @@ final readonly class ProviderSettingsPresenter {
 			);
 			$usageTotal          = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
 			$usageLabel          = ! empty( $usage['available'] )
-				? sprintf( _n( '%d package', '%d packages', $usageTotal, 'ran-booster' ), $usageTotal )
+				? sprintf( _nx( '%d package', '%d packages', $usageTotal, 'Packages using a credential', 'ran-booster' ), $usageTotal )
 				: __( 'Usage unavailable', 'ran-booster' );
 			$healthLabel         = ! empty( $profile['configured'] )
 				? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Stored · Validity checked on use', 'ran-booster' ) )
@@ -1537,13 +1537,13 @@ final readonly class ProviderSettingsPresenter {
 				'repositories' => array(),
 			);
 			$usageTotal         = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
-			$usageLabel         = ! empty( $usage['available'] ) ? sprintf( _n( '%d package', '%d packages', $usageTotal, 'ran-booster' ), $usageTotal ) : __( 'Usage unavailable', 'ran-booster' );
+			$usageLabel         = ! empty( $usage['available'] ) ? sprintf( _nx( '%d package', '%d packages', $usageTotal, 'Packages using a credential', 'ran-booster' ), $usageTotal ) : __( 'Usage unavailable', 'ran-booster' );
 			$scope              = is_string( $profile['scope'] ?? null ) ? $profile['scope'] : '';
 			$label              = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
 			$target             = is_string( $profile['target'] ?? null ) ? $profile['target'] : '';
 			$health             = ! empty( $profile['configured'] ) ? __( 'Saved · Remote delivery not verified by Core', 'ran-booster' ) : __( 'Local secret not configured', 'ran-booster' );
 			$deleteConfirmation = ! empty( $usage['available'] ) && 0 < $usageTotal
-				? sprintf( _n( 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usageTotal, 'ran-booster' ), $usageTotal )
+				? sprintf( _n( /* translators: %d is the number of managed packages that use the local secret. */ 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usageTotal, 'ran-booster' ), $usageTotal )
 				: __( 'Remove this local secret? Remote provider webhooks will not be removed.', 'ran-booster' );
 			$rows[]             = $profile + array(
 				'scope_label'         => $scopeLabels[ $scope ] ?? ucfirst( $scope ),
@@ -1616,13 +1616,13 @@ final readonly class ProviderSettingsPresenter {
 		return array(
 			'credential' => array(
 				'tone'        => $credentialProblem ? 'attention' : ( 0 < $credentialCount ? 'ready' : 'pending' ),
-				'heading'     => $credentialProblem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credentialCount ? __( 'No credential saved', 'ran-booster' ) : sprintf( _n( 'Ready · %d credential', 'Ready · %d credentials', $credentialCount, 'ran-booster' ), $credentialCount ) ),
+				'heading'     => $credentialProblem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credentialCount ? __( 'No credential saved', 'ran-booster' ) : sprintf( _n( /* translators: %d is the number of saved credentials. */ 'Ready · %d credential', 'Ready · %d credentials', $credentialCount, 'ran-booster' ), $credentialCount ) ),
 				'description' => $storageUnavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credentialAttention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credentialCount ? __( 'Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits.', 'ran-booster' ) : __( 'Private repository access is available. Open credential management to validate, replace, or review usage.', 'ran-booster' ) ) ),
 			),
 			'webhook'    => array(
 				'tone'        => $webhookProblem ? 'attention' : ( 0 < $webhookCount ? 'ready' : 'pending' ),
 				'heading'     => $webhookProblem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhookCount ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
-				'description' => $storageUnavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhookAttention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhookCount ? ( 0 < $automaticCount ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( _n( '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhookCount, 'ran-booster' ), $webhookCount ) ) ),
+				'description' => $storageUnavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhookAttention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhookCount ? ( 0 < $automaticCount ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( _n( /* translators: %d is the number of local secrets that can verify signed deliveries. */ '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhookCount, 'ran-booster' ), $webhookCount ) ) ),
 			),
 		);
 	}
@@ -1682,7 +1682,7 @@ final readonly class ProviderSettingsPresenter {
 				'sort'       => $sort,
 				'pagination' => array(
 					'item_count_label' => sprintf( _n( '%d item', '%d items', $list['total'], 'ran-booster' ), $list['total'] ),
-					'page_label'       => sprintf( __( 'Page %1$d of %2$d', 'ran-booster' ), $list['current'], $list['pages'] ),
+					'page_label'       => sprintf( /* translators: 1: current page number, 2: total page count. */ __( 'Page %1$d of %2$d', 'ran-booster' ), $list['current'], $list['pages'] ),
 					'current'          => $list['current'],
 					'pages'            => $list['pages'],
 					'per_page'         => $state['per_page'],
@@ -1713,9 +1713,9 @@ final readonly class ProviderSettingsPresenter {
 	/** @return array<string,string> */
 	private function profileCopy( string $label ): array {
 		return array(
-			'providerBackLabel'               => sprintf( __( 'Back to %s overview', 'ran-booster' ), $label ),
-			'credentialManagementDescription' => sprintf( __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),
-			'secretManagementDescription'     => sprintf( __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
+			'providerBackLabel'               => sprintf( /* translators: %s is the repository provider name. */ __( 'Back to %s overview', 'ran-booster' ), $label ),
+			'credentialManagementDescription' => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),
+			'secretManagementDescription'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
 		);
 	}
 

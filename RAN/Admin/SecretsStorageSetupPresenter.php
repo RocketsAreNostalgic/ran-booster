@@ -59,7 +59,7 @@ final readonly class SecretsStorageSetupPresenter {
 			$phpPath   = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $directory );
 			$root      = realpath( $wordpressRoot );
 
-			$manualPreflight    = 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.';
+			$manualPreflight    = __( 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.', 'ran-booster' );
 			$directoryCommands  = array(
 				'test ! -L ' . escapeshellarg( $parent )
 					. ' && test ! -L ' . escapeshellarg( $directory )
@@ -102,6 +102,9 @@ final readonly class SecretsStorageSetupPresenter {
 				'reset_confirmation'  => $resetConfirmation,
 			);
 		}
+		$discardedCandidates = $includeSensitiveDetails
+			? $this->localizedDiscardedCandidates( $result->discardedCandidates() )
+			: array();
 
 		return array(
 			'status'               => $result->status(),
@@ -110,7 +113,7 @@ final readonly class SecretsStorageSetupPresenter {
 			'candidate_path'       => $candidate,
 			'candidate_directory'  => null === $candidate ? null : dirname( $candidate ),
 			'path_source'          => $includeSensitiveDetails ? $result->pathSource() : null,
-			'discarded_candidates' => $includeSensitiveDetails ? $result->discardedCandidates() : array(),
+			'discarded_candidates' => $discardedCandidates,
 			'can_provision'        => $includeSensitiveDetails && $result->canProvisionAutomatically(),
 			'action_url'           => $actionUrl,
 			'recovery'             => $recoveryPayload,
@@ -118,5 +121,31 @@ final readonly class SecretsStorageSetupPresenter {
 			'directory_commands'   => $directoryCommands,
 			'config_alternatives'  => $configAlternatives,
 		);
+	}
+
+	/**
+	 * @param list<array{directory:string,code:string,reason:string,component:string|null}> $candidates
+	 * @return list<array{directory:string,code:string,reason:string,component:string|null}>
+	 */
+	private function localizedDiscardedCandidates( array $candidates ): array {
+		foreach ( $candidates as $index => $candidate ) {
+			$candidates[ $index ]['reason'] = match ( $candidate['code'] ) {
+				'invalid_candidate_path' => __( 'The candidate is not a valid absolute secrets.json path.', 'ran-booster' ),
+				'temporary_storage' => __( 'The candidate is inside the operating system temporary directory.', 'ran-booster' ),
+				'inside_unsafe_boundary' => __( 'The candidate is inside a public web or version-control directory.', 'ran-booster' ),
+				'private_anchor_unavailable' => __( 'The private account directory is missing, is not a directory or is a symbolic link.', 'ran-booster' ),
+				'symlink_or_unreadable_component' => __( 'A path component is a symbolic link or could not be inspected.', 'ran-booster' ),
+				'storage_file_not_regular' => __( 'The existing storage target is not a regular file.', 'ran-booster' ),
+				'storage_file_hard_linked' => __( 'The existing storage target has more than one hard link.', 'ran-booster' ),
+				'path_component_not_directory' => __( 'A path component is not a directory.', 'ran-booster' ),
+				'world_writable_host_ancestor' => __( 'A host directory is writable by every local user, so the private account path could be replaced.', 'ran-booster' ),
+				'php_accessible_group_writable_ancestor' => __( 'A group-writable host directory is owned by, writable by or grouped with the PHP process, so the private account path could be replaced.', 'ran-booster' ),
+				'broad_private_path_permissions' => __( 'A private path component is writable by its group or by other users.', 'ran-booster' ),
+				'private_anchor_not_owned' => __( 'The private account directory is not writable and owned by the PHP process user.', 'ran-booster' ),
+				default => $candidate['reason'],
+			};
+		}
+
+		return $candidates;
 	}
 }

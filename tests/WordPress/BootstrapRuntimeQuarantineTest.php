@@ -29,16 +29,27 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_instance', $GLOBALS );
 
 		$actions = $GLOBALS['ran_booster_bootstrap_actions'];
-		self::assertCount( 1, $actions );
+		self::assertCount( 2, $actions );
 		self::assertSame(
-			array( 'network_admin_notices' ),
+			array( 'init', 'network_admin_notices' ),
 			array_column( $actions, 'hook' )
 		);
-		self::assertInstanceOf( UnsupportedMultisiteBootstrap::class, $actions[0]['callback'][0] );
-		self::assertSame( 'renderNotice', $actions[0]['callback'][1] );
+		self::assertInstanceOf( UnsupportedMultisiteBootstrap::class, $actions[1]['callback'][0] );
+		self::assertSame( 'renderNotice', $actions[1]['callback'][1] );
 		self::assertSame( array(), $GLOBALS['ran_booster_bootstrap_filters'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_fired_actions'] );
 
+		$actions[0]['callback']();
+		self::assertSame(
+			array(
+				array(
+					'domain'     => 'ran-booster',
+					'deprecated' => false,
+					'path'       => dirname( plugin_basename( $pluginFile ) ) . '/languages',
+				),
+			),
+			$GLOBALS['ran_booster_loaded_textdomains']
+		);
 		$actionHooks = array_column( $GLOBALS['ran_booster_bootstrap_actions'], 'hook' );
 		$filterHooks = array_column( $GLOBALS['ran_booster_bootstrap_filters'], 'hook' );
 		foreach (
@@ -104,7 +115,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 
 		$pluginFile = dirname( __DIR__, 2 ) . '/ran-booster.php';
 		require $pluginFile;
-		$notice = $GLOBALS['ran_booster_bootstrap_actions'][0]['callback'];
+		$notice = $GLOBALS['ran_booster_bootstrap_actions'][1]['callback'];
 
 		ob_start();
 		$notice();
@@ -133,7 +144,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 		$GLOBALS['ran_booster_bootstrap_manage_network_plugins'] = false;
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
-		$notice = $GLOBALS['ran_booster_bootstrap_actions'][0]['callback'];
+		$notice = $GLOBALS['ran_booster_bootstrap_actions'][1]['callback'];
 
 		ob_start();
 		$notice();

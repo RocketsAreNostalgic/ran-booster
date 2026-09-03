@@ -235,6 +235,11 @@ strings nor fragments. Providers should treat constructor rejection as a
 registration-time metadata error rather than attempting to sanitize unsafe
 content later.
 
+Each provider translates its visible metadata, including labels, descriptions,
+and setup or webhook guidance, through its own distributed plugin's text domain
+before constructing metadata. Core projects and escapes that already localized
+data but never translates provider copy through the `ran-booster` domain.
+
 Admin metadata may include an ordinary `ProviderNavigationPlacement`. Its group
 is `git-host` or `other-provider` and its slot is an integer from 1 through
 10,000. These values are provider-declared ordering metadata, not reserved

@@ -12,7 +12,10 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PackagePagePresenterTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['ran_booster_admin_view_filters'] = array();
+		$GLOBALS['ran_booster_admin_view_filters']            = array();
+		$GLOBALS['ran_booster_admin_test_translations']       = array();
+		$GLOBALS['ran_booster_package_view_translations']     = array();
+		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
 
 
@@ -45,6 +48,46 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertSame( 'unlink-theme', $config->getAction( 'unlink' ) );
 		self::assertSame( 'unlink-delete-theme', $config->getAction( 'unlink-delete' ) );
 		self::assertSame( 'bulk-theme', $config->getAction( 'bulk' ) );
+	}
+
+	public function testPackageTypeLabelsUseContextualTranslationsWithoutChangingMachineValues(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
+			"Managed package type singular label\004Plugin" => 'Extension',
+			"Managed package type plural label\004Plugins" => 'Extensions',
+			"Managed package type singular label\004Theme" => 'Habillage',
+			"Managed package type plural label\004Themes"  => 'Habillages',
+		);
+
+		$plugin = PackagePagePresenter::plugin();
+		$theme  = PackagePagePresenter::theme();
+
+		self::assertSame( 'Extension', $plugin->getSingularLabel() );
+		self::assertSame( 'Extensions', $plugin->getPluralLabel() );
+		self::assertSame( 'Habillage', $theme->getSingularLabel() );
+		self::assertSame( 'Habillages', $theme->getPluralLabel() );
+		self::assertSame( 'plugin', $plugin->getType() );
+		self::assertSame( 'file', $plugin->getIdentifierField() );
+		self::assertSame( 'ran-booster-plugins', $plugin->getPageSlug() );
+		self::assertSame( 'theme', $theme->getType() );
+		self::assertSame( 'stylesheet', $theme->getIdentifierField() );
+		self::assertSame( 'ran-booster-themes', $theme->getPageSlug() );
+	}
+
+	public function testPackageTypeLabelsResolveTranslationsAvailableAfterConstruction(): void {
+		$plugin = PackagePagePresenter::plugin();
+		$theme  = PackagePagePresenter::theme();
+
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
+			"Managed package type singular label\004Plugin" => 'Extension',
+			"Managed package type plural label\004Plugins" => 'Extensions',
+			"Managed package type singular label\004Theme" => 'Habillage',
+			"Managed package type plural label\004Themes"  => 'Habillages',
+		);
+
+		self::assertSame( 'Extension', $plugin->getSingularLabel() );
+		self::assertSame( 'Extensions', $plugin->getPluralLabel() );
+		self::assertSame( 'Habillage', $theme->getSingularLabel() );
+		self::assertSame( 'Habillages', $theme->getPluralLabel() );
 	}
 
 	public function testUnsupportedActionsAreRejected(): void {

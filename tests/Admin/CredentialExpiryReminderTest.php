@@ -39,6 +39,8 @@ final class CredentialExpiryReminderTest extends TestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
+		$GLOBALS['ran_booster_admin_test_translations']       = array();
+		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 
 		$this->directory    = sys_get_temp_dir() . '/ran-booster-expiry-reminder-' . bin2hex( random_bytes( 8 ) );
 		$this->path         = $this->directory . '/secrets.php';
@@ -71,7 +73,9 @@ final class CredentialExpiryReminderTest extends TestCase {
 			$GLOBALS['ran_booster_repository_admin_nonce_valid'],
 			$GLOBALS['ran_booster_repository_admin_user_id'],
 			$GLOBALS['ran_booster_repository_admin_user_meta'],
-			$GLOBALS['ran_booster_repository_admin_user_meta_write_fails']
+			$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'],
+			$GLOBALS['ran_booster_admin_test_translations'],
+			$GLOBALS['ran_booster_repository_admin_translations']
 		);
 
 		parent::tearDown();
@@ -107,6 +111,27 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertSame( 'provider', $status['source'] );
 		self::assertSame( 'future', $status['stage'] );
 		self::assertSame( 'Expiry unknown', $this->reminders()->status( 'gh', $this->profile( 'unknown' ) )['badge_label'] );
+	}
+
+	public function testReminderAndNoticeRenderTranslatedAdministratorCopy(): void {
+		$this->credential( 'translated', 'Translated credential' );
+		$this->providerExpiry( 'translated', $this->now->modify( '+2 days' ) );
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']       = array(
+			'Expires in %d day' . "\0" . 'Expires in %d days' => array(
+				'single' => 'Expires in %d translated day',
+				'plural' => 'Expires in %d translated days',
+			),
+			'%1$s (%2$s): %3$s.'    => '%1$s [%2$s]: %3$s!',
+			'Review %s credentials' => 'Review translated %s credentials',
+		);
+		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'] = $GLOBALS['ran_booster_admin_test_translations']['ran-booster'];
+
+		ob_start();
+		( new CredentialExpiryNotice( $this->reminders() ) )->render();
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Translated credential [GitHub]: Expires in 2 translated days!', $html );
+		self::assertStringContainsString( 'Review translated GitHub credentials', $html );
 	}
 
 	public function testDismissalIsPerUserAndReappearsAtTheNextSeverityStage(): void {

@@ -33,7 +33,19 @@ function loadFunction(name) {
 
 	assert.notEqual(end, -1, `The ${name} function must be complete.`);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	return Function(
+		'__',
+		'sprintf',
+		`"use strict"; return (${source.slice(start, end)});`
+	)(
+		(message) => message,
+		(template, ...values) => {
+			let index = 0;
+			return template.replace(/%(?:\d+\$)?[ds]/g, () =>
+				String(values[index++])
+			);
+		}
+	);
 }
 
 function element(initialAttributes = {}) {

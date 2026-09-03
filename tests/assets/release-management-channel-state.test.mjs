@@ -54,19 +54,31 @@ test('client hydration normalizes the release source label', () => {
 	);
 	assert.match(
 		declaration('setChoiceState'),
-		/setText\(choiceHeading, 'Releases'\);/
+		/setText\(choiceHeading, wp\.i18n\.__\(\'Releases\', \'ran-booster\'\)\);/
 	);
-	assert.match(
-		declaration('setChoiceState'),
-		/`Releases unavailable: \$\{description\}`[\s\S]*: 'Releases'/
+	assert.ok(
+		declaration('setChoiceState').includes(
+			"__('Releases unavailable: %s', 'ran-booster')"
+		)
 	);
 	assert.match(
 		declaration('updateAdvancedSummary'),
-		/advancedSummary\.textContent = `Releases · \$\{/
+		/advancedSummary\.textContent = wp\.i18n\.sprintf\([\s\S]*Releases · %s/
 	);
 	assert.match(
 		declaration('showIdle'),
 		/Select Releases to load stable and preview candidates\.[\s\S]*Select Releases to load eligible stable candidates\./
+	);
+});
+
+test('release management stays parseable beside another WordPress i18n alias user', () => {
+	assert.doesNotThrow(() => {
+		new Function('wp', 'const { __, sprintf } = wp.i18n;\n' + source);
+	});
+	assert.doesNotMatch(source, /^const \{ __, sprintf \} = wp\.i18n;/m);
+	assert.match(
+		source,
+		/const initializeManagedReleaseBrowser = \(managedBrowser\) => \{\n\tconst \{ __, sprintf \} = wp\.i18n;/
 	);
 });
 
@@ -205,6 +217,7 @@ test('loading candidates preserves provider order and uses the shared disclosure
 		'install',
 		'details',
 		'inspectRelease',
+		'wp',
 		`"use strict";
 		let requestSequence = 0;
 		let selectedRelease = null;
@@ -226,6 +239,24 @@ test('loading candidates preserves provider order and uses the shared disclosure
 		{ hidden: false },
 		() => {
 			inspectCalls += 1;
+		},
+		{
+			i18n: {
+				__(text) {
+					return text;
+				},
+				_n(singular, plural, count) {
+					return count === 1 ? singular : plural;
+				},
+				sprintf(template, ...values) {
+					let index = 0;
+					return template.replace(/%(?:\d+\$)?[ds]/g, function () {
+						const value = values[index];
+						index += 1;
+						return String(value);
+					});
+				},
+			},
 		}
 	);
 	const harness = createHarness;

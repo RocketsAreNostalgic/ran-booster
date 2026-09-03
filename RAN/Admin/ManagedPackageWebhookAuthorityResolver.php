@@ -41,7 +41,8 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 			$authorityId = $package->getProviderRepositoryId();
 			if ( ! is_string( $authorityId ) || '' === trim( $authorityId ) ) {
 				throw new CredentialRequestException(
-					'This managed package does not have a stable repository identity. Re-save its repository settings before creating a repository-scoped webhook secret.'
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception remains a plain administrator message.
+					__( 'This managed package does not have a stable repository identity. Re-save its repository settings before creating a repository-scoped webhook secret.', 'ran-booster' )
 				);
 			}
 
@@ -50,7 +51,8 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 
 		if ( 1 !== count( $matches ) ) {
 			throw new CredentialRequestException(
-				'Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret.'
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception remains a plain administrator message.
+				__( 'Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret.', 'ran-booster' )
 			);
 		}
 
@@ -78,7 +80,8 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 			}
 		}
 
-		throw new CredentialRequestException( 'Choose an account owner from the managed repositories before creating an owner-scoped webhook secret.' );
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception remains a plain administrator message.
+		throw new CredentialRequestException( __( 'Choose an account owner from the managed repositories before creating an owner-scoped webhook secret.', 'ran-booster' ) );
 	}
 
 	/** @return array{provider_code:string,repository_id:string}|null */

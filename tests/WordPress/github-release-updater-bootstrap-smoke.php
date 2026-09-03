@@ -2,64 +2,27 @@
 
 declare(strict_types=1);
 
-// The real package bootstrap must remain loadable before WordPress finishes
-// loading plugins, without requiring a wider WordPress runtime.
+// Isolated WordPress hook and header readers for the real broker-to-target path.
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+$GLOBALS['ran_booster_updater_smoke_hooks'] = array();
 
-$GLOBALS['ran_booster_updater_bootstrap_actions'] = array();
+define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 
-function did_action( string $hook ): int {
-	if ( 'plugins_loaded' !== $hook ) {
-		throw new RuntimeException( 'The package queried an unexpected WordPress action.' );
-	}
-
-	return 0;
-}
-
-function add_action(
-	string $hook,
-	callable $callback,
-	int $priority = 10,
-	int $acceptedArgs = 1
-): bool {
-	$GLOBALS['ran_booster_updater_bootstrap_actions'][] = array(
-		'hook'          => $hook,
-		'callback'      => $callback,
-		'priority'      => $priority,
-		'accepted_args' => $acceptedArgs,
-	);
+function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+	$GLOBALS['ran_booster_updater_smoke_hooks'][] = compact( 'hook', 'callback', 'priority', 'acceptedArgs' );
 
 	return true;
 }
 
-function add_filter(
-	string $hook,
-	callable $callback,
-	int $priority = 10,
-	int $acceptedArgs = 1
-): bool {
-	unset( $hook, $callback, $priority, $acceptedArgs );
+function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+	$GLOBALS['ran_booster_updater_smoke_hooks'][] = compact( 'hook', 'callback', 'priority', 'acceptedArgs' );
 
 	return true;
-}
-
-function do_action( string $hook, mixed ...$arguments ): void {
-	unset( $arguments );
-	if ( 'ran_wp_github_release_updater_v1_assurance_registration' !== $hook ) {
-		throw new RuntimeException( 'The package fired an unexpected WordPress action.' );
-	}
-}
-
-function plugin_basename( string $file ): string {
-	$marker = '/wp-content/plugins/';
-	$offset = strpos( str_replace( '\\', '/', $file ), $marker );
-
-	return false === $offset ? basename( $file ) : substr( $file, $offset + strlen( $marker ) );
 }
 
 function get_file_data( string $file, array $headers, string $context = '' ): array {
 	unset( $context );
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Isolated local-file WordPress header spy.
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Isolated local-file header proof.
 	$contents = file_get_contents( $file, false, null, 0, 8192 );
 	$data     = array();
 	foreach ( $headers as $field => $header ) {
@@ -71,13 +34,6 @@ function get_file_data( string $file, array $headers, string $context = '' ): ar
 	return $data;
 }
 
-function sanitize_key( mixed $value ): string {
-	return preg_replace( '/[^a-z0-9_\\-]/', '', strtolower( (string) $value ) ) ?? '';
-}
-
-define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
-
-require dirname( __DIR__ ) . '/Support/WPError.php';
 require dirname( __DIR__, 2 ) . '/autoload.php';
 
 $assert = static function ( bool $condition, string $message ): void {
@@ -87,39 +43,40 @@ $assert = static function ( bool $condition, string $message ): void {
 	}
 };
 
-$facade  = RAN\WordPress\GitHubReleaseUpdaterBootstrap::register(
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated runtime-selection fixture.
+$wp_version = '6.8.0';
+RAN\WordPress\ReleaseUpdaterBootstrap::register();
+$broker = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
+
+$assert( is_object( $broker ), 'The release updater broker must register before plugins_loaded.' );
+$assert( false === $broker->diagnostics()['activation_attempted'], 'The broker must not select a runtime during registration.' );
+$assert( RAN\WordPress\ReleaseUpdaterBootstrap::activate(), 'The broker must activate a selected runtime after plugins_loaded.' );
+$assert( true === $broker->diagnostics()['activation_attempted'], 'The broker must record activation.' );
+
+$credentialReads = 0;
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated registration fixture.
+$wpdb   = new stdClass();
+$target = new RAN\Booster\GitHub\GitHubReleaseNativeTarget(
+	'plugin',
 	dirname( __DIR__, 2 ) . '/ran-booster.php',
-	'0.1.0-alpha.10'
+	'RocketsAreNostalgic/ran-booster',
+	'1319710173',
+	'ran-booster',
+	'ran-booster/ran-booster.php',
+	static function () use ( &$credentialReads ): string {
+		++$credentialReads;
+
+		return 'github_pat_smoke';
+	},
+	'prerelease',
+	'forced-off'
 );
-$actions = $GLOBALS['ran_booster_updater_bootstrap_actions'];
+$assert( $target->register(), 'The Core target must register through the selected neutral runtime.' );
+$hookCount = count( $GLOBALS['ran_booster_updater_smoke_hooks'] );
+$assert( 10 === $hookCount, 'The Core target must own exactly one native WordPress hook set.' );
+$assert( $target->register(), 'Repeated Core target registration must remain idempotent.' );
+$assert( $hookCount === count( $GLOBALS['ran_booster_updater_smoke_hooks'] ), 'Repeated registration must not duplicate hooks.' );
+$assert( $target->status()->active, 'The registered neutral Core target must report active.' );
+$assert( 0 === $credentialReads, 'Target registration must not resolve GitHub credentials.' );
 
-$assert( 1 === count( $actions ), 'The package must register exactly one deferred selection callback.' );
-$assert( 'plugins_loaded' === $actions[0]['hook'], 'The package must defer selection to plugins_loaded.' );
-$assert( PHP_INT_MAX - 1 === $actions[0]['priority'], 'The package must select after provider-ready targets.' );
-$assert( 0 === $actions[0]['accepted_args'], 'The package callback must not accept action arguments.' );
-$assert( is_callable( $actions[0]['callback'] ), 'The deferred package callback must be callable.' );
-
-$diagnostics = $facade->diagnostics();
-
-$assert( true === ( $diagnostics['registered'] ?? null ), 'The real facade must report registration.' );
-$assert( 'registered' === ( $diagnostics['state'] ?? null ), 'The real facade must remain pending before selection.' );
-$assert( 'awaiting_runtime' === ( $diagnostics['code'] ?? null ), 'The real facade must await runtime selection.' );
-$assert( false === ( $diagnostics['selection_fixed'] ?? null ), 'Runtime selection must not occur during bootstrap.' );
-$assert( null === ( $diagnostics['selected_version'] ?? null ), 'Bootstrap diagnostics must not claim a selected runtime.' );
-$assert( 1 === ( $diagnostics['candidate_count'] ?? null ), 'The locked package must register one candidate.' );
-
-( $actions[0]['callback'] )();
-
-$diagnostics = $facade->diagnostics();
-$assert( true === ( $diagnostics['selection_fixed'] ?? null ), 'Runtime selection must be fixed after plugins_loaded.' );
-$assert(
-	is_string( $diagnostics['selected_version'] ?? null ),
-	'Runtime selection must report its package version.'
-);
-$assert(
-	RAN\WordPress\GitHubReleaseUpdaterBootstrap::UPDATER_PROSPECTIVE_API_VERSION
-		=== RAN\WordPress\GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $facade ),
-	'Core updater adapter and the selected updater must agree on updater prospective API 4.'
-);
-
-printf( "GitHub release updater bootstrap smoke passed.\n" );
+printf( "Release updater bootstrap smoke passed.\n" );

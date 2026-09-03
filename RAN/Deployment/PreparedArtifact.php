@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use RAN\Logging\BoosterLogger;
-use RAN\WPGitHubReleaseUpdater\V1\Artifact\ClaimedArtifact;
 use RuntimeException;
 
 /**
@@ -14,12 +13,6 @@ use RuntimeException;
 final class PreparedArtifact {
 
 	private bool $cleaned = false;
-
-	private bool $verified = false;
-
-	private bool $transferred = false;
-
-	private ?ClaimedArtifact $releaseClaim = null;
 
 	public function __construct(
 		private readonly string $path,
@@ -30,7 +23,8 @@ final class PreparedArtifact {
 		private readonly int $inode,
 		private readonly int $size,
 		private readonly int $permissions,
-		private readonly int $links
+		private readonly int $links,
+		private readonly ?string $ownedDirectory = null
 	) {
 		if ( '' === $path
 			|| '' === $resolvedRef
@@ -43,34 +37,10 @@ final class PreparedArtifact {
 			|| $inode <= 0
 			|| $size < 0
 			|| 0600 !== $permissions
-			|| 1 !== $links ) {
+			|| 1 !== $links
+			|| ( null !== $ownedDirectory && ! self::privateDirectoryForPath( $ownedDirectory, $path ) ) ) {
 			throw new RuntimeException( 'The prepared deployment artifact identity is invalid.' );
 		}
-	}
-
-	/** Retain the updater's exact release claim as this artifact's cleanup owner. */
-	public static function fromReleaseClaim(
-		ClaimedArtifact $claim,
-		string $resolvedRef,
-		string $expectedVersion
-	): self {
-		$attestation = $claim->assertUnchanged();
-		$identity    = $attestation['identity'];
-
-		$prepared               = new self(
-			$claim->path(),
-			$resolvedRef,
-			$expectedVersion,
-			$attestation['sha256'],
-			$identity['dev'],
-			$identity['ino'],
-			$identity['size'],
-			$identity['mode'] & 0777,
-			$identity['nlink']
-		);
-		$prepared->releaseClaim = $claim;
-
-		return $prepared;
 	}
 
 	public function getPath(): string {
@@ -89,16 +59,9 @@ final class PreparedArtifact {
 	 * Prove that the caller is about to use the exact downloaded bytes.
 	 */
 	public function assertUnchanged(): void {
-		if ( $this->cleaned || $this->transferred ) {
+		if ( $this->cleaned ) {
 			throw new RuntimeException( 'The prepared deployment artifact has already been cleaned up.' );
 		}
-		$this->verified = false;
-		if ( null !== $this->releaseClaim ) {
-			$this->releaseClaim->assertUnchanged();
-			$this->verified = true;
-			return;
-		}
-
 		if ( ! $this->hasOriginalIdentity() ) {
 			BoosterLogger::log(
 				'artifact integrity check failed before use',
@@ -122,53 +85,15 @@ final class PreparedArtifact {
 			);
 			throw new RuntimeException( 'The prepared deployment artifact changed before use.' );
 		}
-
-		$this->verified = true;
-	}
-
-	/**
-	 * Transfer cleanup ownership to the shared updater without repeating the
-	 * digest check already performed by the pre-download boundary.
-	 */
-	public function claimForNativeUpdate( string $type, string $identifier ): ClaimedArtifact {
-		if ( null !== $this->releaseClaim
-			|| $this->cleaned
-			|| $this->transferred
-			|| ! $this->verified ) {
-			throw new RuntimeException( 'The prepared deployment artifact is unavailable.' );
-		}
-		if ( ! $this->hasOriginalIdentity() ) {
-			throw new RuntimeException( 'The prepared deployment artifact changed before handoff.' );
-		}
-
-		$claim             = ClaimedArtifact::forCoreUpdate(
-			$this->path,
-			$this->digest,
-			$type,
-			$identifier,
-			$this->expectedVersion
-		);
-		$this->transferred = true;
-
-		return $claim;
 	}
 
 	/**
 	 * Delete only the unchanged file owned by this artifact.
 	 */
 	public function cleanup(): void {
-		if ( $this->cleaned || $this->transferred ) {
+		if ( $this->cleaned ) {
 			return;
 		}
-		if ( null !== $this->releaseClaim ) {
-			if ( ! $this->releaseClaim->discard() ) {
-				throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
-			}
-			$this->releaseClaim = null;
-			$this->cleaned      = true;
-			return;
-		}
-
 		$this->assertUnchanged();
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes one identity-checked private temporary file.
@@ -177,6 +102,10 @@ final class PreparedArtifact {
 		}
 		clearstatcache( true, $this->path );
 		if ( file_exists( $this->path ) || is_link( $this->path ) ) {
+			throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes the exact empty Core-owned temporary directory.
+		if ( null !== $this->ownedDirectory && ! rmdir( $this->ownedDirectory ) ) {
 			throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
 		}
 
@@ -192,6 +121,20 @@ final class PreparedArtifact {
 			&& $identity['size'] === $this->size
 			&& $identity['permissions'] === $this->permissions
 			&& $identity['links'] === $this->links;
+	}
+
+	private static function privateDirectoryForPath( string $directory, string $path ): bool {
+		if ( dirname( $path ) !== $directory || is_link( $directory ) || ! is_dir( $directory ) ) {
+			return false;
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- The Core-owned temporary directory must not be replaced.
+		$stat = lstat( $directory );
+		if ( false === $stat ) {
+			return false;
+		}
+
+		return 0040000 === ( (int) ( $stat['mode'] ?? 0 ) & 0170000 )
+			&& 0700 === ( (int) ( $stat['mode'] ?? 0 ) & 0777 );
 	}
 
 	/**

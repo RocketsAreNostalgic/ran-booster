@@ -132,7 +132,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	public function inspect(
 		string $type,
 		array $repositoryRequest,
-		int $releaseId,
+		string $releaseId,
 		string $tag,
 		string $channel,
 		string $nonce
@@ -156,11 +156,11 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$inspection = $capabilities['inspector']->inspectRelease(
 				$type,
 				$repository,
-				(string) $releaseId,
+				$releaseId,
 				$tag,
 				$channel
 			);
-			if ( (string) $releaseId !== $inspection->providerReleaseId
+			if ( $releaseId !== $inspection->providerReleaseId
 				|| ! hash_equals( $tag, $inspection->tag ) ) {
 				throw RepositoryReleaseInspectionRejected::invalidRelease();
 			}
@@ -196,7 +196,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	public function install(
 		string $type,
 		array $repositoryRequest,
-		int $releaseId,
+		string $releaseId,
 		string $tag,
 		string $expectedFingerprint,
 		string $channel,
@@ -237,7 +237,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$release = $acquirer->acquireRelease(
 				$type,
 				$repositoryReference,
-				(string) $releaseId,
+				$releaseId,
 				$tag,
 				$expectedFingerprint,
 				$channel
@@ -639,8 +639,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		);
 	}
 
-	private function validExactRelease( int $releaseId, string $tag ): bool {
-		return $releaseId > 0
+	private function validExactRelease( string $releaseId, string $tag ): bool {
+		return 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $releaseId )
 			&& 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,100}\z/D', $tag );
 	}
 

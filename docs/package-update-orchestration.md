@@ -554,14 +554,12 @@ At the installer boundary, `CorePackageExecutor` presents the already-local
 archive through a request-only native offer and pre-download hook. WordPress
 does not download the repository ZIP again.
 
-The unfortunately named
-`ran_wp_github_release_updater_v1_core_reinstall_handoff` remains an active,
-request-scoped branch integration boundary. If the shared updater also sees
-the target, it may accept only Core's same unchanged preflighted path for the
-same type, installed identifier, `update` action, and package argument. It does
-not restore exact release Reinstall, broaden archive authority, or start release
-discovery. Removing or renaming this V1 filter requires a coordinated updater
-API change while the branch caller remains active.
+The selected release updater does not accept that earlier local path. It admits
+only an updater-owned, freshly reacquired release artifact and rejects any
+non-false pre-download reply for a matching native target. Repository-source
+exclusivity therefore remains the boundary between tracked-branch deployment
+and native release update. A conflicting release target fails closed; Core does
+not bypass it through a local-artifact handoff or compatibility shim.
 
 ## Performance and repeated-work audit
 
@@ -580,9 +578,9 @@ optimization candidates; it is not a runtime profile.
   that repository ZIP independently.
 - Prospective inspection downloads, validates and discards the exact release
   ZIP; install performs a fresh acquisition.
-- A branch archive is scanned before handoff and later extracted and staged by
-  WordPress. Those are different security and installation phases, not two
-  archive downloads.
+- A branch archive is scanned before WordPress later extracts and stages it.
+  Those are different security and installation phases, not two archive
+  downloads.
 
 ### Intentional repeated work
 

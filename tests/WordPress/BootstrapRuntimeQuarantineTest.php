@@ -29,39 +29,15 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_instance', $GLOBALS );
 
 		$actions = $GLOBALS['ran_booster_bootstrap_actions'];
-		self::assertCount( 2, $actions );
+		self::assertCount( 1, $actions );
 		self::assertSame(
-			array( 'plugins_loaded', 'network_admin_notices' ),
+			array( 'network_admin_notices' ),
 			array_column( $actions, 'hook' )
 		);
-		self::assertSame( PHP_INT_MAX - 1, $actions[0]['priority'] );
-		self::assertInstanceOf( UnsupportedMultisiteBootstrap::class, $actions[1]['callback'][0] );
-		self::assertSame( 'renderNotice', $actions[1]['callback'][1] );
-		self::assertCount( 1, $GLOBALS['ran_booster_bootstrap_filters'] );
-		$noticeFilter = $GLOBALS['ran_booster_bootstrap_filters'][0];
-		self::assertSame( 'ran_wp_github_release_updater_notice', $noticeFilter['hook'] );
-		self::assertSame( 10, $noticeFilter['priority'] );
-		self::assertSame( 2, $noticeFilter['acceptedArgs'] );
-		self::assertIsCallable( $noticeFilter['callback'] );
-		$notice  = array(
-			'message'     => 'Raw diagnostic.',
-			'remediation' => 'Raw remediation.',
-		);
-		$context = array(
-			'type'       => 'plugin',
-			'package'    => plugin_basename( $pluginFile ),
-			'repository' => 'RocketsAreNostalgic/ran-booster',
-		);
-		self::assertNull( $noticeFilter['callback']( $notice, $context ) );
-		self::assertSame(
-			$notice,
-			$noticeFilter['callback']( $notice, array_merge( $context, array( 'package' => 'different-install/ran-booster.php' ) ) )
-		);
+		self::assertInstanceOf( UnsupportedMultisiteBootstrap::class, $actions[0]['callback'][0] );
+		self::assertSame( 'renderNotice', $actions[0]['callback'][1] );
+		self::assertSame( array(), $GLOBALS['ran_booster_bootstrap_filters'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_fired_actions'] );
-
-		// Complete the request-local updater arbitration. Only Booster's isolated,
-		// forced-manual self-updater may add native WordPress update hooks.
-		$actions[0]['callback']();
 
 		$actionHooks = array_column( $GLOBALS['ran_booster_bootstrap_actions'], 'hook' );
 		$filterHooks = array_column( $GLOBALS['ran_booster_bootstrap_filters'], 'hook' );
@@ -128,7 +104,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 
 		$pluginFile = dirname( __DIR__, 2 ) . '/ran-booster.php';
 		require $pluginFile;
-		$notice = $GLOBALS['ran_booster_bootstrap_actions'][1]['callback'];
+		$notice = $GLOBALS['ran_booster_bootstrap_actions'][0]['callback'];
 
 		ob_start();
 		$notice();
@@ -157,7 +133,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 		$GLOBALS['ran_booster_bootstrap_manage_network_plugins'] = false;
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
-		$notice = $GLOBALS['ran_booster_bootstrap_actions'][1]['callback'];
+		$notice = $GLOBALS['ran_booster_bootstrap_actions'][0]['callback'];
 
 		ob_start();
 		$notice();

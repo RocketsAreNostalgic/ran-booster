@@ -49,12 +49,13 @@ committed_entries=(
 	'uninstall.php'
 	'views'
 )
-package_root='vendor/ran/wp-github-release-updater'
-updater_version='v2.0.0-beta.8'
-updater_commit='d32d48fdf0128fddcee37b16af06001657af97a7'
+package_root='vendor/ran/wp-release-updater'
+updater_version='0.1.0-beta.1'
+updater_commit='8058377d48f6d68ff221ee6f8321af7ed26ce3bd'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
+	"$package_root/runtime-copy.json"
 	"$package_root/runtime.php"
 	"$package_root/src"
 )
@@ -209,7 +210,14 @@ composer_dir="$tmp_dir/composer"
 composer_home="$tmp_dir/composer-home"
 stage_dir="$tmp_dir/stage"
 stage_root="$stage_dir/ran-booster"
-mkdir -p "$composer_dir" "$composer_home" "$stage_root"
+updater_repository="$repo_root/../ran-wp-release-updater"
+updater_checkout="$tmp_dir/ran-wp-release-updater"
+[[ -d "$updater_repository/.git" ]] \
+	|| fail 'the locked neutral updater source checkout is unavailable.'
+git -C "$updater_repository" cat-file -e "${updater_commit}^{commit}" 2>/dev/null \
+	|| fail "the locked neutral updater commit is unavailable: $updater_commit"
+mkdir -p "$composer_dir" "$composer_home" "$stage_root" "$updater_checkout"
+git -C "$updater_repository" archive "$updater_commit" | tar -xf - -C "$updater_checkout"
 git show "$commit:composer.json" > "$composer_dir/composer.json"
 git show "$commit:composer.lock" > "$composer_dir/composer.lock"
 
@@ -238,25 +246,28 @@ if ! php -r '
 			exit( 1 );
 		}
 		$package = $packages[0];
-		$source = $package["source"]["reference"] ?? null;
+		$dist = $package["dist"] ?? null;
 		if (
-			"ran/wp-github-release-updater" !== ( $package["name"] ?? null )
+			"ran/wp-release-updater" !== ( $package["name"] ?? null )
 			|| $argv[2] !== ( $package["version"] ?? null )
-			|| ! is_string( $source )
-			|| ! hash_equals( $argv[3], $source )
-			|| $source !== ( $package["dist"]["reference"] ?? null )
+			|| ! is_array( $dist )
+			|| "path" !== ( $dist["type"] ?? null )
+			|| "../ran-wp-release-updater" !== ( $dist["url"] ?? null )
+			|| ! is_string( $dist["reference"] ?? null )
+			|| ! hash_equals( $argv[3], $dist["reference"] )
+			|| array_key_exists( "source", $package )
 		) {
 			exit( 1 );
 		}
 	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"; then
-	fail "composer.lock must contain only ran/wp-github-release-updater $updater_version at $updater_commit as a production package."
+	fail "composer.lock must contain only ran/wp-release-updater $updater_version from ../ran-wp-release-updater at $updater_commit as a production package."
 fi
 
-for package_entry in LICENSE bootstrap.php runtime.php src; do
+for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
 	[[ -e "$installed_package/$package_entry" ]] \
 		|| fail "the locked updater package is missing $package_entry."
 done
-if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
+if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime-copy.json" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
 	fail 'the updater runtime allowlist must not contain symbolic links.'
 fi
 
@@ -270,6 +281,7 @@ git archive \
 mkdir -p "$stage_root/$package_root"
 cp "$installed_package/LICENSE" "$stage_root/$package_root/LICENSE"
 cp "$installed_package/bootstrap.php" "$stage_root/$package_root/bootstrap.php"
+cp "$installed_package/runtime-copy.json" "$stage_root/$package_root/runtime-copy.json"
 cp "$installed_package/runtime.php" "$stage_root/$package_root/runtime.php"
 cp -R "$installed_package/src" "$stage_root/$package_root/src"
 

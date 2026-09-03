@@ -13,24 +13,51 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 	public function testReleaseUpdaterIsBoundBeforeEveryBootstrapCapture(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$localBinding = strpos( $bootstrap, '$ran_booster_release_updater            = GitHubReleaseUpdaterBootstrap::register(' );
-		$globalMirror = strpos( $bootstrap, '$GLOBALS[\'ran_booster_release_updater\'] = $ran_booster_release_updater;' );
-		$outerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_core_development_notice, $ran_booster_release_updater, $ran_booster_self_update_policy ): void {' );
-		$innerCapture = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater ): void {' );
-		$lateCapture  = strpos( $bootstrap, 'static function () use ( $ran_booster_container, $ran_booster_release_updater ): void {' );
-		$apiGate      = strpos( $bootstrap, 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )' );
+		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
+		$activation   = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::activate();' );
+		$coreTarget   = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
+		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
-		self::assertIsInt( $localBinding );
-		self::assertIsInt( $globalMirror );
-		self::assertIsInt( $outerCapture );
-		self::assertIsInt( $innerCapture );
-		self::assertIsInt( $lateCapture );
-		self::assertIsInt( $apiGate );
-		self::assertLessThan( $globalMirror, $localBinding );
-		self::assertLessThan( $outerCapture, $globalMirror );
-		self::assertLessThan( $innerCapture, $outerCapture );
-		self::assertLessThan( $lateCapture, $innerCapture );
-		self::assertLessThan( $apiGate, $lateCapture );
+		self::assertIsInt( $registration );
+		self::assertIsInt( $activation );
+		self::assertIsInt( $coreTarget );
+		self::assertIsInt( $target );
+		self::assertLessThan( $activation, $registration );
+		self::assertLessThan( $coreTarget, $activation );
+		self::assertLessThan( $target, $activation );
+	}
+
+	public function testCoreSelfTargetUsesTheSealedGitHubReleaseCapability(): void {
+		$bootstrap = $this->source( 'ran-booster.php' );
+
+		$seal        = strpos( $bootstrap, '$providerRegistry->seal()' );
+		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allowsNativeDiscovery() )' );
+		$capability  = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
+		$reference   = strpos( $bootstrap, "new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null )" );
+		$statusBind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )' );
+
+		self::assertIsInt( $seal );
+		self::assertIsInt( $policyGuard );
+		self::assertIsInt( $capability );
+		self::assertIsInt( $reference );
+		self::assertIsInt( $statusBind );
+		self::assertLessThan( $policyGuard, $seal );
+		self::assertLessThan( $capability, $policyGuard );
+		self::assertLessThan( $reference, $capability );
+		self::assertLessThan( $statusBind, $reference );
+		self::assertStringContainsString( "\t\t\t\t\t\t'forced-off'", $bootstrap );
+		self::assertStringNotContainsString( "? 'forced-off' : 'disabled'", $bootstrap );
+		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
+	}
+
+	public function testCurrentOrchestrationDocumentationNamesNoRemovedHandoff(): void {
+		$guide     = $this->source( 'docs/package-update-orchestration.md' );
+		$decisions = $this->source( 'docs/package-update-orchestration-decision-register.md' );
+
+		self::assertStringNotContainsString( 'ran_wp_release_updater_v1_core_artifact_handoff', $guide );
+		self::assertStringNotContainsString( 'ran_wp_github_release_updater_v1_core_reinstall_handoff', $guide );
+		self::assertStringContainsString( '## 2026-08-23 PU-007 owner decision — REPLACE IN PLACE', $decisions );
+		self::assertStringContainsString( '## 2026-09-01 PU-007 security correction — REMOVE', $decisions );
 	}
 
 	public function testBundledSuccessorRegistersOnceAfterProviderSeal(): void {
@@ -44,10 +71,10 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 
 		self::assertIsInt( $providerRegistration );
 		self::assertIsInt( $providerSeal );
-		self::assertIsInt( $releaseControls );
-		self::assertIsInt( $workflowControls );
 		self::assertIsInt( $runtimeInit );
 		self::assertLessThan( $providerSeal, $providerRegistration );
+		self::assertIsInt( $releaseControls );
+		self::assertIsInt( $workflowControls );
 		self::assertLessThan( $releaseControls, $providerSeal );
 		self::assertLessThan( $workflowControls, $providerSeal );
 		self::assertLessThan( $runtimeInit, $releaseControls );
@@ -60,7 +87,8 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 			1,
 			preg_match_all( '/\$ran_booster_container->make\( ReleaseWorkflowControls::class \)->register\(\);/', $bootstrap )
 		);
-		self::assertStringContainsString( 'GitHubReleaseUpdaterBootstrap::prospectiveApiVersion( $ran_booster_release_updater )', $bootstrap );
+		self::assertStringNotContainsString( 'GitHubReleaseUpdaterBootstrap', $bootstrap );
+		self::assertStringNotContainsString( 'prospectiveApiVersion', $bootstrap );
 		self::assertMatchesRegularExpression(
 			'/ReleaseWorkflowControls::class \)->register\(\);[\s\S]*?PHP_INT_MAX/',
 			$bootstrap

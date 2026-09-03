@@ -13,8 +13,14 @@
             "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git"
         },
         {
-            "type": "vcs",
-            "url": "https://github.com/RocketsAreNostalgic/ran-wp-github-release-updater.git"
+            "type": "path",
+            "url": "../ran-wp-release-updater",
+            "options": {
+                "symlink": false,
+                "versions": {
+                    "ran/wp-release-updater": "0.1.0-beta.1"
+                }
+            }
         }
     ],
     "minimum-stability": "stable",
@@ -33,7 +39,7 @@
         "php": "^8.2",
         "ext-sodium": "*",
         "ext-zip": "*",
-        "ran/wp-github-release-updater": "2.0.0-beta.8"
+        "ran/wp-release-updater": "0.1.0-beta.1"
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",

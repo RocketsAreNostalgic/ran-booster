@@ -20,8 +20,6 @@ use WP_Error;
  */
 class CorePackageExecutor {
 
-	private const CORE_REINSTALL_HANDOFF_FILTER = 'ran_wp_github_release_updater_v1_core_reinstall_handoff';
-
 	/** @var Closure(string, string, string, object|null): mixed|null */
 	private ?Closure $coreOperation;
 
@@ -143,7 +141,6 @@ class CorePackageExecutor {
 		$preDownload     = $this->preDownloadFilter( $type, 'update', $artifact, $inputs['identifier'] );
 		$sourceFilter    = $this->sourceSelectionFilter( $inputs['slug'], $inputs['subdirectory'], $type, 'update', $inputs['identifier'] );
 		$vcsFilter       = $this->vcsFilter( $type, $inputs['identifier'] );
-		$handoffFilter   = $this->coreReinstallHandoffFilter( $type, $inputs['identifier'], $artifact );
 		$coreAutoUpdate  = has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
 		$cronFilter      = static fn (): bool => true;
 		$completions     = array();
@@ -156,7 +153,6 @@ class CorePackageExecutor {
 		add_filter( 'upgrader_pre_download', $preDownload, 10, 4 );
 		add_filter( 'upgrader_source_selection', $sourceFilter, 10, 4 );
 		add_filter( 'automatic_updates_is_vcs_checkout', $vcsFilter, 10, 2 );
-		add_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10, 6 );
 		add_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX, 1 );
 		add_action( 'upgrader_process_complete', $complete, 100, 2 );
 
@@ -171,7 +167,6 @@ class CorePackageExecutor {
 			remove_filter( 'upgrader_pre_download', $preDownload, 10 );
 			remove_filter( 'upgrader_source_selection', $sourceFilter, 10 );
 			remove_filter( 'automatic_updates_is_vcs_checkout', $vcsFilter, 10 );
-			remove_filter( self::CORE_REINSTALL_HANDOFF_FILTER, $handoffFilter, 10 );
 			remove_filter( 'wp_doing_cron', $cronFilter, PHP_INT_MAX );
 			remove_action( 'upgrader_process_complete', $complete, 100 );
 			if ( false !== $coreAutoUpdate ) {
@@ -267,50 +262,6 @@ class CorePackageExecutor {
 			}
 
 			return $reply;
-		};
-	}
-
-	/**
-	 * Admit only this immutable branch artifact through the selected updater's
-	 * retained V1 handoff. Every other earlier download reply remains fail-closed.
-	 *
-	 * @return Closure(mixed, mixed, mixed, mixed, mixed, mixed): mixed
-	 */
-	private function coreReinstallHandoffFilter( string $type, string $identifier, PreparedArtifact $artifact ): Closure {
-		return static function (
-			mixed $admitted,
-			mixed $reply,
-			mixed $package,
-			mixed $extra,
-			mixed $targetType,
-			mixed $targetIdentifier
-		) use (
-			$type,
-			$identifier,
-			$artifact
-		): mixed {
-			if ( null !== $admitted ) {
-				return $admitted;
-			}
-			if ( ! is_string( $reply )
-				|| ! is_string( $package )
-				|| ! is_array( $extra )
-				|| $type !== $targetType
-				|| $identifier !== $targetIdentifier
-				|| $identifier !== ( $extra[ $type ] ?? null )
-				|| 'update' !== ( $extra['action'] ?? null )
-				|| ! hash_equals( $artifact->getPath(), $reply )
-				|| ! hash_equals( $artifact->getPath(), $package ) ) {
-				return $admitted;
-			}
-
-			try {
-				$claim = $artifact->claimForNativeUpdate( $type, $identifier );
-			} catch ( Throwable ) {
-				return null;
-			}
-
-			return $claim;
 		};
 	}
 

@@ -60,7 +60,7 @@ final class ProspectiveReleaseOperations {
 		string $operation,
 		string $type,
 		array $untrustedRepository,
-		int $releaseId,
+		string $releaseId,
 		string $tag,
 		string $fingerprint,
 		string $channel,
@@ -82,7 +82,7 @@ final class ProspectiveReleaseOperations {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| null === $repository
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
-			|| $releaseId < 1
+			|| ! $this->validReleaseId( $releaseId )
 			|| ! $this->validReleaseTag( $tag )
 			|| ( 'install' === $operation && ! $this->validFingerprint( $fingerprint ) ) ) {
 			return $outcome( 'invalid_request', false );
@@ -109,7 +109,7 @@ final class ProspectiveReleaseOperations {
 
 	/**
 	 * @param array<mixed> $data
-	 * @return array{candidates?:list<array{release_id:int,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>}>,channel?:string}
+	 * @return array{candidates?:list<array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>}>,channel?:string}
 	 */
 	private function normalizeCandidateListData( array $data ): array {
 		$rawCandidates = is_array( $data['candidates'] ?? null ) ? $data['candidates'] : null;
@@ -127,8 +127,7 @@ final class ProspectiveReleaseOperations {
 			$preview   = $rawCandidate['prerelease'] ?? null;
 			$published = $rawCandidate['published_at'] ?? null;
 			$assets    = $rawCandidate['expected_asset_names'] ?? null;
-			if ( ! is_int( $releaseId )
-				|| $releaseId < 1
+			if ( ! $this->validReleaseId( $releaseId )
 				|| ! $this->validReleaseTag( $tag )
 				|| ! $this->validVersion( $version )
 				|| ! is_bool( $preview )
@@ -206,20 +205,17 @@ final class ProspectiveReleaseOperations {
 		return $safe;
 	}
 
-	/** @param array<mixed> $data @return array<string, bool|int|string> */
+	/** @param array<mixed> $data @return array<string, bool|string> */
 	private function normalizeProspectiveData( array $data ): array {
 		$allowed = array( 'release_id', 'tag', 'version', 'commit', 'details_url', 'package_root', 'main_file', 'fingerprint', 'identifier', 'channel' );
 		$safe    = array();
 		foreach ( $allowed as $key ) {
 			$value = $data[ $key ] ?? null;
-			if ( 'release_id' === $key && is_int( $value ) && $value > 0 ) {
-				$safe[ $key ] = $value;
-				continue;
-			}
 			if ( is_string( $value )
 				&& strlen( $value ) <= $this->prospectiveValueLimit( $key )
 				&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $value ) ) {
 				$valid = match ( $key ) {
+					'release_id' => $this->validReleaseId( $value ),
 					'tag' => $this->validReleaseTag( $value ),
 					'version' => $this->validVersion( $value ),
 					'commit' => 1 === preg_match( '/\A[a-f0-9]{40}\z/D', $value ),
@@ -288,7 +284,7 @@ final class ProspectiveReleaseOperations {
 					$data['main_file'],
 					$data['fingerprint']
 				)
-				&& is_int( $data['release_id'] )
+				&& $this->validReleaseId( $data['release_id'] )
 				&& $this->validReleaseTag( $data['tag'] )
 				&& $this->validVersion( $data['version'] )
 				&& is_string( $data['commit'] )
@@ -321,6 +317,11 @@ final class ProspectiveReleaseOperations {
 
 	private function validReleaseTag( mixed $tag ): bool {
 		return is_string( $tag ) && 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,100}\z/D', $tag );
+	}
+
+	private function validReleaseId( mixed $releaseId ): bool {
+		return is_string( $releaseId )
+			&& 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $releaseId );
 	}
 
 	private function validFingerprint( mixed $fingerprint ): bool {

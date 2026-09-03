@@ -609,8 +609,8 @@ final class ReleaseManagementControls {
 
 		// Domain fields, including the repository credential selector and fingerprint, are unread until authority is proven.
 		$repository  = is_array( $request['ran_booster'] ?? null ) ? wp_unslash( $request['ran_booster'] ) : array();
-		$releaseId   = is_scalar( $request['release_id'] ?? null ) && 1 === preg_match( '/\A[1-9][0-9]*\z/D', (string) $request['release_id'] )
-			? (int) $request['release_id'] : 0;
+		$releaseId   = is_string( $request['release_id'] ?? null )
+			? wp_unslash( $request['release_id'] ) : '';
 		$tag         = is_string( $request['release_tag'] ?? null ) ? wp_unslash( $request['release_tag'] ) : '';
 		$fingerprint = is_string( $request['release_fingerprint'] ?? null ) ? wp_unslash( $request['release_fingerprint'] ) : '';
 		$channel     = array_key_exists( 'release_channel', $request ) ? $this->releaseChannelFrom( $request ) : 'stable';

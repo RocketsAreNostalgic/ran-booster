@@ -20,6 +20,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
+use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;
@@ -2308,6 +2309,93 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( 'theme' ), $refreshes );
 		self::assertSame( 0, $lock->acquires );
 		self::assertSame( array(), $lock->releases );
+	}
+
+	public function testFacadeProjectsNeutralTargetOffersAndValidationFailures(): void {
+		$package = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $package ) );
+		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$store   = new RuntimeReleaseStore(
+			array(
+				"theme\0example-theme" => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
+			)
+		);
+		$updater = new class() {
+			/** @var array<string, int|string|null> */
+			public array $currentStatus = array(
+				'candidate_tag'             => 'v2.0.0',
+				'candidate_validation_code' => 'archive_identity_verified',
+				'candidate_version'         => '2.0.0',
+				'candidate_header_version'  => '2.0.0',
+				'failure_code'              => null,
+				'installed_version'         => '1.0.0',
+				'last_check'                => 1_700_000_000,
+				'offered_version'           => '2.0.0',
+				'relationship'              => 'newer',
+			);
+
+			/** @return array<string, int|string|null> */
+			public function status(): array {
+				return $this->currentStatus;
+			}
+		};
+		$target  = new GitHubReleaseNativeTarget(
+			'theme',
+			'/wordpress/wp-content/themes/example-theme/style.css',
+			'owner/example-theme',
+			'123456789',
+			'example-theme',
+			'example-theme',
+			null,
+			'stable',
+			'manual'
+		);
+		( new \ReflectionProperty( GitHubReleaseNativeTarget::class, 'updater' ) )->setValue( $target, $updater );
+		$registrar = new ManagedReleaseTargetRegistrar(
+			$plugins,
+			$themes,
+			$store,
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry( targetFactory: static fn ( mixed ...$options ): object => $target )
+		);
+		$registrar->register();
+		$facade = new NativeReleaseTrackingFacade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(),
+			static fn (): bool => true,
+			static fn (): bool => true
+		);
+
+		$offer = $facade->status( 'theme', 'example-theme' );
+
+		self::assertSame( '2.0.0', $offer->latestVersion() );
+		self::assertTrue( $offer->updateAvailable() );
+		self::assertSame( '', $offer->failureCode() );
+
+		$updater->currentStatus = array(
+			'candidate_tag'             => 'v2.0.0',
+			'candidate_validation_code' => 'archive_header_missing',
+			'candidate_version'         => '2.0.0',
+			'candidate_header_version'  => null,
+			'failure_code'              => null,
+			'installed_version'         => '1.0.0',
+			'last_check'                => 1_700_000_000,
+			'offered_version'           => null,
+			'relationship'              => 'newer',
+		);
+
+		$failure = $facade->status( 'theme', 'example-theme' );
+
+		self::assertSame( '2.0.0', $failure->latestVersion() );
+		self::assertFalse( $failure->updateAvailable() );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_HEADER_MISSING, $failure->failureCode() );
 	}
 
 	public function testRefreshReportsRemovedReleaseConfigurationWithoutRunningTheUpdater(): void {

@@ -107,8 +107,8 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 		$results = array(
 			$facade->listCandidates( 'plugin', array(), 'stable', 'nonce' ),
-			$facade->inspect( 'plugin', array(), 1, 'v1.0.0', 'stable', 'nonce' ),
-			$facade->install( 'plugin', array(), 1, 'v1.0.0', str_repeat( 'a', 64 ), 'stable', 'nonce' ),
+			$facade->inspect( 'plugin', array(), '1', 'v1.0.0', 'stable', 'nonce' ),
+			$facade->install( 'plugin', array(), '1', 'v1.0.0', str_repeat( 'a', 64 ), 'stable', 'nonce' ),
 		);
 
 		foreach ( $results as $result ) {

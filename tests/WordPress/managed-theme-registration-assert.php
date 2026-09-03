@@ -12,10 +12,20 @@ foreach ( array( 'ran-booster-managed-active', 'ran-booster-managed-inactive' ) 
 	if ( ! $ran_booster_theme->exists() || false !== $ran_booster_theme->errors() ) {
 		throw new RuntimeException( 'A managed fixture theme is unavailable.' );
 	}
-	if ( ! function_exists( 'ran_wp_github_release_updater_v1_has_registered_target' )
-		|| ! ran_wp_github_release_updater_v1_has_registered_target( 'theme', $ran_booster_stylesheet ) ) {
-		throw new RuntimeException( 'Booster did not register a managed theme fixture.' );
-	}
 }
 
-WP_CLI::success( 'Normal Booster registration covers active and inactive managed themes.' );
+$ran_booster_theme_hook           = $GLOBALS['wp_filter']['update_themes_github.com'] ?? null;
+$ran_booster_theme_callback_count = $ran_booster_theme_hook instanceof WP_Hook
+	? count( $ran_booster_theme_hook->callbacks[10] ?? array() )
+	: 0;
+if ( 2 !== $ran_booster_theme_callback_count ) {
+	throw new RuntimeException(
+		sprintf(
+			'Booster registered %d neutral managed-theme callbacks; expected exactly 2.',
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The bounded integer count is emitted only to diagnose the disposable CLI proof.
+			$ran_booster_theme_callback_count
+		)
+	);
+}
+
+WP_CLI::success( 'Normal Booster registration covers active and inactive managed themes through the neutral updater hooks.' );

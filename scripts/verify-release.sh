@@ -31,7 +31,7 @@ cd "$repo_root"
 
 manifest="$repo_root/release-files.txt"
 [[ -f "$manifest" ]] || fail 'release-files.txt is missing.'
-for command_name in cmp composer diff git php unzip zipinfo; do
+for command_name in cmp composer diff git php tar unzip zipinfo; do
 	command -v "$command_name" >/dev/null 2>&1 \
 		|| fail "$command_name is required."
 done
@@ -53,12 +53,13 @@ committed_entries=(
 	'uninstall.php'
 	'views'
 )
-package_root='vendor/ran/wp-github-release-updater'
-updater_version='v2.0.0-beta.8'
-updater_commit='d32d48fdf0128fddcee37b16af06001657af97a7'
+package_root='vendor/ran/wp-release-updater'
+updater_version='0.1.0-beta.1'
+updater_commit='8058377d48f6d68ff221ee6f8321af7ed26ce3bd'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
+	"$package_root/runtime-copy.json"
 	"$package_root/runtime.php"
 	"$package_root/src"
 )
@@ -214,7 +215,14 @@ trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 
 composer_dir="$tmp_dir/composer"
 composer_home="$tmp_dir/composer-home"
-mkdir -p "$composer_dir" "$composer_home"
+updater_repository="$repo_root/../ran-wp-release-updater"
+updater_checkout="$tmp_dir/ran-wp-release-updater"
+[[ -d "$updater_repository/.git" ]] \
+	|| fail 'the locked neutral updater source checkout is unavailable.'
+git -C "$updater_repository" cat-file -e "${updater_commit}^{commit}" 2>/dev/null \
+	|| fail "the locked neutral updater commit is unavailable: $updater_commit"
+mkdir -p "$composer_dir" "$composer_home" "$updater_checkout"
+git -C "$updater_repository" archive "$updater_commit" | tar -xf - -C "$updater_checkout"
 for required_source in composer.json composer.lock .release-please-manifest.json; do
 	git cat-file -e "$commit:$required_source" 2>/dev/null \
 		|| fail "release ref is missing $required_source."
@@ -249,32 +257,34 @@ if ! package_lock_record=$(
 		$package = $packages[0];
 		$name = $package["name"] ?? null;
 		$version = $package["version"] ?? null;
-		$source = $package["source"]["reference"] ?? null;
-		$dist = $package["dist"]["reference"] ?? null;
+		$dist = $package["dist"] ?? null;
 		$contentHash = $lock["content-hash"] ?? null;
 		if (
-			"ran/wp-github-release-updater" !== $name
+			"ran/wp-release-updater" !== $name
 			|| $argv[2] !== $version
-			|| ! is_string( $source )
-			|| ! hash_equals( $argv[3], $source )
-			|| $source !== $dist
+			|| ! is_array( $dist )
+			|| "path" !== ( $dist["type"] ?? null )
+			|| "../ran-wp-release-updater" !== ( $dist["url"] ?? null )
+			|| ! is_string( $dist["reference"] ?? null )
+			|| ! hash_equals( $argv[3], $dist["reference"] )
+			|| array_key_exists( "source", $package )
 			|| ! is_string( $contentHash )
 			|| 1 !== preg_match( "/^[0-9a-f]{32}$/", $contentHash )
 		) {
 			exit( 1 );
 		}
-		echo implode( "\t", array( $name, $version, $source, $contentHash ) );
+		echo implode( "\t", array( $name, $version, $dist["reference"] ) );
 	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"
 ); then
-	fail "composer.lock must contain only ran/wp-github-release-updater $updater_version at $updater_commit as a production package."
+	fail "composer.lock must contain only ran/wp-release-updater $updater_version from ../ran-wp-release-updater at $updater_commit as a production package."
 fi
-IFS=$'\t' read -r package_name package_version package_commit lock_content_hash <<< "$package_lock_record"
+IFS=$'\t' read -r package_name package_version package_commit <<< "$package_lock_record"
 
-for package_entry in LICENSE bootstrap.php runtime.php src; do
+for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
 	[[ -e "$installed_package/$package_entry" ]] \
 		|| fail "the locked updater package is missing $package_entry."
 done
-if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
+if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime-copy.json" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
 	fail 'the updater runtime allowlist must not contain symbolic links.'
 fi
 
@@ -351,7 +361,7 @@ done < <(git ls-tree -r "$commit" -- "${committed_entries[@]}")
 git ls-tree -r --name-only "$commit" -- "${committed_entries[@]}" \
 	| sed 's#^#ran-booster/#' \
 	> "$expected_files"
-for package_entry in LICENSE bootstrap.php runtime.php src; do
+for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
 	if [[ -d "$installed_package/$package_entry" ]]; then
 		find "$installed_package/$package_entry" -type f -print
 	else
@@ -388,6 +398,7 @@ for required_path in \
 	'ran-booster/ran-booster.php' \
 	"ran-booster/$package_root/LICENSE" \
 	"ran-booster/$package_root/bootstrap.php" \
+	"ran-booster/$package_root/runtime-copy.json" \
 	"ran-booster/$package_root/runtime.php"; do
 	grep -Fqx "$required_path" "$archive_files" \
 		|| fail "required runtime file is missing: $required_path"
@@ -432,7 +443,7 @@ php -r '
 	|| fail 'installed Core release marker does not match the release version and commit.'
 
 archived_package="$extract_dir/ran-booster/$package_root"
-for package_entry in LICENSE bootstrap.php runtime.php; do
+for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php; do
 	cmp -s "$installed_package/$package_entry" "$archived_package/$package_entry" \
 		|| fail "archived updater $package_entry does not match the committed Composer lock."
 done

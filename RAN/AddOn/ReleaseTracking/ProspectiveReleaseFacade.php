@@ -9,7 +9,7 @@ namespace RAN\AddOn\ReleaseTracking;
  */
 interface ProspectiveReleaseFacade {
 
-	public const API_VERSION = 6;
+	public const API_VERSION = 7;
 
 	public function nonceAction( string $operation, string $type ): string;
 
@@ -42,7 +42,7 @@ interface ProspectiveReleaseFacade {
 	public function inspect(
 		string $type,
 		array $repositoryRequest,
-		int $releaseId,
+		string $releaseId,
 		string $tag,
 		string $channel,
 		string $nonce
@@ -55,7 +55,7 @@ interface ProspectiveReleaseFacade {
 	public function install(
 		string $type,
 		array $repositoryRequest,
-		int $releaseId,
+		string $releaseId,
 		string $tag,
 		string $expectedFingerprint,
 		string $channel,

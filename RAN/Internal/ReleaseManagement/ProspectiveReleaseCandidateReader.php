@@ -65,8 +65,8 @@ final class ProspectiveReleaseCandidateReader {
 				if ( 'stable' === $channel && $candidate->prerelease ) {
 					throw new InvalidArgumentException( 'The release candidate conflicts with the requested channel.' );
 				}
-				$releaseId = filter_var( $candidate->providerReleaseId, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ) );
-				if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/D', $candidate->providerReleaseId ) || false === $releaseId ) {
+				$releaseId = $candidate->providerReleaseId;
+				if ( 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $releaseId ) ) {
 					throw new InvalidArgumentException( 'The release candidate identity is incompatible.' );
 				}
 				$candidates[] = array(

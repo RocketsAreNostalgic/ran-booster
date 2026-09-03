@@ -60,10 +60,10 @@ final class ProviderApiLifecycleTest extends TestCase {
 		self::assertIsInt( $providerRegistration );
 		self::assertIsInt( $providerSeal );
 		self::assertIsInt( $targetRegistration );
-		self::assertIsInt( $releaseControls );
-		self::assertIsInt( $workflowControls );
 		self::assertTrue( $providerRegistration < $providerSeal );
 		self::assertTrue( $providerSeal < $targetRegistration );
+		self::assertIsInt( $releaseControls );
+		self::assertIsInt( $workflowControls );
 		self::assertTrue( $targetRegistration < $releaseControls );
 		self::assertTrue( $targetRegistration < $workflowControls );
 		self::assertTrue( $workflowControls < $releaseControls );

@@ -4669,6 +4669,8 @@ msgid "The private storage location and WordPress configuration are not on one v
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:180
+#: RAN/Secrets/SecretsStorageProvisioner.php:1057
+#: RAN/Secrets/SecretsStorageProvisioner.php:1065
 msgid "The WordPress configuration could not be updated safely."
 msgstr ""
 
@@ -4866,6 +4868,130 @@ msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:933
 msgid "Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1033
+msgid "The encrypted secrets path is already configured."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1034
+msgid "The WordPress configuration directory is not safe and writable."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1035
+msgid "The encrypted secrets path is not safe for automatic configuration."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1036
+msgid "The supplied WordPress configuration path is not an absolute safe POSIX file path."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1037
+msgid "The WordPress configuration changed before it could be edited."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1038
+msgid "Could not secure the WordPress configuration edit lock."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1039
+msgid "Could not lock the WordPress configuration for editing."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1040
+msgid "The WordPress configuration is not a writable regular file."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1041
+msgid "The WordPress configuration is group- or world-writable."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1042
+msgid "The WordPress configuration has an unsupported size."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1043
+msgid "The WordPress configuration is not owned by the current process owner."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1044
+msgid "Could not read the complete WordPress configuration."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1045
+msgid "The WordPress configuration must contain one standard stop-editing marker."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1046
+msgid "The encrypted secrets path constant is already defined."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1047
+msgid "The automatic encrypted secrets definition is ambiguous."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1048
+msgid "The edited WordPress configuration did not pass the expected definition check."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1049
+msgid "Could not secure the temporary WordPress configuration."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1050
+msgid "Could not preserve WordPress configuration ownership."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1051
+msgid "Could not flush the edited WordPress configuration."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1052
+msgid "Could not synchronize the edited WordPress configuration."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1053
+msgid "The edited WordPress configuration failed its read-back check."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1054
+msgid "The edited WordPress configuration metadata could not be verified."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1055
+msgid "Could not atomically replace the WordPress configuration."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1056
+msgid "The installed WordPress configuration failed verification."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1058
+msgid "The WordPress configuration does not parse as supported PHP."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1059
+msgid "The WordPress configuration uses unsupported line endings."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1060
+msgid "The WordPress configuration edit lock is not safe."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1061
+msgid "Could not write the complete edited WordPress configuration."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1062
+msgid "The temporary WordPress configuration is not safe."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1063
+msgid "Could not open the WordPress configuration edit lock."
+msgstr ""
+
+#: RAN/Secrets/SecretsStorageProvisioner.php:1064
+msgid "Could not create a private temporary WordPress configuration."
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioningResult.php:40

@@ -11,6 +11,7 @@ require_once __DIR__ . '/SecretsStorageWordPressFunctions.php';
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -610,15 +611,65 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 	}
 
-	public function testWriterFailureIsReducedToItsStableNonPathBearingReason(): void {
-		$provisioner                    = $this->provisioner();
-		$provisioner->writerFailureCode = 'config_changed';
+	#[DataProvider( 'wpConfigWriteFailureCases' )]
+	public function testWriterFailureIsReducedToItsStableCodeAndTranslatedDisplayMessage(
+		string $reason,
+		string $sourceMessage
+	): void {
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'][ $sourceMessage ] = 'Translated writer failure: ' . $reason;
+		$provisioner                       = $this->provisioner();
+		$provisioner->writerFailureCode    = $reason;
+		$provisioner->writerFailureMessage = 'Raw writer canary: /private/leaked/wp-config.php';
 
 		$result = $provisioner->provision();
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
-		self::assertSame( 'config_changed', $result->code() );
+		self::assertSame( $reason, $result->code() );
+		self::assertSame( 'Translated writer failure: ' . $reason, $result->message() );
+		self::assertStringNotContainsString( 'Raw writer canary', $result->message() );
 		self::assertStringNotContainsString( $this->root, $result->message() );
+	}
+
+	/** @return iterable<string, array{string, string}> */
+	public static function wpConfigWriteFailureCases(): iterable {
+		$messages = array(
+			'sidecar_path_unchanged'       => 'The encrypted secrets path is already configured.',
+			'config_directory_invalid'     => 'The WordPress configuration directory is not safe and writable.',
+			'sidecar_path_invalid'         => 'The encrypted secrets path is not safe for automatic configuration.',
+			'config_path_invalid'          => 'The supplied WordPress configuration path is not an absolute safe POSIX file path.',
+			'config_changed'               => 'The WordPress configuration changed before it could be edited.',
+			'lock_permissions_failed'      => 'Could not secure the WordPress configuration edit lock.',
+			'lock_failed'                  => 'Could not lock the WordPress configuration for editing.',
+			'config_file_invalid'          => 'The WordPress configuration is not a writable regular file.',
+			'config_permissions_unsafe'    => 'The WordPress configuration is group- or world-writable.',
+			'config_size_unsupported'      => 'The WordPress configuration has an unsupported size.',
+			'config_owner_invalid'         => 'The WordPress configuration is not owned by the current process owner.',
+			'config_read_failed'           => 'Could not read the complete WordPress configuration.',
+			'marker_invalid'               => 'The WordPress configuration must contain one standard stop-editing marker.',
+			'constant_exists'              => 'The encrypted secrets path constant is already defined.',
+			'owned_definition_ambiguous'   => 'The automatic encrypted secrets definition is ambiguous.',
+			'candidate_parse_failed'       => 'The edited WordPress configuration did not pass the expected definition check.',
+			'temporary_permissions_failed' => 'Could not secure the temporary WordPress configuration.',
+			'temporary_ownership_failed'   => 'Could not preserve WordPress configuration ownership.',
+			'temporary_flush_failed'       => 'Could not flush the edited WordPress configuration.',
+			'temporary_sync_failed'        => 'Could not synchronize the edited WordPress configuration.',
+			'temporary_readback_failed'    => 'The edited WordPress configuration failed its read-back check.',
+			'temporary_metadata_invalid'   => 'The edited WordPress configuration metadata could not be verified.',
+			'replace_failed'               => 'Could not atomically replace the WordPress configuration.',
+			'replacement_readback_failed'  => 'The installed WordPress configuration failed verification.',
+			'filesystem_failure'           => 'The WordPress configuration could not be updated safely.',
+			'config_parse_failed'          => 'The WordPress configuration does not parse as supported PHP.',
+			'line_endings_unsupported'     => 'The WordPress configuration uses unsupported line endings.',
+			'lock_invalid'                 => 'The WordPress configuration edit lock is not safe.',
+			'temporary_write_failed'       => 'Could not write the complete edited WordPress configuration.',
+			'temporary_file_invalid'       => 'The temporary WordPress configuration is not safe.',
+			'lock_open_failed'             => 'Could not open the WordPress configuration edit lock.',
+			'temporary_create_failed'      => 'Could not create a private temporary WordPress configuration.',
+			'future_writer_failure'        => 'The WordPress configuration could not be updated safely.',
+		);
+		foreach ( $messages as $reason => $message ) {
+			yield $reason => array( $reason, $message );
+		}
 	}
 
 	public function testUniqueAuthenticatedProviderFitSiblingCanBeAdoptedByOpaqueRevision(): void {
@@ -642,6 +693,29 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$config = (string) file_get_contents( $this->configPath );
 		self::assertStringContainsString( dirname( $old ), $config );
 		self::assertStringNotContainsString( dirname( $this->candidate ), $config );
+		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
+	}
+
+	public function testRecoveryWriterFailureUsesTheSameTranslatedDisplayBoundary(): void {
+		$old = $this->recoveryStore( 'abcdef0123456789' );
+		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->candidate );
+		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster']['The WordPress configuration changed before it could be edited.'] = 'Configuration changed translation.';
+		$provisioner                       = $this->provisioner();
+		$provisioner->configured           = $this->candidate;
+		$provisioner->healthFailure        = true;
+		$provisioner->healthFailureReason  = 'storage_file_missing';
+		$provisioner->writerFailureCode    = 'config_changed';
+		$provisioner->writerFailureMessage = 'Raw recovery writer canary: /private/leaked/wp-config.php';
+		$status                            = $provisioner->status();
+		$recovery                          = $provisioner->recoveryState( $status );
+		self::assertIsArray( $recovery );
+
+		$result = $provisioner->adoptRecovery( (string) $recovery['token'] );
+
+		self::assertSame( 'config_changed', $result->code() );
+		self::assertSame( 'Configuration changed translation.', $result->message() );
+		self::assertStringNotContainsString( 'Raw recovery writer canary', $result->message() );
+		self::assertSame( $this->candidate, $result->candidatePath() );
 		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
 	}
 
@@ -925,6 +999,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public bool $writerCalled                     = false;
 	public bool $probeFails                       = false;
 	public ?string $writerFailureCode             = null;
+	public string $writerFailureMessage           = 'Raw writer failure.';
 	public bool $healthy                          = false;
 	public bool $healthFailure                    = false;
 	public string $healthFailureMessage           = 'Fixture storage failure.';
@@ -1009,11 +1084,30 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 			throw new \RAN\Secrets\WpConfigPathWriteException(
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws a stable fixture code, never rendered output.
 				$this->writerFailureCode,
-				'The WordPress configuration changed before it could be edited.'
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws raw fixture text to prove it is not rendered.
+				$this->writerFailureMessage
 			);
 		}
 
 		return parent::writeConfiguration( $config, $candidate );
+	}
+
+	protected function retargetConfiguration(
+		string $config,
+		string $current,
+		string $replacement
+	): WpConfigPathWriteResult|false {
+		$this->writerCalled = true;
+		if ( null !== $this->writerFailureCode ) {
+			throw new \RAN\Secrets\WpConfigPathWriteException(
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws a stable fixture code, never rendered output.
+				$this->writerFailureCode,
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws raw fixture text to prove it is not rendered.
+				$this->writerFailureMessage
+			);
+		}
+
+		return parent::retargetConfiguration( $config, $current, $replacement );
 	}
 
 	protected function wordpressRoot(): string {

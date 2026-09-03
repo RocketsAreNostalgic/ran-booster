@@ -171,7 +171,7 @@ class SecretsStorageProvisioner {
 		} catch ( WpConfigPathWriteException $exception ) {
 			return SecretsStorageProvisioningResult::manualRequired(
 				$this->stableCode( $exception->reason(), 'wp_config_write_failed' ),
-				$exception->getMessage(),
+				$this->wpConfigWriteFailureMessage( $exception->reason() ),
 				$candidate
 			);
 		} catch ( Throwable ) {
@@ -380,7 +380,7 @@ class SecretsStorageProvisioner {
 			return $this->recoveryFailure(
 				$current,
 				$this->stableCode( $exception->reason(), 'recovery_write_failed' ),
-				$exception->getMessage()
+				$this->wpConfigWriteFailureMessage( $exception->reason() )
 			);
 		} catch ( Throwable ) {
 			return $this->recoveryFailure( $current, 'recovery_write_failed', __( 'The recoverable storage path could not be adopted safely.', 'ran-booster' ) );
@@ -1026,5 +1026,43 @@ class SecretsStorageProvisioner {
 		return is_string( $code ) && preg_match( '/^[a-z][a-z0-9_]{0,63}$/D', $code ) === 1
 			? $code
 			: $fallback;
+	}
+
+	private function wpConfigWriteFailureMessage( string $reason ): string {
+		return match ( $reason ) {
+			'sidecar_path_unchanged' => __( 'The encrypted secrets path is already configured.', 'ran-booster' ),
+			'config_directory_invalid' => __( 'The WordPress configuration directory is not safe and writable.', 'ran-booster' ),
+			'sidecar_path_invalid' => __( 'The encrypted secrets path is not safe for automatic configuration.', 'ran-booster' ),
+			'config_path_invalid' => __( 'The supplied WordPress configuration path is not an absolute safe POSIX file path.', 'ran-booster' ),
+			'config_changed' => __( 'The WordPress configuration changed before it could be edited.', 'ran-booster' ),
+			'lock_permissions_failed' => __( 'Could not secure the WordPress configuration edit lock.', 'ran-booster' ),
+			'lock_failed' => __( 'Could not lock the WordPress configuration for editing.', 'ran-booster' ),
+			'config_file_invalid' => __( 'The WordPress configuration is not a writable regular file.', 'ran-booster' ),
+			'config_permissions_unsafe' => __( 'The WordPress configuration is group- or world-writable.', 'ran-booster' ),
+			'config_size_unsupported' => __( 'The WordPress configuration has an unsupported size.', 'ran-booster' ),
+			'config_owner_invalid' => __( 'The WordPress configuration is not owned by the current process owner.', 'ran-booster' ),
+			'config_read_failed' => __( 'Could not read the complete WordPress configuration.', 'ran-booster' ),
+			'marker_invalid' => __( 'The WordPress configuration must contain one standard stop-editing marker.', 'ran-booster' ),
+			'constant_exists' => __( 'The encrypted secrets path constant is already defined.', 'ran-booster' ),
+			'owned_definition_ambiguous' => __( 'The automatic encrypted secrets definition is ambiguous.', 'ran-booster' ),
+			'candidate_parse_failed' => __( 'The edited WordPress configuration did not pass the expected definition check.', 'ran-booster' ),
+			'temporary_permissions_failed' => __( 'Could not secure the temporary WordPress configuration.', 'ran-booster' ),
+			'temporary_ownership_failed' => __( 'Could not preserve WordPress configuration ownership.', 'ran-booster' ),
+			'temporary_flush_failed' => __( 'Could not flush the edited WordPress configuration.', 'ran-booster' ),
+			'temporary_sync_failed' => __( 'Could not synchronize the edited WordPress configuration.', 'ran-booster' ),
+			'temporary_readback_failed' => __( 'The edited WordPress configuration failed its read-back check.', 'ran-booster' ),
+			'temporary_metadata_invalid' => __( 'The edited WordPress configuration metadata could not be verified.', 'ran-booster' ),
+			'replace_failed' => __( 'Could not atomically replace the WordPress configuration.', 'ran-booster' ),
+			'replacement_readback_failed' => __( 'The installed WordPress configuration failed verification.', 'ran-booster' ),
+			'filesystem_failure' => __( 'The WordPress configuration could not be updated safely.', 'ran-booster' ),
+			'config_parse_failed' => __( 'The WordPress configuration does not parse as supported PHP.', 'ran-booster' ),
+			'line_endings_unsupported' => __( 'The WordPress configuration uses unsupported line endings.', 'ran-booster' ),
+			'lock_invalid' => __( 'The WordPress configuration edit lock is not safe.', 'ran-booster' ),
+			'temporary_write_failed' => __( 'Could not write the complete edited WordPress configuration.', 'ran-booster' ),
+			'temporary_file_invalid' => __( 'The temporary WordPress configuration is not safe.', 'ran-booster' ),
+			'lock_open_failed' => __( 'Could not open the WordPress configuration edit lock.', 'ran-booster' ),
+			'temporary_create_failed' => __( 'Could not create a private temporary WordPress configuration.', 'ran-booster' ),
+			default => __( 'The WordPress configuration could not be updated safely.', 'ran-booster' ),
+		};
 	}
 }

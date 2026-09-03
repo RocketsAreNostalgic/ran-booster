@@ -177,7 +177,8 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		string $expectedReason
 	): void {
 		if ( null !== $sourceMessage ) {
-			$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $expectedReason;
+			$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ]       = $expectedReason;
+			$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'][ $sourceMessage ] = $expectedReason;
 		}
 		$discarded = array(
 			array(

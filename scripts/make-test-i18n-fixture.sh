@@ -29,8 +29,8 @@ temporary_dir=$(mktemp -d "${TMPDIR:-/tmp}/ran-booster-i18n.XXXXXX") \
 	|| fail 'could not create a temporary fixture directory.'
 trap 'rm -rf "$temporary_dir"' EXIT HUP INT TERM
 
-php -n "$wp_cli" i18n make-mo "$fixture_po" "$temporary_dir/ran-booster-fr_FR.mo"
-php -n "$wp_cli" i18n make-json "$fixture_po" "$temporary_dir" --no-purge
+php "$wp_cli" i18n make-mo "$fixture_po" "$temporary_dir/ran-booster-fr_FR.mo"
+php "$wp_cli" i18n make-json "$fixture_po" "$temporary_dir" --no-purge
 chmod 0644 "$temporary_dir"/*
 shopt -s nullglob
 temporary_json=( "$temporary_dir"/*.json )

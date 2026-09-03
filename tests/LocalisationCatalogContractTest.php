@@ -28,8 +28,13 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertStringContainsString( '--skip-theme-json', $script );
 		self::assertStringContainsString( '-d memory_limit=512M', $script );
 		self::assertStringContainsString( 'E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED', $script );
+		self::assertStringNotContainsString( 'php -n', $script );
 		self::assertStringContainsString( '--include=ran-booster.php,autoload.php,index.php,uninstall.php,RAN,views,assets', $script );
 		self::assertStringContainsString( '--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts', $script );
+
+		$fixtureScript = file_get_contents( dirname( __DIR__ ) . '/scripts/make-test-i18n-fixture.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
+		self::assertIsString( $fixtureScript );
+		self::assertStringNotContainsString( 'php -n', $fixtureScript );
 	}
 
 	public function testReleaseAllowlistContainsOnlyTheRuntimeCatalogue(): void {

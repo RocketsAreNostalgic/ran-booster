@@ -22,6 +22,10 @@ mode=${1:-}
 
 command -v php >/dev/null 2>&1 || fail 'php is required.'
 wp_cli=$(command -v wp 2>/dev/null) || fail 'WP-CLI is required.'
+php_runner=( php -n )
+if ! "${php_runner[@]}" "$wp_cli" --info >/dev/null 2>&1; then
+	php_runner=( php )
+fi
 pot='languages/ran-booster.pot'
 temporary_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster.pot.XXXXXX") \
 	|| fail 'could not create a temporary catalogue.'
@@ -33,11 +37,12 @@ normalised_all_domains_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster-all-domains-nor
 	|| fail 'could not create a temporary normalised all-domain catalogue.'
 trap 'rm -f "$temporary_pot" "$temporary_all_domains_pot" "$normalised_pot" "$normalised_all_domains_pot"' EXIT HUP INT TERM
 
-# WP-CLI requires extensions such as Phar that a host may load through php.ini.
+# Prefer PHP without machine-local configuration when it can run the WP-CLI
+# Phar. Otherwise, retain the configured PHP that supplies required extensions.
 # The fixed memory limit keeps the runtime PHP and JavaScript source sweep bounded.
 # Suppress dependency deprecations but retain warnings; block/theme metadata
 # extraction is disabled because it can perform network I/O.
-if ! output=$(php -d memory_limit=512M -d 'error_reporting=E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED' "$wp_cli" i18n make-pot . "$temporary_pot" \
+if ! output=$("${php_runner[@]}" -d memory_limit=512M -d 'error_reporting=E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED' "$wp_cli" i18n make-pot . "$temporary_pot" \
 	--domain=ran-booster \
 	--include=ran-booster.php,autoload.php,index.php,uninstall.php,RAN,views,assets \
 	--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts \
@@ -53,7 +58,7 @@ if grep -q '^Warning:' <<< "$output"; then
 	fail 'WP-CLI reported gettext warnings.'
 fi
 
-if ! all_domains_output=$(php -d memory_limit=512M -d 'error_reporting=E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED' "$wp_cli" i18n make-pot . "$temporary_all_domains_pot" \
+if ! all_domains_output=$("${php_runner[@]}" -d memory_limit=512M -d 'error_reporting=E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED' "$wp_cli" i18n make-pot . "$temporary_all_domains_pot" \
 	--ignore-domain \
 	--include=ran-booster.php,autoload.php,index.php,uninstall.php,RAN,views,assets \
 	--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts \

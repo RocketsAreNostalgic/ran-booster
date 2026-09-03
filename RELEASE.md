@@ -46,7 +46,8 @@ Before merging a release proposal:
 1. run `composer check` and `pnpm check` from the exact candidate commit;
 2. build and verify the release ZIP from that same commit;
 3. confirm the archive contains only the allowlisted runtime and locked updater;
-4. run the required activation and installed lifecycle proofs; and
+4. run the required activation and installed lifecycle proofs, including the
+   installed archive localisation smoke proof; and
 5. review the proposed changelog and every synchronized version source.
 
 The main-push quality workflow builds the candidate artifact. The release

@@ -10,4 +10,9 @@
 			<directory suffix="Test.php">tests/Booster/GitHub</directory>
 		</testsuite>
 	</testsuites>
+	<groups>
+		<exclude>
+			<group>published-template-pack</group>
+		</exclude>
+	</groups>
 </phpunit>

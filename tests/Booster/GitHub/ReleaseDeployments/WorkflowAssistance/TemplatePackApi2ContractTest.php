@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePack;
 use Tests\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\Support\TemplatePackApi2Fixture;
@@ -245,6 +246,7 @@ final class TemplatePackApi2ContractTest extends TestCase {
 		);
 	}
 
+	#[Group( 'published-template-pack' )]
 	public function testExactPublishedPackWhenExplicitlySupplied(): void {
 		$path = getenv( 'RAN_TEMPLATE_PACK_ZIP' );
 		if ( ! is_string( $path ) || '' === $path ) {
@@ -271,6 +273,7 @@ final class TemplatePackApi2ContractTest extends TestCase {
 		self::assertNotSame( $plugin['bundle_sha256'], $theme['bundle_sha256'] );
 	}
 
+	#[Group( 'published-template-pack' )]
 	public function testExactHistoricalPublishedApi1PackIsRefusedWhenExplicitlySupplied(): void {
 		$path = getenv( 'RAN_TEMPLATE_PACK_API1_ZIP' );
 		if ( ! is_string( $path ) || '' === $path ) {

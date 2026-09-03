@@ -47,8 +47,6 @@ wordpress="$(cd "$wordpress" && pwd -P)"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 proof="$root/tests/WordPress/localisation-installed-smoke.php"
 fixture_languages="$root/tests/fixtures/i18n"
-plugin_target="$wordpress/wp-content/plugins/ran-booster"
-languages_target="$plugin_target/languages"
 marker="$wordpress/.ran-booster-disposable-test-site"
 fixture_mo="$fixture_languages/ran-booster-fr_FR.mo"
 
@@ -58,6 +56,38 @@ if [[ -L "$wordpress" || -L "$wordpress/wp-content" || -L "$wordpress/wp-content
 fi
 if [[ -L "$marker" || ! -f "$marker" ]] || ! cmp -s "$marker" <(printf '%s\n' 'RAN Booster disposable test site'); then
 	echo "The installed localisation proof requires $marker with the expected disposable-site marker." >&2
+	exit 2
+fi
+runtime="$("$php_bin" "$wp_cli" eval '
+$plugin_file = WP_PLUGIN_DIR . "/ran-booster/ran-booster.php";
+echo wp_json_encode(
+	array(
+		"ABSPATH" => realpath( ABSPATH ),
+		"WP_CONTENT_DIR" => realpath( WP_CONTENT_DIR ),
+		"WP_PLUGIN_DIR" => realpath( WP_PLUGIN_DIR ),
+		"plugin_target" => realpath( WP_PLUGIN_DIR . "/ran-booster" ),
+		"plugin_file" => realpath( $plugin_file ),
+		"plugin_basename" => plugin_basename( $plugin_file ),
+		"active" => in_array( plugin_basename( $plugin_file ), (array) get_option( "active_plugins", array() ), true ),
+	)
+);
+' --path="$wordpress")" || {
+	echo 'The installed localisation proof could not read the disposable WordPress runtime.' >&2
+	exit 2
+}
+runtime_abspath="$(printf '%s' "$runtime" | jq -er '.ABSPATH | strings')" || exit 2
+runtime_content_dir="$(printf '%s' "$runtime" | jq -er '.WP_CONTENT_DIR | strings')" || exit 2
+runtime_plugin_dir="$(printf '%s' "$runtime" | jq -er '.WP_PLUGIN_DIR | strings')" || exit 2
+runtime_plugin_target="$(printf '%s' "$runtime" | jq -er '.plugin_target | strings')" || exit 2
+runtime_plugin_file="$(printf '%s' "$runtime" | jq -er '.plugin_file | strings')" || exit 2
+runtime_plugin_basename="$(printf '%s' "$runtime" | jq -er '.plugin_basename | strings')" || exit 2
+runtime_plugin_active="$(printf '%s' "$runtime" | jq -er '.active == true')" || exit 2
+plugin_target="$runtime_plugin_dir/ran-booster"
+languages_target="$plugin_target/languages"
+
+if [[ "$runtime_abspath" != "$wordpress" || "$runtime_content_dir" != "$wordpress"/* || "$runtime_plugin_dir" != "$runtime_content_dir"/* || "$runtime_content_dir" != "$(cd "$runtime_content_dir" && pwd -P)" || "$runtime_plugin_dir" != "$(cd "$runtime_plugin_dir" && pwd -P)" || "$runtime_plugin_target" != "$plugin_target" || "$runtime_plugin_file" != "$plugin_target/ran-booster.php" || "$runtime_plugin_basename" != 'ran-booster/ran-booster.php' || "$runtime_plugin_active" != 'true' ]] \
+	|| has_symlink_component "$runtime_content_dir" || has_symlink_component "$runtime_plugin_dir" || has_symlink_component "$plugin_target"; then
+	echo 'The installed localisation proof requires the exact active RAN Booster target in the disposable WordPress runtime.' >&2
 	exit 2
 fi
 if [[ -L "$plugin_target" || ! -f "$plugin_target/ran-booster.php" || -L "$languages_target" || ! -f "$languages_target/ran-booster.pot" ]]; then

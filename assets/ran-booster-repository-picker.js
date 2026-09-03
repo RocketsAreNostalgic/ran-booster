@@ -698,7 +698,7 @@
 				'<select id="ran-booster-repository-picker-public-profile" class="ran-booster-repository-picker__public-profile"></select>' +
 				'</div>' +
 				'<div class="notice notice-info inline ran-booster-repository-picker__public-limit-notice" hidden>' +
-				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a> <span></span></p>' +
+				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a></p>' +
 				'</div>' +
 				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label"></label>' +
 				'<div class="ran-booster-repository-picker__public-search-fields">' +
@@ -717,8 +717,11 @@
 			const modeOptions = overlay.querySelectorAll(
 				'.ran-booster-repository-picker__mode'
 			);
-			const limitCopy = overlay.querySelectorAll(
+			const limitCopy = overlay.querySelector(
 				'.ran-booster-repository-picker__public-limit-notice p span'
+			);
+			const credentialsLink = overlay.querySelector(
+				'.ran-booster-repository-picker__public-limit-link'
 			);
 
 			overlay.querySelector(
@@ -768,16 +771,29 @@
 						'ran-booster'
 					);
 				});
-			limitCopy[0].textContent = __(
+			limitCopy.textContent = __(
 				'Anonymous API requests have lower rate limits.',
 				'ran-booster'
 			);
-			overlay.querySelector(
-				'.ran-booster-repository-picker__public-limit-link'
-			).textContent = __('Manage credentials', 'ran-booster');
-			limitCopy[1].textContent = __(
-				'to add a search credential for more reliable repository lookup.',
+			const linkPlaceholder = '__ran_booster_credentials_link__';
+			const credentialsGuidance = sprintf(
+				/* translators: %s: Manage credentials link. */
+				__(
+					'%s to add a search credential for more reliable repository lookup.',
+					'ran-booster'
+				),
+				linkPlaceholder
+			);
+			const [beforeLink, afterLink = ''] =
+				credentialsGuidance.split(linkPlaceholder);
+			credentialsLink.textContent = __(
+				'Manage credentials',
 				'ran-booster'
+			);
+			credentialsLink.replaceWith(
+				document.createTextNode(beforeLink),
+				credentialsLink,
+				document.createTextNode(afterLink)
 			);
 			overlay.querySelector(
 				'.ran-booster-repository-picker__owner-label'

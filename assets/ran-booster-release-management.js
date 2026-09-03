@@ -228,7 +228,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 						);
 				statusMessage = nativeOffer
 					? outcomeMessage
-					: `${outcomeMessage} Refresh releases before installing.`;
+					: sprintf(
+							/* translators: %s: inspected release status. */
+							__(
+								'%s Refresh releases before installing.',
+								'ran-booster'
+							),
+							outcomeMessage
+						);
 			} else if (relationship === 'older') {
 				outcomeMessage = sprintf(
 					/* translators: %s: release version. */

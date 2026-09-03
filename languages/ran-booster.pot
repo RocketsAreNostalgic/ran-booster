@@ -202,8 +202,8 @@ msgstr ""
 #: views/packages/index.php:308
 #: views/packages/index.php:378
 #: views/packages/source-choices.php:27
-#: assets/ran-booster-release-management.js:798
-#: assets/ran-booster-release-management.js:804
+#: assets/ran-booster-release-management.js:805
+#: assets/ran-booster-release-management.js:811
 msgid "Releases"
 msgstr ""
 
@@ -1386,7 +1386,7 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:377
 #: views/packages/edit.php:209
 #: views/packages/index.php:382
-#: assets/ran-booster-release-management.js:725
+#: assets/ran-booster-release-management.js:732
 msgid "provider default"
 msgstr ""
 
@@ -1406,9 +1406,9 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:448
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:774
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:135
-#: assets/ran-booster-release-management.js:409
-#: assets/ran-booster-release-management.js:716
-#: assets/ran-booster-release-management.js:1133
+#: assets/ran-booster-release-management.js:416
+#: assets/ran-booster-release-management.js:723
+#: assets/ran-booster-release-management.js:1140
 msgid "Stable"
 msgstr ""
 
@@ -2102,7 +2102,7 @@ msgid "Choose a repository, then view its eligible published releases."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:135
-#: assets/ran-booster-release-management.js:847
+#: assets/ran-booster-release-management.js:854
 msgid "Choose repository first"
 msgstr ""
 
@@ -2115,12 +2115,12 @@ msgid "Repository subdirectory not supported"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:155
-#: assets/ran-booster-release-management.js:869
+#: assets/ran-booster-release-management.js:876
 msgid "Published releases are not available for this repository provider."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:156
-#: assets/ran-booster-release-management.js:873
+#: assets/ran-booster-release-management.js:880
 msgid "Provider capability unavailable"
 msgstr ""
 
@@ -2372,8 +2372,8 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:279
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:594
-#: assets/ran-booster-release-management.js:820
-#: assets/ran-booster-release-management.js:850
+#: assets/ran-booster-release-management.js:827
+#: assets/ran-booster-release-management.js:857
 msgid "Release candidates appear here"
 msgstr ""
 
@@ -2419,9 +2419,9 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:448
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:774
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:135
-#: assets/ran-booster-release-management.js:408
-#: assets/ran-booster-release-management.js:715
-#: assets/ran-booster-release-management.js:1132
+#: assets/ran-booster-release-management.js:415
+#: assets/ran-booster-release-management.js:722
+#: assets/ran-booster-release-management.js:1139
 msgid "Preview"
 msgstr ""
 
@@ -2490,7 +2490,7 @@ msgid "Retry release check"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:610
-#: assets/ran-booster-release-management.js:1280
+#: assets/ran-booster-release-management.js:1287
 msgid "Published release inspected"
 msgstr ""
 
@@ -3027,7 +3027,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:350
 #: RAN/Admin/WebhookManagement/views/panel.php:39
 #: views/provider.php:211
-#: assets/ran-booster-repository-picker.js:777
+#: assets/ran-booster-repository-picker.js:789
 msgid "Manage credentials"
 msgstr ""
 
@@ -6859,7 +6859,7 @@ msgstr ""
 #. translators: %s is the repository branch name.
 #: views/packages/edit.php:208
 #: views/packages/index.php:381
-#: assets/ran-booster-release-management.js:723
+#: assets/ran-booster-release-management.js:730
 #, php-format,js-format
 msgid "Branch · %s"
 msgstr ""
@@ -7129,7 +7129,7 @@ msgstr ""
 #: views/packages/index.php:153
 #: views/provider.php:470
 #: views/provider.php:490
-#: assets/ran-booster-repository-picker.js:790
+#: assets/ran-booster-repository-picker.js:806
 msgid "Search"
 msgstr ""
 
@@ -7906,7 +7906,7 @@ msgid "Lookup credential"
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:38
-#: assets/ran-booster-repository-picker.js:897
+#: assets/ran-booster-repository-picker.js:913
 msgid "Anonymous"
 msgstr ""
 
@@ -8813,278 +8813,284 @@ msgstr ""
 msgid "Version %s is newer, but it is not the current WordPress update offer."
 msgstr ""
 
+#. translators: %s: inspected release status.
+#: assets/ran-booster-release-management.js:233
+#, js-format
+msgid "%s Refresh releases before installing."
+msgstr ""
+
 #. translators: %s: release version.
-#: assets/ran-booster-release-management.js:235
+#: assets/ran-booster-release-management.js:242
 #, js-format
 msgid "Version %s is older than the installed version."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:244
+#: assets/ran-booster-release-management.js:251
 msgid "Release checked"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:259
+#: assets/ran-booster-release-management.js:266
 msgid "Booster could not check the selected release. Refresh releases and try again."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:265
+#: assets/ran-booster-release-management.js:272
 msgid "Published release could not be inspected"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:269
+#: assets/ran-booster-release-management.js:276
 msgid "The saved package or release may have changed. Refresh and try again."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:294
-#: assets/ran-booster-release-management.js:959
+#: assets/ran-booster-release-management.js:301
+#: assets/ran-booster-release-management.js:966
 msgid "Checking published releases…"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:295
+#: assets/ran-booster-release-management.js:302
 msgid "Reading eligible candidates for this managed package."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:324
+#: assets/ran-booster-release-management.js:331
 msgid "No Preview releases have been published for this package yet."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:328
+#: assets/ran-booster-release-management.js:335
 msgid "No Stable releases have been published for this package yet."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:337
+#: assets/ran-booster-release-management.js:344
 msgid "No published releases found"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:381
+#: assets/ran-booster-release-management.js:388
 msgid "· Latest eligible"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:384
+#: assets/ran-booster-release-management.js:391
 msgid "· Older than installed"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:389
+#: assets/ran-booster-release-management.js:396
 msgid "· Installed/current"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:391
+#: assets/ran-booster-release-management.js:398
 msgid "· Newer than installed"
 msgstr ""
 
 #. translators: 1: release version, 2: release tag, 3: release channel label, 4: release relationship marker.
-#: assets/ran-booster-release-management.js:404
+#: assets/ran-booster-release-management.js:411
 #, js-format
 msgid "%1$s (%2$s) · %3$s%4$s"
 msgstr ""
 
 #. translators: %s: installed package version.
-#: assets/ran-booster-release-management.js:427
+#: assets/ran-booster-release-management.js:434
 #, js-format
 msgid "Installed version: %s"
 msgstr ""
 
 #. translators: %d: number of earlier releases.
-#: assets/ran-booster-release-management.js:439
-#: assets/ran-booster-release-management.js:1152
+#: assets/ran-booster-release-management.js:446
+#: assets/ran-booster-release-management.js:1159
 #, js-format
 msgid "Show %d earlier release"
 msgid_plural "Show %d earlier releases"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/ran-booster-release-management.js:455
+#: assets/ran-booster-release-management.js:462
 msgid "Downgrades are unavailable because package data migrations may not be reversible. For recovery, follow the package-specific instructions or restore a backup."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:471
-#: assets/ran-booster-release-management.js:1190
+#: assets/ran-booster-release-management.js:478
+#: assets/ran-booster-release-management.js:1197
 msgid "Release candidates loaded"
 msgstr ""
 
 #. translators: %d: number of eligible releases.
-#: assets/ran-booster-release-management.js:474
+#: assets/ran-booster-release-management.js:481
 #, js-format
 msgid "%d eligible release found. Inspecting the preferred available release."
 msgid_plural "%d eligible releases found. Inspecting the preferred available release."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/ran-booster-release-management.js:499
+#: assets/ran-booster-release-management.js:506
 msgid "Preview track currently offers only versions older than installed. WordPress Updates will not downgrade this package."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:506
+#: assets/ran-booster-release-management.js:513
 msgid "No current or newer published release found"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:510
+#: assets/ran-booster-release-management.js:517
 msgid "Every available release is older. WordPress Updates will not downgrade this package."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:519
+#: assets/ran-booster-release-management.js:526
 msgid "Booster could not load published releases. The repository provider may be temporarily unavailable or rate-limited. Try again later."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:525
-#: assets/ran-booster-release-management.js:1010
+#: assets/ran-booster-release-management.js:532
+#: assets/ran-booster-release-management.js:1017
 msgid "Published releases could not be checked"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:529
+#: assets/ran-booster-release-management.js:536
 msgid "Booster could not read eligible releases for the saved package."
 msgstr ""
 
 #. translators: %s: selected release channel.
-#: assets/ran-booster-release-management.js:713
+#: assets/ran-booster-release-management.js:720
 #, js-format
 msgid "Releases · %s"
 msgstr ""
 
 #. translators: %s: release availability description.
-#: assets/ran-booster-release-management.js:795
+#: assets/ran-booster-release-management.js:802
 #, js-format
 msgid "Releases unavailable: %s"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:813
+#: assets/ran-booster-release-management.js:820
 msgid "View eligible published releases from this repository."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:817
+#: assets/ran-booster-release-management.js:824
 msgid "Stable by default"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:822
+#: assets/ran-booster-release-management.js:829
 msgid "Select Releases to load stable and preview candidates."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:826
+#: assets/ran-booster-release-management.js:833
 msgid "Select Releases to load eligible stable candidates."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:843
+#: assets/ran-booster-release-management.js:850
 msgid "Choose a repository before selecting this source."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:851
+#: assets/ran-booster-release-management.js:858
 msgid "Choose a repository above to load eligible published releases."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:876
-#: assets/ran-booster-release-management.js:903
+#: assets/ran-booster-release-management.js:883
+#: assets/ran-booster-release-management.js:910
 msgid "Published releases are unavailable"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:877
+#: assets/ran-booster-release-management.js:884
 msgid "This provider does not expose the complete published-release capability. Use Branch tracking for this repository."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:896
-#: assets/ran-booster-release-management.js:904
+#: assets/ran-booster-release-management.js:903
+#: assets/ran-booster-release-management.js:911
 msgid "Published releases require the repository root. Branch supports the configured subdirectory."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:900
+#: assets/ran-booster-release-management.js:907
 msgid "Repository root required"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:945
+#: assets/ran-booster-release-management.js:952
 msgid "Checking the selected repository for stable releases and prereleases…"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:949
+#: assets/ran-booster-release-management.js:956
 msgid "Checking the selected repository for a stable published release…"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:953
+#: assets/ran-booster-release-management.js:960
 msgid "Checking repository…"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:958
+#: assets/ran-booster-release-management.js:965
 msgid "Validating published release…"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:961
+#: assets/ran-booster-release-management.js:968
 msgid "Booster is downloading and validating the exact release ZIP for review. It will be discarded after inspection."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:965
+#: assets/ran-booster-release-management.js:972
 msgid "Booster is checking release metadata without downloading a package."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1014
+#: assets/ran-booster-release-management.js:1021
 msgid "Repository access or the provider may be temporarily unavailable."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1018
+#: assets/ran-booster-release-management.js:1025
 msgid "Booster could not confirm release availability."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1023
+#: assets/ran-booster-release-management.js:1030
 msgid "No eligible stable release or prerelease found"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1027
+#: assets/ran-booster-release-management.js:1034
 msgid "This repository does not publish an eligible stable or preview release."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1031
+#: assets/ran-booster-release-management.js:1038
 msgid "No eligible stable release or prerelease is currently available."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1036
+#: assets/ran-booster-release-management.js:1043
 msgid "No eligible stable published release found"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1040
+#: assets/ran-booster-release-management.js:1047
 msgid "This repository does not publish an eligible stable release."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1044
+#: assets/ran-booster-release-management.js:1051
 msgid "No eligible stable published release is currently available."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1054
+#: assets/ran-booster-release-management.js:1061
 msgid "Branch only"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1055
+#: assets/ran-booster-release-management.js:1062
 msgid "Check failed"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1071
+#: assets/ran-booster-release-management.js:1078
 msgid "The selected release is not an eligible WordPress package. Choose another release."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1075
+#: assets/ran-booster-release-management.js:1082
 msgid "The selected release could not be checked. Choose another release or retry."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1079
+#: assets/ran-booster-release-management.js:1086
 msgid "Choose another"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1082
+#: assets/ran-booster-release-management.js:1089
 msgid "Published release could not be used"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1084
+#: assets/ran-booster-release-management.js:1091
 msgid "The selected release did not pass the package checks. Earlier releases remain available."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1088
+#: assets/ran-booster-release-management.js:1095
 msgid "The selected release could not be checked. Earlier releases remain available."
 msgstr ""
 
 #. translators: 1: release version, 2: release tag, 3: release channel label.
-#: assets/ran-booster-release-management.js:1136
+#: assets/ran-booster-release-management.js:1143
 #, js-format
 msgid "%1$s (%2$s) · %3$s"
 msgstr ""
 
 #. translators: %d: number of eligible published releases.
-#: assets/ran-booster-release-management.js:1170
+#: assets/ran-booster-release-management.js:1177
 #, js-format
 msgid "%d eligible published release found."
 msgid_plural "%d eligible published releases found."
@@ -9092,7 +9098,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of available releases.
-#: assets/ran-booster-release-management.js:1180
+#: assets/ran-booster-release-management.js:1187
 #, js-format
 msgid "%d available"
 msgid_plural "%d available"
@@ -9100,7 +9106,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of eligible releases.
-#: assets/ran-booster-release-management.js:1193
+#: assets/ran-booster-release-management.js:1200
 #, js-format
 msgid "%d eligible release available. Choose one to run its pre-flight checks."
 msgid_plural "%d eligible releases available. Choose one to run its pre-flight checks."
@@ -9108,16 +9114,16 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: inspected release version.
-#: assets/ran-booster-release-management.js:1271
+#: assets/ran-booster-release-management.js:1278
 #, js-format
 msgid "Release %s was inspected and is ready for final acquisition."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1277
+#: assets/ran-booster-release-management.js:1284
 msgid "Inspected"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1281
+#: assets/ran-booster-release-management.js:1288
 msgid "The selected release passed initial inspection. Review the pre-flight checks below before installing."
 msgstr ""
 
@@ -9147,137 +9153,139 @@ msgstr ""
 msgid "Enter the %s to search."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:726
+#: assets/ran-booster-repository-picker.js:729
 msgid "Pick a repository"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:731
+#: assets/ran-booster-repository-picker.js:734
 msgid "Close repository picker"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:737
+#: assets/ran-booster-repository-picker.js:740
 msgid "Repository source"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:739
+#: assets/ran-booster-repository-picker.js:742
 msgid "Public repositories"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:743
+#: assets/ran-booster-repository-picker.js:746
 msgid "Find public repositories by owner using anonymous or saved access."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:749
+#: assets/ran-booster-repository-picker.js:752
 msgid "Public only"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:750
+#: assets/ran-booster-repository-picker.js:753
 msgid "Accessible repositories"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:754
+#: assets/ran-booster-repository-picker.js:757
 msgid "Browse repositories available to a saved access profile."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:760
+#: assets/ran-booster-repository-picker.js:763
 msgid "Saved access required"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:766
+#: assets/ran-booster-repository-picker.js:769
 msgid "Repository access profile"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:771
+#: assets/ran-booster-repository-picker.js:774
 msgid "Anonymous API requests have lower rate limits."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:778
-msgid "to add a search credential for more reliable repository lookup."
+#. translators: %s: Manage credentials link.
+#: assets/ran-booster-repository-picker.js:781
+#, js-format
+msgid "%s to add a search credential for more reliable repository lookup."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:784
+#: assets/ran-booster-repository-picker.js:800
 msgid "Repository owner"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:787
+#: assets/ran-booster-repository-picker.js:803
 msgid "e.g. organisation-or-user"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:793
+#: assets/ran-booster-repository-picker.js:809
 msgid "Filter repository results"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:796
+#: assets/ran-booster-repository-picker.js:812
 msgid "Filter repository results…"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:847
-#: assets/ran-booster-repository-picker.js:914
+#: assets/ran-booster-repository-picker.js:863
+#: assets/ran-booster-repository-picker.js:930
 msgid "Repository credential"
 msgstr ""
 
 #. translators: 1: repository provider label, 2: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:880
+#: assets/ran-booster-repository-picker.js:896
 #, js-format
 msgid "%1$s %2$s"
 msgstr ""
 
 #. translators: 1: provider-specific repository owner label, 2: repository provider label.
-#: assets/ran-booster-repository-picker.js:996
-#: assets/ran-booster-repository-picker.js:1368
+#: assets/ran-booster-repository-picker.js:1012
+#: assets/ran-booster-repository-picker.js:1384
 #, js-format
 msgid "Enter the %1$s to find public repositories on %2$s."
 msgstr ""
 
 #. translators: %s: repository provider label.
-#: assets/ran-booster-repository-picker.js:1020
+#: assets/ran-booster-repository-picker.js:1036
 #, js-format
 msgid "Add a repository access credential for %s to browse accessible repositories."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1053
+#: assets/ran-booster-repository-picker.js:1069
 msgid "This repository provider does not support browsing."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1065
+#: assets/ran-booster-repository-picker.js:1081
 msgid "Loading repositories…"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1110
+#: assets/ran-booster-repository-picker.js:1126
 msgid "The repository provider returned invalid results."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1193
+#: assets/ran-booster-repository-picker.js:1209
 msgid "No repositories are available to the selected access profile."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1199
+#: assets/ran-booster-repository-picker.js:1215
 msgid "No repositories match your filter."
 msgstr ""
 
 #. translators: %s: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:1206
+#: assets/ran-booster-repository-picker.js:1222
 #, js-format
 msgid "No public repositories were found for this %s."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1239
+#: assets/ran-booster-repository-picker.js:1255
 msgid "Private"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1240
+#: assets/ran-booster-repository-picker.js:1256
 msgid "Public"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1352
+#: assets/ran-booster-repository-picker.js:1368
 msgid "Repositories could not be loaded."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1381
+#: assets/ran-booster-repository-picker.js:1397
 msgid "Public repositories could not be loaded. Check the owner name and try again."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1385
+#: assets/ran-booster-repository-picker.js:1401
 msgid "Repositories could not be loaded. Check the selected access profile and try again."
 msgstr ""
 

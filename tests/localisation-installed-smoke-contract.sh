@@ -9,6 +9,7 @@ fail() {
 
 root=$(git rev-parse --show-toplevel)
 script="$root/tests/WordPress/localisation-installed-smoke.sh"
+fake_php="$root/tests/fixtures/localisation-smoke-fake-php.sh"
 TMPDIR=$(CDPATH='' cd -- "${TMPDIR:-/tmp}" && pwd -P)
 temporary_dir=$(mktemp -d "${TMPDIR:-/tmp}/ran-booster-localisation-smoke.XXXXXX")
 trap 'rm -rf "$temporary_dir"' EXIT HUP INT TERM
@@ -26,10 +27,9 @@ run_smoke() {
 	printf '%s\n%s' "$status" "$output"
 }
 
-printf '%s\n' 'RAN Booster disposable test site' > "$wordpress/.ran-booster-disposable-test-site"
 result="$(run_smoke "$wordpress")"
-[[ "${result%%$'\n'*}" == '2' ]] || fail 'the exact marker did not reach the installed-archive gate.'
-[[ "$result" == *'requires a real installed RAN Booster archive'* ]] || fail 'the exact marker was not accepted before the installed-archive gate.'
+[[ "${result%%$'\n'*}" == '2' ]] || fail 'the absent marker did not fail.'
+[[ "$result" == *'expected disposable-site marker'* ]] || fail 'the absent marker reached a later gate.'
 
 printf '%s\n\n' 'RAN Booster disposable test site' > "$wordpress/.ran-booster-disposable-test-site"
 result="$(run_smoke "$wordpress")"
@@ -58,3 +58,37 @@ status=$?
 set -e
 [[ "$status" == '2' ]] || fail 'the missing jq preflight did not fail.'
 [[ "$output" == *'WP-CLI, PHP, and jq are required'* ]] || fail 'the missing jq preflight was unclear.'
+
+runtime_read=$(grep -n 'WP_CONTENT_DIR' "$script" | head -n 1 | cut -d: -f1)
+fixture_copy=$(grep -n 'cp "\$fixture_mo"' "$script" | cut -d: -f1)
+wplang_mutation=$(grep -n 'option update WPLANG\|update_option( "WPLANG"' "$script" | head -n 1 | cut -d: -f1)
+[[ -n "$runtime_read" && -n "$fixture_copy" && -n "$wplang_mutation" ]] \
+	|| fail 'the runtime target safety contract is incomplete.'
+(( runtime_read < fixture_copy && runtime_read < wplang_mutation )) \
+	|| fail 'the runtime target is not validated before fixture or WPLANG mutation.'
+grep -Fq '"ABSPATH" => realpath( ABSPATH )' "$script" \
+	&& grep -Fq '"WP_PLUGIN_DIR" => realpath( WP_PLUGIN_DIR )' "$script" \
+	&& grep -Fq '"active" => in_array' "$script" \
+	&& grep -Fq 'exact active RAN Booster target' "$script" \
+	|| fail 'the smoke script does not read and validate the exact active runtime target.'
+if grep -Fq 'plugin_target="$wordpress/wp-content/plugins/ran-booster"' "$script"; then
+	fail 'the smoke script still hard-codes the default plugin target.'
+fi
+
+fake_php="$temporary_dir/localisation-smoke-fake-php"
+cp "$root/tests/fixtures/localisation-smoke-fake-php.sh" "$fake_php"
+chmod +x "$fake_php"
+custom_content="$temporary_dir/external-content"
+custom_plugins="$custom_content/custom-plugins"
+mkdir -p "$custom_plugins"
+printf '%s\n' 'RAN Booster disposable test site' > "$wordpress/.ran-booster-disposable-test-site"
+runtime=$(jq -cn --arg root "$wordpress" --arg content "$custom_content" --arg plugins "$custom_plugins" '{ABSPATH:$root,WP_CONTENT_DIR:$content,WP_PLUGIN_DIR:$plugins,plugin_target:($plugins + "/ran-booster"),plugin_file:($plugins + "/ran-booster/ran-booster.php"),plugin_basename:"ran-booster/ran-booster.php",active:true}')
+mutation="$temporary_dir/wplang-mutated"
+set +e
+output="$(RAN_BOOSTER_LOCALISATION_TEST_DISPOSABLE=1 RAN_BOOSTER_LOCALISATION_TEST_URL=http://localhost RAN_BOOSTER_WORDPRESS_PATH="$wordpress" WP_CLI_BIN="$fake_php" PHP_BIN="$fake_php" RAN_BOOSTER_LOCALISATION_FAKE_RUNTIME="$runtime" RAN_BOOSTER_LOCALISATION_FAKE_WPLANG_MUTATION="$mutation" "$BASH" "$script" 2>&1)"
+status=$?
+set -e
+[[ "$status" == '2' ]] || fail 'the external custom content directory did not fail.'
+[[ "$output" == *'exact active RAN Booster target'* ]] || fail 'the external custom content directory reached a later gate.'
+[[ ! -e "$mutation" ]] || fail 'the rejected external custom content directory mutated WPLANG.'
+[[ ! -e "$wordpress/wp-content/plugins/ran-booster/languages/ran-booster-fr_FR.mo" ]] || fail 'the rejected custom runtime copied fixtures into the conventional plugin tree.'

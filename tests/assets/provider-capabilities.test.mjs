@@ -11,7 +11,7 @@ const legacySource = fs.readFileSync(
 	'utf8'
 );
 
-function loadFunction(name) {
+function loadFunction(name, dependencies = {}) {
 	const signature = `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
@@ -37,7 +37,10 @@ function loadFunction(name) {
 
 	assert.notEqual(end, -1, `The shared ${name} function must be complete.`);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	return Function(
+		...Object.keys(dependencies),
+		`"use strict"; return (${source.slice(start, end)});`
+	)(...Object.values(dependencies));
 }
 
 function fixture() {
@@ -109,7 +112,9 @@ test('provider switching enables Automatic without changing Manual selection', (
 });
 
 test('provider switching hides the picker without browsing support', () => {
-	const update = loadFunction('updateRepositoryPickerAvailability');
+	const update = loadFunction('updateRepositoryPickerAvailability', {
+		__: (message) => message,
+	});
 	const { button, form } = pickerFixture();
 
 	update(form, { code: 'fixture-provider', browse: false });
@@ -120,7 +125,9 @@ test('provider switching hides the picker without browsing support', () => {
 });
 
 test('provider switching restores the picker for browsing providers', () => {
-	const update = loadFunction('updateRepositoryPickerAvailability');
+	const update = loadFunction('updateRepositoryPickerAvailability', {
+		__: (message) => message,
+	});
 	const { button, form } = pickerFixture();
 
 	button.disabled = true;
@@ -145,7 +152,10 @@ test('public lookup identity stays distinct from the durable package credential'
 	assert.match(source, /loadedPublicLookupProfileId/);
 	assert.match(source, /ran-booster-public-lookup-profile-input/);
 	assert.match(source, /Repository access profile/);
-	assert.match(source, /new window\.Option\('Anonymous', ''\)/);
+	assert.match(
+		source,
+		/new window\.Option\(__\('Anonymous', 'ran-booster'\), ''\)/
+	);
 	assert.doesNotMatch(source, /Use Anonymous for this lookup/);
 	assert.match(
 		source,
@@ -192,7 +202,10 @@ test('public lookup identity stays distinct from the durable package credential'
 });
 
 test('repository filtering preserves the bounded partial-results warning', () => {
-	const status = loadFunction('repositoryResultStatus');
+	const status = loadFunction('repositoryResultStatus', {
+		_n: (single, plural, count) => (count === 1 ? single : plural),
+		sprintf: (message, count) => message.replace('%d', String(count)),
+	});
 	const warning =
 		'Some repositories are shown. The provider request limit was reached.';
 
@@ -200,6 +213,26 @@ test('repository filtering preserves the bounded partial-results warning', () =>
 	assert.equal(status(1, warning), `1 repository. ${warning}`);
 	assert.equal(status(0, ''), '0 repositories');
 	assert.match(source, /repositoryResultStatus\(\s*filtered\.length,/);
+});
+
+test('repository count and accessibility copy use the Core JavaScript catalogue', () => {
+	const translations = {
+		'%d repository': '%d dépôt',
+		'%d repositories': '%d dépôts',
+	};
+	const status = loadFunction('repositoryResultStatus', {
+		_n: (single, plural, count) =>
+			translations[count > 1 ? plural : single],
+		sprintf: (message, count) => message.replace('%d', String(count)),
+	});
+
+	assert.equal(status(1, ''), '1 dépôt');
+	assert.equal(status(3, ''), '3 dépôts');
+	assert.match(
+		source,
+		/\.setAttribute\(\s*'aria-label',\s*__\('Repository source', 'ran-booster'\)\s*\)/
+	);
+	assert.match(source, /__\('Close repository picker', 'ran-booster'\)/);
 });
 
 test('credential editing contains no unreleased legacy-profile branch', () => {

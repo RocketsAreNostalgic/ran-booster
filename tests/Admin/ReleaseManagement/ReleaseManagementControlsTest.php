@@ -99,6 +99,20 @@ final class ReleaseManagementControlsTest extends TestCase {
 
 		self::assertSame( array( 'ran-booster-release-management' ), array_keys( $GLOBALS['ran_booster_release_management_test_scripts'] ?? array() ) );
 		self::assertSame( array( 'ran-booster-release-management' ), array_keys( $GLOBALS['ran_booster_release_management_test_styles'] ?? array() ) );
+		self::assertSame(
+			array( 'ran-booster-packages', 'wp-i18n' ),
+			$GLOBALS['ran_booster_release_management_test_scripts']['ran-booster-release-management']['dependencies']
+		);
+		self::assertSame(
+			array(
+				array(
+					'handle' => 'ran-booster-release-management',
+					'domain' => 'ran-booster',
+					'path'   => dirname( __DIR__, 3 ) . '/languages',
+				),
+			),
+			$GLOBALS['ran_booster_release_management_test_script_translations'] ?? array()
+		);
 		$projection = $GLOBALS['ran_booster_release_management_test_localized']['ran-booster-release-management']['ranBoosterReleaseManagement'] ?? null;
 		self::assertIsArray( $projection );
 		self::assertSame( 'theme', $projection['type'] );

@@ -302,7 +302,7 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 							$releaseRepositoryCount = (int) $repositoryIntegrationSummary['release_repositories'];
 							/* translators: %d is the number of packages using releases. */
 							$releasePackageCountLabel = sprintf( _nx( '%d package', '%d packages', $releasePackageCount, 'Packages using releases', 'ran-booster' ), $releasePackageCount );
-							/* translators: %d is the number of repositories supplying releases. */
+							/* translators: %d is the number of repositories. */
 							$releaseRepositoryLabel  = sprintf( _n( '%d repository', '%d repositories', $releaseRepositoryCount, 'ran-booster' ), $releaseRepositoryCount );
 							$publishedReleaseSummary = true === ( $repositoryIntegrationSummary['release_totals_incomplete'] ?? false )
 								? sprintf(

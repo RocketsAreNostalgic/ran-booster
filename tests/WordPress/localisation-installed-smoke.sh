@@ -58,8 +58,8 @@ fi
 shopt -s nullglob
 json_fixtures=( "$fixture_languages"/ran-booster-fr_FR-*.json )
 shopt -u nullglob
-if [[ ${#json_fixtures[@]} -ne 1 || ! -f "${json_fixtures[0]:-}" ]]; then
-	echo 'The installed localisation proof requires exactly one source-hashed French Jed JSON fixture.' >&2
+if [[ ${#json_fixtures[@]} -ne 6 ]]; then
+	echo 'The installed localisation proof requires one source-hashed French Jed JSON fixture for each translated Core script.' >&2
 	exit 2
 fi
 if [[ "$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != '8.2' ]]; then
@@ -86,7 +86,7 @@ if original_wplang="$("$php_bin" "$wp_cli" option get WPLANG --format=json --pat
 	original_wplang="$(printf '%s' "$original_wplang" | jq -er 'if type == "string" then . else error("WPLANG must be a string") end')"
 fi
 copied_mo=''
-copied_json=''
+copied_json=()
 wplang_changed='false'
 cleanup() {
 	if [[ "$wplang_changed" == 'true' ]]; then
@@ -97,14 +97,19 @@ cleanup() {
 		fi
 	fi
 	[[ -z "$copied_mo" || ! -f "$copied_mo" ]] || rm -f -- "$copied_mo"
-	[[ -z "$copied_json" || ! -f "$copied_json" ]] || rm -f -- "$copied_json"
+	for copied_file in "${copied_json[@]}"; do
+		[[ ! -f "$copied_file" ]] || rm -f -- "$copied_file"
+	done
 }
 trap cleanup EXIT INT TERM
 
 copied_mo="$languages_target/$(basename "$fixture_mo")"
-copied_json="$languages_target/$(basename "${json_fixtures[0]}")"
 cp "$fixture_mo" "$copied_mo"
-cp "${json_fixtures[0]}" "$copied_json"
+for fixture_json in "${json_fixtures[@]}"; do
+	copied_file="$languages_target/$(basename "$fixture_json")"
+	cp "$fixture_json" "$copied_file"
+	copied_json+=( "$copied_file" )
+done
 wplang_changed='true'
 "$php_bin" "$wp_cli" eval '
 add_filter(
@@ -123,4 +128,4 @@ if ( "fr_FR" !== get_option( "WPLANG", "" ) ) {
 ' --path="$wordpress" >/dev/null
 "$php_bin" "$wp_cli" eval-file "$proof" --user=admin --path="$wordpress"
 
-echo 'Installed localisation proof passed: French PHP and Jed translations loaded from the archive fixture.'
+echo 'Installed localisation proof passed: French PHP and all six Jed translations loaded from the archive fixture.'

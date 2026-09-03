@@ -1,5 +1,6 @@
 (function () {
 	'use strict';
+	const { __, _n, sprintf } = wp.i18n;
 
 	const accessSecretToolResets = new WeakMap();
 	const webhookSecretToolResets = new WeakMap();
@@ -828,7 +829,9 @@
 		);
 		const usageKnown = Number.isInteger(usageTotal) && usageTotal >= 0;
 		const inUse = usageKnown && usageTotal > 0;
-		const label = button.getAttribute('data-label') || 'this credential';
+		const label =
+			button.getAttribute('data-label') ||
+			__('this credential', 'ran-booster');
 		const inUseMessage = modal.querySelector(
 			'[data-delete-credential-in-use]'
 		);
@@ -866,16 +869,25 @@
 		form.elements['ran_booster[id]'].value =
 			button.getAttribute('data-id') || '';
 		modal.querySelector('[data-delete-credential-label]').textContent =
-			'“' + label + '”';
+			sprintf(
+				/* translators: %s: credential label. */
+				__('“%s”', 'ran-booster'),
+				label
+			);
 
 		unusedMessage.toggleAttribute('hidden', !usageKnown || inUse);
 		inUseMessage.toggleAttribute('hidden', !inUse);
 		inUseMessage.textContent = inUse
-			? 'This credential is still used by ' +
-				usageTotal +
-				' managed package' +
-				(usageTotal === 1 ? '' : 's') +
-				'. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it.'
+			? sprintf(
+					/* translators: %d: number of managed packages using this credential. */
+					_n(
+						'This credential is still used by %d managed package. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it.',
+						'This credential is still used by %d managed packages. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it.',
+						usageTotal,
+						'ran-booster'
+					),
+					usageTotal
+				)
 			: '';
 		packageList.replaceChildren();
 		if (showPackages) {
@@ -900,11 +912,25 @@
 		form.elements['ran_booster[id]'].value =
 			button.getAttribute('data-id') || '';
 		labelInput.value = button.getAttribute('data-label') || '';
-		modal.querySelector('.ran-booster-dialog__title').textContent =
-			(isEdit ? 'Edit ' : 'Add ') +
-			(modalKind === 'access'
-				? providerLabel + ' repository credential'
-				: 'Push-to-Deploy secret');
+		const credentialType =
+			modalKind === 'access'
+				? sprintf(
+						/* translators: %s: provider label. */
+						__('%s repository credential', 'ran-booster'),
+						providerLabel
+					)
+				: __('Push-to-Deploy secret', 'ran-booster');
+		modal.querySelector('.ran-booster-dialog__title').textContent = isEdit
+			? sprintf(
+					/* translators: %s is the item being edited. */
+					__('Edit %s', 'ran-booster'),
+					credentialType
+				)
+			: sprintf(
+					/* translators: %s: credential type. */
+					__('Add %s', 'ran-booster'),
+					credentialType
+				);
 		modal.querySelector('.ran-booster-secret-input').required = !isEdit;
 
 		if (modalKind === 'access') {
@@ -1020,7 +1046,11 @@
 
 		const option = modal.ownerDocument.createElement('option');
 		option.value = target;
-		option.textContent = target + ' — already configured';
+		option.textContent = sprintf(
+			/* translators: %s: webhook target. */
+			__('%s — already configured', 'ran-booster'),
+			target
+		);
 		option.dataset.webhookProfileId = profileId;
 		group.appendChild(option);
 	}
@@ -1044,7 +1074,8 @@
 		const secretLabel = modal.querySelector('.ran-booster-secret-label');
 
 		secretLabel.textContent =
-			option.getAttribute('data-secret-label') || 'Credential secret';
+			option.getAttribute('data-secret-label') ||
+			__('Credential secret', 'ran-booster');
 		secretInput.placeholder =
 			secretInput.dataset.saved === 'true'
 				? '••••••••••'
@@ -1113,7 +1144,8 @@
 				: -1;
 		}
 		field.querySelector('.ran-booster-webhook-target-label').textContent =
-			option.getAttribute('data-target-label') || 'Target';
+			option.getAttribute('data-target-label') ||
+			__('Target', 'ran-booster');
 		field.querySelector('.ran-booster-webhook-target-help').textContent =
 			option.getAttribute('data-description') || '';
 	}

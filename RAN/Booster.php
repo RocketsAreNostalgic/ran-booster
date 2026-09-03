@@ -546,10 +546,11 @@ class Booster {
 		wp_register_script(
 			'ran-booster-secure-inputs',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-secure-inputs.js',
-			array( 'ran-booster-js' ),
+			array( 'ran-booster-js', 'wp-i18n' ),
 			$secureInputsScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-secure-inputs', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-enhanced-mutations.js',
@@ -561,17 +562,19 @@ class Booster {
 		wp_register_script(
 			'ran-booster-packages',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-packages.js',
-			array( 'ran-booster-enhanced-mutations' ),
+			array( 'ran-booster-enhanced-mutations', 'wp-i18n' ),
 			$packageScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-packages', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-repository-picker',
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-repository-picker.js',
-			array( 'ran-booster-js' ),
+			array( 'ran-booster-js', 'wp-i18n' ),
 			$repositoryPickerScriptVersion,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-repository-picker', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 
 		if ( 'toplevel_page_ran-booster' === $hook || $isTransporterPage ) {
 			$onboardingPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-onboarding.css';
@@ -590,10 +593,11 @@ class Booster {
 				wp_register_script(
 					'ran-booster-portability',
 					trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-portability.js',
-					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
+					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'wp-i18n' ),
 					$portabilityScriptVersion,
 					true
 				);
+				wp_set_script_translations( 'ran-booster-portability', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 				wp_localize_script(
 					'ran-booster-portability',
 					'ranBoosterPortability',

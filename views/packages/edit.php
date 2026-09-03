@@ -218,7 +218,7 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 
 ?>
 <p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $backUrl ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a></p>
-<h2 class="ran-booster-package-settings__heading"><?php echo esc_html( sprintf( /* translators: %s is a package name. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
+<h2 class="ran-booster-package-settings__heading"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
 
 <?php if ( $providerUnavailable ) { ?>
 	<div class="notice notice-error inline">

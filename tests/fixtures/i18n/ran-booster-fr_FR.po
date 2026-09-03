@@ -19,3 +19,36 @@ msgstr "En attente"
 #: assets/ran-booster-enhanced-mutations.js:630
 msgid "We could not complete that request. Please try again."
 msgstr "Nous n’avons pas pu effectuer cette demande. Veuillez réessayer."
+
+#: assets/ran-booster-packages.js
+msgid "Reinstall cancelled."
+msgstr "Réinstallation annulée."
+
+#: assets/ran-booster-portability.js
+msgid "Reviewing blueprint…"
+msgstr "Examen du plan…"
+
+#: assets/ran-booster-portability.js
+msgid "Package apply failed."
+msgstr "L’application du paquet a échoué."
+
+#: assets/ran-booster-release-management.js
+#. translators: %s: release version.
+msgid "Install %s now"
+msgstr "Installer %s maintenant"
+
+#: assets/ran-booster-repository-picker.js
+msgid "Close repository picker"
+msgstr "Fermer le sélecteur de dépôt"
+
+#: assets/ran-booster-repository-picker.js
+#. translators: %d is the number of repositories.
+msgid "%d repository"
+msgid_plural "%d repositories"
+msgstr[0] "%d dépôt"
+msgstr[1] "%d dépôts"
+
+#: assets/ran-booster-secure-inputs.js
+#. translators: %s is the item being added.
+msgid "Add %s"
+msgstr "Ajouter %s"

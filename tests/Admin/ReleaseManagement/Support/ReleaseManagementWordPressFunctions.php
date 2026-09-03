@@ -213,6 +213,12 @@ function wp_enqueue_script( string $handle, string $source = '', array $dependen
 	$GLOBALS['ran_booster_release_management_test_scripts'][ $handle ] = compact( 'source', 'dependencies', 'version', 'footer' );
 }
 
+function wp_set_script_translations( string $handle, string $domain, string $path = '' ): bool {
+	$GLOBALS['ran_booster_release_management_test_script_translations'][] = compact( 'handle', 'domain', 'path' );
+
+	return true;
+}
+
 /** @param list<string> $dependencies */
 function wp_enqueue_style( string $handle, string $source = '', array $dependencies = array(), string|bool|null $version = false ): void {
 	$GLOBALS['ran_booster_release_management_test_styles'][ $handle ] = compact( 'source', 'dependencies', 'version' );

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\AddOn;
 
-require_once __DIR__ . '/../Support/ExternalFixtureAddOnWordPressFunctions.php';
-
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -13,10 +11,17 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminAddOnTab;
 
 final class ExternalFixtureTabAddOnPluginTest extends TestCase {
+	protected function setUp(): void {
+		require_once __DIR__ . '/../Support/ExternalFixtureAddOnWordPressFunctions.php';
+		require_once __DIR__ . '/../Support/ExternalFixtureTabAddOnWordPressFunctions.php';
+	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPluginLoadedBeforeCoreRegistersAndRendersOneTab(): void {
+		$GLOBALS['ran_booster_external_fixture_addon_translations'] = array(
+			'ran-booster-fixture-tab-addon' => array( 'Fixture Tab' => 'Onglet témoin' ),
+		);
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
@@ -26,9 +31,11 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 
 		self::assertInstanceOf( AdminAddOnTab::class, $tab );
 		self::assertSame( 'ran-booster-fixture-tab-addon', $tab->addOnSlug() );
+		self::assertSame( 'fixture-tab', $tab->key() );
+		self::assertSame( 'Onglet témoin', $tab->label() );
 		self::assertSame( array( $tab ), $registry->all() );
 		self::assertSame(
-			'<div id="ran-booster-fixture-tab" data-scope="site" data-url="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-tab">Fixture Tab</div>',
+			'<div id="ran-booster-fixture-tab" data-scope="site" data-url="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-tab">Onglet témoin</div>',
 			$this->render( $registry, $tab )
 		);
 	}

@@ -9,6 +9,16 @@ const source = fs.readFileSync(
 );
 
 function loadFunction(name, dependencies = {}) {
+	const localizedDependencies = {
+		__: (message) => message,
+		sprintf: (template, ...values) => {
+			let index = 0;
+			return template.replace(/%(?:\d+\$)?[ds]/g, () =>
+				String(values[index++])
+			);
+		},
+		...dependencies,
+	};
 	const signature = `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
@@ -35,9 +45,9 @@ function loadFunction(name, dependencies = {}) {
 	assert.notEqual(end, -1, `The ${name} function must be complete.`);
 
 	return Function(
-		...Object.keys(dependencies),
+		...Object.keys(localizedDependencies),
 		`"use strict"; return (${source.slice(start, end)});`
-	)(...Object.values(dependencies));
+	)(...Object.values(localizedDependencies));
 }
 
 function classes(...initial) {

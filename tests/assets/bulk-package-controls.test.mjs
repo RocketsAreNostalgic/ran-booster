@@ -7,7 +7,7 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
-function loadBulkControls() {
+function loadBulkControls(translations = {}) {
 	const signature = '\tfunction initBulkPackageControls() {';
 	const start = source.indexOf(signature);
 
@@ -41,7 +41,32 @@ function loadBulkControls() {
 		'The bulk package controls function must be complete.'
 	);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	const i18n = {
+		__(text) {
+			return translations[text] || text;
+		},
+		_n(singular, plural, count) {
+			return (
+				translations[count === 1 ? singular : plural] ||
+				(count === 1 ? singular : plural)
+			);
+		},
+		sprintf(template, ...values) {
+			let index = 0;
+			return template.replace(/%(?:\d+\$)?[ds]/g, function () {
+				const value = values[index];
+				index += 1;
+				return String(value);
+			});
+		},
+	};
+
+	return Function(
+		'__',
+		'_n',
+		'sprintf',
+		`"use strict"; return (${source.slice(start, end)});`
+	)(i18n.__, i18n._n, i18n.sprintf);
 }
 
 function fixture() {
@@ -293,5 +318,44 @@ test('branch reinstall asks for count-aware confirmation before submitting', () 
 	} finally {
 		delete globalThis.document;
 		delete globalThis.window;
+	}
+});
+
+test('selection status and validation use translated plurals without changing focus', () => {
+	const fixtureState = fixture();
+	fixtureState.packages[1] = checkbox(false);
+	fixtureState.packages[1].form = fixtureState.form.id;
+	globalThis.document = fixtureState.document;
+
+	try {
+		loadBulkControls({
+			'%1$d %2$s selected': '%1$d %2$s sélectionnés',
+			'%1$s. %2$d eligible for branch Reinstall.':
+				'%1$s. %2$d paquets peuvent être réinstallés depuis la branche.',
+			'Select at least one %s.': 'Sélectionnez au moins un %s.',
+			'Reinstall cancelled.': 'Réinstallation annulée.',
+		})();
+		fixtureState.packages[0].checked = true;
+		fixtureState.packages[0].dispatch('change');
+		fixtureState.packages[1].checked = true;
+		fixtureState.packages[1].dispatch('change');
+
+		assert.equal(
+			fixtureState.status.textContent,
+			'2 branch packages sélectionnés. 1 paquets peuvent être réinstallés depuis la branche.'
+		);
+
+		fixtureState.packages.forEach((item) => {
+			item.checked = false;
+		});
+		const event = { preventDefault() {} };
+		fixtureState.listeners.get('form:submit')(event);
+		assert.equal(
+			fixtureState.status.textContent,
+			'Sélectionnez au moins un branch package.'
+		);
+		assert.equal(fixtureState.packages[0].focused, true);
+	} finally {
+		delete globalThis.document;
 	}
 });

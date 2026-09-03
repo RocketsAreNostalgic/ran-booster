@@ -105,7 +105,11 @@ const candidate = (releaseId, version, relationship, publishedAt) => ({
 	prerelease: false,
 });
 
-const createHarness = (responses, nativeOfferReleaseId = 'offer') => {
+const createHarness = (
+	responses,
+	nativeOfferReleaseId = 'offer',
+	translations = {}
+) => {
 	const nodes = new Map();
 	const browser = new Node('section');
 	browser.dataset = {
@@ -159,6 +163,25 @@ const createHarness = (responses, nativeOfferReleaseId = 'offer') => {
 		Date,
 		FormData,
 		URL,
+		wp: {
+			i18n: {
+				__(text) {
+					return translations[text] || text;
+				},
+				_n(singular, plural, count) {
+					const text = count === 1 ? singular : plural;
+					return translations[text] || text;
+				},
+				sprintf(template, ...values) {
+					let index = 0;
+					return template.replace(/%(?:\d+\$)?[ds]/g, function () {
+						const value = values[index];
+						index += 1;
+						return String(value);
+					});
+				},
+			},
+		},
 		document: {
 			querySelector: (selector) =>
 				selector === '[data-ran-booster-managed-release-browser]'

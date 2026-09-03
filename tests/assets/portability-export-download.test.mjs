@@ -7,7 +7,7 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
-function loadFunction(name) {
+function loadFunction(name, translations = {}) {
 	const signature = `\tfunction ${name}()`;
 	const start = source.indexOf(signature);
 
@@ -33,7 +33,10 @@ function loadFunction(name) {
 
 	assert.notEqual(end, -1, `The ${name} function must be complete.`);
 
-	return Function(`"use strict"; return (${source.slice(start, end)});`)();
+	return Function(
+		'__',
+		`"use strict"; return (${source.slice(start, end)});`
+	)((message) => translations[message] || message);
 }
 
 function control() {

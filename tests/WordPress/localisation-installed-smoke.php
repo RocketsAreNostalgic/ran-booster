@@ -19,8 +19,6 @@ $pluginFile             = WP_PLUGIN_DIR . '/ran-booster/ran-booster.php';
 $pluginLanguages        = WP_PLUGIN_DIR . '/ran-booster/languages';
 $disposableMark         = ABSPATH . '.ran-booster-disposable-test-site';
 $expectedPhpTranslation = 'En attente';
-$expectedJsSource       = 'We could not complete that request. Please try again.';
-$expectedJsTranslation  = 'Nous n’avons pas pu effectuer cette demande. Veuillez réessayer.';
 
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Exact disposable marker content.
 $markerContents = file_get_contents( $disposableMark );
@@ -57,21 +55,36 @@ if ( ! is_textdomain_loaded( 'ran-booster' ) || $expectedPhpTranslation !== $php
 $booster              = new RAN\Booster();
 $booster->boosterPath = plugin_dir_path( $pluginFile );
 $booster->boosterUrl  = plugin_dir_url( $pluginFile );
+$booster->loadScripts( 'ran-booster_page_ran-booster-plugins' );
+$_GET['tab'] = 'portability'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route fixture.
 $booster->loadScripts( 'toplevel_page_ran-booster' );
-$scripts        = wp_scripts();
-$handle         = 'ran-booster-enhanced-mutations';
-$registered     = $scripts->registered[ $handle ] ?? null;
-$expectedSource = plugins_url( 'assets/ran-booster-enhanced-mutations.js', $pluginFile );
-$translations   = $scripts->print_translations( $handle, false );
+$_GET = array( 'page' => 'ran-booster-plugins' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route fixture.
+do_action( 'admin_enqueue_scripts', 'ran-booster_page_ran-booster-plugins' );
 
-if ( ! $registered instanceof _WP_Dependency
-	|| $expectedSource !== $registered->src
-	|| ! in_array( 'wp-i18n', $registered->deps, true )
-	|| 'ran-booster' !== $registered->textdomain
-	|| $pluginLanguages !== $registered->translations_path
-	|| ! is_string( $translations )
-	|| ! str_contains( $translations, wp_json_encode( $expectedJsTranslation ) ) ) {
-	throw new RuntimeException( 'The enhanced-mutations script does not expose the expected installed Jed translation API.' );
+$scripts = wp_scripts();
+foreach (
+	array(
+		'ran-booster-enhanced-mutations' => array( 'ran-booster-enhanced-mutations.js', 'Nous n’avons pas pu effectuer cette demande. Veuillez réessayer.' ),
+		'ran-booster-packages'           => array( 'ran-booster-packages.js', 'Réinstallation annulée.' ),
+		'ran-booster-portability'        => array( 'ran-booster-portability.js', 'Examen du plan…' ),
+		'ran-booster-release-management' => array( 'ran-booster-release-management.js', 'Installer %s maintenant' ),
+		'ran-booster-repository-picker'  => array( 'ran-booster-repository-picker.js', 'Fermer le sélecteur de dépôt' ),
+		'ran-booster-secure-inputs'      => array( 'ran-booster-secure-inputs.js', 'Ajouter %s' ),
+	) as $handle => [ $sourceFile, $expectedTranslation ]
+) {
+	$registered     = $scripts->registered[ $handle ] ?? null;
+	$expectedSource = plugins_url( 'assets/' . $sourceFile, $pluginFile );
+	$translations   = $scripts->print_translations( $handle, false );
+
+	if ( ! $registered instanceof _WP_Dependency
+		|| $expectedSource !== $registered->src
+		|| ! in_array( 'wp-i18n', $registered->deps, true )
+		|| 'ran-booster' !== $registered->textdomain
+		|| $pluginLanguages !== $registered->translations_path
+		|| ! is_string( $translations )
+		|| ! str_contains( $translations, wp_json_encode( $expectedTranslation ) ) ) {
+		throw new RuntimeException( sprintf( 'The %s script does not expose its expected installed Jed translation API.', esc_html( $handle ) ) );
+	}
 }
 
-WP_CLI::success( 'Installed French PHP and enhanced-mutations Jed translations passed.' );
+WP_CLI::success( 'Installed French PHP and all six Jed translations passed.' );

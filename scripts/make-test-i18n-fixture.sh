@@ -32,14 +32,25 @@ trap 'rm -rf "$temporary_dir"' EXIT HUP INT TERM
 php -n "$wp_cli" i18n make-mo "$fixture_po" "$temporary_dir/ran-booster-fr_FR.mo"
 php -n "$wp_cli" i18n make-json "$fixture_po" "$temporary_dir" --no-purge
 chmod 0644 "$temporary_dir"/*
+shopt -s nullglob
+temporary_json=( "$temporary_dir"/*.json )
+fixture_json=( "$fixture_dir"/ran-booster-fr_FR-*.json )
+shopt -u nullglob
 
 if [[ "$mode" == '--check' ]]; then
 	cmp -s "$temporary_dir/ran-booster-fr_FR.mo" "$fixture_mo" \
 		|| fail 'the MO fixture is stale; run scripts/make-test-i18n-fixture.sh.'
-	cmp -s "$temporary_dir"/*.json "$fixture_dir"/*.json \
-		|| fail 'the Jed JSON fixture is stale; run scripts/make-test-i18n-fixture.sh.'
+	[[ ${#temporary_json[@]} -eq ${#fixture_json[@]} ]] \
+		|| fail 'the Jed JSON fixture set is stale; run scripts/make-test-i18n-fixture.sh.'
+	for generated_json in "${temporary_json[@]}"; do
+		cmp -s "$generated_json" "$fixture_dir/$(basename "$generated_json")" \
+			|| fail 'a Jed JSON fixture is stale; run scripts/make-test-i18n-fixture.sh.'
+	done
 	exit 0
 fi
 
 mv "$temporary_dir/ran-booster-fr_FR.mo" "$fixture_mo"
-mv "$temporary_dir"/*.json "$fixture_dir/"
+for existing_json in "${fixture_json[@]}"; do
+	rm -f -- "$existing_json"
+done
+mv "${temporary_json[@]}" "$fixture_dir/"

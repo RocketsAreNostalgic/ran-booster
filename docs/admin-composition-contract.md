@@ -255,6 +255,11 @@ then seals the registry. It rejects unsafe or duplicate keys, more than one tab
 from the same add-on, late registration, incompatible API bounds and requests
 for undeclared facades. Registered tabs appear after Core and provider tabs.
 
+An add-on translates its visible tab label and rendered markup through its own
+text domain before it registers or renders them. Core projects that already
+localized display data and retains its own escaping boundaries; it never passes
+add-on copy through the `ran-booster` domain.
+
 When selected, Core creates an immutable `AdminAddOnContext` only after the
 `manage_options` check. The context supplies the tab key, canonical Booster
 URL, `site` or `network` administration scope, Core/Add-on API versions,

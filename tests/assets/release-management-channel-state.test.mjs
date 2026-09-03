@@ -54,15 +54,16 @@ test('client hydration normalizes the release source label', () => {
 	);
 	assert.match(
 		declaration('setChoiceState'),
-		/setText\(choiceHeading, 'Releases'\);/
+		/setText\(choiceHeading, wp\.i18n\.__\(\'Releases\', \'ran-booster\'\)\);/
 	);
-	assert.match(
-		declaration('setChoiceState'),
-		/`Releases unavailable: \$\{description\}`[\s\S]*: 'Releases'/
+	assert.ok(
+		declaration('setChoiceState').includes(
+			"__('Releases unavailable: %s', 'ran-booster')"
+		)
 	);
 	assert.match(
 		declaration('updateAdvancedSummary'),
-		/advancedSummary\.textContent = `Releases · \$\{/
+		/advancedSummary\.textContent = wp\.i18n\.sprintf\([\s\S]*Releases · %s/
 	);
 	assert.match(
 		declaration('showIdle'),
@@ -205,6 +206,7 @@ test('loading candidates preserves provider order and uses the shared disclosure
 		'install',
 		'details',
 		'inspectRelease',
+		'wp',
 		`"use strict";
 		let requestSequence = 0;
 		let selectedRelease = null;
@@ -226,6 +228,24 @@ test('loading candidates preserves provider order and uses the shared disclosure
 		{ hidden: false },
 		() => {
 			inspectCalls += 1;
+		},
+		{
+			i18n: {
+				__(text) {
+					return text;
+				},
+				_n(singular, plural, count) {
+					return count === 1 ? singular : plural;
+				},
+				sprintf(template, ...values) {
+					let index = 0;
+					return template.replace(/%(?:\d+\$)?[ds]/g, function () {
+						const value = values[index];
+						index += 1;
+						return String(value);
+					});
+				},
+			},
 		}
 	);
 	const harness = createHarness;

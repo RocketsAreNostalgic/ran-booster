@@ -364,10 +364,11 @@ final class ReleaseManagementControls {
 		wp_enqueue_script(
 			'ran-booster-release-management',
 			plugins_url( 'assets/ran-booster-release-management.js', $pluginRoot . '/ran-booster.php' ),
-			array( 'ran-booster-packages' ),
+			array( 'ran-booster-packages', 'wp-i18n' ),
 			is_file( $scriptPath ) ? (string) filemtime( $scriptPath ) : '1',
 			true
 		);
+		wp_set_script_translations( 'ran-booster-release-management', 'ran-booster', $pluginRoot . '/languages' );
 		if ( in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true ) ) {
 			wp_enqueue_style( 'ran-booster-release-management', plugins_url( 'assets/ran-booster-release-management.css', $pluginRoot . '/ran-booster.php' ), array( 'ran-booster-styles' ), is_file( $assetRoot . '/ran-booster-release-management.css' ) ? (string) filemtime( $assetRoot . '/ran-booster-release-management.css' ) : '1' );
 			return;

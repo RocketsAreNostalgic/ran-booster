@@ -9,7 +9,8 @@ fail() {
 
 root=$(git rev-parse --show-toplevel)
 script="$root/tests/WordPress/localisation-installed-smoke.sh"
-temporary_dir=$(mktemp -d /private/tmp/ran-booster-localisation-smoke.XXXXXX)
+TMPDIR=$(CDPATH='' cd -- "${TMPDIR:-/tmp}" && pwd -P)
+temporary_dir=$(mktemp -d "${TMPDIR:-/tmp}/ran-booster-localisation-smoke.XXXXXX")
 trap 'rm -rf "$temporary_dir"' EXIT HUP INT TERM
 wordpress="$temporary_dir/wordpress"
 mkdir -p "$wordpress/wp-content/plugins"

@@ -25,10 +25,9 @@ foreach ( array( $site, WP_CONTENT_DIR, WP_PLUGIN_DIR, get_theme_root(), WP_PLUG
 }
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/theme.php';
-require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 global $wp_filesystem;
-$assert( WP_Filesystem() && $wp_filesystem instanceof WP_Filesystem_Direct, 'Public release proof requires the direct WordPress filesystem.' );
+$assert( ! defined( 'FS_METHOD' ) && ! isset( $wp_filesystem ), 'Public release proof requires an unconfigured direct WordPress filesystem.' );
 $container = require __DIR__ . '/core-container-fixture.php';
 $facade = $container->make( ProspectiveReleaseFacade::class );
 $plugins = $container->make( PluginRepository::class );
@@ -97,6 +96,7 @@ try {
 		$before = $counts;
 		$list = $facade->listCandidates( $type, $request, 'stable', $nonce( 'list_candidates' ) );
 		$successful( $list, 'release_candidates_available' );
+		$assert( $wp_filesystem instanceof WP_Filesystem_Direct, 'Core did not establish the direct WordPress filesystem for release operations.' );
 		$assert( '42' === ( $list->data()['candidates'][0]['release_id'] ?? null ) && $counts['zip'] === $before['zip'], 'Listing lost exact identity or downloaded a ZIP.' );
 		$inspection = $facade->inspect( $type, $request, '42', 'v2.0.0', 'stable', $nonce( 'inspect' ) );
 		$successful( $inspection, 'release_ready' );

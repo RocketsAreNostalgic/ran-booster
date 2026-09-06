@@ -440,6 +440,9 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		string $channel
 	): RepositoryReleaseCandidateList {
 		try {
+			if ( ! $this->ensureDirectFilesystem() ) {
+				throw new RuntimeException();
+			}
 			$result = $this->releaseSource( $packageType, $repository, $channel )->list();
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'GitHub release candidate listing is unavailable.', 503 );
@@ -492,6 +495,9 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		}
 
 		try {
+			if ( ! $this->ensureDirectFilesystem() ) {
+				throw new RuntimeException();
+			}
 			$result = $this->releaseSource( $packageType, $repository, $channel )->inspect( $providerReleaseId, $tag );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'GitHub release inspection is unavailable.', 503 );
@@ -549,6 +555,9 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		}
 
 		try {
+			if ( ! $this->ensureDirectFilesystem() ) {
+				throw new RuntimeException();
+			}
 			$result = $this->releaseSource( $packageType, $repository, $channel )->acquire( $providerReleaseId, $tag, $expectedFingerprint );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'GitHub release acquisition is unavailable.', 503 );
@@ -755,6 +764,28 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
 		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), 52428800 );
+	}
+
+	private function ensureDirectFilesystem(): bool {
+		if ( ! function_exists( 'get_filesystem_method' ) || ! function_exists( 'WP_Filesystem' ) ) {
+			if ( ! defined( 'ABSPATH' ) ) {
+				return false;
+			}
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		global $wp_filesystem;
+		if ( defined( 'FS_METHOD' ) && 'direct' !== FS_METHOD ) {
+			return false;
+		}
+		if ( $wp_filesystem instanceof \WP_Filesystem_Direct ) {
+			return true;
+		}
+		if ( is_object( $wp_filesystem ) || 'direct' !== get_filesystem_method() ) {
+			return false;
+		}
+
+		return WP_Filesystem() && $wp_filesystem instanceof \WP_Filesystem_Direct;
 	}
 
 	private function success( mixed $result, string $code, string $cleanupStatus ): bool {

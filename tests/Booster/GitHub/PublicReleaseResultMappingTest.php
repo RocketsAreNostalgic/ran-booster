@@ -14,9 +14,14 @@ use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected;
 use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
 final class PublicReleaseResultMappingTest extends TestCase {
+	protected function setUp(): void {
+		NeutralReleaseUpdaterFixtures::reset();
+	}
+
 	public function testMapsPublicSuccessAndAcquiresWithoutAnExtraInspection(): void {
 		$source     = new PublicReleaseSourceFixture(
 			$this->listing(),

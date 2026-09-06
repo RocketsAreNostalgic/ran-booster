@@ -17,6 +17,8 @@ final class NeutralReleaseUpdaterFixtures {
 		$GLOBALS['ran_booster_release_requests']   = array();
 		$GLOBALS['ran_booster_release_responses']  = array();
 		$GLOBALS['ran_booster_release_temp_paths'] = array();
+		$GLOBALS['ran_booster_release_filesystem_method'] = 'direct';
+		unset( $GLOBALS['wp_filesystem'] );
 		$GLOBALS['wp_version']                     = '6.8.0'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Deterministic updater runtime fixture.
 		if ( function_exists( 'do_action' ) ) {
 			do_action( 'after_setup_theme' );

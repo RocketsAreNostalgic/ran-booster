@@ -36,11 +36,19 @@ if ( true !== $selfZip->open( $selfArchive, ZipArchive::CREATE ) ) { throw new R
 $selfZip->addFromString( 'ran-booster/ran-booster.php', "<?php\n/*\nPlugin Name: RAN Booster\nVersion: 2.0.0-beta.1\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/RocketsAreNostalgic/ran-booster\n*/\n" );
 $selfZip->close();
 $archives['RocketsAreNostalgic/ran-booster'] = $selfArchive;
-$counts  = array( 'credentials' => 0, 'http' => 0, 'http_bytes' => 0, 'zip_bytes' => 0, 'zip_count' => 0, 'blocked' => 0 );
+$counts  = array( 'credentials' => 0, 'http' => 0, 'http_bytes' => 0, 'wordpress_org' => 0, 'zip_bytes' => 0, 'zip_count' => 0, 'blocked' => 0 );
 add_filter(
 	'pre_http_request',
 	static function ( mixed $pre, array $args, string $url ) use ( $archives, &$counts ): mixed {
+		$host = parse_url( $url, PHP_URL_HOST );
 		$path = parse_url( $url, PHP_URL_PATH );
+		if ( 'api.wordpress.org' === $host && in_array( $path, array( '/plugins/update-check/1.1/', '/themes/update-check/1.1/' ), true ) ) {
+			++$counts['wordpress_org'];
+			$body = '/plugins/update-check/1.1/' === $path
+				? array( 'plugins' => array(), 'translations' => array(), 'no_update' => array() )
+				: array( 'themes' => array(), 'translations' => array(), 'no_update' => array() );
+			return array( 'body' => wp_json_encode( $body ), 'headers' => array(), 'response' => array( 'code' => 200, 'message' => 'OK' ) );
+		}
 		if ( ! is_string( $path ) || ! str_starts_with( $path, '/repos/ran-booster-c4/' ) && ! str_starts_with( $path, '/repos/RocketsAreNostalgic/ran-booster' ) && ! str_starts_with( $path, '/repositories/' ) ) {
 			++$counts['blocked'];
 			return new WP_Error( 'ran_booster_c4_network_denied' );
@@ -124,8 +132,13 @@ if ( ! is_array( $targets ) || count( $targets ) < count( $items ) ) {
 
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-automatic-updater.php';
+delete_site_transient( 'update_plugins' );
+delete_site_transient( 'update_themes' );
 wp_update_plugins();
 wp_update_themes();
+if ( 2 !== $counts['wordpress_org'] ) {
+	throw new RuntimeException( 'The native lifecycle fixture did not serve both bounded WordPress.org update checks.' );
+}
 $pluginUpdates = get_site_transient( 'update_plugins' );
 $themeUpdates  = get_site_transient( 'update_themes' );
 $active        = 0;
@@ -147,7 +160,7 @@ foreach ( $items as $item ) {
 	}
 	$expectedReleaseId = (string) hexdec( substr( sha1( (string) $item['repository'] ), 0, 6 ) );
 	if ( '2.0.0' !== $status->offeredVersion || ! hash_equals( $expectedReleaseId, $status->candidateProviderReleaseId ) ) {
-		throw new RuntimeException( 'The installed target did not retain its exact native offer identity.' );
+		throw new RuntimeException( 'The installed target did not retain its exact native offer identity: ' . wp_json_encode( array( 'expected_release_id' => $expectedReleaseId, 'offered_version' => $status->offeredVersion, 'candidate_release_id' => $status->candidateProviderReleaseId, 'candidate_code' => $status->candidateCode, 'failure_code' => $status->failureCode, 'counts' => $counts ) ) );
 	}
 	++$active;
 }

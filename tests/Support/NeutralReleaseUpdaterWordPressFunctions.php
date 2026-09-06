@@ -4,8 +4,25 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/WPError.php';
 
-if ( ! defined( 'FS_METHOD' ) ) {
-	define( 'FS_METHOD', 'direct' );
+if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
+	class WP_Filesystem_Direct {}
+}
+
+if ( ! function_exists( 'get_filesystem_method' ) ) {
+	function get_filesystem_method(): string {
+		return $GLOBALS['ran_booster_release_filesystem_method'] ?? 'direct';
+	}
+}
+
+if ( ! function_exists( 'WP_Filesystem' ) ) {
+	function WP_Filesystem(): bool {
+		if ( 'direct' !== get_filesystem_method() ) {
+			return false;
+		}
+		$GLOBALS['wp_filesystem'] = new WP_Filesystem_Direct();
+
+		return true;
+	}
 }
 
 if ( ! function_exists( 'add_action' ) ) {

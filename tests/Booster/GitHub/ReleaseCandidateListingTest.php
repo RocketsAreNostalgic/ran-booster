@@ -86,6 +86,56 @@ final class ReleaseCandidateListingTest extends TestCase {
 		self::assertSame( 'Bearer secret-token', NeutralReleaseUpdaterFixtures::requests()[0][1]['headers']['Authorization'] ?? null );
 	}
 
+	public function testListingInitializesTheUnconfiguredDirectFilesystemBeforeReadingTheRelease(): void {
+		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::listing( array() ) ) );
+		self::assertArrayNotHasKey( 'wp_filesystem', $GLOBALS );
+
+		$result = $this->provider( new RepositoryResolverSecretsStub() )->listReleaseCandidates(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'stable'
+		);
+
+		self::assertSame( array(), $result->candidates );
+		self::assertInstanceOf( \WP_Filesystem_Direct::class, $GLOBALS['wp_filesystem'] );
+	}
+
+	public function testListingRejectsANonDirectFilesystemBeforeCredentialsOrHttp(): void {
+		$GLOBALS['ran_booster_release_filesystem_method'] = 'ftpext';
+		$credentials = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
+
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );
+		try {
+			$this->provider( $credentials )->listReleaseCandidates(
+				'plugin',
+				new RepositoryReference( 'owner/private-example', '123456789', true, 'private-release' ),
+				'stable'
+			);
+		} finally {
+			self::assertSame( array(), $credentials->lookups );
+			self::assertSame( array(), NeutralReleaseUpdaterFixtures::requests() );
+		}
+	}
+
+	public function testListingRejectsACurrentNonDirectFilesystemBeforeCredentialsOrHttp(): void {
+		$GLOBALS['wp_filesystem'] = new \stdClass();
+		$credentials = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
+
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );
+		try {
+			$this->provider( $credentials )->listReleaseCandidates(
+				'plugin',
+				new RepositoryReference( 'owner/private-example', '123456789', true, 'private-release' ),
+				'stable'
+			);
+		} finally {
+			self::assertSame( array(), $credentials->lookups );
+			self::assertSame( array(), NeutralReleaseUpdaterFixtures::requests() );
+		}
+	}
+
 	public function testOperationalListingFailureIsRedacted(): void {
 		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::response( 500, array( 'message' => 'upstream-secret-message' ) ) ) );
 

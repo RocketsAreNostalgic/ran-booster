@@ -102,7 +102,7 @@ final class ReleaseCandidateListingTest extends TestCase {
 
 	public function testListingRejectsANonDirectFilesystemBeforeCredentialsOrHttp(): void {
 		$GLOBALS['ran_booster_release_filesystem_method'] = 'ftpext';
-		$credentials = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
+		$credentials                                      = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );
@@ -119,8 +119,8 @@ final class ReleaseCandidateListingTest extends TestCase {
 	}
 
 	public function testListingRejectsACurrentNonDirectFilesystemBeforeCredentialsOrHttp(): void {
-		$GLOBALS['wp_filesystem'] = new \stdClass();
-		$credentials = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
+		$GLOBALS['wp_filesystem'] = new \stdClass(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only current non-direct filesystem fixture.
+		$credentials              = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );

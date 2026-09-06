@@ -775,7 +775,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		}
 
 		global $wp_filesystem;
-		if ( defined( 'FS_METHOD' ) && 'direct' !== FS_METHOD ) {
+		if ( defined( 'FS_METHOD' ) && 'direct' !== constant( 'FS_METHOD' ) ) {
 			return false;
 		}
 		if ( $wp_filesystem instanceof \WP_Filesystem_Direct ) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/WPError.php';
 
+// phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed, WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid -- Test-only WordPress filesystem API stubs require the WordPress class and function names.
 if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
 	class WP_Filesystem_Direct {}
 }
@@ -19,7 +20,7 @@ if ( ! function_exists( 'WP_Filesystem' ) ) {
 		if ( 'direct' !== get_filesystem_method() ) {
 			return false;
 		}
-		$GLOBALS['wp_filesystem'] = new WP_Filesystem_Direct();
+		$GLOBALS['wp_filesystem'] = new WP_Filesystem_Direct(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only direct filesystem initialization fixture.
 
 		return true;
 	}

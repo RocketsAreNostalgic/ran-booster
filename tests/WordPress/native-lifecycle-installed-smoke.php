@@ -23,6 +23,11 @@ if ( ! is_array( $bootstrapProbe ) || ! isset( $bootstrapProbe['elapsed_ns'], $b
 	|| 0 !== $bootstrapProbe['http'] || 0 !== $bootstrapProbe['zip'] || 0 !== $bootstrapProbe['authorization_headers'] ) {
 	throw new RuntimeException( 'Declaration/activation performed remote or credential-bearing HTTP work.' );
 }
+require_once ABSPATH . 'wp-admin/includes/file.php';
+global $wp_filesystem;
+if ( ! WP_Filesystem() || ! $wp_filesystem instanceof WP_Filesystem_Direct ) {
+	throw new RuntimeException( 'The native lifecycle proof requires the direct WordPress filesystem.' );
+}
 $started = microtime( true );
 $selfArchive = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) . '/ran-booster.zip';
 if ( file_exists( $selfArchive ) || is_link( $selfArchive ) ) { throw new RuntimeException( 'Self-offer archive is not exclusively owned.' ); }
@@ -56,7 +61,7 @@ add_filter(
 		$repositoryPath   = '/repos/' . $repository;
 		$release          = array( 'id' => $releaseId, 'tag_name' => 'v2.0.0', 'draft' => false, 'prerelease' => false, 'immutable' => true, 'published_at' => '2026-09-06T00:00:00Z', 'html_url' => 'https://github.com/' . $repository . '/releases/tag/v2.0.0', 'assets' => array( array( 'id' => $assetId, 'name' => basename( $archive ), 'size' => filesize( $archive ), 'state' => 'uploaded', 'digest' => 'sha256:' . hash_file( 'sha256', $archive ), 'browser_download_url' => 'https://api.github.com' . $repositoryPath . '/releases/assets/' . $assetId ) ) );
 		if ( $self ) { $release['tag_name'] = 'v2.0.0-beta.1'; $release['prerelease'] = true; $release['html_url'] = 'https://github.com/' . $repository . '/releases/tag/v2.0.0-beta.1'; }
-		$repositoryBody    = array( 'id' => $repositoryId, 'name' => basename( $repository ), 'full_name' => $repository, 'private' => false, 'default_branch' => 'main', 'owner' => array( 'login' => 'ran-booster-c4' ) );
+		$repositoryBody    = array( 'id' => $repositoryId, 'name' => basename( $repository ), 'full_name' => $repository, 'private' => false, 'default_branch' => 'main', 'html_url' => 'https://github.com/' . $repository, 'owner' => array( 'login' => $self ? 'RocketsAreNostalgic' : 'ran-booster-c4' ) );
 		$repositoryMatch   = $path === $repositoryPath || $path === '/repositories/' . $repositoryId || str_starts_with( $path, $repositoryPath . '/' );
 		if ( ! $repositoryMatch ) {
 			continue;

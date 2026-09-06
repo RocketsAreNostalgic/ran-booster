@@ -25,7 +25,10 @@ foreach ( array( $site, WP_CONTENT_DIR, WP_PLUGIN_DIR, get_theme_root(), WP_PLUG
 }
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/theme.php';
+require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+global $wp_filesystem;
+$assert( WP_Filesystem() && $wp_filesystem instanceof WP_Filesystem_Direct, 'Public release proof requires the direct WordPress filesystem.' );
 $container = require __DIR__ . '/core-container-fixture.php';
 $facade = $container->make( ProspectiveReleaseFacade::class );
 $plugins = $container->make( PluginRepository::class );

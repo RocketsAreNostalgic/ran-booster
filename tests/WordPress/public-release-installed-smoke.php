@@ -45,8 +45,8 @@ foreach ( array( 'plugin', 'theme' ) as $type ) {
 	$repository = 'ran-booster-c4/' . $slug;
 	$metadata = 'plugin' === $type ? $slug . '.php' : 'style.css';
 	$contents = 'plugin' === $type
-		? "<?php\n/*\nPlugin Name: C4 prospective plugin\nVersion: 2.0.0\nUpdate URI: https://github.com/$repository\n*/\n"
-		: "/*\nTheme Name: C4 prospective theme\nVersion: 2.0.0\nUpdate URI: https://github.com/$repository\n*/\n";
+		? "<?php\n/*\nPlugin Name: C4 prospective plugin\nVersion: 2.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n"
+		: "/*\nTheme Name: C4 prospective theme\nVersion: 2.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n";
 	$archive = $archiveRoot . '/' . $slug . '.zip';
 	$assert( ! file_exists( $archive ) && ! is_link( $archive ), 'Prospective archive already exists.' );
 	$zip = new ZipArchive();

@@ -52,8 +52,8 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	$repository = 'ran-booster-c4/' . $root;
 	$metadata   = 'plugin' === $type ? $root . '.php' : 'style.css';
 	$contents   = 'plugin' === $type
-		? "<?php\n/*\nPlugin Name: C4 $number\nVersion: 1.0.0\nUpdate URI: https://github.com/$repository\n*/\n"
-		: "/*\nTheme Name: C4 $number\nVersion: 1.0.0\nUpdate URI: https://github.com/$repository\n*/\n";
+		? "<?php\n/*\nPlugin Name: C4 $number\nVersion: 1.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n"
+		: "/*\nTheme Name: C4 $number\nVersion: 1.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n";
 	file_put_contents( $directory . '/' . $metadata, $contents );
 	if ( 'theme' === $type ) {
 		file_put_contents( $directory . '/index.php', '<?php' );

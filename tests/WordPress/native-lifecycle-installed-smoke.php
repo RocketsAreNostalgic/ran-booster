@@ -33,7 +33,7 @@ $selfArchive = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) . '/ran-b
 if ( file_exists( $selfArchive ) || is_link( $selfArchive ) ) { throw new RuntimeException( 'Self-offer archive is not exclusively owned.' ); }
 $selfZip = new ZipArchive();
 if ( true !== $selfZip->open( $selfArchive, ZipArchive::CREATE ) ) { throw new RuntimeException( 'Self-offer archive creation failed.' ); }
-$selfZip->addFromString( 'ran-booster/ran-booster.php', "<?php\n/*\nPlugin Name: RAN Booster\nVersion: 2.0.0-beta.1\nUpdate URI: https://github.com/RocketsAreNostalgic/ran-booster\n*/\n" );
+$selfZip->addFromString( 'ran-booster/ran-booster.php', "<?php\n/*\nPlugin Name: RAN Booster\nVersion: 2.0.0-beta.1\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/RocketsAreNostalgic/ran-booster\n*/\n" );
 $selfZip->close();
 $archives['RocketsAreNostalgic/ran-booster'] = $selfArchive;
 $counts  = array( 'credentials' => 0, 'http' => 0, 'http_bytes' => 0, 'zip_bytes' => 0, 'zip_count' => 0, 'blocked' => 0 );
@@ -165,11 +165,32 @@ foreach ( $items as $item ) {
 	if ( ( 'automatic' === $item['policy'] ) !== $automatic ) {
 		throw new RuntimeException( 'The installed native automatic policy was not applied.' );
 	}
-	$result = 'automatic' === $item['policy']
-		? ( new WP_Automatic_Updater() )->update( $type, $offer )
-		: ( 'plugin' === $type
+	if ( 'automatic' === $item['policy'] ) {
+		$result = null;
+		$automaticUpdate = static function () use ( $type, $offer, &$result ): void {
+			$result = ( new WP_Automatic_Updater() )->update( $type, $offer );
+		};
+		$targetContext = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root();
+		$vcsCheckout   = static function ( bool $checkout, string $context ) use ( $targetContext ): bool {
+			return realpath( $context ) === realpath( $targetContext ) ? false : $checkout;
+		};
+		if ( ! WP_Upgrader::create_lock( 'auto_updater' ) ) {
+			throw new RuntimeException( 'The installed native automatic updater lock is unavailable.' );
+		}
+		add_filter( 'automatic_updates_is_vcs_checkout', $vcsCheckout, PHP_INT_MAX, 2 );
+		add_action( 'wp_maybe_auto_update', $automaticUpdate, PHP_INT_MAX );
+		try {
+			do_action( 'wp_maybe_auto_update' );
+		} finally {
+			remove_action( 'wp_maybe_auto_update', $automaticUpdate, PHP_INT_MAX );
+			remove_filter( 'automatic_updates_is_vcs_checkout', $vcsCheckout, PHP_INT_MAX );
+			WP_Upgrader::release_lock( 'auto_updater' );
+		}
+	} else {
+		$result = 'plugin' === $type
 			? ( new Plugin_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $item['identifier'], array( 'clear_update_cache' => false ) )
-			: ( new Theme_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $item['identifier'], array( 'clear_update_cache' => false ) ) );
+			: ( new Theme_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $item['identifier'], array( 'clear_update_cache' => false ) );
+	}
 		if ( true !== $result ) {
 			throw new RuntimeException( 'The installed native ' . $type . ' ' . $item['policy'] . ' update failed.' );
 		}

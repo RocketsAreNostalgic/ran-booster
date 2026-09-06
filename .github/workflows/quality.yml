@@ -496,11 +496,16 @@ jobs:
               | jq -er '
                 [.packages[] | select(.name == "ran/wp-release-updater")] as $packages
                 | if (($packages | length) == 1
-                    and $packages[0].dist.type == "path"
-                    and $packages[0].dist.url == "../ran-wp-release-updater"
+                    and $packages[0].version == "v0.1.0-beta.3"
+                    and $packages[0].source.type == "git"
+                    and $packages[0].source.url == "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git"
+                    and $packages[0].source.reference == "52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                    and $packages[0].dist.type == "zip"
+                    and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                    and $packages[0].dist.reference == $packages[0].source.reference
                     and ($packages[0].dist.reference | type) == "string")
                   then $packages[0].dist.reference
-                  else error("Expected one exact locked neutral updater path package.")
+                  else error("Expected the exact published beta.3 updater source and ZIP distribution.")
                   end
               '
           )"
@@ -680,11 +685,16 @@ jobs:
                     | jq -er '
                       [.packages[] | select(.name == "ran/wp-release-updater")] as $packages
                       | if (($packages | length) == 1
-                          and $packages[0].dist.type == "path"
-                          and $packages[0].dist.url == "../ran-wp-release-updater"
+                          and $packages[0].version == "v0.1.0-beta.3"
+                          and $packages[0].source.type == "git"
+                          and $packages[0].source.url == "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git"
+                          and $packages[0].source.reference == "52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                          and $packages[0].dist.type == "zip"
+                          and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                          and $packages[0].dist.reference == $packages[0].source.reference
                           and ($packages[0].dist.reference | type) == "string")
                         then $packages[0].dist.reference
-                        else error("Expected one exact locked neutral updater path package.")
+                        else error("Expected the exact published beta.3 updater source and ZIP distribution.")
                         end
                     '
                 )"
@@ -1027,11 +1037,11 @@ jobs:
                   $runtime_root = WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater";
                   $copy = json_decode( file_get_contents( $runtime_root . "/runtime-copy.json" ), true, 512, JSON_THROW_ON_ERROR );
                   $expected = array(
-                    "package_revision" => "78baea839384601339be8fbd5bf72ece40897e8847aa980009e04365d28e71c3",
-                    "package_version" => "0.1.0-beta.2",
+                    "package_revision" => "6e305b46ba99898b51bded7266aa9964d88665744928b11162919bf51398ec91",
+                    "package_version" => "0.1.0-beta.3",
                     "php_floor" => "8.2.0",
                     "runtime_file" => "runtime.php",
-                    "runtime_protocol" => 1,
+                    "runtime_protocol" => 3,
                     "wordpress_floor" => "6.5.0",
                   );
                   if ( $copy !== $expected ) {

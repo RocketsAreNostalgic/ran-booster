@@ -19,12 +19,11 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 
 	/** @param string|callable|null $accessToken */
 	public function __construct(
+		private object $registrar,
 		private string $packageType,
 		private string $metadataFile,
 		private string $repository,
 		private string $providerRepositoryId,
-		private string $packageRoot,
-		private string $installedIdentifier,
 		string|callable|null $accessToken,
 		private string $channel,
 		private string $deploymentPolicy
@@ -34,39 +33,29 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			|| ! in_array( $deploymentPolicy, array( 'disabled', 'forced-off', 'manual', 'automatic' ), true ) ) {
 			throw new LogicException( 'The GitHub release native target is incompatible.' );
 		}
-		$this->accessToken = is_string( $accessToken ) || null === $accessToken
-			? $accessToken
-			: Closure::fromCallable( $accessToken );
+		$this->accessToken = is_string( $accessToken )
+			? static fn (): string => $accessToken
+			: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );
 	}
 
 	public function register(): bool {
-		if ( null !== $this->updater ) {
-			return true;
-		}
-
 		try {
-			$binding     = \RAN\WPReleaseUpdater\V1\Contract\BindingRecord::create( $this->bindingFacts() );
-			$credentials = $this->credentials();
-			global $wpdb;
-			if ( ! is_object( $wpdb ) ) {
-				return false;
+			if ( null === $this->updater ) {
+				$method        = 'plugin' === $this->packageType ? 'plugin' : 'theme';
+				$this->updater = $this->registrar->{$method}(
+					'github',
+					$this->metadataFile,
+					$this->repository,
+					$this->providerRepositoryId,
+					$this->channel,
+					$this->deploymentPolicy,
+					$this->accessToken
+				);
 			}
-			$updater = \RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseAdapter::registerFromConfiguration(
-				$this->configuration(),
-				$binding,
-				$credentials,
-				$wpdb,
-				$this->archivePolicy()
-			);
+			return true === $this->updater->register();
 		} catch ( \Throwable ) {
 			return false;
 		}
-		if ( ! is_object( $updater ) ) {
-			return false;
-		}
-		$this->updater = $updater;
-
-		return true;
 	}
 
 	public function status(): RepositoryReleaseNativeTargetStatus {
@@ -74,11 +63,31 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			return new RepositoryReleaseNativeTargetStatus( false );
 		}
 		if ( ! is_callable( array( $this->updater, 'status' ) ) ) {
-			return new RepositoryReleaseNativeTargetStatus( true, failureCode: 'github_updater_status_unavailable' );
+			return new RepositoryReleaseNativeTargetStatus( false, failureCode: 'github_updater_status_unavailable' );
 		}
 
 		try {
-			$status = $this->updater->status();
+			$outer = $this->updater->status();
+			if ( ! is_array( $outer )
+				|| array_keys( $outer ) !== array( 'state', 'declaration_accepted', 'hooks_registered', 'code', 'native' ) ) {
+				throw new LogicException( 'The public updater target status is incompatible.' );
+			}
+			if ( 'active' !== $outer['state']
+				|| true !== $outer['declaration_accepted']
+				|| true !== $outer['hooks_registered']
+				|| 'target_active' !== $outer['code'] ) {
+				if ( 'inactive' === $outer['state'] ) {
+					$code = $this->statusCode( $outer['code'] );
+
+					return new RepositoryReleaseNativeTargetStatus(
+						false,
+						failureCode: '' === $code ? 'github_updater_status_unavailable' : 'github_updater_' . substr( $code, 0, 48 )
+					);
+				}
+
+				return new RepositoryReleaseNativeTargetStatus( false );
+			}
+			$status = $outer['native'];
 			if ( ! is_array( $status )
 				|| array_keys( $status ) !== array(
 					'candidate_tag',
@@ -121,7 +130,7 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 				$candidateHeaderVersion
 			);
 		} catch ( \Throwable ) {
-			return new RepositoryReleaseNativeTargetStatus( true, failureCode: 'github_updater_status_unavailable' );
+			return new RepositoryReleaseNativeTargetStatus( false, failureCode: 'github_updater_status_unavailable' );
 		}
 	}
 
@@ -131,123 +140,10 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 		}
 
 		try {
-			$this->updater->refresh();
+			return true === $this->updater->refresh();
 		} catch ( \Throwable ) {
 			return false;
 		}
-
-		return true;
-	}
-
-	/** @return array<string, string> */
-	private function bindingFacts(): array {
-		$wordpressVersion = $this->wordpressVersion();
-		$uri              = 'https://github.com/' . $this->repository;
-
-		return array(
-			'canonical_repository_locator' => $this->repository,
-			'canonical_update_uri'         => $uri,
-			'installed_package_identity'   => $this->installedIdentifier,
-			'php_runtime_version'          => PHP_VERSION,
-			'provider_code'                => 'github',
-			'release_channel'              => $this->channel,
-			'stable_repository_identity'   => $this->providerRepositoryId,
-			'target_type'                  => $this->packageType,
-			'update_policy'                => $this->deploymentPolicy,
-			'wordpress_runtime_version'    => $wordpressVersion,
-		);
-	}
-
-	/** @return array<string, mixed> */
-	private function configuration(): array {
-		$headers = $this->headers();
-		$uri     = 'https://github.com/' . $this->repository;
-
-		return array(
-			'headers'                    => $headers,
-			'installed_package_identity' => $this->installedIdentifier,
-			'policy'                     => $this->deploymentPolicy,
-			'target_type'                => $this->packageType,
-			'update_uri'                 => $uri,
-		);
-	}
-
-	/** @return array<string, string> */
-	private function archivePolicy(): array {
-		$headers          = $this->headers();
-		$uri              = 'https://github.com/' . $this->repository;
-		$wordpressVersion = $this->wordpressVersion();
-
-		return array(
-			'archive_root'               => $this->packageRoot,
-			'configuration_update_uri'   => $uri,
-			'header_file'                => basename( $this->metadataFile ),
-			'installed_package_identity' => $this->installedIdentifier,
-			'metadata_name'              => $headers['Name'],
-			'offer_update_uri'           => $uri,
-			'php_runtime_version'        => PHP_VERSION,
-			'provider_code'              => 'github',
-			'repository_identity'        => $this->providerRepositoryId,
-			'repository_locator'         => $this->repository,
-			'staged_package_update_uri'  => $uri,
-			'target_type'                => $this->packageType,
-			'wordpress_runtime_version'  => $wordpressVersion,
-		);
-	}
-
-	private function credentials(): ?\RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver {
-		if ( is_callable( $this->accessToken ) ) {
-			return new \RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver( $this->accessToken );
-		}
-		if ( is_string( $this->accessToken ) ) {
-			$accessToken = $this->accessToken;
-
-			return new \RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver( static fn (): string => $accessToken );
-		}
-
-		return null;
-	}
-
-	/** @return array<string, string> */
-	private function headers(): array {
-		if ( ! function_exists( 'get_file_data' ) ) {
-			throw new LogicException( 'The GitHub release native target metadata is unavailable.' );
-		}
-		$values = get_file_data(
-			$this->metadataFile,
-			array(
-				'Author'      => 'Author',
-				'Description' => 'Description',
-				'Name'        => 'theme' === $this->packageType ? 'Theme Name' : 'Plugin Name',
-				'PluginURI'   => 'theme' === $this->packageType ? 'Theme URI' : 'Plugin URI',
-				'RequiresPHP' => 'Requires PHP',
-				'RequiresWP'  => 'Requires at least',
-				'UpdateURI'   => 'Update URI',
-				'Version'     => 'Version',
-			),
-			$this->packageType
-		);
-		if ( ! is_array( $values ) || 8 !== count( $values ) ) {
-			throw new LogicException( 'The GitHub release native target metadata is incompatible.' );
-		}
-
-		foreach ( $values as $value ) {
-			if ( ! is_string( $value ) ) {
-				throw new LogicException( 'The GitHub release native target metadata is incompatible.' );
-			}
-		}
-
-		/** @var array<string, string> $values */
-		return $values;
-	}
-
-	private function wordpressVersion(): string {
-		global $wp_version;
-		if ( ! is_string( $wp_version ) || '' === $wp_version ) {
-			throw new LogicException( 'The GitHub release native target runtime is unavailable.' );
-		}
-
-		return $wp_version;
 	}
 
 	private function candidateCode( mixed $value ): string {

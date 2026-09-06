@@ -7,6 +7,8 @@ namespace Tests\Booster\GitHub;
 require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
@@ -18,6 +20,8 @@ use RuntimeException;
 use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState( false )]
 final class ReleaseCandidateListingTest extends TestCase {
 	protected function setUp(): void {
 		NeutralReleaseUpdaterFixtures::reset();
@@ -86,7 +90,7 @@ final class ReleaseCandidateListingTest extends TestCase {
 		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::response( 500, array( 'message' => 'upstream-secret-message' ) ) ) );
 
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );
+		$this->expectExceptionMessage( 'GitHub returned invalid release candidates.' );
 		$this->provider( new RepositoryResolverSecretsStub() )->listReleaseCandidates(
 			'plugin',
 			new RepositoryReference( 'owner/example', '123456789', false, null ),
@@ -140,7 +144,8 @@ final class ReleaseCandidateListingTest extends TestCase {
 				public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 					return null;
 				}
-			}
+			},
+			NeutralReleaseUpdaterFixtures::registrar()
 		);
 		self::assertInstanceOf( RepositoryReleaseCandidateListing::class, $provider );
 

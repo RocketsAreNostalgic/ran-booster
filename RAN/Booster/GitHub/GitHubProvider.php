@@ -69,9 +69,6 @@ use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SourceReadyAssessor;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;
-use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubCredentialResolver;
-use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseReadUnavailable;
-use RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseService;
 use RuntimeException;
 
 final class GitHubProvider implements RepositoryProvider, RepositoryPathInspector, CredentialValidator, CredentialedPublicRepositoryBrowser, WebhookNormalizerContract, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets, RepositoryReleaseWorkflowManagement {
@@ -88,16 +85,18 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	private Diagnostics $diagnostics;
 	private CredentialPolicy $credentialPolicy;
 	private GitHubRepositoryReleaseWorkflow $releaseWorkflow;
+	private object $registrar;
 
 	/** @var array<string, GitHubReleaseNativeTarget> */
 	private array $nativeTargets = array();
 
-	public static function create( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider {
+	public static function create( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence, object $registrar ): RepositoryProvider {
 		return new self(
 			$credentials,
 			new RepositoryBrowser( $credentials ),
 			new WebhookNormalizer( $credentials, $deliveryEvidence ),
-			new RepositoryWebhookClient()
+			new RepositoryWebhookClient(),
+			$registrar
 		);
 	}
 
@@ -124,7 +123,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		);
 	}
 
-	private function __construct( ProviderCredentialStore $credentials, RepositoryBrowser $browser, WebhookNormalizer $webhooks, RepositoryWebhookClient $webhookClient ) {
+	private function __construct( ProviderCredentialStore $credentials, RepositoryBrowser $browser, WebhookNormalizer $webhooks, RepositoryWebhookClient $webhookClient, object $registrar ) {
+		$this->registrar        = $registrar;
 		$this->credentials      = $credentials;
 		$this->browser          = $browser;
 		$this->webhooks         = $webhooks;
@@ -414,12 +414,11 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		}
 
 		$target = new GitHubReleaseNativeTarget(
+			$this->registrar,
 			$packageType,
 			$metadataFile,
 			$repository->locator,
 			$repositoryId,
-			$packageRoot,
-			$installedIdentifier,
 			$this->releaseAccessToken( $repository ),
 			$channel,
 			$deploymentPolicy
@@ -441,23 +440,21 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		string $channel
 	): RepositoryReleaseCandidateList {
 		try {
-			$service  = $this->releaseService( $packageType, $repository, $channel );
-			$releases = $service->listReleases();
-		} catch ( GitHubReleaseReadUnavailable ) {
-			throw new RepositoryReleaseReadUnavailable( 'GitHub release candidate access is unavailable.', 503 );
+			$result = $this->releaseSource( $packageType, $repository, $channel )->list();
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'GitHub release candidate listing is unavailable.', 503 );
 		}
-		if ( ! empty( $releases['rate_limit']['limited'] ) ) {
+		if ( $this->readUnavailable( $result, 'list' ) ) {
 			throw new RepositoryReleaseReadUnavailable( 'GitHub release candidate access is unavailable.', 502 );
 		}
-		if ( ! is_array( $releases['candidates'] ?? null )
-			|| ! empty( $releases['not_modified'] ) ) {
+		if ( ! $this->success( $result, 'releases_listed', 'not_applicable' )
+			|| ! is_array( $result['value']['candidates'] ?? null )
+			|| ! empty( $result['value']['not_modified'] ) ) {
 			throw new RuntimeException( 'GitHub returned invalid release candidates.', 502 );
 		}
 
 		$candidates = array();
-		foreach ( $releases['candidates'] as $release ) {
+		foreach ( $result['value']['candidates'] as $release ) {
 			if ( ! is_array( $release )
 				|| ! is_string( $release['release_identity'] ?? null )
 				|| ! is_string( $release['tag'] ?? null )
@@ -495,34 +492,34 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		}
 
 		try {
-			$service = $this->releaseService( $packageType, $repository, $channel );
+			$result = $this->releaseSource( $packageType, $repository, $channel )->inspect( $providerReleaseId, $tag );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'GitHub release inspection is unavailable.', 503 );
 		}
-
-		try {
-			$inspection = $service->inspectProspective( $providerReleaseId, $tag );
-		} catch ( InvalidArgumentException ) {
-			throw RepositoryReleaseInspectionRejected::invalidRelease();
-		} catch ( GitHubReleaseReadUnavailable ) {
+		if ( $this->readUnavailable( $result, 'inspect' ) ) {
 			throw new RepositoryReleaseReadUnavailable( 'GitHub release inspection access is unavailable.', 502 );
-		} catch ( RuntimeException $exception ) {
-			if ( 'The GitHub release package is invalid.' === $exception->getMessage() ) {
+		}
+		if ( ! $this->success( $result, 'release_inspected', 'complete' ) || ! is_array( $result['value'] ) ) {
+			if ( $this->failure( $result, 'inspect', 'invalid_release' ) ) {
+				throw RepositoryReleaseInspectionRejected::invalidRelease();
+			}
+			if ( $this->failure( $result, 'inspect', 'package_incompatible' ) ) {
 				throw RepositoryReleaseInspectionRejected::incompatible();
 			}
-
 			throw new RuntimeException( 'GitHub could not inspect the selected release.', 502 );
 		}
-
 		try {
-			$facts = $inspection->toArray();
-			if ( ! hash_equals( $providerReleaseId, $facts['release_identity'] )
-				|| ! hash_equals( $tag, $facts['tag'] )
-				|| ! hash_equals( $packageType, $facts['target_type'] )
-				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ) ) {
+			$facts = $result['value'];
+			if ( ! hash_equals( $providerReleaseId, $facts['release_identity'] ?? '' )
+				|| ! hash_equals( $tag, $facts['tag'] ?? '' )
+				|| ! hash_equals( $packageType, $facts['target_type'] ?? '' )
+				|| ! hash_equals( $channel, $facts['channel'] ?? '' )
+				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
+				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
+				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
+				|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
 				throw new RuntimeException();
 			}
-
 			return new RepositoryReleaseInspection(
 				$facts['release_identity'],
 				$facts['tag'],
@@ -547,53 +544,63 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	): RepositoryReleaseArtifact {
 		if ( ! $this->boundedOpaqueValue( $providerReleaseId, 191 )
 			|| ! $this->boundedOpaqueValue( $tag, 100 )
-			|| 1 !== preg_match( '/\Av1:[a-f0-9]{64}\z/D', $expectedFingerprint ) ) {
+			|| 1 !== preg_match( '/\Av2:[a-f0-9]{64}\z/D', $expectedFingerprint ) ) {
 			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
 		}
 
 		try {
-			$service = $this->releaseService( $packageType, $repository, $channel );
+			$result = $this->releaseSource( $packageType, $repository, $channel )->acquire( $providerReleaseId, $tag, $expectedFingerprint );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'GitHub release acquisition is unavailable.', 503 );
 		}
-
-		try {
-			$inspection = $service->inspectProspective( $providerReleaseId, $tag );
-			if ( ! hash_equals( $expectedFingerprint, $inspection->fingerprintValue() ) ) {
+		if ( is_array( $result ) && 'failed' === ( $result['cleanup_status'] ?? null ) ) {
+			throw RepositoryReleaseAcquisitionRejected::cleanupFailed();
+		}
+		if ( $this->readUnavailable( $result, 'acquire' ) ) {
+			throw new RepositoryReleaseReadUnavailable( 'GitHub release acquisition access is unavailable.', 502 );
+		}
+		if ( ! $this->success( $result, 'release_acquired', 'retained' )
+			|| ! is_array( $result['value'] ?? null )
+			|| array_keys( $result['value'] ) !== array( 'inspection', 'artifact' )
+			|| ! is_array( $result['value']['inspection'] ?? null )
+			|| ! is_object( $result['value']['artifact'] ?? null ) ) {
+			if ( ! $this->discardRejectedArtifact( $result ) ) {
+				throw RepositoryReleaseAcquisitionRejected::cleanupFailed();
+			}
+			if ( $this->failure( $result, 'acquire', 'invalid_release' )
+				|| $this->failure( $result, 'acquire', 'package_incompatible' )
+				|| $this->failure( $result, 'acquire', 'release_changed' ) ) {
 				throw RepositoryReleaseAcquisitionRejected::invalidRelease();
 			}
-			$validated = $service->acquireProspective( $inspection, $expectedFingerprint );
-		} catch ( InvalidArgumentException ) {
-			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
-		} catch ( RepositoryReleaseAcquisitionRejected $exception ) {
-			throw $exception;
-		} catch ( RuntimeException $exception ) {
-			if ( str_contains( $exception->getMessage(), ' changed before acquisition.' ) ) {
-				throw RepositoryReleaseAcquisitionRejected::invalidRelease();
-			}
-
 			throw new RuntimeException( 'GitHub could not acquire the selected release.', 502 );
 		}
-
 		try {
-			$facts = $validated->inspection()->toArray();
+			$facts = $result['value']['inspection'];
 			if ( ! hash_equals( $providerReleaseId, $facts['release_identity'] )
 				|| ! hash_equals( $tag, $facts['tag'] )
 				|| ! hash_equals( $packageType, $facts['target_type'] )
-				|| ! hash_equals( $expectedFingerprint, $facts['fingerprint'] ) ) {
+				|| ! hash_equals( $expectedFingerprint, $facts['fingerprint'] )
+				|| ! hash_equals( $channel, $facts['channel'] ?? '' )
+				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
+				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
+				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
+				|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
 				throw new RuntimeException();
 			}
 
 			return new GitHubReleaseArtifact(
-				$validated,
+				$result['value']['artifact'],
 				$facts['version'],
 				$facts['commit_identity'],
 				$facts['package_root'],
-				$facts['main_file']
+				$facts['main_file'],
+				$facts['artifact_size'],
+				$facts['maximum_artifact_bytes'],
+				$facts['artifact_sha256']
 			);
 		} catch ( \Throwable ) {
 			try {
-				$cleanupFailed = ! $validated->discard();
+				$cleanupFailed = ! $result['value']['artifact']->discard();
 			} catch ( \Throwable ) {
 				$cleanupFailed = true;
 			}
@@ -742,25 +749,49 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		};
 	}
 
-	private function releaseService( string $packageType, RepositoryReference $repository, string $channel ): GitHubReleaseService {
-		global $wp_version;
+	private function releaseSource( string $packageType, RepositoryReference $repository, string $channel ): object {
 		$repositoryId = $repository->providerRepositoryId;
-		if ( null === $repositoryId || ! is_string( $wp_version ) || '' === $wp_version ) {
+		if ( null === $repositoryId ) {
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
-		$credential = $this->releaseAccessToken( $repository );
-		return new GitHubReleaseService(
-			array(
-				'canonical_repository_locator' => $repository->locator,
-				'canonical_update_uri'         => $this->expectedUpdateUri( $repository ),
-				'php_runtime_version'          => PHP_VERSION,
-				'release_channel'              => $channel,
-				'stable_repository_identity'   => $repositoryId,
-				'target_type'                  => $packageType,
-				'wordpress_runtime_version'    => $wp_version,
-			),
-			null === $credential ? null : new GitHubCredentialResolver( $credential )
-		);
+		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), 52428800 );
+	}
+
+	private function success( mixed $result, string $code, string $cleanupStatus ): bool {
+		return is_array( $result ) && array_keys( $result ) === array( 'ok', 'code', 'value', 'retry_after', 'cleanup_status' )
+			&& true === $result['ok'] && $code === $result['code'] && null === $result['retry_after'] && $cleanupStatus === $result['cleanup_status'];
+	}
+
+	private function readUnavailable( mixed $result, string $operation ): bool {
+		return $this->failure( $result, $operation, 'credential_unavailable' )
+			|| $this->failure( $result, $operation, 'repository_access_unavailable' )
+			|| $this->failure( $result, $operation, 'rate_limited' );
+	}
+
+	private function failure( mixed $result, string $operation, string $code ): bool {
+		if ( ! is_array( $result ) || array_keys( $result ) !== array( 'ok', 'code', 'value', 'retry_after', 'cleanup_status' )
+			|| false !== $result['ok'] || $code !== $result['code'] || null !== $result['value']
+			|| ! in_array( $result['cleanup_status'], array( 'not_applicable', 'complete', 'failed' ), true )
+			|| ( 'list' === $operation && 'not_applicable' !== $result['cleanup_status'] )
+			|| 'failed' === $result['cleanup_status'] ) {
+			return false;
+		}
+
+		return 'rate_limited' === $code
+			? ( null === $result['retry_after'] || ( is_int( $result['retry_after'] ) && 1 <= $result['retry_after'] && 86400 >= $result['retry_after'] ) )
+			: null === $result['retry_after'];
+	}
+
+	private function discardRejectedArtifact( mixed $result ): bool {
+		$artifact = is_array( $result ) && is_array( $result['value'] ?? null ) ? $result['value']['artifact'] ?? null : null;
+		if ( ! is_object( $artifact ) || ! method_exists( $artifact, 'discard' ) ) {
+			return true;
+		}
+		try {
+			return true === $artifact->discard();
+		} catch ( \Throwable ) {
+			return false;
+		}
 	}
 
 	private function boundedOpaqueValue( string $value, int $maximumBytes ): bool {

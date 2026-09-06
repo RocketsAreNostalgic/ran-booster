@@ -55,8 +55,8 @@ committed_entries=(
 	'views'
 )
 package_root='vendor/ran/wp-release-updater'
-updater_version='0.1.0-beta.2'
-updater_commit='d1e67116492116b3001d34f4fe40129c13f9cf7e'
+updater_version='v0.1.0-beta.3'
+updater_commit='52078f1f5af2b4b2538f13d5072621df8ac0d562'
 package_entries=(
 	"$package_root/LICENSE"
 	"$package_root/bootstrap.php"
@@ -264,11 +264,14 @@ if ! package_lock_record=$(
 			"ran/wp-release-updater" !== $name
 			|| $argv[2] !== $version
 			|| ! is_array( $dist )
-			|| "path" !== ( $dist["type"] ?? null )
-			|| "../ran-wp-release-updater" !== ( $dist["url"] ?? null )
+			|| "zip" !== ( $dist["type"] ?? null )
+			|| "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/" . $argv[3] !== ( $dist["url"] ?? null )
 			|| ! is_string( $dist["reference"] ?? null )
 			|| ! hash_equals( $argv[3], $dist["reference"] )
-			|| array_key_exists( "source", $package )
+			|| ! is_array( $package["source"] ?? null )
+			|| "git" !== ( $package["source"]["type"] ?? null )
+			|| "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git" !== ( $package["source"]["url"] ?? null )
+			|| ! hash_equals( $argv[3], $package["source"]["reference"] ?? "" )
 			|| ! is_string( $contentHash )
 			|| 1 !== preg_match( "/^[0-9a-f]{32}$/", $contentHash )
 		) {
@@ -277,7 +280,7 @@ if ! package_lock_record=$(
 		echo implode( "\t", array( $name, $version, $dist["reference"] ) );
 	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"
 ); then
-	fail "composer.lock must contain only ran/wp-release-updater $updater_version from ../ran-wp-release-updater at $updater_commit as a production package."
+	fail "composer.lock must contain only ran/wp-release-updater $updater_version at $updater_commit as a production package."
 fi
 IFS=$'\t' read -r package_name package_version package_commit <<< "$package_lock_record"
 

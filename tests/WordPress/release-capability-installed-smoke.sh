@@ -18,6 +18,10 @@ if [[ "${RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL:-}" != 'http://localhost' ]]; t
 	echo 'The installed release-capability proof requires the exact CI site URL.' >&2
 	exit 2
 fi
+if [[ -z "${RUNNER_TEMP:-}" || ! -d "$RUNNER_TEMP" ]]; then
+	echo 'The installed release-capability proof requires CI RUNNER_TEMP.' >&2
+	exit 2
+fi
 if ! command -v "$wp_cli" >/dev/null 2>&1 || ! command -v "$php_bin" >/dev/null 2>&1 || ! command -v zip >/dev/null 2>&1; then
 	echo 'WP-CLI, PHP, and zip are required for the installed release-capability proof.' >&2
 	exit 2
@@ -27,6 +31,8 @@ wp_cli="$(command -v "$wp_cli")"
 wordpress="$(cd "$wordpress" && pwd -P)"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 proof="$root/tests/WordPress/release-capability-installed-smoke.php"
+native_seed="$root/tests/WordPress/native-lifecycle-installed-seed.php"
+native_proof="$root/tests/WordPress/native-lifecycle-installed-smoke.php"
 fixture_source="$root/tests/fixtures/ran-booster-release-capability-provider"
 fixture_target="$wordpress/wp-content/plugins/ran-booster-release-capability-provider"
 plugin_target="$wordpress/wp-content/plugins/ran-booster-p2-fixture-plugin"
@@ -61,8 +67,9 @@ if [[ "$("$php_bin" "$wp_cli" option get siteurl --path="$wordpress")" != "$RAN_
 	exit 2
 fi
 
-archive_root="$(mktemp -d "${RUNNER_TEMP:-/tmp}/ran-booster-release-capability.XXXXXX")"
+archive_root="$(mktemp -d "$RUNNER_TEMP/ran-booster-release-capability.XXXXXX")"
 cleanup() {
+	"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/native-lifecycle-installed-cleanup.php" --user=admin --path="$wordpress" || echo "Native fixture cleanup failed; ownership manifest retained." >&2
 	"$php_bin" "$wp_cli" option delete ran_booster_p2_plugin_archive ran_booster_p2_theme_archive ran_booster_p2_last_artifact --path="$wordpress" >/dev/null 2>&1 || true
 	if [[ -d "$fixture_target" && ! -L "$fixture_target" ]]; then
 		"$php_bin" "$wp_cli" plugin deactivate ran-booster-release-capability-provider --path="$wordpress" >/dev/null 2>&1 || true
@@ -87,6 +94,12 @@ printf '%s\n' '<?php' '// Silence is golden.' > "$archive_root/theme/ran-booster
 
 export RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT="$archive_root"
 "$php_bin" "$wp_cli" eval-file "$proof" --user=admin --path="$wordpress"
+
+for scale in 1 5 10 20; do
+	export RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE="$scale"
+	"$php_bin" "$wp_cli" eval-file "$native_seed" --user=admin --path="$wordpress"
+	"$php_bin" "$wp_cli" eval-file "$native_proof" --user=admin --path="$wordpress"
+done
 
 if [[ -e "$plugin_target" || -L "$plugin_target" || -e "$theme_target" || -L "$theme_target" ]]; then
 	echo 'The installed release-capability proof left a package fixture behind.' >&2

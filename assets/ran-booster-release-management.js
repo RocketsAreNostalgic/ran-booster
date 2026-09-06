@@ -687,7 +687,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			: []
 	);
 	const validFingerprint = (value) =>
-		typeof value === 'string' && /^v1:[a-f0-9]{64}$/.test(value);
+		typeof value === 'string' && /^v2:[a-f0-9]{64}$/.test(value);
 
 	const releaseChannel = () =>
 		channelControl?.querySelector(

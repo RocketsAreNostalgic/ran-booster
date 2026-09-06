@@ -94,7 +94,8 @@ final class GitHubProviderWebhookManagementTest extends TestCase {
 	private function provider( RepositoryResolverSecretsStub $store ): GitHubProvider {
 		$provider = GitHubProvider::create(
 			$store,
-			new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			new \stdClass()
 		);
 		self::assertInstanceOf( GitHubProvider::class, $provider );
 

@@ -7,6 +7,8 @@ namespace Tests\Booster\GitHub;
 require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php';
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
@@ -18,6 +20,8 @@ use RuntimeException;
 use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState( false )]
 final class ReleaseInspectionTest extends TestCase {
 	protected function setUp(): void {
 		NeutralReleaseUpdaterFixtures::reset();
@@ -40,7 +44,7 @@ final class ReleaseInspectionTest extends TestCase {
 		self::assertSame( str_repeat( 'a', 40 ), $result->providerCommitId );
 		self::assertSame( 'example', $result->packageRoot );
 		self::assertSame( 'example.php', $result->mainFile );
-		self::assertMatchesRegularExpression( '/\Av1:[a-f0-9]{64}\z/D', $result->fingerprint );
+		self::assertMatchesRegularExpression( '/\Av2:[a-f0-9]{64}\z/D', $result->fingerprint );
 		self::assertSame( 'https://github.com/owner/example/releases/tag/v1.2.3', $provider->releaseDetailsUrl( $repository, $result->tag ) );
 		foreach ( NeutralReleaseUpdaterFixtures::requests() as $request ) {
 			self::assertStringNotContainsString( sys_get_temp_dir(), $request[0] );
@@ -83,7 +87,7 @@ final class ReleaseInspectionTest extends TestCase {
 		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::response( 500, array( 'message' => 'upstream-secret-message' ) ) ) );
 
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'GitHub could not inspect the selected release.' );
+		$this->expectExceptionMessage( 'The exact repository release could not be inspected.' );
 		$this->provider()->inspectRelease(
 			'plugin',
 			new RepositoryReference( 'owner/example', '123456789', false, null ),
@@ -114,7 +118,8 @@ final class ReleaseInspectionTest extends TestCase {
 				public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 					return null;
 				}
-			}
+			},
+			NeutralReleaseUpdaterFixtures::registrar()
 		);
 		self::assertInstanceOf( GitHubProvider::class, $provider );
 		self::assertInstanceOf( RepositoryReleaseInspector::class, $provider );

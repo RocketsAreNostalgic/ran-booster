@@ -455,6 +455,16 @@ The facet grants no WordPress installation or adoption authority. Core retains
 the updater claim through `PreparedArtifact`, owns installation and installed
 readback, and discards the exact claim after use.
 
+The bundled GitHub provider uses the public beta.3 registrar's `releases()`
+source. It maps operation-specific result envelopes into these existing Core
+contracts; it does not import updater implementation classes. Inspection returns
+an opaque `v2:` fingerprint after discarding its validation archive. Acquisition
+calls `acquire()` once with that fingerprint and freshly obtains the archive.
+Core consumes the retained artifact through public `inspect()` and `discard()`
+methods, creates its existing `PreparedArtifact` during the reader callback,
+and discards the source artifact before installation. Failed cleanup takes
+precedence over the primary acquisition failure and never permits installation.
+
 `RepositoryReleaseNativeTargets` is the exact optional capability for joining
 WordPress's native plugin or theme update flow. Core supplies the resolved
 repository, Core-derived metadata path, installed identity, channel and

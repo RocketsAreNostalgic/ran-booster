@@ -645,7 +645,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	private function validFingerprint( string $fingerprint ): bool {
-		return 1 === preg_match( '/\Av1:[a-f0-9]{64}\z/D', $fingerprint );
+		return 1 === preg_match( '/\Av2:[a-f0-9]{64}\z/D', $fingerprint );
 	}
 
 	private function validChannel( string $channel ): bool {

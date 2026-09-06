@@ -127,30 +127,23 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core always submits its target to the shared updater before `plugins_loaded`.
-That registration is needed so bundled updater copies select one compatible
-runtime deterministically and retain the prospective-release API used by
-managed packages.
+Core loads the released `ran/wp-release-updater` beta.3 bootstrap after its
+single-site admission check and retains the returned public registrar. The
+updater schedules Protocol 3 activation at `after_setup_theme`, priority 100;
+Core does not activate a broker itself. Loading the registrar preserves runtime
+selection and prospective releases even when Core declares no self-update target.
 
-When Core policy disables native discovery, it passes both:
+When Core policy disables native discovery, Core omits its self-target
+declaration. No Core native discovery or installation hooks are registered, and
+no self-update credential or feed request is made. Managed targets retain their
+own declarations and policies.
 
-```php
-autoUpdatePolicy: 'disabled',
-nativeDiscovery: false,
-```
-
-The selected runtime attaches passive
-`inactive / native_discovery_disabled` diagnostics but does not construct
-Core's native updater. It registers no Core self-update discovery, plugin
-information, auto-update, upgrader, completion, notice, refresh, or HTTP work.
-
-The `disabled` automatic-update policy is retained as defence in depth. It must
-not be treated as a substitute for runtime-only mode because disabled policy
-alone can still consume the feed before deciding not to offer the release.
-
-When discovery is enabled, Core retains `forced-off` automatic policy. A newer
-verified public release can appear in WordPress's manual update UI, but Booster
-does not opt itself into unattended installation.
+When discovery is enabled, Core declares the target with the public `manual`
+policy. A newer verified public release may appear in WordPress's manual update
+UI. Automatic installation remains disabled. Core separately rejects bulk
+self-updates, including a bulk operation containing only Booster, at its existing
+pre-download authority fence before repository lookup or lock acquisition.
+The updater's `manual` policy alone does not reject bulk installation.
 
 Managed plugin and theme release targets are separate. Their configured Manual,
 Automatic, or Disabled policies are not changed by the Core self-update mode.

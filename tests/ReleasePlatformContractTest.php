@@ -7,10 +7,10 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleasePlatformContractTest extends TestCase {
-	private const UPDATER_COMMIT  = 'd1e67116492116b3001d34f4fe40129c13f9cf7e';
+	private const UPDATER_COMMIT  = '52078f1f5af2b4b2538f13d5072621df8ac0d562';
 	private const UPDATER_PACKAGE = 'ran/wp-release-updater';
 	private const UPDATER_PATH    = 'vendor/ran/wp-release-updater';
-	private const UPDATER_VERSION = '0.1.0-beta.2';
+	private const UPDATER_VERSION = 'v0.1.0-beta.3';
 
 	public function testComposerDeclaresTheZipRuntimeRequirement(): void {
 		$composer = json_decode(
@@ -31,9 +31,9 @@ final class ReleasePlatformContractTest extends TestCase {
 			self::assertStringContainsString( "updater_version='" . self::UPDATER_VERSION . "'", $script );
 			self::assertStringContainsString( "updater_commit='" . self::UPDATER_COMMIT . "'", $script );
 			self::assertStringContainsString( '"' . self::UPDATER_PACKAGE . '" !==', $script );
-			self::assertStringContainsString( '"../ran-wp-release-updater" !== ( $dist["url"] ?? null )', $script );
+			self::assertStringContainsString( '"zip" !== ( $dist["type"] ?? null )', $script );
 			self::assertStringContainsString( 'hash_equals( $argv[3], $dist["reference"] )', $script );
-			self::assertStringContainsString( 'array_key_exists( "source", $package )', $script );
+			self::assertStringContainsString( '$package["source"]["reference"]', $script );
 			self::assertStringContainsString( 'git -C "$updater_repository" archive "$updater_commit" | tar -xf - -C "$updater_checkout"', $script );
 			self::assertStringNotContainsString( 'ran/wp-github-release-updater', $script );
 		}
@@ -61,10 +61,9 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertIsArray( $package );
 		self::assertSame( self::UPDATER_PACKAGE, $package['name'] ?? null );
 		self::assertSame( self::UPDATER_VERSION, $package['version'] ?? null );
-		self::assertSame( 'path', $package['dist']['type'] ?? null );
-		self::assertSame( '../ran-wp-release-updater', $package['dist']['url'] ?? null );
+		self::assertSame( 'zip', $package['dist']['type'] ?? null );
 		self::assertSame( self::UPDATER_COMMIT, $package['dist']['reference'] ?? null );
-		self::assertArrayNotHasKey( 'source', $package );
+		self::assertSame( self::UPDATER_COMMIT, $package['source']['reference'] ?? null );
 	}
 
 	public function testDisposableLifecycleFixtureUsesTheVendoredUpdatersStableUserAgent(): void {

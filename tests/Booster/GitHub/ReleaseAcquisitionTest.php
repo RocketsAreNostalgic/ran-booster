@@ -7,6 +7,8 @@ namespace Tests\Booster\GitHub;
 require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php';
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Deployment\PreparedArtifact;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
@@ -18,6 +20,8 @@ use RuntimeException;
 use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState( false )]
 final class ReleaseAcquisitionTest extends TestCase {
 	protected function setUp(): void {
 		NeutralReleaseUpdaterFixtures::reset();
@@ -71,7 +75,7 @@ final class ReleaseAcquisitionTest extends TestCase {
 			'stable'
 		);
 
-		self::assertSame( array( 'private-release', 'private-release' ), $credentials->lookups );
+		self::assertSame( array( 'private-release' ), $credentials->lookups );
 		self::assertTrue( $artifact->discard() );
 	}
 
@@ -99,7 +103,7 @@ final class ReleaseAcquisitionTest extends TestCase {
 		$fingerprint = $this->fingerprint( $provider, $repository );
 		NeutralReleaseUpdaterFixtures::queue(
 			array_merge(
-				NeutralReleaseUpdaterFixtures::proof(),
+				array_slice( NeutralReleaseUpdaterFixtures::proof(), 0, 4 ),
 				array( NeutralReleaseUpdaterFixtures::response( 500, array( 'message' => 'upstream-secret-message' ) ) )
 			)
 		);
@@ -108,7 +112,7 @@ final class ReleaseAcquisitionTest extends TestCase {
 			$provider->acquireRelease( 'plugin', $repository, '42', 'v1.2.3', $fingerprint, 'stable' );
 			self::fail( 'Operational acquisition failure must throw.' );
 		} catch ( RuntimeException $exception ) {
-			self::assertSame( 'GitHub could not acquire the selected release.', $exception->getMessage() );
+			self::assertSame( 'The exact repository release could not be acquired.', $exception->getMessage() );
 		}
 		foreach ( $GLOBALS['ran_booster_release_temp_paths'] as $path ) {
 			self::assertFileDoesNotExist( $path );
@@ -128,7 +132,8 @@ final class ReleaseAcquisitionTest extends TestCase {
 				public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 					return null;
 				}
-			}
+			},
+			NeutralReleaseUpdaterFixtures::registrar()
 		);
 		self::assertInstanceOf( GitHubProvider::class, $provider );
 		self::assertInstanceOf( RepositoryReleaseAcquirer::class, $provider );

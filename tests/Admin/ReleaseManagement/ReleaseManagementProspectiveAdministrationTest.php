@@ -57,7 +57,7 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 	}
 
 	public function testListInspectAndFingerprintBoundInstallForwardExactNeutralEvidence(): void {
-		$fingerprint                             = 'v1:' . str_repeat( 'b', 64 );
+		$fingerprint                             = 'v2:' . str_repeat( 'b', 64 );
 		$prospective                             = new ProspectiveReleaseFacadeDouble();
 		$prospective->results['list_candidates'] = ProspectiveReleaseResult::success(
 			'release_candidates_available',
@@ -207,7 +207,7 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		);
 
 		$fingerprintOutcome             = $controls->processProspectiveRequest( 'install', $request );
-		$request['release_fingerprint'] = 'v1:' . str_repeat( 'a', 64 );
+		$request['release_fingerprint'] = 'v2:' . str_repeat( 'a', 64 );
 		$request['release_channel']     = 'nightly';
 		$channelOutcome                 = $controls->processProspectiveRequest( 'install', $request );
 
@@ -393,7 +393,7 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 
 	#[DataProvider( 'installTypes' )]
 	public function testFingerprintBoundInstallHasPluginThemeParity( string $type, string $identifier ): void {
-		$fingerprint                     = 'v1:' . str_repeat( 'c', 64 );
+		$fingerprint                     = 'v2:' . str_repeat( 'c', 64 );
 		$prospective                     = new ProspectiveReleaseFacadeDouble();
 		$prospective->results['install'] = ProspectiveReleaseResult::success(
 			'installed',

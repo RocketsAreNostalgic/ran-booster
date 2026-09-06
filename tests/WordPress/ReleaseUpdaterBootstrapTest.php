@@ -13,19 +13,17 @@ use RAN\WordPress\ReleaseUpdaterBootstrap;
 final class ReleaseUpdaterBootstrapTest extends TestCase {
 
 	#[RunInSeparateProcess]
-	public function testRegistersCandidateBeforeAndActivatesRuntimeAfterPluginsLoaded(): void {
+	public function testReturnsThePublicRegistrarWhichSchedulesActivation(): void {
 		global $wp_version;
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated runtime-selection fixture.
 		$wp_version = '6.8.0';
 
-		ReleaseUpdaterBootstrap::register();
-		$broker = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
+		$registrar = ReleaseUpdaterBootstrap::register();
+		$broker    = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
 
+		self::assertIsObject( $registrar );
 		self::assertIsObject( $broker );
-		self::assertSame( 1, $broker->protocolVersion() );
+		self::assertSame( 3, $broker->protocolVersion() );
 		self::assertSame( 1, $broker->diagnostics()['candidate_count'] );
-		self::assertFalse( $broker->diagnostics()['activation_attempted'] );
-		self::assertTrue( ReleaseUpdaterBootstrap::activate() );
-		self::assertTrue( $broker->diagnostics()['activation_attempted'] );
 	}
 }

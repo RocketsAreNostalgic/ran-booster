@@ -101,7 +101,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertSame( 2, substr_count( $workflow, 'Check out locked neutral updater source' ) );
 		self::assertStringContainsString( 'git show "${source_commit}:composer.lock"', $workflow );
 		self::assertStringContainsString( '.name == "ran/wp-release-updater"', $workflow );
-		self::assertStringContainsString( '.dist.url == "../ran-wp-release-updater"', $workflow );
+		self::assertStringContainsString( '.dist.type == "zip"', $workflow );
 		self::assertStringContainsString( 'updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"', $workflow );
 		self::assertSame( 2, substr_count( $workflow, 'git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"' ) );
 		self::assertStringContainsString( 'test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"', $workflow );
@@ -117,8 +117,8 @@ final class ReleaseWorkflowContractTest extends TestCase {
 
 		self::assertStringContainsString( 'Read back the neutral updater runtime contract', $workflow );
 		self::assertStringContainsString( 'WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater"', $workflow );
-		self::assertStringContainsString( '"package_version" => "0.1.0-beta.2"', $workflow );
-		self::assertStringContainsString( '"runtime_protocol" => 1', $workflow );
+		self::assertStringContainsString( '"package_version" => "0.1.0-beta.3"', $workflow );
+		self::assertStringContainsString( '"runtime_protocol" => 3', $workflow );
 		self::assertStringContainsString( 'RAN\\\\\\\\WPReleaseUpdater\\\\\\\\V1\\\\\\\\WordPress\\\\\\\\NativePluginUpdater', $workflow );
 		self::assertStringNotContainsString( 'ran_booster_release_updater', $workflow );
 		self::assertStringNotContainsString( 'selection_fixed', $workflow );

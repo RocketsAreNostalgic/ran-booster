@@ -127,9 +127,9 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads the released `ran/wp-release-updater` beta.3 bootstrap after its
+Core loads the released `ran/wp-release-updater` beta.4 bootstrap after its
 single-site admission check and retains the returned public registrar. The
-updater schedules Protocol 3 activation at `after_setup_theme`, priority 100;
+updater schedules Protocol 4 activation at `after_setup_theme`, priority 100;
 Core does not activate a broker itself. Loading the registrar preserves runtime
 selection and prospective releases even when Core declares no self-update target.
 

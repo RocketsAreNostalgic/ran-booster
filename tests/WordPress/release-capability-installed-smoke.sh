@@ -33,6 +33,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 proof="$root/tests/WordPress/release-capability-installed-smoke.php"
 native_seed="$root/tests/WordPress/native-lifecycle-installed-seed.php"
 native_proof="$root/tests/WordPress/native-lifecycle-installed-smoke.php"
+public_release_proof="$root/tests/WordPress/public-release-installed-smoke.php"
 fixture_source="$root/tests/fixtures/ran-booster-release-capability-provider"
 fixture_target="$wordpress/wp-content/plugins/ran-booster-release-capability-provider"
 plugin_target="$wordpress/wp-content/plugins/ran-booster-p2-fixture-plugin"
@@ -69,6 +70,7 @@ fi
 
 archive_root="$(mktemp -d "$RUNNER_TEMP/ran-booster-release-capability.XXXXXX")"
 cleanup() {
+	if [[ -n "${probe_target:-}" && -f "$probe_target" && ! -L "$probe_target" ]] && cmp -s "$probe_source" "$probe_target"; then rm -- "$probe_target"; fi
 	"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/native-lifecycle-installed-cleanup.php" --user=admin --path="$wordpress" || echo "Native fixture cleanup failed; ownership manifest retained." >&2
 	"$php_bin" "$wp_cli" option delete ran_booster_p2_plugin_archive ran_booster_p2_theme_archive ran_booster_p2_last_artifact --path="$wordpress" >/dev/null 2>&1 || true
 	if [[ -d "$fixture_target" && ! -L "$fixture_target" ]]; then
@@ -94,12 +96,25 @@ printf '%s\n' '<?php' '// Silence is golden.' > "$archive_root/theme/ran-booster
 
 export RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT="$archive_root"
 "$php_bin" "$wp_cli" eval-file "$proof" --user=admin --path="$wordpress"
+"$php_bin" "$wp_cli" eval-file "$public_release_proof" --user=admin --path="$wordpress"
+
+probe_source="$root/tests/WordPress/native-lifecycle-bootstrap-probe.php"
+probe_target="$wordpress/wp-content/mu-plugins/ran-booster-c4-bootstrap-probe.php"
+if [[ -L "$wordpress/wp-content/mu-plugins" || -e "$probe_target" || -L "$probe_target" ]]; then
+    echo 'Bootstrap probe target is not exclusively owned.' >&2
+    exit 1
+fi
+mkdir -p "$wordpress/wp-content/mu-plugins"
+cp "$probe_source" "$probe_target"
 
 for scale in 1 5 10 20; do
 	export RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE="$scale"
 	"$php_bin" "$wp_cli" eval-file "$native_seed" --user=admin --path="$wordpress"
 	"$php_bin" "$wp_cli" eval-file "$native_proof" --user=admin --path="$wordpress"
 done
+
+cmp "$probe_source" "$probe_target"
+rm -- "$probe_target"
 
 if [[ -e "$plugin_target" || -L "$plugin_target" || -e "$theme_target" || -L "$theme_target" ]]; then
 	echo 'The installed release-capability proof left a package fixture behind.' >&2

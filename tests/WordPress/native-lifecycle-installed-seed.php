@@ -46,7 +46,8 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	if ( ! mkdir( $directory, 0700, true ) ) {
 		throw new RuntimeException( 'The native lifecycle fixture directory is unsafe.' );
 	}
-	$items[] = array( 'number' => $number, 'type' => $type, 'identifier' => $identifier, 'directory' => $directory );
+	$policy  = $number % 4 >= 2 ? 'automatic' : 'manual';
+	$items[] = array( 'number' => $number, 'type' => $type, 'identifier' => $identifier, 'directory' => $directory, 'policy' => $policy );
 	update_option( 'ran_booster_c4_native_items', $items, false );
 	$repository = 'ran-booster-c4/' . $root;
 	$metadata   = 'plugin' === $type ? $root . '.php' : 'style.css';
@@ -56,6 +57,7 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	file_put_contents( $directory . '/' . $metadata, $contents );
 	if ( 'theme' === $type ) {
 		file_put_contents( $directory . '/index.php', '<?php' );
+		file_put_contents( $directory . '/functions.php', "<?php\nthrow new RuntimeException( 'Inactive C4 theme executed.' );\n" );
 	}
 	$archive = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) . '/' . $root . '.zip';
 	$zip     = new ZipArchive();
@@ -66,6 +68,7 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	$zip->addFromString( $root . '/' . $metadata, $updatedContents );
 	if ( 'theme' === $type ) {
 		$zip->addFromString( $root . '/index.php', '<?php' );
+		$zip->addFromString( $root . '/functions.php', "<?php\nthrow new RuntimeException( 'Inactive C4 theme executed.' );\n" );
 	}
 	$zip->close();
 	$configuration = json_encode( array( 'channel' => 'stable', 'package_root' => $root, 'metadata_file' => $metadata ), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
@@ -76,7 +79,7 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 			'repository'             => $repository,
 			'branch'                 => 'main',
 			'type'                   => 'plugin' === $type ? 1 : 2,
-			'deployment_policy'      => 0 === $number % 4 ? 'automatic' : 'manual',
+			'deployment_policy'      => $policy,
 			'source'                 => 'release_asset',
 			'source_revision'        => 1,
 			'provider'               => 'gh',

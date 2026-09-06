@@ -87,7 +87,7 @@ final class ReleaseInspectionTest extends TestCase {
 		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::response( 500, array( 'message' => 'upstream-secret-message' ) ) ) );
 
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'The exact repository release could not be inspected.' );
+		$this->expectExceptionMessage( 'GitHub could not inspect the selected release.' );
 		$this->provider()->inspectRelease(
 			'plugin',
 			new RepositoryReference( 'owner/example', '123456789', false, null ),

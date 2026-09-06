@@ -49,7 +49,7 @@ foreach ( $items as $item ) {
         throw new RuntimeException( 'Native cleanup target is unsafe.' );
     }
     if ( is_dir( $directory ) ) {
-        $expected = 'plugin' === $type ? array( $metadata ) : array( 'style.css', 'index.php' );
+        $expected = 'plugin' === $type ? array( $metadata ) : array( 'style.css', 'index.php', 'functions.php' );
         foreach ( scandir( $directory ) as $entry ) {
             if ( '.' === $entry || '..' === $entry ) { continue; }
             if ( ! in_array( $entry, $expected, true ) || is_link( $directory . '/' . $entry ) || ! is_file( $directory . '/' . $entry ) ) {

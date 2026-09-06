@@ -112,7 +112,7 @@ final class ReleaseAcquisitionTest extends TestCase {
 			$provider->acquireRelease( 'plugin', $repository, '42', 'v1.2.3', $fingerprint, 'stable' );
 			self::fail( 'Operational acquisition failure must throw.' );
 		} catch ( RuntimeException $exception ) {
-			self::assertSame( 'The exact repository release could not be acquired.', $exception->getMessage() );
+			self::assertSame( 'GitHub could not acquire the selected release.', $exception->getMessage() );
 		}
 		foreach ( $GLOBALS['ran_booster_release_temp_paths'] as $path ) {
 			self::assertFileDoesNotExist( $path );

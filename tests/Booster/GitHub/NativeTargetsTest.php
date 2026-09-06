@@ -66,13 +66,14 @@ final class NativeTargetsTest extends TestCase {
 						'hooks_registered'     => true,
 						'code'                 => 'target_active',
 						'native'               => array(
+							'candidate_header_version'  => '1.2.0',
 							'candidate_tag'             => 'v1.2.0',
 							'candidate_validation_code' => 'archive_identity_verified',
 							'candidate_version'         => '1.2.0',
-							'candidate_header_version'  => '1.2.0',
 							'failure_code'              => null,
 							'installed_version'         => '1.0.0',
 							'last_check'                => 1_700_000_000,
+							'offered_release_identity'  => 'provider-release-42',
 							'offered_version'           => '1.2.0',
 							'relationship'              => 'newer',
 						),
@@ -92,6 +93,84 @@ final class NativeTargetsTest extends TestCase {
 		self::assertSame( 'v1.2.0', $status->candidateReleaseTag );
 		self::assertSame( '1.2.0', $status->candidateReleaseVersion );
 		self::assertSame( '1.2.0', $status->candidatePackageHeaderVersion );
+		self::assertSame( 'provider-release-42', $status->candidateProviderReleaseId );
+	}
+
+	public function testNativeOfferRequiresItsOpaqueIdentityAndVersionTogether(): void {
+		foreach ( array(
+			array( 'provider-release-42', null ),
+			array( null, '1.2.0' ),
+			array( "provider\x00release", '1.2.0' ),
+		) as list( $identity, $version ) ) {
+			$target = $this->target( null );
+			( new \ReflectionProperty( GitHubReleaseNativeTarget::class, 'updater' ) )->setValue(
+				$target,
+				new class( $identity, $version ) {
+					public function __construct( private mixed $identity, private mixed $version ) {
+					}
+
+					/** @return array<string, mixed> */
+					public function status(): array {
+						return array(
+							'state'                => 'active',
+							'declaration_accepted' => true,
+							'hooks_registered'     => true,
+							'code'                 => 'target_active',
+							'native'               => array(
+								'offered_version'          => $this->version,
+								'candidate_tag'            => 'v1.2.0',
+								'candidate_header_version' => '1.2.0',
+								'candidate_validation_code' => 'archive_identity_verified',
+								'candidate_version'        => '1.2.0',
+								'failure_code'             => null,
+								'installed_version'        => '1.0.0',
+								'last_check'               => 1_700_000_000,
+								'relationship'             => 'newer',
+								'offered_release_identity' => $this->identity,
+							),
+						);
+					}
+				}
+			);
+
+			self::assertFalse( $target->status()->active );
+			self::assertSame( 'github_updater_status_unavailable', $target->status()->failureCode );
+		}
+	}
+
+	public function testNullNativeOfferProjectsNoIdentity(): void {
+		$target = $this->target( null );
+		( new \ReflectionProperty( GitHubReleaseNativeTarget::class, 'updater' ) )->setValue(
+			$target,
+			new class() {
+				/** @return array<string, mixed> */
+				public function status(): array {
+					return array(
+						'state'                => 'active',
+						'declaration_accepted' => true,
+						'hooks_registered'     => true,
+						'code'                 => 'target_active',
+						'native'               => array(
+							'candidate_header_version'  => null,
+							'candidate_tag'             => null,
+							'candidate_validation_code' => null,
+							'candidate_version'         => null,
+							'failure_code'              => null,
+							'installed_version'         => '1.0.0',
+							'last_check'                => 1_700_000_000,
+							'offered_release_identity'  => null,
+							'offered_version'           => null,
+							'relationship'              => null,
+						),
+					);
+				}
+			}
+		);
+
+		$status = $target->status();
+		self::assertTrue( $status->active );
+		self::assertSame( '', $status->offeredVersion );
+		self::assertSame( '', $status->candidateProviderReleaseId );
 	}
 
 	public function testQueuedAndInactiveNeutralStatesDoNotClaimNativeAuthority(): void {

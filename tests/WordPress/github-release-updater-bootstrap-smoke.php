@@ -50,7 +50,7 @@ $broker     = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
 
 $assert( is_object( $broker ), 'The release updater broker must register before plugins_loaded.' );
 $assert( is_object( $registrar ), 'The release updater must return its public registrar.' );
-$assert( 3 === $broker->protocolVersion(), 'The public registrar must use Protocol 3.' );
+$assert( 4 === $broker->protocolVersion(), 'The public registrar must use Protocol 4.' );
 
 $credentialReads = 0;
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated registration fixture.

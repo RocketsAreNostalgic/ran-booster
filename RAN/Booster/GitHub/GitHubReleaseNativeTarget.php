@@ -89,17 +89,22 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			}
 			$status = $outer['native'];
 			if ( ! is_array( $status )
-				|| array_keys( $status ) !== array(
-					'candidate_tag',
-					'candidate_validation_code',
-					'candidate_version',
-					'candidate_header_version',
-					'failure_code',
-					'installed_version',
-					'last_check',
-					'offered_version',
-					'relationship',
-				) ) {
+				|| count( $status ) !== 10
+				|| array_diff(
+					array_keys( $status ),
+					array(
+						'candidate_header_version',
+						'candidate_tag',
+						'candidate_validation_code',
+						'candidate_version',
+						'failure_code',
+						'installed_version',
+						'last_check',
+						'offered_release_identity',
+						'offered_version',
+						'relationship',
+					)
+				) !== array() ) {
 				throw new LogicException( 'The neutral updater status is incompatible.' );
 			}
 			if ( ! $this->validUpdaterStatus( $status ) ) {
@@ -127,7 +132,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 				$candidateCode,
 				$candidateTag,
 				$candidateVersion,
-				$candidateHeaderVersion
+				$candidateHeaderVersion,
+				$this->statusText( $status['offered_release_identity'], 191 )
 			);
 		} catch ( \Throwable ) {
 			return new RepositoryReleaseNativeTargetStatus( false, failureCode: 'github_updater_status_unavailable' );
@@ -180,6 +186,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			&& ( null === $status['installed_version'] || '' !== $this->statusVersion( $status['installed_version'] ) )
 			&& ( null === $status['last_check'] || ( is_int( $status['last_check'] ) && 0 < $status['last_check'] ) )
 			&& ( null === $status['offered_version'] || '' !== $this->statusVersion( $status['offered_version'] ) )
+			&& ( null === $status['offered_release_identity'] || '' !== $this->statusText( $status['offered_release_identity'], 191 ) )
+			&& ( ( null === $status['offered_version'] ) === ( null === $status['offered_release_identity'] ) )
 			&& ( null === $status['relationship'] || '' !== $this->statusRelationship( $status['relationship'] ) );
 	}
 

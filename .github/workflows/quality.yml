@@ -496,16 +496,16 @@ jobs:
               | jq -er '
                 [.packages[] | select(.name == "ran/wp-release-updater")] as $packages
                 | if (($packages | length) == 1
-                    and $packages[0].version == "v0.1.0-beta.3"
+                    and $packages[0].version == "v0.1.0-beta.4"
                     and $packages[0].source.type == "git"
                     and $packages[0].source.url == "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git"
-                    and $packages[0].source.reference == "52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                    and $packages[0].source.reference == "dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
                     and $packages[0].dist.type == "zip"
-                    and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                    and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
                     and $packages[0].dist.reference == $packages[0].source.reference
                     and ($packages[0].dist.reference | type) == "string")
                   then $packages[0].dist.reference
-                  else error("Expected the exact published beta.3 updater source and ZIP distribution.")
+                  else error("Expected the exact published beta.4 updater source and ZIP distribution.")
                   end
               '
           )"
@@ -685,16 +685,16 @@ jobs:
                     | jq -er '
                       [.packages[] | select(.name == "ran/wp-release-updater")] as $packages
                       | if (($packages | length) == 1
-                          and $packages[0].version == "v0.1.0-beta.3"
+                          and $packages[0].version == "v0.1.0-beta.4"
                           and $packages[0].source.type == "git"
                           and $packages[0].source.url == "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git"
-                          and $packages[0].source.reference == "52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                          and $packages[0].source.reference == "dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
                           and $packages[0].dist.type == "zip"
-                          and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/52078f1f5af2b4b2538f13d5072621df8ac0d562"
+                          and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
                           and $packages[0].dist.reference == $packages[0].source.reference
                           and ($packages[0].dist.reference | type) == "string")
                         then $packages[0].dist.reference
-                        else error("Expected the exact published beta.3 updater source and ZIP distribution.")
+                        else error("Expected the exact published beta.4 updater source and ZIP distribution.")
                         end
                     '
                 )"
@@ -862,7 +862,7 @@ jobs:
                 set -euo pipefail
                 archive="$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"
                 plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
-                expected_root="$RUNNER_TEMP/ran-booster-installed-readback"
+                expected_root="$GITHUB_WORKSPACE/build/ran-booster-installed-readback"
 
                 test "$(wp plugin get ran-booster --field=version --path=build/wordpress)" = '${{ needs.runtime-archive.outputs.version }}'
                 jq -e \
@@ -877,8 +877,8 @@ jobs:
                 mkdir -p "$expected_root"
                 unzip -q "$archive" -d "$expected_root"
                 diff -qr \
-                    "$expected_root/ran-booster/vendor/ran/wp-release-updater" \
-                    "$plugin_root/vendor/ran/wp-release-updater"
+                    "$expected_root/ran-booster" \
+                    "$plugin_root"
 
   wordpress:
       name: WordPress ${{ matrix.wordpress }} / ${{ matrix.database }} / PHP 8.2
@@ -984,7 +984,7 @@ jobs:
 
                 archive="$GITHUB_WORKSPACE/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip"
                 plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
-                expected_root="$RUNNER_TEMP/ran-booster-installed-readback"
+                expected_root="$GITHUB_WORKSPACE/build/ran-booster-installed-readback"
 
                 test "$(wp plugin get ran-booster --field=version --path=build/wordpress)" = '${{ needs.runtime-archive.outputs.version }}'
                 jq -e \
@@ -999,8 +999,8 @@ jobs:
                 mkdir -p "$expected_root"
                 unzip -q "$archive" -d "$expected_root"
                 diff -qr \
-                    "$expected_root/ran-booster/vendor/ran/wp-release-updater" \
-                    "$plugin_root/vendor/ran/wp-release-updater"
+                    "$expected_root/ran-booster" \
+                    "$plugin_root"
 
           - name: Read back the installed GitHub provider contract
             run: wp eval-file "$GITHUB_WORKSPACE/tests/WordPress/github-provider-installed-readback.php" --path=build/wordpress
@@ -1037,11 +1037,11 @@ jobs:
                   $runtime_root = WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater";
                   $copy = json_decode( file_get_contents( $runtime_root . "/runtime-copy.json" ), true, 512, JSON_THROW_ON_ERROR );
                   $expected = array(
-                    "package_revision" => "6e305b46ba99898b51bded7266aa9964d88665744928b11162919bf51398ec91",
-                    "package_version" => "0.1.0-beta.3",
+                    "package_revision" => "c197d9909a774fb089b108c8138ab05c74948e1c71da2b38ccc56f5ff00cfce2",
+                    "package_version" => "0.1.0-beta.4",
                     "php_floor" => "8.2.0",
                     "runtime_file" => "runtime.php",
-                    "runtime_protocol" => 3,
+                    "runtime_protocol" => 4,
                     "wordpress_floor" => "6.5.0",
                   );
                   if ( $copy !== $expected ) {

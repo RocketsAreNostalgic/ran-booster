@@ -14,8 +14,30 @@ release_commit=$(git rev-parse --verify "$2^{commit}") \
 
 git merge-base --is-ancestor "$base_commit" "$release_commit" \
 	|| fail 'release commit does not descend from its pull-request base.'
-[[ "$(git rev-parse "${release_commit}^")" == "$base_commit" ]] \
-	|| fail 'release candidate must be the single generated commit directly above its pull-request base.'
+
+release_parents=( $(git rev-list --parents -n 1 "$release_commit") )
+case "${#release_parents[@]}" in
+	2)
+		[[ "${release_parents[1]}" == "$base_commit" ]] \
+			|| fail 'linear release candidate must be the generated commit directly above its pull-request base.'
+		;;
+	3)
+		if [[ "${release_parents[1]}" == "$base_commit" ]]; then
+			generated_commit="${release_parents[2]}"
+		elif [[ "${release_parents[2]}" == "$base_commit" ]]; then
+			generated_commit="${release_parents[1]}"
+		else
+			fail 'updated release candidate merge must have its pull-request base as a parent.'
+		fi
+		[[ "$(git rev-list --parents -n 1 "$generated_commit" | wc -w | tr -d ' ')" == 2 ]] \
+			|| fail 'updated release candidate must contain one generated commit, not merged history.'
+		[[ "$(git rev-parse "${generated_commit}^")" == "$(git merge-base "$base_commit" "$generated_commit")" ]] \
+			|| fail 'updated release candidate must generate directly from the branches’ common ancestor.'
+		;;
+	*)
+		fail 'release candidate must be a generated commit or a controlled branch-update merge.'
+		;;
+esac
 
 expected_changes=$(printf '%s\n' \
 	$'M\t.release-please-manifest.json' \

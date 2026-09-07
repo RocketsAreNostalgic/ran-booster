@@ -58,7 +58,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 				return $secrets;
 			}
-		) )->register( $container, $runtime );
+		) )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
 
 		self::assertInstanceOf( RegistrationTrackingSecretsFile::class, $secrets );
 		$provider = $container->make( ProviderRegistry::class )->get( 'gh' );

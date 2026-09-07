@@ -4,6 +4,48 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/WPError.php';
 
+// phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed, WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid -- Test-only WordPress filesystem API stubs require the WordPress class and function names.
+if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
+	class WP_Filesystem_Direct {}
+}
+
+if ( ! function_exists( 'get_filesystem_method' ) ) {
+	function get_filesystem_method(): string {
+		return $GLOBALS['ran_booster_release_filesystem_method'] ?? 'direct';
+	}
+}
+
+if ( ! function_exists( 'WP_Filesystem' ) ) {
+	function WP_Filesystem(): bool {
+		if ( 'direct' !== get_filesystem_method() ) {
+			return false;
+		}
+		$GLOBALS['wp_filesystem'] = new WP_Filesystem_Direct(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only direct filesystem initialization fixture.
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'add_action' ) ) {
+	function add_action( string $hook, callable $callback, int $priority = 10, int $arguments = 1 ): void {
+		$GLOBALS['ran_booster_release_actions'][ $hook ][] = $callback;
+	}
+}
+
+if ( ! function_exists( 'add_filter' ) ) {
+	function add_filter( string $hook, callable $callback, int $priority = 10, int $arguments = 1 ): void {}
+}
+
+if ( ! function_exists( 'doing_action' ) ) {
+	function doing_action( string $hook ): bool {
+		return false; }
+}
+
+if ( ! function_exists( 'did_action' ) ) {
+	function did_action( string $hook ): int {
+		return 0; }
+}
+
 if ( ! function_exists( 'wp_safe_remote_get' ) ) {
 	function wp_safe_remote_get( string $url, array $arguments ): array|WP_Error {
 		$GLOBALS['ran_booster_release_requests'][] = array( $url, $arguments );

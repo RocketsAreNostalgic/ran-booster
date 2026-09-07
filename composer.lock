@@ -4,15 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8c4005e6124ec578e2565eaca9b542c8",
+    "content-hash": "4da43d67f3b40bdd30f8cff72a6b8bb8",
     "packages": [
         {
             "name": "ran/wp-release-updater",
-            "version": "0.1.0-beta.2",
+            "version": "v0.1.0-beta.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
+                "reference": "dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
+            },
             "dist": {
-                "type": "path",
-                "url": "../ran-wp-release-updater",
-                "reference": "d1e67116492116b3001d34f4fe40129c13f9cf7e"
+                "type": "zip",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3",
+                "reference": "dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3",
+                "shasum": ""
             },
             "require": {
                 "ext-hash": "*",
@@ -52,6 +58,9 @@
                 "test:parity": [
                     "php tests/Integration/paired-github-provider-proof.php"
                 ],
+                "test:wordpress-integration": [
+                    "@php tests/Integration/wordpress-integration.php"
+                ],
                 "test:wordpress-bulk": [
                     "php tests/Integration/wordpress-native-mixed-bulk-proof.php"
                 ],
@@ -71,10 +80,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "transport-options": {
-                "symlink": false,
-                "relative": true
-            }
+            "time": "2026-09-06T22:35:55+00:00"
         }
     ],
     "packages-dev": [

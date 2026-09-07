@@ -4,20 +4,42 @@ declare(strict_types=1);
 
 namespace Tests\Booster\GitHub\Support;
 
-require_once __DIR__ . '/NeutralReleaseUpdaterWordPressFunctions.php';
-$ran_booster_updater_test_root = getenv( 'RAN_BOOSTER_UPDATER_TEST_ROOT' );
-if ( ! is_string( $ran_booster_updater_test_root ) || '' === $ran_booster_updater_test_root ) {
-	$ran_booster_updater_test_root = dirname( __DIR__, 2 ) . '/../ran-wp-release-updater';
-}
-require_once $ran_booster_updater_test_root . '/runtime.php';
-unset( $ran_booster_updater_test_root );
-
 final class NeutralReleaseUpdaterFixtures {
+	private static bool $booted = false;
+
+	public static function registrar(): object {
+		self::boot();
+
+		return $GLOBALS['ran_booster_release_registrar'];
+	}
 	public static function reset(): void {
-		$GLOBALS['ran_booster_release_requests']   = array();
-		$GLOBALS['ran_booster_release_responses']  = array();
-		$GLOBALS['ran_booster_release_temp_paths'] = array();
-		$GLOBALS['wp_version']                     = '6.8.0'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Deterministic updater runtime fixture.
+		self::boot();
+		$GLOBALS['ran_booster_release_requests']          = array();
+		$GLOBALS['ran_booster_release_responses']         = array();
+		$GLOBALS['ran_booster_release_temp_paths']        = array();
+		$GLOBALS['ran_booster_release_filesystem_method'] = 'direct';
+		unset( $GLOBALS['wp_filesystem'] );
+		$GLOBALS['wp_version'] = '6.8.0'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Deterministic updater runtime fixture.
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'after_setup_theme' );
+		} else {
+			foreach ( $GLOBALS['ran_booster_release_actions']['after_setup_theme'] ?? array() as $ran_booster_release_action ) {
+				$ran_booster_release_action();
+			}
+		}
+	}
+
+	private static function boot(): void {
+		if ( self::$booted ) {
+			return;
+		}
+		require_once __DIR__ . '/NeutralReleaseUpdaterWordPressFunctions.php';
+		$root = getenv( 'RAN_BOOSTER_UPDATER_TEST_ROOT' );
+		if ( ! is_string( $root ) || '' === $root ) {
+			$root = dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater';
+		}
+		$GLOBALS['ran_booster_release_registrar'] = require $root . '/bootstrap.php';
+		self::$booted                             = true;
 	}
 
 	public static function cleanup(): void {

@@ -79,7 +79,6 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 
 $ran_booster_version            = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 $ran_booster_self_update_policy = CoreSelfUpdatePolicy::detect( __FILE__, $ran_booster_version );
-ReleaseUpdaterBootstrap::register();
 add_action(
 	'init',
 	static function (): void {
@@ -99,6 +98,7 @@ if ( ! $ran_booster_runtime_support->allowsManagedOperations() ) {
 
 	return;
 }
+$ran_booster_release_updater = ReleaseUpdaterBootstrap::register();
 if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );
 } elseif ( PortabilityFacade::API_VERSION !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
@@ -107,12 +107,12 @@ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 $ran_booster_core_development_notice = new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy );
 $ran_booster_core_development_notice->register();
 
-( static function () use ( $ran_booster_core_development_notice, $ran_booster_self_update_policy ): void {
+( static function () use ( $ran_booster_core_development_notice, $ran_booster_self_update_policy, $ran_booster_release_updater ): void {
 	$ran_booster_container            = new CoreContainer();
 	$ran_booster_runtime              = new Booster( $ran_booster_container );
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
 	$ran_booster_runtime->boosterUrl  = plugin_dir_url( __FILE__ );
-	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime );
+	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater, plugin_basename( __FILE__ ) );
 	if ( ! defined( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION' ) ) {
 		define( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION', 1 );
 	} elseif ( 1 !== RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION ) {
@@ -133,7 +133,6 @@ $ran_booster_core_development_notice->register();
 			do_action( 'ran_booster_register_providers', $providerRegistry );
 			$providerRegistry->seal();
 
-			ReleaseUpdaterBootstrap::activate();
 			$coreVersion       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 			$coreReleaseTarget = null;
 			if ( $ran_booster_self_update_policy->allowsNativeDiscovery() ) {
@@ -147,7 +146,7 @@ $ran_booster_core_development_notice->register();
 							'ran-booster',
 							plugin_basename( __FILE__ ),
 							str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
-							'forced-off'
+							'manual'
 						);
 					if ( ! $coreReleaseTarget->register() ) {
 						$coreReleaseTarget = null;

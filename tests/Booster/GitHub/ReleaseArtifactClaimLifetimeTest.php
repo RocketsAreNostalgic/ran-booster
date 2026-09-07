@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Booster\GitHub;
 
+// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Structural public-artifact fixture belongs beside its custody cases.
+
 require_once __DIR__ . '/ReleaseArtifactFilesystemFunctions.php';
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubReleaseArtifact;
-use RAN\WPReleaseUpdater\V1\Archive\TemporaryArtifact;
-use RAN\WPReleaseUpdater\V1\Provider\GitHub\ProspectiveReleaseArtifact;
-use RAN\WPReleaseUpdater\V1\Provider\GitHub\ProspectiveReleaseInspection;
 use RuntimeException;
 
 final class ReleaseArtifactClaimLifetimeTest extends TestCase {
@@ -156,71 +155,121 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		}
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testFirstFailedHandoffDiscardCannotBeHiddenByRetry(): void {
+		$this->resetFilesystemHooks();
+		$path = $this->archivePath();
+
+		try {
+			$source   = new StructuralReleaseArtifact( $path, array( false, true ) );
+			$artifact = $this->artifactFromSource( $source );
+			$this->expectHandoffFailure( $artifact );
+
+			self::assertSame( 1, $source->discardCalls );
+			self::assertFalse( $artifact->discard() );
+			self::assertSame( 1, $source->discardCalls );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $path );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testThrownHandoffDiscardCannotBeHiddenByLaterSuccess(): void {
+		$this->resetFilesystemHooks();
+		$path = $this->archivePath();
+
+		try {
+			$source   = new ThrowingDiscardStructuralReleaseArtifact( $path );
+			$artifact = $this->artifactFromSource( $source );
+			$this->expectHandoffFailure( $artifact );
+
+			self::assertSame( 1, $source->discardCalls );
+			self::assertFalse( $artifact->discard() );
+			self::assertSame( 1, $source->discardCalls );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $path );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testPostReaderRuntimeLossRemovesProvisionalCopy(): void {
+		$this->resetFilesystemHooks();
+		$path = $this->archivePath();
+
+		try {
+			$source   = new FaultingStructuralReleaseArtifact( $path, false );
+			$artifact = $this->artifactFromSource( $source );
+			$this->expectHandoffFailure( $artifact );
+
+			self::assertNotNull( $source->prepared );
+			self::assertFileDoesNotExist( $source->prepared->getPath() );
+			self::assertDirectoryDoesNotExist( dirname( $source->prepared->getPath() ) );
+			self::assertFileDoesNotExist( $path );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $path );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testPreparedCopyCleanupUncertaintyRemainsReportable(): void {
+		$this->resetFilesystemHooks();
+		$path = $this->archivePath();
+
+		try {
+			$source   = new FaultingStructuralReleaseArtifact( $path, true );
+			$artifact = $this->artifactFromSource( $source );
+			$this->expectHandoffFailure( $artifact );
+
+			self::assertNotNull( $source->prepared );
+			self::assertFileExists( $source->prepared->getPath() );
+			self::assertFalse( $artifact->discard() );
+			chmod( $source->prepared->getPath(), 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only retained-copy cleanup.
+			$source->prepared->cleanup();
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $path );
+		}
+	}
+
 		/** @return array{GitHubReleaseArtifact, string} */
 	private function artifact(): array {
-		require_once dirname( __DIR__, 3 ) . '/../ran-wp-release-updater/runtime.php';
+		$path   = $this->archivePath();
+		$digest = hash_file( 'sha256', $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only artifact identity.
+		self::assertIsString( $digest );
+
+		return array(
+			new GitHubReleaseArtifact(
+				new StructuralReleaseArtifact( $path ),
+				'1.2.3',
+				str_repeat( 'a', 40 ),
+				'example',
+				'example.php',
+				strlen( 'verified-release-archive' ),
+				52428800,
+				$digest
+			),
+			$path,
+		);
+	}
+
+	private function archivePath(): string {
 		$path = tempnam( sys_get_temp_dir(), 'ran-booster-real-release-artifact-' );
 		self::assertIsString( $path );
 		file_put_contents( $path, 'verified-release-archive' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test-only artifact.
 		chmod( $path, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only custody fixture.
-		$stat = lstat( $path );
-		self::assertIsArray( $stat );
-		$identity = array(
-			'dev'   => $stat['dev'],
-			'ino'   => $stat['ino'],
-			'mode'  => $stat['mode'],
-			'nlink' => $stat['nlink'],
-			'uid'   => $stat['uid'],
-			'gid'   => $stat['gid'],
-			'size'  => $stat['size'],
-			'mtime' => $stat['mtime'],
-			'ctime' => $stat['ctime'],
-		);
-		$digest   = hash_file( 'sha256', $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only artifact identity.
-		self::assertIsString( $digest );
-		$temporary  = new TemporaryArtifact( $path, $digest, $identity );
-		$inspection = ProspectiveReleaseInspection::create(
-			array(
-				'artifact_filename'         => 'example.zip',
-				'artifact_identity'         => '8',
-				'artifact_sha256'           => $digest,
-				'artifact_size'             => strlen( 'verified-release-archive' ),
-				'assurance_facts'           => array(
-					'exact_artifact_identity'       => true,
-					'exact_commit_identity'         => true,
-					'exact_reacquisition_supported' => true,
-					'exact_release_identity'        => true,
-					'provenance_verified'           => true,
-					'publication_immutable'         => true,
-					'repository_identity_stable'    => true,
-					'trusted_digest_source'         => true,
-				),
-				'canonical_update_uri'      => 'https://github.com/owner/example',
-				'channel'                   => 'stable',
-				'commit_identity'           => str_repeat( 'a', 40 ),
-				'main_file'                 => 'example.php',
-				'package_root'              => 'example',
-				'php_runtime_version'       => '8.2.0',
-				'release_identity'          => '42',
-				'repository_identity'       => '123456789',
-				'repository_locator'        => 'owner/example',
-				'tag'                       => 'v1.2.3',
-				'target_type'               => 'plugin',
-				'version'                   => '1.2.3',
-				'wordpress_runtime_version' => '6.8.0',
-			)
-		);
 
-		return array(
-			new GitHubReleaseArtifact(
-				new ProspectiveReleaseArtifact( $inspection, $temporary ),
-				'1.2.3',
-				str_repeat( 'a', 40 ),
-				'example',
-				'example.php'
-			),
-			$path,
-		);
+		return $path;
+	}
+
+	private function artifactFromSource( object $source ): GitHubReleaseArtifact {
+		return new GitHubReleaseArtifact( $source, '1.2.3', str_repeat( 'a', 40 ), 'example', 'example.php', strlen( 'verified-release-archive' ), 52428800, hash( 'sha256', 'verified-release-archive' ) );
 	}
 
 	private function expectHandoffFailure( GitHubReleaseArtifact $artifact ): void {
@@ -251,5 +300,73 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		if ( is_dir( $directory ) && ! is_link( $directory ) ) {
 			rmdir( $directory ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Test-only exact cleanup.
 		}
+	}
+}
+
+final class StructuralReleaseArtifact {
+	public int $discardCalls = 0;
+
+	/** @param list<bool> $discardResults */
+	public function __construct( private string $path, private array $discardResults = array() ) {}
+
+	public function inspect( callable $reader ): mixed {
+		return $reader( $this->path );
+	}
+
+	public function discard(): bool {
+		++$this->discardCalls;
+		if ( array() !== $this->discardResults ) {
+			return array_shift( $this->discardResults );
+		}
+		if ( is_file( $this->path ) ) {
+			unlink( $this->path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test fixture discards its exact temporary artifact.
+		}
+
+		return ! file_exists( $this->path );
+	}
+}
+
+final class FaultingStructuralReleaseArtifact {
+	public ?\RAN\Deployment\PreparedArtifact $prepared = null;
+
+	public function __construct( private string $path, private bool $breakPreparedCopy ) {}
+
+	public function inspect( callable $reader ): mixed {
+		$this->prepared = $reader( $this->path );
+		if ( $this->breakPreparedCopy ) {
+			chmod( $this->prepared->getPath(), 0644 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only prepared-copy identity drift.
+		}
+
+		throw new RuntimeException( 'Provider artifact runtime became unavailable.' );
+	}
+
+	public function discard(): bool {
+		if ( is_file( $this->path ) ) {
+			unlink( $this->path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test fixture discards its exact temporary artifact.
+		}
+
+		return ! file_exists( $this->path );
+	}
+}
+
+final class ThrowingDiscardStructuralReleaseArtifact {
+	public int $discardCalls = 0;
+
+	public function __construct( private string $path ) {}
+
+	public function inspect( callable $reader ): mixed {
+		return $reader( $this->path );
+	}
+
+	public function discard(): bool {
+		++$this->discardCalls;
+		if ( 1 === $this->discardCalls ) {
+			throw new RuntimeException( 'The provider discard operation failed.' );
+		}
+		if ( is_file( $this->path ) ) {
+			unlink( $this->path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test fixture discards its exact temporary artifact.
+		}
+
+		return ! file_exists( $this->path );
 	}
 }

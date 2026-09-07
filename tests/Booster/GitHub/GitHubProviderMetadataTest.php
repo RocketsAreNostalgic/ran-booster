@@ -29,7 +29,8 @@ final class GitHubProviderMetadataTest extends TestCase {
 	private function provider(): GitHubProvider {
 		$provider = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),
-			new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			new \stdClass()
 		);
 
 		self::assertInstanceOf( GitHubProvider::class, $provider );

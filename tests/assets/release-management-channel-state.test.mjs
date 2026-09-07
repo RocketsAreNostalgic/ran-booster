@@ -499,7 +499,7 @@ test('changing channel invalidates the exact candidate and ignores a stale candi
 			tag: 'v1.0.0',
 			version: '1.0.0',
 			channel: 'stable',
-			fingerprint: 'v1:${'a'.repeat(64)}'
+			fingerprint: 'v2:${'a'.repeat(64)}'
 		};
 		let releaseSelected = true;
 		let discoveryTimer = null;

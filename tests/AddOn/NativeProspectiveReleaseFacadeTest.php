@@ -66,7 +66,7 @@ use RAN\Storage\RepositorySourceGuard;
 
 final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
-	private const FINGERPRINT = 'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+	private const FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 	private ?string $artifactPath                                = null;
 	private ?ProspectiveRepositoryReleaseArtifact $acquisition   = null;
@@ -981,7 +981,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$this->repositoryRequest(),
 			'42',
 			'v1.2.3',
-			'v1:' . str_repeat( 'b', 64 ),
+			'v2:' . str_repeat( 'b', 64 ),
 			'stable',
 			'valid-nonce'
 		);
@@ -1535,7 +1535,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 }
 
 final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata, RepositoryReleaseNativeTargets {
-	private const EXPECTED_FINGERPRINT = 'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+	private const EXPECTED_FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 	public static int $resolveCalls                                     = 0;
 	public static int $listingCalls                                     = 0;
@@ -1718,7 +1718,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 			str_repeat( 'a', 40 ),
 			'example',
 			'example.php',
-			'v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+			'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 		);
 	}
 

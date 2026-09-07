@@ -84,7 +84,7 @@ final class BoosterServiceProvider {
 	}
 
 	/** @internal Core bootstrap composition only. */
-	public function register( CoreContainer $container, Booster $runtime ): void {
+	public function register( CoreContainer $container, Booster $runtime, object $releaseUpdater, string $selfPluginIdentifier ): void {
 		$database       = new Database();
 		$secretsRuntime = new SecretsRuntimeAvailability();
 		$secretPolicies = new ProviderSecretPolicyCatalog();
@@ -236,7 +236,8 @@ final class BoosterServiceProvider {
 			'gh',
 			static fn ( ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(
 				$credentials,
-				$deliveryEvidence
+				$deliveryEvidence,
+				$releaseUpdater
 			)
 		);
 		$container->bind( ProviderRegistry::class, $providers );
@@ -409,7 +410,8 @@ final class BoosterServiceProvider {
 			$container->make( ThemeRepository::class ),
 			$releaseStore,
 			$container->make( WordPressUpdaterLock::class ),
-			$container->make( ProviderRegistry::class )
+			$container->make( ProviderRegistry::class ),
+			bulkForbiddenPluginIdentifier: $selfPluginIdentifier
 		);
 		$container->bind( ManagedReleaseTargetRegistrar::class, $releaseRegistrar );
 		$releaseFacade = new NativeReleaseTrackingFacade(

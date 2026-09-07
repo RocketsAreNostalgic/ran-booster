@@ -727,7 +727,8 @@ final class RepositoryResolverTest extends TestCase {
 	private function provider( RepositoryResolverSecretsStub $secrets ): GitHubProvider {
 		$provider = GitHubProvider::create(
 			$secrets,
-			new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			new \stdClass()
 		);
 		self::assertInstanceOf( GitHubProvider::class, $provider );
 

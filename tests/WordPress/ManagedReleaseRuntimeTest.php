@@ -1165,6 +1165,65 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		}
 	}
 
+	public function testSelfBulkUpdateIsRejectedBeforeManagedLookupAndManualSingleIsUnaffected(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::never() )->method( 'boosterPluginFromFile' );
+		$registrar = $this->registrar(
+			$plugins,
+			$this->createStub( ThemeRepository::class ),
+			new RuntimeReleaseStore(),
+			$lock  = new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(),
+			bulkForbiddenPluginIdentifier: 'ran-booster.php'
+		);
+
+		$result = $registrar->authorizeNativeDownload(
+			false,
+			'package.zip',
+			(object) array(
+				'bulk'           => true,
+				'update_count'   => 1,
+				'update_current' => 1,
+			),
+			array(
+				'plugin' => 'ran-booster.php',
+				'action' => 'update',
+				'type'   => 'plugin',
+			)
+		);
+
+		self::assertInstanceOf( \WP_Error::class, $result );
+		self::assertSame( 'ran_booster_native_update_unsupported_context', $result->get_error_code() );
+		self::assertSame( 0, $lock->tokenReads );
+		self::assertSame( 0, $lock->acquires );
+
+		$package = $this->package( 'plugin', 'ran-booster.php', 'ran-booster', DeploymentPolicy::MANUAL );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->with( 'ran-booster.php' )->willReturn( $package );
+		$registrar = $this->registrar(
+			$plugins,
+			$this->createStub( ThemeRepository::class ),
+			new RuntimeReleaseStore(),
+			new RuntimeUpdaterLock(),
+			$this->releaseMetadataRegistry(),
+			bulkForbiddenPluginIdentifier: 'ran-booster.php'
+		);
+
+		$result = $registrar->authorizeNativeDownload(
+			false,
+			'package.zip',
+			new \stdClass(),
+			array(
+				'plugin' => 'ran-booster.php',
+				'action' => 'update',
+				'type'   => 'plugin',
+			)
+		);
+
+		self::assertInstanceOf( \WP_Error::class, $result );
+		self::assertSame( 'ran_booster_native_update_authority_changed', $result->get_error_code() );
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testOneTargetWordPressBulkUpdateUsesManualFenceAndDefersFailedRestoreRelease(): void {
@@ -2324,17 +2383,28 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			)
 		);
 		$updater = new class() {
+			public function register(): bool {
+				return true;
+			}
+
 			/** @var array<string, int|string|null> */
 			public array $currentStatus = array(
-				'candidate_tag'             => 'v2.0.0',
-				'candidate_validation_code' => 'archive_identity_verified',
-				'candidate_version'         => '2.0.0',
-				'candidate_header_version'  => '2.0.0',
-				'failure_code'              => null,
-				'installed_version'         => '1.0.0',
-				'last_check'                => 1_700_000_000,
-				'offered_version'           => '2.0.0',
-				'relationship'              => 'newer',
+				'state'                => 'active',
+				'declaration_accepted' => true,
+				'hooks_registered'     => true,
+				'code'                 => 'target_active',
+				'native'               => array(
+					'candidate_tag'             => 'v2.0.0',
+					'candidate_validation_code' => 'archive_identity_verified',
+					'candidate_version'         => '2.0.0',
+					'candidate_header_version'  => '2.0.0',
+					'failure_code'              => null,
+					'installed_version'         => '1.0.0',
+					'last_check'                => 1_700_000_000,
+					'offered_release_identity'  => '42',
+					'offered_version'           => '2.0.0',
+					'relationship'              => 'newer',
+				),
 			);
 
 			/** @return array<string, int|string|null> */
@@ -2343,18 +2413,24 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			}
 		};
 		$target  = new GitHubReleaseNativeTarget(
+			new class() {
+				public function theme( mixed ...$arguments ): object {
+					unset( $arguments );
+
+					return new \stdClass();
+				}
+			},
 			'theme',
 			'/wordpress/wp-content/themes/example-theme/style.css',
 			'owner/example-theme',
 			'123456789',
-			'example-theme',
-			'example-theme',
 			null,
 			'stable',
 			'manual'
 		);
 		( new \ReflectionProperty( GitHubReleaseNativeTarget::class, 'updater' ) )->setValue( $target, $updater );
-		$registrar = new ManagedReleaseTargetRegistrar(
+		self::assertTrue( $target->status()->active );
+		$registrar = $this->registrar(
 			$plugins,
 			$themes,
 			$store,
@@ -2362,7 +2438,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$this->releaseMetadataRegistry( targetFactory: static fn ( mixed ...$options ): object => $target )
 		);
 		$registrar->register();
-		$facade = new NativeReleaseTrackingFacade(
+		self::assertSame( $target, $registrar->target( 'theme', 'example-theme' ), $registrar->failureCode( 'theme', 'example-theme' ) );
+		$facade = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -2380,15 +2457,22 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( '', $offer->failureCode() );
 
 		$updater->currentStatus = array(
-			'candidate_tag'             => 'v2.0.0',
-			'candidate_validation_code' => 'archive_header_missing',
-			'candidate_version'         => '2.0.0',
-			'candidate_header_version'  => null,
-			'failure_code'              => null,
-			'installed_version'         => '1.0.0',
-			'last_check'                => 1_700_000_000,
-			'offered_version'           => null,
-			'relationship'              => 'newer',
+			'state'                => 'active',
+			'declaration_accepted' => true,
+			'hooks_registered'     => true,
+			'code'                 => 'target_active',
+			'native'               => array(
+				'candidate_tag'             => 'v2.0.0',
+				'candidate_validation_code' => 'archive_header_missing',
+				'candidate_version'         => '2.0.0',
+				'candidate_header_version'  => null,
+				'failure_code'              => null,
+				'installed_version'         => '1.0.0',
+				'last_check'                => 1_700_000_000,
+				'offered_release_identity'  => null,
+				'offered_version'           => null,
+				'relationship'              => 'newer',
+			),
 		);
 
 		$failure = $facade->status( 'theme', 'example-theme' );

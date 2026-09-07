@@ -151,15 +151,23 @@ jobs:
             pr_head_repository="$RAN_PR_HEAD_REPOSITORY"
             pr_head_sha="$RAN_PR_HEAD_SHA"
 
-            if [[ "$GITHUB_ACTOR" == 'github-actions[bot]' \
-              && "$RAN_PR_AUTHOR" == 'github-actions[bot]' \
+            if [[ "$RAN_PR_AUTHOR" == 'github-actions[bot]' \
               && "$RAN_PR_BASE" == main \
               && "$RAN_PR_HEAD" == "$release_branch" \
               && "$RAN_PR_HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]; then
               bash scripts/validate-release-candidate.sh "$pr_base_sha" "$pr_head_sha"
               test "$(git rev-parse "${pr_head_sha}^{tree}")" = "$tested_tree"
-              lane=release-candidate
-              source_commit="$pr_head_sha"
+              candidate_runs="$(gh api \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/${admitted_workflow_id}/runs?head_sha=${pr_head_sha}&status=completed&per_page=100" \
+                | jq -c '{workflow_runs: [.workflow_runs[] | select(.status == "completed" and .conclusion == "success")] }')"
+              bash scripts/has-trusted-release-candidate-run.sh \
+                "$admitted_workflow_id" "$pr_head_ref" "$pr_head_sha" "$pr_head_repository" \
+                <<< "$candidate_runs" \
+                || { echo '::error::Release Please candidate requires a completed successful trusted Quality dispatch; rerun after bot qualification.'; exit 1; }
+              if [[ "$GITHUB_ACTOR" == 'github-actions[bot]' ]]; then
+                lane=release-candidate
+                source_commit="$pr_head_sha"
+              fi
             fi
           fi
 

@@ -295,7 +295,22 @@ jobs:
                       nodes {
                         commit {
                           oid
-                          parents(first: 2) { nodes { oid } }
+                          parents(first: 3) {
+                            totalCount
+                            nodes {
+                              oid
+                              signature {
+                                isValid
+                                state
+                                signer { login }
+                              }
+                              author {
+                                email
+                                user { login }
+                              }
+                              committer { email }
+                            }
+                          }
                           signature {
                             isValid
                             state

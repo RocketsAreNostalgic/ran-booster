@@ -98,6 +98,90 @@ expect_invalid() {
 prepare_valid valid
 expect_valid valid
 
+prepare_valid updated-branch
+generated_sha=$head_sha
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+git -C "$case_dir" checkout --quiet "$generated_sha"
+git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
+head_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_valid updated-branch
+
+prepare_valid updated-branch-version-mismatch
+generated_sha=$head_sha
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+git -C "$case_dir" checkout --quiet "$generated_sha"
+git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
+replace_in_case 's/1\.2\.4/1.2.5/g' .release-please-manifest.json
+replace_in_case 's/1\.2\.4/1.2.5/g' ran-booster.php
+replace_in_case 's/1\.2\.4/1.2.5/g' readme.txt
+replace_in_case 's/1\.2\.4/1.2.5/g' CHANGELOG.md
+amend_case
+expect_invalid updated-branch-version-mismatch
+
+prepare_valid updated-branch-changelog-mismatch
+generated_sha=$head_sha
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+git -C "$case_dir" checkout --quiet "$generated_sha"
+git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
+replace_in_case 's/Generated release\./Adjusted release notes./' CHANGELOG.md
+amend_case
+expect_invalid updated-branch-changelog-mismatch
+
+prepare_valid updated-branch-plus-prefixed-changelog-mismatch
+replace_in_case 's/Generated release\./+ Generated release./' CHANGELOG.md
+amend_case
+generated_sha=$head_sha
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+git -C "$case_dir" checkout --quiet "$generated_sha"
+git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
+replace_in_case 's/\+ Generated release\./+ Adjusted release notes./' CHANGELOG.md
+amend_case
+expect_invalid updated-branch-plus-prefixed-changelog-mismatch
+
+prepare_valid updated-branch-runtime-edit
+generated_sha=$head_sha
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+git -C "$case_dir" checkout --quiet "$generated_sha"
+git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
+printf '<?php // Unexpected release runtime edit.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet --amend --no-edit
+head_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_invalid updated-branch-runtime-edit
+
+prepare_valid updated-branch-unsupported-history
+generated_sha=$head_sha
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+git -C "$case_dir" checkout --quiet "$generated_sha"
+git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unsupported release history'
+git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
+head_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_invalid updated-branch-unsupported-history
+
 prepare_valid multi-commit
 git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unexpected second commit'
 head_sha=$(git -C "$case_dir" rev-parse HEAD)
@@ -158,4 +242,4 @@ replace_in_case 's/1\.2\.4/1.2.5/g' CHANGELOG.md
 amend_case
 expect_invalid wrong-heading
 
-printf 'Release candidate validator behavior passed (1 valid, 12 invalid cases).\n'
+printf 'Release candidate validator behavior passed (2 valid, 17 invalid cases).\n'

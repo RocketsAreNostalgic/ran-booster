@@ -7,6 +7,8 @@ namespace Tests\Booster\GitHub;
 require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
@@ -18,6 +20,8 @@ use RuntimeException;
 use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState( false )]
 final class ReleaseCandidateListingTest extends TestCase {
 	protected function setUp(): void {
 		NeutralReleaseUpdaterFixtures::reset();
@@ -82,11 +86,61 @@ final class ReleaseCandidateListingTest extends TestCase {
 		self::assertSame( 'Bearer secret-token', NeutralReleaseUpdaterFixtures::requests()[0][1]['headers']['Authorization'] ?? null );
 	}
 
+	public function testListingInitializesTheUnconfiguredDirectFilesystemBeforeReadingTheRelease(): void {
+		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::listing( array() ) ) );
+		self::assertArrayNotHasKey( 'wp_filesystem', $GLOBALS );
+
+		$result = $this->provider( new RepositoryResolverSecretsStub() )->listReleaseCandidates(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'stable'
+		);
+
+		self::assertSame( array(), $result->candidates );
+		self::assertInstanceOf( \WP_Filesystem_Direct::class, $GLOBALS['wp_filesystem'] );
+	}
+
+	public function testListingRejectsANonDirectFilesystemBeforeCredentialsOrHttp(): void {
+		$GLOBALS['ran_booster_release_filesystem_method'] = 'ftpext';
+		$credentials                                      = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
+
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );
+		try {
+			$this->provider( $credentials )->listReleaseCandidates(
+				'plugin',
+				new RepositoryReference( 'owner/private-example', '123456789', true, 'private-release' ),
+				'stable'
+			);
+		} finally {
+			self::assertSame( array(), $credentials->lookups );
+			self::assertSame( array(), NeutralReleaseUpdaterFixtures::requests() );
+		}
+	}
+
+	public function testListingRejectsACurrentNonDirectFilesystemBeforeCredentialsOrHttp(): void {
+		$GLOBALS['wp_filesystem'] = new \stdClass(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only current non-direct filesystem fixture.
+		$credentials              = new RepositoryResolverSecretsStub( array( 'private-release' => 'secret-token' ) );
+
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );
+		try {
+			$this->provider( $credentials )->listReleaseCandidates(
+				'plugin',
+				new RepositoryReference( 'owner/private-example', '123456789', true, 'private-release' ),
+				'stable'
+			);
+		} finally {
+			self::assertSame( array(), $credentials->lookups );
+			self::assertSame( array(), NeutralReleaseUpdaterFixtures::requests() );
+		}
+	}
+
 	public function testOperationalListingFailureIsRedacted(): void {
 		NeutralReleaseUpdaterFixtures::queue( array( NeutralReleaseUpdaterFixtures::response( 500, array( 'message' => 'upstream-secret-message' ) ) ) );
 
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'GitHub release candidate listing is unavailable.' );
+		$this->expectExceptionMessage( 'GitHub returned invalid release candidates.' );
 		$this->provider( new RepositoryResolverSecretsStub() )->listReleaseCandidates(
 			'plugin',
 			new RepositoryReference( 'owner/example', '123456789', false, null ),
@@ -114,7 +168,7 @@ final class ReleaseCandidateListingTest extends TestCase {
 		yield 'concealed or missing repository' => array( 404 );
 	}
 
-	public function testRateLimitAndTransportPreserveFallbackSignal(): void {
+	public function testRateLimitPreservesFallbackWhileTransportFailureStaysOperational(): void {
 		foreach ( array(
 			NeutralReleaseUpdaterFixtures::response( 429, array(), array( 'retry-after' => '30' ) ),
 			new \WP_Error( 'http_request_failed', 'upstream-secret-message' ),
@@ -127,8 +181,14 @@ final class ReleaseCandidateListingTest extends TestCase {
 					'stable'
 				);
 				self::fail( 'Repository read failures must preserve the fallback signal.' );
-			} catch ( RepositoryReleaseReadUnavailable $exception ) {
-				self::assertSame( 'GitHub release candidate access is unavailable.', $exception->getMessage() );
+			} catch ( \RuntimeException $exception ) {
+				if ( $failure instanceof \WP_Error ) {
+					self::assertNotInstanceOf( RepositoryReleaseReadUnavailable::class, $exception );
+					self::assertSame( 'GitHub returned invalid release candidates.', $exception->getMessage() );
+				} else {
+					self::assertInstanceOf( RepositoryReleaseReadUnavailable::class, $exception );
+					self::assertSame( 'GitHub release candidate access is unavailable.', $exception->getMessage() );
+				}
 			}
 		}
 	}
@@ -140,7 +200,8 @@ final class ReleaseCandidateListingTest extends TestCase {
 				public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 					return null;
 				}
-			}
+			},
+			NeutralReleaseUpdaterFixtures::registrar()
 		);
 		self::assertInstanceOf( RepositoryReleaseCandidateListing::class, $provider );
 

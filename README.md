@@ -183,8 +183,11 @@ derives the expanded limit at four times that value and retains its other ZIP,
 identity, path and free-space checks. The same policy covers every registered
 provider's branch-source manual installs and updates, webhook updates, and
 Transporter Blueprint installs. Prospective release installation instead uses
-the shared updater's separate archive custody and bounds and creates no
-deployment attempt. Keep committed development-only files out of the deployed
+the released `ran/wp-release-updater` beta.4 public API (Protocol 4), with
+separate archive custody and bounds, and creates no deployment attempt.
+Inspection discards its validation ZIP; installation freshly reacquires the
+selected release using its opaque `v2:` fingerprint. Earlier selections require
+reinspection. Keep committed development-only files out of the deployed
 ref rather than treating a higher limit as a substitute for repository hygiene.
 
 ### Provider add-ons

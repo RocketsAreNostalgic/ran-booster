@@ -82,7 +82,7 @@ behaviour.
 ## Ownership and handoff points
 
 | Owner                         | Authority                                                                                                                                                                                                                                     |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Booster release controls      | Render release state and actions and pass bounded intent to Core's internal coordinators. They do not receive credentials, download archives, schedule updates, or mutate package files.                                                      |
 | Booster Core                  | Owns package source and revision, deployment policy, facade authorization, prospective adoption, managed-package enumeration, native-update authority snapshots and locking, stale-offer suppression, branch admission/history, provider-composed branch preflight, and final management postconditions. |
 | Shared GitHub release updater | Implements the bundled GitHub provider's release discovery and archive checks, owns native release caching and its provider-owned WordPress target runtime, and retains exact archive custody until typed handoff. |
@@ -146,9 +146,9 @@ and
 
 Booster's self-update target is not a managed package and does not use branch
 deployment, managed-package release controls, stored provider credentials, or deployment
-activity. Core always registers the target early enough to participate in
-shared-updater runtime arbitration. Whether that target also joins WordPress's
-native discovery and installer hooks is decided separately.
+activity. Loading the public updater registrar participates in runtime
+arbitration. Core declares its self-target only when its self-update policy
+allows native discovery.
 
 In the default `auto` mode, only a verified release installation carrying the
 build-generated `ran-booster-release.json` marker may consume the configured
@@ -161,7 +161,9 @@ registration carries no credential, so anonymous discovery fails closed with
 
 An operator may force `enabled` only for a disposable update test or force
 `disabled` as a narrow site-level freeze. Enabled Core discovery remains
-manual-only because Core passes the updater's forced-off automatic policy.
+manual-only through the public updater's `manual` policy. Core also rejects
+bulk self-updates at its pre-download authority fence, before remote work or
+lock acquisition.
 These controls do not change managed plugin or theme release policies.
 
 ## Trigger matrix
@@ -169,9 +171,9 @@ These controls do not change managed plugin or theme release policies.
 ### Published-release tracking
 
 | Trigger                    | Initiator                                                                                 | Immediate handoff                                                                                                          | Can download a ZIP?                           | Can change files? |
-| -------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------- |
+| ----------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------- |
 | **Use releases**           | Administrator in Booster                                                                  | Core handler → internal coordinator → provider listing and exact inspection → atomic source transition                     | Yes, for eligibility and identity validation  | No                |
-| Request bootstrap          | Booster                                                                                   | Registers each eligible managed target with the shared updater before `plugins_loaded` selects one bundled updater runtime | No                                            | No                |
+| Request bootstrap       | Booster                                                                                   | Registers each eligible managed target with the shared updater before public activation at `after_setup_theme` priority 100 | No                                            | No                |
 | Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | Yes, for candidate validation on a cache miss | No                |
 | **Check releases**         | Administrator in Booster                                                                  | Core handler → internal coordinator → updater cache clear → WordPress native update check                                  | Yes, for fresh candidate validation           | No                |
 | Prospective **Install**    | Administrator selecting an exact release                                                  | Core prospective facade → selected provider → Core installer and adoption                                                  | Yes, one exact installation archive           | Yes               |
@@ -239,7 +241,7 @@ sequenceDiagram
     participant G as GitHub Releases
     participant A as Booster release controls
 
-    B->>U: Register eligible release target before plugins_loaded
+    B->>U: Declare eligible release target before after_setup_theme
     U->>U: Select one compatible bundled runtime
     W->>U: Native update check invokes github.com update filter
     alt cached offer or current state is fresh
@@ -262,7 +264,7 @@ The candidate-validation ZIP is temporary. It proves that the release is safe
 to advertise, then its temporary file is discarded. The cached native offer is
 metadata, not an installation archive.
 
-The bundled updater at `v2.0.0-beta.8` binds managed release configuration,
+The bundled `ran/wp-release-updater` beta.4 binds managed release configuration,
 cached offers and release fingerprints to the provider's stable repository ID.
 Discovery and acquisition also compare that ID with live GitHub repository
 metadata. Reusing the same `owner/repository` locator for a deleted and recreated
@@ -282,10 +284,14 @@ the same update.
 
 #### Release request budget
 
-The updater's Phase 1A tests freeze successful service-layer request counts so
-that later optimizations cannot quietly trade away freshness or repository
-identity. These are deterministic fixture budgets, not production telemetry or
-worst-case maxima. The fixtures model a cold cache, one non-full release page,
+The earlier updater's Phase 1A tests recorded the service-layer request counts
+below. They remain a historical comparison baseline, not measured Protocol 4
+Core integration results or production maxima. The current integration must
+measure its exact installed fixture before claiming the same HTTP envelope.
+Listing still downloads no ZIP; inspection verifies and discards one ZIP;
+prospective acquisition freshly verifies one ZIP without a Core pre-inspection.
+
+The earlier fixtures model a cold cache, one non-full release page,
 a direct successful response, the first candidate succeeding, and a stored
 stable GitHub repository ID.
 

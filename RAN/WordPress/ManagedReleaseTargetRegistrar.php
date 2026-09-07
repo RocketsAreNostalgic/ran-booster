@@ -48,7 +48,8 @@ final class ManagedReleaseTargetRegistrar {
 		private ManagedReleaseStore $store,
 		private WordPressUpdaterLock $updaterLock,
 		private ProviderRegistry $providers,
-		?RepositorySourceGuard $sourceGuard = null
+		?RepositorySourceGuard $sourceGuard = null,
+		private readonly ?string $bulkForbiddenPluginIdentifier = null
 	) {
 		$this->sourceGuard = $sourceGuard ?? new RepositorySourceGuard();
 	}
@@ -127,6 +128,9 @@ final class ManagedReleaseTargetRegistrar {
 			&& 1 === ( $upgrader->update_count ?? null )
 			&& 1 === ( $upgrader->update_current ?? null );
 		$target           = $this->nativeTarget( $hookExtra, $bulk );
+		if ( $bulk && null !== $target && 'plugin' === $target['type'] && $this->bulkForbiddenPluginIdentifier === $target['identifier'] ) {
+			return $this->nativeUpdateError( 'unsupported_context' );
+		}
 		if ( null === $target ) {
 			return $reply;
 		}

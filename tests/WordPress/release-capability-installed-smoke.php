@@ -102,7 +102,7 @@ try {
 		);
 		$assertResult( $inspection, 'release_ready' );
 		$evidence = $inspection->data();
-		if ( 'v1:' . str_repeat( 'b', 64 ) !== ( $evidence['fingerprint'] ?? null ) ) {
+		if ( 'v2:' . str_repeat( 'b', 64 ) !== ( $evidence['fingerprint'] ?? null ) ) {
 			throw new RuntimeException( 'The installed release fingerprint is invalid.' );
 		}
 

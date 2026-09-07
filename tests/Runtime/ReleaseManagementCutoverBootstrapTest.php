@@ -14,17 +14,15 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
-		$activation   = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::activate();' );
 		$coreTarget   = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
 		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
 		self::assertIsInt( $registration );
-		self::assertIsInt( $activation );
 		self::assertIsInt( $coreTarget );
 		self::assertIsInt( $target );
-		self::assertLessThan( $activation, $registration );
-		self::assertLessThan( $coreTarget, $activation );
-		self::assertLessThan( $target, $activation );
+		self::assertLessThan( $coreTarget, $registration );
+		self::assertLessThan( $target, $registration );
+		self::assertStringNotContainsString( 'ReleaseUpdaterBootstrap::activate()', $bootstrap );
 	}
 
 	public function testCoreSelfTargetUsesTheSealedGitHubReleaseCapability(): void {
@@ -45,7 +43,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertLessThan( $capability, $policyGuard );
 		self::assertLessThan( $reference, $capability );
 		self::assertLessThan( $statusBind, $reference );
-		self::assertStringContainsString( "\t\t\t\t\t\t'forced-off'", $bootstrap );
+		self::assertStringContainsString( "\t\t\t\t\t\t'manual'", $bootstrap );
 		self::assertStringNotContainsString( "? 'forced-off' : 'disabled'", $bootstrap );
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}
@@ -159,6 +157,14 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$proof = $this->source( 'tests/WordPress/release-capability-installed-smoke.php' );
 		self::assertStringContainsString( "RAN Booster disposable test site\\n", $proof );
 		self::assertSame( 2, substr_count( $proof, '->requireSuccess()' ) );
+
+		foreach ( array( 'native-lifecycle-installed-seed.php', 'native-lifecycle-installed-smoke.php', 'RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE', 'native-lifecycle-installed-cleanup.php' ) as $nativeContract ) {
+			self::assertStringContainsString( $nativeContract, $runner );
+		}
+		$nativeProof = $this->source( 'tests/WordPress/native-lifecycle-installed-smoke.php' );
+		foreach ( array( 'GitHubProvider', 'GitHubReleaseNativeTarget', 'ManagedReleaseTargetRegistrar', 'after_setup_theme', 'ran_booster_native_update_unsupported_context' ) as $nativeContract ) {
+			self::assertStringContainsString( $nativeContract, $nativeProof );
+		}
 	}
 
 	private function source( string $path ): string {

@@ -270,8 +270,11 @@ one exact release-configuration query for each eligible release-managed target;
 it also checks and hydrates returned package paths. Saved credential material
 remains lazy and is not read merely to register those targets.
 
-That eager registration is required before the updater broker fixes its
-request-local target selection at the earliest `plugins_loaded` callback.
+Core declares targets after provider registration and sealing at
+`plugins_loaded`. The public updater registrar activates once after theme
+loading at `after_setup_theme`, priority 100. Declaration acceptance is not an
+active native target; Core projects active status only after the public handle
+reports that its hooks are registered.
 Deferring it based on `REST_REQUEST`, URI shape, admin, cron, or WP-CLI state
 would make native update interception depend on an incomplete request
 classifier. The Webhook V1 decision is therefore:

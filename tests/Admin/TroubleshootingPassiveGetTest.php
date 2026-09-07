@@ -270,7 +270,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 
 				return $secrets;
 			}
-		) )->register( $container, $booster );
+		) )->register( $container, $booster, new \stdClass(), 'ran-booster.php' );
 		$container->bind( 'RAN\\Storage\\Database', $database );
 		$container->bind( 'RAN\\Storage\\PluginRepository', $plugins );
 		self::assertInstanceOf( CredentialUsageReader::class, $container->make( CredentialUsageReader::class ) );

@@ -126,7 +126,7 @@ final class PartialProvider extends BaseProvider implements RepositoryReleaseMet
 }
 
 final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets, FixturePrivateCapability {
-	private const FINGERPRINT = 'v1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+	private const FINGERPRINT = 'v2:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
 	public function __construct() {
 		parent::__construct( 'p2-release' );

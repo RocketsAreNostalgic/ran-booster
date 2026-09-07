@@ -48,11 +48,12 @@ final class VendorConformanceTest extends TestCase {
 			->getConstructor()?->getParameters()[0] ?? null;
 
 		self::assertNotNull( $browserParameter );
-		self::assertCount( 2, $providerParameters );
+		self::assertCount( 3, $providerParameters );
 		self::assertNotNull( $webhookParameter );
 		self::assertSame( ProviderCredentialStore::class, (string) $browserParameter->getType() );
 		self::assertSame( ProviderCredentialStore::class, (string) $providerParameters[0]->getType() );
 		self::assertSame( AuthenticatedWebhookDeliveryEvidenceReader::class, (string) $providerParameters[1]->getType() );
+		self::assertSame( 'object', (string) $providerParameters[2]->getType() );
 		self::assertSame( RepositoryProvider::class, (string) $compositionMethod->getReturnType() );
 		self::assertTrue( $compositionMethod->isPublic() );
 		self::assertTrue( $compositionMethod->isStatic() );
@@ -125,7 +126,7 @@ final class VendorConformanceTest extends TestCase {
 
 		$registry->registerWithCredentialStore(
 			'gh',
-			static fn ( ProviderCredentialStore $store, AuthenticatedWebhookDeliveryEvidenceReader $evidence ): RepositoryProvider => GitHubProvider::create( $store, $evidence )
+			static fn ( ProviderCredentialStore $store, AuthenticatedWebhookDeliveryEvidenceReader $evidence ): RepositoryProvider => GitHubProvider::create( $store, $evidence, new \stdClass() )
 		);
 		$registry->seal();
 

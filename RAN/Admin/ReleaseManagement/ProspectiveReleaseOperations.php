@@ -325,7 +325,7 @@ final class ProspectiveReleaseOperations {
 	}
 
 	private function validFingerprint( mixed $fingerprint ): bool {
-		return is_string( $fingerprint ) && 1 === preg_match( '/\Av1:[a-f0-9]{64}\z/D', $fingerprint );
+		return is_string( $fingerprint ) && 1 === preg_match( '/\Av2:[a-f0-9]{64}\z/D', $fingerprint );
 	}
 
 	private function validVersion( mixed $version ): bool {

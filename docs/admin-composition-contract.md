@@ -214,13 +214,15 @@ All three operations recheck `manage_options`, the applicable WordPress install
 capability and the operation/type nonce derived from `nonceAction()`.
 Candidate listing returns at most eight display-safe summaries without
 downloading a ZIP. Inspection downloads, validates and discards the exact ZIP,
-then returns bounded metadata and a strict continuity fingerprint; installation
-freshly reacquires the exact release, verifies the fingerprint and package,
+then returns bounded metadata and an opaque `v2:` continuity fingerprint.
+Installation freshly reacquires the exact release, verifies the fingerprint and package,
 refuses an already installed, managed or active target, delegates mutation to
 WordPress Core, verifies that the new install remains inactive, and reports
 adoption separately. The facade never exposes
 credentials, signed URLs, internal descriptors, archive paths or provider
-responses. A partial provider capability set exposes no prospective choice and
+responses. Selections retained from the earlier `v1:` contract must be
+inspected again; Core does not translate or accept the old fingerprint. A new
+inspection is also required after the release or its archive changes. A partial provider capability set exposes no prospective choice and
 grants no repository, credential, remote, download, or mutation authority.
 
 ## Add-on dashboard tabs

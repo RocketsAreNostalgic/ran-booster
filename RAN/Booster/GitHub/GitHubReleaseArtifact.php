@@ -6,8 +6,6 @@ namespace RAN\Booster\GitHub;
 
 use RAN\Deployment\PreparedArtifact;
 use RAN\RepositoryProvider\RepositoryReleaseArtifact;
-use RAN\WPReleaseUpdater\V1\Archive\TemporaryArtifact;
-use RAN\WPReleaseUpdater\V1\Provider\GitHub\ProspectiveReleaseArtifact;
 use RuntimeException;
 
 /**
@@ -16,23 +14,26 @@ use RuntimeException;
  * @internal
  */
 final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
-	private const MAX_COPY_BYTES = 52428800;
 
-	private bool $handedOff                     = false;
-	private ?bool $discardResult                = null;
-	private ?TemporaryArtifact $claimedArtifact = null;
-
+	private bool $handedOff      = false;
+	private ?bool $discardResult = null;
 	public function __construct(
-		private ProspectiveReleaseArtifact $artifact,
+		private object $artifact,
 		private string $version,
 		private string $providerCommitId,
 		private string $packageRoot,
-		private string $mainFile
+		private string $mainFile,
+		private int $artifactSize,
+		private int $maximumArtifactBytes,
+		private string $artifactSha256
 	) {
 		if ( 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._+-]{0,63}\z/D', $version )
 			|| ! $this->boundedOpaqueValue( $providerCommitId, 191 )
 			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $packageRoot )
-			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $mainFile ) ) {
+			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $mainFile )
+			|| $artifactSize < 1 || $maximumArtifactBytes < $artifactSize
+			|| 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $artifactSha256 )
+			|| ! method_exists( $artifact, 'inspect' ) || ! method_exists( $artifact, 'discard' ) ) {
 			throw new RuntimeException( 'The GitHub release artifact is invalid.' );
 		}
 	}
@@ -55,14 +56,10 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 		if ( null !== $this->discardResult ) {
 			return $this->discardResult;
 		}
-		$this->discardResult = null === $this->claimedArtifact
-			? true === $this->artifact->discard()
-			: true === $this->claimedArtifact->discard();
-		if ( $this->discardResult ) {
-			$this->claimedArtifact = null;
-		}
+		$discarded           = true === $this->artifact->discard();
+		$this->discardResult = $discarded ? true : null;
 
-		return $this->discardResult;
+		return $discarded;
 	}
 
 	public function handoffToCore(): PreparedArtifact {
@@ -70,21 +67,46 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 			throw new RuntimeException( 'The GitHub release artifact is unavailable.' );
 		}
 
+		$prepared                = null;
+		$sourceDiscardAttempted  = false;
+		$sourceDiscardSuccessful = false;
 		try {
-			$this->claimedArtifact ??= $this->artifact->claimTemporaryArtifact();
-			$prepared                = $this->claimedArtifact->inspect(
-				fn ( string $source ): PreparedArtifact => $this->copyToCore( $source )
+			$prepared = $this->artifact->inspect(
+				function ( string $source ) use ( &$prepared ): PreparedArtifact {
+					$prepared = $this->copyToCore( $source );
+
+					return $prepared;
+				}
 			);
-			if ( ! $prepared instanceof PreparedArtifact || ! $this->claimedArtifact->discard() ) {
-				$prepared?->cleanup();
+			if ( ! $prepared instanceof PreparedArtifact ) {
 				throw new RuntimeException();
 			}
-			$this->handedOff       = true;
-			$this->claimedArtifact = null;
+			$sourceDiscardAttempted  = true;
+			$sourceDiscardSuccessful = true === $this->artifact->discard();
+			if ( ! $sourceDiscardSuccessful ) {
+				throw new RuntimeException();
+			}
+			$this->handedOff = true;
 
 			return $prepared;
 		} catch ( \Throwable ) {
-			$this->discard();
+			if ( $prepared instanceof PreparedArtifact ) {
+				try {
+					$prepared->cleanup();
+				} catch ( \Throwable ) {
+					$this->discardResult = false;
+				}
+			}
+			if ( ! $sourceDiscardAttempted ) {
+				try {
+					$sourceDiscardSuccessful = true === $this->artifact->discard();
+				} catch ( \Throwable ) {
+					$sourceDiscardSuccessful = false;
+				}
+			}
+			if ( ! $sourceDiscardSuccessful ) {
+				$this->discardResult = false;
+			}
 			throw new RuntimeException( 'The GitHub release artifact could not be prepared.' );
 		}
 	}
@@ -118,15 +140,14 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 	}
 
 	private function copyToCore( string $source ): PreparedArtifact {
-		$sourceIdentity = PreparedArtifact::regularFileIdentity( $source );
-		$directory      = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( random_bytes( 16 ) );
-		$path           = $directory . '/archive.zip';
-		$input          = false;
-		$output         = false;
-		$copyIdentity   = null;
+		$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( random_bytes( 16 ) );
+		$path         = $directory . '/archive.zip';
+		$input        = false;
+		$output       = false;
+		$copyIdentity = null;
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- The random directory is the Core-owned custody boundary.
-		if ( null === $sourceIdentity || ! mkdir( $directory, 0700 ) ) {
+		if ( ! mkdir( $directory, 0700 ) ) {
 			throw new RuntimeException();
 		}
 		$directoryIdentity = self::privateDirectoryIdentity( $directory );
@@ -151,8 +172,8 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_copy_to_stream -- The source is copied in a fixed upper bound without holding the archive in memory.
-			$size = stream_copy_to_stream( $input, $output, self::MAX_COPY_BYTES + 1 );
-			if ( false === $size || self::MAX_COPY_BYTES < $size ) {
+			$size = stream_copy_to_stream( $input, $output, $this->artifactSize + 1 );
+			if ( false === $size || $this->artifactSize !== $size || $size > $this->maximumArtifactBytes ) {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close before Core identity capture.
@@ -169,13 +190,9 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 			$input            = false;
 			$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
-			$sourceDigest = hash_file( 'sha256', $source );
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
 			$copyDigest = hash_file( 'sha256', $path );
-			if ( ! is_string( $sourceDigest )
-				|| ! is_string( $copyDigest )
-				|| ! hash_equals( $sourceDigest, $copyDigest )
-				|| $sourceIdentity !== PreparedArtifact::regularFileIdentity( $source )
+			if ( ! is_string( $copyDigest )
+				|| ! hash_equals( $this->artifactSha256, $copyDigest )
 				|| $directoryIdentity !== self::privateDirectoryIdentity( $directory )
 				|| $copyIdentity !== self::pathFileIdentity( $path )
 				|| null === $preparedIdentity
@@ -183,7 +200,7 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 				throw new RuntimeException();
 			}
 
-			return new PreparedArtifact( $path, $this->providerCommitId, $this->version, $sourceDigest, $preparedIdentity['device'], $preparedIdentity['inode'], $preparedIdentity['size'], $preparedIdentity['permissions'], $preparedIdentity['links'], $directory );
+			return new PreparedArtifact( $path, $this->providerCommitId, $this->version, $this->artifactSha256, $preparedIdentity['device'], $preparedIdentity['inode'], $preparedIdentity['size'], $preparedIdentity['permissions'], $preparedIdentity['links'], $directory );
 		} catch ( \Throwable ) {
 			$this->removeCopy( $path, $directory, $directoryIdentity, $copyIdentity );
 			throw new RuntimeException();

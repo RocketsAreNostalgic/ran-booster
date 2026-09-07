@@ -35,16 +35,27 @@ jq -e \
 	--arg committer_email 'noreply@github.com' \
 	--arg head "$head_sha" \
 	--arg signer web-flow \
-	'.identity.data.repository.pullRequest.commits.nodes
+	'def valid_web_flow:
+		.signature.isValid == true
+		and .signature.state == "VALID"
+		and .signature.signer.login == $signer;
+	def generated_release:
+		valid_web_flow
+		and .author.user.login == $bot
+		and .author.email == $bot_email
+		and .committer.email == $committer_email;
+	def merge_wrapper:
+		valid_web_flow
+		and .committer.email == $committer_email;
+	.identity.data.repository.pullRequest.commits.nodes
 	| length == 1
 	and .[0].commit.oid == $head
-	and (.[0].commit.parents.nodes | length == 1 and .[0].oid == $base)
-	and .[0].commit.signature.isValid == true
-	and .[0].commit.signature.state == "VALID"
-	and .[0].commit.signature.signer.login == $signer
-	and .[0].commit.author.user.login == $bot
-	and .[0].commit.author.email == $bot_email
-	and .[0].commit.committer.email == $committer_email' \
+	and (.[0].commit as $head_commit
+		| $head_commit.parents as $parents
+		| ($parents.totalCount == 1 and ($parents.nodes | length) == 1 and $parents.nodes[0].oid == $base and ($head_commit | generated_release))
+			or ($parents.totalCount == 2 and ($parents.nodes | length) == 2 and ($head_commit | merge_wrapper)
+				and any($parents.nodes[]; .oid == $base)
+				and any($parents.nodes[]; .oid != $base and (generated_release))))' \
 	<<< "$input" >/dev/null \
 	|| fail 'release reconciliation requires the exact verified Release Please bot commit identity.'
 

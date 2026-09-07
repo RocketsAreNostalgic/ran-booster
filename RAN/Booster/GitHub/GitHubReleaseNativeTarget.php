@@ -68,8 +68,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 
 		try {
 			$outer = $this->updater->status();
-			if ( ! is_array( $outer )
-				|| array_keys( $outer ) !== array( 'state', 'declaration_accepted', 'hooks_registered', 'code', 'native' ) ) {
+			if ( ! is_array( $outer ) || 5 !== count( $outer )
+				|| array_diff( array_keys( $outer ), array( 'state', 'declaration_accepted', 'hooks_registered', 'code', 'native' ) ) !== array() ) {
 				throw new LogicException( 'The public updater target status is incompatible.' );
 			}
 			if ( 'active' !== $outer['state']

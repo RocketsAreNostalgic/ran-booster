@@ -45,6 +45,48 @@ final class PublicReleaseResultMappingTest extends TestCase {
 		self::assertSame( 1, $source->acquireCalls );
 	}
 
+	public function testMapsReorderedPublicEnvelopesAndAcquisitionValue(): void {
+		$source     = new PublicReleaseSourceFixture(
+			array_reverse( $this->listing(), true ),
+			array_reverse( $this->envelope( true, 'release_inspected', $this->facts(), 'complete' ), true ),
+			array_reverse(
+				$this->envelope(
+					true,
+					'release_acquired',
+					array(
+						'artifact'   => new PublicReleaseArtifactFixture( $this->archive() ),
+						'inspection' => $this->facts(),
+					),
+					'retained'
+				),
+				true
+			)
+		);
+		$provider   = $this->provider( $source );
+		$repository = new RepositoryReference( 'owner/example', '123456789', false, null );
+
+		self::assertCount( 1, $provider->listReleaseCandidates( 'plugin', $repository, 'stable' )->candidates );
+		self::assertSame( 'v2:' . str_repeat( 'b', 64 ), $provider->inspectRelease( 'plugin', $repository, '42', 'v1.2.3', 'stable' )->fingerprint );
+		$provider->acquireRelease( 'plugin', $repository, '42', 'v1.2.3', 'v2:' . str_repeat( 'b', 64 ), 'stable' )->discard();
+	}
+
+	public function testMapsReorderedPublicFailureEnvelope(): void {
+		$provider = $this->provider(
+			new PublicReleaseSourceFixture(
+				$this->listing(),
+				$this->envelope( true, 'release_inspected', $this->facts(), 'complete' ),
+				array_reverse( $this->envelope( false, 'release_changed', null ), true )
+			)
+		);
+
+		try {
+			$provider->acquireRelease( 'plugin', new RepositoryReference( 'owner/example', '123456789', false, null ), '42', 'v1.2.3', 'v2:' . str_repeat( 'b', 64 ), 'stable' );
+			self::fail( 'A reordered release-change failure was not mapped.' );
+		} catch ( RepositoryReleaseAcquisitionRejected $failure ) {
+			self::assertSame( RepositoryReleaseAcquisitionRejected::INVALID_RELEASE, $failure->reason );
+		}
+	}
+
 	public function testRejectsV1BeforeThePublicSourceAndMapsCleanupBeforeFailure(): void {
 		$source     = new PublicReleaseSourceFixture( $this->listing(), $this->envelope( true, 'release_inspected', $this->facts(), 'complete' ), $this->envelope( false, 'release_changed', null, 'failed' ) );
 		$provider   = $this->provider( $source );
@@ -63,7 +105,7 @@ final class PublicReleaseResultMappingTest extends TestCase {
 	}
 
 	public function testRateLimitWithNullRetryUsesExistingReadFallback(): void {
-		$provider = $this->provider( new PublicReleaseSourceFixture( $this->envelope( false, 'rate_limited', null ), $this->envelope( true, 'release_inspected', $this->facts(), 'complete' ), $this->envelope( false, 'operation_failed', null ) ) );
+		$provider = $this->provider( new PublicReleaseSourceFixture( array_reverse( $this->envelope( false, 'rate_limited', null ), true ), $this->envelope( true, 'release_inspected', $this->facts(), 'complete' ), $this->envelope( false, 'operation_failed', null ) ) );
 		$this->expectException( RepositoryReleaseReadUnavailable::class );
 		$provider->listReleaseCandidates( 'plugin', new RepositoryReference( 'owner/example', '123456789', false, null ), 'stable' );
 	}

@@ -69,8 +69,10 @@ if [[ "$("$php_bin" "$wp_cli" option get siteurl --path="$wordpress")" != "$RAN_
 fi
 
 archive_root="$(mktemp -d "$RUNNER_TEMP/ran-booster-release-capability.XXXXXX")"
+probe_source=''
+probe_target=''
 cleanup() {
-	if [[ -n "${probe_target:-}" && -f "$probe_target" && ! -L "$probe_target" ]] && cmp -s "$probe_source" "$probe_target"; then rm -- "$probe_target"; fi
+	if [[ -n "${probe_target:-}" && -n "${probe_source:-}" && -f "$probe_target" && ! -L "$probe_target" ]] && cmp -s "$probe_source" "$probe_target"; then rm -- "$probe_target"; fi
 	"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/native-lifecycle-installed-cleanup.php" --user=admin --path="$wordpress" || echo "Native fixture cleanup failed; ownership manifest retained." >&2
 	"$php_bin" "$wp_cli" option delete ran_booster_p2_plugin_archive ran_booster_p2_theme_archive ran_booster_p2_last_artifact --path="$wordpress" >/dev/null 2>&1 || true
 	if [[ -d "$fixture_target" && ! -L "$fixture_target" ]]; then

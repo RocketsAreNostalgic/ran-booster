@@ -570,7 +570,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		}
 		if ( ! $this->success( $result, 'release_acquired', 'retained' )
 			|| ! is_array( $result['value'] ?? null )
-			|| array_keys( $result['value'] ) !== array( 'inspection', 'artifact' )
+			|| 2 !== count( $result['value'] )
+			|| array_diff( array_keys( $result['value'] ), array( 'inspection', 'artifact' ) ) !== array()
 			|| ! is_array( $result['value']['inspection'] ?? null )
 			|| ! is_object( $result['value']['artifact'] ?? null ) ) {
 			if ( ! $this->discardRejectedArtifact( $result ) ) {
@@ -789,7 +790,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	}
 
 	private function success( mixed $result, string $code, string $cleanupStatus ): bool {
-		return is_array( $result ) && array_keys( $result ) === array( 'ok', 'code', 'value', 'retry_after', 'cleanup_status' )
+		return is_array( $result ) && 5 === count( $result )
+			&& array_diff( array_keys( $result ), array( 'ok', 'code', 'value', 'retry_after', 'cleanup_status' ) ) === array()
 			&& true === $result['ok'] && $code === $result['code'] && null === $result['retry_after'] && $cleanupStatus === $result['cleanup_status'];
 	}
 
@@ -800,7 +802,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	}
 
 	private function failure( mixed $result, string $operation, string $code ): bool {
-		if ( ! is_array( $result ) || array_keys( $result ) !== array( 'ok', 'code', 'value', 'retry_after', 'cleanup_status' )
+		if ( ! is_array( $result ) || 5 !== count( $result )
+			|| array_diff( array_keys( $result ), array( 'ok', 'code', 'value', 'retry_after', 'cleanup_status' ) ) !== array()
 			|| false !== $result['ok'] || $code !== $result['code'] || null !== $result['value']
 			|| ! in_array( $result['cleanup_status'], array( 'not_applicable', 'complete', 'failed' ), true )
 			|| ( 'list' === $operation && 'not_applicable' !== $result['cleanup_status'] )

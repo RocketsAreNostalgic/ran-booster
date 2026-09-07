@@ -96,6 +96,42 @@ final class NativeTargetsTest extends TestCase {
 		self::assertSame( 'provider-release-42', $status->candidateProviderReleaseId );
 	}
 
+	public function testRegisteredNeutralUpdaterProjectsAReorderedOuterStatus(): void {
+		$target = $this->target( null );
+		( new \ReflectionProperty( GitHubReleaseNativeTarget::class, 'updater' ) )->setValue(
+			$target,
+			new class() {
+				/** @return array<string, mixed> */
+				public function status(): array {
+					return array(
+						'native'               => array(
+							'candidate_header_version'  => '1.2.0',
+							'candidate_tag'             => 'v1.2.0',
+							'candidate_validation_code' => 'archive_identity_verified',
+							'candidate_version'         => '1.2.0',
+							'failure_code'              => null,
+							'installed_version'         => '1.0.0',
+							'last_check'                => 1_700_000_000,
+							'offered_release_identity'  => 'provider-release-42',
+							'offered_version'           => '1.2.0',
+							'relationship'              => 'newer',
+						),
+						'code'                 => 'target_active',
+						'hooks_registered'     => true,
+						'declaration_accepted' => true,
+						'state'                => 'active',
+					);
+				}
+			}
+		);
+
+		$status = $target->status();
+
+		self::assertTrue( $status->active );
+		self::assertSame( '1.2.0', $status->offeredVersion );
+		self::assertSame( 'release_identity_verified', $status->candidateCode );
+	}
+
 	public function testNativeOfferRequiresItsOpaqueIdentityAndVersionTogether(): void {
 		foreach ( array(
 			array( 'provider-release-42', null ),

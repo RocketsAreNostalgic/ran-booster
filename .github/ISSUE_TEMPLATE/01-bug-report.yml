@@ -39,7 +39,7 @@ body:
       id: provider
       attributes:
           label: Repository provider
-          description: Name the provider, but omit private repository identifiers unless essential.
+          description: Name the provider only; never include private repository or site identifiers.
           placeholder: GitHub
       validations:
           required: true
@@ -80,7 +80,7 @@ body:
       attributes:
           label: Safety check
           options:
-              - label: I have removed credentials, secrets, signed URLs, private source, customer data, release assets, full logs, private workbench material, and Dex identifiers.
+              - label: I have removed credentials, secrets, signed URLs, private source, private repository or site identities, customer data, release assets, full logs, private workbench material, and Dex identifiers.
                 required: true
               - label: This report does not disclose a security vulnerability.
                 required: true

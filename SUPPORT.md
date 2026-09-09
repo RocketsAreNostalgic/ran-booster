@@ -10,8 +10,10 @@ There is no guaranteed response or resolution time.
 Before opening an issue, gather the RAN Booster, WordPress, PHP, and database
 versions. Include the repository provider and package operation involved, the
 steps needed to reproduce the problem, and the expected and actual result. A
-Booster support reference is useful when one is available, but remove private
-repository and site identities unless they are essential to reproduction.
+Booster support reference is useful when one is available. Never include private
+repository or site identities in a public issue or pull request; redact them and
+reduce the report to a non-sensitive reproducer. If that is not possible, do not
+publish the private material.
 
 Do not put vulnerability details, credentials, webhook secrets, WordPress
 salts, database or customer data, signed URLs, release assets, private source,

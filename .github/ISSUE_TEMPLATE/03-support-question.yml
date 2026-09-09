@@ -6,7 +6,7 @@ body:
       attributes:
           value: |
               Use this form for ordinary support questions. Report reproducible defects with the Bug report form.
-              Never include vulnerability details here. Use the private route in
+              Never include vulnerability details, private repository identities, or private site identities here. Replace private identities with neutral labels. Use the private route in
               [SECURITY.md](https://github.com/RocketsAreNostalgic/ran-booster/blob/main/SECURITY.md)
               for sensitive reporting.
     - type: input
@@ -35,20 +35,20 @@ body:
       id: question
       attributes:
           label: Question
-          description: Ask your support question with clear, minimal context.
+          description: Ask your support question with clear, minimal context and neutral labels for private repository or site identities.
       validations:
           required: true
     - type: textarea
       id: evidence
       attributes:
           label: Evidence and context
-          description: If useful, include small reproduction steps, a screenshot, or a short sanitized log excerpt.
+          description: If useful, include small reproduction steps, a screenshot, or a short sanitized log excerpt after removing private repository and site identities.
     - type: checkboxes
       id: acknowledgements
       attributes:
           label: Required acknowledgements
           options:
-              - label: I have removed credentials, secrets, signed URLs, private repository IDs, customer data, full production logs, private source, private workbench material, and Dex identifiers.
+              - label: I have removed credentials, secrets, signed URLs, private repository IDs, private repository and site identities, customer data, full production logs, private source, private workbench material, and Dex identifiers.
                 required: true
               - label: This request does not include a security vulnerability.
                 required: true

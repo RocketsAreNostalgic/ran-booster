@@ -5,13 +5,13 @@ body:
     - type: markdown
       attributes:
           value: |
-              Feature requests help shape future work, but submitting one does not create a roadmap, delivery, or support commitment. Do not include private source, credentials, customer data, or other sensitive material.
+              Feature requests help shape future work, but submitting one does not create a roadmap, delivery, or support commitment. Do not include private repository or site identities, private source, credentials, customer data, or other sensitive material. Replace private identities with neutral labels.
               Security vulnerabilities are never reported here. Use the private route in SECURITY.md for sensitive reporting.
     - type: textarea
       id: problem
       attributes:
           label: Problem
-          description: What is difficult today, and who encounters it?
+          description: What is difficult today, and who encounters it? Use neutral labels for any private repository or site identities.
       validations:
           required: true
     - type: textarea
@@ -25,13 +25,13 @@ body:
       id: current_approach
       attributes:
           label: Current approach
-          description: Optional. Explain how you handle the problem now and where that approach falls short.
+          description: Optional. Explain how you handle the problem now and where that approach falls short, without including private repository or site identities.
     - type: checkboxes
       id: safety
       attributes:
           label: Safety check
           options:
-              - label: I have removed credentials, private source, customer data, signed URLs, full logs, private workbench material, and Dex identifiers.
+              - label: I have removed private repository and site identities, credentials, private source, customer data, signed URLs, full logs, private workbench material, and Dex identifiers.
                 required: true
               - label: This request does not disclose a security vulnerability.
                 required: true

@@ -7,8 +7,8 @@ body:
           value: |
               Use this form only when GitHub private vulnerability reporting is unavailable.
               Do not include vulnerability details, exploit steps, credentials, webhook
-              secrets, repository credentials, WordPress salts, private repository URLs,
-              signed URLs, full logs, customer data, or release assets.
+              secrets, repository credentials, WordPress salts, private repository or site identities,
+              signed URLs, full logs, customer data, or release assets. Replace any private identity with a neutral label.
     - type: checkboxes
       id: acknowledgements
       attributes:
@@ -18,7 +18,7 @@ body:
                 required: true
               - label: I have not included vulnerability details, exploit steps, or reproduction traces in this report.
                 required: true
-              - label: I have removed secrets, private repository identifiers, and sensitive operations data from this report.
+              - label: I have removed secrets, private repository and site identities, and sensitive operations data from this report.
                 required: true
               - label: I understand this public issue is only a request for private contact and contains no technical findings.
                 required: true

@@ -20,13 +20,10 @@
 	<arg name="parallel" value="4"/>
 	<arg value="sp"/>
 
-	<rule ref="PHPCompatibilityWP"/>
+	<rule ref="RANWordPressPlugin"/>
 	<rule ref="WordPress-Extra">
 		<!-- This single-file characterization harness intentionally declares WordPress fixtures inline. -->
 		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-		<!-- The RAN namespace is PSR-4 autoloaded, so class files retain class-case names. -->
-		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
-		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
 		<!-- Preserve the inherited camelCase OOP API and its local implementation variables. -->
 		<exclude name="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid"/>
 		<exclude name="WordPress.NamingConventions.ValidVariableName"/>
@@ -41,13 +38,13 @@
 		<properties>
 			<property name="prefixes" type="array">
 				<element value="ran_booster"/>
-				<!-- The namespace separator makes the three-character RAN namespace a valid WPCS prefix. -->
+				<!-- Booster intentionally contains multiple established production namespaces below the RAN root. -->
 				<element value="RAN\"/>
 			</property>
 		</properties>
 	</rule>
 
-	<!-- WPCS 3.4 hard-codes a four-character minimum; this inherited plugin's namespace is RAN. -->
+	<!-- WPCS 3.4 hard-codes a four-character minimum; Booster's established production namespace root is RAN. -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound">
 		<severity>0</severity>
 	</rule>

@@ -23,7 +23,7 @@ use RuntimeException;
 
 final class AdmittedBranchExecutionParityTest extends TestCase {
 	public function testDowngradeIsBlockedBeforeMutation(): void {
-		$host = new ParityAdmittedHost();
+		$host                  = new ParityAdmittedHost();
 		$host->artifactVersion = '0.9.0';
 
 		$code = $this->deploy( $host, 'update' );
@@ -36,7 +36,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	public function testPolicyFailureIsProjectedBeforeArtifactAcquisition(): void {
-		$host = new ParityAdmittedHost();
+		$host                = new ParityAdmittedHost();
 		$host->policyFailure = DeploymentOutcome::CODE_POLICY_BLOCKED;
 
 		$code = $this->deploy( $host, 'update' );
@@ -49,7 +49,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	public function testMutationStartDurabilityFailurePreventsCoreExecutionAndPreservesAmbiguity(): void {
-		$host = new ParityAdmittedHost();
+		$host                       = new ParityAdmittedHost();
 		$host->mutationStartFailure = true;
 
 		try {
@@ -66,7 +66,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	public function testSuccessfulInstallUsesDurableAdoptionAfterVerifiedMutation(): void {
-		$host = new ParityAdmittedHost();
+		$host           = new ParityAdmittedHost();
 		$host->baseline = null;
 
 		$code = $this->deploy( $host, 'install' );
@@ -84,7 +84,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	public function testCleanupFailureAfterMutationIsProjectedAsInterrupted(): void {
-		$host = new ParityAdmittedHost();
+		$host                 = new ParityAdmittedHost();
 		$host->cleanupFailure = true;
 
 		$code = $this->deploy( $host, 'update' );
@@ -109,7 +109,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 			null,
 			'example/example.php'
 		);
-		$updater = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
+		$updater     = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
 		return $updater->plugin( 'owner/example', 'R_example', 'main', null, 'example' )->deploy();
 	}
 
@@ -128,11 +128,15 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	/** @var list<string> */
 	public array $events = array();
 	/** @var array{identifier:string,version:string,active:bool}|null */
-	public ?array $baseline = array( 'identifier' => 'example/example.php', 'version' => '1.0.0', 'active' => false );
-	public string $artifactVersion = '2.0.0';
-	public ?string $policyFailure = null;
+	public ?array $baseline           = array(
+		'identifier' => 'example/example.php',
+		'version'    => '1.0.0',
+		'active'     => false,
+	);
+	public string $artifactVersion    = '2.0.0';
+	public ?string $policyFailure     = null;
 	public bool $mutationStartFailure = false;
-	public bool $cleanupFailure = false;
+	public bool $cleanupFailure       = false;
 	private ParityAdmittedArtifact $artifact;
 
 	public function __construct() {
@@ -166,6 +170,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	public function assertMutationAllowed(): void {
 		$this->events[] = 'allowed';
 		if ( null !== $this->policyFailure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test double transports a domain failure code.
 			throw new AdmittedBranchStageFailure( $this->policyFailure );
 		}
 	}
@@ -186,7 +191,11 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
 		$this->events[] = 'installed';
-		return array( 'identifier' => 'example/example.php', 'version' => $this->artifactVersion, 'active' => false );
+		return array(
+			'identifier' => 'example/example.php',
+			'version'    => $this->artifactVersion,
+			'active'     => false,
+		);
 	}
 
 	public function baselineNow( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {

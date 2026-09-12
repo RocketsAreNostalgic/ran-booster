@@ -21,10 +21,10 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 	}
 
 	public function testReleaseInspectionResolvesAndValidatesNonDefaultLimitLazily(): void {
-		$registrar = new class() {
+		$registrar  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
-			public int $limitReads = 0;
+			public int $limitReads  = 0;
 
 			public function maximumArtifactBytes(): int {
 				++$this->limitReads;
@@ -63,7 +63,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$provider = GitHubProvider::create(
+		$provider   = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),
 			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
 			$registrar
@@ -81,7 +81,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 	}
 
 	public function testDefaultReleaseSourceKeepsLegacyRegistrarCallShape(): void {
-		$registrar = new class() {
+		$registrar  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
 
@@ -94,7 +94,10 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 						return array(
 							'ok'             => true,
 							'code'           => 'releases_listed',
-							'value'          => array( 'candidates' => array(), 'not_modified' => false ),
+							'value'          => array(
+								'candidates'   => array(),
+								'not_modified' => false,
+							),
 							'retry_after'    => null,
 							'cleanup_status' => 'not_applicable',
 						);
@@ -102,7 +105,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$provider = GitHubProvider::create(
+		$provider   = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),
 			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
 			$registrar
@@ -128,7 +131,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$target = new GitHubReleaseNativeTarget(
+		$target     = new GitHubReleaseNativeTarget(
 			$nonDefault,
 			'plugin',
 			'/wordpress/wp-content/plugins/example/example.php',
@@ -158,7 +161,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$target = new GitHubReleaseNativeTarget(
+		$target  = new GitHubReleaseNativeTarget(
 			$default,
 			'plugin',
 			'/wordpress/wp-content/plugins/example/example.php',

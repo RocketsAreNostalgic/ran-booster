@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+// Internal exception values are control-flow/diagnostic transport, not rendered output.
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
+// Trust-boundary URL parsing and local writability probes intentionally use PHP primitives.
+// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
+
 namespace RAN\Deployment;
 
 use RAN\ManagedRepository;
@@ -53,7 +59,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	private const EXPANDED_RATIO    = 4;
 
 	private ?ProviderPreparedArchive $providerArchive = null;
-	private bool $providerArchiveCleaned = false;
+	private bool $providerArchiveCleaned              = false;
 
 	public function __construct(
 		private DeploymentAttempt $attempt,
@@ -625,7 +631,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$active     = $package instanceof \RAN\Plugin
 			? in_array( $identifier, (array) get_option( 'active_plugins', array() ), true )
 			: in_array( $identifier, array( (string) get_option( 'stylesheet', '' ), (string) get_option( 'template', '' ) ), true );
-		return array( 'version' => $package->getVersion(), 'active' => $active );
+		return array(
+			'version' => $package->getVersion(),
+			'active'  => $active,
+		);
 	}
 
 	private function installedPackage( string $type, string $slug ): Package {

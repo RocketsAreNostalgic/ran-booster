@@ -76,7 +76,7 @@ final readonly class DeploymentRequest {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.', 0, $exception );
 		}
 
-		$legacyKeys = array(
+		$legacyKeys  = array(
 			'repository',
 			'credential_id',
 			'private',
@@ -103,7 +103,7 @@ final readonly class DeploymentRequest {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.' );
 		}
 
-		$request = new self(
+		$request   = new self(
 			$data['repository'],
 			$data['credential_id'],
 			$data['private'],

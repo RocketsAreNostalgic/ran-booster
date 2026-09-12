@@ -12,7 +12,7 @@ final class BranchUpdaterBootstrap {
 	/** @var array<string, string> */
 	private const PREFIXES = array(
 		'RAN\\WPBranchUpdater\\V1\\' => '/vendor/ran/wp-branch-updater/src/',
-		'RAN\\UpdaterSupport\\V1\\' => '/vendor/ran/updater-support/src/',
+		'RAN\\UpdaterSupport\\V1\\'  => '/vendor/ran/updater-support/src/',
 	);
 
 	private static bool $registered = false;

@@ -56,9 +56,9 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	private int $randomByte = 1;
 
 	protected function setUp(): void {
-		$this->database  = new AttemptRepositoryDatabase();
-		$GLOBALS['wpdb'] = $this->database;
-		$this->attempts  = new DeploymentAttemptRepository(
+		$this->database         = new AttemptRepositoryDatabase();
+		$GLOBALS['wpdb']        = $this->database;
+		$this->attempts         = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-12 12:00:00 UTC' ),
@@ -66,8 +66,8 @@ final class AdmittedBranchExecutionTest extends TestCase {
 				return str_repeat( chr( $this->randomByte++ ), $length );
 			}
 		);
-		$this->plugins = new BoundaryPluginRepository();
-		$this->themes  = new BoundaryThemeRepository();
+		$this->plugins          = new BoundaryPluginRepository();
+		$this->themes           = new BoundaryThemeRepository();
 		$this->plugins->package = $this->plugin();
 	}
 
@@ -88,7 +88,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			null,
 			'example/example.php'
 		);
-		$host = new BoundaryAdmittedHost();
+		$host        = new BoundaryAdmittedHost();
 
 		$updater = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
 		$code    = $updater->plugin( 'owner/example', 'R_example', 'main', null, 'example' )->deploy();
@@ -157,13 +157,20 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	}
 
 	public function testProviderArchiveIsCleanedWhenItsResolvedRevisionIsInvalid(): void {
-		$archive  = new BoundaryProviderArchive( '' );
-		$provider = new BoundaryRepositoryProvider( $archive );
-		$adapter  = $this->adapter( $this->runningUpdate(), new ProviderRegistry( array( $provider ) ) );
+		$archive     = new BoundaryProviderArchive( '' );
+		$provider    = new BoundaryRepositoryProvider( $archive );
+		$adapter     = $this->adapter( $this->runningUpdate(), new ProviderRegistry( array( $provider ) ) );
 		$declaration = $adapter->declaration();
 
 		try {
-			$adapter->prepare( $declaration, array( 'identifier' => 'example/example.php', 'version' => '1.0.0', 'active' => false ) );
+			$adapter->prepare(
+				$declaration,
+				array(
+					'identifier' => 'example/example.php',
+					'version'    => '1.0.0',
+					'active'     => false,
+				)
+			);
 			self::fail( 'An invalid resolved revision must fail before artifact acquisition.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, $failure->outcomeCode );
@@ -265,6 +272,7 @@ final class BoundaryProviderArchive implements ProviderPreparedArchive {
 
 final class BoundaryRepositoryProvider implements RepositoryProvider {
 	use SuppliesProviderDiagnostics;
+
 	public function __construct( private BoundaryProviderArchive $archive ) {}
 	public function getMetadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
@@ -307,7 +315,11 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 	}
 	public function frozenTarget( BranchDeploymentDeclaration $deployment, bool $deferExisting ): ?array {
 		$this->events[] = $deferExisting ? 'frozen:defer' : 'frozen:live';
-		return array( 'identifier' => 'example/example.php', 'version' => '1.0.0', 'active' => false );
+		return array(
+			'identifier' => 'example/example.php',
+			'version'    => '1.0.0',
+			'active'     => false,
+		);
 	}
 	public function maintenanceActive(): bool {
 		$this->events[] = 'maintenance';
@@ -318,7 +330,11 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 	}
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
 		$this->events[] = 'installed';
-		return array( 'identifier' => 'example/example.php', 'version' => '2.0.0', 'active' => false );
+		return array(
+			'identifier' => 'example/example.php',
+			'version'    => '2.0.0',
+			'active'     => false,
+		);
 	}
 	public function baselineNow( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
 		$this->events[] = 'baseline-now';

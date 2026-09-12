@@ -2,26 +2,32 @@
 
 declare(strict_types=1);
 
+// Standalone CLI verifier: WordPress runtime APIs are intentionally unavailable here.
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
+
 if ( PHP_SAPI !== 'cli' || 2 !== $argc ) {
 	fwrite( STDERR, "Usage: php scripts/verify-runtime-dependencies.php <composer.lock>\n" );
 	exit( 2 );
 }
 
 $expected = array(
-	'ran/updater-support' => array(
-		'version' => 'dev-main',
+	'ran/updater-support'    => array(
+		'version'    => 'dev-main',
 		'repository' => 'RocketsAreNostalgic/ran-updater-support',
-		'reference' => '4afba1191b81602741ada8948fcf78a6c7510659',
+		'reference'  => '4afba1191b81602741ada8948fcf78a6c7510659',
 	),
-	'ran/wp-branch-updater' => array(
-		'version' => 'v1.0.0-beta.2',
+	'ran/wp-branch-updater'  => array(
+		'version'    => 'v1.0.0-beta.2',
 		'repository' => 'RocketsAreNostalgic/ran-wp-branch-updater',
-		'reference' => 'bc0f6608f591ee9c48b71de90e4d651462455b47',
+		'reference'  => 'bc0f6608f591ee9c48b71de90e4d651462455b47',
 	),
 	'ran/wp-release-updater' => array(
-		'version' => 'v0.1.0-beta.4',
+		'version'    => 'v0.1.0-beta.4',
 		'repository' => 'RocketsAreNostalgic/ran-wp-release-updater',
-		'reference' => 'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3',
+		'reference'  => 'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3',
 	),
 );
 
@@ -53,11 +59,11 @@ if ( array_keys( $expected ) !== array_keys( array_intersect_key( $expected, $ac
 }
 
 foreach ( $expected as $name => $identity ) {
-	$package = $actual[ $name ] ?? null;
-	$source = is_array( $package ) ? ( $package['source'] ?? null ) : null;
-	$dist = is_array( $package ) ? ( $package['dist'] ?? null ) : null;
+	$package   = $actual[ $name ] ?? null;
+	$source    = is_array( $package ) ? ( $package['source'] ?? null ) : null;
+	$dist      = is_array( $package ) ? ( $package['dist'] ?? null ) : null;
 	$sourceUrl = 'https://github.com/' . $identity['repository'] . '.git';
-	$distUrl = 'https://api.github.com/repos/' . $identity['repository'] . '/zipball/' . $identity['reference'];
+	$distUrl   = 'https://api.github.com/repos/' . $identity['repository'] . '/zipball/' . $identity['reference'];
 
 	if (
 		! is_array( $package )

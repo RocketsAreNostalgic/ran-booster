@@ -45,7 +45,7 @@ class DeploymentCoordinator {
 		?WordPressCorePackageExecutor $branchExecutor = null
 	) {
 		$this->branchExecutor = $branchExecutor ?? new WordPressCorePackageExecutor();
-		$this->sourceGuard   ??= new RepositorySourceGuard();
+		$this->sourceGuard  ??= new RepositorySourceGuard();
 		if ( '' === trim( $maintenancePath ) ) {
 			throw new RuntimeException( 'The WordPress maintenance path is invalid.' );
 		}
@@ -268,8 +268,8 @@ class DeploymentCoordinator {
 				$declaration->slug,
 				$declaration->subdirectory
 			);
-		$code    = $deployment->deploy();
-		$outcome = $this->finishedOutcome( $host->terminalAttempt() );
+		$code       = $deployment->deploy();
+		$outcome    = $this->finishedOutcome( $host->terminalAttempt() );
 		if ( ! hash_equals( $code, $outcome->getCode() ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -387,7 +387,10 @@ class DeploymentCoordinator {
 					&& (string) $package->getBranch() === $event->branch
 					&& null !== $package->getProviderRepositoryId()
 					&& hash_equals( (string) $package->getProviderRepositoryId(), $event->providerRepositoryId ) ) {
-					$matches[] = array( 'type' => $type, 'package' => $package );
+					$matches[] = array(
+						'type'    => $type,
+						'package' => $package,
+					);
 				}
 			}
 		}
@@ -396,6 +399,7 @@ class DeploymentCoordinator {
 
 	private function assertBranchSource( Package $package ): void {
 		if ( PackageSource::BRANCH !== $package->getSource() ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
 			throw new DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED, 'Branch deployment is unavailable for a release-managed package.' );
 		}
 	}

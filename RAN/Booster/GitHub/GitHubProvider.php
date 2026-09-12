@@ -98,16 +98,14 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	public static function create(
 		ProviderCredentialStore $credentials,
 		AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-		object $registrar,
-		?callable $maximumArtifactBytes = null
+		object $registrar
 	): RepositoryProvider {
 		return new self(
 			$credentials,
 			new RepositoryBrowser( $credentials ),
 			new WebhookNormalizer( $credentials, $deliveryEvidence ),
 			new RepositoryWebhookClient(),
-			$registrar,
-			$maximumArtifactBytes
+			$registrar
 		);
 	}
 
@@ -139,21 +137,21 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		RepositoryBrowser $browser,
 		WebhookNormalizer $webhooks,
 		RepositoryWebhookClient $webhookClient,
-		object $registrar,
-		?callable $maximumArtifactBytes = null
+		object $registrar
 	) {
 		$this->registrar            = $registrar;
-		$this->maximumArtifactBytes = null === $maximumArtifactBytes
-			? static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES
-			: Closure::fromCallable( $maximumArtifactBytes );
+		$resolver                   = is_callable( array( $registrar, 'maximumArtifactBytes' ) )
+			? Closure::fromCallable( array( $registrar, 'maximumArtifactBytes' ) )
+			: static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
+		$this->maximumArtifactBytes = static fn (): int => $resolver();
 		$this->credentials          = $credentials;
-		$this->browser          = $browser;
-		$this->webhooks         = $webhooks;
-		$this->webhookClient    = $webhookClient;
-		$this->diagnostics      = new Diagnostics( $browser );
-		$this->credentialPolicy = new CredentialPolicy();
-		$workflowRecords        = new SetupRecordStore();
-		$this->releaseWorkflow  = new GitHubRepositoryReleaseWorkflow(
+		$this->browser              = $browser;
+		$this->webhooks             = $webhooks;
+		$this->webhookClient        = $webhookClient;
+		$this->diagnostics          = new Diagnostics( $browser );
+		$this->credentialPolicy     = new CredentialPolicy();
+		$workflowRecords            = new SetupRecordStore();
+		$this->releaseWorkflow      = new GitHubRepositoryReleaseWorkflow(
 			$credentials,
 			new WorkflowApplicationCoordinator(
 				new GitHubRepositoryClient(),
@@ -163,7 +161,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			),
 			$workflowRecords
 		);
-		$this->metadata         = new ProviderMetadata(
+		$this->metadata             = new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
 			'https://github.com/',

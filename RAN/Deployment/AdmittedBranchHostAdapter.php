@@ -179,14 +179,20 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 
 		$providerArchive = $this->providerArchive;
-		$resolvedRef     = $providerArchive->getResolvedRef();
-		if ( '' === $resolvedRef || $resolvedRef !== trim( $resolvedRef ) || strlen( $resolvedRef ) > 191 || preg_match( '/[[:cntrl:]]/', $resolvedRef ) === 1 ) {
+		try {
+			$resolvedRef = $providerArchive->getResolvedRef();
+			if ( '' === $resolvedRef || $resolvedRef !== trim( $resolvedRef ) || strlen( $resolvedRef ) > 191 || preg_match( '/[[:cntrl:]]/', $resolvedRef ) === 1 ) {
+				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
+			}
+			if ( null !== $deployment->expectedHead && ! hash_equals( $deployment->expectedHead, $resolvedRef ) ) {
+				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
+			}
+		} catch ( AdmittedBranchStageFailure $failure ) {
 			$this->cleanupProviderArchive( $providerArchive );
-			$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
-		}
-		if ( null !== $deployment->expectedHead && ! hash_equals( $deployment->expectedHead, $resolvedRef ) ) {
+			throw $failure;
+		} catch ( Throwable $failure ) {
 			$this->cleanupProviderArchive( $providerArchive );
-			$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
+			$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );
 		}
 
 		try {

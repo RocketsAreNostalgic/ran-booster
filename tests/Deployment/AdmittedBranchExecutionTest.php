@@ -179,6 +179,30 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		self::assertSame( 1, $archive->cleanupCalls );
 	}
 
+	public function testProviderArchiveIsCleanedWhenResolvedRevisionRetrievalThrows(): void {
+		$archive                   = new BoundaryProviderArchive( str_repeat( 'a', 40 ) );
+		$archive->resolvedRefFails = true;
+		$provider                  = new BoundaryRepositoryProvider( $archive );
+		$adapter                   = $this->adapter( $this->runningUpdate(), new ProviderRegistry( array( $provider ) ) );
+		$declaration               = $adapter->declaration();
+
+		try {
+			$adapter->prepare(
+				$declaration,
+				array(
+					'identifier' => 'example/example.php',
+					'version'    => '1.0.0',
+					'active'     => false,
+				)
+			);
+			self::fail( 'Resolved revision retrieval failure must clean the provider archive.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $failure->outcomeCode );
+		}
+
+		self::assertSame( 1, $archive->cleanupCalls );
+	}
+
 	private function runningUpdate(): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/example',
@@ -259,12 +283,16 @@ final class BoundaryThemeRepository extends ThemeRepository {
 }
 
 final class BoundaryProviderArchive implements ProviderPreparedArchive {
-	public int $cleanupCalls = 0;
+	public int $cleanupCalls      = 0;
+	public bool $resolvedRefFails = false;
 	public function __construct( private string $resolvedRef ) {}
 	public function getUrl(): string {
 		return 'https://example.test/archive.zip';
 	}
 	public function getResolvedRef(): string {
+		if ( $this->resolvedRefFails ) {
+			throw new RuntimeException( 'Resolved revision retrieval failed.' );
+		}
 		return $this->resolvedRef;
 	}
 	public function verifyCurrentHead(): void {}

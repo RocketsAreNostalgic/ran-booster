@@ -1,0 +1,158 @@
+name: Phase C review remediation
+
+on:
+  push:
+    branches:
+      - refactor/adopt-normalized-branch-updater
+    paths:
+      - .github/workflows/phase-c-review-remediation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/adopt-normalized-branch-updater
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Prepare private test temporary directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_tmp="$RUNNER_TEMP/ran-booster-tests"
+          mkdir -p "$test_tmp"
+          chmod 700 "$test_tmp"
+          echo "TMPDIR=$test_tmp" >> "$GITHUB_ENV"
+
+      - name: Apply and validate review remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          adapter = Path('RAN/Deployment/AdmittedBranchHostAdapter.php')
+          source = adapter.read_text()
+          old = """\t\ttry {\n\t\t\t$this->providerArchive = $this->providers->get( $provider )->prepareArchive(\n\t\t\t\tnew ArchiveRequest(\n\t\t\t\t\t$reference,\n\t\t\t\t\t(string) $data['requested_ref'],\n\t\t\t\t\t'webhook' === $data['source'] ? $request->configuredBranch : null\n\t\t\t\t)\n\t\t\t);\n\t\t} catch ( Throwable $failure ) {\n\t\t\t$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );\n\t\t}\n"""
+          new = """\t\ttry {\n\t\t\t$this->providerArchive = $this->providers->get( $provider )->prepareArchive(\n\t\t\t\tnew ArchiveRequest(\n\t\t\t\t\t$reference,\n\t\t\t\t\t(string) $data['requested_ref'],\n\t\t\t\t\t'webhook' === $data['source'] ? $request->configuredBranch : null\n\t\t\t\t)\n\t\t\t);\n\t\t} catch ( StaleDeployment ) {\n\t\t\t$this->stage( DeploymentOutcome::CODE_STALE_EVENT );\n\t\t} catch ( Throwable $failure ) {\n\t\t\t$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );\n\t\t}\n"""
+          if source.count(old) != 1:
+              raise SystemExit('prepareArchive catch block did not match exactly once')
+          adapter.write_text(source.replace(old, new))
+
+          test = Path('tests/Deployment/AdmittedBranchExecutionTest.php')
+          source = test.read_text()
+          import_anchor = "use RAN\\RepositoryProvider\\RepositoryProvider;\n"
+          if source.count(import_anchor) != 1:
+              raise SystemExit('StaleDeployment import anchor did not match exactly once')
+          source = source.replace(import_anchor, import_anchor + "use RAN\\RepositoryProvider\\StaleDeployment;\n")
+
+          test_anchor = """\tpublic function testProviderArchiveIsCleanedWhenItsResolvedRevisionIsInvalid(): void {\n"""
+          stale_test = """\tpublic function testStaleProviderPreparationProjectsStaleEvent(): void {\n\t\t$archive     = new BoundaryProviderArchive( str_repeat( 'a', 40 ) );\n\t\t$provider    = new BoundaryRepositoryProvider( $archive, new StaleDeployment( 'The admitted ref is stale.' ) );\n\t\t$adapter     = $this->adapter( $this->runningUpdate(), new ProviderRegistry( array( $provider ) ) );\n\t\t$declaration = $adapter->declaration();\n\n\t\ttry {\n\t\t\t$adapter->prepare(\n\t\t\t\t$declaration,\n\t\t\t\tarray(\n\t\t\t\t\t'identifier' => 'example/example.php',\n\t\t\t\t\t'version'    => '1.0.0',\n\t\t\t\t\t'active'     => false,\n\t\t\t\t)\n\t\t\t);\n\t\t\tself::fail( 'A stale provider preparation must stop before artifact acquisition.' );\n\t\t} catch ( AdmittedBranchStageFailure $failure ) {\n\t\t\tself::assertSame( DeploymentOutcome::CODE_STALE_EVENT, $failure->outcomeCode );\n\t\t}\n\n\t\tself::assertSame( 0, $archive->cleanupCalls );\n\t}\n\n"""
+          if source.count(test_anchor) != 1:
+              raise SystemExit('stale provider test anchor did not match exactly once')
+          source = source.replace(test_anchor, stale_test + test_anchor)
+
+          provider_old = """final class BoundaryRepositoryProvider implements RepositoryProvider {\n\tuse SuppliesProviderDiagnostics;\n\n\tpublic function __construct( private BoundaryProviderArchive $archive ) {}\n"""
+          provider_new = """final class BoundaryRepositoryProvider implements RepositoryProvider {\n\tuse SuppliesProviderDiagnostics;\n\n\tpublic function __construct( private BoundaryProviderArchive $archive, private ?\\Throwable $prepareFailure = null ) {}\n"""
+          if source.count(provider_old) != 1:
+              raise SystemExit('boundary provider constructor did not match exactly once')
+          source = source.replace(provider_old, provider_new)
+
+          prepare_old = """\tpublic function prepareArchive( ArchiveRequest $request ): ProviderPreparedArchive {\n\t\treturn $this->archive;\n\t}\n"""
+          prepare_new = """\tpublic function prepareArchive( ArchiveRequest $request ): ProviderPreparedArchive {\n\t\tif ( null !== $this->prepareFailure ) {\n\t\t\tthrow $this->prepareFailure;\n\t\t}\n\t\treturn $this->archive;\n\t}\n"""
+          if source.count(prepare_old) != 1:
+              raise SystemExit('boundary provider prepareArchive did not match exactly once')
+          test.write_text(source.replace(prepare_old, prepare_new))
+
+          limit = Path('RAN/PackageArtifactLimit.php')
+          source = limit.read_text()
+          source = source.replace(
+              " * Resolve and validate Booster's compressed package-artifact ceiling.\n *\n * Package-specific policy wins over the legacy site-wide default.\n",
+              " * Resolve and validate Booster's compressed package-artifact ceiling.\n *\n * The published maximum stays representable with the pinned updater's 4x expanded ceiling on 32-bit PHP.\n",
+          )
+          source = source.replace("\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870912;\n\tprivate const EXPANDED_RATIO                = 4;\n", "\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870911;\n")
+          old_valid = """\tpublic static function requireValid( mixed $value ): int {\n\t\t$platformMaximum = min(\n\t\t\tself::MAXIMUM_ARTIFACT_BYTES,\n\t\t\tintdiv( PHP_INT_MAX, self::EXPANDED_RATIO )\n\t\t);\n\t\tif (\n\t\t\t! is_int( $value )\n\t\t\t|| $value < self::MINIMUM_ARTIFACT_BYTES\n\t\t\t|| $value > $platformMaximum\n\t\t) {\n"""
+          new_valid = """\tpublic static function requireValid( mixed $value ): int {\n\t\tif (\n\t\t\t! is_int( $value )\n\t\t\t|| $value < self::MINIMUM_ARTIFACT_BYTES\n\t\t\t|| $value > self::MAXIMUM_ARTIFACT_BYTES\n\t\t) {\n"""
+          if source.count(old_valid) != 1:
+              raise SystemExit('artifact validator block did not match exactly once')
+          source = source.replace(old_valid, new_valid)
+          dead_method = """\n\tpublic static function requireValidOverride( ?int $value ): ?int {\n\t\treturn null === $value ? null : self::requireValid( $value );\n\t}\n"""
+          if source.count(dead_method) != 1:
+              raise SystemExit('dead override validator did not match exactly once')
+          limit.write_text(source.replace(dead_method, ''))
+
+          Path('tests/PackageArtifactLimitTest.php').write_text("""<?php\n\ndeclare(strict_types=1);\n\nnamespace Tests;\n\nuse InvalidArgumentException;\nuse PHPUnit\\Framework\\TestCase;\nuse RAN\\PackageArtifactLimit;\n\nfinal class PackageArtifactLimitTest extends TestCase {\n\tpublic function testPublishedMaximumFitsPinnedUpdaterExpandedCeilingOn32BitPhp(): void {\n\t\t$maximum32BitSafeCompressedBytes = intdiv( 2147483647, 4 );\n\n\t\tself::assertSame( 536870911, $maximum32BitSafeCompressedBytes );\n\t\tself::assertSame( $maximum32BitSafeCompressedBytes, PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES );\n\t\tself::assertSame( $maximum32BitSafeCompressedBytes, PackageArtifactLimit::requireValid( $maximum32BitSafeCompressedBytes ) );\n\t}\n\n\tpublic function testOneByteAbovePublishedMaximumIsRejected(): void {\n\t\t$this->expectException( InvalidArgumentException::class );\n\n\t\tPackageArtifactLimit::requireValid( PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES + 1 );\n\t}\n}\n""")
+
+          def insert_runtime_verifier(path_string: str) -> None:
+              path = Path(path_string)
+              lines = path.read_text().splitlines(keepends=True)
+              matches = []
+              for index in range(len(lines) - 1):
+                  if lines[index].strip() == 'scripts/build-release.sh \\' and lines[index + 1].strip() == 'scripts/verify-release.sh \\':
+                      matches.append(index)
+              if len(matches) != 1:
+                  raise SystemExit(f'{path_string}: expected exactly one release trust-path insertion point, found {len(matches)}')
+              index = matches[0]
+              indentation = lines[index][: len(lines[index]) - len(lines[index].lstrip())]
+              lines.insert(index + 1, indentation + 'scripts/verify-runtime-dependencies.php \\\n')
+              path.write_text(''.join(lines))
+
+          insert_runtime_verifier('.github/workflows/quality.yml')
+          insert_runtime_verifier('.github/workflows/release-please.yml')
+
+          Path('tests/ReleaseTrustPathTest.php').write_text("""<?php\n\ndeclare(strict_types=1);\n\nnamespace Tests;\n\nuse PHPUnit\\Framework\\TestCase;\n\nfinal class ReleaseTrustPathTest extends TestCase {\n\t/** @dataProvider workflowProvider */\n\tpublic function testRuntimeDependencyVerifierIsReleaseTrustAuthority( string $workflow ): void {\n\t\t$lines = file( dirname( __DIR__ ) . '/' . $workflow, FILE_IGNORE_NEW_LINES );\n\t\tself::assertIsArray( $lines );\n\t\t$lines = array_map( 'trim', $lines );\n\t\t$index = array_search( 'scripts/build-release.sh \\\\', $lines, true );\n\n\t\tself::assertIsInt( $index );\n\t\tself::assertSame( 'scripts/verify-runtime-dependencies.php \\\\', $lines[ $index + 1 ] ?? null );\n\t\tself::assertSame( 'scripts/verify-release.sh \\\\', $lines[ $index + 2 ] ?? null );\n\t}\n\n\t/** @return array<string, array{string}> */\n\tpublic static function workflowProvider(): array {\n\t\treturn array(\n\t\t\t'quality' => array( '.github/workflows/quality.yml' ),\n\t\t\t'release' => array( '.github/workflows/release-please.yml' ),\n\t\t);\n\t}\n}\n""")
+          PY
+
+          composer install --no-interaction --prefer-dist --no-progress
+          set +e
+          vendor/bin/phpcbf --standard=.phpcs.xml \
+            RAN/Deployment/AdmittedBranchHostAdapter.php \
+            RAN/PackageArtifactLimit.php \
+            tests/Deployment/AdmittedBranchExecutionTest.php \
+            tests/PackageArtifactLimitTest.php \
+            tests/ReleaseTrustPathTest.php
+          phpcbf_status=$?
+          set -e
+          test "$phpcbf_status" -eq 0 -o "$phpcbf_status" -eq 1
+
+          vendor/bin/phpunit --configuration phpunit.xml tests/Deployment/AdmittedBranchExecutionTest.php --fail-on-phpunit-deprecation
+          vendor/bin/phpunit --configuration phpunit.xml tests/PackageArtifactLimitTest.php --fail-on-phpunit-deprecation
+          vendor/bin/phpunit --configuration phpunit.xml tests/ReleaseTrustPathTest.php --fail-on-phpunit-deprecation
+          vendor/bin/phpcs --standard=.phpcs.xml \
+            RAN/Deployment/AdmittedBranchHostAdapter.php \
+            RAN/PackageArtifactLimit.php \
+            tests/Deployment/AdmittedBranchExecutionTest.php \
+            tests/PackageArtifactLimitTest.php \
+            tests/ReleaseTrustPathTest.php
+          vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G \
+            RAN/Deployment/AdmittedBranchHostAdapter.php \
+            RAN/PackageArtifactLimit.php
+          git diff --check
+
+          rm .github/workflows/phase-c-review-remediation.yml
+          git config user.name 'bnjmnrsh'
+          git config user.email '65979639+bnjmnrsh@users.noreply.github.com'
+          git add \
+            RAN/Deployment/AdmittedBranchHostAdapter.php \
+            RAN/PackageArtifactLimit.php \
+            tests/Deployment/AdmittedBranchExecutionTest.php \
+            tests/PackageArtifactLimitTest.php \
+            tests/ReleaseTrustPathTest.php \
+            .github/workflows/quality.yml \
+            .github/workflows/release-please.yml \
+            .github/workflows/phase-c-review-remediation.yml
+          git commit -m 'fix: address final Phase C review findings'
+          git push origin HEAD:refactor/adopt-normalized-branch-updater

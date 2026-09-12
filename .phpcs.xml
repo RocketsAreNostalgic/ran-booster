@@ -80,6 +80,11 @@
 		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
 	</rule>
 
+	<!-- The single-file characterization harness reads plugin source text directly to assert legacy removals. -->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
+		<exclude-pattern>/tests/characterization.php</exclude-pattern>
+	</rule>
+
 	<!--
 		SecretsFile uses a site-owned encrypted JSON sidecar and atomic temp-file + rename writes.
 		WP_Filesystem cannot provide the same same-directory atomic replacement contract.

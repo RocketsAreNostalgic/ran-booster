@@ -236,7 +236,8 @@ final class BoosterServiceProvider {
 			static fn ( ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(
 				$credentials,
 				$deliveryEvidence,
-				$releaseUpdater
+				$releaseUpdater,
+				static fn (): int => PackageArtifactLimit::resolve( null )
 			)
 		);
 		$container->bind( ProviderRegistry::class, $providers );

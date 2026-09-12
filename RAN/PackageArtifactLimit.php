@@ -42,8 +42,4 @@ final class PackageArtifactLimit {
 
 		return $value;
 	}
-
-	public static function requireValidOverride( ?int $value ): ?int {
-		return null === $value ? null : self::requireValid( $value );
-	}
 }

@@ -14,6 +14,7 @@ interface RepositoryReleaseAcquirer extends ProviderCapability {
 		string $providerReleaseId,
 		string $tag,
 		string $expectedFingerprint,
-		string $channel
+		string $channel,
+		int $maximumArtifactBytes
 	): RepositoryReleaseArtifact;
 }

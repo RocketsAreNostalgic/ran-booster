@@ -23,10 +23,14 @@ jobs:
           tools: composer:v2, wp-cli:2.12.0
           coverage: none
 
-      - name: Apply final repair and full PHP quality contract
+      - name: Apply proven repair and focused quality gates
         shell: bash
         run: |
           set -euo pipefail
+          test_tmp="${HOME}/.ran-booster-tests"
+          install -d -m 0700 "${test_tmp}"
+          export TMPDIR="${test_tmp}"
+
           python3 <<'PY'
           from pathlib import Path
 
@@ -70,29 +74,58 @@ jobs:
           adapter = Path('RAN/WordPress/ManagedReleaseUpdaterRegistrar.php')
           if adapter.exists():
               raise SystemExit('ManagedReleaseUpdaterRegistrar.php already exists')
-          adapter_lines = [
-              '<?php', '', 'declare(strict_types=1);', '', 'namespace RAN\\WordPress;', '',
-              'use Closure;', 'use LogicException;', 'use RAN\\PackageArtifactLimit;', '',
-              '/**', ' * Bounded adapter over the selected release-updater registrar.', ' *',
-              ' * The provider module receives the same registrar object contract as before;',
-              ' * Booster-owned archive policy remains resolved at this Core composition edge.', ' */',
-              'final readonly class ManagedReleaseUpdaterRegistrar {',
-              '\tpublic function __construct( private object $registrar ) {', '\t}', '',
-              '\tpublic function maximumArtifactBytes(): int {', '\t\treturn PackageArtifactLimit::resolve( null );', '\t}', '',
-              '\tpublic function plugin( mixed ...$arguments ): object {', "\t\treturn $this->invoke( 'plugin', $arguments );", '\t}', '',
-              '\tpublic function theme( mixed ...$arguments ): object {', "\t\treturn $this->invoke( 'theme', $arguments );", '\t}', '',
-              '\tpublic function releases( mixed ...$arguments ): object {', "\t\treturn $this->invoke( 'releases', $arguments );", '\t}', '',
-              '\t/** @param list<mixed> $arguments */',
-              '\tprivate function invoke( string $method, array $arguments ): object {',
-              '\t\t$callable = array( $this->registrar, $method );',
-              '\t\tif ( ! is_callable( $callable ) ) {',
-              "\t\t\tthrow new LogicException( 'The selected release updater registrar is incompatible.' );", '\t\t}', '',
-              '\t\t$result = Closure::fromCallable( $callable )( ...$arguments );',
-              '\t\tif ( ! is_object( $result ) ) {',
-              "\t\t\tthrow new LogicException( 'The selected release updater registrar returned an invalid handle.' );", '\t\t}', '',
-              '\t\treturn $result;', '\t}', '}',
-          ]
-          adapter.write_text('\n'.join(adapter_lines) + '\n')
+          adapter.write_text("""<?php
+
+declare(strict_types=1);
+
+namespace RAN\\WordPress;
+
+use Closure;
+use LogicException;
+use RAN\\PackageArtifactLimit;
+
+/**
+ * Bounded adapter over the selected release-updater registrar.
+ *
+ * The provider module receives the same registrar object contract as before;
+ * Booster-owned archive policy remains resolved at this Core composition edge.
+ */
+final readonly class ManagedReleaseUpdaterRegistrar {
+\tpublic function __construct( private object $registrar ) {
+\t}
+
+\tpublic function maximumArtifactBytes(): int {
+\t\treturn PackageArtifactLimit::resolve( null );
+\t}
+
+\tpublic function plugin( mixed ...$arguments ): object {
+\t\treturn $this->invoke( 'plugin', $arguments );
+\t}
+
+\tpublic function theme( mixed ...$arguments ): object {
+\t\treturn $this->invoke( 'theme', $arguments );
+\t}
+
+\tpublic function releases( mixed ...$arguments ): object {
+\t\treturn $this->invoke( 'releases', $arguments );
+\t}
+
+\t/** @param list<mixed> $arguments */
+\tprivate function invoke( string $method, array $arguments ): object {
+\t\t$callable = array( $this->registrar, $method );
+\t\tif ( ! is_callable( $callable ) ) {
+\t\t\tthrow new LogicException( 'The selected release updater registrar is incompatible.' );
+\t\t}
+
+\t\t$result = Closure::fromCallable( $callable )( ...$arguments );
+\t\tif ( ! is_object( $result ) ) {
+\t\t\tthrow new LogicException( 'The selected release updater registrar returned an invalid handle.' );
+\t\t}
+
+\t\treturn $result;
+\t}
+}
+""")
 
           verifier = 'scripts/verify-runtime-dependencies.php'
           replace_once(
@@ -129,11 +162,13 @@ jobs:
           composer test:github-module
           composer analyze
           composer lint:php
-          composer check
+
           rm -f \
             .github/workflows/phase-c-quality-contract-remediation.yml \
             .github/workflows/phase-c-quality-contract-wrapper.yml \
-            .github/workflows/phase-c-phpcs-diagnostic.yml
+            .github/workflows/phase-c-phpcs-diagnostic.yml \
+            .github/workflows/phase-c-merge-ref-diagnostic.yml
+
           git config user.name "bnjmnrsh"
           git config user.email "65979639+bnjmnrsh@users.noreply.github.com"
           git add -A

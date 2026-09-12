@@ -86,10 +86,13 @@ abstract class AbstractPackage implements Package {
 
 	public function setMaximumArtifactBytes( ?int $maximumArtifactBytes ): void {
 		$this->maximumArtifactBytes = PackageArtifactLimit::requireValidOverride( $maximumArtifactBytes );
+		if ( $this->repository instanceof ManagedRepository ) {
+			$this->repository = $this->repository->withMaximumArtifactBytes( $this->maximumArtifactBytes );
+		}
 	}
 
 	public function setRepository( ManagedRepository $repository ): void {
-		$this->repository = $repository;
+		$this->repository = $repository->withMaximumArtifactBytes( $this->maximumArtifactBytes );
 	}
 
 	public function getRepository(): ManagedRepository {

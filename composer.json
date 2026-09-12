@@ -42,7 +42,7 @@
         "ext-sodium": "*",
         "ext-zip": "*",
         "ran/updater-support": "dev-main",
-        "ran/wp-branch-updater": "1.0.0-beta.1",
+        "ran/wp-branch-updater": "1.0.0-beta.2",
         "ran/wp-release-updater": "0.1.0-beta.4"
     },
     "extra": {

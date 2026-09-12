@@ -1,0 +1,52 @@
+name: Phase C coding-standards remediation
+
+on:
+  push:
+    branches:
+      - refactor/adopt-normalized-branch-updater
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/adopt-normalized-branch-updater
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2, wp-cli:2.12.0
+          coverage: none
+
+      - name: Run remediation with auto-fix proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/phase-c-quality-contract-wrapper.yml
+          python3 <<'PY'
+          from pathlib import Path
+          source = Path('.github/workflows/phase-c-quality-contract-remediation.yml').read_text()
+          old = '          composer lint:php\n'
+          new = (
+              '          composer lint:php:fix || true\n'
+              '          composer test:github-module\n'
+              '          composer analyze\n'
+              '          composer lint:php\n'
+          )
+          if source.count(old) != 1:
+              raise SystemExit('Expected one PHPCS command in remediation workflow.')
+          source = source.replace(old, new, 1)
+          marker = '        run: |\n'
+          if source.count(marker) != 1:
+              raise SystemExit('Expected one remediation run block.')
+          block = source.split(marker, 1)[1]
+          lines = block.splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/phase-c-remediate.sh').write_text(script)
+          PY
+          bash /tmp/phase-c-remediate.sh

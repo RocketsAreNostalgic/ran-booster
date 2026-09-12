@@ -6,6 +6,7 @@ namespace RAN\Deployment;
 
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
+use RAN\PackageArtifactLimit;
 use RAN\PackageOperation;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderCode;
@@ -371,7 +372,8 @@ class DeploymentCoordinator {
 			(string) $package->getSlug(),
 			is_string( $package->getSubdirectory() ) ? $package->getSubdirectory() : null,
 			$package->getDeploymentPolicy(),
-			$userId
+			$userId,
+			PackageArtifactLimit::resolve( $package->getMaximumArtifactBytes() )
 		);
 	}
 
@@ -395,7 +397,6 @@ class DeploymentCoordinator {
 					&& hash_equals( (string) $package->getProviderRepositoryId(), $event->providerRepositoryId ) ) {
 					$matches[] = array( 'type' => $type, 'package' => $package );
 				}
-			}
 		}
 		return $matches;
 	}

@@ -7,7 +7,6 @@ namespace RAN\WordPress;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
-use RAN\PackageArtifactLimit;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
@@ -436,7 +435,7 @@ final class ManagedReleaseTargetRegistrar {
 		$metadataFile  = $this->metadataPath( $type, $configuration, $identifier );
 		$target        = $nativeTargets->createNativeTarget(
 			$type,
-			$package->getRepository()->withMaximumArtifactBytes( PackageArtifactLimit::resolve( null ) )->reference,
+			$package->getRepository()->reference,
 			$metadataFile,
 			$configuration->packageRoot(),
 			$identifier,
@@ -636,7 +635,6 @@ final class ManagedReleaseTargetRegistrar {
 			'private'                => $package->getPrivate() ? 1 : 0,
 			'configuration'          => $configuration->toJson(),
 			'deployment_policy'      => $package->getDeploymentPolicy()->value,
-			'maximum_artifact_bytes' => PackageArtifactLimit::resolve( null ),
 		);
 	}
 

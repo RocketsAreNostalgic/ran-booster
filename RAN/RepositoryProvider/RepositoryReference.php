@@ -5,22 +5,18 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use InvalidArgumentException;
-use RAN\PackageArtifactLimit;
 
 final readonly class RepositoryReference {
 	public string $locator;
-	public ?int $maximumArtifactBytes;
 
 	public function __construct(
 		string $locator,
 		public ?string $providerRepositoryId,
 		public bool $private,
-		public ?string $credentialId,
-		?int $maximumArtifactBytes = null
+		public ?string $credentialId
 	) {
 		$this->assertProviderRepositoryId( $providerRepositoryId );
-		$this->locator              = RepositoryLocator::requireValid( $locator );
-		$this->maximumArtifactBytes = PackageArtifactLimit::requireValidOverride( $maximumArtifactBytes );
+		$this->locator = RepositoryLocator::requireValid( $locator );
 		$this->rejectEmptyValue( $credentialId, 'Credential ID' );
 	}
 
@@ -38,8 +34,7 @@ final readonly class RepositoryReference {
 			$this->locator,
 			$this->providerRepositoryId,
 			$this->private,
-			$credentialId,
-			$this->maximumArtifactBytes
+			$credentialId
 		);
 	}
 

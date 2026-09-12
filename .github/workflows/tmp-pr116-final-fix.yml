@@ -1,0 +1,159 @@
+name: Temporary PR 116 final remediation
+
+on:
+  push:
+    branches:
+      - refactor/adopt-normalized-branch-updater
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/adopt-normalized-branch-updater
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2, wp-cli:2.12.0
+
+      - name: Apply review fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          adapter = Path('RAN/Deployment/AdmittedBranchHostAdapter.php')
+          text = adapter.read_text()
+          old = "\t\t\t$request->private,\n\t\t\t$request->credentialId,\n\t\t\t$request->maximumArtifactBytes\n\t\t);"
+          new = "\t\t\t$request->private,\n\t\t\t$request->credentialId\n\t\t);"
+          if old in text:
+              adapter.write_text(text.replace(old, new, 1))
+
+          provider = Path('RAN/Booster/GitHub/GitHubProvider.php')
+          text = provider.read_text()
+          import_marker = "use InvalidArgumentException;\n"
+          if 'use RAN\\PackageArtifactLimit;' not in text:
+              if import_marker not in text:
+                  raise SystemExit('GitHubProvider import marker was not found')
+              text = text.replace(import_marker, import_marker + "use RAN\\PackageArtifactLimit;\n", 1)
+
+          inspect_old = "$result = $this->releaseSource( $packageType, $repository, $channel )->inspect( $providerReleaseId, $tag );"
+          if inspect_old in text:
+              text = text.replace(inspect_old, "$maximumArtifactBytes = PackageArtifactLimit::resolve( null );\n\t\t\t$result = $this->releaseSource( $packageType, $repository, $channel, $maximumArtifactBytes )->inspect( $providerReleaseId, $tag );", 1)
+
+          acquire_old = "$result = $this->releaseSource( $packageType, $repository, $channel )->acquire( $providerReleaseId, $tag, $expectedFingerprint );"
+          if acquire_old in text:
+              text = text.replace(acquire_old, "$maximumArtifactBytes = PackageArtifactLimit::resolve( null );\n\t\t\t$result = $this->releaseSource( $packageType, $repository, $channel, $maximumArtifactBytes )->acquire( $providerReleaseId, $tag, $expectedFingerprint );", 1)
+
+          text = text.replace("|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null )", "|| $maximumArtifactBytes !== ( $facts['maximum_artifact_bytes'] ?? null )")
+
+          signature_old = "private function releaseSource( string $packageType, RepositoryReference $repository, string $channel ): object {"
+          if signature_old in text:
+              text = text.replace(signature_old, "private function releaseSource( string $packageType, RepositoryReference $repository, string $channel, ?int $maximumArtifactBytes = null ): object {", 1)
+
+          registrar_old = "\t\treturn $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), 52428800 );"
+          if registrar_old in text:
+              registrar_new = "\t\t$maximumArtifactBytes = PackageArtifactLimit::resolve( $maximumArtifactBytes );\n\t\treturn $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), $maximumArtifactBytes );"
+              text = text.replace(registrar_old, registrar_new, 1)
+          provider.write_text(text)
+
+          test = Path('tests/Deployment/AdmittedBranchExecutionTest.php')
+          text = test.read_text()
+          imports = "use RAN\\Storage\\Database;\nuse RAN\\Storage\\PluginRepository;"
+          if 'use RAN\\Storage\\PackageMutationResult;' not in text:
+              if imports not in text:
+                  raise SystemExit('Admitted boundary test import marker was not found')
+              text = text.replace(imports, "use RAN\\Storage\\Database;\nuse RAN\\Storage\\PackageMutationResult;\nuse RAN\\Storage\\PackageStorageOperation;\nuse RAN\\Storage\\PluginRepository;", 1)
+
+          test_name = 'testConcreteAdapterAdoptsWithoutEmbeddingArchivePolicyInRepositoryIdentity'
+          if test_name not in text:
+              test_marker = "\tpublic function testConcreteAdapterUsesTheSharedWordPressUpdaterLock(): void {"
+              test_method = """\tpublic function testConcreteAdapterAdoptsWithoutEmbeddingArchivePolicyInRepositoryIdentity(): void {
+\t\t$adapter     = $this->adapter( $this->runningUpdate(), new ProviderRegistry() );
+\t\t$declaration = $adapter->declaration();
+
+\t\tself::assertTrue( $adapter->adopt( $declaration ) );
+\t\t$adopted = $this->plugins->adopted;
+\t\tself::assertInstanceOf( Plugin::class, $adopted );
+\t\tself::assertSame( 'gh', $adopted->getProviderCode() );
+\t\tself::assertSame( 'R_example', $adopted->getProviderRepositoryId() );
+\t\tself::assertSame( 'owner/example', $adopted->getRepository() );
+\t\tself::assertSame( 'main', $adopted->getBranch() );
+\t\tself::assertSame( DeploymentPolicy::AUTOMATIC, $adopted->getDeploymentPolicy() );
+\t}
+
+"""
+              if test_marker not in text:
+                  raise SystemExit('Admitted boundary test insertion point was not found')
+              text = text.replace(test_marker, test_method + test_marker, 1)
+
+          repo_old = """final class BoundaryPluginRepository extends PluginRepository {
+\tpublic ?Plugin $package = null;
+\tpublic function __construct() {}
+\tpublic function fromSlug( $slug ) {
+\t\treturn $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
+\t}
+\tpublic function boosterPluginFromFile( $file ) {
+\t\treturn $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
+\t}
+}"""
+          if repo_old in text:
+              repo_new = """final class BoundaryPluginRepository extends PluginRepository {
+\tpublic ?Plugin $package = null;
+\tpublic ?Plugin $adopted = null;
+\tpublic function __construct() {}
+\tpublic function allDeploymentPlugins( ?\\RAN\\PackageSource $source = null ): array {
+\t\treturn null === $this->package ? array() : array( 'example/example.php' => $this->package );
+\t}
+\tpublic function fromSlug( $slug ) {
+\t\treturn $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
+\t}
+\tpublic function boosterPluginFromFile( $file ) {
+\t\treturn $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
+\t}
+\tpublic function adopt( Plugin $plugin ): PackageMutationResult {
+\t\t$this->adopted = $plugin;
+\t\t$this->package = $plugin;
+\t\treturn PackageMutationResult::changed( PackageStorageOperation::UPDATE );
+\t}
+}"""
+              text = text.replace(repo_old, repo_new, 1)
+          test.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Verify focused admitted boundary
+        run: vendor/bin/phpunit --configuration phpunit.xml tests/Deployment/AdmittedBranchExecutionTest.php
+
+      - name: Refresh and verify gettext catalogue
+        run: |
+          bash scripts/make-pot.sh
+          bash scripts/make-pot.sh --check
+
+      - name: Commit remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add RAN/Deployment/AdmittedBranchHostAdapter.php RAN/Booster/GitHub/GitHubProvider.php tests/Deployment/AdmittedBranchExecutionTest.php languages/ran-booster.pot
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No product changes remain to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix: close Phase C review gaps'
+          git push origin HEAD:refactor/adopt-normalized-branch-updater

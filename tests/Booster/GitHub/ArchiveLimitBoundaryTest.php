@@ -11,15 +11,26 @@ use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReference;
 use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
 /** Proves the Core-owned archive policy is resolved only at release-operation boundaries. */
 final class ArchiveLimitBoundaryTest extends TestCase {
+	protected function setUp(): void {
+		NeutralReleaseUpdaterFixtures::reset();
+	}
+
 	public function testReleaseInspectionResolvesAndValidatesNonDefaultLimitLazily(): void {
-		$reads     = 0;
 		$registrar = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
+			public int $limitReads = 0;
+
+			public function maximumArtifactBytes(): int {
+				++$this->limitReads;
+
+				return 1048576;
+			}
 
 			public function releases( mixed ...$arguments ): object {
 				$this->arguments = $arguments;
@@ -52,24 +63,19 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$provider  = GitHubProvider::create(
+		$provider = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),
 			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
-			$registrar,
-			static function () use ( &$reads ): int {
-				++$reads;
-
-				return 1048576;
-			}
+			$registrar
 		);
 		$repository = new RepositoryReference( 'owner/example', '123456789', false, null );
 
-		self::assertSame( 0, $reads );
+		self::assertSame( 0, $registrar->limitReads );
 		self::assertSame(
 			'v2:' . str_repeat( 'b', 64 ),
 			$provider->inspectRelease( 'plugin', $repository, '42', 'v1.2.3', 'stable' )->fingerprint
 		);
-		self::assertSame( 2, $reads );
+		self::assertSame( 2, $registrar->limitReads );
 		self::assertCount( 7, $registrar->arguments );
 		self::assertSame( 1048576, $registrar->arguments[6] );
 	}
@@ -96,7 +102,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$provider  = GitHubProvider::create(
+		$provider = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),
 			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
 			$registrar
@@ -122,7 +128,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$target     = new GitHubReleaseNativeTarget(
+		$target = new GitHubReleaseNativeTarget(
 			$nonDefault,
 			'plugin',
 			'/wordpress/wp-content/plugins/example/example.php',
@@ -152,7 +158,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				};
 			}
 		};
-		$target  = new GitHubReleaseNativeTarget(
+		$target = new GitHubReleaseNativeTarget(
 			$default,
 			'plugin',
 			'/wordpress/wp-content/plugins/example/example.php',

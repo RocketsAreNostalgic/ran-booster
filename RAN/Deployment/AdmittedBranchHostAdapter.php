@@ -489,7 +489,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		if ( $expanded > $maximumArtifactBytes * self::EXPANDED_RATIO ) {
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_EXPANDED_TOO_LARGE );
 		}
-		$required             = ( $expanded * 2 ) + intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
+		$overhead = intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
+		if ( $expanded > intdiv( PHP_INT_MAX - $overhead, 2 ) ) {
+			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
+		}
+		$required             = ( $expanded * 2 ) + $overhead;
 		$upgradeAvailable     = defined( 'WP_CONTENT_DIR' ) ? disk_free_space( WP_CONTENT_DIR ) : false;
 		$destinationAvailable = disk_free_space( $this->destinationRoot( $deployment ) );
 		if ( false === $upgradeAvailable || false === $destinationAvailable || $upgradeAvailable < $required || $destinationAvailable < $required ) {

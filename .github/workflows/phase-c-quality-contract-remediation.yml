@@ -1,0 +1,109 @@
+name: Phase C quality-contract remediation
+
+on:
+  push:
+    branches:
+      - refactor/adopt-normalized-branch-updater
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/adopt-normalized-branch-updater
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2, wp-cli:2.12.0
+          coverage: none
+
+      - name: Apply production remediation and prove focused gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          provider = 'RAN/Booster/GitHub/GitHubProvider.php'
+          replace_once(
+              provider,
+              "\tpublic static function create(\n\t\tProviderCredentialStore $credentials,\n\t\tAuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,\n\t\tobject $registrar,\n\t\t?callable $maximumArtifactBytes = null\n\t): RepositoryProvider {\n\t\treturn new self(\n\t\t\t$credentials,\n\t\t\tnew RepositoryBrowser( $credentials ),\n\t\t\tnew WebhookNormalizer( $credentials, $deliveryEvidence ),\n\t\t\tnew RepositoryWebhookClient(),\n\t\t\t$registrar,\n\t\t\t$maximumArtifactBytes\n\t\t);\n\t}\n",
+              "\tpublic static function create(\n\t\tProviderCredentialStore $credentials,\n\t\tAuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,\n\t\tobject $registrar\n\t): RepositoryProvider {\n\t\treturn new self(\n\t\t\t$credentials,\n\t\t\tnew RepositoryBrowser( $credentials ),\n\t\t\tnew WebhookNormalizer( $credentials, $deliveryEvidence ),\n\t\t\tnew RepositoryWebhookClient(),\n\t\t\t$registrar\n\t\t);\n\t}\n"
+          )
+          replace_once(
+              provider,
+              "\tprivate function __construct(\n\t\tProviderCredentialStore $credentials,\n\t\tRepositoryBrowser $browser,\n\t\tWebhookNormalizer $webhooks,\n\t\tRepositoryWebhookClient $webhookClient,\n\t\tobject $registrar,\n\t\t?callable $maximumArtifactBytes = null\n\t) {\n\t\t$this->registrar            = $registrar;\n\t\t$this->maximumArtifactBytes = null === $maximumArtifactBytes\n\t\t\t? static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES\n\t\t\t: Closure::fromCallable( $maximumArtifactBytes );\n\t\t$this->credentials          = $credentials;\n",
+              "\tprivate function __construct(\n\t\tProviderCredentialStore $credentials,\n\t\tRepositoryBrowser $browser,\n\t\tWebhookNormalizer $webhooks,\n\t\tRepositoryWebhookClient $webhookClient,\n\t\tobject $registrar\n\t) {\n\t\t$this->registrar = $registrar;\n\t\t$resolver        = is_callable( array( $registrar, 'maximumArtifactBytes' ) )\n\t\t\t? Closure::fromCallable( array( $registrar, 'maximumArtifactBytes' ) )\n\t\t\t: static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES;\n\t\t$this->maximumArtifactBytes = static fn (): int => $resolver();\n\t\t$this->credentials          = $credentials;\n"
+          )
+
+          service = 'RAN/BoosterServiceProvider.php'
+          replace_once(
+              service,
+              "use RAN\\WordPress\\ManagedReleaseStore;\nuse RAN\\WordPress\\ManagedReleaseTargetRegistrar;\n",
+              "use RAN\\WordPress\\ManagedReleaseStore;\nuse RAN\\WordPress\\ManagedReleaseTargetRegistrar;\nuse RAN\\WordPress\\ManagedReleaseUpdaterRegistrar;\n"
+          )
+          replace_once(
+              service,
+              "\t\t$providers = new ProviderRegistry(\n",
+              "\t\t$releaseRegistrar = new ManagedReleaseUpdaterRegistrar( $releaseUpdater );\n\t\t$providers        = new ProviderRegistry(\n"
+          )
+          replace_once(
+              service,
+              "\t\t\tstatic fn ( ProviderCredentialStore $credentials, \\RAN\\RepositoryProvider\\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(\n\t\t\t\t$credentials,\n\t\t\t\t$deliveryEvidence,\n\t\t\t\t$releaseUpdater,\n\t\t\t\tstatic fn (): int => PackageArtifactLimit::resolve( null )\n\t\t\t)\n",
+              "\t\t\tstatic fn ( ProviderCredentialStore $credentials, \\RAN\\RepositoryProvider\\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(\n\t\t\t\t$credentials,\n\t\t\t\t$deliveryEvidence,\n\t\t\t\t$releaseRegistrar\n\t\t\t)\n"
+          )
+
+          adapter = Path('RAN/WordPress/ManagedReleaseUpdaterRegistrar.php')
+          if adapter.exists():
+              raise SystemExit('ManagedReleaseUpdaterRegistrar.php already exists')
+          adapter_lines = [
+              '<?php', '', 'declare(strict_types=1);', '', 'namespace RAN\\WordPress;', '',
+              'use Closure;', 'use LogicException;', 'use RAN\\PackageArtifactLimit;', '',
+              '/**', ' * Bounded adapter over the selected release-updater registrar.', ' *',
+              ' * The provider module receives the same registrar object contract as before;',
+              ' * Booster-owned archive policy remains resolved at this Core composition edge.', ' */',
+              'final readonly class ManagedReleaseUpdaterRegistrar {',
+              '\tpublic function __construct( private object $registrar ) {', '\t}', '',
+              '\tpublic function maximumArtifactBytes(): int {', '\t\treturn PackageArtifactLimit::resolve( null );', '\t}', '',
+              '\tpublic function plugin( mixed ...$arguments ): object {', "\t\treturn $this->invoke( 'plugin', $arguments );", '\t}', '',
+              '\tpublic function theme( mixed ...$arguments ): object {', "\t\treturn $this->invoke( 'theme', $arguments );", '\t}', '',
+              '\tpublic function releases( mixed ...$arguments ): object {', "\t\treturn $this->invoke( 'releases', $arguments );", '\t}', '',
+              '\t/** @param list<mixed> $arguments */',
+              '\tprivate function invoke( string $method, array $arguments ): object {',
+              '\t\t$callable = array( $this->registrar, $method );',
+              '\t\tif ( ! is_callable( $callable ) ) {',
+              "\t\t\tthrow new LogicException( 'The selected release updater registrar is incompatible.' );", '\t\t}', '',
+              '\t\t$result = Closure::fromCallable( $callable )( ...$arguments );',
+              '\t\tif ( ! is_object( $result ) ) {',
+              "\t\t\tthrow new LogicException( 'The selected release updater registrar returned an invalid handle.' );", '\t\t}', '',
+              '\t\treturn $result;', '\t}', '}',
+          ]
+          adapter.write_text('\n'.join(adapter_lines) + '\n')
+          PY
+
+          scripts/make-pot.sh
+          composer install --no-interaction --prefer-dist --no-progress
+          composer test:github-module
+          composer analyze
+          composer lint:php
+          rm .github/workflows/phase-c-quality-contract-remediation.yml
+          git config user.name "bnjmnrsh"
+          git config user.email "65979639+bnjmnrsh@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix: preserve provider composition for archive policy"
+          git push origin HEAD:refactor/adopt-normalized-branch-updater

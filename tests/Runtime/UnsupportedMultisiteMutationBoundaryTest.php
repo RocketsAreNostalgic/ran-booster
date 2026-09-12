@@ -308,8 +308,6 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
 			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class ),
-			$this->blank( \RAN\Deployment\DeploymentArchivePreflight::class ),
-			$this->blank( CorePackageExecutor::class ),
 			$this->blank( WordPressWorkerWakeup::class ),
 			'/tmp/ran-booster-multisite-quarantine-maintenance',
 			$this->blank( WordPressUpdaterLock::class )

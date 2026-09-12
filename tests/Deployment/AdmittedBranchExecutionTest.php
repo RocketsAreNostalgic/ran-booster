@@ -243,6 +243,9 @@ final class AdmittedBranchExecutionTest extends TestCase {
 final class BoundaryPluginRepository extends PluginRepository {
 	public ?Plugin $package = null;
 	public function __construct() {}
+	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+		return null === $this->package ? array() : array( (string) $this->package->getIdentifier() => $this->package );
+	}
 	public function fromSlug( $slug ) {
 		return $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
 	}

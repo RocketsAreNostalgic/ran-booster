@@ -9,7 +9,7 @@ use RAN\PackageArtifactLimit;
 
 final readonly class RepositoryReference {
 	public string $locator;
-	public int $maximumArtifactBytes;
+	public ?int $maximumArtifactBytes;
 
 	public function __construct(
 		string $locator,
@@ -19,8 +19,8 @@ final readonly class RepositoryReference {
 		?int $maximumArtifactBytes = null
 	) {
 		$this->assertProviderRepositoryId( $providerRepositoryId );
-		$this->locator               = RepositoryLocator::requireValid( $locator );
-		$this->maximumArtifactBytes  = PackageArtifactLimit::resolve( $maximumArtifactBytes );
+		$this->locator              = RepositoryLocator::requireValid( $locator );
+		$this->maximumArtifactBytes = PackageArtifactLimit::requireValidOverride( $maximumArtifactBytes );
 		$this->rejectEmptyValue( $credentialId, 'Credential ID' );
 	}
 

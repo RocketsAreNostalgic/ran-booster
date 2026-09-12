@@ -6,6 +6,7 @@ namespace RAN\Booster\GitHub;
 
 use Closure;
 use InvalidArgumentException;
+use RAN\PackageArtifactLimit;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -523,7 +524,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
 				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
 				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
-				|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
+				|| PackageArtifactLimit::resolve( null ) !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
 				throw new RuntimeException();
 			}
 			return new RepositoryReleaseInspection(
@@ -594,7 +595,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
 				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
 				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
-				|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
+				|| PackageArtifactLimit::resolve( null ) !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
 				throw new RuntimeException();
 			}
 
@@ -764,7 +765,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		if ( null === $repositoryId ) {
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
-		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), 52428800 );
+		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), PackageArtifactLimit::resolve( null ) );
 	}
 
 	private function ensureDirectFilesystem(): bool {

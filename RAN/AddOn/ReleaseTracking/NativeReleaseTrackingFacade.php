@@ -7,7 +7,6 @@ namespace RAN\AddOn\ReleaseTracking;
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
-use RAN\PackageArtifactLimit;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -419,7 +418,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	/** @return list<RepositoryReference> */
 	private function releaseBrowserRepositories( Package $package ): array {
-		$repository = $package->getRepository()->withMaximumArtifactBytes( PackageArtifactLimit::resolve( null ) )->reference;
+		$repository = $package->getRepository()->reference;
 		if ( $repository->private ) {
 			return null === $repository->credentialId ? array() : array( $repository );
 		}

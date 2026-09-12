@@ -33,6 +33,10 @@ interface Package {
 
 	public function setSource( PackageSource $source, int $revision ): void;
 
+	public function getMaximumArtifactBytes(): ?int;
+
+	public function setMaximumArtifactBytes( ?int $maximumArtifactBytes ): void;
+
 	public function setRepository( ManagedRepository $repository ): void;
 
 	public function getRepository(): ManagedRepository;

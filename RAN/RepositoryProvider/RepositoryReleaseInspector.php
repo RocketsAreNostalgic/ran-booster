@@ -13,7 +13,6 @@ interface RepositoryReleaseInspector extends ProviderCapability {
 		RepositoryReference $repository,
 		string $providerReleaseId,
 		string $tag,
-		string $channel,
-		int $maximumArtifactBytes
+		string $channel
 	): RepositoryReleaseInspection;
 }

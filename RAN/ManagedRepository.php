@@ -20,12 +20,25 @@ final readonly class ManagedRepository {
 		string $providerRepositoryId,
 		string $branch,
 		bool $private = false,
-		?string $credentialId = null
+		?string $credentialId = null,
+		?int $maximumArtifactBytes = null
 	) {
 		$credentialId    = null === $credentialId || '' === trim( $credentialId ) ? null : $credentialId;
 		$this->provider  = is_string( $provider ) ? ProviderCode::parse( $provider ) : $provider;
-		$this->reference = new RepositoryReference( $locator, $providerRepositoryId, $private, $credentialId );
+		$this->reference = new RepositoryReference( $locator, $providerRepositoryId, $private, $credentialId, $maximumArtifactBytes );
 		$this->branch    = '' === $branch ? 'main' : $branch;
+	}
+
+	public function withMaximumArtifactBytes( ?int $maximumArtifactBytes ): self {
+		return new self(
+			$this->provider,
+			$this->reference->locator,
+			(string) $this->reference->providerRepositoryId,
+			$this->branch,
+			$this->reference->private,
+			$this->reference->credentialId,
+			$maximumArtifactBytes
+		);
 	}
 
 	public function __toString(): string {

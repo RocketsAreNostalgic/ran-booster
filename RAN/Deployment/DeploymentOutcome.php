@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use InvalidArgumentException;
+use RAN\RepositoryProvider\StaleDeployment;
 use Throwable;
 
 /** A closed terminal result; no provider text or arbitrary evidence is stored. */
@@ -169,6 +170,10 @@ final readonly class DeploymentOutcome {
 	 * Provider messages and response bodies remain outside the attempt record.
 	 */
 	public static function fromProviderFailure( Throwable $failure ): self {
+		if ( $failure instanceof StaleDeployment ) {
+			return self::fromCode( self::CODE_STALE_EVENT );
+		}
+
 		$code = match ( (int) $failure->getCode() ) {
 			400, 422      => self::CODE_PROVIDER_REQUEST_INVALID,
 			401           => self::CODE_PROVIDER_CREDENTIAL_REJECTED,

@@ -12,15 +12,24 @@ use RAN\Deployment\DeploymentRequest;
 
 final class DeploymentRequestTest extends TestCase {
 
-	public function testCanonicalRequestRoundTripsWithOnlyTheEightAllowedKeys(): void {
+	public function testCanonicalRequestRoundTripsWithOnlyTheNineAllowedKeys(): void {
 		$request = $this->request();
 
 		self::assertSame(
-			array( 'repository', 'credential_id', 'private', 'configured_branch', 'package_slug', 'subdirectory', 'deployment_policy', 'initiating_user_id' ),
+			array( 'repository', 'credential_id', 'private', 'configured_branch', 'package_slug', 'subdirectory', 'deployment_policy', 'initiating_user_id', 'maximum_artifact_bytes' ),
 			array_keys( $request->toArray() )
 		);
 		self::assertSame( $request->toJson(), DeploymentRequest::fromJson( $request->toJson() )->toJson() );
 		self::assertLessThanOrEqual( 4096, strlen( $request->toJson() ) );
+	}
+
+	public function testLegacyRequestUsesCurrentSiteArtifactLimit(): void {
+		$data = $this->request()->toArray();
+		unset( $data['maximum_artifact_bytes'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The unit test exercises the runtime JSON boundary.
+		$json = json_encode( $data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
+
+		self::assertSame( \RAN\PackageArtifactLimit::resolve( null ), DeploymentRequest::fromJson( $json )->maximumArtifactBytes );
 	}
 
 	public function testNonCanonicalOrExtendedJsonIsRejected(): void {

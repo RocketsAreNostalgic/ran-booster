@@ -112,7 +112,7 @@ final readonly class DeploymentRequest {
 			$data['subdirectory'],
 			DeploymentPolicy::fromDatabase( $data['deployment_policy'] ),
 			$data['initiating_user_id'],
-			$legacy ? PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES : $data['maximum_artifact_bytes']
+			$legacy ? PackageArtifactLimit::resolve( null ) : $data['maximum_artifact_bytes']
 		);
 		$canonical = $request->toArray();
 		if ( $legacy ) {

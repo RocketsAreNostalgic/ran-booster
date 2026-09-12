@@ -53,6 +53,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	private const EXPANDED_RATIO    = 4;
 
 	private ?ProviderPreparedArchive $providerArchive = null;
+	private bool $providerArchiveCleaned = false;
 
 	public function __construct(
 		private DeploymentAttempt $attempt,
@@ -134,6 +135,14 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
+	public function terminalAttempt(): DeploymentAttempt {
+		if ( ! $this->attempt->getState()->isTerminal() || null === $this->attempt->getOutcome() ) {
+			throw DeploymentStorageFailure::inconsistent();
+		}
+
+		return $this->attempt;
+	}
+
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
 		$this->assertDeclaration( $deployment );
 		if ( null !== $this->providerArchive ) {
@@ -196,6 +205,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			}
 		);
 
+		$artifact = null;
 		try {
 			$artifact = new PreparedArchiveArtifact(
 				PreparedArchive::downloadAndValidate(
@@ -208,8 +218,16 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$this->assertArtifactCapacity( $artifact, $deployment, $maximumArtifactBytes );
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
+			$this->cleanupProviderArchive( $providerArchive );
+			if ( $artifact instanceof PreparedArchiveArtifact ) {
+				$this->cleanupArtifactAfterHostFailure( $artifact );
+			}
 			throw $failure;
 		} catch ( Throwable ) {
+			$this->cleanupProviderArchive( $providerArchive );
+			if ( $artifact instanceof PreparedArchiveArtifact ) {
+				$this->cleanupArtifactAfterHostFailure( $artifact );
+			}
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED );
 		}
 	}
@@ -384,9 +402,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	private function downloadProviderArchive( ProviderPreparedArchive $archive, string $destination, int $maximumArtifactBytes ): void {
-		$url = $archive->getUrl();
-		$this->assertSafeHttpsUrl( $url );
 		try {
+			$url = $archive->getUrl();
+			$this->assertSafeHttpsUrl( $url );
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
 				$response = wp_safe_remote_get(
 					$url,
@@ -430,6 +448,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	private function cleanupProviderArchive( ProviderPreparedArchive $archive ): void {
+		if ( $this->providerArchiveCleaned ) {
+			return;
+		}
+		$this->providerArchiveCleaned = true;
 		try {
 			$archive->cleanup();
 		} catch ( Throwable ) {
@@ -461,19 +483,16 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$path = $artifact->archive()->getPath();
 		$size = filesize( $path );
 		if ( false === $size || $size > $maximumArtifactBytes ) {
-			$this->cleanupArtifactAfterHostFailure( $artifact );
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE );
 		}
 		$expanded = $this->expandedBytes( $path );
 		if ( $expanded > $maximumArtifactBytes * self::EXPANDED_RATIO ) {
-			$this->cleanupArtifactAfterHostFailure( $artifact );
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_EXPANDED_TOO_LARGE );
 		}
-		$required             = intdiv( ( $expanded * 21 ) + 9, 10 );
+		$required             = ( $expanded * 2 ) + intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
 		$upgradeAvailable     = defined( 'WP_CONTENT_DIR' ) ? disk_free_space( WP_CONTENT_DIR ) : false;
 		$destinationAvailable = disk_free_space( $this->destinationRoot( $deployment ) );
 		if ( false === $upgradeAvailable || false === $destinationAvailable || $upgradeAvailable < $required || $destinationAvailable < $required ) {
-			$this->cleanupArtifactAfterHostFailure( $artifact );
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
 		}
 	}
@@ -511,7 +530,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
 		}
 		$parts = parse_url( $url );
-		if ( false === filter_var( $url, FILTER_VALIDATE_URL ) || ! is_array( $parts ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || '' === (string) ( $parts['host'] ?? '' ) || isset( $parts['user'], $parts['pass'] ) || isset( $parts['fragment'] ) ) {
+		if ( false === filter_var( $url, FILTER_VALIDATE_URL ) || ! is_array( $parts ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || '' === (string) ( $parts['host'] ?? '' ) || isset( $parts['user'] ) || isset( $parts['pass'] ) || isset( $parts['fragment'] ) ) {
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
 		}
 	}

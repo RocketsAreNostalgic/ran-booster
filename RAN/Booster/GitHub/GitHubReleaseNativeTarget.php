@@ -14,7 +14,6 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 
 	private ?object $updater = null;
-	private int $maximumArtifactBytes = PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
 
 	/** @var string|callable|null */
 	private string|Closure|null $accessToken;
@@ -28,7 +27,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 		private string $providerRepositoryId,
 		string|callable|null $accessToken,
 		private string $channel,
-		private string $deploymentPolicy
+		private string $deploymentPolicy,
+		private ?int $maximumArtifactBytes = null
 	) {
 		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true )
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
@@ -40,12 +40,6 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );
 	}
 
-	public function configureMaximumArtifactBytes( int $maximumArtifactBytes ): void {
-		if ( null !== $this->updater ) {
-			throw new LogicException( 'The GitHub release native target is already registered.' );
-		}
-		$this->maximumArtifactBytes = PackageArtifactLimit::requireValid( $maximumArtifactBytes );
-	}
 
 	public function register(): bool {
 		try {
@@ -59,7 +53,7 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 					$this->channel,
 					$this->deploymentPolicy,
 					$this->accessToken,
-					$this->maximumArtifactBytes
+					PackageArtifactLimit::resolve( $this->maximumArtifactBytes )
 				);
 			}
 			return true === $this->updater->register();

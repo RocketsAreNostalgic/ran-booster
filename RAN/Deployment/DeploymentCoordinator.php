@@ -248,7 +248,7 @@ class DeploymentCoordinator {
 			$declaration = $host->declaration();
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			$host->finish( $failure->outcomeCode );
-			return $this->finishedOutcome( $attempt->getId() );
+			return $this->finishedOutcome( $host->terminalAttempt() );
 		}
 
 		$updater    = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
@@ -269,16 +269,15 @@ class DeploymentCoordinator {
 				$declaration->subdirectory
 			);
 		$code    = $deployment->deploy();
-		$outcome = $this->finishedOutcome( $attempt->getId() );
+		$outcome = $this->finishedOutcome( $host->terminalAttempt() );
 		if ( ! hash_equals( $code, $outcome->getCode() ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 		return $outcome;
 	}
 
-	private function finishedOutcome( int $attemptId ): DeploymentOutcome {
-		$finished = $this->attempts->findExact( $attemptId );
-		if ( null === $finished || ! $finished->getState()->isTerminal() ) {
+	private function finishedOutcome( DeploymentAttempt $finished ): DeploymentOutcome {
+		if ( ! $finished->getState()->isTerminal() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 		$outcome = $finished->getOutcome() ?? throw DeploymentStorageFailure::inconsistent();
@@ -366,7 +365,7 @@ class DeploymentCoordinator {
 			is_string( $package->getSubdirectory() ) ? $package->getSubdirectory() : null,
 			$package->getDeploymentPolicy(),
 			$userId,
-			PackageArtifactLimit::resolve( $package->getMaximumArtifactBytes() )
+			PackageArtifactLimit::resolve( null )
 		);
 	}
 

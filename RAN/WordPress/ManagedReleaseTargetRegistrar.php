@@ -436,14 +436,13 @@ final class ManagedReleaseTargetRegistrar {
 		$metadataFile  = $this->metadataPath( $type, $configuration, $identifier );
 		$target        = $nativeTargets->createNativeTarget(
 			$type,
-			$package->getRepository()->reference,
+			$package->getRepository()->withMaximumArtifactBytes( PackageArtifactLimit::resolve( null ) )->reference,
 			$metadataFile,
 			$configuration->packageRoot(),
 			$identifier,
 			$configuration->channel(),
 			$package->getDeploymentPolicy()->value
 		);
-		$target->configureMaximumArtifactBytes( PackageArtifactLimit::resolve( $package->getMaximumArtifactBytes() ) );
 		if ( ! $target->register() ) {
 			throw new \RuntimeException( 'The managed release target could not be registered.' );
 		}
@@ -637,7 +636,7 @@ final class ManagedReleaseTargetRegistrar {
 			'private'                => $package->getPrivate() ? 1 : 0,
 			'configuration'          => $configuration->toJson(),
 			'deployment_policy'      => $package->getDeploymentPolicy()->value,
-			'maximum_artifact_bytes' => PackageArtifactLimit::resolve( $package->getMaximumArtifactBytes() ),
+			'maximum_artifact_bytes' => PackageArtifactLimit::resolve( null ),
 		);
 	}
 

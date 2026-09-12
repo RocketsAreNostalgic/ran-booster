@@ -51,7 +51,7 @@ committed_entries=(
 	'views'
 )
 release_package_root='vendor/ran/wp-release-updater'
-release_release_updater_commit='dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3'
+release_updater_commit='dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3'
 branch_package_root='vendor/ran/wp-branch-updater'
 support_package_root='vendor/ran/updater-support'
 package_entries=(

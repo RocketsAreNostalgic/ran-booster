@@ -13,7 +13,6 @@ abstract class AbstractPackage implements Package {
 	protected DeploymentPolicy $deploymentPolicy = DeploymentPolicy::MANUAL;
 	protected PackageSource $source              = PackageSource::BRANCH;
 	protected int $sourceRevision                = 1;
-	protected ?int $maximumArtifactBytes         = null;
 	protected $subdirectory;
 	protected ?string $deploymentRef    = null;
 	protected ?string $installationSlug = null;
@@ -80,19 +79,9 @@ abstract class AbstractPackage implements Package {
 		$this->sourceRevision = $revision;
 	}
 
-	public function getMaximumArtifactBytes(): ?int {
-		return $this->maximumArtifactBytes;
-	}
-
-	public function setMaximumArtifactBytes( ?int $maximumArtifactBytes ): void {
-		$this->maximumArtifactBytes = PackageArtifactLimit::requireValidOverride( $maximumArtifactBytes );
-		if ( $this->repository instanceof ManagedRepository ) {
-			$this->repository = $this->repository->withMaximumArtifactBytes( $this->maximumArtifactBytes );
-		}
-	}
 
 	public function setRepository( ManagedRepository $repository ): void {
-		$this->repository = $repository->withMaximumArtifactBytes( $this->maximumArtifactBytes );
+		$this->repository = $repository;
 	}
 
 	public function getRepository(): ManagedRepository {

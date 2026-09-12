@@ -16,7 +16,6 @@ use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Deployment\DeploymentAttemptRepository;
-use RAN\Deployment\DeploymentArchivePreflight;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentWorker;
 use RAN\Deployment\WordPressWorkerWakeup;
@@ -297,7 +296,6 @@ final class BoosterServiceProvider {
 				$container->make( DeploymentAttemptRepository::class )
 			)
 		);
-		$container->bind( DeploymentArchivePreflight::class, new DeploymentArchivePreflight() );
 		$container->bind( CorePackageExecutor::class, new CorePackageExecutor() );
 		$container->bind( WordPressUpdaterLock::class, new WordPressUpdaterLock() );
 		$container->bind(
@@ -314,8 +312,6 @@ final class BoosterServiceProvider {
 					$container->make( PluginRepository::class ),
 					$container->make( ThemeRepository::class ),
 					$container->make( ProviderRegistry::class ),
-					$container->make( DeploymentArchivePreflight::class ),
-					$container->make( CorePackageExecutor::class ),
 					$container->make( WordPressWorkerWakeup::class ),
 					ABSPATH . '.maintenance',
 					$container->make( WordPressUpdaterLock::class ),

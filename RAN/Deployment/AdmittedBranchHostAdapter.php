@@ -314,7 +314,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			(string) $data['provider_repository_id'],
 			$request->configuredBranch,
 			$request->private,
-			$request->credentialId
+			$request->credentialId,
+			$request->maximumArtifactBytes
 		);
 		$installed->setRepository( $repository );
 		$installed->setSubdirectory( $request->subdirectory );

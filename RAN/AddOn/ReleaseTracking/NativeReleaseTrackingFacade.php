@@ -418,7 +418,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	/** @return list<RepositoryReference> */
 	private function releaseBrowserRepositories( Package $package ): array {
-		$repository = $package->getRepository()->reference;
+		$repository = $package->getRepository()->withMaximumArtifactBytes( $package->getMaximumArtifactBytes() )->reference;
 		if ( $repository->private ) {
 			return null === $repository->credentialId ? array() : array( $repository );
 		}
@@ -435,12 +435,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private function repositoryWithCredential( RepositoryReference $repository, string $credentialId ): RepositoryReference {
-		return new RepositoryReference(
-			$repository->locator,
-			$repository->providerRepositoryId,
-			$repository->private,
-			$credentialId
-		);
+		return $repository->withCredential( $credentialId );
 	}
 
 	public function enable(

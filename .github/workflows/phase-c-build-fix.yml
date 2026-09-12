@@ -30,8 +30,8 @@ jobs:
               raise SystemExit('release package root anchor not unique')
           text = text.replace(anchor, anchor + "release_updater_commit='dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3'\n", 1)
           count = text.count('updater_commit')
-          if count != 3:
-              raise SystemExit(f'expected three residual updater_commit references, found {count}')
+          if count != 4:
+              raise SystemExit(f'expected four updater_commit occurrences after inserting the identity, found {count}')
           text = text.replace('updater_commit', 'release_updater_commit')
           p.write_text(text)
           PY

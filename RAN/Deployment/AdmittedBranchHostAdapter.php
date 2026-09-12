@@ -48,11 +48,9 @@ use ZipArchive;
  */
 final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, AdmittedArchiveSource, AdmittedTargetFacts, AdmittedPackageExecutor, MutationLock {
 
-	private const PACKAGE_MAX_COMPRESSED_BYTES = 52428800;
-	private const MIN_CONFIGURED_BYTES          = 1048576;
-	private const DOWNLOAD_TIMEOUT              = 120;
-	private const DOWNLOAD_ATTEMPTS             = 2;
-	private const EXPANDED_RATIO                = 4;
+	private const DOWNLOAD_TIMEOUT  = 120;
+	private const DOWNLOAD_ATTEMPTS = 2;
+	private const EXPANDED_RATIO    = 4;
 
 	private ?ProviderPreparedArchive $providerArchive = null;
 
@@ -142,10 +140,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			throw new RuntimeException( 'The admitted archive source is already consumed.' );
 		}
 
-		$data      = $this->attempt->safeData();
-		$request   = $this->attempt->getRequest();
-		$provider  = ProviderCode::parse( (string) $data['provider'] );
-		$reference = new RepositoryReference(
+		$data                 = $this->attempt->safeData();
+		$request              = $this->attempt->getRequest();
+		$maximumArtifactBytes = $request->maximumArtifactBytes;
+		$provider             = ProviderCode::parse( (string) $data['provider'] );
+		$reference            = new RepositoryReference(
 			$request->repository,
 			(string) $data['provider_repository_id'],
 			$request->private,
@@ -176,7 +175,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 
 		try {
-			$this->assertLocalReadiness( $deployment );
+			$this->assertLocalReadiness( $deployment, $maximumArtifactBytes );
 		} catch ( Throwable $failure ) {
 			$this->cleanupProviderArchive( $providerArchive );
 			throw $failure;
@@ -186,8 +185,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$provider->value,
 			(string) $data['provider_repository_id'],
 			$resolvedRef,
-			function ( string $destination ) use ( $providerArchive ): void {
-				$this->downloadProviderArchive( $providerArchive, $destination );
+			function ( string $destination, int $providerMaximumArtifactBytes ) use ( $providerArchive, $maximumArtifactBytes ): void {
+				if ( $providerMaximumArtifactBytes !== $maximumArtifactBytes ) {
+					$this->stage( DeploymentOutcome::CODE_ARCHIVE_LIMIT_INVALID );
+				}
+				$this->downloadProviderArchive( $providerArchive, $destination, $maximumArtifactBytes );
 			},
 			function () use ( $providerArchive ): void {
 				$this->verifyProviderHead( $providerArchive );
@@ -196,9 +198,14 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		try {
 			$artifact = new PreparedArchiveArtifact(
-				PreparedArchive::downloadAndValidate( $offer, $deployment, $this->archiveDirectory() )
+				PreparedArchive::downloadAndValidate(
+					$offer,
+					$deployment,
+					$this->archiveDirectory(),
+					$maximumArtifactBytes
+				)
 			);
-			$this->assertArtifactCapacity( $artifact, $deployment );
+			$this->assertArtifactCapacity( $artifact, $deployment, $maximumArtifactBytes );
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			throw $failure;
@@ -375,7 +382,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function downloadProviderArchive( ProviderPreparedArchive $archive, string $destination ): void {
+	private function downloadProviderArchive( ProviderPreparedArchive $archive, string $destination, int $maximumArtifactBytes ): void {
 		$url = $archive->getUrl();
 		$this->assertSafeHttpsUrl( $url );
 		try {
@@ -388,7 +395,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 						'reject_unsafe_urls'  => true,
 						'stream'              => true,
 						'filename'            => $destination,
-						'limit_response_size' => $this->compressedLimit() + 1,
+						'limit_response_size' => $maximumArtifactBytes + 1,
 					)
 				);
 				if ( is_wp_error( $response ) ) {
@@ -429,7 +436,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assertLocalReadiness( BranchDeploymentDeclaration $deployment ): void {
+	private function assertLocalReadiness( BranchDeploymentDeclaration $deployment, int $maximumArtifactBytes ): void {
 		if ( ! class_exists( ZipArchive::class ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_ZIP_EXTENSION_MISSING );
 		}
@@ -444,20 +451,20 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DIRECTORY_UNWRITABLE );
 		}
 		$available = disk_free_space( $tempRoot );
-		if ( false === $available || $available < $this->compressedLimit() ) {
+		if ( false === $available || $available < $maximumArtifactBytes ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
 		}
 	}
 
-	private function assertArtifactCapacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
+	private function assertArtifactCapacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment, int $maximumArtifactBytes ): void {
 		$path = $artifact->archive()->getPath();
 		$size = filesize( $path );
-		if ( false === $size || $size > $this->compressedLimit() ) {
+		if ( false === $size || $size > $maximumArtifactBytes ) {
 			$this->cleanupArtifactAfterHostFailure( $artifact );
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE );
 		}
 		$expanded = $this->expandedBytes( $path );
-		if ( $expanded > $this->compressedLimit() * self::EXPANDED_RATIO ) {
+		if ( $expanded > $maximumArtifactBytes * self::EXPANDED_RATIO ) {
 			$this->cleanupArtifactAfterHostFailure( $artifact );
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_EXPANDED_TOO_LARGE );
 		}
@@ -496,14 +503,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$zip->close();
 		}
 		return $total;
-	}
-
-	private function compressedLimit(): int {
-		$value = defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ? constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) : self::PACKAGE_MAX_COMPRESSED_BYTES;
-		if ( ! is_int( $value ) || $value < self::MIN_CONFIGURED_BYTES || $value > self::PACKAGE_MAX_COMPRESSED_BYTES ) {
-			$this->stage( DeploymentOutcome::CODE_ARCHIVE_LIMIT_INVALID );
-		}
-		return $value;
 	}
 
 	private function assertSafeHttpsUrl( mixed $url ): void {

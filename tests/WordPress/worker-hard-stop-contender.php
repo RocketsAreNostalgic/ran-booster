@@ -17,21 +17,19 @@ $attempt  = $attempts->claimNext();
 if ( null === $attempt ) {
 	throw new RuntimeException( 'The contender could not claim the second attempt.' );
 }
-$coordinator = $booster->make( RAN\Deployment\DeploymentCoordinator::class );
-$acquire     = new ReflectionMethod( $coordinator, 'acquireCoreLock' );
-$release     = new ReflectionMethod( $coordinator, 'releaseCoreLock' );
-$suffix      = '';
+$lock   = $booster->make( RAN\WordPress\WordPressUpdaterLock::class );
+$suffix = '';
 
 if ( 'pre' === $phase ) {
-	$token = $acquire->invoke( $coordinator );
-	if ( ! is_string( $token ) || ! $release->invoke( $coordinator, $token ) ) {
+	$token = $lock->acquire();
+	if ( ! $lock->release( $token ) ) {
 		throw new RuntimeException( 'The contender could not acquire and exactly release the available core lock.' );
 	}
 	$attempts->finish( $attempt->getId(), RAN\Deployment\DeploymentOutcome::fromCode( RAN\Deployment\DeploymentOutcome::CODE_NO_CHANGE ) );
 	$suffix = 'core-lock-available';
 } else {
 	try {
-		$acquire->invoke( $coordinator );
+		$lock->acquire();
 		throw new RuntimeException( 'The contender unexpectedly acquired the retained core lock.' );
 	} catch ( RuntimeException $exception ) {
 		if ( ! str_contains( $exception->getMessage(), 'already running' ) ) {

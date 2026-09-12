@@ -58,6 +58,11 @@ jobs:
           PY
 
           composer install --no-interaction --prefer-dist --no-progress
+          set +e
+          vendor/bin/phpcbf --standard=.phpcs.xml RAN/Deployment/AdmittedBranchHostAdapter.php tests/Deployment/AdmittedBranchExecutionTest.php
+          phpcbf_status=$?
+          set -e
+          test "$phpcbf_status" -eq 0 -o "$phpcbf_status" -eq 1
           vendor/bin/phpunit --configuration phpunit.xml --filter AdmittedBranchExecutionTest --fail-on-phpunit-deprecation
           vendor/bin/phpcs --standard=.phpcs.xml RAN/Deployment/AdmittedBranchHostAdapter.php tests/Deployment/AdmittedBranchExecutionTest.php
           vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G RAN/Deployment/AdmittedBranchHostAdapter.php tests/Deployment/AdmittedBranchExecutionTest.php

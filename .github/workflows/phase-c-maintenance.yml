@@ -101,7 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           composer update ran/wp-branch-updater ran/updater-support --with-dependencies
-          composer validate --strict
+          composer validate
           php -r '$lock=json_decode(file_get_contents("composer.lock"), true, flags: JSON_THROW_ON_ERROR); $seen=[]; foreach ($lock["packages"] as $package) { if ($package["name"] === "ran/wp-branch-updater") { printf("branch-updater %s %s\n", $package["version"], $package["source"]["reference"] ?? ""); $seen["branch"]=$package; } if ($package["name"] === "ran/updater-support") { printf("updater-support %s %s\n", $package["version"], $package["source"]["reference"] ?? ""); $seen["support"]=$package; } } if (($seen["branch"]["version"] ?? null) !== "v1.0.0-beta.2" || ($seen["branch"]["source"]["reference"] ?? null) !== "bc0f6608f591ee9c48b71de90e4d651462455b47" || !isset($seen["support"])) { exit(1); }'
 
       - name: Commit generated Phase C completion

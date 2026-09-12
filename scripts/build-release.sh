@@ -51,6 +51,7 @@ committed_entries=(
 	'views'
 )
 release_package_root='vendor/ran/wp-release-updater'
+release_release_updater_commit='dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3'
 branch_package_root='vendor/ran/wp-branch-updater'
 support_package_root='vendor/ran/updater-support'
 package_entries=(
@@ -220,10 +221,10 @@ updater_repository="$repo_root/../ran-wp-release-updater"
 updater_checkout="$tmp_dir/ran-wp-release-updater"
 [[ -d "$updater_repository/.git" ]] \
 	|| fail 'the locked neutral updater source checkout is unavailable.'
-git -C "$updater_repository" cat-file -e "${updater_commit}^{commit}" 2>/dev/null \
-	|| fail "the locked neutral updater commit is unavailable: $updater_commit"
+git -C "$updater_repository" cat-file -e "${release_updater_commit}^{commit}" 2>/dev/null \
+	|| fail "the locked neutral updater commit is unavailable: $release_updater_commit"
 mkdir -p "$composer_dir" "$composer_home" "$stage_root" "$updater_checkout"
-git -C "$updater_repository" archive "$updater_commit" | tar -xf - -C "$updater_checkout"
+git -C "$updater_repository" archive "$release_updater_commit" | tar -xf - -C "$updater_checkout"
 git show "$commit:composer.json" > "$composer_dir/composer.json"
 git show "$commit:composer.lock" > "$composer_dir/composer.lock"
 

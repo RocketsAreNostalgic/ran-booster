@@ -61,23 +61,28 @@ jobs:
 
           replace_once(
               'RAN/Booster/GitHub/GitHubProvider.php',
-              "\\t\\t\\t\\t|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {",
-              "\\t\\t\\t\\t|| $repository->maximumArtifactBytes !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {"
+              "52428800 !== ( $facts['maximum_artifact_bytes'] ?? null )",
+              "$repository->maximumArtifactBytes !== ( $facts['maximum_artifact_bytes'] ?? null )"
           )
           replace_once(
               'RAN/Booster/GitHub/GitHubProvider.php',
-              "\\t\\t\\t\\t|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {",
-              "\\t\\t\\t\\t|| $repository->maximumArtifactBytes !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {"
+              "52428800 !== ( $facts['maximum_artifact_bytes'] ?? null )",
+              "$repository->maximumArtifactBytes !== ( $facts['maximum_artifact_bytes'] ?? null )"
           )
           replace_once(
               'RAN/Booster/GitHub/GitHubProvider.php',
-              "\\t\\treturn $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), 52428800 );",
-              "\\t\\treturn $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), $repository->maximumArtifactBytes );"
+              "$this->releaseAccessToken( $repository ), 52428800 );",
+              "$this->releaseAccessToken( $repository ), $repository->maximumArtifactBytes );"
           )
 
           old = '''\tprivate function repositoryWithCredential( RepositoryReference $repository, string $credentialId ): RepositoryReference {\n\t\treturn new RepositoryReference(\n\t\t\t$repository->locator,\n\t\t\t$repository->providerRepositoryId,\n\t\t\t$repository->private,\n\t\t\t$credentialId\n\t\t);\n\t}\n'''
           new = '''\tprivate function repositoryWithCredential( RepositoryReference $repository, string $credentialId ): RepositoryReference {\n\t\treturn $repository->withCredential( $credentialId );\n\t}\n'''
           replace_once('RAN/AddOn/ReleaseTracking/NativeReleaseTrackingFacade.php', old, new)
+          replace_once(
+              'RAN/AddOn/ReleaseTracking/NativeReleaseTrackingFacade.php',
+              '$repository = $package->getRepository()->reference;',
+              '$repository = $package->getRepository()->withMaximumArtifactBytes( $package->getMaximumArtifactBytes() )->reference;'
+          )
 
           replace_once(
               'RAN/Deployment/AdmittedBranchHostAdapter.php',
@@ -101,7 +106,7 @@ jobs:
           set -euo pipefail
           composer update ran/wp-branch-updater ran/updater-support --with-dependencies
           composer validate --strict
-          php -r '$lock=json_decode(file_get_contents("composer.lock"), true, flags: JSON_THROW_ON_ERROR); foreach ($lock["packages"] as $package) { if ($package["name"] === "ran/wp-branch-updater") { printf("branch-updater %s %s\n", $package["version"], $package["source"]["reference"] ?? ""); } if ($package["name"] === "ran/updater-support") { printf("updater-support %s %s\n", $package["version"], $package["source"]["reference"] ?? ""); } }'
+          php -r '$lock=json_decode(file_get_contents("composer.lock"), true, flags: JSON_THROW_ON_ERROR); $seen=[]; foreach ($lock["packages"] as $package) { if ($package["name"] === "ran/wp-branch-updater") { printf("branch-updater %s %s\n", $package["version"], $package["source"]["reference"] ?? ""); $seen["branch"]=$package; } if ($package["name"] === "ran/updater-support") { printf("updater-support %s %s\n", $package["version"], $package["source"]["reference"] ?? ""); $seen["support"]=$package; } } if (($seen["branch"]["version"] ?? null) !== "v1.0.0-beta.2" || ($seen["branch"]["source"]["reference"] ?? null) !== "bc0f6608f591ee9c48b71de90e4d651462455b47" || !isset($seen["support"])) { exit(1); }'
 
       - name: Commit generated Phase C completion
         shell: bash

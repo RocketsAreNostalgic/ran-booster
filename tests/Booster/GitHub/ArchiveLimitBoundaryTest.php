@@ -13,6 +13,7 @@ use RAN\RepositoryProvider\RepositoryReference;
 use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
+/** Proves the Core-owned archive policy is resolved only at release-operation boundaries. */
 final class ArchiveLimitBoundaryTest extends TestCase {
 	public function testReleaseInspectionResolvesAndValidatesNonDefaultLimitLazily(): void {
 		$reads     = 0;

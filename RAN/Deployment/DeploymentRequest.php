@@ -15,6 +15,8 @@ final readonly class DeploymentRequest {
 
 	private const MAX_JSON_BYTES = 4096;
 
+	public int $maximumArtifactBytes;
+
 	public function __construct(
 		public string $repository,
 		public ?string $credentialId,
@@ -24,7 +26,7 @@ final readonly class DeploymentRequest {
 		public ?string $subdirectory,
 		public DeploymentPolicy $deploymentPolicy,
 		public ?int $initiatingUserId,
-		public int $maximumArtifactBytes = PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES
+		?int $maximumArtifactBytes = null
 	) {
 		self::assertLocator( $repository );
 		self::assertCredentialId( $credentialId );
@@ -34,7 +36,9 @@ final readonly class DeploymentRequest {
 		if ( null !== $initiatingUserId && $initiatingUserId < 1 ) {
 			throw new InvalidArgumentException( 'The initiating user ID must be positive.' );
 		}
-		PackageArtifactLimit::requireValid( $maximumArtifactBytes );
+		$this->maximumArtifactBytes = null === $maximumArtifactBytes
+			? PackageArtifactLimit::resolve( null )
+			: PackageArtifactLimit::requireValid( $maximumArtifactBytes );
 		if ( strlen( $this->toJson() ) > self::MAX_JSON_BYTES ) {
 			throw new InvalidArgumentException( 'The deployment request is too large.' );
 		}

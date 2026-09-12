@@ -8,7 +8,7 @@ The common policy is:
 - use locked dependency manifests;
 - retain PHP 8.2 as the supported floor;
 - use pinned third-party Actions and declared toolchain versions;
-- keep pull-request source execution read-only and credential-free;
+- keep project-controlled build/test execution read-only and credential-free; where runtime admission must query GitHub metadata, expose only the read-only, step-scoped `GITHUB_TOKEN` permissions required for that classifier;
 - make repository-owned aggregate checks (`composer check`, `pnpm check`) authoritative for their code surfaces;
 - keep product-specific installation, compatibility, packaging, provenance, and release proofs in the owning repository.
 

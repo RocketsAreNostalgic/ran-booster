@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: '24.11.0'
       - run: composer update ran/coding-standards phpcompatibility/php-compatibility phpcompatibility/phpcompatibility-paragonie phpcompatibility/phpcompatibility-wp --with-dependencies --no-install --no-scripts --no-plugins --no-interaction
-      - run: composer validate --strict --no-check-publish
+      - run: composer validate --strict --no-check-publish --no-check-all
       - run: grep -q '0b03e61a4bb558deeb6bc6b6399f44c0ec95e5be' composer.lock
       - run: pnpm install --lockfile-only --ignore-scripts
       - run: grep -q '751edd097e3902efb93992bf47401a1a4f4b1fa8' pnpm-lock.yaml

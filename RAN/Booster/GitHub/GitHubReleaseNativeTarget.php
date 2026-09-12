@@ -6,6 +6,7 @@ namespace RAN\Booster\GitHub;
 
 use Closure;
 use LogicException;
+use RAN\PackageArtifactLimit;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 
@@ -13,6 +14,7 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 
 	private ?object $updater = null;
+	private int $maximumArtifactBytes = PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
 
 	/** @var string|callable|null */
 	private string|Closure|null $accessToken;
@@ -38,6 +40,13 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 			: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );
 	}
 
+	public function configureMaximumArtifactBytes( int $maximumArtifactBytes ): void {
+		if ( null !== $this->updater ) {
+			throw new LogicException( 'The GitHub release native target is already registered.' );
+		}
+		$this->maximumArtifactBytes = PackageArtifactLimit::requireValid( $maximumArtifactBytes );
+	}
+
 	public function register(): bool {
 		try {
 			if ( null === $this->updater ) {
@@ -49,7 +58,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 					$this->providerRepositoryId,
 					$this->channel,
 					$this->deploymentPolicy,
-					$this->accessToken
+					$this->accessToken,
+					$this->maximumArtifactBytes
 				);
 			}
 			return true === $this->updater->register();

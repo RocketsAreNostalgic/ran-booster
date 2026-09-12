@@ -79,16 +79,24 @@ jobs:
 
           limit = Path('RAN/PackageArtifactLimit.php')
           source = limit.read_text()
-          source = source.replace(
-              " * Resolve and validate Booster's compressed package-artifact ceiling.\n *\n * Package-specific policy wins over the legacy site-wide default.\n",
-              " * Resolve and validate Booster's compressed package-artifact ceiling.\n *\n * The published maximum stays representable with the pinned updater's 4x expanded ceiling on 32-bit PHP.\n",
-          )
-          source = source.replace("\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870912;\n\tprivate const EXPANDED_RATIO                = 4;\n", "\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870911;\n")
-          old_valid = """\tpublic static function requireValid( mixed $value ): int {\n\t\t$platformMaximum = min(\n\t\t\tself::MAXIMUM_ARTIFACT_BYTES,\n\t\t\tintdiv( PHP_INT_MAX, self::EXPANDED_RATIO )\n\t\t);\n\t\tif (\n\t\t\t! is_int( $value )\n\t\t\t|| $value < self::MINIMUM_ARTIFACT_BYTES\n\t\t\t|| $value > $platformMaximum\n\t\t) {\n"""
-          new_valid = """\tpublic static function requireValid( mixed $value ): int {\n\t\tif (\n\t\t\t! is_int( $value )\n\t\t\t|| $value < self::MINIMUM_ARTIFACT_BYTES\n\t\t\t|| $value > self::MAXIMUM_ARTIFACT_BYTES\n\t\t) {\n"""
-          if source.count(old_valid) != 1:
-              raise SystemExit('artifact validator block did not match exactly once')
-          source = source.replace(old_valid, new_valid)
+          old_doc = """/**\n * Resolve Booster's effective acquired-artifact ceiling for one managed package.\n *\n * Package-specific policy wins over the legacy site-wide default. Updater\n * packages receive only the resolved integer and never depend on Booster's\n * configuration names.\n */\n"""
+          new_doc = """/**\n * Resolve Booster's effective acquired-artifact ceiling.\n *\n * The published maximum stays representable with the pinned updater's 4x\n * expanded ceiling on 32-bit PHP. Updater packages receive only the resolved\n * integer and never depend on Booster's configuration names.\n */\n"""
+          if source.count(old_doc) != 1:
+              raise SystemExit('artifact-limit docblock did not match exactly once')
+          source = source.replace(old_doc, new_doc)
+          if source.count("\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870912;\n") != 1:
+              raise SystemExit('artifact maximum constant did not match exactly once')
+          source = source.replace("\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870912;\n", "\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870911;\n")
+          if source.count("\n\tprivate const EXPANDED_RATIO = 4;\n") != 1:
+              raise SystemExit('expanded ratio constant did not match exactly once')
+          source = source.replace("\n\tprivate const EXPANDED_RATIO = 4;\n", '')
+          platform_line = "\t\t$platformMaximum = min( self::MAXIMUM_ARTIFACT_BYTES, intdiv( PHP_INT_MAX, self::EXPANDED_RATIO ) );\n"
+          if source.count(platform_line) != 1:
+              raise SystemExit('platform maximum calculation did not match exactly once')
+          source = source.replace(platform_line, '')
+          if source.count("\t\t\t|| $value > $platformMaximum ) {\n") != 1:
+              raise SystemExit('platform maximum comparison did not match exactly once')
+          source = source.replace("\t\t\t|| $value > $platformMaximum ) {\n", "\t\t\t|| $value > self::MAXIMUM_ARTIFACT_BYTES ) {\n")
           dead_method = """\n\tpublic static function requireValidOverride( ?int $value ): ?int {\n\t\treturn null === $value ? null : self::requireValid( $value );\n\t}\n"""
           if source.count(dead_method) != 1:
               raise SystemExit('dead override validator did not match exactly once')

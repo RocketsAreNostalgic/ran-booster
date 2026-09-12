@@ -50,15 +50,20 @@ committed_entries=(
 	'uninstall.php'
 	'views'
 )
-package_root='vendor/ran/wp-release-updater'
-updater_version='v0.1.0-beta.4'
-updater_commit='dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3'
+release_package_root='vendor/ran/wp-release-updater'
+branch_package_root='vendor/ran/wp-branch-updater'
+support_package_root='vendor/ran/updater-support'
 package_entries=(
-	"$package_root/LICENSE"
-	"$package_root/bootstrap.php"
-	"$package_root/runtime-copy.json"
-	"$package_root/runtime.php"
-	"$package_root/src"
+	"$support_package_root/LICENSE"
+	"$support_package_root/src"
+	"$branch_package_root/LICENSE"
+	"$branch_package_root/bootstrap.php"
+	"$branch_package_root/src"
+	"$release_package_root/LICENSE"
+	"$release_package_root/bootstrap.php"
+	"$release_package_root/runtime-copy.json"
+	"$release_package_root/runtime.php"
+	"$release_package_root/src"
 )
 generated_entries=(
 	'ran-booster-release.json'
@@ -234,45 +239,35 @@ git show "$commit:composer.lock" > "$composer_dir/composer.lock"
 		--no-autoloader
 )
 
-installed_package="$composer_dir/$package_root"
-[[ -d "$installed_package" ]] \
-	|| fail 'the locked updater package was not installed.'
-
-# Validate the locked package identity.
-# shellcheck disable=SC2016
-if ! php -r '
-		$lock = json_decode( file_get_contents( $argv[1] ), true, 512, JSON_THROW_ON_ERROR );
-		$packages = $lock["packages"] ?? null;
-		if ( ! is_array( $packages ) || 1 !== count( $packages ) || ! is_array( $packages[0] ) ) {
-			exit( 1 );
-		}
-		$package = $packages[0];
-		$dist = $package["dist"] ?? null;
-		if (
-			"ran/wp-release-updater" !== ( $package["name"] ?? null )
-			|| $argv[2] !== ( $package["version"] ?? null )
-			|| ! is_array( $dist )
-			|| "zip" !== ( $dist["type"] ?? null )
-			|| "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/" . $argv[3] !== ( $dist["url"] ?? null )
-			|| ! is_string( $dist["reference"] ?? null )
-			|| ! hash_equals( $argv[3], $dist["reference"] )
-			|| ! is_array( $package["source"] ?? null )
-			|| "git" !== ( $package["source"]["type"] ?? null )
-			|| "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git" !== ( $package["source"]["url"] ?? null )
-			|| ! hash_equals( $argv[3], $package["source"]["reference"] ?? "" )
-		) {
-			exit( 1 );
-		}
-	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"; then
-	fail "composer.lock must contain only ran/wp-release-updater $updater_version at $updater_commit as a production package."
-fi
-
-for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
-	[[ -e "$installed_package/$package_entry" ]] \
-		|| fail "the locked updater package is missing $package_entry."
+release_installed_package="$composer_dir/$release_package_root"
+branch_installed_package="$composer_dir/$branch_package_root"
+support_installed_package="$composer_dir/$support_package_root"
+for installed_package in "$release_installed_package" "$branch_installed_package" "$support_installed_package"; do
+	[[ -d "$installed_package" ]] || fail "locked runtime package was not installed: $installed_package"
 done
-if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime-copy.json" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
-	fail 'the updater runtime allowlist must not contain symbolic links.'
+
+php "$repo_root/scripts/verify-runtime-dependencies.php" "$composer_dir/composer.lock" >/dev/null \
+	|| fail 'composer.lock does not contain the exact approved runtime dependency set.'
+
+for required_path in \
+	"$release_installed_package/LICENSE" \
+	"$release_installed_package/bootstrap.php" \
+	"$release_installed_package/runtime-copy.json" \
+	"$release_installed_package/runtime.php" \
+	"$release_installed_package/src" \
+	"$branch_installed_package/LICENSE" \
+	"$branch_installed_package/bootstrap.php" \
+	"$branch_installed_package/src" \
+	"$support_installed_package/LICENSE" \
+	"$support_installed_package/src"; do
+	[[ -e "$required_path" ]] || fail "locked runtime package is missing: $required_path"
+done
+if find \
+	"$release_installed_package/LICENSE" "$release_installed_package/bootstrap.php" "$release_installed_package/runtime-copy.json" "$release_installed_package/runtime.php" "$release_installed_package/src" \
+	"$branch_installed_package/LICENSE" "$branch_installed_package/bootstrap.php" "$branch_installed_package/src" \
+	"$support_installed_package/LICENSE" "$support_installed_package/src" \
+	-type l -print -quit | grep -q .; then
+	fail 'runtime dependency allowlist must not contain symbolic links.'
 fi
 
 git archive \
@@ -282,12 +277,17 @@ git archive \
 	-- "${committed_entries[@]}" \
 	| tar -xf - -C "$stage_dir"
 
-mkdir -p "$stage_root/$package_root"
-cp "$installed_package/LICENSE" "$stage_root/$package_root/LICENSE"
-cp "$installed_package/bootstrap.php" "$stage_root/$package_root/bootstrap.php"
-cp "$installed_package/runtime-copy.json" "$stage_root/$package_root/runtime-copy.json"
-cp "$installed_package/runtime.php" "$stage_root/$package_root/runtime.php"
-cp -R "$installed_package/src" "$stage_root/$package_root/src"
+mkdir -p "$stage_root/$release_package_root" "$stage_root/$branch_package_root" "$stage_root/$support_package_root"
+cp "$release_installed_package/LICENSE" "$stage_root/$release_package_root/LICENSE"
+cp "$release_installed_package/bootstrap.php" "$stage_root/$release_package_root/bootstrap.php"
+cp "$release_installed_package/runtime-copy.json" "$stage_root/$release_package_root/runtime-copy.json"
+cp "$release_installed_package/runtime.php" "$stage_root/$release_package_root/runtime.php"
+cp -R "$release_installed_package/src" "$stage_root/$release_package_root/src"
+cp "$branch_installed_package/LICENSE" "$stage_root/$branch_package_root/LICENSE"
+cp "$branch_installed_package/bootstrap.php" "$stage_root/$branch_package_root/bootstrap.php"
+cp -R "$branch_installed_package/src" "$stage_root/$branch_package_root/src"
+cp "$support_installed_package/LICENSE" "$stage_root/$support_package_root/LICENSE"
+cp -R "$support_installed_package/src" "$stage_root/$support_package_root/src"
 
 # This positive provenance marker exists only inside an official staged archive.
 # Source checkouts therefore fail closed unless an operator explicitly enables
@@ -335,7 +335,7 @@ php -r '
 		touch( $item->getPathname(), $epoch );
 	}
 	touch( $archiveRoot, $epoch );
-	' "$stage_root/$package_root" "$stage_root" "$commit_epoch" "$stage_root/ran-booster-release.json"
+	' "$stage_root/vendor/ran" "$stage_root" "$commit_epoch" "$stage_root/ran-booster-release.json"
 
 archive_name="ran-booster-$expected_version.zip"
 tmp_archive="$tmp_dir/$archive_name"

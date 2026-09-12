@@ -63,6 +63,7 @@ use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedMultisiteBootstrap;
 use RAN\Storage\Database;
 use RAN\Troubleshooting\CoreSelfUpdateStatus;
+use RAN\WordPress\BranchUpdaterBootstrap;
 use RAN\WordPress\CoreSelfUpdatePolicy;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\ReleaseUpdaterBootstrap;
@@ -98,6 +99,7 @@ if ( ! $ran_booster_runtime_support->allowsManagedOperations() ) {
 
 	return;
 }
+BranchUpdaterBootstrap::register();
 $ran_booster_release_updater = ReleaseUpdaterBootstrap::register();
 if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );

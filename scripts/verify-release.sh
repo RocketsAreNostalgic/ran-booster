@@ -54,15 +54,20 @@ committed_entries=(
 	'uninstall.php'
 	'views'
 )
-package_root='vendor/ran/wp-release-updater'
-updater_version='v0.1.0-beta.4'
-updater_commit='dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3'
+release_package_root='vendor/ran/wp-release-updater'
+branch_package_root='vendor/ran/wp-branch-updater'
+support_package_root='vendor/ran/updater-support'
 package_entries=(
-	"$package_root/LICENSE"
-	"$package_root/bootstrap.php"
-	"$package_root/runtime-copy.json"
-	"$package_root/runtime.php"
-	"$package_root/src"
+	"$support_package_root/LICENSE"
+	"$support_package_root/src"
+	"$branch_package_root/LICENSE"
+	"$branch_package_root/bootstrap.php"
+	"$branch_package_root/src"
+	"$release_package_root/LICENSE"
+	"$release_package_root/bootstrap.php"
+	"$release_package_root/runtime-copy.json"
+	"$release_package_root/runtime.php"
+	"$release_package_root/src"
 )
 generated_entries=(
 	'ran-booster-release.json'
@@ -243,171 +248,32 @@ git show "$commit:composer.lock" > "$composer_dir/composer.lock"
 		--no-autoloader
 )
 
-installed_package="$composer_dir/$package_root"
-[[ -d "$installed_package" ]] \
-	|| fail 'the committed lock did not install the updater package.'
-
-# shellcheck disable=SC2016
-if ! package_lock_record=$(
-	php -r '
-		$lock = json_decode( file_get_contents( $argv[1] ), true, 512, JSON_THROW_ON_ERROR );
-		$packages = $lock["packages"] ?? null;
-		if ( ! is_array( $packages ) || 1 !== count( $packages ) || ! is_array( $packages[0] ) ) {
-			exit( 1 );
-		}
-		$package = $packages[0];
-		$name = $package["name"] ?? null;
-		$version = $package["version"] ?? null;
-		$dist = $package["dist"] ?? null;
-		$contentHash = $lock["content-hash"] ?? null;
-		if (
-			"ran/wp-release-updater" !== $name
-			|| $argv[2] !== $version
-			|| ! is_array( $dist )
-			|| "zip" !== ( $dist["type"] ?? null )
-			|| "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/" . $argv[3] !== ( $dist["url"] ?? null )
-			|| ! is_string( $dist["reference"] ?? null )
-			|| ! hash_equals( $argv[3], $dist["reference"] )
-			|| ! is_array( $package["source"] ?? null )
-			|| "git" !== ( $package["source"]["type"] ?? null )
-			|| "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git" !== ( $package["source"]["url"] ?? null )
-			|| ! hash_equals( $argv[3], $package["source"]["reference"] ?? "" )
-			|| ! is_string( $contentHash )
-			|| 1 !== preg_match( "/^[0-9a-f]{32}$/", $contentHash )
-		) {
-			exit( 1 );
-		}
-		echo implode( "\t", array( $name, $version, $dist["reference"] ) );
-	' "$composer_dir/composer.lock" "$updater_version" "$updater_commit"
-); then
-	fail "composer.lock must contain only ran/wp-release-updater $updater_version at $updater_commit as a production package."
-fi
-IFS=$'\t' read -r package_name package_version package_commit <<< "$package_lock_record"
-
-for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
-	[[ -e "$installed_package/$package_entry" ]] \
-		|| fail "the locked updater package is missing $package_entry."
-done
-if find "$installed_package/LICENSE" "$installed_package/bootstrap.php" "$installed_package/runtime-copy.json" "$installed_package/runtime.php" "$installed_package/src" -type l -print -quit | grep -q .; then
-	fail 'the updater runtime allowlist must not contain symbolic links.'
-fi
-
-archive_paths="$tmp_dir/archive-paths.txt"
-archive_files="$tmp_dir/archive-files.txt"
-expected_files="$tmp_dir/expected-files.txt"
-expected_paths="$tmp_dir/expected-paths.txt"
-entries_file="$tmp_dir/entries.txt"
-contents_file="$tmp_dir/archive-contents.bin"
-
-unzip -Z1 "$archive" > "$archive_paths"
-[[ -s "$archive_paths" ]] || fail 'archive is empty.'
-grep -Fqx 'ran-booster/' "$archive_paths" \
-	|| fail 'archive must contain exactly one ran-booster/ root.'
-
-while IFS= read -r path || [[ -n "$path" ]]; do
-	[[ "$path" == ran-booster/* ]] \
-		|| fail "path is outside the ran-booster/ root: $path"
-	[[ "$path" != *\\* && "$path" != *'//'* ]] \
-		|| fail "unsafe archive path: $path"
-	relative=${path#ran-booster/}
-	[[ -z "$relative" || ( "$relative" != '..' && "$relative" != ../* && "$relative" != */../* && "$relative" != */.. ) ]] \
-		|| fail "unsafe archive path: $path"
-
-	case "$relative" in
-		AGENTS.md|AGENTS.md/*|.agents|.agents/*|.dex|.dex/*|ran-booster-workbench|ran-booster-workbench/*|.github|.github/*|tests|tests/*|scripts|scripts/*|build|build/*|node_modules|node_modules/*|README.md|CHANGELOG.md|release-files.txt|release-please-config.json|.release-please-manifest.json|package.json|pnpm-lock.yaml|composer.json|composer.lock|.ran-booster|.ran-booster/*|secrets.json|*/secrets.json|secrets.json.lock|*/secrets.json.lock|boosterlog|*.log|*.zip|*.tar|*.tar.gz|*.tgz)
-			fail "development, secret, log, or archive path is forbidden: $path"
-			;;
-		vendor|vendor/|vendor/ran|vendor/ran/)
-			;;
-		vendor/*)
-			[[ "$relative" == "$package_root" || "$relative" == "$package_root/" || "$relative" == "$package_root/"* ]] \
-				|| fail "unexpected vendor path is forbidden: $path"
-			;;
-	esac
-done < "$archive_paths"
-
-if zipinfo -l "$archive" | awk '$1 ~ /^l/ { found = 1 } END { exit !found }'; then
-	fail 'release archive must not contain symbolic links.'
-fi
-
-while IFS= read -r entry || [[ -n "$entry" ]]; do
-	[[ -z "$entry" || "$entry" == \#* ]] && continue
-	[[ "$entry" =~ ^[A-Za-z0-9._/-]+$ ]] \
-		|| fail "unsafe allowlist path: $entry"
-
-	allowed=false
-	for expected in "${allowed_entries[@]}"; do
-		if [[ "$entry" == "$expected" ]]; then
-			allowed=true
-			break
-		fi
-	done
-	[[ "$allowed" == true ]] \
-		|| fail "unexpected runtime allowlist entry: $entry"
-	grep -Fqx "$entry" "$entries_file" 2>/dev/null \
-		&& fail "duplicate allowlist entry: $entry"
-	printf '%s\n' "$entry" >> "$entries_file"
-done < "$manifest"
-
-[[ $(awk 'END { print NR }' "$entries_file") -eq ${#allowed_entries[@]} ]] \
-	|| fail 'release-files.txt does not contain the complete runtime allowlist.'
-for required in "${allowed_entries[@]}"; do
-	grep -Fqx "$required" "$entries_file" \
-		|| fail "required allowlist entry is missing: $required"
+release_installed_package="$composer_dir/$release_package_root"
+branch_installed_package="$composer_dir/$branch_package_root"
+support_installed_package="$composer_dir/$support_package_root"
+for installed_package in "$release_installed_package" "$branch_installed_package" "$support_installed_package"; do
+	[[ -d "$installed_package" ]] || fail "committed lock did not install runtime package: $installed_package"
 done
 
-while IFS= read -r tree_entry; do
-	mode=${tree_entry%% *}
-	[[ "$mode" != '120000' ]] \
-		|| fail 'release files must not contain symbolic links.'
-done < <(git ls-tree -r "$commit" -- "${committed_entries[@]}")
-
-git ls-tree -r --name-only "$commit" -- "${committed_entries[@]}" \
-	| sed 's#^#ran-booster/#' \
-	> "$expected_files"
-for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php src; do
-	if [[ -d "$installed_package/$package_entry" ]]; then
-		find "$installed_package/$package_entry" -type f -print
-	else
-		printf '%s\n' "$installed_package/$package_entry"
-	fi
-done \
-	| sed "s#^$installed_package/#ran-booster/$package_root/#" \
-	>> "$expected_files"
-printf '%s\n' 'ran-booster/ran-booster-release.json' >> "$expected_files"
-LC_ALL=C sort -o "$expected_files" "$expected_files"
-grep -v '/$' "$archive_paths" | LC_ALL=C sort > "$archive_files"
-
-diff -u "$expected_files" "$archive_files" >/dev/null \
-	|| fail 'archive files do not exactly match committed Core plus the locked updater runtime allowlist.'
-
-printf '%s\n' 'ran-booster/' > "$expected_paths"
-while IFS= read -r expected_file; do
-	printf '%s\n' "$expected_file" >> "$expected_paths"
-	parent=${expected_file%/*}
-	while [[ "$parent" != 'ran-booster' ]]; do
-		printf '%s/\n' "$parent" >> "$expected_paths"
-		parent=${parent%/*}
-	done
-done < "$expected_files"
-LC_ALL=C sort -u -o "$expected_paths" "$expected_paths"
-LC_ALL=C sort -u -o "$archive_paths" "$archive_paths"
-diff -u "$expected_paths" "$archive_paths" >/dev/null \
-	|| fail 'archive contains an unexpected file or directory path.'
+if ! dependency_records=$(php "$repo_root/scripts/verify-runtime-dependencies.php" "$composer_dir/composer.lock"); then
+	fail 'composer.lock does not contain the exact approved runtime dependency set.'
+fi
 
 for required_path in \
 	'ran-booster/NOTICE.md' \
 	'ran-booster/license.txt' \
 	'ran-booster/ran-booster-release.json' \
 	'ran-booster/ran-booster.php' \
-	"ran-booster/$package_root/LICENSE" \
-	"ran-booster/$package_root/bootstrap.php" \
-	"ran-booster/$package_root/runtime-copy.json" \
-	"ran-booster/$package_root/runtime.php"; do
+	"ran-booster/$support_package_root/LICENSE" \
+	"ran-booster/$branch_package_root/LICENSE" \
+	"ran-booster/$branch_package_root/bootstrap.php" \
+	"ran-booster/$release_package_root/LICENSE" \
+	"ran-booster/$release_package_root/bootstrap.php" \
+	"ran-booster/$release_package_root/runtime-copy.json" \
+	"ran-booster/$release_package_root/runtime.php"; do
 	grep -Fqx "$required_path" "$archive_files" \
 		|| fail "required runtime file is missing: $required_path"
 done
-
 archive_plugin_version=$(
 	unzip -p "$archive" ran-booster/ran-booster.php \
 		| sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
@@ -446,18 +312,28 @@ php -r '
 	"$commit" \
 	|| fail 'installed Core release marker does not match the release version and commit.'
 
-archived_package="$extract_dir/ran-booster/$package_root"
-for package_entry in LICENSE bootstrap.php runtime-copy.json runtime.php; do
-	cmp -s "$installed_package/$package_entry" "$archived_package/$package_entry" \
-		|| fail "archived updater $package_entry does not match the committed Composer lock."
-done
-while IFS= read -r package_file || [[ -n "$package_file" ]]; do
-	[[ -n "$package_file" ]] || continue
-	relative_package_file=${package_file#"$installed_package/"}
-	cmp -s "$package_file" "$archived_package/$relative_package_file" \
-		|| fail "archived updater $relative_package_file does not match the committed Composer lock."
-done < <(find "$installed_package/src" -type f -print | LC_ALL=C sort)
-
+compare_runtime_package() {
+	local installed_root=$1
+	local archived_root=$2
+	shift 2
+	local entry package_file relative_package_file
+	for entry in "$@"; do
+		if [[ -d "$installed_root/$entry" ]]; then
+			while IFS= read -r package_file || [[ -n "$package_file" ]]; do
+				[[ -n "$package_file" ]] || continue
+				relative_package_file=${package_file#"$installed_root/"}
+				cmp -s "$package_file" "$archived_root/$relative_package_file" \
+					|| fail "archived runtime dependency $relative_package_file does not match the committed Composer lock."
+			done < <(find "$installed_root/$entry" -type f -print | LC_ALL=C sort)
+		else
+			cmp -s "$installed_root/$entry" "$archived_root/$entry" \
+				|| fail "archived runtime dependency $entry does not match the committed Composer lock."
+		fi
+	done
+}
+compare_runtime_package "$support_installed_package" "$extract_dir/ran-booster/$support_package_root" LICENSE src
+compare_runtime_package "$branch_installed_package" "$extract_dir/ran-booster/$branch_package_root" LICENSE bootstrap.php src
+compare_runtime_package "$release_installed_package" "$extract_dir/ran-booster/$release_package_root" LICENSE bootstrap.php runtime-copy.json runtime.php src
 php_file_count=0
 while IFS= read -r php_file || [[ -n "$php_file" ]]; do
 	[[ -z "$php_file" ]] && continue
@@ -477,5 +353,7 @@ fi
 printf 'Verified %s\n' "$archive"
 printf 'Version %s\n' "$plugin_version"
 printf 'SHA-256 %s\n' "$actual_hash"
-printf 'Updater %s %s %s\n' "$package_name" "$package_version" "$package_commit"
+printf 'Runtime dependencies
+%s
+' "$dependency_records"
 printf 'PHP files linted %s\n' "$php_file_count"

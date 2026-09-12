@@ -1,0 +1,281 @@
+name: Phase C release-limit remediation
+
+on:
+  push:
+    branches:
+      - refactor/adopt-normalized-branch-updater
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/adopt-normalized-branch-updater
+          fetch-depth: 0
+
+      - name: Apply deterministic remediation
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          provider = Path('RAN/Booster/GitHub/GitHubProvider.php')
+          text = provider.read_text()
+          text = text.replace('use RAN\\PackageArtifactLimit;\n', '')
+          if 'use RAN\\PackageArtifactLimit;' in text:
+              raise SystemExit('GitHubProvider still imports PackageArtifactLimit')
+          provider.write_text(text)
+
+          replace_once(
+              provider,
+              "\tprivate object $registrar;\n",
+              "\tprivate object $registrar;\n\n\t/** @var Closure(): int */\n\tprivate Closure $maximumArtifactBytes;\n\n\tprivate const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;\n"
+          )
+          replace_once(
+              provider,
+              "\tpublic static function create( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence, object $registrar ): RepositoryProvider {\n\t\treturn new self(\n\t\t\t$credentials,\n\t\t\tnew RepositoryBrowser( $credentials ),\n\t\t\tnew WebhookNormalizer( $credentials, $deliveryEvidence ),\n\t\t\tnew RepositoryWebhookClient(),\n\t\t\t$registrar\n\t\t);\n\t}\n",
+              "\tpublic static function create( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence, object $registrar, ?callable $maximumArtifactBytes = null ): RepositoryProvider {\n\t\treturn new self(\n\t\t\t$credentials,\n\t\t\tnew RepositoryBrowser( $credentials ),\n\t\t\tnew WebhookNormalizer( $credentials, $deliveryEvidence ),\n\t\t\tnew RepositoryWebhookClient(),\n\t\t\t$registrar,\n\t\t\t$maximumArtifactBytes\n\t\t);\n\t}\n"
+          )
+          replace_once(
+              provider,
+              "\tprivate function __construct( ProviderCredentialStore $credentials, RepositoryBrowser $browser, WebhookNormalizer $webhooks, RepositoryWebhookClient $webhookClient, object $registrar ) {\n\t\t$this->registrar        = $registrar;\n\t\t$this->credentials      = $credentials;\n",
+              "\tprivate function __construct( ProviderCredentialStore $credentials, RepositoryBrowser $browser, WebhookNormalizer $webhooks, RepositoryWebhookClient $webhookClient, object $registrar, ?callable $maximumArtifactBytes = null ) {\n\t\t$this->registrar            = $registrar;\n\t\t$this->maximumArtifactBytes = null === $maximumArtifactBytes\n\t\t\t? static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES\n\t\t\t: Closure::fromCallable( $maximumArtifactBytes );\n\t\t$this->credentials          = $credentials;\n"
+          )
+          replace_once(
+              provider,
+              "\t\t\t$this->releaseAccessToken( $repository ),\n\t\t\t$channel,\n\t\t\t$deploymentPolicy\n\t\t);\n",
+              "\t\t\t$this->releaseAccessToken( $repository ),\n\t\t\t$channel,\n\t\t\t$deploymentPolicy,\n\t\t\tfn (): int => $this->maximumArtifactBytes()\n\t\t);\n"
+          )
+          text = provider.read_text()
+          if text.count('PackageArtifactLimit::resolve( null )') != 3:
+              raise SystemExit(f"GitHubProvider: expected three policy calls, found {text.count('PackageArtifactLimit::resolve( null )')}")
+          text = text.replace('PackageArtifactLimit::resolve( null ) !== ( $facts[\'maximum_artifact_bytes\'] ?? null )', "$this->maximumArtifactBytes() !== ( $facts['maximum_artifact_bytes'] ?? null )")
+          old_release = "\t\treturn $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), PackageArtifactLimit::resolve( null ) );\n"
+          new_release = "\t\t$maximumArtifactBytes = $this->maximumArtifactBytes();\n\t\tif ( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES === $maximumArtifactBytes ) {\n\t\t\treturn $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ) );\n\t\t}\n\n\t\treturn $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), $maximumArtifactBytes );\n"
+          if text.count(old_release) != 1:
+              raise SystemExit('GitHubProvider: releaseSource call shape did not match')
+          text = text.replace(old_release, new_release, 1)
+          marker = "\n\tprivate function ensureDirectFilesystem(): bool {\n"
+          method = "\n\tprivate function maximumArtifactBytes(): int {\n\t\treturn ( $this->maximumArtifactBytes )();\n\t}\n"
+          if text.count(marker) != 1:
+              raise SystemExit('GitHubProvider: ensureDirectFilesystem marker mismatch')
+          text = text.replace(marker, method + marker, 1)
+          if 'PackageArtifactLimit' in text:
+              raise SystemExit('GitHubProvider retains PackageArtifactLimit dependency')
+          provider.write_text(text)
+
+          target = Path('RAN/Booster/GitHub/GitHubReleaseNativeTarget.php')
+          text = target.read_text().replace('use RAN\\PackageArtifactLimit;\n', '')
+          target.write_text(text)
+          replace_once(
+              target,
+              "\t/** @var string|callable|null */\n\tprivate string|Closure|null $accessToken;\n",
+              "\t/** @var string|callable|null */\n\tprivate string|Closure|null $accessToken;\n\n\t/** @var Closure(): int */\n\tprivate Closure $maximumArtifactBytes;\n\n\tprivate const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;\n"
+          )
+          replace_once(
+              target,
+              "\t\tprivate string $channel,\n\t\tprivate string $deploymentPolicy,\n\t\tprivate ?int $maximumArtifactBytes = null\n\t) {\n",
+              "\t\tprivate string $channel,\n\t\tprivate string $deploymentPolicy,\n\t\t?callable $maximumArtifactBytes = null\n\t) {\n"
+          )
+          replace_once(
+              target,
+              "\t\t$this->accessToken = is_string( $accessToken )\n\t\t\t? static fn (): string => $accessToken\n\t\t\t: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );\n",
+              "\t\t$this->accessToken          = is_string( $accessToken )\n\t\t\t? static fn (): string => $accessToken\n\t\t\t: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );\n\t\t$this->maximumArtifactBytes = null === $maximumArtifactBytes\n\t\t\t? static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES\n\t\t\t: Closure::fromCallable( $maximumArtifactBytes );\n"
+          )
+          old_register = "\t\t\t\t$method        = 'plugin' === $this->packageType ? 'plugin' : 'theme';\n\t\t\t\t$this->updater = $this->registrar->{$method}(\n\t\t\t\t\t'github',\n\t\t\t\t\t$this->metadataFile,\n\t\t\t\t\t$this->repository,\n\t\t\t\t\t$this->providerRepositoryId,\n\t\t\t\t\t$this->channel,\n\t\t\t\t\t$this->deploymentPolicy,\n\t\t\t\t\t$this->accessToken,\n\t\t\t\t\tPackageArtifactLimit::resolve( $this->maximumArtifactBytes )\n\t\t\t\t);\n"
+          new_register = "\t\t\t\t$method               = 'plugin' === $this->packageType ? 'plugin' : 'theme';\n\t\t\t\t$maximumArtifactBytes = ( $this->maximumArtifactBytes )();\n\t\t\t\t$arguments            = array(\n\t\t\t\t\t'github',\n\t\t\t\t\t$this->metadataFile,\n\t\t\t\t\t$this->repository,\n\t\t\t\t\t$this->providerRepositoryId,\n\t\t\t\t\t$this->channel,\n\t\t\t\t\t$this->deploymentPolicy,\n\t\t\t\t\t$this->accessToken,\n\t\t\t\t);\n\t\t\t\tif ( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES !== $maximumArtifactBytes ) {\n\t\t\t\t\t$arguments[] = $maximumArtifactBytes;\n\t\t\t\t}\n\t\t\t\t$this->updater = $this->registrar->{$method}( ...$arguments );\n"
+          replace_once(target, old_register, new_register)
+          if 'PackageArtifactLimit' in target.read_text():
+              raise SystemExit('GitHubReleaseNativeTarget retains PackageArtifactLimit dependency')
+
+          service = Path('RAN/BoosterServiceProvider.php')
+          replace_once(
+              service,
+              "\t\t\t\t$deliveryEvidence,\n\t\t\t\t$releaseUpdater\n\t\t\t)\n",
+              "\t\t\t\t$deliveryEvidence,\n\t\t\t\t$releaseUpdater,\n\t\t\t\tstatic fn (): int => PackageArtifactLimit::resolve( null )\n\t\t\t)\n"
+          )
+
+          test = Path('tests/Booster/GitHub/ArchiveLimitBoundaryTest.php')
+          test.write_text(r'''<?php
+
+declare(strict_types=1);
+
+namespace Tests\Booster\GitHub;
+
+require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php';
+
+use PHPUnit\Framework\TestCase;
+use RAN\Booster\GitHub\GitHubProvider;
+use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
+use RAN\RepositoryProvider\RepositoryReference;
+use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
+
+final class ArchiveLimitBoundaryTest extends TestCase {
+	public function testReleaseSourceResolvesNonDefaultLimitLazilyAndForwardsIt(): void {
+		$reads     = 0;
+		$registrar = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function releases( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					/** @return array<string, mixed> */
+					public function list(): array {
+						return array(
+							'ok'             => true,
+							'code'           => 'releases_listed',
+							'value'          => array( 'candidates' => array(), 'not_modified' => false ),
+							'retry_after'    => null,
+							'cleanup_status' => 'not_applicable',
+						);
+					}
+				};
+			}
+		};
+		$provider  = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			$registrar,
+			static function () use ( &$reads ): int {
+				++$reads;
+
+				return 1048576;
+			}
+		);
+
+		self::assertSame( 0, $reads );
+		$provider->listReleaseCandidates(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'stable'
+		);
+		self::assertSame( 1, $reads );
+		self::assertCount( 7, $registrar->arguments );
+		self::assertSame( 1048576, $registrar->arguments[6] );
+	}
+
+	public function testReleaseSourcePreservesLegacyCallShapeForDefaultLimit(): void {
+		$registrar = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function releases( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					/** @return array<string, mixed> */
+					public function list(): array {
+						return array(
+							'ok'             => true,
+							'code'           => 'releases_listed',
+							'value'          => array( 'candidates' => array(), 'not_modified' => false ),
+							'retry_after'    => null,
+							'cleanup_status' => 'not_applicable',
+						);
+					}
+				};
+			}
+		};
+		$provider = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			$registrar
+		);
+
+		$provider->listReleaseCandidates(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'stable'
+		);
+		self::assertCount( 6, $registrar->arguments );
+	}
+
+	public function testNativeTargetForwardsOnlyNonDefaultLimit(): void {
+		$registrar = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function plugin( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					public function register(): bool {
+						return true;
+					}
+				};
+			}
+		};
+		$target = new GitHubReleaseNativeTarget(
+			$registrar,
+			'plugin',
+			'/wordpress/wp-content/plugins/example/example.php',
+			'owner/example',
+			'42',
+			null,
+			'stable',
+			'manual',
+			static fn (): int => 1048576
+		);
+		self::assertTrue( $target->register() );
+		self::assertCount( 8, $registrar->arguments );
+		self::assertSame( 1048576, $registrar->arguments[7] );
+
+		$defaultRegistrar = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function plugin( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					public function register(): bool {
+						return true;
+					}
+				};
+			}
+		};
+		$defaultTarget = new GitHubReleaseNativeTarget(
+			$defaultRegistrar,
+			'plugin',
+			'/wordpress/wp-content/plugins/example/example.php',
+			'owner/example',
+			'42',
+			null,
+			'stable',
+			'manual'
+		);
+		self::assertTrue( $defaultTarget->register() );
+		self::assertCount( 7, $defaultRegistrar->arguments );
+	}
+}
+''')
+          PY
+
+          php -l RAN/Booster/GitHub/GitHubProvider.php
+          php -l RAN/Booster/GitHub/GitHubReleaseNativeTarget.php
+          php -l RAN/BoosterServiceProvider.php
+          php -l tests/Booster/GitHub/ArchiveLimitBoundaryTest.php
+
+          rm .github/workflows/phase-c-release-limit-remediation.yml
+
+          git config user.name "bnjmnrsh"
+          git config user.email "65979639+bnjmnrsh@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix: preserve release limit boundaries"
+          git push origin HEAD:refactor/adopt-normalized-branch-updater

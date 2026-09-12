@@ -18,7 +18,6 @@ use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
-use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WPBranchUpdater\V1\Runtime\AdmittedBranchStageFailure;
 use RAN\WPBranchUpdater\V1\Runtime\BranchUpdater;
@@ -38,8 +37,6 @@ class DeploymentCoordinator {
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
 		private ProviderRegistry $providers,
-		DeploymentArchivePreflight $legacyPreflight,
-		CorePackageExecutor $legacyExecutor,
 		private WordPressWorkerWakeup $wakeup,
 		private string $maintenancePath,
 		private WordPressUpdaterLock $updaterLock,
@@ -47,10 +44,6 @@ class DeploymentCoordinator {
 		private ?RepositorySourceGuard $sourceGuard = null,
 		?WordPressCorePackageExecutor $branchExecutor = null
 	) {
-		// These constructor positions are removed with the dead embedded branch
-		// preflight/executor in the same Phase C change. They are accepted only
-		// while the composition root and characterization tests are being cut over.
-		unset( $legacyPreflight, $legacyExecutor );
 		$this->branchExecutor = $branchExecutor ?? new WordPressCorePackageExecutor();
 		$this->sourceGuard   ??= new RepositorySourceGuard();
 		if ( '' === trim( $maintenancePath ) ) {
@@ -258,7 +251,7 @@ class DeploymentCoordinator {
 			return $this->finishedOutcome( $attempt->getId() );
 		}
 
-		$updater = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
+		$updater    = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
 		$deployment = 'plugin' === $declaration->packageType
 			? $updater->plugin(
 				$declaration->repository,

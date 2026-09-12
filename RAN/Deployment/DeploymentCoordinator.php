@@ -390,6 +390,7 @@ class DeploymentCoordinator {
 					&& hash_equals( (string) $package->getProviderRepositoryId(), $event->providerRepositoryId ) ) {
 					$matches[] = array( 'type' => $type, 'package' => $package );
 				}
+			}
 		}
 		return $matches;
 	}

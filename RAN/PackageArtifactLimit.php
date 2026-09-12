@@ -18,6 +18,8 @@ final class PackageArtifactLimit {
 	public const MINIMUM_ARTIFACT_BYTES         = 1048576;
 	public const MAXIMUM_ARTIFACT_BYTES         = 536870912;
 
+	private const EXPANDED_RATIO = 4;
+
 	public static function resolve( ?int $packageOverride ): int {
 		if ( null !== $packageOverride ) {
 			return self::requireValid( $packageOverride );
@@ -27,13 +29,14 @@ final class PackageArtifactLimit {
 			return self::requireValid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
 		}
 
-		return self::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
+		return self::requireValid( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES );
 	}
 
 	public static function requireValid( mixed $value ): int {
+		$platformMaximum = min( self::MAXIMUM_ARTIFACT_BYTES, intdiv( PHP_INT_MAX, self::EXPANDED_RATIO ) );
 		if ( ! is_int( $value )
 			|| $value < self::MINIMUM_ARTIFACT_BYTES
-			|| $value > self::MAXIMUM_ARTIFACT_BYTES ) {
+			|| $value > $platformMaximum ) {
 			throw new InvalidArgumentException( 'The maximum artifact byte limit is invalid.' );
 		}
 

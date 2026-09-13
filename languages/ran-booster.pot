@@ -5971,7 +5971,7 @@ msgid "Archive deployments are currently blocked:"
 msgstr ""
 
 #: views/documentation.php:379
-msgid "RAN_BOOSTER_MAX_ARCHIVE_BYTES must be an integer between 1 MiB and 512 MiB."
+msgid "RAN_BOOSTER_MAX_ARCHIVE_BYTES must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB)."
 msgstr ""
 
 #: views/documentation.php:381
@@ -5979,7 +5979,7 @@ msgid "If a legitimate repository needs more room, set one target-local, site-wi
 msgstr ""
 
 #: views/documentation.php:383
-msgid "The value may be 1–512 MiB. Booster derives an expanded-content limit four times as large and still applies its entry-count, path, identity and free-space checks. The setting affects manual installs, manual and webhook updates, and package installation from a Transporter Blueprint; reviewing a Transporter Blueprint and adopting an already-installed package do not download a repository archive."
+msgid "The value may range from 1 MiB through 536,870,911 bytes (just under 512 MiB). Booster derives an expanded-content limit four times as large and still applies its entry-count, path, identity and free-space checks. The setting affects manual installs, manual and webhook updates, and package installation from a Transporter Blueprint; reviewing a Transporter Blueprint and adopting an already-installed package do not download a repository archive."
 msgstr ""
 
 #: views/documentation.php:390

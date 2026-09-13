@@ -23,13 +23,14 @@ final class DeploymentRequestTest extends TestCase {
 		self::assertLessThanOrEqual( 4096, strlen( $request->toJson() ) );
 	}
 
-	public function testLegacyRequestUsesCurrentSiteArtifactLimit(): void {
+	public function testPreReleaseEightKeyRequestShapeIsRejected(): void {
 		$data = $this->request()->toArray();
 		unset( $data['maximum_artifact_bytes'] );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The unit test exercises the runtime JSON boundary.
 		$json = json_encode( $data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
 
-		self::assertSame( \RAN\PackageArtifactLimit::resolve( null ), DeploymentRequest::fromJson( $json )->maximumArtifactBytes );
+		$this->expectException( InvalidArgumentException::class );
+		DeploymentRequest::fromJson( $json );
 	}
 
 	public function testNonCanonicalOrExtendedJsonIsRejected(): void {

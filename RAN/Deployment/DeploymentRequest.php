@@ -87,7 +87,7 @@ final readonly class DeploymentRequest {
 			'initiating_user_id',
 			'maximum_artifact_bytes',
 		);
-		$keys = is_array( $data ) ? array_keys( $data ) : array();
+		$keys         = is_array( $data ) ? array_keys( $data ) : array();
 		if ( $keys !== $expectedKeys
 			|| ! is_array( $data )
 			|| ! is_string( $data['repository'] )

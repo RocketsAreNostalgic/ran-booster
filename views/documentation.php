@@ -10,14 +10,18 @@ foreach ( $tabs as $documentationTab ) {
 		$tabUrls[ $documentationTab['key'] ] = $documentationTab['url'];
 	}
 }
-$adminUrl                 = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
-$installPluginUrl         = $adminUrl . '?page=ran-booster-plugins-create';
-$installThemeUrl          = $adminUrl . '?page=ran-booster-themes-create';
-$managePluginsUrl         = $adminUrl . '?page=ran-booster-plugins';
-$manageThemesUrl          = $adminUrl . '?page=ran-booster-themes';
-$portabilityUrl           = $tabUrls['portability'] ?? $adminUrl . '?page=ran-booster-transporter';
-$troubleshootingUrl       = $tabUrls['troubleshooting'] ?? $adminUrl . '?page=ran-booster&tab=troubleshooting';
-$archiveLimitStatus       = array( 'valid' => true, 'compressed' => null, 'expanded' => null );
+$adminUrl           = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+$installPluginUrl   = $adminUrl . '?page=ran-booster-plugins-create';
+$installThemeUrl    = $adminUrl . '?page=ran-booster-themes-create';
+$managePluginsUrl   = $adminUrl . '?page=ran-booster-plugins';
+$manageThemesUrl    = $adminUrl . '?page=ran-booster-themes';
+$portabilityUrl     = $tabUrls['portability'] ?? $adminUrl . '?page=ran-booster-transporter';
+$troubleshootingUrl = $tabUrls['troubleshooting'] ?? $adminUrl . '?page=ran-booster&tab=troubleshooting';
+$archiveLimitStatus = array(
+	'valid'      => true,
+	'compressed' => null,
+	'expanded'   => null,
+);
 try {
 	$archiveLimitStatus['compressed'] = \RAN\PackageArtifactLimit::resolve( null );
 	$archiveLimitStatus['expanded']   = $archiveLimitStatus['compressed'] * 4;

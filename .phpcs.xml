@@ -2,7 +2,7 @@
 <ruleset name="RAN Booster Coding Standards">
 	<description>WordPress and PHP compatibility checks for RAN Booster.</description>
 
-	<config name="minimum_supported_wp_version" value="7.0"/>
+	<config name="minimum_wp_version" value="7.0"/>
 	<config name="testVersion" value="8.2-"/>
 
 	<file>.</file>
@@ -20,18 +20,18 @@
 	<arg name="parallel" value="4"/>
 	<arg value="sp"/>
 
-	<rule ref="PHPCompatibilityWP"/>
-	<rule ref="WordPress-Extra">
-		<!-- This single-file characterization harness intentionally declares WordPress fixtures inline. -->
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-		<!-- The RAN namespace is PSR-4 autoloaded, so class files retain class-case names. -->
-		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
-		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
-		<!-- Preserve the inherited camelCase OOP API and its local implementation variables. -->
-		<exclude name="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid"/>
-		<exclude name="WordPress.NamingConventions.ValidVariableName"/>
-		<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->
-		<exclude name="WordPress.PHP.YodaConditions"/>
+	<rule ref="RANWordPressPlugin"/>
+
+	<!-- Preserve the inherited camelCase OOP API and its local implementation variables. -->
+	<rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<severity>0</severity>
+	</rule>
+	<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->
+	<rule ref="WordPress.PHP.YodaConditions">
+		<severity>0</severity>
 	</rule>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
@@ -41,13 +41,13 @@
 		<properties>
 			<property name="prefixes" type="array">
 				<element value="ran_booster"/>
-				<!-- The namespace separator makes the three-character RAN namespace a valid WPCS prefix. -->
+				<!-- Booster intentionally contains multiple established production namespaces below the RAN root. -->
 				<element value="RAN\"/>
 			</property>
 		</properties>
 	</rule>
 
-	<!-- WPCS 3.4 hard-codes a four-character minimum; this inherited plugin's namespace is RAN. -->
+	<!-- WPCS 3.4 hard-codes a four-character minimum; Booster's established production namespace root is RAN. -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound">
 		<severity>0</severity>
 	</rule>
@@ -78,6 +78,11 @@
 	</rule>
 	<rule ref="WordPress.Security.NonceVerification.Recommended">
 		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
+	</rule>
+
+	<!-- The single-file characterization harness reads plugin source text directly to assert legacy removals. -->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
+		<exclude-pattern>/tests/characterization.php</exclude-pattern>
 	</rule>
 
 	<!--

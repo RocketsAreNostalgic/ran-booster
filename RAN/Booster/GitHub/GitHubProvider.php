@@ -785,9 +785,6 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
 		$maximumArtifactBytes = $this->maximumArtifactBytes();
-		if ( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES === $maximumArtifactBytes ) {
-			return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ) );
-		}
 
 		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), $maximumArtifactBytes );
 	}

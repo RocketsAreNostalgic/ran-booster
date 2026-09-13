@@ -80,13 +80,21 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		self::assertSame( 1048576, $registrar->arguments[6] );
 	}
 
-	public function testDefaultReleaseSourceKeepsLegacyRegistrarCallShape(): void {
+	public function testDefaultReleaseSourceUsesTheSevenArgumentRegistrarContract(): void {
 		$registrar  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
 
-			public function releases( mixed ...$arguments ): object {
-				$this->arguments = $arguments;
+			public function releases(
+				mixed $provider,
+				mixed $packageType,
+				mixed $repository,
+				mixed $repositoryId,
+				mixed $channel,
+				mixed $accessToken,
+				mixed $maximumArtifactBytes
+			): object {
+				$this->arguments = array( $provider, $packageType, $repository, $repositoryId, $channel, $accessToken, $maximumArtifactBytes );
 
 				return new class() {
 					/** @return array<string, mixed> */
@@ -113,7 +121,8 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		$repository = new RepositoryReference( 'owner/example', '123456789', false, null );
 
 		$provider->listReleaseCandidates( 'plugin', $repository, 'stable' );
-		self::assertCount( 6, $registrar->arguments );
+		self::assertCount( 7, $registrar->arguments );
+		self::assertSame( 52428800, $registrar->arguments[6] );
 	}
 
 	public function testNativeTargetOnlyAddsTheOptionalArgumentForNonDefaultLimit(): void {

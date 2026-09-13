@@ -147,10 +147,4 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertIsInt( $move );
 		self::assertTrue( $verify < $move );
 	}
-
-	public function testDeploymentPreflightNamesTheMissingPlatformRequirement(): void {
-		$source = file_get_contents( dirname( __DIR__ ) . '/RAN/Deployment/DeploymentArchivePreflight.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
-		self::assertIsString( $source );
-		self::assertStringContainsString( 'The PHP ext-zip platform requirement is unavailable', $source );
-	}
 }

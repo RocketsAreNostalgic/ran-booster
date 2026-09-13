@@ -76,7 +76,7 @@ final readonly class DeploymentRequest {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.', 0, $exception );
 		}
 
-		$legacyKeys  = array(
+		$expectedKeys = array(
 			'repository',
 			'credential_id',
 			'private',
@@ -85,11 +85,10 @@ final readonly class DeploymentRequest {
 			'subdirectory',
 			'deployment_policy',
 			'initiating_user_id',
+			'maximum_artifact_bytes',
 		);
-		$currentKeys = array_merge( $legacyKeys, array( 'maximum_artifact_bytes' ) );
-		$keys        = is_array( $data ) ? array_keys( $data ) : array();
-		$legacy      = $keys === $legacyKeys;
-		if ( ( ! $legacy && $keys !== $currentKeys )
+		$keys         = is_array( $data ) ? array_keys( $data ) : array();
+		if ( $keys !== $expectedKeys
 			|| ! is_array( $data )
 			|| ! is_string( $data['repository'] )
 			|| ( null !== $data['credential_id'] && ! is_string( $data['credential_id'] ) )
@@ -99,11 +98,11 @@ final readonly class DeploymentRequest {
 			|| ( null !== $data['subdirectory'] && ! is_string( $data['subdirectory'] ) )
 			|| ! is_string( $data['deployment_policy'] )
 			|| ( null !== $data['initiating_user_id'] && ! is_int( $data['initiating_user_id'] ) )
-			|| ( ! $legacy && ! is_int( $data['maximum_artifact_bytes'] ) ) ) {
+			|| ! is_int( $data['maximum_artifact_bytes'] ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.' );
 		}
 
-		$request   = new self(
+		$request = new self(
 			$data['repository'],
 			$data['credential_id'],
 			$data['private'],
@@ -112,13 +111,9 @@ final readonly class DeploymentRequest {
 			$data['subdirectory'],
 			DeploymentPolicy::fromDatabase( $data['deployment_policy'] ),
 			$data['initiating_user_id'],
-			$legacy ? PackageArtifactLimit::resolve( null ) : $data['maximum_artifact_bytes']
+			$data['maximum_artifact_bytes']
 		);
-		$canonical = $request->toArray();
-		if ( $legacy ) {
-			unset( $canonical['maximum_artifact_bytes'] );
-		}
-		if ( ! hash_equals( self::encode( $canonical ), $json ) ) {
+		if ( ! hash_equals( $request->toJson(), $json ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is not canonical.' );
 		}
 

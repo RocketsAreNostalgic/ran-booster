@@ -2889,7 +2889,7 @@ final class DashboardActivityWpdb {
 			'state'                   => $state,
 			'mutation_started_at'     => null,
 			'outcome_code'            => $outcomeCode,
-			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"automatic","initiating_user_id":1}',
+			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"automatic","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
 			'created_at'              => '2026-07-19 00:00:00',
 			'finished_at'             => '2026-07-19 00:00:00',
 		);

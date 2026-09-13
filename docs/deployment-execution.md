@@ -17,8 +17,8 @@ available so an operator can restore a supported database without losing the
 stored tables or schema-version option.
 
 This guide documents the current runtime deployment path in RAN Booster. It is
-based on the implementation in `RAN/Deployment/` and the supporting provider,
-storage, and WordPress integration types.
+based on the implementation in `RAN/Deployment/`, the normalized branch-updater
+package, and the supporting provider, storage, and WordPress integration types.
 
 For the operator-level trigger sequence and every Booster, shared-updater, and
 WordPress handoff for both published releases and tracked branches, begin with
@@ -37,10 +37,15 @@ that filesystem mutation is allowed.
 The runtime path is intentionally serial:
 
 1. Admission and claiming happen in the deployment-attempt table.
-1. The coordinator prepares the provider archive and performs preflight.
-1. WordPress's native `auto_updater.lock` is acquired before filesystem mutation.
-1. The coordinator re-checks the target package, verifies the provider head,
-   confirms the artifact, and calls the WordPress core upgrader.
+1. The coordinator constructs an `AdmittedBranchHostAdapter` and delegates the
+   admitted attempt to `ran/wp-branch-updater`.
+1. The normalized branch updater acquires and validates the provider archive;
+   the Booster host boundary supplies provider custody, local readiness and
+   capacity checks, durable journal updates, and target facts.
+1. The shared WordPress updater lock is acquired before filesystem mutation.
+   The admitted runner re-checks the target, provider head, artifact identity,
+   maintenance state and mutation fence before using its WordPress Core package
+   executor.
 1. The attempt is finished with a terminal `DeploymentOutcome`.
 
 Branch-source manual installs and updates share this execution machinery. Web
@@ -50,22 +55,28 @@ request-local release facade and does not create a deployment attempt.
 
 ## Core classes
 
-The main runtime types are:
+The main Booster runtime types are:
 
 - `RAN\Deployment\DeploymentCoordinator`
+- `RAN\Deployment\AdmittedBranchHostAdapter`
 - `RAN\Deployment\DeploymentAttemptRepository`
 - `RAN\Deployment\DeploymentAttempt`
 - `RAN\Deployment\DeploymentOutcome`
 - `RAN\Deployment\DeploymentState`
 - `RAN\Deployment\DeploymentRequest`
-- `RAN\Deployment\DeploymentArchivePreflight`
 - `RAN\Deployment\PackageMutationGuard`
 - `RAN\Deployment\WordPressWorkerWakeup`
 
-`DeploymentCoordinator` owns the orchestration. It accepts a manual
-`PackageOperation`, validates the request shape, persists or claims an attempt,
-prepares the archive, acquires the native WordPress lock, and executes the
-mutation through the WordPress upgrader layer.
+`DeploymentCoordinator` owns Booster admission, history and the composition
+boundary. It accepts a manual `PackageOperation` or claimed attempt, constructs
+the bounded host adapter, and delegates synchronous branch lifecycle ordering
+to the normalized branch updater.
+
+`AdmittedBranchHostAdapter` translates the already-admitted Booster snapshot
+into the updater's admitted contracts. It owns no lifecycle sequencing; it
+provides provider archive access, durable attempt transitions, target facts,
+the shared updater lock and the WordPress package-execution boundary required by
+the external runner.
 
 `DeploymentAttemptRepository` is the durable queue and journal. It stores one
 row per attempt and uses the same table for admission, claim, transition, and
@@ -110,13 +121,17 @@ cursor-based Load more pagination.
 
 GitHub and Bitbucket return an archive of the whole repository. A configured
 package subdirectory is inspected after download and does not reduce the
-download size. `DeploymentArchivePreflight` therefore applies one target-local,
-site-wide policy to every provider deployment:
+download size. Booster resolves one site-wide compressed-artifact policy when
+an attempt is admitted and stores that resolved integer in the immutable
+`DeploymentRequest`. The normalized branch updater receives that value and
+applies its archive validation; its expanded ceiling is four times the
+compressed ceiling.
 
 - 50 MiB compressed by default.
 - 200 MiB expanded by default.
 - An optional `RAN_BOOSTER_MAX_ARCHIVE_BYTES` integer in `wp-config.php` may set
-  the compressed limit from 1 MiB through 536,870,911 bytes (just under 512 MiB), a ceiling that is portable across supported 32- and 64-bit PHP builds.
+  the compressed limit from 1 MiB through 536,870,911 bytes (just under 512 MiB),
+  a ceiling that is portable across supported 32- and 64-bit PHP builds.
 - The expanded limit is always four times the compressed limit.
 
 For example:
@@ -125,14 +140,15 @@ For example:
 define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );
 ```
 
-The effective compressed limit also bounds the provider response stream and the
-initial temporary-space check. Entry-count, path-depth, package-identity,
-containment and free-space checks remain independent. An invalid override fails
-closed before download. The same preflight applies to provider branch-source
-manual installs and updates, webhook updates, and package installation from a
-Transporter Blueprint. Prospective published-release installation instead uses
-the shared updater's archive custody and bounds. Neither adoption path downloads
-an archive.
+The Booster host adapter uses the same snapshotted compressed limit to bound the
+provider response stream and initial temporary-space check, and performs
+additional host-side capacity checks after the normalized updater has validated
+the archive. Entry-count, path-depth, package-identity and containment
+validation belong to the normalized branch updater. An invalid site override
+fails closed when a new attempt is admitted. Provider branch-source manual
+installs, updates and webhook updates use this admitted path. Prospective
+published-release installation instead uses the release updater's archive
+custody and bounds. Neither adoption path downloads an archive.
 
 ## Manual and web hook entry points
 
@@ -167,11 +183,11 @@ It refuses to run outside `wp_doing_cron()`.
   its own plugin files.
 - `assertDeploymentTargetCount()` caps web hook fan-out at 64 targets.
 
-After archive preparation and lock acquisition, the coordinator separately
-rechecks the frozen target, the provider head where applicable, artifact
-identity, and maintenance state before writing the mutation fence and calling
-WordPress. These checks fail closed rather than infer safety from the updater
-lock.
+After archive preparation and lock acquisition, the admitted runner asks the
+host boundary to recheck the frozen target, provider head where applicable,
+artifact identity and maintenance state before writing the mutation fence and
+calling WordPress. These checks fail closed rather than infer safety from the
+updater lock.
 
 ## Booster updates
 
@@ -222,11 +238,15 @@ The key fields are:
 - `state`: the current `DeploymentState`
 - `mutation_started_at`: the mutation fence
 - `outcome_code`: the closed terminal result code
-- `request_json`: the canonical execution snapshot
+- `request_json`: the canonical execution snapshot, including the admitted
+  `maximum_artifact_bytes` value
 
 `DeploymentAttempt::fromDatabase()` enforces the integrity rules for those
 fields. For example, queued rows cannot already contain a mutation fence, and a
-terminal row must contain both an outcome and a finished timestamp.
+terminal row must contain both an outcome and a finished timestamp. During the
+pre-release Phase C cutover, only the current nine-key `DeploymentRequest`
+shape is supported; older development attempt rows are intentionally not
+migrated and should be discarded when resetting a pre-release installation.
 
 Core does not retain the raw webhook body, signature headers, or provider-side
 duration. A provider timeout can occur after durable admission, so GitHub or

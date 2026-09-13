@@ -1,21 +1,15 @@
 <?php
-
 defined( 'WPINC' ) || die;
-
-$providerDocumentation = isset( $providerDocumentation ) && is_array( $providerDocumentation )
-	? $providerDocumentation
-	: array();
+$providerDocumentation = isset( $providerDocumentation ) && is_array( $providerDocumentation ) ? $providerDocumentation : array();
 $documentationUrl      = isset( $documentationUrl ) && is_string( $documentationUrl ) ? $documentationUrl : '';
 $documentationScope    = isset( $documentationScope ) && is_string( $documentationScope ) ? $documentationScope : 'site';
 $documentationHooks    = new \RAN\Admin\DocumentationHookRenderer();
 $tabUrls               = array();
-
 foreach ( $tabs as $documentationTab ) {
 	if ( isset( $documentationTab['key'], $documentationTab['url'] ) && is_string( $documentationTab['key'] ) && is_string( $documentationTab['url'] ) ) {
 		$tabUrls[ $documentationTab['key'] ] = $documentationTab['url'];
 	}
 }
-
 $adminUrl                 = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 $installPluginUrl         = $adminUrl . '?page=ran-booster-plugins-create';
 $installThemeUrl          = $adminUrl . '?page=ran-booster-themes-create';
@@ -23,21 +17,12 @@ $managePluginsUrl         = $adminUrl . '?page=ran-booster-plugins';
 $manageThemesUrl          = $adminUrl . '?page=ran-booster-themes';
 $portabilityUrl           = $tabUrls['portability'] ?? $adminUrl . '?page=ran-booster-transporter';
 $troubleshootingUrl       = $tabUrls['troubleshooting'] ?? $adminUrl . '?page=ran-booster&tab=troubleshooting';
+$archiveLimitStatus       = array( 'valid' => true, 'compressed' => null, 'expanded' => null );
 try {
-	$compressedLimit   = \RAN\PackageArtifactLimit::resolve( null );
-	$archiveLimitStatus = array(
-		'valid'      => true,
-		'compressed' => $compressedLimit,
-		'expanded'   => $compressedLimit * 4,
-		'source'     => defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ? 'configured' : 'default',
-	);
+	$archiveLimitStatus['compressed'] = \RAN\PackageArtifactLimit::resolve( null );
+	$archiveLimitStatus['expanded']   = $archiveLimitStatus['compressed'] * 4;
 } catch ( \InvalidArgumentException ) {
-	$archiveLimitStatus = array(
-		'valid'      => false,
-		'compressed' => null,
-		'expanded'   => null,
-		'source'     => 'configured',
-	);
+	$archiveLimitStatus['valid'] = false;
 }
 $compressedLimitMiB       = is_int( $archiveLimitStatus['compressed'] ) ? intdiv( $archiveLimitStatus['compressed'], 1048576 ) : null;
 $expandedLimitMiB         = is_int( $archiveLimitStatus['expanded'] ) ? intdiv( $archiveLimitStatus['expanded'], 1048576 ) : null;
@@ -385,7 +370,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 							__( 'This site currently allows repository ZIPs up to %1$d MiB compressed and %2$d MiB expanded (%3$s).', 'ran-booster' ),
 							$compressedLimitMiB,
 							$expandedLimitMiB,
-							'default' === $archiveLimitStatus['source'] ? __( 'Booster default', 'ran-booster' ) : __( 'configured in wp-config.php', 'ran-booster' )
+							! defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ? __( 'Booster default', 'ran-booster' ) : __( 'configured in wp-config.php', 'ran-booster' )
 						);
 						echo esc_html( $archiveLimitMessage );
 						?>

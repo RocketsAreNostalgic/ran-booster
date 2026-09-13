@@ -772,7 +772,7 @@ msgid "The repository ZIP expands beyond this site's configured archive safety l
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:25
-msgid "RAN_BOOSTER_MAX_ARCHIVE_BYTES is invalid. Set it in wp-config.php to an integer between 1 MiB and 512 MiB."
+msgid "RAN_BOOSTER_MAX_ARCHIVE_BYTES is invalid. Set it in wp-config.php to an integer between 1 MiB and 536,870,911 bytes (just under 512 MiB)."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:26

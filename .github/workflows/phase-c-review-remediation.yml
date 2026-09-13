@@ -47,26 +47,10 @@ jobs:
           limit = Path('RAN/PackageArtifactLimit.php')
           source = limit.read_text()
           replacements = [
-              (
-                  "\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870912;\n",
-                  "\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870911;\n",
-                  'artifact maximum constant',
-              ),
-              (
-                  "\n\tprivate const EXPANDED_RATIO = 4;\n",
-                  "",
-                  'expanded ratio constant',
-              ),
-              (
-                  "\t\t$platformMaximum = min( self::MAXIMUM_ARTIFACT_BYTES, intdiv( PHP_INT_MAX, self::EXPANDED_RATIO ) );\n",
-                  "",
-                  'platform maximum calculation',
-              ),
-              (
-                  "\t\t\t|| $value > $platformMaximum ) {\n",
-                  "\t\t\t|| $value > self::MAXIMUM_ARTIFACT_BYTES ) {\n",
-                  'platform maximum comparison',
-              ),
+              ("\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870912;\n", "\tpublic const MAXIMUM_ARTIFACT_BYTES         = 536870911;\n", 'artifact maximum constant'),
+              ("\n\tprivate const EXPANDED_RATIO = 4;\n", "", 'expanded ratio constant'),
+              ("\t\t$platformMaximum = min( self::MAXIMUM_ARTIFACT_BYTES, intdiv( PHP_INT_MAX, self::EXPANDED_RATIO ) );\n", "", 'platform maximum calculation'),
+              ("\t\t\t|| $value > $platformMaximum ) {\n", "\t\t\t|| $value > self::MAXIMUM_ARTIFACT_BYTES ) {\n", 'platform maximum comparison'),
           ]
           for old, new, label in replacements:
               if source.count(old) != 1:
@@ -74,62 +58,21 @@ jobs:
               source = source.replace(old, new)
           limit.write_text(source)
 
-          Path('tests/PackageArtifactLimitTest.php').write_text("""<?php
-
-declare(strict_types=1);
-
-namespace Tests;
-
-use InvalidArgumentException;
-use PHPUnit\\Framework\\TestCase;
-use RAN\\PackageArtifactLimit;
-
-final class PackageArtifactLimitTest extends TestCase {
-\tpublic function testPublishedMaximumFitsPinnedUpdaterExpandedCeilingOn32BitPhp(): void {
-\t\t$maximum32BitSafeCompressedBytes = intdiv( 2147483647, 4 );
-
-\t\tself::assertSame( 536870911, $maximum32BitSafeCompressedBytes );
-\t\tself::assertSame( $maximum32BitSafeCompressedBytes, PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES );
-\t\tself::assertSame(
-\t\t\t$maximum32BitSafeCompressedBytes,
-\t\t\tPackageArtifactLimit::requireValid( $maximum32BitSafeCompressedBytes )
-\t\t);
-\t}
-
-\tpublic function testExact512MiBEndpointIsRejected(): void {
-\t\t$this->expectException( InvalidArgumentException::class );
-
-\t\tPackageArtifactLimit::requireValid( 536870912 );
-\t}
-}
-""")
+          test_content = "<?php\n\ndeclare(strict_types=1);\n\nnamespace Tests;\n\nuse InvalidArgumentException;\nuse PHPUnit\\Framework\\TestCase;\nuse RAN\\PackageArtifactLimit;\n\nfinal class PackageArtifactLimitTest extends TestCase {\n\tpublic function testPublishedMaximumFitsPinnedUpdaterExpandedCeilingOn32BitPhp(): void {\n\t\t$maximum32BitSafeCompressedBytes = intdiv( 2147483647, 4 );\n\n\t\tself::assertSame( 536870911, $maximum32BitSafeCompressedBytes );\n\t\tself::assertSame( $maximum32BitSafeCompressedBytes, PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES );\n\t\tself::assertSame(\n\t\t\t$maximum32BitSafeCompressedBytes,\n\t\t\tPackageArtifactLimit::requireValid( $maximum32BitSafeCompressedBytes )\n\t\t);\n\t}\n\n\tpublic function testExact512MiBEndpointIsRejected(): void {\n\t\t$this->expectException( InvalidArgumentException::class );\n\n\t\tPackageArtifactLimit::requireValid( 536870912 );\n\t}\n}\n"
+          Path('tests/PackageArtifactLimitTest.php').write_text(test_content)
 
           readme = Path('README.md')
           source = readme.read_text()
-          old = """The compressed value must be an integer from 1 MiB through 512 MiB. Booster
-derives the expanded limit at four times that value and retains its other ZIP,
-identity, path and free-space checks.
-"""
-          new = """The compressed value must be an integer from 1 MiB through 536,870,911 bytes
-(just under 512 MiB), a ceiling that is portable across supported 32- and
-64-bit PHP builds. Booster derives the expanded limit at four times that value
-and retains its other ZIP, identity, path and free-space checks.
-"""
+          old = "The compressed value must be an integer from 1 MiB through 512 MiB. Booster\nderives the expanded limit at four times that value and retains its other ZIP,\nidentity, path and free-space checks.\n"
+          new = "The compressed value must be an integer from 1 MiB through 536,870,911 bytes\n(just under 512 MiB), a ceiling that is portable across supported 32- and\n64-bit PHP builds. Booster derives the expanded limit at four times that value\nand retains its other ZIP, identity, path and free-space checks.\n"
           if source.count(old) != 1:
               raise SystemExit('README archive range did not match exactly once')
           readme.write_text(source.replace(old, new))
 
           guide = Path('docs/deployment-execution.md')
           source = guide.read_text()
-          old = """- An optional `RAN_BOOSTER_MAX_ARCHIVE_BYTES` integer in `wp-config.php` may set
-  the compressed limit from 1 MiB through 512 MiB.
-- The expanded limit is always four times the compressed limit.
-"""
-          new = """- An optional `RAN_BOOSTER_MAX_ARCHIVE_BYTES` integer in `wp-config.php` may set
-  the compressed limit from 1 MiB through 536,870,911 bytes (just under 512 MiB),
-  a ceiling that is portable across supported 32- and 64-bit PHP builds.
-- The expanded limit is always four times the compressed limit.
-"""
+          old = "- An optional `RAN_BOOSTER_MAX_ARCHIVE_BYTES` integer in `wp-config.php` may set\n  the compressed limit from 1 MiB through 512 MiB.\n- The expanded limit is always four times the compressed limit.\n"
+          new = "- An optional `RAN_BOOSTER_MAX_ARCHIVE_BYTES` integer in `wp-config.php` may set\n  the compressed limit from 1 MiB through 536,870,911 bytes (just under 512 MiB),\n  a ceiling that is portable across supported 32- and 64-bit PHP builds.\n- The expanded limit is always four times the compressed limit.\n"
           if source.count(old) != 1:
               raise SystemExit('deployment guide archive range did not match exactly once')
           guide.write_text(source.replace(old, new))

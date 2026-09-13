@@ -16,9 +16,7 @@ use InvalidArgumentException;
 final class PackageArtifactLimit {
 	public const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
 	public const MINIMUM_ARTIFACT_BYTES         = 1048576;
-	public const MAXIMUM_ARTIFACT_BYTES         = 536870912;
-
-	private const EXPANDED_RATIO = 4;
+	public const MAXIMUM_ARTIFACT_BYTES         = 536870911;
 
 	public static function resolve( ?int $packageOverride ): int {
 		if ( null !== $packageOverride ) {
@@ -33,10 +31,9 @@ final class PackageArtifactLimit {
 	}
 
 	public static function requireValid( mixed $value ): int {
-		$platformMaximum = min( self::MAXIMUM_ARTIFACT_BYTES, intdiv( PHP_INT_MAX, self::EXPANDED_RATIO ) );
 		if ( ! is_int( $value )
 			|| $value < self::MINIMUM_ARTIFACT_BYTES
-			|| $value > $platformMaximum ) {
+			|| $value > self::MAXIMUM_ARTIFACT_BYTES ) {
 			throw new InvalidArgumentException( 'The maximum artifact byte limit is invalid.' );
 		}
 

@@ -1,0 +1,52 @@
+name: Phase C archive ceiling POT refresh
+
+on:
+  push:
+    branches:
+      - refactor/adopt-normalized-branch-updater
+    paths:
+      - .github/workflows/phase-c-pot-refresh.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/adopt-normalized-branch-updater
+          fetch-depth: 0
+
+      - name: Set up PHP and WP-CLI
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: wp-cli:2.12.0
+
+      - name: Refresh and verify translation catalogue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_tmp="$RUNNER_TEMP/ran-booster-tests"
+          mkdir -p "$test_tmp"
+          chmod 700 "$test_tmp"
+          export TMPDIR="$test_tmp"
+
+          bash scripts/make-pot.sh
+          bash scripts/make-pot.sh --check
+
+          test "$(git status --short -- languages/ran-booster.pot | wc -l)" -eq 1
+          git diff --check -- languages/ran-booster.pot
+
+          rm .github/workflows/phase-c-pot-refresh.yml
+          git config user.name 'bnjmnrsh'
+          git config user.email '65979639+bnjmnrsh@users.noreply.github.com'
+          git add languages/ran-booster.pot .github/workflows/phase-c-pot-refresh.yml
+          git diff --cached --quiet && { echo 'Expected POT refresh changes.' >&2; exit 1; }
+          git commit -m 'chore: refresh archive ceiling translations'
+          git push origin HEAD:refactor/adopt-normalized-branch-updater

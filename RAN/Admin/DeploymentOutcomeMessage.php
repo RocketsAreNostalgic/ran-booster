@@ -22,7 +22,7 @@ final class DeploymentOutcomeMessage {
 			'provider_unavailable'           => __( 'The repository provider could not be reached or returned an invalid response. Try again later.', 'ran-booster' ),
 			'archive_compressed_too_large'   => __( 'The repository ZIP exceeds this site\'s configured archive download limit. Reduce the repository size or raise RAN_BOOSTER_MAX_ARCHIVE_BYTES in wp-config.php.', 'ran-booster' ),
 			'archive_expanded_too_large'     => __( 'The repository ZIP expands beyond this site\'s configured archive safety limit. Reduce the repository contents or raise RAN_BOOSTER_MAX_ARCHIVE_BYTES in wp-config.php.', 'ran-booster' ),
-			'archive_limit_invalid'          => __( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES is invalid. Set it in wp-config.php to an integer between 1 MiB and 512 MiB.', 'ran-booster' ),
+			'archive_limit_invalid'          => __( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES is invalid. Set it in wp-config.php to an integer between 1 MiB and 536,870,911 bytes (just under 512 MiB).', 'ran-booster' ),
 			'preflight_failed'               => __( 'Booster stopped the package before changing files, but no exact failed check was recorded. Check the package and settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats.', 'ran-booster' ),
 			'downgrade_blocked'              => __( 'Booster blocked an older branch package before changing files. Restore a full-site backup or use a publisher-provided down-migration for intentional recovery.', 'ran-booster' ),
 			'lock_unavailable'               => __( 'Another deployment is using the WordPress package lock. Wait for it to finish, check Activity for a pending recovery, then retry.', 'ran-booster' ),

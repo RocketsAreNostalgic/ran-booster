@@ -404,8 +404,6 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$this->createStub( PluginRepository::class ),
 			$this->createStub( ThemeRepository::class ),
 			new ProviderRegistry(),
-			new DeploymentArchivePreflight(),
-			new CorePackageExecutor(),
 			new WordPressWorkerWakeup( $attempts ),
 			'/tmp/ran-booster-operator-test-maintenance',
 			$this->createStub( WordPressUpdaterLock::class )

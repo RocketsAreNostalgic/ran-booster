@@ -150,7 +150,8 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringContainsString( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $compressed );
 		self::assertStringContainsString( 'expands beyond', $expanded );
 		self::assertStringContainsString( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $expanded );
-		self::assertStringContainsString( '1 MiB and 512 MiB', $invalid );
+		self::assertStringContainsString( '1 MiB and 536,870,911 bytes', $invalid );
+		self::assertStringContainsString( 'just under 512 MiB', $invalid );
 		self::assertStringNotContainsString( 'Authorization', $compressed . $expanded . $invalid );
 	}
 

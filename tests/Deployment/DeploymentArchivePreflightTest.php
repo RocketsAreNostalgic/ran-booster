@@ -50,10 +50,19 @@ final class DeploymentArchivePreflightTest extends TestCase {
 			self::markTestSkipped( 'ZipArchive is required for archive preflight tests.' );
 		}
 		DeploymentArchivePreflightWordPressState::reset();
-		foreach ( array( DeploymentArchivePreflightTestEnvironment::temporaryRoot(), DeploymentArchivePreflightTestEnvironment::upgradeRoot(), DeploymentArchivePreflightTestEnvironment::pluginRoot(), DeploymentArchivePreflightTestEnvironment::themeRoot() ) as $directory ) {
+		$directories = array(
+			DeploymentArchivePreflightTestEnvironment::temporaryRoot(),
+			DeploymentArchivePreflightTestEnvironment::upgradeRoot(),
+			DeploymentArchivePreflightTestEnvironment::pluginRoot(),
+			DeploymentArchivePreflightTestEnvironment::themeRoot(),
+			defined( 'WP_CONTENT_DIR' ) ? (string) WP_CONTENT_DIR : DeploymentArchivePreflightTestEnvironment::upgradeRoot(),
+			defined( 'WP_PLUGIN_DIR' ) ? (string) WP_PLUGIN_DIR : DeploymentArchivePreflightTestEnvironment::pluginRoot(),
+		);
+		foreach ( array_unique( $directories ) as $directory ) {
 			if ( ! is_dir( $directory ) ) {
 				mkdir( $directory, 0700, true );
 			}
+			chmod( $directory, 0700 );
 		}
 	}
 

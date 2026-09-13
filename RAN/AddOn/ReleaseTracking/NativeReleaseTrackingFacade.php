@@ -435,12 +435,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private function repositoryWithCredential( RepositoryReference $repository, string $credentialId ): RepositoryReference {
-		return new RepositoryReference(
-			$repository->locator,
-			$repository->providerRepositoryId,
-			$repository->private,
-			$credentialId
-		);
+		return $repository->withCredential( $credentialId );
 	}
 
 	public function enable(

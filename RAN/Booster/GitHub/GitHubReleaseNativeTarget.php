@@ -17,6 +17,11 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 	/** @var string|callable|null */
 	private string|Closure|null $accessToken;
 
+	/** @var Closure(): int */
+	private Closure $maximumArtifactBytes;
+
+	private const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
+
 	/** @param string|callable|null $accessToken */
 	public function __construct(
 		private object $registrar,
@@ -26,31 +31,41 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 		private string $providerRepositoryId,
 		string|callable|null $accessToken,
 		private string $channel,
-		private string $deploymentPolicy
+		private string $deploymentPolicy,
+		?callable $maximumArtifactBytes = null
 	) {
 		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true )
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
 			|| ! in_array( $deploymentPolicy, array( 'disabled', 'forced-off', 'manual', 'automatic' ), true ) ) {
 			throw new LogicException( 'The GitHub release native target is incompatible.' );
 		}
-		$this->accessToken = is_string( $accessToken )
+		$this->accessToken          = is_string( $accessToken )
 			? static fn (): string => $accessToken
 			: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );
+		$this->maximumArtifactBytes = null === $maximumArtifactBytes
+			? static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES
+			: Closure::fromCallable( $maximumArtifactBytes );
 	}
+
 
 	public function register(): bool {
 		try {
 			if ( null === $this->updater ) {
-				$method        = 'plugin' === $this->packageType ? 'plugin' : 'theme';
-				$this->updater = $this->registrar->{$method}(
+				$method               = 'plugin' === $this->packageType ? 'plugin' : 'theme';
+				$maximumArtifactBytes = ( $this->maximumArtifactBytes )();
+				$arguments            = array(
 					'github',
 					$this->metadataFile,
 					$this->repository,
 					$this->providerRepositoryId,
 					$this->channel,
 					$this->deploymentPolicy,
-					$this->accessToken
+					$this->accessToken,
 				);
+				if ( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES !== $maximumArtifactBytes ) {
+					$arguments[] = $maximumArtifactBytes;
+				}
+				$this->updater = $this->registrar->{$method}( ...$arguments );
 			}
 			return true === $this->updater->register();
 		} catch ( \Throwable ) {

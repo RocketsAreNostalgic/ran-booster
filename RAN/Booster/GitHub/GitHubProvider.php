@@ -87,10 +87,19 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	private GitHubRepositoryReleaseWorkflow $releaseWorkflow;
 	private object $registrar;
 
+	/** @var Closure(): int */
+	private Closure $maximumArtifactBytes;
+
+	private const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
+
 	/** @var array<string, GitHubReleaseNativeTarget> */
 	private array $nativeTargets = array();
 
-	public static function create( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence, object $registrar ): RepositoryProvider {
+	public static function create(
+		ProviderCredentialStore $credentials,
+		AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+		object $registrar
+	): RepositoryProvider {
 		return new self(
 			$credentials,
 			new RepositoryBrowser( $credentials ),
@@ -123,16 +132,26 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		);
 	}
 
-	private function __construct( ProviderCredentialStore $credentials, RepositoryBrowser $browser, WebhookNormalizer $webhooks, RepositoryWebhookClient $webhookClient, object $registrar ) {
-		$this->registrar        = $registrar;
-		$this->credentials      = $credentials;
-		$this->browser          = $browser;
-		$this->webhooks         = $webhooks;
-		$this->webhookClient    = $webhookClient;
-		$this->diagnostics      = new Diagnostics( $browser );
-		$this->credentialPolicy = new CredentialPolicy();
-		$workflowRecords        = new SetupRecordStore();
-		$this->releaseWorkflow  = new GitHubRepositoryReleaseWorkflow(
+	private function __construct(
+		ProviderCredentialStore $credentials,
+		RepositoryBrowser $browser,
+		WebhookNormalizer $webhooks,
+		RepositoryWebhookClient $webhookClient,
+		object $registrar
+	) {
+		$this->registrar            = $registrar;
+		$resolver                   = is_callable( array( $registrar, 'maximumArtifactBytes' ) )
+			? Closure::fromCallable( array( $registrar, 'maximumArtifactBytes' ) )
+			: static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
+		$this->maximumArtifactBytes = static fn (): int => $resolver();
+		$this->credentials          = $credentials;
+		$this->browser              = $browser;
+		$this->webhooks             = $webhooks;
+		$this->webhookClient        = $webhookClient;
+		$this->diagnostics          = new Diagnostics( $browser );
+		$this->credentialPolicy     = new CredentialPolicy();
+		$workflowRecords            = new SetupRecordStore();
+		$this->releaseWorkflow      = new GitHubRepositoryReleaseWorkflow(
 			$credentials,
 			new WorkflowApplicationCoordinator(
 				new GitHubRepositoryClient(),
@@ -142,7 +161,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			),
 			$workflowRecords
 		);
-		$this->metadata         = new ProviderMetadata(
+		$this->metadata             = new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
 			'https://github.com/',
@@ -421,7 +440,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			$repositoryId,
 			$this->releaseAccessToken( $repository ),
 			$channel,
-			$deploymentPolicy
+			$deploymentPolicy,
+			fn (): int => $this->maximumArtifactBytes()
 		);
 		$this->nativeTargets[ self::nativeTargetKey( $packageType, $installedIdentifier ) ] = $target;
 
@@ -523,7 +543,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
 				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
 				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
-				|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
+				|| $this->maximumArtifactBytes() !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
 				throw new RuntimeException();
 			}
 			return new RepositoryReleaseInspection(
@@ -594,7 +614,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
 				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
 				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
-				|| 52428800 !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
+				|| $this->maximumArtifactBytes() !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
 				throw new RuntimeException();
 			}
 
@@ -764,7 +784,16 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		if ( null === $repositoryId ) {
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
-		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), 52428800 );
+		$maximumArtifactBytes = $this->maximumArtifactBytes();
+		if ( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES === $maximumArtifactBytes ) {
+			return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ) );
+		}
+
+		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), $maximumArtifactBytes );
+	}
+
+	private function maximumArtifactBytes(): int {
+		return ( $this->maximumArtifactBytes )();
 	}
 
 	private function ensureDirectFilesystem(): bool {

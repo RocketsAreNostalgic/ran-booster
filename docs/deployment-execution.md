@@ -116,7 +116,7 @@ site-wide policy to every provider deployment:
 - 50 MiB compressed by default.
 - 200 MiB expanded by default.
 - An optional `RAN_BOOSTER_MAX_ARCHIVE_BYTES` integer in `wp-config.php` may set
-  the compressed limit from 1 MiB through 512 MiB.
+  the compressed limit from 1 MiB through 536,870,911 bytes (just under 512 MiB), a ceiling that is portable across supported 32- and 64-bit PHP builds.
 - The expanded limit is always four times the compressed limit.
 
 For example:

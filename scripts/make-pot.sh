@@ -88,8 +88,12 @@ cmp -s "$normalised_pot" "$normalised_all_domains_pot" \
 	|| fail 'domain-filtered and all-domain catalogues differ; every runtime string must use ran-booster.'
 
 if [[ "$mode" == '--check' ]]; then
-	cmp -s "$temporary_pot" "$pot" \
-		|| fail 'languages/ran-booster.pot is stale; run scripts/make-pot.sh.'
+	if ! cmp -s "$temporary_pot" "$pot"; then
+		printf 'make-pot: expected catalogue base64 follows.\n' >&2
+		base64 -w 0 "$temporary_pot" >&2
+		printf '\nmake-pot: end expected catalogue base64.\n' >&2
+		fail 'languages/ran-booster.pot is stale; run scripts/make-pot.sh.'
+	fi
 	exit 0
 fi
 

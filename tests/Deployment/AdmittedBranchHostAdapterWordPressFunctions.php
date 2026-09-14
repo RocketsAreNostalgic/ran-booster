@@ -28,6 +28,18 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_temp_dir' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\disk_free_space' ) ) {
+	function disk_free_space( string $directory ): float|false {
+		$values = $GLOBALS['ran_booster_admitted_disk_free_space'] ?? null;
+		if ( is_array( $values ) && array_key_exists( $directory, $values ) ) {
+			$value = $values[ $directory ];
+			return false === $value ? false : (float) $value;
+		}
+
+		return \disk_free_space( $directory );
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 	/** @param array<string, mixed> $arguments */
 	function wp_safe_remote_get( string $url, array $arguments ): mixed {

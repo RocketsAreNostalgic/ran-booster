@@ -20,9 +20,9 @@ $expected = array(
 		'reference'  => '4afba1191b81602741ada8948fcf78a6c7510659',
 	),
 	'ran/wp-branch-updater'  => array(
-		'version'    => 'v1.0.0-beta.2',
+		'version'    => 'v1.0.0-beta.3',
 		'repository' => 'RocketsAreNostalgic/ran-wp-branch-updater',
-		'reference'  => 'bc0f6608f591ee9c48b71de90e4d651462455b47',
+		'reference'  => 'd07237618f4ae836920098e00061f728c2af8879',
 	),
 	'ran/wp-release-updater' => array(
 		'version'    => 'v0.1.0-beta.4',

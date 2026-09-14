@@ -14,8 +14,8 @@ final class ReleasePlatformContractTest extends TestCase {
 			'repository' => 'https://github.com/RocketsAreNostalgic/ran-updater-support.git',
 		),
 		'ran/wp-branch-updater'  => array(
-			'version'    => 'v1.0.0-beta.2',
-			'commit'     => 'bc0f6608f591ee9c48b71de90e4d651462455b47',
+			'version'    => 'v1.0.0-beta.3',
+			'commit'     => 'd07237618f4ae836920098e00061f728c2af8879',
 			'repository' => 'https://github.com/RocketsAreNostalgic/ran-wp-branch-updater.git',
 		),
 		'ran/wp-release-updater' => array(

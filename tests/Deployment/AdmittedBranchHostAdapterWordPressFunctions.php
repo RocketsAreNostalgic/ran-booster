@@ -36,8 +36,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 			'arguments' => $arguments,
 		);
 
-		$responses = $GLOBALS['ran_booster_admitted_http_responses'] ?? array( 200 );
-		$response  = array_shift( $responses );
+		$responses                                      = $GLOBALS['ran_booster_admitted_http_responses'] ?? array( 200 );
+		$response                                       = array_shift( $responses );
 		$GLOBALS['ran_booster_admitted_http_responses'] = $responses;
 		if ( 'wp_error' === $response ) {
 			return array( 'ran_booster_test_wp_error' => true );

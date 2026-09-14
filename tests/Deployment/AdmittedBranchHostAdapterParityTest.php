@@ -85,9 +85,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			file_put_contents( $file, "<?php\n" );
 		}
 
-		$this->database  = new AttemptRepositoryDatabase();
-		$GLOBALS['wpdb'] = $this->database;
-		$this->attempts  = new DeploymentAttemptRepository(
+		$this->database         = new AttemptRepositoryDatabase();
+		$GLOBALS['wpdb']        = $this->database;
+		$this->attempts         = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-14 00:00:00 UTC' ),
@@ -209,11 +209,11 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	public function testPostMutationManagedSnapshotDriftFinishesInterrupted(): void {
-		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
-		$provider = new ParityRepositoryProvider( $archive );
-		$executor = new ParityCoreExecutor();
-		$attempt  = $this->runningUpdate();
-		$adapter  = $this->adapter( $attempt, $provider, executor: $executor );
+		$archive                  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider                 = new ParityRepositoryProvider( $archive );
+		$executor                 = new ParityCoreExecutor();
+		$attempt                  = $this->runningUpdate();
+		$adapter                  = $this->adapter( $attempt, $provider, executor: $executor );
 		$this->plugins->installed = $this->plugin( version: '2.0.0' );
 		$this->downloadFixture( 'example' );
 		$executor->afterExecution = function (): void {
@@ -337,14 +337,14 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$attempt  = $this->runningInstall( $slug, DeploymentPolicy::MANUAL );
 		$adapter  = $this->adapter( $attempt, $provider, executor: $executor );
 		$this->downloadFixture( $slug );
-		$this->plugins->installed    = $this->plugin(
+		$this->plugins->installed      = $this->plugin(
 			identifier: $slug . '/' . $slug . '.php',
 			version: '2.0.0',
 			repository: 'owner/install-plugin',
 			repositoryId: 'R_install_plugin',
 			policy: DeploymentPolicy::MANUAL
 		);
-		$this->plugins->byIdentifier = $this->plugin(
+		$this->plugins->byIdentifier   = $this->plugin(
 			identifier: $slug . '/' . $slug . '.php',
 			version: '2.0.0',
 			repository: $exact ? 'owner/install-plugin' : 'owner/other',
@@ -515,7 +515,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			"<?php\n/*\nPlugin Name: Example\nVersion: {$version}\n*/\n"
 		);
 		$zip->close();
-		$this->fixtures[] = $path;
+		$this->fixtures[]                                 = $path;
 		$GLOBALS['ran_booster_admitted_download_fixture'] = $path;
 		return $path;
 	}
@@ -580,11 +580,11 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 final class ParityPluginRepository extends PluginRepository {
 	/** @var list<Plugin> */
-	public array $managed = array();
-	public ?Plugin $installed = null;
-	public ?Plugin $byIdentifier = null;
+	public array $managed                         = array();
+	public ?Plugin $installed                     = null;
+	public ?Plugin $byIdentifier                  = null;
 	public ?PackageMutationResult $adoptionResult = null;
-	public int $adoptCalls = 0;
+	public int $adoptCalls                        = 0;
 
 	public function __construct() {}
 
@@ -627,7 +627,7 @@ final class ParityThemeRepository extends ThemeRepository {
 }
 
 final class ParityProviderArchive implements ProviderPreparedArchive {
-	public string $url = 'https://example.test/archive.zip';
+	public string $url       = 'https://example.test/archive.zip';
 	public int $cleanupCalls = 0;
 	/** @var null|callable(): void */
 	public $onCleanup = null;
@@ -661,7 +661,7 @@ final class ParityProviderArchive implements ProviderPreparedArchive {
 final class ParityRepositoryProvider implements RepositoryProvider {
 	use SuppliesProviderDiagnostics;
 
-	public int $prepareCalls = 0;
+	public int $prepareCalls                 = 0;
 	public ?RuntimeException $prepareFailure = null;
 
 	public function __construct( private ?ParityProviderArchive $archive ) {}

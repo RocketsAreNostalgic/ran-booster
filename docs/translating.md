@@ -118,6 +118,8 @@ tracked JSON catalogues behind. The commands below use Bash, matching the
 repository's fixture-generation script.
 
 ```bash
+set -euo pipefail
+
 locale=fr_FR
 po="languages/ran-booster-${locale}.po"
 temporary_dir=$(mktemp -d)
@@ -145,23 +147,27 @@ if (( ${#generated_json[@]} > 0 )); then
 fi
 ```
 
-`--no-purge` is important: it leaves the JavaScript messages in the PO while
-also generating their Jed JSON files.
+`set -euo pipefail` ensures a failed generation command stops the script before
+it removes any previously valid catalogues. `--no-purge` is important because
+it leaves the JavaScript messages in the PO while also generating their Jed JSON
+files.
 
 Generating into a clean directory and replacing the complete locale JSON set is
 also important. If a translated JavaScript source disappears from the PO,
 `make-json` will not generate a replacement for its old hashed catalogue; the
 explicit cleanup above prevents that obsolete JSON file from continuing to ship.
 
-After `make-json`, expect one or more files named like:
+If the PO contains translated messages referenced by JavaScript, `make-json`
+produces one or more files named like:
 
 ```text
 languages/ran-booster-fr_FR-0740f819f199a9141dd38d191f417a06.json
 ```
 
-The exact hashes depend on the JavaScript source files represented by the
-translation. Generate them with WP-CLI; do not calculate or edit the hashes by
-hand.
+A valid incomplete translation with no translated JavaScript messages can
+produce no JSON files at all. The exact hashes for any generated catalogues
+depend on the JavaScript source files represented by the translation. Generate
+them with WP-CLI; do not calculate or edit the hashes by hand.
 
 Whenever the PO changes, regenerate the MO and JSON files so the submitted
 runtime files match the editable source.

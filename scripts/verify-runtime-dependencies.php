@@ -15,14 +15,14 @@ if ( PHP_SAPI !== 'cli' || 2 !== $argc ) {
 
 $expected = array(
 	'ran/updater-support'    => array(
-		'version'    => 'dev-main',
+		'version'    => 'v0.1.0-beta.2',
 		'repository' => 'RocketsAreNostalgic/ran-updater-support',
-		'reference'  => '4afba1191b81602741ada8948fcf78a6c7510659',
+		'reference'  => '83384bb6f4652d8988374867f4103fde63878451',
 	),
 	'ran/wp-branch-updater'  => array(
-		'version'    => 'v1.0.0-beta.3',
+		'version'    => 'v1.0.0-beta.4',
 		'repository' => 'RocketsAreNostalgic/ran-wp-branch-updater',
-		'reference'  => 'd07237618f4ae836920098e00061f728c2af8879',
+		'reference'  => 'e325811348cc5e24ec2364483698533ca061cb59',
 	),
 	'ran/wp-release-updater' => array(
 		'version'    => 'v0.1.0-beta.4',

@@ -6,6 +6,16 @@ declare(strict_types=1);
 
 namespace RAN\Deployment;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', sys_get_temp_dir() . '/ran-booster-admitted-parity-wp/' );
+}
+if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+	define( 'WP_CONTENT_DIR', sys_get_temp_dir() . '/ran-booster-admitted-parity-content' );
+}
+if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
+	define( 'WP_PLUGIN_DIR', sys_get_temp_dir() . '/ran-booster-admitted-parity-plugins' );
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\get_filesystem_method' ) ) {
 	function get_filesystem_method(): string {
 		return (string) ( $GLOBALS['ran_booster_admitted_filesystem_method'] ?? 'direct' );

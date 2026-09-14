@@ -58,9 +58,9 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 	}
 
 	public function testHostCapacityAcceptsExactlyTwoCopiesPlusTenPercentOverhead(): void {
-		list( $artifact, $deployment ) = $this->preparedArtifact();
-		$expanded                      = $artifact->archive()->expandedBytes();
-		$required                      = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
+		list( $artifact, $deployment )                   = $this->preparedArtifact();
+		$expanded                                        = $artifact->archive()->expandedBytes();
+		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
 			WP_CONTENT_DIR => $required,
 			WP_PLUGIN_DIR  => $required,
@@ -75,9 +75,9 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 	}
 
 	public function testHostCapacityMapsInsufficientDestinationSpaceToExistingOutcome(): void {
-		list( $artifact, $deployment ) = $this->preparedArtifact();
-		$expanded                      = $artifact->archive()->expandedBytes();
-		$required                      = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
+		list( $artifact, $deployment )                   = $this->preparedArtifact();
+		$expanded                                        = $artifact->archive()->expandedBytes();
+		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
 			WP_CONTENT_DIR => $required,
 			WP_PLUGIN_DIR  => $required - 1,

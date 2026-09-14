@@ -178,7 +178,7 @@ one target-local, site-wide override in `wp-config.php`:
 define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );
 ```
 
-The compressed value must be an integer from 1 MiB through 512 MiB. Booster
+The compressed value must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB), a ceiling that is portable across supported 32- and 64-bit PHP builds. Booster
 derives the expanded limit at four times that value and retains its other ZIP,
 identity, path and free-space checks. The same policy covers every registered
 provider's branch-source manual installs and updates, webhook updates, and

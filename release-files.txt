@@ -16,6 +16,11 @@ ran-booster.php
 ran-booster-release.json
 readme.txt
 uninstall.php
+vendor/ran/updater-support/LICENSE
+vendor/ran/updater-support/src
+vendor/ran/wp-branch-updater/LICENSE
+vendor/ran/wp-branch-updater/bootstrap.php
+vendor/ran/wp-branch-updater/src
 vendor/ran/wp-release-updater/LICENSE
 vendor/ran/wp-release-updater/bootstrap.php
 vendor/ran/wp-release-updater/runtime-copy.json

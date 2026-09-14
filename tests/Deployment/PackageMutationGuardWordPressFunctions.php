@@ -12,9 +12,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\is_multisite' ) ) {
 			return (bool) $GLOBALS['ran_booster_package_mutation_guard_multisite'];
 		}
 
-		return class_exists( DeploymentArchivePreflightWordPressState::class )
-			? DeploymentArchivePreflightWordPressState::$multisite
-			: false;
+		return false;
 	}
 }
 
@@ -26,8 +24,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_is_file_mod_allowed' ) ) {
 			return (bool) $GLOBALS['ran_booster_package_mutation_guard_file_mods'];
 		}
 
-		return class_exists( DeploymentArchivePreflightWordPressState::class )
-			? DeploymentArchivePreflightWordPressState::$fileMods
-			: true;
+		return true;
 	}
 }

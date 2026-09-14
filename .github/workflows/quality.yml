@@ -225,6 +225,7 @@ jobs:
               .github/workflows/quality.yml \
               .github/workflows/release-please.yml \
               scripts/build-release.sh \
+              scripts/verify-runtime-dependencies.php \
               scripts/verify-release.sh \
               scripts/validate-release-candidate.sh \
               scripts/select-merged-release-pr.sh \

@@ -181,10 +181,11 @@ Load more pagination remain independent.
 Provider deployments download the whole repository ZIP, even when a package
 subdirectory is selected. The target-site default is 50 MiB compressed and
 200 MiB expanded. Operators can set a site-wide compressed limit from 1 MiB
-through 512 MiB with `RAN_BOOSTER_MAX_ARCHIVE_BYTES` in `wp-config.php`; Booster
-derives the expanded limit at four times that value. This policy covers manual
-and webhook deployments and Transporter Blueprint installs without weakening the other
-archive safety checks.
+through 536,870,911 bytes (just under 512 MiB) with
+`RAN_BOOSTER_MAX_ARCHIVE_BYTES` in `wp-config.php`; Booster derives the expanded
+limit at four times that value. This policy covers manual and webhook deployments
+and Transporter Blueprint installs without weakening the other archive safety
+checks.
 
 The [package update orchestration guide](https://github.com/RocketsAreNostalgic/ran-booster/blob/main/docs/package-update-orchestration.md)
 maps release and branch triggers plus every Booster-to-WordPress handoff. The

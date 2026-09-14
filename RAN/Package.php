@@ -33,6 +33,7 @@ interface Package {
 
 	public function setSource( PackageSource $source, int $revision ): void;
 
+
 	public function setRepository( ManagedRepository $repository ): void;
 
 	public function getRepository(): ManagedRepository;

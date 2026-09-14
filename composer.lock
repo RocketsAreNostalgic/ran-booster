@@ -4,8 +4,154 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4da43d67f3b40bdd30f8cff72a6b8bb8",
+    "content-hash": "7e8fcf41e2431ed1d07533fd4b039926",
     "packages": [
+        {
+            "name": "ran/updater-support",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/RocketsAreNostalgic/ran-updater-support.git",
+                "reference": "4afba1191b81602741ada8948fcf78a6c7510659"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-updater-support/zipball/4afba1191b81602741ada8948fcf78a6c7510659",
+                "reference": "4afba1191b81602741ada8948fcf78a6c7510659",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "RAN\\UpdaterSupport\\V1\\": "src/"
+                }
+            },
+            "scripts": {
+                "check": [
+                    "@validate:strict",
+                    "@test:contract",
+                    "@test:release-publisher",
+                    "@lint:php"
+                ],
+                "validate:strict": [
+                    "composer validate --strict --no-check-publish"
+                ],
+                "test:contract": [
+                    "php tests/contract.php"
+                ],
+                "lint:php": [
+                    "find src tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l"
+                ],
+                "test:release-publisher": [
+                    "node --test tests/release-publisher.test.mjs tests/release-publisher-decision.test.mjs"
+                ]
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Shared contracts and utilities for RAN updater packages.",
+            "support": {
+                "issues": "https://github.com/RocketsAreNostalgic/ran-updater-support/issues",
+                "security": "https://github.com/RocketsAreNostalgic/ran-updater-support/security/advisories/new",
+                "source": "https://github.com/RocketsAreNostalgic/ran-updater-support"
+            },
+            "time": "2026-09-11T16:28:40+00:00"
+        },
+        {
+            "name": "ran/wp-branch-updater",
+            "version": "v1.0.0-beta.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater.git",
+                "reference": "bc0f6608f591ee9c48b71de90e4d651462455b47"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/bc0f6608f591ee9c48b71de90e4d651462455b47",
+                "reference": "bc0f6608f591ee9c48b71de90e4d651462455b47",
+                "shasum": ""
+            },
+            "require": {
+                "ext-hash": "*",
+                "ext-json": "*",
+                "ext-zip": "*",
+                "php": "^8.2",
+                "ran/updater-support": "dev-main"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "RAN\\WPBranchUpdater\\V1\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "classmap": [
+                    "tests/Support/"
+                ]
+            },
+            "scripts": {
+                "test:contract": [
+                    "@php tests/contract.php"
+                ],
+                "test:architecture": [
+                    "@php tests/architecture-normalisation-baseline.php"
+                ],
+                "test:archive": [
+                    "@php tests/archive-normalisation-baseline.php"
+                ],
+                "test:runner": [
+                    "@php tests/admitted-runner.php"
+                ],
+                "test:hard-stop": [
+                    "@php tests/hard-stop.php"
+                ],
+                "test:journal": [
+                    "@php tests/journal-invariants.php"
+                ],
+                "test:identifier": [
+                    "@php tests/installed-package-identifier.php"
+                ],
+                "test:error-code": [
+                    "@php tests/core-package-error-code.php"
+                ],
+                "lint": [
+                    "find src tests scripts -type f -name '*.php' -print0 | xargs -0 -n1 php -l && php -l bootstrap.php"
+                ],
+                "check": [
+                    "@validate:strict",
+                    "@test:contract",
+                    "@test:architecture",
+                    "@test:archive",
+                    "@test:runner",
+                    "@test:hard-stop",
+                    "@test:journal",
+                    "@test:identifier",
+                    "@test:error-code",
+                    "@test:release-publisher",
+                    "@lint"
+                ],
+                "validate:strict": [
+                    "composer validate --strict --no-check-publish"
+                ],
+                "test:release-publisher": [
+                    "node --test tests/release-publisher-decision.test.mjs tests/release-publisher.test.mjs tests/release-publisher-version.test.mjs tests/release-publisher-recovery.test.mjs"
+                ]
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Explicit branch ZIP deployment for WordPress plugins and themes.",
+            "support": {
+                "issues": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater/issues",
+                "security": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater/security/advisories/new",
+                "source": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater"
+            },
+            "time": "2026-09-12T13:05:54+00:00"
+        },
         {
             "name": "ran/wp-release-updater",
             "version": "v0.1.0-beta.4",
@@ -2732,6 +2878,8 @@
         "phpcompatibility/phpcompatibility-paragonie": 20,
         "phpcompatibility/phpcompatibility-wp": 20,
         "ran/admin-shell": 20,
+        "ran/updater-support": 20,
+        "ran/wp-branch-updater": 10,
         "ran/wp-release-updater": 10
     },
     "prefer-stable": true,

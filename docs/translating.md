@@ -170,7 +170,10 @@ runtime files match the editable source.
 
 For a local test installation, place the PO, MO, and generated JSON files in the
 installed plugin's `languages` directory, then switch WordPress to the target
-site language.
+site language. Before treating an administration-screen check as evidence, also
+set the current administrator's profile Language to the target language or to
+**Site Default**. An explicit user-level Language selection overrides the site
+language in WordPress administration screens.
 
 Check more than one Booster screen. PHP and JavaScript use different runtime
 catalogues, so seeing one translated page does not prove that both paths work.
@@ -237,9 +240,10 @@ At the time this guide was added, the repository did not yet contain bundled
 community translations. `tests/LocalisationCatalogContractTest.php` currently
 requires `languages/` to contain only `ran-booster.pot`, so the first locale PR
 cannot pass the repository's catalogue contract until a maintainer updates that
-contract to admit the new runtime files. Translation contributors do not need to
-change unrelated PHP tests or runtime code unless a maintainer asks for that
-companion change during review.
+contract to admit the complete locale file set: the editable `.po` source, the
+generated `.mo` catalogue, and every generated Jed `.json` catalogue for that
+locale. Translation contributors do not need to change unrelated PHP tests or
+runtime code unless a maintainer asks for that companion change during review.
 
 ## Maintainer catalogue commands
 

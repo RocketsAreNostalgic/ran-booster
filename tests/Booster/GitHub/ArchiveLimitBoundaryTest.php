@@ -6,6 +6,8 @@ namespace Tests\Booster\GitHub;
 
 require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php';
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
@@ -132,6 +134,84 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		self::assertSame( PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES, $registrar->arguments[6] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testConfiguredSiteLimitFlowsThroughTheHostReleaseBoundary(): void {
+		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 1048576 );
+		$runtime = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function releases( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					/** @return array<string, mixed> */
+					public function list(): array {
+						return array(
+							'ok'             => true,
+							'code'           => 'releases_listed',
+							'value'          => array(
+								'candidates'   => array(),
+								'not_modified' => false,
+							),
+							'retry_after'    => null,
+							'cleanup_status' => 'not_applicable',
+						);
+					}
+				};
+			}
+		};
+		$provider = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			new ManagedReleaseUpdaterRegistrar( $runtime )
+		);
+
+		self::assertSame( 'gh', $provider->getMetadata()->code->value );
+		$provider->listReleaseCandidates(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'stable'
+		);
+		self::assertCount( 7, $runtime->arguments );
+		self::assertSame( 1048576, $runtime->arguments[6] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testInvalidSiteLimitFailsOnlyAtTheReleaseBoundary(): void {
+		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES - 1 );
+		$runtime = new class() {
+			public bool $releaseSourceRequested = false;
+
+			public function releases( mixed ...$arguments ): object {
+				unset( $arguments );
+				$this->releaseSourceRequested = true;
+
+				return new class() {};
+			}
+		};
+		$provider = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			new ManagedReleaseUpdaterRegistrar( $runtime )
+		);
+
+		self::assertSame( 'gh', $provider->getMetadata()->code->value );
+		try {
+			$provider->listReleaseCandidates(
+				'plugin',
+				new RepositoryReference( 'owner/example', '123456789', false, null ),
+				'stable'
+			);
+			self::fail( 'The invalid site archive limit must fail closed at the release boundary.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertSame( 503, $exception->getCode() );
+			self::assertFalse( $runtime->releaseSourceRequested );
+		}
+	}
+
 	public function testMissingLimitCapabilityFailsOnlyAtReleaseBoundary(): void {
 		$provider = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),
@@ -215,6 +295,36 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 
 		self::assertTrue( $target->register() );
 		self::assertCount( 7, $default->arguments );
+	}
+
+	public function testDirectNativeTargetWithoutHostLimitUsesUpdaterOwnedDefaultContract(): void {
+		$runtime = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function plugin( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					public function register(): bool {
+						return true;
+					}
+				};
+			}
+		};
+		$target  = new GitHubReleaseNativeTarget(
+			$runtime,
+			'plugin',
+			'/wordpress/wp-content/plugins/example/example.php',
+			'owner/example',
+			'42',
+			null,
+			'stable',
+			'manual'
+		);
+
+		self::assertTrue( $target->register() );
+		self::assertCount( 7, $runtime->arguments );
 	}
 
 	public function testGitHubReleaseAdaptersDoNotOwnBoosterDefaultLiteral(): void {

@@ -87,10 +87,10 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	private GitHubRepositoryReleaseWorkflow $releaseWorkflow;
 	private object $registrar;
 
-	/** @var (Closure(): int)|null */
+	/**
+	 * @var (Closure(): int)|null Host-resolved archive-limit supplier.
+	 */
 	private ?Closure $maximumArtifactBytes;
-
-	// Booster owns archive-limit policy; the provider only asks the host for its resolved value.
 
 	/** @var array<string, GitHubReleaseNativeTarget> */
 	private array $nativeTargets = array();

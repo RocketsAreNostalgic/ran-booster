@@ -80,8 +80,17 @@
 		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
 	</rule>
 
-	<!-- The single-file characterization harness reads plugin source text directly to assert legacy removals. -->
+	<!-- The single-file characterization harness is CLI-only and asserts source text verbatim. -->
 	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
+		<exclude-pattern>/tests/characterization.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
+		<exclude-pattern>/tests/characterization.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
+		<exclude-pattern>/tests/characterization.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.CapitalPDangit.MisspelledInText">
 		<exclude-pattern>/tests/characterization.php</exclude-pattern>
 	</rule>
 

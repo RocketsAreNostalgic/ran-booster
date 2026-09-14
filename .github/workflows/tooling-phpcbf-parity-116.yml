@@ -1,0 +1,56 @@
+name: Tooling PHPCBF parity 116
+
+on:
+  push:
+    branches:
+      - tooling/phpcbf-parity-116
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+          ini-file: production
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Format scoped parity files with PHPCBF
+        shell: bash
+        run: |
+          set +e
+          vendor/bin/phpcbf --standard=.phpcs.xml \
+            tests/Deployment/AdmittedBranchHostAdapterParityTest.php \
+            tests/Deployment/AdmittedBranchHostAdapterWordPressFunctions.php
+          status=$?
+          set -e
+
+          echo "PHPCBF_EXIT_STATUS=${status}"
+          echo '----- PHPCBF DIFF START -----'
+          git diff --no-ext-diff --unified=3 -- \
+            tests/Deployment/AdmittedBranchHostAdapterParityTest.php \
+            tests/Deployment/AdmittedBranchHostAdapterWordPressFunctions.php
+          echo '----- PHPCBF DIFF END -----'
+
+          git diff --check
+          vendor/bin/phpcs --standard=.phpcs.xml \
+            tests/Deployment/AdmittedBranchHostAdapterParityTest.php \
+            tests/Deployment/AdmittedBranchHostAdapterWordPressFunctions.php
+
+          if [ "$status" -gt 1 ]; then
+            exit "$status"
+          fi

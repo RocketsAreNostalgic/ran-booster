@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\PackageArtifactLimit;
+use ReflectionMethod;
 use TypeError;
 
 final class PackageArtifactLimitTest extends TestCase {
@@ -40,7 +41,7 @@ final class PackageArtifactLimitTest extends TestCase {
 		self::assertSame( PackageArtifactLimit::resolve(), PackageArtifactLimit::resolve( null ) );
 
 		$this->expectException( TypeError::class );
-		PackageArtifactLimit::resolve( 1048576 );
+		( new ReflectionMethod( PackageArtifactLimit::class, 'resolve' ) )->invoke( null, 1048576 );
 	}
 
 	public function testPublishedMaximumFitsPinnedUpdaterExpandedCeilingOn32BitPhp(): void {

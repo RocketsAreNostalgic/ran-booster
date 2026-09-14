@@ -20,7 +20,7 @@ final readonly class ManagedReleaseUpdaterRegistrar {
 	}
 
 	public function maximumArtifactBytes(): int {
-		return PackageArtifactLimit::resolve( null );
+		return PackageArtifactLimit::resolve();
 	}
 
 	public function plugin( mixed ...$arguments ): object {

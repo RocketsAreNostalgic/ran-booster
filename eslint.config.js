@@ -1,10 +1,10 @@
-import wordpress from "@wordpress/eslint-plugin";
+import ranWordPress from "@rocketsarenostalgic/quality-config/eslint/wordpress";
 
 export default [
 	{
 		ignores: ["assets/lib/**"],
 	},
-	...wordpress.configs.recommended,
+	...ranWordPress,
 	{
 		files: [ "assets/**/*.js" ],
 		languageOptions: {

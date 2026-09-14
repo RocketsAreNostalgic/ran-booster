@@ -3,6 +3,29 @@
 This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
+## RAN quality profile and shared standards
+
+Booster uses the RAN `wordpress-plugin` quality profile. Organisation-level PHP
+coding ancestry comes from `ran/coding-standards` through `RANWordPressPlugin`,
+and frontend ESLint/Prettier/Stylelint ancestry comes from
+`@rocketsarenostalgic/quality-config`.
+
+During the current proof, tracked lockfiles bind those shared packages to the
+reviewed candidates `0b03e61a4bb558deeb6bc6b6399f44c0ec95e5be` and
+`751edd097e3902efb93992bf47401a1a4f4b1fa8`. Do not replace those exact locked
+candidates with floating, unreviewed package state. After Starter and Booster
+have both proven the candidates and the shared packages receive versioned
+releases, move Booster to the released versions through a reviewed dependency
+change.
+
+Booster remains the owner of its actual product contract and stronger gates:
+WordPress/PHP support, its established `RAN\` production namespace family,
+text domain, source paths, inherited/runtime/security exceptions, PHPStan scope,
+localisation and generated-state checks, updater/release state contracts,
+admin-shell parity, race/hard-stop/runtime proofs, frontend source globs and
+globals, asset tests, and release verification. Shared-package adoption must
+never remove or silently weaken those local guarantees.
+
 - Work from an accepted public request or issue. Inspect the affected code and
   tests before editing, verify the result before declaring completion, and
   record concrete check evidence. Do not invent unavailable private context.

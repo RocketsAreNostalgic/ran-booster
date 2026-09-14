@@ -9,6 +9,13 @@ use PHPUnit\Framework\TestCase;
 use RAN\PackageArtifactLimit;
 
 final class PackageArtifactLimitTest extends TestCase {
+	public function testDefaultResolvesFromTheSingleBoosterAuthority(): void {
+		self::assertSame(
+			PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES,
+			PackageArtifactLimit::resolve()
+		);
+	}
+
 	public function testPublishedMaximumFitsPinnedUpdaterExpandedCeilingOn32BitPhp(): void {
 		$maximum32BitSafeCompressedBytes = intdiv( 2147483647, 4 );
 

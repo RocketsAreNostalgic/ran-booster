@@ -40,10 +40,12 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 			if ( file_exists( $file ) || is_link( $file ) ) {
 				unlink( $file );
 			}
+		}
 		foreach ( array_reverse( $this->directories ) as $directory ) {
 			if ( is_dir( $directory ) ) {
 				rmdir( $directory );
 			}
+		}
 	}
 
 	public function testAdapterConsumesPackageExpandedByteFactWithoutRescanningZip(): void {

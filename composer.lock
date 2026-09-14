@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7e8fcf41e2431ed1d07533fd4b039926",
+    "content-hash": "065148a7865c17079615cf39fd1cd308",
     "packages": [
         {
             "name": "ran/updater-support",
@@ -1575,6 +1575,60 @@
             "time": "2026-08-21T21:56:26+00:00"
         },
         {
+            "name": "ran/coding-standards",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/RocketsAreNostalgic/ran-coding-standards.git",
+                "reference": "0b03e61a4bb558deeb6bc6b6399f44c0ec95e5be"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-coding-standards/zipball/0b03e61a4bb558deeb6bc6b6399f44c0ec95e5be",
+                "reference": "0b03e61a4bb558deeb6bc6b6399f44c0ec95e5be",
+                "shasum": ""
+            },
+            "require": {
+                "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
+                "php": ">=7.4",
+                "squizlabs/php_codesniffer": "^3.13.6",
+                "wp-coding-standards/wpcs": "^3.4.1"
+            },
+            "require-dev": {
+                "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+                "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",
+                "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2"
+            },
+            "default-branch": true,
+            "type": "phpcodesniffer-standard",
+            "scripts": {
+                "validate:strict": [
+                    "composer validate --strict --no-check-publish --no-check-all"
+                ],
+                "test:consumer-install": [
+                    "@php tests/consumer-install.php"
+                ],
+                "test": [
+                    "@php tests/run.php"
+                ],
+                "check": [
+                    "@validate:strict",
+                    "@test",
+                    "@test:consumer-install"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Shared PHP and WordPress coding standards for Rockets Are Nostalgic projects.",
+            "homepage": "https://github.com/RocketsAreNostalgic/ran-coding-standards",
+            "support": {
+                "source": "https://github.com/RocketsAreNostalgic/ran-coding-standards/tree/main",
+                "issues": "https://github.com/RocketsAreNostalgic/ran-coding-standards/issues"
+            },
+            "time": "2026-09-11T16:32:33+00:00"
+        },
+        {
             "name": "sebastian/cli-parser",
             "version": "3.0.2",
             "source": {
@@ -2874,10 +2928,11 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "phpcompatibility/php-compatibility": 20,
-        "phpcompatibility/phpcompatibility-paragonie": 20,
-        "phpcompatibility/phpcompatibility-wp": 20,
+        "phpcompatibility/php-compatibility": 15,
+        "phpcompatibility/phpcompatibility-paragonie": 15,
+        "phpcompatibility/phpcompatibility-wp": 15,
         "ran/admin-shell": 20,
+        "ran/coding-standards": 20,
         "ran/updater-support": 20,
         "ran/wp-branch-updater": 10,
         "ran/wp-release-updater": 10

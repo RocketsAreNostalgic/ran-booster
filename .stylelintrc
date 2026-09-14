@@ -1,5 +1,5 @@
 {
-	"extends": "@wordpress/stylelint-config",
+	"extends": "@rocketsarenostalgic/quality-config/stylelint/wordpress",
 	"ignoreFiles": [
 		"node_modules/**/*",
 		"vendor/**/*"

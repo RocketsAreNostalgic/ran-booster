@@ -24,7 +24,7 @@ jobs:
           tools: composer:v2
           coverage: none
       - name: Regenerate only branch updater lock entry
-        run: composer update ran/wp-branch-updater --no-dependencies --no-interaction --no-progress
+        run: composer update ran/wp-branch-updater --no-install --no-interaction --no-progress
       - name: Commit generated lock when changed
         run: |
           if git diff --quiet -- composer.lock; then

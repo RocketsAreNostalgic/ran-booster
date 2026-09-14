@@ -439,7 +439,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			$this->releaseAccessToken( $repository ),
 			$channel,
 			$deploymentPolicy,
-			fn (): int => $this->maximumArtifactBytes()
+			$this->maximumArtifactBytes
 		);
 		$this->nativeTargets[ self::nativeTargetKey( $packageType, $installedIdentifier ) ] = $target;
 
@@ -784,7 +784,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		if ( null === $repositoryId ) {
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
-		$arguments = array( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ) );
+		$arguments            = array( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ) );
 		$maximumArtifactBytes = $this->maximumArtifactBytes();
 		if ( null !== $maximumArtifactBytes ) {
 			$arguments[] = $maximumArtifactBytes;

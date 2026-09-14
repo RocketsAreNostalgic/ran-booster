@@ -7,6 +7,7 @@ namespace Tests\WordPress;
 use PHPUnit\Framework\TestCase;
 use RAN\PackageArtifactLimit;
 use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
+use Tests\Support\RecordingReleaseUpdaterRuntime;
 
 /** Proves updater-version compatibility remains a Booster host concern. */
 final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
@@ -45,16 +46,5 @@ final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 
 		self::assertCount( 8, $runtime->arguments );
 		self::assertSame( 1048576, $runtime->arguments[7] );
-	}
-}
-
-final class RecordingReleaseUpdaterRuntime {
-	/** @var list<mixed> */
-	public array $arguments = array();
-
-	public function plugin( mixed ...$arguments ): object {
-		$this->arguments = $arguments;
-
-		return new class() {};
 	}
 }

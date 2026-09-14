@@ -111,7 +111,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		$retirementBridge = defined( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' )
 			&& 1 === constant( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' );
 
-		return class_exists( 'RAN\\AssistedHooks\\Plugin', false ) && ! $retirementBridge;
+		return class_exists( 'RAN\AssistedHooks\Plugin', false ) && ! $retirementBridge;
 	}
 
 	public static function registerLegacyAssistedHooksAddOnNotice(): void {

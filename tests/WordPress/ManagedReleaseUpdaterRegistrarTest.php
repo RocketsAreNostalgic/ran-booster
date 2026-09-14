@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\WordPress;
+
+use PHPUnit\Framework\TestCase;
+use RAN\PackageArtifactLimit;
+use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
+
+/** Proves updater-version compatibility remains a Booster host concern. */
+final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
+	public function testDefaultNativeTargetLimitUsesSevenArgumentUpdaterContract(): void {
+		$runtime   = $this->runtime();
+		$registrar = new ManagedReleaseUpdaterRegistrar( $runtime );
+
+		$registrar->plugin(
+			'github',
+			'/wordpress/wp-content/plugins/example/example.php',
+			'owner/example',
+			'42',
+			'stable',
+			'manual',
+			null,
+			PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES
+		);
+
+		self::assertCount( 7, $runtime->arguments );
+	}
+
+	public function testNonDefaultNativeTargetLimitUsesEightArgumentUpdaterContract(): void {
+		$runtime   = $this->runtime();
+		$registrar = new ManagedReleaseUpdaterRegistrar( $runtime );
+
+		$registrar->plugin(
+			'github',
+			'/wordpress/wp-content/plugins/example/example.php',
+			'owner/example',
+			'42',
+			'stable',
+			'manual',
+			null,
+			1048576
+		);
+
+		self::assertCount( 8, $runtime->arguments );
+		self::assertSame( 1048576, $runtime->arguments[7] );
+	}
+
+	private function runtime(): object {
+		return new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function plugin( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {};
+			}
+		};
+	}
+}

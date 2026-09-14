@@ -95,10 +95,10 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 				return str_repeat( chr( $this->randomByte++ ), $length );
 			}
 		);
-		$this->plugins        = new ParityPluginRepository();
-		$this->themes         = new ParityThemeRepository();
-		$this->sourceDatabase = new RepositorySourceGuardDatabase();
-		$this->sourceGuard    = new RepositorySourceGuard( $this->sourceDatabase, $this->createStub( Database::class ) );
+		$this->plugins          = new ParityPluginRepository();
+		$this->themes           = new ParityThemeRepository();
+		$this->sourceDatabase   = new RepositorySourceGuardDatabase();
+		$this->sourceGuard      = new RepositorySourceGuard( $this->sourceDatabase, $this->createStub( Database::class ) );
 		$this->plugins->managed = array( $this->plugin() );
 	}
 
@@ -612,6 +612,7 @@ final class ParityPluginRepository extends PluginRepository {
 			if ( (string) $plugin->getIdentifier() === (string) $file ) {
 				return $plugin;
 			}
+		}
 		throw new RuntimeException( 'Missing managed plugin.' );
 	}
 
@@ -715,7 +716,7 @@ final class ParityFailureNotifier implements DeploymentFailureNotifier {
 	public function __construct( private AttemptRepositoryDatabase $database ) {}
 
 	public function notify( DeploymentAttempt $attempt ): bool {
-		$this->attempts[]    = $attempt;
+		$this->attempts[]     = $attempt;
 		$this->storedStates[] = (string) ( $this->database->rows[0]['state'] ?? '' );
 		return true;
 	}

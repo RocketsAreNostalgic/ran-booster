@@ -11,7 +11,7 @@ use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 /** Proves updater-version compatibility remains a Booster host concern. */
 final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 	public function testDefaultNativeTargetLimitUsesSevenArgumentUpdaterContract(): void {
-		$runtime   = $this->runtime();
+		$runtime   = new RecordingReleaseUpdaterRuntime();
 		$registrar = new ManagedReleaseUpdaterRegistrar( $runtime );
 
 		$registrar->plugin(
@@ -29,7 +29,7 @@ final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 	}
 
 	public function testNonDefaultNativeTargetLimitUsesEightArgumentUpdaterContract(): void {
-		$runtime   = $this->runtime();
+		$runtime   = new RecordingReleaseUpdaterRuntime();
 		$registrar = new ManagedReleaseUpdaterRegistrar( $runtime );
 
 		$registrar->plugin(
@@ -46,17 +46,15 @@ final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 		self::assertCount( 8, $runtime->arguments );
 		self::assertSame( 1048576, $runtime->arguments[7] );
 	}
+}
 
-	private function runtime(): object {
-		return new class() {
-			/** @var list<mixed> */
-			public array $arguments = array();
+final class RecordingReleaseUpdaterRuntime {
+	/** @var list<mixed> */
+	public array $arguments = array();
 
-			public function plugin( mixed ...$arguments ): object {
-				$this->arguments = $arguments;
+	public function plugin( mixed ...$arguments ): object {
+		$this->arguments = $arguments;
 
-				return new class() {};
-			}
-		};
+		return new class() {};
 	}
 }

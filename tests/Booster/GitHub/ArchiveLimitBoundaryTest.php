@@ -210,6 +210,40 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		self::assertCount( 7, $runtime->arguments );
 	}
 
+	public function testProviderCreatedNativeTargetWithoutHostLimitUsesUpdaterOwnedDefaultContract(): void {
+		$runtime = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function plugin( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					public function register(): bool {
+						return true;
+					}
+				};
+			}
+		};
+		$provider = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			$runtime
+		);
+		$target   = $provider->createNativeTarget(
+			'plugin',
+			new RepositoryReference( 'owner/example', '42', false, null ),
+			'/wordpress/wp-content/plugins/example/example.php',
+			'example',
+			'example/example.php',
+			'stable',
+			'manual'
+		);
+
+		self::assertTrue( $target->register() );
+		self::assertCount( 7, $runtime->arguments );
+	}
+
 	public function testGitHubReleaseAdaptersDoNotOwnBoosterDefaultLiteral(): void {
 		foreach ( array( GitHubProvider::class, GitHubReleaseNativeTarget::class ) as $class ) {
 			$file = ( new \ReflectionClass( $class ) )->getFileName();

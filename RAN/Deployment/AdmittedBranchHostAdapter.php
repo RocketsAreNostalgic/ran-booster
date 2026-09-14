@@ -56,7 +56,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private const DOWNLOAD_TIMEOUT  = 120;
 	private const DOWNLOAD_ATTEMPTS = 2;
-	private const EXPANDED_RATIO    = 4;
 
 	private ?ProviderPreparedArchive $providerArchive = null;
 	private bool $providerArchiveCleaned              = false;
@@ -227,7 +226,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 					$maximumArtifactBytes
 				)
 			);
-			$this->assertArtifactCapacity( $artifact, $deployment, $maximumArtifactBytes );
+			$this->assertArtifactCapacity( $artifact, $deployment );
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			$this->cleanupProviderArchive( $providerArchive );
@@ -490,16 +489,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assertArtifactCapacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment, int $maximumArtifactBytes ): void {
-		$path = $artifact->archive()->getPath();
-		$size = filesize( $path );
-		if ( false === $size || $size > $maximumArtifactBytes ) {
-			$this->stage( DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE );
-		}
-		$expanded = $this->expandedBytes( $path );
-		if ( $expanded > $maximumArtifactBytes * self::EXPANDED_RATIO ) {
-			$this->stage( DeploymentOutcome::CODE_ARCHIVE_EXPANDED_TOO_LARGE );
-		}
+	private function assertArtifactCapacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
+		$expanded = $artifact->archive()->expandedBytes();
 		$overhead = intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
 		if ( $expanded > intdiv( PHP_INT_MAX - $overhead, 2 ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
@@ -518,26 +509,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		} catch ( Throwable ) {
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED );
 		}
-	}
-
-	private function expandedBytes( string $path ): int {
-		$zip = new ZipArchive();
-		if ( true !== $zip->open( $path, ZipArchive::RDONLY ) ) {
-			$this->stage( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED );
-		}
-		$total = 0;
-		try {
-			for ( $index = 0; $index < $zip->numFiles; ++$index ) {
-				$stat = $zip->statIndex( $index, ZipArchive::FL_UNCHANGED );
-				if ( false === $stat || ! is_int( $stat['size'] ?? null ) || $stat['size'] < 0 || $total > PHP_INT_MAX - $stat['size'] ) {
-					$this->stage( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED );
-				}
-				$total += $stat['size'];
-			}
-		} finally {
-			$zip->close();
-		}
-		return $total;
 	}
 
 	private function assertSafeHttpsUrl( mixed $url ): void {

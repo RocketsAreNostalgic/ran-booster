@@ -29,6 +29,15 @@ final readonly class RepositoryReference {
 		);
 	}
 
+	public function withCredential( ?string $credentialId ): self {
+		return new self(
+			$this->locator,
+			$this->providerRepositoryId,
+			$this->private,
+			$credentialId
+		);
+	}
+
 	private function assertProviderRepositoryId( ?string $providerRepositoryId ): void {
 		if ( null !== $providerRepositoryId
 			&& ( '' === $providerRepositoryId

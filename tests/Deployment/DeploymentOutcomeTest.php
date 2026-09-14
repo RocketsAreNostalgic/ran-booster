@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentState;
+use RAN\RepositoryProvider\StaleDeployment;
 
 final class DeploymentOutcomeTest extends TestCase {
 
@@ -67,6 +68,13 @@ final class DeploymentOutcomeTest extends TestCase {
 		);
 
 		self::assertSame( $expected, $outcome->getCode() );
+		self::assertSame( DeploymentState::FAILED, $outcome->getState() );
+	}
+
+	public function testStaleProviderFailureMapsToStaleEvent(): void {
+		$outcome = DeploymentOutcome::fromProviderFailure( new StaleDeployment( 'The admitted ref is stale.' ) );
+
+		self::assertSame( DeploymentOutcome::CODE_STALE_EVENT, $outcome->getCode() );
 		self::assertSame( DeploymentState::FAILED, $outcome->getState() );
 	}
 }

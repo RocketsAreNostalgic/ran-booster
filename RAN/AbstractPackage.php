@@ -79,6 +79,7 @@ abstract class AbstractPackage implements Package {
 		$this->sourceRevision = $revision;
 	}
 
+
 	public function setRepository( ManagedRepository $repository ): void {
 		$this->repository = $repository;
 	}

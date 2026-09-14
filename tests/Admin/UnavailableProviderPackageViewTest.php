@@ -655,7 +655,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				'state'                   => $state,
 				'mutation_started_at'     => null,
 				'outcome_code'            => $outcome,
-				'request_json'            => '{"repository":"owner/exact-repository","credential_id":"agency_profile","private":true,"configured_branch":"release","package_slug":"exact","subdirectory":null,"deployment_policy":"automatic","initiating_user_id":1}',
+				'request_json'            => '{"repository":"owner/exact-repository","credential_id":"agency_profile","private":true,"configured_branch":"release","package_slug":"exact","subdirectory":null,"deployment_policy":"automatic","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
 				'created_at'              => '2026-07-19 00:00:00',
 				'finished_at'             => $terminal ? '2026-07-19 00:00:00' : null,
 				'resolved_at'             => $resolved ? '2026-07-19 00:05:00' : null,

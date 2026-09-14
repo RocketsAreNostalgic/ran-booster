@@ -1,6 +1,6 @@
 <?php
 
-// Claim one compact attempt, optionally acquire the core lock, then block for SIGKILL.
+// Claim one compact attempt, optionally acquire the native updater lock, then block for SIGKILL.
 // phpcs:disable
 
 $phase = $args[0] ?? '';
@@ -15,8 +15,8 @@ if ( null === $claimed ) {
 	throw new RuntimeException( 'The hard-stop child could not claim the seeded attempt.' );
 }
 if ( 'pre' !== $phase ) {
-	$coordinator = $booster->make( RAN\Deployment\DeploymentCoordinator::class );
-	( new ReflectionMethod( $coordinator, 'acquireCoreLock' ) )->invoke( $coordinator );
+	$lock = $booster->make( RAN\WordPress\WordPressUpdaterLock::class );
+	$lock->acquire();
 	$attempts->markMutationStarted( $claimed->getId() );
 }
 $marker = fopen( $barrier, 'x' );

@@ -90,8 +90,6 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	/** @var Closure(): int */
 	private Closure $maximumArtifactBytes;
 
-	private const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
-
 	/** @var array<string, GitHubReleaseNativeTarget> */
 	private array $nativeTargets = array();
 
@@ -113,7 +111,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		$retirementBridge = defined( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' )
 			&& 1 === constant( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION' );
 
-		return class_exists( 'RAN\AssistedHooks\Plugin', false ) && ! $retirementBridge;
+		return class_exists( 'RAN\\AssistedHooks\\Plugin', false ) && ! $retirementBridge;
 	}
 
 	public static function registerLegacyAssistedHooksAddOnNotice(): void {
@@ -140,10 +138,14 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		object $registrar
 	) {
 		$this->registrar            = $registrar;
-		$resolver                   = is_callable( array( $registrar, 'maximumArtifactBytes' ) )
-			? Closure::fromCallable( array( $registrar, 'maximumArtifactBytes' ) )
-			: static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
-		$this->maximumArtifactBytes = static fn (): int => $resolver();
+		$this->maximumArtifactBytes = static function () use ( $registrar ): int {
+			$resolver = array( $registrar, 'maximumArtifactBytes' );
+			if ( ! is_callable( $resolver ) ) {
+				throw new RuntimeException( 'The GitHub release service configuration is unavailable.' );
+			}
+
+			return Closure::fromCallable( $resolver )();
+		};
 		$this->credentials          = $credentials;
 		$this->browser              = $browser;
 		$this->webhooks             = $webhooks;

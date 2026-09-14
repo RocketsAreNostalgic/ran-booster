@@ -9,7 +9,10 @@ require_once dirname( __DIR__, 2 ) . '/Support/NeutralReleaseUpdaterFixtures.php
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
+use RAN\PackageArtifactLimit;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
+use RuntimeException;
 use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
@@ -85,6 +88,10 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 			/** @var list<mixed> */
 			public array $arguments = array();
 
+			public function maximumArtifactBytes(): int {
+				return PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
+			}
+
 			public function releases(
 				mixed $provider,
 				mixed $packageType,
@@ -122,10 +129,34 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 
 		$provider->listReleaseCandidates( 'plugin', $repository, 'stable' );
 		self::assertCount( 7, $registrar->arguments );
-		self::assertSame( 52428800, $registrar->arguments[6] );
+		self::assertSame( PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES, $registrar->arguments[6] );
 	}
 
-	public function testNativeTargetOnlyAddsTheOptionalArgumentForNonDefaultLimit(): void {
+	public function testMissingLimitCapabilityFailsOnlyAtReleaseBoundary(): void {
+		$provider = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			new class() {
+				public function releases( mixed ...$arguments ): object {
+					unset( $arguments );
+
+					return new class() {};
+				}
+			}
+		);
+
+		self::assertSame( 'gh', $provider->getMetadata()->code->value );
+
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionCode( 503 );
+		$provider->listReleaseCandidates(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'stable'
+		);
+	}
+
+	public function testNativeTargetCompatibilityDecisionLivesAtHostRegistrar(): void {
 		$nonDefault = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
@@ -141,7 +172,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 			}
 		};
 		$target     = new GitHubReleaseNativeTarget(
-			$nonDefault,
+			new ManagedReleaseUpdaterRegistrar( $nonDefault ),
 			'plugin',
 			'/wordpress/wp-content/plugins/example/example.php',
 			'owner/example',
@@ -171,17 +202,30 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 			}
 		};
 		$target  = new GitHubReleaseNativeTarget(
-			$default,
+			new ManagedReleaseUpdaterRegistrar( $default ),
 			'plugin',
 			'/wordpress/wp-content/plugins/example/example.php',
 			'owner/example',
 			'42',
 			null,
 			'stable',
-			'manual'
+			'manual',
+			static fn (): int => PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES
 		);
 
 		self::assertTrue( $target->register() );
 		self::assertCount( 7, $default->arguments );
+	}
+
+	public function testGitHubReleaseAdaptersDoNotOwnBoosterDefaultLiteral(): void {
+		foreach ( array( GitHubProvider::class, GitHubReleaseNativeTarget::class ) as $class ) {
+			$file = ( new \ReflectionClass( $class ) )->getFileName();
+			self::assertIsString( $file );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- source-level ownership regression assertion.
+			$source = file_get_contents( $file );
+			self::assertIsString( $source );
+			self::assertStringNotContainsString( '52428800', $source );
+			self::assertStringNotContainsString( 'DEFAULT_MAXIMUM_ARTIFACT_BYTES', $source );
+		}
 	}
 }

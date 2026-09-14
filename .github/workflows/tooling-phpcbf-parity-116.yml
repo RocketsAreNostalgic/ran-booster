@@ -6,7 +6,7 @@ on:
       - tooling/phpcbf-parity-116
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
@@ -16,7 +16,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
@@ -29,7 +29,7 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Format scoped parity files with PHPCBF
+      - name: Format, verify, and materialize scoped files
         shell: bash
         run: |
           set +e
@@ -39,13 +39,6 @@ jobs:
           status=$?
           set -e
 
-          echo "PHPCBF_EXIT_STATUS=${status}"
-          echo '----- PHPCBF DIFF START -----'
-          git diff --no-ext-diff --unified=3 -- \
-            tests/Deployment/AdmittedBranchHostAdapterParityTest.php \
-            tests/Deployment/AdmittedBranchHostAdapterWordPressFunctions.php
-          echo '----- PHPCBF DIFF END -----'
-
           git diff --check
           vendor/bin/phpcs --standard=.phpcs.xml \
             tests/Deployment/AdmittedBranchHostAdapterParityTest.php \
@@ -54,3 +47,18 @@ jobs:
           if [ "$status" -gt 1 ]; then
             exit "$status"
           fi
+
+          if git diff --quiet -- \
+            tests/Deployment/AdmittedBranchHostAdapterParityTest.php \
+            tests/Deployment/AdmittedBranchHostAdapterWordPressFunctions.php; then
+            echo 'Scoped files already formatted.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            tests/Deployment/AdmittedBranchHostAdapterParityTest.php \
+            tests/Deployment/AdmittedBranchHostAdapterWordPressFunctions.php
+          git commit -m 'tooling: materialize PHPCBF output'
+          git push origin HEAD:tooling/phpcbf-parity-116

@@ -114,9 +114,10 @@ placeholder or technical contract.
 
 After editing the PO, generate both the PHP and JavaScript runtime files. Build
 into a clean temporary directory first so an updated locale cannot leave stale
-tracked JSON catalogues behind.
+tracked JSON catalogues behind. The commands below use Bash, matching the
+repository's fixture-generation script.
 
-```sh
+```bash
 locale=fr_FR
 po="languages/ran-booster-${locale}.po"
 temporary_dir=$(mktemp -d)
@@ -233,11 +234,12 @@ Open the pull request against `main` and follow the general contribution rules
 in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 At the time this guide was added, the repository did not yet contain bundled
-community translations and its release-catalogue contract reflects that current
-state. The first translation accepted for bundling may therefore need a small
-maintainer-owned update to that release contract. Translation contributors do
-not need to change unrelated PHP tests or runtime code unless a maintainer asks
-for that change during review.
+community translations. `tests/LocalisationCatalogContractTest.php` currently
+requires `languages/` to contain only `ran-booster.pot`, so the first locale PR
+cannot pass the repository's catalogue contract until a maintainer updates that
+contract to admit the new runtime files. Translation contributors do not need to
+change unrelated PHP tests or runtime code unless a maintainer asks for that
+companion change during review.
 
 ## Maintainer catalogue commands
 

@@ -20,8 +20,6 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 	/** @var Closure(): int */
 	private Closure $maximumArtifactBytes;
 
-	private const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
-
 	/** @param string|callable|null $accessToken */
 	public function __construct(
 		private object $registrar,
@@ -32,7 +30,7 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 		string|callable|null $accessToken,
 		private string $channel,
 		private string $deploymentPolicy,
-		?callable $maximumArtifactBytes = null
+		callable $maximumArtifactBytes
 	) {
 		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true )
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
@@ -42,18 +40,14 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 		$this->accessToken          = is_string( $accessToken )
 			? static fn (): string => $accessToken
 			: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );
-		$this->maximumArtifactBytes = null === $maximumArtifactBytes
-			? static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES
-			: Closure::fromCallable( $maximumArtifactBytes );
+		$this->maximumArtifactBytes = Closure::fromCallable( $maximumArtifactBytes );
 	}
-
 
 	public function register(): bool {
 		try {
 			if ( null === $this->updater ) {
-				$method               = 'plugin' === $this->packageType ? 'plugin' : 'theme';
-				$maximumArtifactBytes = ( $this->maximumArtifactBytes )();
-				$arguments            = array(
+				$method        = 'plugin' === $this->packageType ? 'plugin' : 'theme';
+				$this->updater = $this->registrar->{$method}(
 					'github',
 					$this->metadataFile,
 					$this->repository,
@@ -61,11 +55,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 					$this->channel,
 					$this->deploymentPolicy,
 					$this->accessToken,
+					( $this->maximumArtifactBytes )()
 				);
-				if ( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES !== $maximumArtifactBytes ) {
-					$arguments[] = $maximumArtifactBytes;
-				}
-				$this->updater = $this->registrar->{$method}( ...$arguments );
 			}
 			return true === $this->updater->register();
 		} catch ( \Throwable ) {

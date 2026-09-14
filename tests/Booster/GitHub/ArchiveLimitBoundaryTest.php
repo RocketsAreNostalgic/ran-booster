@@ -211,7 +211,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 	}
 
 	public function testProviderCreatedNativeTargetWithoutHostLimitUsesUpdaterOwnedDefaultContract(): void {
-		$runtime = new class() {
+		$runtime  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
 

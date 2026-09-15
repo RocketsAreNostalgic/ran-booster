@@ -11,7 +11,7 @@ spl_autoload_register(
 			'RAN\\RepositoryProvider\\'       => $ranBoosterRoot . '/RAN/RepositoryProvider/',
 			'RAN\\AddOn\\WebhookAssistance\\' => $ranBoosterRoot . '/RAN/AddOn/WebhookAssistance/',
 			'RAN\\Admin\\Interaction\\'       => $ranBoosterRoot . '/RAN/Admin/Interaction/',
-			'RAN\\UpdaterSupport\\V1\\'        => $ranBoosterRoot . '/vendor/ran/updater-support/src/',
+			'RAN\\UpdaterSupport\\V1\\'       => $ranBoosterRoot . '/vendor/ran/updater-support/src/',
 			'Tests\\Booster\\GitHub\\'        => __DIR__ . '/',
 		);
 

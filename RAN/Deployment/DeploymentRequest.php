@@ -160,6 +160,7 @@ final readonly class DeploymentRequest {
 		try {
 			$normalized = PackageSubdirectory::normalize( $value );
 		} catch ( InvalidArgumentException $exception ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.
 			throw new InvalidArgumentException( 'The package subdirectory is invalid.', 0, $exception );
 		}
 		if ( null === $normalized ) {

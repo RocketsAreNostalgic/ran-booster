@@ -303,6 +303,7 @@ class RepositoryBrowser {
 		try {
 			$path = RepositoryRelativePath::normalize( $path );
 		} catch ( InvalidArgumentException $exception ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.
 			throw new RuntimeException( 'The GitHub repository path check is invalid.', 400, $exception );
 		}
 		if ( 1 !== preg_match( '/^[0-9a-f]{40}$/i', $ref ) ) {

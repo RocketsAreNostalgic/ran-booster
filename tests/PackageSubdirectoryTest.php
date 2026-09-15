@@ -20,16 +20,16 @@ final class PackageSubdirectoryTest extends TestCase {
 	/** @return array<string, array{mixed, string|null}> */
 	public static function validPaths(): array {
 		return array(
-			'absent'                => array( null, null ),
-			'empty'                 => array( '', null ),
-			'whitespace'            => array( '  ', null ),
-			'single'                => array( 'plugin', 'plugin' ),
-			'nested'                => array( 'packages/example-plugin', 'packages/example-plugin' ),
-			'trimmed'               => array( ' packages/example-plugin ', 'packages/example-plugin' ),
-			'trailing slash'        => array( 'branch-fixture/', 'branch-fixture' ),
-			'literal token'         => array( 'packages/%41ddon', 'packages/%41ddon' ),
-			'encoded nested colon'  => array( 'packages/C%3A-name', 'packages/C%3A-name' ),
-			'bounded decode depth'  => array( 'packages/%' . str_repeat( '25', 7 ) . '41', 'packages/%' . str_repeat( '25', 7 ) . '41' ),
+			'absent'               => array( null, null ),
+			'empty'                => array( '', null ),
+			'whitespace'           => array( '  ', null ),
+			'single'               => array( 'plugin', 'plugin' ),
+			'nested'               => array( 'packages/example-plugin', 'packages/example-plugin' ),
+			'trimmed'              => array( ' packages/example-plugin ', 'packages/example-plugin' ),
+			'trailing slash'       => array( 'branch-fixture/', 'branch-fixture' ),
+			'literal token'        => array( 'packages/%41ddon', 'packages/%41ddon' ),
+			'encoded nested colon' => array( 'packages/C%3A-name', 'packages/C%3A-name' ),
+			'bounded decode depth' => array( 'packages/%' . str_repeat( '25', 7 ) . '41', 'packages/%' . str_repeat( '25', 7 ) . '41' ),
 		);
 	}
 

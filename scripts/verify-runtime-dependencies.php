@@ -148,7 +148,7 @@ foreach ( $policy['packages'] as $record ) {
 		++$neutralUpdaters;
 	}
 
-	$expected[ $name ] = array(
+	$expected[ $name ]            = array(
 		'repository'   => $repository,
 		'archive_root' => $archiveRoot,
 		'surfaces'     => $validatedSurfaces,

@@ -210,7 +210,7 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertIsArray( $lock['packages'] ?? null );
 		self::assertIsArray( $lock['packages'][0] ?? null );
 		$lock['packages'][0]['name'] = 'ran/unexpected-runtime';
-		$path = $this->writeTemporaryJson( $lock );
+		$path                        = $this->writeTemporaryJson( $lock );
 
 		try {
 			$result = $this->runRuntimeDependencyVerifier(
@@ -228,7 +228,7 @@ final class ReleasePlatformContractTest extends TestCase {
 		$policy = $this->readPackagingPolicy();
 		self::assertIsArray( $policy['packages'][0] ?? null );
 		$policy['packages'][0]['repository'] = 'RocketsAreNostalgic/not-the-locked-package';
-		$path = $this->writeTemporaryJson( $policy );
+		$path                                = $this->writeTemporaryJson( $policy );
 
 		try {
 			$result = $this->runRuntimeDependencyVerifier(
@@ -294,8 +294,8 @@ final class ReleasePlatformContractTest extends TestCase {
 	}
 
 	public function testQualityTreatsPackagingPolicyAsFreshEvidenceInputOnly(): void {
-		$quality = $this->readText( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
-		$release = $this->readText( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );
+		$quality           = $this->readText( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
+		$release           = $this->readText( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );
 		$qualityTrustPaths = $this->trustPathBlock( $quality );
 		$releaseTrustPaths = $this->trustPathBlock( $release );
 
@@ -315,12 +315,12 @@ final class ReleasePlatformContractTest extends TestCase {
 
 	public function testDisposableLifecycleFixtureUsesTheVendoredUpdatersStableUserAgent(): void {
 		$releaseUpdaterPath = $this->neutralUpdaterArchiveRoot();
-		$updater = $this->readText(
+		$updater            = $this->readText(
 			dirname( __DIR__ )
 				. '/' . $releaseUpdaterPath
 				. '/src/Provider/GitHub/GitHubReleaseService.php'
 		);
-		$fixture = $this->readText(
+		$fixture            = $this->readText(
 			dirname( __DIR__ )
 				. '/tests/Integration/phase-4.4-core-disposable-harness.php'
 		);
@@ -357,7 +357,7 @@ final class ReleasePlatformContractTest extends TestCase {
 			'bash "$script_dir/verify-release.sh" "$tmp_archive" '
 				. '"$expected_version" "$commit"'
 		);
-		$move = strpos(
+		$move   = strpos(
 			$script,
 			'mv -f "$tmp_archive" "$build_dir/$archive_name"'
 		);

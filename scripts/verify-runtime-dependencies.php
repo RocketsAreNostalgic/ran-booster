@@ -105,40 +105,43 @@ foreach ( $policy['packages'] as $record ) {
 	}
 
 	$validatedSurfaces = array();
+	$surfacePaths      = array();
 	foreach ( $surfaces as $surface ) {
-		if (
-			! is_string( $surface )
-			|| 1 !== preg_match( '/^[A-Za-z0-9._\/-]+$/D', $surface )
-			|| str_starts_with( $surface, '/' )
-			|| str_starts_with( $surface, './' )
-			|| str_contains( $surface, '//' )
-		) {
-			fwrite( STDERR, "Runtime packaging policy contains an unsafe surface path.\n" );
+		if ( ! is_array( $surface ) ) {
+			fwrite( STDERR, "Runtime packaging policy contains an invalid surface record.\n" );
 			exit( 1 );
 		}
 
-		$segments = explode( '/', $surface );
-		foreach ( $segments as $segment ) {
-			if ( '' === $segment || '.' === $segment || '..' === $segment ) {
-				fwrite( STDERR, "Runtime packaging policy contains an unsafe surface path.\n" );
-				exit( 1 );
-			}
+		$surfaceKeys = array_keys( $surface );
+		sort( $surfaceKeys );
+		if ( array( 'kind', 'path' ) !== $surfaceKeys ) {
+			fwrite( STDERR, "Runtime packaging policy surface record contains an unsupported field.\n" );
+			exit( 1 );
 		}
 
-		foreach ( $validatedSurfaces as $existingSurface ) {
-			if (
-				$surface === $existingSurface
-				|| str_starts_with( $surface, $existingSurface . '/' )
-				|| str_starts_with( $existingSurface, $surface . '/' )
-			) {
-				fwrite(
-					STDERR,
-					"Runtime packaging policy contains a duplicate or overlapping surface path.\n"
-				);
-				exit( 1 );
-			}
+		$surfacePath = $surface['path'] ?? null;
+		$surfaceKind = $surface['kind'] ?? null;
+		if (
+			! is_string( $surfacePath )
+			|| 1 !== preg_match( '/^[A-Za-z0-9._-]+$/D', $surfacePath )
+			|| '.' === $surfacePath
+			|| '..' === $surfacePath
+			|| ! is_string( $surfaceKind )
+			|| ! in_array( $surfaceKind, array( 'file', 'directory' ), true )
+		) {
+			fwrite( STDERR, "Runtime packaging policy contains an invalid top-level surface.\n" );
+			exit( 1 );
 		}
-		$validatedSurfaces[] = $surface;
+
+		if ( isset( $surfacePaths[ $surfacePath ] ) ) {
+			fwrite( STDERR, "Runtime packaging policy contains a duplicate surface path.\n" );
+			exit( 1 );
+		}
+		$surfacePaths[ $surfacePath ] = true;
+		$validatedSurfaces[]          = array(
+			'path' => $surfacePath,
+			'kind' => $surfaceKind,
+		);
 	}
 
 	if ( 'neutral-updater' === $buildRole ) {
@@ -238,6 +241,10 @@ foreach ( $expected as $name => $identity ) {
 	$reference = $package['source']['reference'];
 
 	if ( $packaging ) {
+		$surfaceSpecs = array_map(
+			static fn( array $surface ): string => $surface['kind'] . ':' . $surface['path'],
+			$identity['surfaces']
+		);
 		printf(
 			"%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			$name,
@@ -245,7 +252,7 @@ foreach ( $expected as $name => $identity ) {
 			$reference,
 			$identity['repository'],
 			$identity['archive_root'],
-			implode( ',', $identity['surfaces'] ),
+			implode( ',', $surfaceSpecs ),
 			$identity['build_role'] ?? '-'
 		);
 		continue;

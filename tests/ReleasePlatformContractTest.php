@@ -9,13 +9,13 @@ use PHPUnit\Framework\TestCase;
 final class ReleasePlatformContractTest extends TestCase {
 	private const RUNTIME_PACKAGES     = array(
 		'ran/updater-support'    => array(
-			'version'    => 'dev-main',
-			'commit'     => '4afba1191b81602741ada8948fcf78a6c7510659',
+			'version'    => 'v0.1.0-beta.2',
+			'commit'     => '83384bb6f4652d8988374867f4103fde63878451',
 			'repository' => 'https://github.com/RocketsAreNostalgic/ran-updater-support.git',
 		),
 		'ran/wp-branch-updater'  => array(
-			'version'    => 'v1.0.0-beta.3',
-			'commit'     => 'd07237618f4ae836920098e00061f728c2af8879',
+			'version'    => 'v1.0.0-beta.4',
+			'commit'     => 'e325811348cc5e24ec2364483698533ca061cb59',
 			'repository' => 'https://github.com/RocketsAreNostalgic/ran-wp-branch-updater.git',
 		),
 		'ran/wp-release-updater' => array(

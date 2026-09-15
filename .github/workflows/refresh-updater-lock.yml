@@ -1,0 +1,68 @@
+name: Refresh updater dependency lock
+
+on:
+  push:
+    branches:
+      - deps/versioned-updater-graph
+    paths:
+      - .github/workflows/refresh-updater-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lock:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: deps/versioned-updater-graph
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+          extensions: zip
+          tools: composer:v2
+
+      - name: Resolve published updater graph
+        run: |
+          set -euo pipefail
+          composer update ran/updater-support ran/wp-branch-updater --with-all-dependencies --no-interaction --prefer-dist --no-progress
+          composer validate --strict --no-check-publish
+          php -r '
+            $lock = json_decode(file_get_contents("composer.lock"), true, flags: JSON_THROW_ON_ERROR);
+            $packages = [];
+            foreach ($lock["packages"] ?? [] as $package) {
+                $packages[$package["name"]] = $package;
+            }
+            $expected = [
+                "ran/updater-support" => ["v0.1.0-beta.2", "83384bb6f4652d8988374867f4103fde63878451"],
+                "ran/wp-branch-updater" => ["v1.0.0-beta.4", "e325811348cc5e24ec2364483698533ca061cb59"],
+            ];
+            foreach ($expected as $name => [$version, $reference]) {
+                if (($packages[$name]["version"] ?? null) !== $version || ($packages[$name]["source"]["reference"] ?? null) !== $reference) {
+                    fwrite(STDERR, "Unexpected resolved identity for {$name}\n");
+                    exit(1);
+                }
+            }
+            if (($packages["ran/wp-branch-updater"]["require"]["ran/updater-support"] ?? null) !== "0.1.0-beta.2") {
+                fwrite(STDERR, "Branch updater does not expose the expected versioned updater-support dependency\n");
+                exit(1);
+            }
+          '
+
+      - name: Commit generated lock
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- composer.json
+          git diff --quiet -- composer.lock && { echo '::error::composer.lock did not change'; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add composer.lock
+          git commit -m 'build: refresh versioned updater lock'
+          git push origin HEAD:deps/versioned-updater-graph

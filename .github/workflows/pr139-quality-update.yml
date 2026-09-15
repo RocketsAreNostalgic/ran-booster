@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           python3 scripts/pr139-quality-update.py
           cp .github/workflows/quality.yml quality-pr139-next.txt
-          git restore .github/workflows/quality.yml .github/workflows/pr139-quality-update.yml scripts/pr139-quality-update.py
+          git restore .github/workflows/quality.yml .github/workflows/pr139-quality-update.yml scripts/pr139-quality-update.py tests/ReleasePlatformContractTest.php
           git diff --check -- quality-pr139-next.txt
           test "$(git status --short)" = '?? quality-pr139-next.txt'
           git config user.name 'Benjamin Rush'

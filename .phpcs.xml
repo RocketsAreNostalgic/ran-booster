@@ -2,7 +2,7 @@
 <ruleset name="RAN Booster Coding Standards">
 	<description>WordPress and PHP compatibility checks for RAN Booster.</description>
 
-	<config name="minimum_supported_wp_version" value="7.0"/>
+	<config name="minimum_wp_version" value="7.0"/>
 	<config name="testVersion" value="8.2-"/>
 
 	<file>.</file>

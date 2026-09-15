@@ -1,0 +1,44 @@
+name: Fix PR 139 Quality contract assertion
+
+on:
+  push:
+    branches:
+      - refactor/runtime-packaging-policy
+    paths:
+      - .github/workflows/pr139-test-contract-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out topic branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/runtime-packaging-policy
+          fetch-depth: 0
+
+      - name: Fix contract assertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/ReleasePlatformContractTest.php')
+          text = path.read_text()
+          old = "\t\tself::assertStringContainsString( 'verify-runtime-dependencies.php --packaging', $quality );\n"
+          new = """\t\tself::assertStringContainsString(\n\t\t\t'git show \"${source_commit}:scripts/verify-runtime-dependencies.php\"',\n\t\t\t$quality\n\t\t);\n\t\tself::assertStringContainsString( 'php \"$verifier_file\" --packaging', $quality );\n"""
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one assertion target, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          git diff --check -- tests/ReleasePlatformContractTest.php
+          git config user.name 'Benjamin Rush'
+          git config user.email 'bnjmnrsh@gmail.com'
+          git add tests/ReleasePlatformContractTest.php
+          git commit -m 'test: assert source-bound packaging verifier'
+          git push origin HEAD:refactor/runtime-packaging-policy

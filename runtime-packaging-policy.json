@@ -1,0 +1,40 @@
+{
+    "schema": "ran-booster-runtime-packaging",
+    "schema_version": 1,
+    "packages": [
+        {
+            "name": "ran/updater-support",
+            "repository": "RocketsAreNostalgic/ran-updater-support",
+            "archive_root": "vendor/ran/updater-support",
+            "surfaces": [
+                "LICENSE",
+                "src"
+            ],
+            "build_role": null
+        },
+        {
+            "name": "ran/wp-branch-updater",
+            "repository": "RocketsAreNostalgic/ran-wp-branch-updater",
+            "archive_root": "vendor/ran/wp-branch-updater",
+            "surfaces": [
+                "LICENSE",
+                "bootstrap.php",
+                "src"
+            ],
+            "build_role": null
+        },
+        {
+            "name": "ran/wp-release-updater",
+            "repository": "RocketsAreNostalgic/ran-wp-release-updater",
+            "archive_root": "vendor/ran/wp-release-updater",
+            "surfaces": [
+                "LICENSE",
+                "bootstrap.php",
+                "runtime-copy.json",
+                "runtime.php",
+                "src"
+            ],
+            "build_role": "neutral-updater"
+        }
+    ]
+}

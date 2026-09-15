@@ -41,7 +41,10 @@ never remove or silently weaken those local guarantees.
   method, checks and unresolved risks, then merge only after the owner explicitly
   authorizes that specific pull request. This includes Release Please pull
   requests even when repository permissions or branch rules allow a direct
-  merge.
+  merge. For ordinary iterative or agent-developed PRs, prefer squash so the
+  reviewed PR lands as one meaningful default-branch commit. Use a merge commit
+  only when the PR's internal commit sequence is deliberately meaningful and
+  worth preserving. Rebase merge is not part of the normal RAN workflow.
 - Never commit or print personal access tokens, Bitbucket tokens, webhook
   secrets, the site-owned secrets sidecar, logs, `vendor`, or `node_modules`.
 - Keep GitHub and Bitbucket behavior behind provider contracts.

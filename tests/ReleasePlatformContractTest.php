@@ -302,7 +302,11 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertStringContainsString( 'runtime-packaging-policy.json', $qualityTrustPaths );
 		self::assertStringNotContainsString( 'runtime-packaging-policy.json', $releaseTrustPaths );
 		self::assertStringNotContainsString( 'Check out locked neutral updater source', $quality );
-		self::assertStringContainsString( 'verify-runtime-dependencies.php --packaging', $quality );
+		self::assertStringContainsString(
+			'git show "${source_commit}:scripts/verify-runtime-dependencies.php"',
+			$quality
+		);
+		self::assertStringContainsString( 'php "$verifier_file" --packaging', $quality );
 		self::assertStringNotContainsString(
 			'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3',
 			$quality

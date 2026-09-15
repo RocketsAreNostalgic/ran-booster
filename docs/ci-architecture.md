@@ -25,6 +25,11 @@ release-control or evidence-input paths change, so a changed workflow, release
 script, dependency manifest, or runtime packaging policy cannot promote stale
 pull-request evidence.
 
+`RELEASE.md` is the canonical human-readable inventory that separates the
+release-control/release-execution paths from ordinary evidence-input paths.
+Contract tests compare that inventory with Quality's executable changed-file
+classifier. This document deliberately does not repeat the full catalogue.
+
 The Release Please workflow is the bounded mutator. It is triggered only by a
 successful push-triggered Quality run on `main`, checks out that exact Quality
 commit, and re-establishes the merged pull-request identity before exercising

@@ -17,10 +17,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 	/** @var string|callable|null */
 	private string|Closure|null $accessToken;
 
-	/** @var Closure(): int */
-	private Closure $maximumArtifactBytes;
-
-	private const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
+	/** @var (Closure(): int)|null */
+	private ?Closure $maximumArtifactBytes;
 
 	/** @param string|callable|null $accessToken */
 	public function __construct(
@@ -42,18 +40,14 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 		$this->accessToken          = is_string( $accessToken )
 			? static fn (): string => $accessToken
 			: ( null === $accessToken ? null : Closure::fromCallable( $accessToken ) );
-		$this->maximumArtifactBytes = null === $maximumArtifactBytes
-			? static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES
-			: Closure::fromCallable( $maximumArtifactBytes );
+		$this->maximumArtifactBytes = null === $maximumArtifactBytes ? null : Closure::fromCallable( $maximumArtifactBytes );
 	}
-
 
 	public function register(): bool {
 		try {
 			if ( null === $this->updater ) {
-				$method               = 'plugin' === $this->packageType ? 'plugin' : 'theme';
-				$maximumArtifactBytes = ( $this->maximumArtifactBytes )();
-				$arguments            = array(
+				$method    = 'plugin' === $this->packageType ? 'plugin' : 'theme';
+				$arguments = array(
 					'github',
 					$this->metadataFile,
 					$this->repository,
@@ -62,8 +56,8 @@ final class GitHubReleaseNativeTarget implements RepositoryReleaseNativeTarget {
 					$this->deploymentPolicy,
 					$this->accessToken,
 				);
-				if ( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES !== $maximumArtifactBytes ) {
-					$arguments[] = $maximumArtifactBytes;
+				if ( null !== $this->maximumArtifactBytes ) {
+					$arguments[] = ( $this->maximumArtifactBytes )();
 				}
 				$this->updater = $this->registrar->{$method}( ...$arguments );
 			}

@@ -7,22 +7,24 @@ namespace RAN;
 use InvalidArgumentException;
 
 /**
- * Resolve Booster's effective acquired-artifact ceiling for one managed package.
+ * Resolve and validate Booster's acquired-artifact ceiling.
  *
- * Package-specific policy wins over the legacy site-wide default. Updater
- * packages receive only the resolved integer and never depend on Booster's
- * configuration names.
+ * Site configuration is resolved once at the relevant Booster composition or
+ * admission boundary. Durable requests retain their already-resolved integer
+ * and validate it with requireValid(); there is no non-durable per-package
+ * override API.
  */
 final class PackageArtifactLimit {
 	public const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
 	public const MINIMUM_ARTIFACT_BYTES         = 1048576;
 	public const MAXIMUM_ARTIFACT_BYTES         = 536870911;
 
-	public static function resolve( ?int $packageOverride ): int {
-		if ( null !== $packageOverride ) {
-			return self::requireValid( $packageOverride );
-		}
-
+	/**
+	 * The null-only argument preserves source compatibility with callers from the
+	 * removed future-override seam without accepting any package-specific limit.
+	 */
+	public static function resolve( null $legacyNull = null ): int {
+		unset( $legacyNull );
 		if ( defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ) {
 			return self::requireValid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
 		}

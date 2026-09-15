@@ -10,17 +10,18 @@ use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReference;
+use RuntimeException;
 use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use Tests\Booster\GitHub\Support\NeutralReleaseUpdaterFixtures;
 use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
 
-/** Proves the Core-owned archive policy is resolved only at release-operation boundaries. */
+/** Proves GitHub consumes host/updater archive policy without owning it. */
 final class ArchiveLimitBoundaryTest extends TestCase {
 	protected function setUp(): void {
 		NeutralReleaseUpdaterFixtures::reset();
 	}
 
-	public function testReleaseInspectionResolvesAndValidatesNonDefaultLimitLazily(): void {
+	public function testReleaseInspectionResolvesAndValidatesSuppliedLimitLazily(): void {
 		$registrar  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
@@ -80,7 +81,7 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		self::assertSame( 1048576, $registrar->arguments[6] );
 	}
 
-	public function testDefaultReleaseSourceUsesTheSevenArgumentRegistrarContract(): void {
+	public function testReleaseSourceWithoutHostLimitUsesUpdaterOwnedDefaultContract(): void {
 		$registrar  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
@@ -91,10 +92,9 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 				mixed $repository,
 				mixed $repositoryId,
 				mixed $channel,
-				mixed $accessToken,
-				mixed $maximumArtifactBytes
+				mixed $accessToken
 			): object {
-				$this->arguments = array( $provider, $packageType, $repository, $repositoryId, $channel, $accessToken, $maximumArtifactBytes );
+				$this->arguments = array( $provider, $packageType, $repository, $repositoryId, $channel, $accessToken );
 
 				return new class() {
 					/** @return array<string, mixed> */
@@ -121,42 +121,35 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		$repository = new RepositoryReference( 'owner/example', '123456789', false, null );
 
 		$provider->listReleaseCandidates( 'plugin', $repository, 'stable' );
-		self::assertCount( 7, $registrar->arguments );
-		self::assertSame( 52428800, $registrar->arguments[6] );
+		self::assertCount( 6, $registrar->arguments );
 	}
 
-	public function testNativeTargetOnlyAddsTheOptionalArgumentForNonDefaultLimit(): void {
-		$nonDefault = new class() {
-			/** @var list<mixed> */
-			public array $arguments = array();
+	public function testUnavailableReleaseRuntimeFailsOnlyAtReleaseBoundary(): void {
+		$provider = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			new class() {
+				public function releases( mixed ...$arguments ): object {
+					unset( $arguments );
 
-			public function plugin( mixed ...$arguments ): object {
-				$this->arguments = $arguments;
-
-				return new class() {
-					public function register(): bool {
-						return true;
-					}
-				};
+					return new class() {};
+				}
 			}
-		};
-		$target     = new GitHubReleaseNativeTarget(
-			$nonDefault,
-			'plugin',
-			'/wordpress/wp-content/plugins/example/example.php',
-			'owner/example',
-			'42',
-			null,
-			'stable',
-			'manual',
-			static fn (): int => 1048576
 		);
 
-		self::assertTrue( $target->register() );
-		self::assertCount( 8, $nonDefault->arguments );
-		self::assertSame( 1048576, $nonDefault->arguments[7] );
+		self::assertSame( 'gh', $provider->getMetadata()->code->value );
 
-		$default = new class() {
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionCode( 503 );
+		$provider->listReleaseCandidates(
+			'plugin',
+			new RepositoryReference( 'owner/example', '123456789', false, null ),
+			'stable'
+		);
+	}
+
+	public function testNativeTargetForwardsSuppliedHostLimit(): void {
+		$runtime = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
 
@@ -171,7 +164,39 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 			}
 		};
 		$target  = new GitHubReleaseNativeTarget(
-			$default,
+			$runtime,
+			'plugin',
+			'/wordpress/wp-content/plugins/example/example.php',
+			'owner/example',
+			'42',
+			null,
+			'stable',
+			'manual',
+			static fn (): int => 1048576
+		);
+
+		self::assertTrue( $target->register() );
+		self::assertCount( 8, $runtime->arguments );
+		self::assertSame( 1048576, $runtime->arguments[7] );
+	}
+
+	public function testDirectNativeTargetWithoutHostLimitUsesUpdaterOwnedDefaultContract(): void {
+		$runtime = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function plugin( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					public function register(): bool {
+						return true;
+					}
+				};
+			}
+		};
+		$target  = new GitHubReleaseNativeTarget(
+			$runtime,
 			'plugin',
 			'/wordpress/wp-content/plugins/example/example.php',
 			'owner/example',
@@ -182,6 +207,52 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		);
 
 		self::assertTrue( $target->register() );
-		self::assertCount( 7, $default->arguments );
+		self::assertCount( 7, $runtime->arguments );
+	}
+
+	public function testProviderCreatedNativeTargetWithoutHostLimitUsesUpdaterOwnedDefaultContract(): void {
+		$runtime  = new class() {
+			/** @var list<mixed> */
+			public array $arguments = array();
+
+			public function plugin( mixed ...$arguments ): object {
+				$this->arguments = $arguments;
+
+				return new class() {
+					public function register(): bool {
+						return true;
+					}
+				};
+			}
+		};
+		$provider = GitHubProvider::create(
+			new RepositoryResolverSecretsStub(),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			$runtime
+		);
+		$target   = $provider->createNativeTarget(
+			'plugin',
+			new RepositoryReference( 'owner/example', '42', false, null ),
+			'/wordpress/wp-content/plugins/example/example.php',
+			'example',
+			'example/example.php',
+			'stable',
+			'manual'
+		);
+
+		self::assertTrue( $target->register() );
+		self::assertCount( 7, $runtime->arguments );
+	}
+
+	public function testGitHubReleaseAdaptersDoNotOwnBoosterDefaultLiteral(): void {
+		foreach ( array( GitHubProvider::class, GitHubReleaseNativeTarget::class ) as $class ) {
+			$file = ( new \ReflectionClass( $class ) )->getFileName();
+			self::assertIsString( $file );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- source-level ownership regression assertion.
+			$source = file_get_contents( $file );
+			self::assertIsString( $source );
+			self::assertStringNotContainsString( '52428800', $source );
+			self::assertStringNotContainsString( 'DEFAULT_MAXIMUM_ARTIFACT_BYTES', $source );
+		}
 	}
 }

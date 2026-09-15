@@ -87,10 +87,10 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	private GitHubRepositoryReleaseWorkflow $releaseWorkflow;
 	private object $registrar;
 
-	/** @var Closure(): int */
-	private Closure $maximumArtifactBytes;
-
-	private const DEFAULT_MAXIMUM_ARTIFACT_BYTES = 52428800;
+	/**
+	 * @var (Closure(): int)|null Host-resolved archive-limit supplier.
+	 */
+	private ?Closure $maximumArtifactBytes;
 
 	/** @var array<string, GitHubReleaseNativeTarget> */
 	private array $nativeTargets = array();
@@ -139,11 +139,9 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		RepositoryWebhookClient $webhookClient,
 		object $registrar
 	) {
+		$resolver                   = array( $registrar, 'maximumArtifactBytes' );
 		$this->registrar            = $registrar;
-		$resolver                   = is_callable( array( $registrar, 'maximumArtifactBytes' ) )
-			? Closure::fromCallable( array( $registrar, 'maximumArtifactBytes' ) )
-			: static fn (): int => self::DEFAULT_MAXIMUM_ARTIFACT_BYTES;
-		$this->maximumArtifactBytes = static fn (): int => $resolver();
+		$this->maximumArtifactBytes = is_callable( $resolver ) ? Closure::fromCallable( $resolver ) : null;
 		$this->credentials          = $credentials;
 		$this->browser              = $browser;
 		$this->webhooks             = $webhooks;
@@ -441,7 +439,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			$this->releaseAccessToken( $repository ),
 			$channel,
 			$deploymentPolicy,
-			fn (): int => $this->maximumArtifactBytes()
+			$this->maximumArtifactBytes
 		);
 		$this->nativeTargets[ self::nativeTargetKey( $packageType, $installedIdentifier ) ] = $target;
 
@@ -535,7 +533,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			throw new RuntimeException( 'GitHub could not inspect the selected release.', 502 );
 		}
 		try {
-			$facts = $result['value'];
+			$maximumArtifactBytes = $this->maximumArtifactBytes();
+			$facts                = $result['value'];
 			if ( ! hash_equals( $providerReleaseId, $facts['release_identity'] ?? '' )
 				|| ! hash_equals( $tag, $facts['tag'] ?? '' )
 				|| ! hash_equals( $packageType, $facts['target_type'] ?? '' )
@@ -543,7 +542,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
 				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
 				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
-				|| $this->maximumArtifactBytes() !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
+				|| ( null !== $maximumArtifactBytes && $maximumArtifactBytes !== ( $facts['maximum_artifact_bytes'] ?? null ) ) ) {
 				throw new RuntimeException();
 			}
 			return new RepositoryReleaseInspection(
@@ -605,7 +604,8 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 			throw new RuntimeException( 'GitHub could not acquire the selected release.', 502 );
 		}
 		try {
-			$facts = $result['value']['inspection'];
+			$maximumArtifactBytes = $this->maximumArtifactBytes();
+			$facts                = $result['value']['inspection'];
 			if ( ! hash_equals( $providerReleaseId, $facts['release_identity'] )
 				|| ! hash_equals( $tag, $facts['tag'] )
 				|| ! hash_equals( $packageType, $facts['target_type'] )
@@ -614,7 +614,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! hash_equals( $this->expectedUpdateUri( $repository ), $facts['canonical_update_uri'] ?? '' )
 				|| ! hash_equals( $repository->locator, $facts['repository_locator'] ?? '' )
 				|| ! hash_equals( (string) $repository->providerRepositoryId, $facts['repository_identity'] ?? '' )
-				|| $this->maximumArtifactBytes() !== ( $facts['maximum_artifact_bytes'] ?? null ) ) {
+				|| ( null !== $maximumArtifactBytes && $maximumArtifactBytes !== ( $facts['maximum_artifact_bytes'] ?? null ) ) ) {
 				throw new RuntimeException();
 			}
 
@@ -784,13 +784,17 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		if ( null === $repositoryId ) {
 			throw new InvalidArgumentException( 'The GitHub release service configuration is unavailable.' );
 		}
+		$arguments            = array( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ) );
 		$maximumArtifactBytes = $this->maximumArtifactBytes();
+		if ( null !== $maximumArtifactBytes ) {
+			$arguments[] = $maximumArtifactBytes;
+		}
 
-		return $this->registrar->releases( 'github', $packageType, $repository->locator, $repositoryId, $channel, $this->releaseAccessToken( $repository ), $maximumArtifactBytes );
+		return $this->registrar->releases( ...$arguments );
 	}
 
-	private function maximumArtifactBytes(): int {
-		return ( $this->maximumArtifactBytes )();
+	private function maximumArtifactBytes(): ?int {
+		return null === $this->maximumArtifactBytes ? null : ( $this->maximumArtifactBytes )();
 	}
 
 	private function ensureDirectFilesystem(): bool {

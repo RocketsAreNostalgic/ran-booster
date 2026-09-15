@@ -37,7 +37,7 @@ final readonly class DeploymentRequest {
 			throw new InvalidArgumentException( 'The initiating user ID must be positive.' );
 		}
 		$this->maximumArtifactBytes = null === $maximumArtifactBytes
-			? PackageArtifactLimit::resolve( null )
+			? PackageArtifactLimit::resolve()
 			: PackageArtifactLimit::requireValid( $maximumArtifactBytes );
 		if ( strlen( $this->toJson() ) > self::MAX_JSON_BYTES ) {
 			throw new InvalidArgumentException( 'The deployment request is too large.' );

@@ -81,26 +81,6 @@ jobs:
           fi
 
           merged_pr_number="$(jq -er '.number' <<< "$merged_pr")"
-          files_json="$(gh api --paginate --slurp \
-            "repos/${GITHUB_REPOSITORY}/pulls/${merged_pr_number}/files?per_page=100")"
-          for trust_path in \
-            .github/workflows/quality.yml \
-            .github/workflows/release-please.yml \
-            scripts/build-release.sh \
-            scripts/verify-runtime-dependencies.php \
-            scripts/verify-release.sh \
-            scripts/validate-release-candidate.sh \
-            scripts/select-merged-release-pr.sh \
-            scripts/reconcile-release-candidate-marker.sh \
-            scripts/verify-release-tag-target.sh \
-            scripts/has-trusted-release-candidate-run.sh \
-            scripts/verify-immutable-release-assets.sh; do
-            if jq -e --arg path "$trust_path" 'add | any(.[]; .filename == $path)' <<< "$files_json" >/dev/null; then
-              printf 'release-required=false\nrelease-please-required=false\n' >> "$GITHUB_OUTPUT"
-              echo "::notice::Merged pull request ${merged_pr_number} changed release authority ${trust_path}; privileged reconciliation is intentionally deferred."
-              exit 0
-            fi
-          done
 
           if ! jq -e \
             --arg bot 'github-actions[bot]' \

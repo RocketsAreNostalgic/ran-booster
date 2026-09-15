@@ -61,6 +61,21 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'all(.[]; .filename != $path)', $workflow );
 	}
 
+
+	public function testReleasePromotesSuccessfulExactMainQualityWithoutSelfDeferral(): void {
+		$workflow = $this->workflow( 'release-please.yml' );
+
+		self::assertStringContainsString( "github.event.workflow_run.event == 'push'", $workflow );
+		self::assertStringContainsString( "github.event.workflow_run.conclusion == 'success'", $workflow );
+		self::assertStringContainsString( "github.event.workflow_run.head_branch == 'main'", $workflow );
+		self::assertStringContainsString( 'test "$(git rev-parse HEAD)" = "$RAN_QUALITY_COMMIT"', $workflow );
+		self::assertStringContainsString( 'and .merge_commit_sha == $merge', $workflow );
+		self::assertStringContainsString( 'merged_pr_number="$(jq -er \'.number\' <<< "$merged_pr")"', $workflow );
+		self::assertStringContainsString( '[[ "$current_main" == "$RAN_QUALITY_COMMIT" ]] && release_please_required=true', $workflow );
+		self::assertStringNotContainsString( 'for trust_path in \\', $workflow );
+		self::assertStringNotContainsString( 'privileged reconciliation is intentionally deferred', $workflow );
+	}
+
 	public function testQualityFetchesCandidateCommitsWithEphemeralTokenCredentials(): void {
 		$workflow         = $this->workflow( 'quality.yml' );
 		$credentialHelper = 'credential.helper=!f() { printf "%s\\n" "username=x-access-token" "password=$GH_TOKEN"; }; f';

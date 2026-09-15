@@ -297,10 +297,10 @@ final class ReleasePlatformContractTest extends TestCase {
 		$quality           = $this->readText( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
 		$release           = $this->readText( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );
 		$qualityTrustPaths = $this->trustPathBlock( $quality );
-		$releaseTrustPaths = $this->trustPathBlock( $release );
 
 		self::assertStringContainsString( 'runtime-packaging-policy.json', $qualityTrustPaths );
-		self::assertStringNotContainsString( 'runtime-packaging-policy.json', $releaseTrustPaths );
+		self::assertStringNotContainsString( 'runtime-packaging-policy.json', $release );
+		self::assertStringNotContainsString( 'for trust_path in \\', $release );
 		self::assertStringNotContainsString( 'Check out locked neutral updater source', $quality );
 		self::assertStringContainsString(
 			'git show "${source_commit}:scripts/verify-runtime-dependencies.php"',

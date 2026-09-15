@@ -7,8 +7,14 @@
             "repository": "RocketsAreNostalgic/ran-updater-support",
             "archive_root": "vendor/ran/updater-support",
             "surfaces": [
-                "LICENSE",
-                "src"
+                {
+                    "path": "LICENSE",
+                    "kind": "file"
+                },
+                {
+                    "path": "src",
+                    "kind": "directory"
+                }
             ],
             "build_role": null
         },
@@ -17,9 +23,18 @@
             "repository": "RocketsAreNostalgic/ran-wp-branch-updater",
             "archive_root": "vendor/ran/wp-branch-updater",
             "surfaces": [
-                "LICENSE",
-                "bootstrap.php",
-                "src"
+                {
+                    "path": "LICENSE",
+                    "kind": "file"
+                },
+                {
+                    "path": "bootstrap.php",
+                    "kind": "file"
+                },
+                {
+                    "path": "src",
+                    "kind": "directory"
+                }
             ],
             "build_role": null
         },
@@ -28,11 +43,26 @@
             "repository": "RocketsAreNostalgic/ran-wp-release-updater",
             "archive_root": "vendor/ran/wp-release-updater",
             "surfaces": [
-                "LICENSE",
-                "bootstrap.php",
-                "runtime-copy.json",
-                "runtime.php",
-                "src"
+                {
+                    "path": "LICENSE",
+                    "kind": "file"
+                },
+                {
+                    "path": "bootstrap.php",
+                    "kind": "file"
+                },
+                {
+                    "path": "runtime-copy.json",
+                    "kind": "file"
+                },
+                {
+                    "path": "runtime.php",
+                    "kind": "file"
+                },
+                {
+                    "path": "src",
+                    "kind": "directory"
+                }
             ],
             "build_role": "neutral-updater"
         }

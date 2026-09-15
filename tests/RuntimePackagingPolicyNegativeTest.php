@@ -17,7 +17,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 			self::assertIsArray( $policy['packages'][0] ?? null );
 			$policy['packages'][0]['name']         = $packageName;
 			$policy['packages'][0]['archive_root'] = 'vendor/' . $packageName;
-			$policyPath = $this->writeTemporaryJson( $policy );
+			$policyPath                            = $this->writeTemporaryJson( $policy );
 
 			try {
 				$result = $this->runVerifier( dirname( __DIR__ ) . '/composer.lock', $policyPath );
@@ -40,7 +40,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 			$lock = $this->readJson( dirname( __DIR__ ) . '/composer.lock' );
 			self::assertIsArray( $lock['packages'][0] ?? null );
 			$lock['packages'][0]['version'] = $version;
-			$lockPath = $this->writeTemporaryJson( $lock );
+			$lockPath                       = $this->writeTemporaryJson( $lock );
 
 			try {
 				$result = $this->runVerifier( $lockPath, dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
@@ -56,7 +56,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$lock = $this->readJson( dirname( __DIR__ ) . '/composer.lock' );
 		self::assertIsArray( $lock['packages'][0] ?? null );
 		$lock['packages'][0]['version'] = 'v1.2.3+dist.1';
-		$lockPath = $this->writeTemporaryJson( $lock );
+		$lockPath                       = $this->writeTemporaryJson( $lock );
 
 		try {
 			$result = $this->runVerifier( $lockPath, dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
@@ -70,7 +70,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$policy = $this->readJson( dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
 		self::assertIsArray( $policy['packages'][0]['surfaces'][0] ?? null );
 		$policy['packages'][0]['surfaces'][0]['kind'] = 'blob';
-		$policyPath = $this->writeTemporaryJson( $policy );
+		$policyPath                                   = $this->writeTemporaryJson( $policy );
 
 		try {
 			$result = $this->runVerifier( dirname( __DIR__ ) . '/composer.lock', $policyPath );
@@ -197,7 +197,11 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$exit = proc_close( $process );
 		self::assertIsString( $stdout );
 		self::assertIsString( $stderr );
-		return array( 'exit' => $exit, 'stdout' => $stdout, 'stderr' => $stderr );
+		return array(
+			'exit'   => $exit,
+			'stdout' => $stdout,
+			'stderr' => $stderr,
+		);
 	}
 
 	/**

@@ -1,0 +1,87 @@
+name: Apply path boundary repair
+
+on:
+  push:
+    branches:
+      - refactor/shared-repository-relative-path
+    paths:
+      - .github/workflows/apply-path-boundary-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/shared-repository-relative-path
+          fetch-depth: 0
+
+      - name: Apply exact boundary edits
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one match, found {count}')
+              file.write_text(text.replace(old, new))
+
+          replace(
+              'RAN/Booster/GitHub/RepositoryBrowser.php',
+              'use RAN\\PackageSubdirectory;\n',
+              'use RAN\\UpdaterSupport\\V1\\RepositoryRelativePath;\n',
+          )
+          replace(
+              'RAN/Booster/GitHub/RepositoryBrowser.php',
+              "\t\t$fullName = $this->validateRepositoryName( $fullName );\n\t\t$path     = PackageSubdirectory::normalize( $path );\n\t\tif ( null === $path || 1 !== preg_match( '/^[0-9a-f]{40}$/i', $ref ) ) {\n\t\t\tthrow new RuntimeException( 'The GitHub repository path check is invalid.', 400 );\n\t\t}\n",
+              "\t\t$fullName = $this->validateRepositoryName( $fullName );\n\t\ttry {\n\t\t\t$path = RepositoryRelativePath::normalize( $path );\n\t\t} catch ( InvalidArgumentException $exception ) {\n\t\t\tthrow new RuntimeException( 'The GitHub repository path check is invalid.', 400, $exception );\n\t\t}\n\t\tif ( 1 !== preg_match( '/^[0-9a-f]{40}$/i', $ref ) ) {\n\t\t\tthrow new RuntimeException( 'The GitHub repository path check is invalid.', 400 );\n\t\t}\n",
+          )
+          replace(
+              'tests/Booster/GitHub/bootstrap.php',
+              "\t\t\t'RAN\\\\Admin\\\\Interaction\\\\'       => $ranBoosterRoot . '/RAN/Admin/Interaction/',\n\t\t\t'Tests\\\\Booster\\\\GitHub\\\\'        => __DIR__ . '/',\n",
+              "\t\t\t'RAN\\\\Admin\\\\Interaction\\\\'       => $ranBoosterRoot . '/RAN/Admin/Interaction/',\n\t\t\t'RAN\\\\UpdaterSupport\\\\V1\\\\'        => $ranBoosterRoot . '/vendor/ran/updater-support/src/',\n\t\t\t'Tests\\\\Booster\\\\GitHub\\\\'        => __DIR__ . '/',\n",
+          )
+          replace(
+              'tests/Booster/GitHub/bootstrap.php',
+              "\t\tif ( 'RAN\\\\PackageSubdirectory' === $class ) {\n\t\t\t// RepositoryDescriptor and the path-inspection capability share this\n\t\t\t// Core-owned repository-relative path validator.\n\t\t\trequire $ranBoosterRoot . '/RAN/PackageSubdirectory.php';\n\t\t\treturn;\n\t\t}\n",
+              "\t\tif ( 'RAN\\\\PackageSubdirectory' === $class ) {\n\t\t\t// RepositoryDescriptor remains a host contract and reaches the Core\n\t\t\t// wrapper transitively; GitHub implementation code no longer imports it.\n\t\t\trequire $ranBoosterRoot . '/RAN/PackageSubdirectory.php';\n\t\t\treturn;\n\t\t}\n",
+          )
+          replace(
+              'tests/Booster/GitHub/ModuleDependencyBoundaryTest.php',
+              'private const ALLOWED_CORE_IMPORTS = array(',
+              'private const ALLOWED_IMPORTS = array(',
+          )
+          replace(
+              'tests/Booster/GitHub/ModuleDependencyBoundaryTest.php',
+              "\t\t'RAN\\Deployment\\PreparedArtifact',\n\t\t'RAN\\PackageSubdirectory',\n",
+              "\t\t'RAN\\Deployment\\PreparedArtifact',\n\t\t'RAN\\UpdaterSupport\\V1\\RepositoryRelativePath',\n",
+          )
+          replace(
+              'tests/Booster/GitHub/ModuleDependencyBoundaryTest.php',
+              'public function testModuleImportsOnlyTheExplicitProviderApiAllowlist(): void {',
+              'public function testModuleImportsOnlyTheExplicitBoundaryAllowlist(): void {',
+          )
+          replace(
+              'tests/Booster/GitHub/ModuleDependencyBoundaryTest.php',
+              '$allowed = self::ALLOWED_CORE_IMPORTS;',
+              '$allowed = self::ALLOWED_IMPORTS;',
+          )
+
+          Path('.github/workflows/apply-path-boundary-fix.yml').unlink()
+
+      - name: Commit boundary repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add RAN/Booster/GitHub/RepositoryBrowser.php tests/Booster/GitHub/bootstrap.php tests/Booster/GitHub/ModuleDependencyBoundaryTest.php .github/workflows/apply-path-boundary-fix.yml
+          git commit -m 'refactor: remove GitHub path-policy Core coupling'
+          git push origin HEAD:refactor/shared-repository-relative-path

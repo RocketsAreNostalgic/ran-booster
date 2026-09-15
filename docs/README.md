@@ -14,6 +14,9 @@ sanitized Booster-specific evidence.
   records Provider API 10 exact-code collision, credential-custody, and
   same-vendor coexistence behavior without presenting proposed hardening as
   current protection.
+- [Provider release-workflow capability](provider-release-workflow-api.md)
+  records the frozen workflow API 1 compatibility contract and the provider-
+  neutral API 2 facet without changing the Provider API 10 registration seam.
 
 Core architecture, release, portability, and security contracts remain in the
 named documents beside this index.

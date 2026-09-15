@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Admin\ReleaseManagement\Support;
 
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\PreparedArchive;
 use RAN\RepositoryProvider\ProviderCode;
@@ -26,13 +24,15 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RuntimeException;
 
-final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagement, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
+final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV2, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	/** @var list<array{operation:string,credential_id:?string,channel?:string,key?:string,confirmation?:string}> */
 	public array $calls           = array();
 	public int $statusReads       = 0;
@@ -72,7 +72,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 	public function createNativeTarget( string $packageType, RepositoryReference $repository, string $metadataFile, string $packageRoot, string $installedIdentifier, string $channel, string $deploymentPolicy ): RepositoryReleaseNativeTarget {
 		unset( $packageType, $repository, $metadataFile, $packageRoot, $installedIdentifier, $channel, $deploymentPolicy );
 		throw new RuntimeException( 'Native targets are outside this fixture.' ); }
-	public function workflowStatus( ReleaseTrackingStatus $status ): RepositoryReleaseWorkflowStatus {
+	public function workflowStatus( RepositoryReleaseWorkflowTarget $status ): RepositoryReleaseWorkflowStatus {
 		++$this->statusReads;
 		$this->throwIfNeeded();
 		return $this->status ?? new RepositoryReleaseWorkflowStatus(
@@ -87,7 +87,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 				),
 			)
 		); }
-	public function workflowPreview( ReleaseTrackingStatus $status, string $key ): ?RepositoryReleaseWorkflowPreview {
+	public function workflowPreview( RepositoryReleaseWorkflowTarget $status, string $key ): ?RepositoryReleaseWorkflowPreview {
 		unset( $status );
 		$this->throwIfNeeded();
 		$this->calls[] = array(
@@ -96,10 +96,10 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 			'key'           => $key,
 		);
 		return $this->preview; }
-	public function workflowInspect( ReleaseTrackingStatus $status, string $channel, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflowInspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status, $preflight );
 		return $this->result( 'inspect', $credentialId, array( 'channel' => $channel ) ); }
-	public function workflowSetup( ReleaseTrackingStatus $status, string $key, string $confirmation, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflowSetup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status, $preflight );
 		return $this->result(
 			'setup',
@@ -109,13 +109,13 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 				'confirmation' => $confirmation,
 			)
 		); }
-	public function workflowOutcome( ReleaseTrackingStatus $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflowOutcome( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status );
 		return $this->result( 'outcome', $credentialId ); }
-	public function workflowInspectUpdate( ReleaseTrackingStatus $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflowInspectUpdate( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status );
 		return $this->result( 'update_inspect', $credentialId ); }
-	public function workflowSetupUpdate( ReleaseTrackingStatus $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflowSetupUpdate( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status );
 		return $this->result(
 			'update_setup',

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use Throwable;
 
 /** GitHub API 2 assessment, preview, mutation, readback and outcome owner. */
@@ -23,7 +23,7 @@ final class WorkflowApplicationCoordinator {
 	) {
 	}
 
-	public function inspect( ReleaseTrackingStatus $status, string $channel, ReleaseTrackingPreflight $preflight, string $token ): array {
+	public function inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, string $token ): array {
 		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) || $this->records->occupied( $status->providerRepositoryId() ) ) {
 			return $this->result( $status, 'invalid_request' );
 		}
@@ -49,7 +49,7 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	/** @param array<string,string> $preflightNonces */
-	public function setup( ReleaseTrackingStatus $status, string $key, string $confirmation, ReleaseTrackingPreflight $preflight, string $token ): array {
+	public function setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, string $token ): array {
 		$preview = $this->preview( $key, $status );
 		if ( null === $preview || 'bootstrap' !== $preview['kind'] || '' === $token || ! hash_equals( $preview['repository'], trim( $confirmation ) ) ) {
 			return $this->result( $status, 'invalid_request', false, $key );
@@ -74,7 +74,7 @@ final class WorkflowApplicationCoordinator {
 		return $this->openDraft( $status, $key, $remote, 'bootstrap', '', $token );
 	}
 
-	public function inspectUpdate( ReleaseTrackingStatus $status, string $token ): array {
+	public function inspectUpdate( RepositoryReleaseWorkflowTarget $status, string $token ): array {
 		$record = $this->currentRecord( $status );
 		if ( null === $record ) {
 			return $this->result( $status, 'invalid_request' );
@@ -108,7 +108,7 @@ final class WorkflowApplicationCoordinator {
 		return in_array( $code, self::PREFLIGHT_REASON_CODES, true ) ? $code : 'preflight_contract_unavailable';
 	}
 
-	public function setupUpdate( ReleaseTrackingStatus $status, string $key, string $confirmation, string $token ): array {
+	public function setupUpdate( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, string $token ): array {
 		$preview = $this->preview( $key, $status );
 		$record  = $this->currentRecord( $status );
 		if ( null === $record || null === $preview || 'template_update' !== $preview['kind']
@@ -125,7 +125,7 @@ final class WorkflowApplicationCoordinator {
 		return $this->openDraft( $status, $key, $remote, 'template_update', $remote['old_pack_version'], $token );
 	}
 
-	public function outcome( ReleaseTrackingStatus $status, string $token ): array {
+	public function outcome( RepositoryReleaseWorkflowTarget $status, string $token ): array {
 		$record = $this->currentRecord( $status );
 		if ( null === $record ) {
 			return $this->result( $status, 'invalid_request' );
@@ -159,12 +159,12 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	/** Check stored workflow state before an adapter reads credential material. */
-	public function hasCurrentRecord( ReleaseTrackingStatus $status ): bool {
+	public function hasCurrentRecord( RepositoryReleaseWorkflowTarget $status ): bool {
 		return null !== $this->currentRecord( $status );
 	}
 
 	/** @return array<string,int|string>|null */
-	private function currentRecord( ReleaseTrackingStatus $status ): ?array {
+	private function currentRecord( RepositoryReleaseWorkflowTarget $status ): ?array {
 		$record = $this->records->find( $status->providerRepositoryId() );
 		if ( null === $record || ! hash_equals( $status->type(), $record['package_type'] )
 			|| ! hash_equals( $status->identifier(), $record['package_identifier'] ) ) {
@@ -183,7 +183,7 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	/** Return only a strict, current-user, current-package schema 2 preview. */
-	public function preview( string $key, ReleaseTrackingStatus $status ): ?array {
+	public function preview( string $key, RepositoryReleaseWorkflowTarget $status ): ?array {
 		$preview       = get_transient( self::PREVIEW_PREFIX . $key );
 		$validIdentity = static function ( mixed $identity ): bool {
 			if ( ! is_array( $identity ) || array_keys( $identity ) !== self::IDENTITY_FIELDS
@@ -244,7 +244,7 @@ final class WorkflowApplicationCoordinator {
 		return $preview;
 	}
 
-	private function bootstrapBundle( ReleaseTrackingStatus $status, string $token, ?TemplatePack $pack = null, bool $adopt = false ): array {
+	private function bootstrapBundle( RepositoryReleaseWorkflowTarget $status, string $token, ?TemplatePack $pack = null, bool $adopt = false ): array {
 		$target = $this->target( $status, $token );
 		if ( 'ok' !== $target['code'] ) {
 			return $target;
@@ -259,11 +259,11 @@ final class WorkflowApplicationCoordinator {
 		if ( 'ok' !== $template['code'] ) {
 			return $template;
 		}
-		$assessment = $this->assessor->assess( $target['snapshot'], $status->type(), $status->packageRoot(), $status->installedVersion(), $status->eligibility()->expectedUpdateUri() );
+		$assessment = $this->assessor->assess( $target['snapshot'], $status->type(), $status->packageRoot(), $status->installedVersion(), $status->expectedUpdateUri() );
 		if ( ! $assessment->readyForBootstrap() ) {
 			return array( 'code' => $assessment->code() );
 		}
-		$made = ManagedReleaseBundle::bootstrap( $template['pack'], $assessment, $target['snapshot'], $status->eligibility()->expectedUpdateUri() );
+		$made = ManagedReleaseBundle::bootstrap( $template['pack'], $assessment, $target['snapshot'], $status->expectedUpdateUri() );
 		return 'ok' === $made['code'] ? array_merge(
 			$target,
 			array(
@@ -275,7 +275,7 @@ final class WorkflowApplicationCoordinator {
 	}
 
 	/** @param array{repository:string,default_branch:string,snapshot:RepositorySnapshot} $target */
-	private function existingManagedRelease( ReleaseTrackingStatus $status, array $target, string $token ): array {
+	private function existingManagedRelease( RepositoryReleaseWorkflowTarget $status, array $target, string $token ): array {
 		$receipt = ManagedReleaseBundle::receipt( (string) $target['snapshot']->document( ManagedReleaseBundle::RECEIPT_PATH ) );
 		if ( null === $receipt ) {
 			return array( 'code' => 'managed_profile_modified' );
@@ -284,11 +284,11 @@ final class WorkflowApplicationCoordinator {
 		if ( ! hash_equals( $status->type(), $inputs['package_type'] )
 			|| ! hash_equals( $status->packageRoot(), $inputs['package_slug'] )
 			|| ! hash_equals( $target['default_branch'], $inputs['default_branch'] )
-			|| ! hash_equals( rtrim( $status->eligibility()->expectedUpdateUri(), '/' ), $inputs['update_uri'] )
+			|| ! hash_equals( rtrim( $status->expectedUpdateUri(), '/' ), $inputs['update_uri'] )
 			|| ! hash_equals( 'https://github.com/' . $target['repository'], $inputs['update_uri'] ) ) {
 			return array( 'code' => 'managed_profile_modified' );
 		}
-		$assessment = $this->assessor->assessManaged( $target['snapshot'], $status->type(), $status->packageRoot(), $status->installedVersion(), $status->eligibility()->expectedUpdateUri() );
+		$assessment = $this->assessor->assessManaged( $target['snapshot'], $status->type(), $status->packageRoot(), $status->installedVersion(), $status->expectedUpdateUri() );
 		if ( ! $assessment->readyForBootstrap() ) {
 			return array( 'code' => $assessment->code() );
 		}
@@ -300,7 +300,7 @@ final class WorkflowApplicationCoordinator {
 		return 'managed_profile_current' === $verified['code'] ? array( 'code' => 'release_automation_present' ) : $verified;
 	}
 
-	private function updateBundle( ReleaseTrackingStatus $status, string $token ): array {
+	private function updateBundle( RepositoryReleaseWorkflowTarget $status, string $token ): array {
 		$target = $this->target( $status, $token );
 		if ( 'ok' !== $target['code'] ) {
 			return $target;
@@ -328,8 +328,8 @@ final class WorkflowApplicationCoordinator {
 		) : $update;
 	}
 
-	private function target( ReleaseTrackingStatus $status, string $token ): array {
-		$url = $status->eligibility()->expectedUpdateUri();
+	private function target( RepositoryReleaseWorkflowTarget $status, string $token ): array {
+		$url = $status->expectedUpdateUri();
 		if ( 1 !== preg_match( '#\Ahttps://github\.com/([A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99})/?\z#D', $url, $match ) ) {
 			return array( 'code' => 'invalid_request' );
 		}
@@ -351,7 +351,7 @@ final class WorkflowApplicationCoordinator {
 		);
 	}
 
-	private function openDraft( ReleaseTrackingStatus $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
+	private function openDraft( RepositoryReleaseWorkflowTarget $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
 		$claim = $this->records->claim( $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision(), 'template_update' === $operation );
 		if ( null === $claim ) {
 			return $this->result( $status, 'invalid_request', false, $previewKey );
@@ -364,11 +364,11 @@ final class WorkflowApplicationCoordinator {
 		return $released || ! $outcome['successful'] ? $outcome : $this->result( $status, 'partial', false, '', 'local_persistence' );
 	}
 
-	private function releaseClaim( ReleaseTrackingStatus $status, string $claim ): bool {
+	private function releaseClaim( RepositoryReleaseWorkflowTarget $status, string $claim ): bool {
 		return $this->records->releaseClaim( $status->providerRepositoryId(), $claim );
 	}
 
-	private function openClaimedDraft( ReleaseTrackingStatus $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
+	private function openClaimedDraft( RepositoryReleaseWorkflowTarget $status, string $previewKey, array $remote, string $operation, string $oldPackVersion, string $token ): array {
 		if ( ! delete_transient( self::PREVIEW_PREFIX . $previewKey ) ) {
 			return $this->result( $status, 'invalid_request', false, $previewKey );
 		}
@@ -495,7 +495,7 @@ final class WorkflowApplicationCoordinator {
 		);
 	}
 
-	private function previewRecord( string $kind, ReleaseTrackingStatus $status, array $remote, string $channel ): array {
+	private function previewRecord( string $kind, RepositoryReleaseWorkflowTarget $status, array $remote, string $channel ): array {
 		$bundle  = $remote['bundle'];
 		$changes = array();
 		foreach ( $bundle->files() as $file ) {
@@ -549,7 +549,7 @@ final class WorkflowApplicationCoordinator {
 			&& $preview['changes'] === $changes;
 	}
 
-	private function record( ReleaseTrackingStatus $status, array $remote, ManagedReleaseBundle $bundle, string $operation, string $branch, string $head, int $pull ): array {
+	private function record( RepositoryReleaseWorkflowTarget $status, array $remote, ManagedReleaseBundle $bundle, string $operation, string $branch, string $head, int $pull ): array {
 		$identity = $bundle->packIdentity();
 		return array(
 			'schema_version'        => 2,
@@ -612,7 +612,7 @@ final class WorkflowApplicationCoordinator {
 		return true;
 	}
 
-	private function result( ReleaseTrackingStatus $status, string $code, bool $successful = false, string $preview = '', string $stage = '', string $diagnostic = '' ): array {
+	private function result( RepositoryReleaseWorkflowTarget $status, string $code, bool $successful = false, string $preview = '', string $stage = '', string $diagnostic = '' ): array {
 		$mapped = in_array( $code, self::PREFLIGHT_REASON_CODES, true ) ? 'workflow_' . $code : match ( $code ) {
 			'ready', 'invalid_release_assets', 'release_version_mismatch', 'release_header_missing', 'release_header_invalid', 'release_archive_unreadable', 'preflight_unavailable' => 'workflow_' . ( 'ready' === $code ? 'release_ready' : $code ),
 			'unauthorised' => 'workflow_unauthorised', 'template_superseded', 'template_pack_changed' => 'workflow_template_superseded',

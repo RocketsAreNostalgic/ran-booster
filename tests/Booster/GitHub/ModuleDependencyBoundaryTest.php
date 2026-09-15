@@ -18,8 +18,6 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 	);
 
 	private const ALLOWED_CORE_IMPORTS = array(
-		'RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight',
-		'RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus',
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryClient',
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryReleaseWorkflow',
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore',
@@ -80,10 +78,12 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus',
 		'RAN\RepositoryProvider\RepositoryReleaseNativeTargets',
 		'RAN\RepositoryProvider\RepositoryReleaseReadUnavailable',
-		'RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement',
+		'RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2',
+		'RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight',
 		'RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview',
 		'RAN\RepositoryProvider\RepositoryReleaseWorkflowResult',
 		'RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus',
+		'RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget',
 		'RAN\RepositoryProvider\RepositoryWebhookFitness',
 		'RAN\RepositoryProvider\RepositoryWebhookFitnessResult',
 		'RAN\RepositoryProvider\RepositoryWebhookManagement',

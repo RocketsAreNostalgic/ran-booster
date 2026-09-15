@@ -123,11 +123,37 @@ HTML seam.
 
 ### Optional release workflow management
 
-`RepositoryReleaseWorkflowManagement` opts into the fixed workflow helper with
-`RELEASE_WORKFLOW_API_VERSION = 1`. The same registered provider must also
-implement all five release-consumption contracts: `RepositoryReleaseMetadata`,
+`RepositoryReleaseWorkflowManagement` is the frozen, load-compatible workflow
+API 1 contract with `RELEASE_WORKFLOW_API_VERSION = 1`. Existing API 1 provider
+classes may continue to declare and load against that unchanged interface, but
+the current workflow helper no longer resolves API 1 for operations.
+
+The current helper resolves `RepositoryReleaseWorkflowManagementV2` directly.
+API 2 is a separate `ProviderCapability` with
+`RELEASE_WORKFLOW_API_VERSION = 2`; it intentionally does not extend API 1, so
+loading the neutral facet does not load Core `ReleaseTrackingStatus` or
+`ReleaseTrackingPreflight` parameter types into an external provider runtime.
+
+API 2 keeps the same fixed workflow operation shape and accepts only neutral
+inputs. `RepositoryReleaseWorkflowTarget` carries the bounded package identity,
+source revision, stable provider repository ID, package root, installed version
+and expected Update URI required by provider workflow logic. The expected Update
+URI may be empty; when present it must be an HTTPS URL with a host and no
+userinfo. Ordinary release tracking may retain a non-HTTPS canonical Update URI,
+but Core cannot project that value into an API 2 target, so that
+provider/package is not eligible for current workflow-helper calls until the URI
+satisfies this stricter workflow boundary.
+`RepositoryReleaseWorkflowPreflight` carries only the bounded preflight machine
+code and reason code needed by inspection and setup. Core constructs fresh
+neutral values at the provider call boundary.
+
+A provider implementing API 2 must also implement all five release-consumption
+contracts on the same registered aggregate: `RepositoryReleaseMetadata`,
 `RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
-`RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`.
+`RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`. Current Core
+workflow-helper controls and calls also require that aggregate's
+`ProviderMetadata` to expose non-null `ProviderAdminMetadata`. Admin metadata
+remains optional for ordinary provider registration and other capabilities.
 
 The dependencies are one-way. A provider may support releases without workflow
 setup, or Branch deployments without assisted webhooks. A Branch package may be
@@ -135,13 +161,16 @@ assessed for release workflow setup before it switches to Releases. Package
 eligibility and repository exclusivity still apply; package source is not a
 substitute for provider capability.
 
-The interface exposes local `workflowStatus()` and validated `workflowPreview()`
-reads plus five operations: `workflowInspect()`, `workflowSetup()`,
-`workflowOutcome()`, `workflowInspectUpdate()` and `workflowSetupUpdate()`.
-Providers return bounded immutable status, preview and result values, not HTML,
-callbacks, clients or storage handles. Available releases, detected automation,
-verified configuration, recorded setup pull requests and latest outcomes remain
-separate evidence.
+The API 2 interface exposes local `workflowStatus()` and validated
+`workflowPreview()` reads plus five operations: `workflowInspect()`,
+`workflowSetup()`, `workflowOutcome()`, `workflowInspectUpdate()` and
+`workflowSetupUpdate()`. Providers return bounded immutable status, preview and
+result values, not HTML, callbacks, clients or storage handles. Available
+releases, detected automation, verified configuration, recorded setup pull
+requests and latest outcomes remain separate evidence.
+
+See [Provider release-workflow capability](provider-release-workflow-api.md) for
+the frozen API 1 compatibility contract and standalone neutral API 2 boundary.
 
 `RepositoryReleaseWorkflowResult::failureStage()` is a closed, Core-owned
 display category, never a provider-defined value. Successful results must use
@@ -154,8 +183,9 @@ Core admits one fixed workflow endpoint. It checks administrator permissions,
 provider dependencies, exact repository/package/source revision, repository
 admission, operation nonce, preview identity and credential-profile eligibility
 before calling the operation. Assessment and setup each receive fresh Core
-release preflight evidence for that exact target. Setup takes its channel from
-the provider's validated, current-user preview, never a submitted channel.
+release preflight evidence projected into the neutral API 2 preflight value for
+that exact target. Setup takes its channel from the provider's validated,
+current-user preview, never a submitted channel.
 
 Operations receive only a saved credential profile ID. The provider resolves
 secret material through its bound credential store after authorization. Public
@@ -171,8 +201,18 @@ Deployment tabs and independently supported release consumption remain usable.
 Remote inspection requires an explicit action. Outcomes return to the exact
 repository Releases tab, with diagnostics inside its notice area.
 
-This optional interface does not change Provider API 10 or its registration
-factory, and introduces no repository settings object or shared workflow storage.
+These optional workflow facets do not change Provider API 10 or its registration
+factory, and introduce no repository settings object or shared workflow storage.
+
+Because the global Provider API marker remains 10, an API-2-aware provider must
+feature-detect `RepositoryReleaseWorkflowManagementV2` with `interface_exists()`
+before loading or declaring any class that implements it. Older Provider API 10
+Booster releases may not define that facet. Keep the V2-capable implementation
+behind the feature gate so the provider's ordinary API-10 implementation remains
+loadable when the interface is absent; providers that do not adopt workflow API
+2 need no additional check. The
+[workflow API feature-detection guidance](provider-release-workflow-api.md#provider-api-10-feature-detection)
+shows the safe conditional-loading pattern.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
@@ -326,8 +366,8 @@ exact first archive request and must be removed before any redirect.
 
 If a provider add-on is deactivated, Booster retains those stored identities
 and presents the package as unavailable. It must not substitute another
-provider. Deployment and provider actions remain disabled until the same code
-is registered again; unlinking the management record remains available.
+provider. Deployment and provider actions remain disabled until the same code is
+registered again; unlinking the management record remains available.
 
 The supplied `ProviderDiagnostics` object owns a fixed, bounded set of checks
 including credential configuration/authentication and repository

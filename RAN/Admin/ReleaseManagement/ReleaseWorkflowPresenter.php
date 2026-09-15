@@ -9,7 +9,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
@@ -608,7 +608,7 @@ final class ReleaseWorkflowPresenter {
 		$channel     = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : $status->channel();
 		$preview     = null;
 		if ( '' === $reason && '' !== $previewKey ) {
-			$preview = $this->requestBoundary( fn () => $provider->workflowPreview( $status, $previewKey ), null );
+			$preview = $this->requestBoundary( fn () => $provider->workflowPreview( ReleaseWorkflowProviderProjection::target( $status ), $previewKey ), null );
 			if ( null !== $preview && ( $preview->key() !== $previewKey || $preview->providerCode() !== $providerCode || $preview->repositoryId() !== $status->providerRepositoryId() ) ) {
 				$preview = null;
 			}
@@ -775,17 +775,17 @@ final class ReleaseWorkflowPresenter {
 	}
 
 	/** @return list<array{id:string,label:string}> */
-	private function workflowCapability( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
+	private function workflowCapability( string $providerCode ): ?RepositoryReleaseWorkflowManagementV2 {
 		try {
-			return $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagement::class );
+			return $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagementV2::class );
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
-	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagement {
+	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagementV2 {
 		$provider = $this->workflowCapability( $providerCode );
-		return null !== $provider && 1 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
+		return null !== $provider && 2 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
 	}
 
 	private function releaseProviderSupported( string $providerCode ): bool {
@@ -809,7 +809,7 @@ final class ReleaseWorkflowPresenter {
 		}
 		$key = hash( 'sha256', (string) wp_json_encode( array( $providerCode, $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) ) );
 		if ( ! array_key_exists( $key, $this->workflowStatuses ) ) {
-			$value = $this->requestBoundary( fn () => $provider->workflowStatus( $status ), null );
+			$value = $this->requestBoundary( fn () => $provider->workflowStatus( ReleaseWorkflowProviderProjection::target( $status ) ), null );
 			if ( null !== $value && ( $value->providerCode() !== $providerCode
 				|| $value->repositoryId() !== $status->providerRepositoryId()
 				|| ( $value->recordExact() && ( $value->packageType() !== $status->type() || $value->packageIdentifier() !== $status->identifier() || $value->sourceRevision() !== $status->sourceRevision() ) ) ) ) {

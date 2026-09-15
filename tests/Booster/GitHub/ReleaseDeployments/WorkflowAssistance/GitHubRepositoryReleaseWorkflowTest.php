@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace Tests\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 
 use PHPUnit\Framework\TestCase;
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryClient;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryReleaseWorkflow;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SourceReadyAssessor;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient;
 use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
+use Tests\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\Support\WorkflowProviderFixtures;
 
 require_once __DIR__ . '/WorkflowAssistanceTestBootstrap.php';
 require_once __DIR__ . '/Support/WorkflowCredentialStore.php';
+require_once __DIR__ . '/Support/WorkflowProviderFixtures.php';
 
 final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 	protected function setUp(): void {
@@ -33,7 +35,7 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 	public function testPassiveStatusUsesOnlyDisplaySafeProfilesAndExactActionsUrl(): void {
 		$credentials = new WorkflowCredentialStore();
 		$workflow    = $this->workflow( $credentials );
-		$status      = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$status      = WorkflowProviderFixtures::target();
 
 		$result = $workflow->status( $status );
 
@@ -68,7 +70,7 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		);
 
 		$workflow = $this->workflow( new WorkflowCredentialStore() );
-		$status   = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$status   = WorkflowProviderFixtures::target();
 		$result   = $workflow->status( $status );
 
 		self::assertSame( 'theme', $result->packageType() );
@@ -81,7 +83,7 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 	public function testInvalidUpdateLifecycleRequestsDoNotReadCredentialMaterial(): void {
 		$credentials = new WorkflowCredentialStore();
 		$workflow    = $this->workflow( $credentials );
-		$status      = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$status      = WorkflowProviderFixtures::target();
 
 		self::assertSame( 'workflow_invalid_request', $workflow->outcome( $status, 'eligible' )->workflowCode() );
 		self::assertSame( 'workflow_invalid_request', $workflow->inspectUpdate( $status, 'eligible' )->workflowCode() );
@@ -94,11 +96,11 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		$credentials->eligibleMaterial = null;
 		$records                       = new SetupRecordStore();
 		$transport                     = new D23ApplicationTransport();
-		$status                        = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$status                        = WorkflowProviderFixtures::target();
 		self::assertTrue( $records->save( $this->record() ) );
 		$workflow = $this->workflow( $credentials, $records, $transport );
 
-		self::assertSame( 'workflow_unauthorised', $workflow->inspect( $status, 'stable', new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin' ), 'eligible' )->workflowCode() );
+		self::assertSame( 'workflow_unauthorised', $workflow->inspect( $status, 'stable', WorkflowProviderFixtures::preflight(), 'eligible' )->workflowCode() );
 		self::assertSame( 'workflow_unauthorised', $workflow->outcome( $status, 'eligible' )->workflowCode() );
 		self::assertSame( 'workflow_unauthorised', $workflow->inspectUpdate( $status, 'eligible' )->workflowCode() );
 		self::assertSame( array( 'eligible', 'eligible', 'eligible' ), $credentials->materialReads );
@@ -109,9 +111,9 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 		$credentials = new WorkflowCredentialStore();
 		$records     = new SetupRecordStore();
 		$transport   = new D23ApplicationTransport();
-		$status      = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$status      = WorkflowProviderFixtures::target();
 		$workflow    = $this->workflow( $credentials, $records, $transport );
-		$preflight   = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin' );
+		$preflight   = WorkflowProviderFixtures::preflight();
 		$preview     = $workflow->inspect( $status, 'stable', $preflight, 'eligible' );
 		self::assertTrue( $workflow->setup( $status, $preview->previewKey(), 'owner/example-plugin', $preflight, 'eligible' )->successful() );
 		$transport->mergePull();
@@ -136,7 +138,7 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 				'configured' => true,
 			),
 		);
-		$status                = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
+		$status                = WorkflowProviderFixtures::target();
 
 		$choice = $this->workflow( $credentials )->status( $status )->credentialChoices()[0];
 
@@ -148,17 +150,17 @@ final class GitHubRepositoryReleaseWorkflowTest extends TestCase {
 	public function testPreflightAndIneligibleSavedCredentialAreRejectedBeforeMaterialRead(): void {
 		$credentials = new WorkflowCredentialStore();
 		$workflow    = $this->workflow( $credentials );
-		$status      = ( new D23ReleaseFacade() )->status( 'plugin', 'example-plugin/example-plugin.php' );
-		$blocked     = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, 'example-plugin', reasonCode: 'provider_unavailable' );
+		$status      = WorkflowProviderFixtures::target();
+		$blocked     = WorkflowProviderFixtures::preflight( RepositoryReleaseWorkflowPreflight::PREFLIGHT_UNAVAILABLE, 'provider_unavailable' );
 
 		$preflightResult = $workflow->inspect( $status, 'stable', $blocked, 'eligible' );
 		self::assertSame( 'workflow_preflight_unavailable', $preflightResult->workflowCode() );
 		self::assertSame( '', $preflightResult->correlationReference() );
 		self::assertSame( array(), $credentials->materialReads );
 
-		$preview = $workflow->inspect( $status, 'stable', new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin' ), null );
+		$preview = $workflow->inspect( $status, 'stable', WorkflowProviderFixtures::preflight(), null );
 		self::assertTrue( $preview->successful() );
-		self::assertSame( 'workflow_unauthorised', $workflow->setup( $status, $preview->previewKey(), 'owner/example-plugin', new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin' ), 'constant' )->workflowCode() );
+		self::assertSame( 'workflow_unauthorised', $workflow->setup( $status, $preview->previewKey(), 'owner/example-plugin', WorkflowProviderFixtures::preflight(), 'constant' )->workflowCode() );
 		self::assertSame( array(), $credentials->materialReads );
 	}
 

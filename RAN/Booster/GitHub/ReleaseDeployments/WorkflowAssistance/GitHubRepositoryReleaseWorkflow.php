@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance;
 
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\RepositoryProvider\ProviderCredentialStore;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use Throwable;
 
-/** @internal GitHub implementation and persistence owner for workflow API 1. */
+/** @internal GitHub implementation and persistence owner for workflow API 2. */
 final class GitHubRepositoryReleaseWorkflow {
 	public function __construct( private ProviderCredentialStore $credentials, private WorkflowApplicationCoordinator $coordinator, private SetupRecordStore $records ) {}
 
-	public function status( ReleaseTrackingStatus $status ): RepositoryReleaseWorkflowStatus {
+	public function status( RepositoryReleaseWorkflowTarget $status ): RepositoryReleaseWorkflowStatus {
 		$record      = $this->records->find( $status->providerRepositoryId() );
 		$exact       = null !== $record && $status->type() === $record['package_type'] && $status->identifier() === $record['package_identifier'] && $status->sourceRevision() === $record['source_revision'];
 		$type        = null === $record ? $status->type() : $record['package_type'];
@@ -53,7 +53,7 @@ final class GitHubRepositoryReleaseWorkflow {
 		);
 	}
 
-	public function preview( ReleaseTrackingStatus $status, string $key ): ?RepositoryReleaseWorkflowPreview {
+	public function preview( RepositoryReleaseWorkflowTarget $status, string $key ): ?RepositoryReleaseWorkflowPreview {
 		$preview = $this->coordinator->preview( $key, $status );
 		if ( null === $preview ) {
 			return null; }
@@ -84,13 +84,13 @@ final class GitHubRepositoryReleaseWorkflow {
 		);
 	}
 
-	public function inspect( ReleaseTrackingStatus $status, string $channel, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		if ( ! $this->bootstrapPreflight( $preflight ) ) {
 			return $this->persist( 'inspect', $status, $this->preflightResult( $status, $preflight ) ); }
 		$token = $this->credential( $credentialId, false );
 		return $this->persist( 'inspect', $status, $this->selectedCredentialUnavailable( $credentialId, $token ) ? $this->unauthorised( $status ) : $this->coordinator->inspect( $status, $channel, $preflight, $token ) );
 	}
-	public function setup( ReleaseTrackingStatus $status, string $key, string $confirmation, ReleaseTrackingPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		if ( ! $this->bootstrapPreflight( $preflight ) ) {
 			return $this->persist( 'setup', $status, $this->preflightResult( $status, $preflight, $key ) ); }
 		if ( null === $this->coordinator->preview( $key, $status ) ) {
@@ -99,19 +99,19 @@ final class GitHubRepositoryReleaseWorkflow {
 		$token = $this->credential( $credentialId, true );
 		return $this->persist( 'setup', $status, '' === $token ? $this->unauthorised( $status, $key ) : $this->coordinator->setup( $status, $key, $confirmation, $preflight, $token ) );
 	}
-	public function outcome( ReleaseTrackingStatus $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function outcome( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		if ( ! $this->coordinator->hasCurrentRecord( $status ) ) {
 			return $this->persist( 'outcome', $status, $this->invalidRequest( $status ) );
 		}
 		$token = $this->credential( $credentialId, true );
 		return $this->persist( 'outcome', $status, $this->selectedCredentialUnavailable( $credentialId, $token ) ? $this->unauthorised( $status ) : $this->coordinator->outcome( $status, $token ) ); }
-	public function inspectUpdate( ReleaseTrackingStatus $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function inspectUpdate( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		if ( ! $this->coordinator->hasCurrentRecord( $status ) ) {
 			return $this->persist( 'update_inspect', $status, $this->invalidRequest( $status ) );
 		}
 		$token = $this->credential( $credentialId, true );
 		return $this->persist( 'update_inspect', $status, $this->selectedCredentialUnavailable( $credentialId, $token ) ? $this->unauthorised( $status ) : $this->coordinator->inspectUpdate( $status, $token ) ); }
-	public function setupUpdate( ReleaseTrackingStatus $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function setupUpdate( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		$preview = $this->coordinator->preview( $key, $status );
 		if ( ! $this->coordinator->hasCurrentRecord( $status ) || null === $preview || 'template_update' !== $preview['kind'] ) {
 			return $this->persist( 'update_setup', $status, $this->invalidRequest( $status, $key ) );
@@ -119,7 +119,7 @@ final class GitHubRepositoryReleaseWorkflow {
 		$token = $this->credential( $credentialId, true );
 		return $this->persist( 'update_setup', $status, '' === $token ? $this->unauthorised( $status, $key ) : $this->coordinator->setupUpdate( $status, $key, $confirmation, $token ) ); }
 
-	private function persist( string $operation, ReleaseTrackingStatus $status, array $outcome ): RepositoryReleaseWorkflowResult {
+	private function persist( string $operation, RepositoryReleaseWorkflowTarget $status, array $outcome ): RepositoryReleaseWorkflowResult {
 		$observation = match ( $outcome['code'] ) {
 			'workflow_release_automation_conflict' => 'existing_automation_detected', 'workflow_release_automation_present' => 'booster_setup_verified', 'workflow_inspected' => 'no_recognisable_automation', default => '' };
 		if ( '' !== $observation ) {
@@ -155,9 +155,9 @@ final class GitHubRepositoryReleaseWorkflow {
 		}
 		return new RepositoryReleaseWorkflowResult( $outcome['code'], $outcome['successful'], $outcome['preview_key'], $outcome['failure_stage'], $outcome['diagnostic_code'], $outcome['correlation_reference'] ?? '' );
 	}
-	private function bootstrapPreflight( ReleaseTrackingPreflight $preflight ): bool {
+	private function bootstrapPreflight( RepositoryReleaseWorkflowPreflight $preflight ): bool {
 		return in_array( $preflight->code(), array( 'ready', 'release_unavailable' ), true ); }
-	private function preflightResult( ReleaseTrackingStatus $status, ReleaseTrackingPreflight $preflight, string $key = '' ): array {
+	private function preflightResult( RepositoryReleaseWorkflowTarget $status, RepositoryReleaseWorkflowPreflight $preflight, string $key = '' ): array {
 		return array(
 			'code'            => 'workflow_' . ( 'preflight_unavailable' === $preflight->code() ? 'preflight_unavailable' : $preflight->code() ),
 			'successful'      => false,
@@ -165,7 +165,7 @@ final class GitHubRepositoryReleaseWorkflow {
 			'failure_stage'   => 'release_preflight',
 			'diagnostic_code' => '' !== $preflight->reasonCode() ? $preflight->reasonCode() : 'preflight_contract_unavailable',
 		); }
-	private function unauthorised( ReleaseTrackingStatus $status, string $key = '' ): array {
+	private function unauthorised( RepositoryReleaseWorkflowTarget $status, string $key = '' ): array {
 		return array(
 			'code'            => 'workflow_unauthorised',
 			'successful'      => false,
@@ -173,7 +173,7 @@ final class GitHubRepositoryReleaseWorkflow {
 			'failure_stage'   => 'credential_authorisation',
 			'diagnostic_code' => 'credential_authorisation_unavailable',
 		); }
-	private function invalidRequest( ReleaseTrackingStatus $status, string $key = '' ): array {
+	private function invalidRequest( RepositoryReleaseWorkflowTarget $status, string $key = '' ): array {
 		return array(
 			'code'            => 'workflow_invalid_request',
 			'successful'      => false,
@@ -222,8 +222,8 @@ final class GitHubRepositoryReleaseWorkflow {
 	}
 	private function repositoryLocator( ?array $record ): string {
 		return is_array( $record ) && is_string( $record['repository'] ?? null ) ? $record['repository'] : ''; }
-	private function workflowUrl( ReleaseTrackingStatus $status ): string {
-		$url = $status->eligibility()->expectedUpdateUri();
+	private function workflowUrl( RepositoryReleaseWorkflowTarget $status ): string {
+		$url = $status->expectedUpdateUri();
 		return 1 === preg_match( '#\Ahttps://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\z#D', $url ) ? $url . '/actions' : '';
 	}
 }

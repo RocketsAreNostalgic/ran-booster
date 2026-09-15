@@ -41,6 +41,23 @@ final class ReleaseTrackingContractTest extends TestCase {
 		self::assertTrue( $status->updateAvailable() );
 	}
 
+	public function testStatusDoesNotApplyWorkflowUpdateUriValidation(): void {
+		$status = new ReleaseTrackingStatus(
+			'plugin',
+			'example/example.php',
+			'release_asset',
+			4,
+			'123456789',
+			'manual',
+			new ReleaseTrackingEligibility(
+				ReleaseTrackingEligibility::ELIGIBLE,
+				'http://git.example.test/owner/example'
+			)
+		);
+
+		self::assertSame( 'http://git.example.test/owner/example', $status->eligibility()->expectedUpdateUri() );
+	}
+
 	public function testStatusRejectsUnboundedProviderRepositoryIdentity(): void {
 		$this->expectException( \InvalidArgumentException::class );
 

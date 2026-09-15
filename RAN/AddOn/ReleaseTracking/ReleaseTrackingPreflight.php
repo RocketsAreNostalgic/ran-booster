@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace RAN\AddOn\ReleaseTracking;
 
 use InvalidArgumentException;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 
 /**
  * Bounded result of a read-only repository release artifact preflight.
  */
-final readonly class ReleaseTrackingPreflight {
+final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowPreflight {
 
 	public const READY                      = 'ready';
 	public const RELEASE_UNAVAILABLE        = 'release_unavailable';
@@ -54,6 +55,8 @@ final readonly class ReleaseTrackingPreflight {
 			|| ( '' !== $this->releaseUrl && ! $this->validReleaseUrl( $this->releaseUrl ) ) ) {
 			throw new InvalidArgumentException( 'Release tracking preflight is invalid.' );
 		}
+
+		parent::__construct( $this->code, $this->reasonCode );
 	}
 
 	public function code(): string {

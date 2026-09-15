@@ -1,4 +1,4 @@
-name: Apply bounded PR 139 Quality update
+name: Materialize bounded PR 139 Quality patch
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  update:
+  materialize:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -21,17 +21,17 @@ jobs:
           ref: refactor/runtime-packaging-policy
           fetch-depth: 0
 
-      - name: Apply bounded update
-        run: python3 scripts/pr139-quality-update.py
-
-      - name: Commit bounded result
+      - name: Materialize bounded patch as ordinary text
         shell: bash
         run: |
           set -euo pipefail
-          git diff --check
-          git status --short
+          python3 scripts/pr139-quality-update.py
+          cp .github/workflows/quality.yml quality-pr139-next.txt
+          git restore .github/workflows/quality.yml .github/workflows/pr139-quality-update.yml scripts/pr139-quality-update.py
+          git diff --check -- quality-pr139-next.txt
+          test "$(git status --short)" = '?? quality-pr139-next.txt'
           git config user.name 'Benjamin Rush'
           git config user.email 'bnjmnrsh@gmail.com'
-          git add -A
-          git commit -m 'ci: align runtime packaging evidence'
+          git add quality-pr139-next.txt
+          git commit -m 'chore: materialize bounded Quality patch'
           git push origin HEAD:refactor/runtime-packaging-policy

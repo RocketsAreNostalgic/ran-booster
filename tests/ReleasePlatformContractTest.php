@@ -432,13 +432,13 @@ final class ReleasePlatformContractTest extends TestCase {
 	}
 
 	private function trustPathBlock( string $workflow ): string {
-		$matched = preg_match(
-			'/for trust_path in \\\n(?<paths>.*?)\; do/s',
-			$workflow,
-			$matches
-		);
-		self::assertSame( 1, $matched );
-		return (string) $matches['paths'];
+		$start = strpos( $workflow, 'for trust_path in \\' );
+		self::assertIsInt( $start );
+
+		$end = strpos( $workflow, '; do', $start );
+		self::assertIsInt( $end );
+
+		return substr( $workflow, $start, $end - $start );
 	}
 
 	/**

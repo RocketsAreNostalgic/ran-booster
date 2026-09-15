@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Verify a RAN Booster release ZIP against an immutable Git commit and a clean
-# install of its committed Composer lock.
+# install of its committed Composer lock plus runtime packaging policy.
 #
 # Usage: verify-release.sh [archive] [expected-version] [ref]
 # Defaults: ref=HEAD; expected-version=the plugin Version at ref; archive=the
@@ -54,26 +54,10 @@ committed_entries=(
 	'uninstall.php'
 	'views'
 )
-release_package_root='vendor/ran/wp-release-updater'
-branch_package_root='vendor/ran/wp-branch-updater'
-support_package_root='vendor/ran/updater-support'
-release_updater_commit='dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3'
-package_entries=(
-	"$support_package_root/LICENSE"
-	"$support_package_root/src"
-	"$branch_package_root/LICENSE"
-	"$branch_package_root/bootstrap.php"
-	"$branch_package_root/src"
-	"$release_package_root/LICENSE"
-	"$release_package_root/bootstrap.php"
-	"$release_package_root/runtime-copy.json"
-	"$release_package_root/runtime.php"
-	"$release_package_root/src"
-)
 generated_entries=(
 	'ran-booster-release.json'
 )
-allowed_entries=( "${committed_entries[@]}" "${package_entries[@]}" "${generated_entries[@]}" )
+allowed_entries=( "${committed_entries[@]}" "${generated_entries[@]}" )
 
 plugin_version=$(
 	git show "$commit:ran-booster.php" \
@@ -222,20 +206,35 @@ trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 
 composer_dir="$tmp_dir/composer"
 composer_home="$tmp_dir/composer-home"
-updater_repository="$repo_root/../ran-wp-release-updater"
-updater_checkout="$tmp_dir/ran-wp-release-updater"
-[[ -d "$updater_repository/.git" ]] \
-	|| fail 'the locked neutral updater source checkout is unavailable.'
-git -C "$updater_repository" cat-file -e "${release_updater_commit}^{commit}" 2>/dev/null \
-	|| fail "the locked neutral updater commit is unavailable: $release_updater_commit"
-mkdir -p "$composer_dir" "$composer_home" "$updater_checkout"
-git -C "$updater_repository" archive "$release_updater_commit" | tar -xf - -C "$updater_checkout"
-for required_source in composer.json composer.lock .release-please-manifest.json; do
+policy_file="$composer_dir/runtime-packaging-policy.json"
+packaging_records="$tmp_dir/runtime-packaging.tsv"
+mkdir -p "$composer_dir" "$composer_home"
+for required_source in composer.json composer.lock .release-please-manifest.json runtime-packaging-policy.json; do
 	git cat-file -e "$commit:$required_source" 2>/dev/null \
 		|| fail "release ref is missing $required_source."
 done
 git show "$commit:composer.json" > "$composer_dir/composer.json"
 git show "$commit:composer.lock" > "$composer_dir/composer.lock"
+git show "$commit:runtime-packaging-policy.json" > "$policy_file"
+
+if ! dependency_records=$(php "$repo_root/scripts/verify-runtime-dependencies.php" "$composer_dir/composer.lock" "$policy_file"); then
+	fail 'composer.lock and runtime packaging policy do not describe one approved runtime dependency set.'
+fi
+if ! php "$repo_root/scripts/verify-runtime-dependencies.php" --packaging "$composer_dir/composer.lock" "$policy_file" > "$packaging_records"; then
+	fail 'runtime packaging projection could not be produced.'
+fi
+[[ -s "$packaging_records" ]] || fail 'runtime packaging policy did not produce any package records.'
+
+package_roots=()
+package_surface_specs=()
+package_installed=()
+while IFS=$'\t' read -r package_name package_version package_reference package_repository package_root surface_specs build_role; do
+	[[ -n "$package_name" && -n "$package_version" && -n "$package_reference" && -n "$package_repository" && -n "$package_root" && -n "$surface_specs" && -n "$build_role" ]] \
+		|| fail 'runtime packaging projection contains an incomplete package record.'
+	package_roots+=( "$package_root" )
+	package_surface_specs+=( "$surface_specs" )
+	package_installed+=( "$composer_dir/$package_root" )
+done < "$packaging_records"
 
 (
 	cd "$composer_dir"
@@ -249,37 +248,39 @@ git show "$commit:composer.lock" > "$composer_dir/composer.lock"
 		--no-autoloader
 )
 
-release_installed_package="$composer_dir/$release_package_root"
-branch_installed_package="$composer_dir/$branch_package_root"
-support_installed_package="$composer_dir/$support_package_root"
-for installed_package in "$release_installed_package" "$branch_installed_package" "$support_installed_package"; do
-	[[ -d "$installed_package" ]] || fail "committed lock did not install runtime package: $installed_package"
-done
-
-if ! dependency_records=$(php "$repo_root/scripts/verify-runtime-dependencies.php" "$composer_dir/composer.lock"); then
-	fail 'composer.lock does not contain the exact approved runtime dependency set.'
+if ! php "$repo_root/scripts/verify-runtime-dependencies.php" --verify-install "$composer_dir" "$composer_dir/composer.lock" "$policy_file"; then
+	fail 'installed runtime package surfaces do not match the locked runtime packaging policy.'
 fi
 
-for required_runtime_path in \
-	"$release_installed_package/LICENSE" \
-	"$release_installed_package/bootstrap.php" \
-	"$release_installed_package/runtime-copy.json" \
-	"$release_installed_package/runtime.php" \
-	"$release_installed_package/src" \
-	"$branch_installed_package/LICENSE" \
-	"$branch_installed_package/bootstrap.php" \
-	"$branch_installed_package/src" \
-	"$support_installed_package/LICENSE" \
-	"$support_installed_package/src"; do
-	[[ -e "$required_runtime_path" ]] || fail "locked runtime package is missing: $required_runtime_path"
+for index in "${!package_roots[@]}"; do
+	installed_package=${package_installed[$index]}
+	[[ -d "$installed_package" && ! -L "$installed_package" ]] \
+		|| fail "committed lock did not install a regular runtime package root: $installed_package"
+	IFS=',' read -r -a surface_specs <<< "${package_surface_specs[$index]}"
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		surface=${surface_spec#*:}
+		required_runtime_path="$installed_package/$surface"
+		case "$surface_kind" in
+			file)
+				[[ -f "$required_runtime_path" && ! -L "$required_runtime_path" ]] \
+					|| fail "locked runtime package file surface is missing or changed kind: $required_runtime_path"
+				;;
+			directory)
+				[[ -d "$required_runtime_path" && ! -L "$required_runtime_path" ]] \
+					|| fail "locked runtime package directory surface is missing or changed kind: $required_runtime_path"
+				find "$required_runtime_path" -type f -print -quit | grep -q . \
+					|| fail "locked runtime package directory surface is empty: $required_runtime_path"
+				if find "$required_runtime_path" -type l -print -quit | grep -q .; then
+					fail 'runtime dependency allowlist must not contain symbolic links.'
+				fi
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
+	done
 done
-if find \
-	"$release_installed_package/LICENSE" "$release_installed_package/bootstrap.php" "$release_installed_package/runtime-copy.json" "$release_installed_package/runtime.php" "$release_installed_package/src" \
-	"$branch_installed_package/LICENSE" "$branch_installed_package/bootstrap.php" "$branch_installed_package/src" \
-	"$support_installed_package/LICENSE" "$support_installed_package/src" \
-	-type l -print -quit | grep -q .; then
-	fail 'runtime dependency allowlist must not contain symbolic links.'
-fi
 
 archive_paths="$tmp_dir/archive-paths.txt"
 archive_files="$tmp_dir/archive-files.txt"
@@ -303,14 +304,14 @@ while IFS= read -r path || [[ -n "$path" ]]; do
 		|| fail "unsafe archive path: $path"
 
 	case "$relative" in
-		AGENTS.md|AGENTS.md/*|.agents|.agents/*|.dex|.dex/*|ran-booster-workbench|ran-booster-workbench/*|.github|.github/*|tests|tests/*|scripts|scripts/*|build|build/*|node_modules|node_modules/*|README.md|CHANGELOG.md|release-files.txt|release-please-config.json|.release-please-manifest.json|package.json|pnpm-lock.yaml|composer.json|composer.lock|.ran-booster|.ran-booster/*|secrets.json|*/secrets.json|secrets.json.lock|*/secrets.json.lock|boosterlog|*.log|*.zip|*.tar|*.tar.gz|*.tgz)
+		AGENTS.md|AGENTS.md/*|.agents|.agents/*|.dex|.dex/*|ran-booster-workbench|ran-booster-workbench/*|.github|.github/*|tests|tests/*|scripts|scripts/*|build|build/*|node_modules|node_modules/*|README.md|CHANGELOG.md|release-files.txt|runtime-packaging-policy.json|release-please-config.json|.release-please-manifest.json|package.json|pnpm-lock.yaml|composer.json|composer.lock|.ran-booster|.ran-booster/*|secrets.json|*/secrets.json|secrets.json.lock|*/secrets.json.lock|boosterlog|*.log|*.zip|*.tar|*.tar.gz|*.tgz)
 			fail "development, secret, log, or archive path is forbidden: $path"
 			;;
 		vendor|vendor/|vendor/ran|vendor/ran/)
 			;;
 		vendor/*)
 			allowed_vendor=false
-			for package_root in "$support_package_root" "$branch_package_root" "$release_package_root"; do
+			for package_root in "${package_roots[@]}"; do
 				if [[ "$relative" == "$package_root" || "$relative" == "$package_root/" || "$relative" == "$package_root/"* ]]; then
 					allowed_vendor=true
 					break
@@ -338,17 +339,17 @@ while IFS= read -r entry || [[ -n "$entry" ]]; do
 		fi
 	done
 	[[ "$allowed" == true ]] \
-		|| fail "unexpected runtime allowlist entry: $entry"
+		|| fail "unexpected Core runtime allowlist entry: $entry"
 	grep -Fqx "$entry" "$entries_file" 2>/dev/null \
 		&& fail "duplicate allowlist entry: $entry"
 	printf '%s\n' "$entry" >> "$entries_file"
 done < "$manifest"
 
 [[ $(awk 'END { print NR }' "$entries_file") -eq ${#allowed_entries[@]} ]] \
-	|| fail 'release-files.txt does not contain the complete runtime allowlist.'
+	|| fail 'release-files.txt does not contain the complete Core runtime allowlist.'
 for required in "${allowed_entries[@]}"; do
 	grep -Fqx "$required" "$entries_file" \
-		|| fail "required allowlist entry is missing: $required"
+		|| fail "required Core allowlist entry is missing: $required"
 done
 
 while IFS= read -r tree_entry; do
@@ -363,25 +364,38 @@ git ls-tree -r --name-only "$commit" -- "${committed_entries[@]}" \
 append_runtime_files() {
 	local installed_root=$1
 	local package_root=$2
-	shift 2
-	local package_entry
-	for package_entry in "$@"; do
-		if [[ -d "$installed_root/$package_entry" ]]; then
-			find "$installed_root/$package_entry" -type f -print
-		else
-			printf '%s\n' "$installed_root/$package_entry"
-		fi
+	local surface_specs_csv=$3
+	local surface_spec surface_kind surface
+	local -a surface_specs
+	IFS=',' read -r -a surface_specs <<< "$surface_specs_csv"
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		surface=${surface_spec#*:}
+		case "$surface_kind" in
+			file)
+				printf '%s\n' "$installed_root/$surface"
+				;;
+			directory)
+				find "$installed_root/$surface" -type f -print
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
 	done | sed "s#^$installed_root/#ran-booster/$package_root/#" >> "$expected_files"
 }
-append_runtime_files "$support_installed_package" "$support_package_root" LICENSE src
-append_runtime_files "$branch_installed_package" "$branch_package_root" LICENSE bootstrap.php src
-append_runtime_files "$release_installed_package" "$release_package_root" LICENSE bootstrap.php runtime-copy.json runtime.php src
+for index in "${!package_roots[@]}"; do
+	append_runtime_files \
+		"${package_installed[$index]}" \
+		"${package_roots[$index]}" \
+		"${package_surface_specs[$index]}"
+done
 printf '%s\n' 'ran-booster/ran-booster-release.json' >> "$expected_files"
 LC_ALL=C sort -o "$expected_files" "$expected_files"
 grep -v '/$' "$archive_paths" | LC_ALL=C sort > "$archive_files"
 
 diff -u "$expected_files" "$archive_files" >/dev/null \
-	|| fail 'archive files do not exactly match committed Core plus the locked runtime dependency allowlist.'
+	|| fail 'archive files do not exactly match committed Core plus the locked runtime dependency policy.'
 
 printf '%s\n' 'ran-booster/' > "$expected_paths"
 while IFS= read -r expected_file; do
@@ -401,14 +415,7 @@ for required_path in \
 	'ran-booster/NOTICE.md' \
 	'ran-booster/license.txt' \
 	'ran-booster/ran-booster-release.json' \
-	'ran-booster/ran-booster.php' \
-	"ran-booster/$support_package_root/LICENSE" \
-	"ran-booster/$branch_package_root/LICENSE" \
-	"ran-booster/$branch_package_root/bootstrap.php" \
-	"ran-booster/$release_package_root/LICENSE" \
-	"ran-booster/$release_package_root/bootstrap.php" \
-	"ran-booster/$release_package_root/runtime-copy.json" \
-	"ran-booster/$release_package_root/runtime.php"; do
+	'ran-booster/ran-booster.php'; do
 	grep -Fqx "$required_path" "$archive_files" \
 		|| fail "required runtime file is missing: $required_path"
 done
@@ -453,25 +460,38 @@ php -r '
 compare_runtime_package() {
 	local installed_root=$1
 	local archived_root=$2
-	shift 2
-	local entry package_file relative_package_file
-	for entry in "$@"; do
-		if [[ -d "$installed_root/$entry" ]]; then
-			while IFS= read -r package_file || [[ -n "$package_file" ]]; do
-				[[ -n "$package_file" ]] || continue
-				relative_package_file=${package_file#"$installed_root/"}
-				cmp -s "$package_file" "$archived_root/$relative_package_file" \
-					|| fail "archived runtime dependency $relative_package_file does not match the committed Composer lock."
-			done < <(find "$installed_root/$entry" -type f -print | LC_ALL=C sort)
-		else
-			cmp -s "$installed_root/$entry" "$archived_root/$entry" \
-				|| fail "archived runtime dependency $entry does not match the committed Composer lock."
-		fi
+	local surface_specs_csv=$3
+	local surface_spec surface_kind entry package_file relative_package_file
+	local -a surface_specs
+	IFS=',' read -r -a surface_specs <<< "$surface_specs_csv"
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		entry=${surface_spec#*:}
+		case "$surface_kind" in
+			file)
+				cmp -s "$installed_root/$entry" "$archived_root/$entry" \
+					|| fail "archived runtime dependency $entry does not match the committed Composer lock."
+				;;
+			directory)
+				while IFS= read -r package_file || [[ -n "$package_file" ]]; do
+					[[ -n "$package_file" ]] || continue
+					relative_package_file=${package_file#"$installed_root/"}
+					cmp -s "$package_file" "$archived_root/$relative_package_file" \
+						|| fail "archived runtime dependency $relative_package_file does not match the committed Composer lock."
+				done < <(find "$installed_root/$entry" -type f -print | LC_ALL=C sort)
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
 	done
 }
-compare_runtime_package "$support_installed_package" "$extract_dir/ran-booster/$support_package_root" LICENSE src
-compare_runtime_package "$branch_installed_package" "$extract_dir/ran-booster/$branch_package_root" LICENSE bootstrap.php src
-compare_runtime_package "$release_installed_package" "$extract_dir/ran-booster/$release_package_root" LICENSE bootstrap.php runtime-copy.json runtime.php src
+for index in "${!package_roots[@]}"; do
+	compare_runtime_package \
+		"${package_installed[$index]}" \
+		"$extract_dir/ran-booster/${package_roots[$index]}" \
+		"${package_surface_specs[$index]}"
+done
 php_file_count=0
 while IFS= read -r php_file || [[ -n "$php_file" ]]; do
 	[[ -z "$php_file" ]] && continue
@@ -491,7 +511,5 @@ fi
 printf 'Verified %s\n' "$archive"
 printf 'Version %s\n' "$plugin_version"
 printf 'SHA-256 %s\n' "$actual_hash"
-printf 'Runtime dependencies
-%s
-' "$dependency_records"
+printf 'Runtime dependencies\n%s\n' "$dependency_records"
 printf 'PHP files linted %s\n' "$php_file_count"

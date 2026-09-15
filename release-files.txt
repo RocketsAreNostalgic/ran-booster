@@ -1,10 +1,12 @@
-# Runtime files and directories included in the release ZIP.
+# Core runtime files and directories included in the release ZIP.
 #
-# Core paths are read from the selected release commit. Vendor paths are copied
-# from a clean --no-dev Composer install of that commit's composer.json and
-# composer.lock. ran-booster-release.json is generated only in the temporary
-# archive stage from the selected version and immutable commit. The build and
-# verification scripts reject every path outside this exact allowlist.
+# These paths are read from the selected release commit. Runtime dependency
+# package roots and shipped surfaces are owned separately by
+# runtime-packaging-policy.json and are copied from a clean --no-dev Composer
+# install of the same commit's composer.json and composer.lock.
+# ran-booster-release.json is generated only in the temporary archive stage from
+# the selected version and immutable commit. The build and verification scripts
+# reject every path outside these two declarative allowlists.
 NOTICE.md
 RAN
 assets
@@ -16,14 +18,4 @@ ran-booster.php
 ran-booster-release.json
 readme.txt
 uninstall.php
-vendor/ran/updater-support/LICENSE
-vendor/ran/updater-support/src
-vendor/ran/wp-branch-updater/LICENSE
-vendor/ran/wp-branch-updater/bootstrap.php
-vendor/ran/wp-branch-updater/src
-vendor/ran/wp-release-updater/LICENSE
-vendor/ran/wp-release-updater/bootstrap.php
-vendor/ran/wp-release-updater/runtime-copy.json
-vendor/ran/wp-release-updater/runtime.php
-vendor/ran/wp-release-updater/src
 views

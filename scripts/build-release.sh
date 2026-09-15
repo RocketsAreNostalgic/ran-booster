@@ -204,30 +204,15 @@ fi
 [[ -s "$packaging_records" ]] || fail 'runtime packaging policy did not produce any package records.'
 
 package_roots=()
-package_surfaces=()
+package_surface_specs=()
 package_installed=()
-neutral_updater_repository=''
-neutral_updater_reference=''
-while IFS=$'\t' read -r package_name package_version package_reference package_repository package_root surfaces build_role; do
-	[[ -n "$package_name" && -n "$package_version" && -n "$package_reference" && -n "$package_repository" && -n "$package_root" && -n "$surfaces" && -n "$build_role" ]] \
+while IFS=$'\t' read -r package_name package_version package_reference package_repository package_root surface_specs build_role; do
+	[[ -n "$package_name" && -n "$package_version" && -n "$package_reference" && -n "$package_repository" && -n "$package_root" && -n "$surface_specs" && -n "$build_role" ]] \
 		|| fail 'runtime packaging projection contains an incomplete package record.'
 	package_roots+=( "$package_root" )
-	package_surfaces+=( "$surfaces" )
+	package_surface_specs+=( "$surface_specs" )
 	package_installed+=( "$composer_dir/$package_root" )
-	if [[ "$build_role" == 'neutral-updater' ]]; then
-		[[ -z "$neutral_updater_repository" ]] || fail 'runtime packaging projection identifies multiple neutral updaters.'
-		neutral_updater_repository="$package_repository"
-		neutral_updater_reference="$package_reference"
-	fi
 done < "$packaging_records"
-[[ -n "$neutral_updater_repository" && -n "$neutral_updater_reference" ]] \
-	|| fail 'runtime packaging projection does not identify the neutral updater.'
-
-updater_repository="$repo_root/../${neutral_updater_repository#*/}"
-[[ -d "$updater_repository/.git" ]] \
-	|| fail 'the locked neutral updater source checkout is unavailable.'
-git -C "$updater_repository" cat-file -e "${neutral_updater_reference}^{commit}" 2>/dev/null \
-	|| fail "the locked neutral updater commit is unavailable: $neutral_updater_reference"
 
 (
 	cd "$composer_dir"
@@ -243,17 +228,32 @@ git -C "$updater_repository" cat-file -e "${neutral_updater_reference}^{commit}"
 
 for index in "${!package_roots[@]}"; do
 	installed_package=${package_installed[$index]}
-	IFS=',' read -r -a surfaces <<< "${package_surfaces[$index]}"
-	[[ -d "$installed_package" ]] || fail "locked runtime package was not installed: $installed_package"
-	required_paths=()
-	for surface in "${surfaces[@]}"; do
+	[[ -d "$installed_package" && ! -L "$installed_package" ]] \
+		|| fail "locked runtime package root is missing or symbolic: $installed_package"
+	IFS=',' read -r -a surface_specs <<< "${package_surface_specs[$index]}"
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		surface=${surface_spec#*:}
 		required_path="$installed_package/$surface"
-		[[ -e "$required_path" ]] || fail "locked runtime package is missing: $required_path"
-		required_paths+=( "$required_path" )
+		case "$surface_kind" in
+			file)
+				[[ -f "$required_path" && ! -L "$required_path" ]] \
+					|| fail "locked runtime package file surface is missing or changed kind: $required_path"
+				;;
+			directory)
+				[[ -d "$required_path" && ! -L "$required_path" ]] \
+					|| fail "locked runtime package directory surface is missing or changed kind: $required_path"
+				find "$required_path" -type f -print -quit | grep -q . \
+					|| fail "locked runtime package directory surface is empty: $required_path"
+				if find "$required_path" -type l -print -quit | grep -q .; then
+					fail 'runtime dependency allowlist must not contain symbolic links.'
+				fi
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
 	done
-	if find "${required_paths[@]}" -type l -print -quit | grep -q .; then
-		fail 'runtime dependency allowlist must not contain symbolic links.'
-	fi
 done
 
 git archive \
@@ -266,12 +266,24 @@ git archive \
 for index in "${!package_roots[@]}"; do
 	package_root=${package_roots[$index]}
 	installed_package=${package_installed[$index]}
-	IFS=',' read -r -a surfaces <<< "${package_surfaces[$index]}"
+	IFS=',' read -r -a surface_specs <<< "${package_surface_specs[$index]}"
 	mkdir -p "$stage_root/$package_root"
-	for surface in "${surfaces[@]}"; do
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		surface=${surface_spec#*:}
+		source="$installed_package/$surface"
 		target="$stage_root/$package_root/$surface"
-		mkdir -p "$(dirname -- "$target")"
-		cp -R "$installed_package/$surface" "$target"
+		case "$surface_kind" in
+			file)
+				cp "$source" "$target"
+				;;
+			directory)
+				cp -R "$source" "$target"
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
 	done
 done
 

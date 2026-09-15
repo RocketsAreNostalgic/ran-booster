@@ -226,30 +226,15 @@ fi
 [[ -s "$packaging_records" ]] || fail 'runtime packaging policy did not produce any package records.'
 
 package_roots=()
-package_surfaces=()
+package_surface_specs=()
 package_installed=()
-neutral_updater_repository=''
-neutral_updater_reference=''
-while IFS=$'\t' read -r package_name package_version package_reference package_repository package_root surfaces build_role; do
-	[[ -n "$package_name" && -n "$package_version" && -n "$package_reference" && -n "$package_repository" && -n "$package_root" && -n "$surfaces" && -n "$build_role" ]] \
+while IFS=$'\t' read -r package_name package_version package_reference package_repository package_root surface_specs build_role; do
+	[[ -n "$package_name" && -n "$package_version" && -n "$package_reference" && -n "$package_repository" && -n "$package_root" && -n "$surface_specs" && -n "$build_role" ]] \
 		|| fail 'runtime packaging projection contains an incomplete package record.'
 	package_roots+=( "$package_root" )
-	package_surfaces+=( "$surfaces" )
+	package_surface_specs+=( "$surface_specs" )
 	package_installed+=( "$composer_dir/$package_root" )
-	if [[ "$build_role" == 'neutral-updater' ]]; then
-		[[ -z "$neutral_updater_repository" ]] || fail 'runtime packaging projection identifies multiple neutral updaters.'
-		neutral_updater_repository="$package_repository"
-		neutral_updater_reference="$package_reference"
-	fi
 done < "$packaging_records"
-[[ -n "$neutral_updater_repository" && -n "$neutral_updater_reference" ]] \
-	|| fail 'runtime packaging projection does not identify the neutral updater.'
-
-updater_repository="$repo_root/../${neutral_updater_repository#*/}"
-[[ -d "$updater_repository/.git" ]] \
-	|| fail 'the locked neutral updater source checkout is unavailable.'
-git -C "$updater_repository" cat-file -e "${neutral_updater_reference}^{commit}" 2>/dev/null \
-	|| fail "the locked neutral updater commit is unavailable: $neutral_updater_reference"
 
 (
 	cd "$composer_dir"
@@ -265,17 +250,32 @@ git -C "$updater_repository" cat-file -e "${neutral_updater_reference}^{commit}"
 
 for index in "${!package_roots[@]}"; do
 	installed_package=${package_installed[$index]}
-	IFS=',' read -r -a surfaces <<< "${package_surfaces[$index]}"
-	[[ -d "$installed_package" ]] || fail "committed lock did not install runtime package: $installed_package"
-	required_runtime_paths=()
-	for surface in "${surfaces[@]}"; do
+	[[ -d "$installed_package" && ! -L "$installed_package" ]] \
+		|| fail "committed lock did not install a regular runtime package root: $installed_package"
+	IFS=',' read -r -a surface_specs <<< "${package_surface_specs[$index]}"
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		surface=${surface_spec#*:}
 		required_runtime_path="$installed_package/$surface"
-		[[ -e "$required_runtime_path" ]] || fail "locked runtime package is missing: $required_runtime_path"
-		required_runtime_paths+=( "$required_runtime_path" )
+		case "$surface_kind" in
+			file)
+				[[ -f "$required_runtime_path" && ! -L "$required_runtime_path" ]] \
+					|| fail "locked runtime package file surface is missing or changed kind: $required_runtime_path"
+				;;
+			directory)
+				[[ -d "$required_runtime_path" && ! -L "$required_runtime_path" ]] \
+					|| fail "locked runtime package directory surface is missing or changed kind: $required_runtime_path"
+				find "$required_runtime_path" -type f -print -quit | grep -q . \
+					|| fail "locked runtime package directory surface is empty: $required_runtime_path"
+				if find "$required_runtime_path" -type l -print -quit | grep -q .; then
+					fail 'runtime dependency allowlist must not contain symbolic links.'
+				fi
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
 	done
-	if find "${required_runtime_paths[@]}" -type l -print -quit | grep -q .; then
-		fail 'runtime dependency allowlist must not contain symbolic links.'
-	fi
 done
 
 archive_paths="$tmp_dir/archive-paths.txt"
@@ -360,20 +360,31 @@ git ls-tree -r --name-only "$commit" -- "${committed_entries[@]}" \
 append_runtime_files() {
 	local installed_root=$1
 	local package_root=$2
-	local surfaces_csv=$3
-	local package_entry
-	local -a surfaces
-	IFS=',' read -r -a surfaces <<< "$surfaces_csv"
-	for package_entry in "${surfaces[@]}"; do
-		if [[ -d "$installed_root/$package_entry" ]]; then
-			find "$installed_root/$package_entry" -type f -print
-		else
-			printf '%s\n' "$installed_root/$package_entry"
-		fi
+	local surface_specs_csv=$3
+	local surface_spec surface_kind surface
+	local -a surface_specs
+	IFS=',' read -r -a surface_specs <<< "$surface_specs_csv"
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		surface=${surface_spec#*:}
+		case "$surface_kind" in
+			file)
+				printf '%s\n' "$installed_root/$surface"
+				;;
+			directory)
+				find "$installed_root/$surface" -type f -print
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
 	done | sed "s#^$installed_root/#ran-booster/$package_root/#" >> "$expected_files"
 }
 for index in "${!package_roots[@]}"; do
-	append_runtime_files "${package_installed[$index]}" "${package_roots[$index]}" "${package_surfaces[$index]}"
+	append_runtime_files \
+		"${package_installed[$index]}" \
+		"${package_roots[$index]}" \
+		"${package_surface_specs[$index]}"
 done
 printf '%s\n' 'ran-booster/ran-booster-release.json' >> "$expected_files"
 LC_ALL=C sort -o "$expected_files" "$expected_files"
@@ -445,29 +456,37 @@ php -r '
 compare_runtime_package() {
 	local installed_root=$1
 	local archived_root=$2
-	local surfaces_csv=$3
-	local entry package_file relative_package_file
-	local -a surfaces
-	IFS=',' read -r -a surfaces <<< "$surfaces_csv"
-	for entry in "${surfaces[@]}"; do
-		if [[ -d "$installed_root/$entry" ]]; then
-			while IFS= read -r package_file || [[ -n "$package_file" ]]; do
-				[[ -n "$package_file" ]] || continue
-				relative_package_file=${package_file#"$installed_root/"}
-				cmp -s "$package_file" "$archived_root/$relative_package_file" \
-					|| fail "archived runtime dependency $relative_package_file does not match the committed Composer lock."
-			done < <(find "$installed_root/$entry" -type f -print | LC_ALL=C sort)
-		else
-			cmp -s "$installed_root/$entry" "$archived_root/$entry" \
-				|| fail "archived runtime dependency $entry does not match the committed Composer lock."
-		fi
+	local surface_specs_csv=$3
+	local surface_spec surface_kind entry package_file relative_package_file
+	local -a surface_specs
+	IFS=',' read -r -a surface_specs <<< "$surface_specs_csv"
+	for surface_spec in "${surface_specs[@]}"; do
+		surface_kind=${surface_spec%%:*}
+		entry=${surface_spec#*:}
+		case "$surface_kind" in
+			file)
+				cmp -s "$installed_root/$entry" "$archived_root/$entry" \
+					|| fail "archived runtime dependency $entry does not match the committed Composer lock."
+				;;
+			directory)
+				while IFS= read -r package_file || [[ -n "$package_file" ]]; do
+					[[ -n "$package_file" ]] || continue
+					relative_package_file=${package_file#"$installed_root/"}
+					cmp -s "$package_file" "$archived_root/$relative_package_file" \
+						|| fail "archived runtime dependency $relative_package_file does not match the committed Composer lock."
+				done < <(find "$installed_root/$entry" -type f -print | LC_ALL=C sort)
+				;;
+			*)
+				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
+				;;
+		esac
 	done
 }
 for index in "${!package_roots[@]}"; do
 	compare_runtime_package \
 		"${package_installed[$index]}" \
 		"$extract_dir/ran-booster/${package_roots[$index]}" \
-		"${package_surfaces[$index]}"
+		"${package_surface_specs[$index]}"
 done
 php_file_count=0
 while IFS= read -r php_file || [[ -n "$php_file" ]]; do

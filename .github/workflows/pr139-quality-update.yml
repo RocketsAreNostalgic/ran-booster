@@ -25,6 +25,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Materialize the exact proposed workflow/test bytes as ordinary files;
+          # the GitHub connector promotes them after this read-only transformation.
           python3 scripts/pr139-quality-update.py
           cp .github/workflows/quality.yml quality-pr139-next.txt
           cp tests/ReleasePlatformContractTest.php release-platform-pr139-next.txt

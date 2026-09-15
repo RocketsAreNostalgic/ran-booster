@@ -1,0 +1,74 @@
+name: Apply PR 139 compatibility-floor fix
+
+on:
+  push:
+    branches:
+      - refactor/runtime-packaging-policy
+    paths:
+      - .github/workflows/pr139-floor-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out topic branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/runtime-packaging-policy
+          fetch-depth: 0
+
+      - name: Apply bounded compatibility-floor fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          quality_path = Path('.github/workflows/quality.yml')
+          quality = quality_path.read_text()
+
+          old = '''              runtime_version=${package_version#v}\n              runtime_protocol="$(jq -er '.extra["ran-updater-runtime-protocol"] | select(type == "number" and . > 0)' "$expected_project/composer.json")"\n              COMPOSER_HOME="$composer_home" composer install \\\n'''
+          new = '''              runtime_version=${package_version#v}\n              runtime_protocol="$(jq -er '.extra["ran-updater-runtime-protocol"] | select(type == "number" and . > 0)' "$expected_project/composer.json")"\n              booster_requires_php="$(\n                git show "${source_commit}:ran-booster.php" \\\n                  | sed -n 's/^[[:space:]]*\\*[[:space:]]*Requires PHP:[[:space:]]*\\([^[:space:]]*\\)[[:space:]]*$/\\1/p'\n              )"\n              booster_requires_wordpress="$(\n                git show "${source_commit}:ran-booster.php" \\\n                  | sed -n 's/^[[:space:]]*\\*[[:space:]]*Requires at least:[[:space:]]*\\([^[:space:]]*\\)[[:space:]]*$/\\1/p'\n              )"\n              [[ "$booster_requires_php" =~ ^[0-9]+\\.[0-9]+(\\.[0-9]+)?$ ]]\n              [[ "$booster_requires_wordpress" =~ ^[0-9]+\\.[0-9]+(\\.[0-9]+)?$ ]]\n              COMPOSER_HOME="$composer_home" composer install \\\n'''
+          if quality.count(old) != 1:
+              raise SystemExit(f'floor source insertion target count: {quality.count(old)}')
+          quality = quality.replace(old, new, 1)
+
+          old = '''                '.package_version == $version\n                  and .runtime_protocol == $protocol\n                  and (.package_revision | type == "string" and test("^[0-9a-f]{64}$"))\n                  and .runtime_file == "runtime.php"' \\\n                "$runtime_copy" >/dev/null\n              grep -Fq 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePluginUpdater' "$runtime_file"\n'''
+          new = '''                '.package_version == $version\n                  and .runtime_protocol == $protocol\n                  and (.package_revision | type == "string" and test("^[0-9a-f]{64}$"))\n                  and .runtime_file == "runtime.php"\n                  and (.php_floor | type == "string" and test("^[0-9]+\\\\.[0-9]+(?:\\\\.[0-9]+)?$"))\n                  and (.wordpress_floor | type == "string" and test("^[0-9]+\\\\.[0-9]+(?:\\\\.[0-9]+)?$"))' \\\n                "$runtime_copy" >/dev/null\n              runtime_php_floor="$(jq -er '.php_floor' "$runtime_copy")"\n              runtime_wordpress_floor="$(jq -er '.wordpress_floor' "$runtime_copy")"\n              php -r 'exit( version_compare( $argv[1], $argv[2], "<=" ) ? 0 : 1 );' \\\n                "$runtime_php_floor" "$booster_requires_php" \\\n                || { echo 'Neutral updater PHP floor exceeds Booster support.' >&2; exit 1; }\n              php -r 'exit( version_compare( $argv[1], $argv[2], "<=" ) ? 0 : 1 );' \\\n                "$runtime_wordpress_floor" "$booster_requires_wordpress" \\\n                || { echo 'Neutral updater WordPress floor exceeds Booster support.' >&2; exit 1; }\n              grep -Fq 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePluginUpdater' "$runtime_file"\n'''
+          if quality.count(old) != 1:
+              raise SystemExit(f'floor validation replacement target count: {quality.count(old)}')
+          quality = quality.replace(old, new, 1)
+          quality_path.write_text(quality)
+
+          test_path = Path('tests/ReleasePlatformContractTest.php')
+          test = test_path.read_text()
+          marker = '''\t\tself::assertStringContainsString( 'php "$verifier_file" --packaging', $quality );\n\t\tself::assertStringNotContainsString(\n'''
+          replacement = '''\t\tself::assertStringContainsString( 'php "$verifier_file" --packaging', $quality );\n\t\tself::assertStringContainsString( 'Requires PHP:', $quality );\n\t\tself::assertStringContainsString( 'Requires at least:', $quality );\n\t\tself::assertStringContainsString( '.php_floor', $quality );\n\t\tself::assertStringContainsString( '.wordpress_floor', $quality );\n\t\tself::assertStringContainsString( 'version_compare( $argv[1], $argv[2], "<=" )', $quality );\n\t\tself::assertStringNotContainsString(\n'''
+          if test.count(marker) != 1:
+              raise SystemExit(f'test insertion target count: {test.count(marker)}')
+          test_path.write_text(test.replace(marker, replacement, 1))
+
+          docs_path = Path('docs/runtime-packaging-policy.md')
+          docs = docs_path.read_text()
+          old_docs = 'The release updater sealed/runtime-copy model is unchanged: the release updater remains a normal policy-approved package surface, and the selected release-updater package root, version, repository, and revision are derived from the committed policy + lock projection rather than hard-coded independently. The installed WordPress readback uses that same projection, performs a clean Composer install for the selected source commit, and compares the shipped `runtime-copy.json` / `runtime.php` bytes before validating the runtime metadata and V1 marker.\n'
+          new_docs = old_docs.rstrip('\n') + ' The readback also requires the updater\'s declared PHP and WordPress floors to be no higher than Booster\'s selected-commit `Requires PHP` and `Requires at least` headers, so the updater remains runnable across Booster\'s full declared support range without duplicating version constants in CI.\n'
+          if docs.count(old_docs) != 1:
+              raise SystemExit(f'documentation insertion target count: {docs.count(old_docs)}')
+          docs_path.write_text(docs.replace(old_docs, new_docs, 1))
+          PY
+
+          cp .github/workflows/quality.yml quality-pr139-floor-next.txt
+          git restore .github/workflows/quality.yml
+          php -l tests/ReleasePlatformContractTest.php
+          git diff --check
+          changed="$(git diff --name-only)"
+          test "$changed" = $'docs/runtime-packaging-policy.md\nquality-pr139-floor-next.txt\ntests/ReleasePlatformContractTest.php'
+          git config user.name 'Benjamin Rush'
+          git config user.email 'bnjmnrsh@gmail.com'
+          git add docs/runtime-packaging-policy.md quality-pr139-floor-next.txt tests/ReleasePlatformContractTest.php
+          git commit -m 'fix: preserve updater compatibility floors'
+          git push origin HEAD:refactor/runtime-packaging-policy

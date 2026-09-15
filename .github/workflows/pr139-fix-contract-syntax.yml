@@ -21,7 +21,7 @@ jobs:
           ref: refactor/runtime-packaging-policy
           fetch-depth: 0
 
-      - name: Correct the single malformed contract assertion
+      - name: Correct the two stale workflow contract literals
         shell: bash
         run: |
           set -euo pipefail
@@ -30,10 +30,14 @@ jobs:
 
           path = Path('tests/ReleaseWorkflowContractTest.php')
           lines = path.read_text().splitlines()
-          matches = [i for i, line in enumerate(lines) if "assertStringContainsString( 'composer install " in line]
-          if len(matches) != 1:
-              raise SystemExit(f'contract syntax line count: {len(matches)}')
-          lines[matches[0]] = "\t\tself::assertStringContainsString( 'composer install', $workflow );"
+
+          composer = [i for i, line in enumerate(lines) if "assertStringContainsString( 'composer install " in line]
+          marker = [i for i, line in enumerate(lines) if "assertStringContainsString( 'RAN" in line and 'NativePluginUpdater' in line]
+          if len(composer) != 1 or len(marker) != 1:
+              raise SystemExit(f'contract line counts: composer={len(composer)} marker={len(marker)}')
+
+          lines[composer[0]] = "\t\tself::assertStringContainsString( 'composer install', $workflow );"
+          lines[marker[0]] = "\t\tself::assertStringContainsString( 'RAN\\\\WPReleaseUpdater\\\\V1\\\\WordPress\\\\NativePluginUpdater', $workflow );"
           path.write_text('\n'.join(lines) + '\n')
           PY
           php -l tests/ReleaseWorkflowContractTest.php
@@ -43,5 +47,5 @@ jobs:
           git config user.name 'Benjamin Rush'
           git config user.email 'bnjmnrsh@gmail.com'
           git add tests/ReleaseWorkflowContractTest.php
-          git commit -m 'test: fix runtime packaging workflow contract syntax'
+          git commit -m 'test: align runtime packaging workflow contracts'
           git push origin HEAD:refactor/runtime-packaging-policy

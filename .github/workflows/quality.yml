@@ -995,11 +995,8 @@ jobs:
               [[ "$package_reference" =~ ^[0-9a-f]{40}$ ]]
               [[ "$package_repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
               [[ "$package_root" == vendor/* ]]
-              IFS=',' read -r -a neutral_surfaces <<< "$surface_specs"
-              printf '%s
-' "${neutral_surfaces[@]}" | grep -Fxq 'file:runtime-copy.json'
-              printf '%s
-' "${neutral_surfaces[@]}" | grep -Fxq 'file:runtime.php'
+              [[ ",$surface_specs," == *,file:runtime-copy.json,* ]]
+              [[ ",$surface_specs," == *,file:runtime.php,* ]]
 
               runtime_version=${package_version#v}
               runtime_protocol="$(jq -er '.extra["ran-updater-runtime-protocol"] | select(type == "number" and . > 0)' "$expected_project/composer.json")"

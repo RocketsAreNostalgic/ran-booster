@@ -105,6 +105,12 @@ If the provider has admin-facing credential kinds or web hook scopes, include
 placeholders, descriptions, scope names, and web hook guidance within the
 constructor limits.
 
+Admin metadata remains optional for ordinary provider registration and other
+capabilities. A provider opting into the current
+`RepositoryReleaseWorkflowManagementV2` helper must expose non-null
+`ProviderAdminMetadata` on its registered aggregate; otherwise Core does not
+expose workflow-helper controls or calls for that provider.
+
 Use an optional `ProviderNavigationPlacement` when the provider should declare
 its position in Core's provider navigation. Choose the ordinary `git-host` or
 `other-provider` group and a slot from 1 through 10,000. No slot is reserved for
@@ -212,12 +218,29 @@ them:
   eligible for managed published-release tracking. Core retains installed
   package enumeration, authority snapshots, mutation fences, locks and source
   transitions.
-- `RAN\RepositoryProvider\RepositoryReleaseWorkflowManagement` for optional
+- `RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2` for optional
   release workflow assessment, draft pull requests, outcome checks and template
-  updates. It requires all five release-consumption contracts on the same
-  provider. Core owns the shared controls and authorization; providers return
-  immutable evidence and own their remote operations. See the
+  updates. Current Core resolves this standalone workflow API 2 facet directly.
+  API-1 providers remain load-compatible, but must explicitly migrate to V2 to
+  receive workflow-helper calls. It requires all five release-consumption
+  contracts and non-null `ProviderAdminMetadata` on the same provider aggregate.
+  The projected expected Update URI may be empty; when present it must be an
+  HTTPS URL with a host and no userinfo. A non-HTTPS canonical Update URI may
+  remain valid for ordinary release tracking, but makes that provider/package
+  ineligible for current workflow-helper calls. Core owns the shared controls
+  and authorization; providers return immutable evidence and own their remote
+  operations. See the
   [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
+
+Because the global Provider API marker remains 10, that marker alone does not
+prove workflow API 2 exists. A provider adopting
+`RepositoryReleaseWorkflowManagementV2` must call `interface_exists()` for that
+exact interface before loading or declaring any class that implements it. Keep
+the V2-capable implementation behind that feature gate; an older API-10 Booster
+host can then continue loading the provider's ordinary API-10 implementation
+without the V2 file being loaded. Providers that do not adopt workflow API 2
+need no additional feature check. See the
+[dedicated workflow API contract](provider-release-workflow-api.md#provider-api-10-feature-detection).
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits an automation helper, Booster omits that helper's setup component without
@@ -279,6 +302,9 @@ shape check.
    single-use `RepositoryReleaseArtifact`. Do not return a path, URL, archive
    bytes, provider result payload or reusable claim. Report a bounded cleanup
    failure when provider-owned bytes cannot be discarded before handoff.
+1. If adopting `RepositoryReleaseWorkflowManagementV2`, feature-detect that
+   interface before the V2 implementation class is loaded so the provider stays
+   non-fatal on older Booster releases that still advertise Provider API 10.
 1. Test registration from the main plugin file with the version guard in place.
 1. Verify the provider registers cleanly, seals cleanly, and surfaces the
    correct optional capabilities.
@@ -313,7 +339,7 @@ Common setup failures and what they mean:
 
 If the vendor registers in tests but not in WordPress, confirm that the callback
 runs on the active plugin load path and that `RAN_BOOSTER_PROVIDER_API_VERSION`
-is exactly `9`.
+is exactly `10`.
 
 ## Related types
 

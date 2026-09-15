@@ -493,17 +493,21 @@ back to the Core baseline; invalid badge labels and status values are dropped.
 Repository-scoped release workflow management belongs on the selected repository
 page. Core composes `ReleaseWorkflowControls` directly with the repository
 renderer; there is no provider HTML action or competing provider-rendered shell.
-The optional `RepositoryReleaseWorkflowManagement` capability supplies bounded
-immutable status, preview and result values. Core keeps the heading, setup-status
-line, credential selector, labels and help links stable, varying only values,
-notices and enabled states. Rendering uses local evidence only.
+The optional `RepositoryReleaseWorkflowManagementV2` capability supplies bounded
+immutable status, preview and result values to the current workflow helper.
+`RepositoryReleaseWorkflowManagement` remains the frozen, load-compatible API 1
+facet, but current Core does not resolve it for workflow-helper calls. Core keeps
+the heading, setup-status line, credential selector, labels and help links
+stable, varying only values, notices and enabled states. Rendering uses local
+evidence only.
 
 Core validates the exact provider, repository, package and source revision before
 each fixed operation. Package settings retain source, track, candidate selection,
 installation and update-policy controls. Repository history uses normalized
 `webhook` and `release_workflow` categories, not provider key prefixes or English
 headings; only exact current summary projections contribute to review counts.
-See the [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
+See the [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management)
+and the [API 1 to API 2 migration and feature-detection contract](provider-release-workflow-api.md).
 
 ## Structured administration actions
 

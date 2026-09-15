@@ -29,12 +29,12 @@ jobs:
           from pathlib import Path
 
           path = Path('tests/ReleaseWorkflowContractTest.php')
-          text = path.read_text()
-          old = "\t\tself::assertStringContainsString( 'composer install \\\\', $workflow );"
-          new = "\t\tself::assertStringContainsString( 'composer install', $workflow );"
-          if text.count(old) != 1:
-              raise SystemExit(f'contract syntax replacement count: {text.count(old)}')
-          path.write_text(text.replace(old, new, 1))
+          lines = path.read_text().splitlines()
+          matches = [i for i, line in enumerate(lines) if "assertStringContainsString( 'composer install " in line]
+          if len(matches) != 1:
+              raise SystemExit(f'contract syntax line count: {len(matches)}')
+          lines[matches[0]] = "\t\tself::assertStringContainsString( 'composer install', $workflow );"
+          path.write_text('\n'.join(lines) + '\n')
           PY
           php -l tests/ReleaseWorkflowContractTest.php
           composer install --no-interaction --prefer-dist --no-progress

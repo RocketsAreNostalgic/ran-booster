@@ -186,18 +186,22 @@ foreach ( $packages as $package ) {
 	$actual[ $name ] = $package;
 }
 
+if ( count( $actual ) !== count( array_intersect_key( $actual, $expected ) ) ) {
+	fwrite( STDERR, "Runtime dependency lock contains an unexpected production package.\n" );
+	exit( 1 );
+}
+
 $versionPattern = '/^v?[0-9]+\.[0-9]+\.[0-9]+'
 	. '(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D';
 
 foreach ( $expected as $name => $identity ) {
-	$package = $actual[ $name ] ?? null;
-	$source  = is_array( $package ) ? ( $package['source'] ?? null ) : null;
-	$dist    = is_array( $package ) ? ( $package['dist'] ?? null ) : null;
-	$version = is_array( $package ) ? ( $package['version'] ?? null ) : null;
+	$package = $actual[ $name ];
+	$source  = $package['source'] ?? null;
+	$dist    = $package['dist'] ?? null;
+	$version = $package['version'] ?? null;
 
 	if (
-		! is_array( $package )
-		|| ! is_string( $version )
+		! is_string( $version )
 		|| 1 !== preg_match( $versionPattern, $version )
 		|| ! is_array( $source )
 		|| 'git' !== ( $source['type'] ?? null )
@@ -222,11 +226,6 @@ foreach ( $expected as $name => $identity ) {
 		fwrite( STDERR, "Runtime dependency repository identity mismatch for {$name}.\n" );
 		exit( 1 );
 	}
-}
-
-if ( count( $actual ) !== count( array_intersect_key( $actual, $expected ) ) ) {
-	fwrite( STDERR, "Runtime dependency lock contains an unexpected production package.\n" );
-	exit( 1 );
 }
 
 $contentHash = $lock['content-hash'] ?? null;

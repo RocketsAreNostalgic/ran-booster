@@ -8,6 +8,7 @@ use RAN\Deployment\PreparedArtifact;
 use RAN\WordPress\CorePackageExecutionFailure;
 use RAN\WordPress\CorePackageExecutor;
 
+require_once dirname( __DIR__, 2 ) . '/vendor/ran/updater-support/src/RepositoryRelativePath.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/PackageSubdirectory.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Deployment/PreparedArtifact.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Runtime/RuntimeSupport.php';

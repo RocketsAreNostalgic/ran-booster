@@ -7,19 +7,32 @@ create tags manually.
 
 ## Changes to release authority
 
-The Quality and Release Please workflows treat their workflow definitions and
-release scripts as privileged release authority. When a merged pull request
-changes one of those files, Quality still verifies the merged commit, but
-Release Please intentionally makes no repository or release mutation. This
-prevents a newly changed workflow from immediately exercising its own release
-permissions.
+Booster uses trusted-main promotion for release control. Pull requests remain
+mandatory on `main`, the repository ruleset has no bypass actors, and strict
+Runtime archive, Quality, and Release candidate install readback checks remain
+required before merge.
 
-After an authority-changing pull request lands, merge a separate ordinary pull
-request that does not change the protected workflows or release scripts. Its
-successful main-branch Quality run may then open or update the Release Please
-proposal using the reviewed authority. Rerunning the authority-changing commit
-does not bypass this separation, and version files or tags must not be edited by
-hand.
+The current single-maintainer model does not claim a separate human
+authorization principal. Release-control pull requests continue through the
+repository's exact-head automated review process; where repository settings
+require an external automated approval such as Copilot, that is a pre-merge
+review gate rather than release evidence.
+
+A merge does not itself authorize privileged release mutation. Quality must
+successfully qualify that exact merged `main` revision. Changes to release
+workflows, release scripts, dependency manifests, the runtime packaging policy,
+and other evidence inputs continue to force a fresh main Runtime archive and
+Quality run rather than reusing pull-request evidence.
+
+Release Please runs only after a successful push-triggered `main` Quality run
+for this repository. It checks out that exact Quality commit and proves the
+merged lifecycle before opening or updating a release proposal or reconciling
+publication. There is no mandatory second ordinary pull request after a
+release-control change: successful exact-main qualification is the promotion
+boundary.
+
+Exact candidate identity, artifact provenance, immutable publication, and
+post-publication readback remain unchanged.
 
 ## Release candidate fetch credentials
 

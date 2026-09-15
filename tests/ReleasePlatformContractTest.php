@@ -312,6 +312,8 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertStringContainsString( '.php_floor', $quality );
 		self::assertStringContainsString( '.wordpress_floor', $quality );
 		self::assertStringContainsString( 'version_compare( $argv[1], $argv[2], "<=" )', $quality );
+		self::assertStringContainsString( 'booster_requires_php="${booster_requires_php}.0"', $quality );
+		self::assertStringContainsString( 'booster_requires_wordpress="${booster_requires_wordpress}.0"', $quality );
 		self::assertStringNotContainsString( '[[ "$package_version" =~ ^v?', $quality );
 		self::assertStringNotContainsString(
 			'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3',

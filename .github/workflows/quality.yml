@@ -1009,6 +1009,12 @@ jobs:
               )"
               [[ "$booster_requires_php" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
               [[ "$booster_requires_wordpress" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
+              if [[ "$booster_requires_php" =~ ^[0-9]+\.[0-9]+$ ]]; then
+                booster_requires_php="${booster_requires_php}.0"
+              fi
+              if [[ "$booster_requires_wordpress" =~ ^[0-9]+\.[0-9]+$ ]]; then
+                booster_requires_wordpress="${booster_requires_wordpress}.0"
+              fi
               COMPOSER_HOME="$composer_home" composer install \
                 --working-dir="$expected_project" \
                 --no-dev \

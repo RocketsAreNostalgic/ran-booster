@@ -226,6 +226,10 @@ done < "$packaging_records"
 		--no-autoloader
 )
 
+if ! php "$repo_root/scripts/verify-runtime-dependencies.php" --verify-install "$composer_dir" "$composer_dir/composer.lock" "$policy_file"; then
+	fail 'installed runtime package surfaces do not match the locked runtime packaging policy.'
+fi
+
 for index in "${!package_roots[@]}"; do
 	installed_package=${package_installed[$index]}
 	[[ -d "$installed_package" && ! -L "$installed_package" ]] \

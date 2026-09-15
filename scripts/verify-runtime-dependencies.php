@@ -8,16 +8,27 @@ declare(strict_types=1);
 // phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 // phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
 
-$arguments = array_slice( $argv, 1 );
-$packaging = false;
+$arguments     = array_slice( $argv, 1 );
+$packaging     = false;
+$installedRoot = null;
+$usage         = 'Usage: php scripts/verify-runtime-dependencies.php '
+	. '[--packaging | --verify-install <installed-root>] '
+	. '<composer.lock> <runtime-packaging-policy.json>' . "\n";
+
 if ( '--packaging' === ( $arguments[0] ?? null ) ) {
 	$packaging = true;
 	array_shift( $arguments );
+} elseif ( '--verify-install' === ( $arguments[0] ?? null ) ) {
+	array_shift( $arguments );
+	$candidateInstalledRoot = array_shift( $arguments );
+	if ( ! is_string( $candidateInstalledRoot ) || '' === $candidateInstalledRoot ) {
+		fwrite( STDERR, $usage );
+		exit( 2 );
+	}
+	$installedRoot = $candidateInstalledRoot;
 }
 
 if ( PHP_SAPI !== 'cli' || 2 !== count( $arguments ) ) {
-	$usage = 'Usage: php scripts/verify-runtime-dependencies.php '
-		. '[--packaging] <composer.lock> <runtime-packaging-policy.json>' . "\n";
 	fwrite( STDERR, $usage );
 	exit( 2 );
 }
@@ -86,7 +97,7 @@ foreach ( $policy['packages'] as $record ) {
 
 	if (
 		! is_string( $name )
-		|| 1 !== preg_match( '/^ran\/[a-z0-9_.-]+$/D', $name )
+		|| 1 !== preg_match( '/^ran\/(?!\.{1,2}$)[a-z0-9_.-]+$/D', $name )
 		|| ! is_string( $repository )
 		|| 1 !== preg_match( '/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/D', $repository )
 		|| ! is_string( $archiveRoot )
@@ -191,8 +202,10 @@ if ( count( $actual ) !== count( array_intersect_key( $actual, $expected ) ) ) {
 	exit( 1 );
 }
 
-$versionPattern = '/^v?[0-9]+\.[0-9]+\.[0-9]+'
-	. '(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D';
+$versionPattern = '/^v?(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
+	. '(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)'
+	. '(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?'
+	. '(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/D';
 
 foreach ( $expected as $name => $identity ) {
 	$package = $actual[ $name ];
@@ -232,6 +245,71 @@ $contentHash = $lock['content-hash'] ?? null;
 if ( ! is_string( $contentHash ) || 1 !== preg_match( '/^[0-9a-f]{32}$/D', $contentHash ) ) {
 	fwrite( STDERR, "Runtime dependency lock content hash is invalid.\n" );
 	exit( 1 );
+}
+
+if ( null !== $installedRoot ) {
+	if ( ! is_dir( $installedRoot ) || is_link( $installedRoot ) ) {
+		fwrite( STDERR, "Installed runtime root is missing or symbolic.\n" );
+		exit( 1 );
+	}
+
+	foreach ( $expected as $name => $identity ) {
+		$packageRoot = rtrim( $installedRoot, '/\\' ) . '/' . $identity['archive_root'];
+		if ( ! is_dir( $packageRoot ) || is_link( $packageRoot ) ) {
+			fwrite( STDERR, "Installed runtime package root is missing or symbolic for {$name}.\n" );
+			exit( 1 );
+		}
+
+		foreach ( $identity['surfaces'] as $surface ) {
+			$surfacePath = $packageRoot . '/' . $surface['path'];
+			if ( 'file' === $surface['kind'] ) {
+				if ( ! is_file( $surfacePath ) || is_link( $surfacePath ) ) {
+					fwrite( STDERR, "Installed runtime file surface is missing or changed kind for {$name}: {$surface['path']}.\n" );
+					exit( 1 );
+				}
+				continue;
+			}
+
+			if ( ! is_dir( $surfacePath ) || is_link( $surfacePath ) ) {
+				fwrite( STDERR, "Installed runtime directory surface is missing or changed kind for {$name}: {$surface['path']}.\n" );
+				exit( 1 );
+			}
+
+			$pending = array( $surfacePath );
+			while ( array() !== $pending ) {
+				$directory = array_pop( $pending );
+				$entries   = scandir( $directory );
+				if ( false === $entries ) {
+					fwrite( STDERR, "Installed runtime directory surface is unreadable for {$name}: {$surface['path']}.\n" );
+					exit( 1 );
+				}
+				$entries = array_values( array_diff( $entries, array( '.', '..' ) ) );
+				if ( array() === $entries ) {
+					$relative = substr( $directory, strlen( $packageRoot ) + 1 );
+					fwrite( STDERR, "Installed runtime directory surface contains an empty directory for {$name}: {$relative}.\n" );
+					exit( 1 );
+				}
+
+				foreach ( $entries as $entry ) {
+					$child = $directory . '/' . $entry;
+					if ( is_link( $child ) ) {
+						fwrite( STDERR, "Installed runtime directory surface contains a symbolic link for {$name}: {$surface['path']}.\n" );
+						exit( 1 );
+					}
+					if ( is_dir( $child ) ) {
+						$pending[] = $child;
+						continue;
+					}
+					if ( ! is_file( $child ) ) {
+						fwrite( STDERR, "Installed runtime directory surface contains an unsupported filesystem entry for {$name}: {$surface['path']}.\n" );
+						exit( 1 );
+					}
+				}
+			}
+		}
+	}
+
+	exit( 0 );
 }
 
 foreach ( $expected as $name => $identity ) {

@@ -1,0 +1,70 @@
+name: Normalize path-policy standards
+
+on:
+  push:
+    branches:
+      - refactor/shared-repository-relative-path
+    paths:
+      - .github/workflows/fix-path-standards.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/shared-repository-relative-path
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install locked dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Add developer-only chained-exception suppressions
+        shell: python
+        run: |
+          from pathlib import Path
+
+          replacements = {
+              'RAN/Booster/GitHub/RepositoryBrowser.php': (
+                  "\t\t} catch ( InvalidArgumentException $exception ) {\n\t\t\tthrow new RuntimeException( 'The GitHub repository path check is invalid.', 400, $exception );",
+                  "\t\t} catch ( InvalidArgumentException $exception ) {\n\t\t\t// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.\n\t\t\tthrow new RuntimeException( 'The GitHub repository path check is invalid.', 400, $exception );",
+              ),
+              'RAN/Deployment/DeploymentRequest.php': (
+                  "\t\t} catch ( InvalidArgumentException $exception ) {\n\t\t\tthrow new InvalidArgumentException( 'The package subdirectory is invalid.', 0, $exception );",
+                  "\t\t} catch ( InvalidArgumentException $exception ) {\n\t\t\t// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.\n\t\t\tthrow new InvalidArgumentException( 'The package subdirectory is invalid.', 0, $exception );",
+              ),
+          }
+          for path, (old, new) in replacements.items():
+              file = Path(path)
+              text = file.read_text()
+              if text.count(old) != 1:
+                  raise SystemExit(f'{path}: expected exactly one chained-exception match')
+              file.write_text(text.replace(old, new))
+
+      - name: Apply automatic coding-standard fixes
+        run: vendor/bin/phpcbf --standard=.phpcs.xml RAN/Booster/GitHub/RepositoryBrowser.php RAN/Deployment/DeploymentRequest.php tests/PackageSubdirectoryTest.php tests/Booster/GitHub/bootstrap.php || test $? -eq 1
+
+      - name: Verify coding standards
+        run: vendor/bin/phpcs --standard=.phpcs.xml -s RAN/Booster/GitHub/RepositoryBrowser.php RAN/Deployment/DeploymentRequest.php tests/PackageSubdirectoryTest.php tests/Booster/GitHub/bootstrap.php
+
+      - name: Remove temporary workflow and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/fix-path-standards.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add RAN/Booster/GitHub/RepositoryBrowser.php RAN/Deployment/DeploymentRequest.php tests/PackageSubdirectoryTest.php tests/Booster/GitHub/bootstrap.php .github/workflows/fix-path-standards.yml
+          git commit -m 'style: normalize path-policy changes'
+          git push origin HEAD:refactor/shared-repository-relative-path

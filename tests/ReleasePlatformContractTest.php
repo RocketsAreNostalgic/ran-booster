@@ -23,7 +23,13 @@ final class ReleasePlatformContractTest extends TestCase {
 		'ran/wp-release-updater' => array(
 			'repository'   => 'RocketsAreNostalgic/ran-wp-release-updater',
 			'archive_root' => 'vendor/ran/wp-release-updater',
-			'surfaces'     => array( 'LICENSE', 'bootstrap.php', 'runtime-copy.json', 'runtime.php', 'src' ),
+			'surfaces'     => array(
+				'LICENSE',
+				'bootstrap.php',
+				'runtime-copy.json',
+				'runtime.php',
+				'src',
+			),
 			'build_role'   => 'neutral-updater',
 		),
 	);
@@ -61,7 +67,9 @@ final class ReleasePlatformContractTest extends TestCase {
 		$lock   = $this->readJson( dirname( __DIR__ ) . '/composer.lock' );
 		$policy = $this->readPackagingPolicy();
 
-		$packages = is_array( $lock['packages'] ?? null ) ? $lock['packages'] : array();
+		$packages = is_array( $lock['packages'] ?? null )
+			? $lock['packages']
+			: array();
 		self::assertCount( count( self::RUNTIME_PACKAGING_POLICY ), $packages );
 
 		$byName = array();
@@ -82,6 +90,8 @@ final class ReleasePlatformContractTest extends TestCase {
 		}
 		self::assertSame( array_keys( $policyByName ), array_keys( $byName ) );
 
+		$versionPattern = '/^v?[0-9]+\.[0-9]+\.[0-9]+'
+			. '(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D';
 		foreach ( $policyByName as $name => $record ) {
 			$package    = $byName[ $name ];
 			$repository = $record['repository'] ?? null;
@@ -90,11 +100,14 @@ final class ReleasePlatformContractTest extends TestCase {
 			self::assertIsString( $reference );
 			self::assertMatchesRegularExpression( '/^[0-9a-f]{40}$/D', $reference );
 			self::assertMatchesRegularExpression(
-				'/^v?[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D',
+				$versionPattern,
 				(string) ( $package['version'] ?? '' )
 			);
 			self::assertSame( 'git', $package['source']['type'] ?? null );
-			self::assertSame( 'https://github.com/' . $repository . '.git', $package['source']['url'] ?? null );
+			self::assertSame(
+				'https://github.com/' . $repository . '.git',
+				$package['source']['url'] ?? null
+			);
 			self::assertSame( 'zip', $package['dist']['type'] ?? null );
 			self::assertSame( $reference, $package['dist']['reference'] ?? null );
 			self::assertSame(
@@ -111,7 +124,8 @@ final class ReleasePlatformContractTest extends TestCase {
 		);
 
 		self::assertSame( 0, $result['exit'], $result['stderr'] );
-		self::assertCount( count( self::RUNTIME_PACKAGING_POLICY ), array_filter( explode( "\n", trim( $result['stdout'] ) ) ) );
+		$records = array_filter( explode( "\n", trim( $result['stdout'] ) ) );
+		self::assertCount( count( self::RUNTIME_PACKAGING_POLICY ), $records );
 	}
 
 	public function testRuntimeDependencyVerifierRejectsUnexpectedPackageDrift(): void {
@@ -127,14 +141,15 @@ final class ReleasePlatformContractTest extends TestCase {
 			);
 			self::assertNotSame( 0, $result['exit'] );
 		} finally {
-			@unlink( $path );
+			$this->removeTemporaryFile( $path );
 		}
 	}
 
 	public function testRuntimeDependencyVerifierRejectsRepositoryDrift(): void {
 		$policy = $this->readPackagingPolicy();
 		self::assertIsArray( $policy['packages'][0] ?? null );
-		$policy['packages'][0]['repository'] = 'RocketsAreNostalgic/not-the-locked-package';
+		$policy['packages'][0]['repository'] =
+			'RocketsAreNostalgic/not-the-locked-package';
 		$path = $this->writeTemporaryJson( $policy );
 
 		try {
@@ -144,7 +159,7 @@ final class ReleasePlatformContractTest extends TestCase {
 			);
 			self::assertNotSame( 0, $result['exit'] );
 		} finally {
-			@unlink( $path );
+			$this->removeTemporaryFile( $path );
 		}
 	}
 
@@ -162,37 +177,64 @@ final class ReleasePlatformContractTest extends TestCase {
 			);
 			self::assertNotSame( 0, $result['exit'] );
 		} finally {
-			@unlink( $path );
+			$this->removeTemporaryFile( $path );
 		}
 	}
 
 	public function testReleaseScriptsConsumeTheSharedPackagingPolicyProjection(): void {
 		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $scriptName ) {
-			$script = file_get_contents( dirname( __DIR__ ) . '/scripts/' . $scriptName ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+			$script = file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+				dirname( __DIR__ ) . '/scripts/' . $scriptName
+			);
 			self::assertIsString( $script );
 			self::assertStringContainsString( 'runtime-packaging-policy.json', $script );
-			self::assertStringContainsString( 'scripts/verify-runtime-dependencies.php', $script );
+			self::assertStringContainsString(
+				'scripts/verify-runtime-dependencies.php',
+				$script
+			);
 			self::assertStringContainsString( '--packaging', $script );
 			self::assertStringContainsString( 'package_roots=()', $script );
 			self::assertStringContainsString( 'package_surfaces=()', $script );
-			self::assertStringNotContainsString( "release_package_root='vendor/ran/wp-release-updater'", $script );
-			self::assertStringNotContainsString( "branch_package_root='vendor/ran/wp-branch-updater'", $script );
-			self::assertStringNotContainsString( "support_package_root='vendor/ran/updater-support'", $script );
-			self::assertStringNotContainsString( 'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3', $script );
+			self::assertStringNotContainsString(
+				"release_package_root='vendor/ran/wp-release-updater'",
+				$script
+			);
+			self::assertStringNotContainsString(
+				"branch_package_root='vendor/ran/wp-branch-updater'",
+				$script
+			);
+			self::assertStringNotContainsString(
+				"support_package_root='vendor/ran/updater-support'",
+				$script
+			);
+			self::assertStringNotContainsString(
+				'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3',
+				$script
+			);
 		}
 	}
 
 	public function testReleaseScriptsRejectSymbolicLinksAcrossEveryPolicySurface(): void {
 		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $scriptName ) {
-			$script = file_get_contents( dirname( __DIR__ ) . '/scripts/' . $scriptName ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+			$script = file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+				dirname( __DIR__ ) . '/scripts/' . $scriptName
+			);
 			self::assertIsString( $script );
-			self::assertStringContainsString( '-type l -print -quit | grep -q .', $script );
-			self::assertStringContainsString( 'runtime dependency allowlist must not contain symbolic links.', $script );
+			self::assertStringContainsString(
+				'-type l -print -quit | grep -q .',
+				$script
+			);
+			self::assertStringContainsString(
+				'runtime dependency allowlist must not contain symbolic links.',
+				$script
+			);
 		}
 	}
 
 	public function testCoreReleaseFileManifestDoesNotDuplicatePackageSurfaces(): void {
-		$manifest = file_get_contents( dirname( __DIR__ ) . '/release-files.txt' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		$manifest = file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+			dirname( __DIR__ ) . '/release-files.txt'
+		);
 		self::assertIsString( $manifest );
 		self::assertStringNotContainsString( 'vendor/ran/', $manifest );
 		self::assertStringContainsString( 'runtime-packaging-policy.json', $manifest );
@@ -200,17 +242,32 @@ final class ReleasePlatformContractTest extends TestCase {
 
 	public function testDisposableLifecycleFixtureUsesTheVendoredUpdatersStableUserAgent(): void {
 		$releaseUpdaterPath = $this->neutralUpdaterArchiveRoot();
-		$updater = file_get_contents( dirname( __DIR__ ) . '/' . $releaseUpdaterPath . '/src/Provider/GitHub/GitHubReleaseService.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Vendored release contract.
-		$fixture = file_get_contents( dirname( __DIR__ ) . '/tests/Integration/phase-4.4-core-disposable-harness.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable lifecycle fixture contract.
+		$updater = file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Vendored release contract.
+			dirname( __DIR__ )
+				. '/' . $releaseUpdaterPath
+				. '/src/Provider/GitHub/GitHubReleaseService.php'
+		);
+		$fixture = file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable lifecycle fixture contract.
+			dirname( __DIR__ )
+				. '/tests/Integration/phase-4.4-core-disposable-harness.php'
+		);
 
 		self::assertIsString( $updater );
 		self::assertIsString( $fixture );
-		self::assertStringContainsString( "'User-Agent' => 'ran-wp-release-updater',", $updater );
-		self::assertStringContainsString( "'ran-wp-release-updater' !== ( \$headers['User-Agent'] ?? null )", $fixture );
+		self::assertStringContainsString(
+			"'User-Agent' => 'ran-wp-release-updater',",
+			$updater
+		);
+		self::assertStringContainsString(
+			"'ran-wp-release-updater' !== ( \$headers['User-Agent'] ?? null )",
+			$fixture
+		);
 	}
 
 	public function testReleaseVerifierRequiresTheSupportedCoreAndPolicyDrivenRuntimeProofs(): void {
-		$script = file_get_contents( dirname( __DIR__ ) . '/scripts/verify-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		$script = file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+			dirname( __DIR__ ) . '/scripts/verify-release.sh'
+		);
 		self::assertIsString( $script );
 
 		foreach ( array(
@@ -228,11 +285,20 @@ final class ReleasePlatformContractTest extends TestCase {
 	}
 
 	public function testBuilderVerifiesTheArchiveBeforePublishingItToTheBuildDirectory(): void {
-		$script = file_get_contents( dirname( __DIR__ ) . '/scripts/build-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		$script = file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+			dirname( __DIR__ ) . '/scripts/build-release.sh'
+		);
 		self::assertIsString( $script );
 
-		$verify = strpos( $script, 'bash "$script_dir/verify-release.sh" "$tmp_archive" "$expected_version" "$commit"' );
-		$move   = strpos( $script, 'mv -f "$tmp_archive" "$build_dir/$archive_name"' );
+		$verify = strpos(
+			$script,
+			'bash "$script_dir/verify-release.sh" "$tmp_archive" '
+				. '"$expected_version" "$commit"'
+		);
+		$move = strpos(
+			$script,
+			'mv -f "$tmp_archive" "$build_dir/$archive_name"'
+		);
 		self::assertIsInt( $verify );
 		self::assertIsInt( $move );
 		self::assertTrue( $verify < $move );
@@ -242,7 +308,9 @@ final class ReleasePlatformContractTest extends TestCase {
 	 * @return array<string, mixed>
 	 */
 	private function readPackagingPolicy(): array {
-		return $this->readJson( dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
+		return $this->readJson(
+			dirname( __DIR__ ) . '/runtime-packaging-policy.json'
+		);
 	}
 
 	/**
@@ -261,7 +329,10 @@ final class ReleasePlatformContractTest extends TestCase {
 
 	private function neutralUpdaterArchiveRoot(): string {
 		foreach ( $this->readPackagingPolicy()['packages'] as $record ) {
-			if ( is_array( $record ) && 'neutral-updater' === ( $record['build_role'] ?? null ) ) {
+			if (
+				is_array( $record )
+				&& 'neutral-updater' === ( $record['build_role'] ?? null )
+			) {
 				$root = $record['archive_root'] ?? null;
 				self::assertIsString( $root );
 				return $root;
@@ -273,8 +344,11 @@ final class ReleasePlatformContractTest extends TestCase {
 	/**
 	 * @return array{exit: int, stdout: string, stderr: string}
 	 */
-	private function runRuntimeDependencyVerifier( string $lockPath, string $policyPath ): array {
-		$process = proc_open(
+	private function runRuntimeDependencyVerifier(
+		string $lockPath,
+		string $policyPath
+	): array {
+		$process = proc_open( // phpcs:ignore -- CLI-only contract test invokes the repository verifier.
 			array(
 				PHP_BINARY,
 				dirname( __DIR__ ) . '/scripts/verify-runtime-dependencies.php',
@@ -288,11 +362,11 @@ final class ReleasePlatformContractTest extends TestCase {
 			$pipes
 		);
 		self::assertIsResource( $process );
-		$stdout = stream_get_contents( $pipes[1] );
-		$stderr = stream_get_contents( $pipes[2] );
-		fclose( $pipes[1] );
-		fclose( $pipes[2] );
-		$exit = proc_close( $process );
+		$stdout = stream_get_contents( $pipes[1] ); // phpcs:ignore -- CLI-only process pipe.
+		$stderr = stream_get_contents( $pipes[2] ); // phpcs:ignore -- CLI-only process pipe.
+		fclose( $pipes[1] ); // phpcs:ignore -- CLI-only process pipe.
+		fclose( $pipes[2] ); // phpcs:ignore -- CLI-only process pipe.
+		$exit = proc_close( $process ); // phpcs:ignore -- CLI-only process handle.
 		self::assertIsString( $stdout );
 		self::assertIsString( $stderr );
 		return array(
@@ -306,13 +380,25 @@ final class ReleasePlatformContractTest extends TestCase {
 	 * @param array<string, mixed> $document
 	 */
 	private function writeTemporaryJson( array $document ): string {
-		$path = tempnam( sys_get_temp_dir(), 'ran-booster-runtime-policy-' );
+		$path = tempnam( // phpcs:ignore -- CLI-only temporary test fixture.
+			sys_get_temp_dir(),
+			'ran-booster-runtime-policy-'
+		);
 		self::assertIsString( $path );
-		$bytes = file_put_contents(
+		$bytes = file_put_contents( // phpcs:ignore -- CLI-only temporary test fixture.
 			$path,
-			json_encode( $document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n"
-		); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Local temporary test fixture.
+			json_encode(
+				$document,
+				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+			) . "\n"
+		);
 		self::assertIsInt( $bytes );
 		return $path;
+	}
+
+	private function removeTemporaryFile( string $path ): void {
+		if ( is_file( $path ) ) {
+			unlink( $path ); // phpcs:ignore -- CLI-only temporary test fixture cleanup.
+		}
 	}
 }

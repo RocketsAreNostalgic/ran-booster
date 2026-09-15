@@ -220,6 +220,7 @@ jobs:
             for trust_path in \
               composer.json \
               composer.lock \
+              runtime-packaging-policy.json \
               package.json \
               pnpm-lock.yaml \
               .github/workflows/quality.yml \
@@ -488,46 +489,6 @@ jobs:
           extensions: zip
           tools: composer:v2
 
-      - name: Check out locked neutral updater source
-        if: ${{ steps.lifecycle.outputs.reuse-requested != 'true' || steps.prior-artifact.outcome != 'success' || steps.admission.outcome != 'success' }}
-        shell: bash
-        env:
-          RAN_SOURCE_COMMIT: ${{ steps.lifecycle.outputs.source-commit }}
-        run: |
-          set -euo pipefail
-          source_commit="$RAN_SOURCE_COMMIT"
-          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            source_commit="$GITHUB_SHA"
-          fi
-
-          updater_commit="$(
-            git show "${source_commit}:composer.lock" \
-              | jq -er '
-                [.packages[] | select(.name == "ran/wp-release-updater")] as $packages
-                | if (($packages | length) == 1
-                    and $packages[0].version == "v0.1.0-beta.4"
-                    and $packages[0].source.type == "git"
-                    and $packages[0].source.url == "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git"
-                    and $packages[0].source.reference == "dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
-                    and $packages[0].dist.type == "zip"
-                    and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
-                    and $packages[0].dist.reference == $packages[0].source.reference
-                    and ($packages[0].dist.reference | type) == "string")
-                  then $packages[0].dist.reference
-                  else error("Expected the exact published beta.4 updater source and ZIP distribution.")
-                  end
-              '
-          )"
-          [[ "$updater_commit" =~ ^[0-9a-f]{40}$ ]]
-
-          updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"
-          test ! -e "$updater_repository"
-          git init --quiet "$updater_repository"
-          git -C "$updater_repository" remote add origin 'https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git'
-          git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"
-          git -C "$updater_repository" checkout --quiet --detach FETCH_HEAD
-          test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"
-
       - name: Build and verify fresh runtime archive
         id: fresh-archive
         if: ${{ steps.lifecycle.outputs.reuse-requested != 'true' || steps.prior-artifact.outcome != 'success' || steps.admission.outcome != 'success' }}
@@ -681,41 +642,6 @@ jobs:
             with:
                 fetch-depth: 0
                 persist-credentials: false
-
-          - name: Check out locked neutral updater source
-            shell: bash
-            env:
-                RAN_SOURCE_COMMIT: ${{ github.sha }}
-            run: |
-                set -euo pipefail
-                source_commit="$RAN_SOURCE_COMMIT"
-                updater_commit="$(
-                  git show "${source_commit}:composer.lock" \
-                    | jq -er '
-                      [.packages[] | select(.name == "ran/wp-release-updater")] as $packages
-                      | if (($packages | length) == 1
-                          and $packages[0].version == "v0.1.0-beta.4"
-                          and $packages[0].source.type == "git"
-                          and $packages[0].source.url == "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git"
-                          and $packages[0].source.reference == "dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
-                          and $packages[0].dist.type == "zip"
-                          and $packages[0].dist.url == "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3"
-                          and $packages[0].dist.reference == $packages[0].source.reference
-                          and ($packages[0].dist.reference | type) == "string")
-                        then $packages[0].dist.reference
-                        else error("Expected the exact published beta.4 updater source and ZIP distribution.")
-                        end
-                    '
-                )"
-                [[ "$updater_commit" =~ ^[0-9a-f]{40}$ ]]
-
-                updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"
-                test ! -e "$updater_repository"
-                git init --quiet "$updater_repository"
-                git -C "$updater_repository" remote add origin 'https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git'
-                git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"
-                git -C "$updater_repository" checkout --quiet --detach FETCH_HEAD
-                test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"
 
           - name: Prepare private test temporary directory
             shell: bash
@@ -1041,28 +967,90 @@ jobs:
 
           - name: Read back the neutral updater runtime contract
             shell: bash
+            env:
+                RAN_SOURCE_COMMIT: ${{ needs.runtime-archive.outputs.source-commit }}
             run: |
-              wp eval '
-                  $runtime_root = WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater";
-                  $copy = json_decode( file_get_contents( $runtime_root . "/runtime-copy.json" ), true, 512, JSON_THROW_ON_ERROR );
-                  $expected = array(
-                    "package_revision" => "c197d9909a774fb089b108c8138ab05c74948e1c71da2b38ccc56f5ff00cfce2",
-                    "package_version" => "0.1.0-beta.4",
-                    "php_floor" => "8.2.0",
-                    "runtime_file" => "runtime.php",
-                    "runtime_protocol" => 4,
-                    "wordpress_floor" => "6.5.0",
-                  );
-                  if ( $copy !== $expected ) {
-                    throw new RuntimeException( "The neutral updater runtime-copy metadata is unexpected." );
-                  }
-                  $runtime = file_get_contents( $runtime_root . "/runtime.php" );
-                  if ( false === $runtime || ! str_contains( $runtime, "RAN\\\\WPReleaseUpdater\\\\V1\\\\WordPress\\\\NativePluginUpdater" ) ) {
-                    throw new RuntimeException( "The neutral updater V1 runtime marker is unavailable." );
-                  }
-                  WP_CLI::success( "Neutral updater runtime metadata and V1 marker passed." );
-                ' --path=build/wordpress
+              set -euo pipefail
+              source_commit="$RAN_SOURCE_COMMIT"
+              [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
 
+              expected_project="$(mktemp -d)"
+              composer_home="$(mktemp -d)"
+              lock_file="$expected_project/composer.lock"
+              policy_file="$expected_project/runtime-packaging-policy.json"
+              verifier_file="$expected_project/verify-runtime-dependencies.php"
+              trap 'rm -rf "$expected_project" "$composer_home"' EXIT
+
+              git show "${source_commit}:composer.json" > "$expected_project/composer.json"
+              git show "${source_commit}:composer.lock" > "$lock_file"
+              git show "${source_commit}:runtime-packaging-policy.json" > "$policy_file"
+              git show "${source_commit}:scripts/verify-runtime-dependencies.php" > "$verifier_file"
+
+              projection="$(php "$verifier_file" --packaging "$lock_file" "$policy_file")"
+              mapfile -t neutral_records < <(awk -F '	' '$7 == "neutral-updater" { print }' <<< "$projection")
+              test "${#neutral_records[@]}" -eq 1
+              IFS=$'	' read -r package_name package_version package_reference package_repository package_root surface_specs build_role <<< "${neutral_records[0]}"
+              test "$build_role" = 'neutral-updater'
+              [[ "$package_reference" =~ ^[0-9a-f]{40}$ ]]
+              [[ "$package_repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+              [[ "$package_root" == vendor/* ]]
+              [[ ",$surface_specs," == *,file:runtime-copy.json,* ]]
+              [[ ",$surface_specs," == *,file:runtime.php,* ]]
+
+              runtime_version=${package_version#v}
+              runtime_protocol="$(jq -er '.extra["ran-updater-runtime-protocol"] | select(type == "number" and . > 0)' "$expected_project/composer.json")"
+              booster_requires_php="$(
+                git show "${source_commit}:ran-booster.php" \
+                  | sed -n 's/^[[:space:]]*\*[[:space:]]*Requires PHP:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
+              )"
+              booster_requires_wordpress="$(
+                git show "${source_commit}:ran-booster.php" \
+                  | sed -n 's/^[[:space:]]*\*[[:space:]]*Requires at least:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
+              )"
+              [[ "$booster_requires_php" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
+              [[ "$booster_requires_wordpress" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
+              COMPOSER_HOME="$composer_home" composer install \
+                --working-dir="$expected_project" \
+                --no-dev \
+                --no-interaction \
+                --prefer-dist \
+                --no-progress \
+                --no-scripts \
+                --no-plugins
+
+              plugin_root="$GITHUB_WORKSPACE/build/wordpress/wp-content/plugins/ran-booster"
+              runtime_root="$plugin_root/$package_root"
+              expected_runtime_root="$expected_project/$package_root"
+              runtime_copy="$runtime_root/runtime-copy.json"
+              runtime_file="$runtime_root/runtime.php"
+              expected_runtime_copy="$expected_runtime_root/runtime-copy.json"
+              expected_runtime_file="$expected_runtime_root/runtime.php"
+
+              test -f "$runtime_copy"
+              test -f "$runtime_file"
+              test -f "$expected_runtime_copy"
+              test -f "$expected_runtime_file"
+              cmp -s "$expected_runtime_copy" "$runtime_copy"
+              cmp -s "$expected_runtime_file" "$runtime_file"
+              jq -e \
+                --arg version "$runtime_version" \
+                --argjson protocol "$runtime_protocol" \
+                '.package_version == $version
+                  and .runtime_protocol == $protocol
+                  and (.package_revision | type == "string" and test("^[0-9a-f]{64}$"))
+                  and .runtime_file == "runtime.php"
+                  and (.php_floor | type == "string" and test("^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"))
+                  and (.wordpress_floor | type == "string" and test("^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"))' \
+                "$runtime_copy" >/dev/null
+              runtime_php_floor="$(jq -er '.php_floor' "$runtime_copy")"
+              runtime_wordpress_floor="$(jq -er '.wordpress_floor' "$runtime_copy")"
+              php -r 'exit( version_compare( $argv[1], $argv[2], "<=" ) ? 0 : 1 );' \
+                "$runtime_php_floor" "$booster_requires_php" \
+                || { echo 'Neutral updater PHP floor exceeds Booster support.' >&2; exit 1; }
+              php -r 'exit( version_compare( $argv[1], $argv[2], "<=" ) ? 0 : 1 );' \
+                "$runtime_wordpress_floor" "$booster_requires_wordpress" \
+                || { echo 'Neutral updater WordPress floor exceeds Booster support.' >&2; exit 1; }
+              grep -Fq 'RAN\WPReleaseUpdater\V1\WordPress\NativePluginUpdater' "$runtime_file"
           - name: Prove database activation and storage
             env:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress

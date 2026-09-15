@@ -5,6 +5,9 @@ sanitized Booster-specific evidence.
 
 - [Translating RAN Booster](translating.md) explains how to create, build, test,
   and submit PHP and JavaScript translations.
+- [Runtime dependency packaging policy](runtime-packaging-policy.md) records the
+  authority split between the Composer lock, Booster's shipped package-surface
+  policy, and the release builder/verifier.
 - [Multisite quarantine evidence](evidence/multisite-quarantine-2026-07-28/README.md)
   is retained proof output, not a restore fixture.
 - [Core V3 C2-C3 operator-journey map](characterization/core-v3-c2-c3-operator-journey-map.md)

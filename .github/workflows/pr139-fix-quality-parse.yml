@@ -1,0 +1,51 @@
+name: Materialize PR 139 Quality parse fix
+
+on:
+  push:
+    branches:
+      - refactor/runtime-packaging-policy
+    paths:
+      - .github/workflows/pr139-fix-quality-parse.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out topic branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/runtime-packaging-policy
+          fetch-depth: 0
+
+      - name: Materialize corrected workflow as ordinary text
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('.github/workflows/quality.yml')
+          text = path.read_text()
+          pattern = re.compile(
+              r'''              IFS=',' read -r -a neutral_surfaces <<< "\$surface_specs"\n.*?\n\n              runtime_version=''',
+              re.S,
+          )
+          replacement = '''              [[ ",$surface_specs," == *,file:runtime-copy.json,* ]]\n              [[ ",$surface_specs," == *,file:runtime.php,* ]]\n\n              runtime_version='''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'neutral surface parse replacement count: {count}')
+          path.write_text(text)
+          PY
+          cp .github/workflows/quality.yml quality-pr139-fixed.txt
+          git restore .github/workflows/quality.yml .github/workflows/pr139-fix-quality-parse.yml
+          git diff --check -- quality-pr139-fixed.txt
+          git config user.name 'Benjamin Rush'
+          git config user.email 'bnjmnrsh@gmail.com'
+          git add quality-pr139-fixed.txt
+          git commit -m 'chore: materialize PR 139 Quality parse fix'
+          git push origin HEAD:refactor/runtime-packaging-policy

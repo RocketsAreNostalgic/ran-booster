@@ -7,6 +7,7 @@ namespace RAN\Deployment;
 use InvalidArgumentException;
 use JsonException;
 use RAN\PackageArtifactLimit;
+use RAN\PackageSubdirectory;
 
 /**
  * The closed, secret-free execution snapshot stored with an attempt.
@@ -154,8 +155,14 @@ final readonly class DeploymentRequest {
 		if ( null === $value ) {
 			return;
 		}
+
 		self::assertSafeText( $value, 255 );
-		if ( str_starts_with( $value, '/' ) || str_contains( $value, '\\' ) || in_array( '..', explode( '/', $value ), true ) ) {
+		try {
+			$normalized = PackageSubdirectory::normalize( $value );
+		} catch ( InvalidArgumentException $exception ) {
+			throw new InvalidArgumentException( 'The package subdirectory is invalid.', 0, $exception );
+		}
+		if ( null === $normalized ) {
 			throw new InvalidArgumentException( 'The package subdirectory is invalid.' );
 		}
 	}

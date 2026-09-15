@@ -53,9 +53,21 @@ final class DeploymentRequestTest extends TestCase {
 		yield 'control' => array( static fn (): DeploymentRequest => self::make( repository: "group/repo\nAuthorization: bearer" ) );
 		yield 'url credential' => array( static fn (): DeploymentRequest => self::make( repository: 'https://user:pass@example.test/repo' ) );
 		yield 'traversal' => array( static fn (): DeploymentRequest => self::make( subdirectory: 'package/../secret' ) );
+		yield 'encoded traversal' => array( static fn (): DeploymentRequest => self::make( subdirectory: 'package/%252e%252e/secret' ) );
 		yield 'absolute path' => array( static fn (): DeploymentRequest => self::make( subdirectory: '/tmp/package' ) );
+		yield 'encoded drive prefix' => array( static fn (): DeploymentRequest => self::make( subdirectory: 'C%3A/packages/example' ) );
+		yield 'decode depth exceeded' => array( static fn (): DeploymentRequest => self::make( subdirectory: 'packages/%' . str_repeat( '25', 8 ) . '41' ) );
+		yield 'blank subdirectory' => array( static fn (): DeploymentRequest => self::make( subdirectory: '   ' ) );
 		yield 'secret assignment' => array( static fn (): DeploymentRequest => self::make( configuredBranch: 'token=abcdef' ) );
 		yield 'oversized' => array( static fn (): DeploymentRequest => self::make( repository: str_repeat( 'a', 513 ) ) );
+	}
+
+	public function testSharedDecodeBoundaryRemainsDurable(): void {
+		$subdirectory = 'packages/%' . str_repeat( '25', 7 ) . '41';
+		$request      = self::make( subdirectory: $subdirectory );
+
+		self::assertSame( $subdirectory, $request->subdirectory );
+		self::assertSame( $request->toJson(), DeploymentRequest::fromJson( $request->toJson() )->toJson() );
 	}
 
 	private function request(): DeploymentRequest {

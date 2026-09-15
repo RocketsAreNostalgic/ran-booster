@@ -7,6 +7,7 @@ namespace Tests;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\InvalidPackageSubdirectory;
 use RAN\PackageSubdirectory;
 
 final class PackageSubdirectoryTest extends TestCase {
@@ -19,14 +20,16 @@ final class PackageSubdirectoryTest extends TestCase {
 	/** @return array<string, array{mixed, string|null}> */
 	public static function validPaths(): array {
 		return array(
-			'absent'         => array( null, null ),
-			'empty'          => array( '', null ),
-			'whitespace'     => array( '  ', null ),
-			'single'         => array( 'plugin', 'plugin' ),
-			'nested'         => array( 'packages/example-plugin', 'packages/example-plugin' ),
-			'trimmed'        => array( ' packages/example-plugin ', 'packages/example-plugin' ),
-			'trailing slash' => array( 'branch-fixture/', 'branch-fixture' ),
-			'literal token'  => array( 'packages/%41ddon', 'packages/%41ddon' ),
+			'absent'                => array( null, null ),
+			'empty'                 => array( '', null ),
+			'whitespace'            => array( '  ', null ),
+			'single'                => array( 'plugin', 'plugin' ),
+			'nested'                => array( 'packages/example-plugin', 'packages/example-plugin' ),
+			'trimmed'               => array( ' packages/example-plugin ', 'packages/example-plugin' ),
+			'trailing slash'        => array( 'branch-fixture/', 'branch-fixture' ),
+			'literal token'         => array( 'packages/%41ddon', 'packages/%41ddon' ),
+			'encoded nested colon'  => array( 'packages/C%3A-name', 'packages/C%3A-name' ),
+			'bounded decode depth'  => array( 'packages/%' . str_repeat( '25', 7 ) . '41', 'packages/%' . str_repeat( '25', 7 ) . '41' ),
 		);
 	}
 
@@ -45,6 +48,9 @@ final class PackageSubdirectoryTest extends TestCase {
 			'UNC'                       => array( '\\\\server\\share' ),
 			'drive absolute'            => array( 'C:/packages/example' ),
 			'drive relative'            => array( 'C:packages/example' ),
+			'encoded drive prefix'      => array( 'C%3A/packages/example' ),
+			'encoded drive letter'      => array( '%43:/packages/example' ),
+			'double encoded drive'      => array( 'C%253A/packages/example' ),
 			'backslash'                 => array( 'packages\\example' ),
 			'empty segment'             => array( 'packages//example' ),
 			'root'                      => array( '/' ),
@@ -58,9 +64,18 @@ final class PackageSubdirectoryTest extends TestCase {
 			'double encoded separator'  => array( 'packages%252fexample' ),
 			'deep encoded separator'    => array( 'packages%2525252fexample' ),
 			'encoded backslash'         => array( 'packages%5cexample' ),
+			'decode depth exceeded'     => array( 'packages/%' . str_repeat( '25', 8 ) . '41' ),
 			'NUL'                       => array( "packages/\0example" ),
 			'control'                   => array( "packages/\nexample" ),
+			'control only'              => array( "\n" ),
 		);
+	}
+
+	public function testItMapsSharedPathFailuresToBoosterException(): void {
+		$this->expectException( InvalidPackageSubdirectory::class );
+		$this->expectExceptionMessage( 'The package subdirectory must be a normalized relative path.' );
+
+		PackageSubdirectory::normalize( 'C%3A/packages/example' );
 	}
 
 	public function testItDerivesOnlyValidatedSlugs(): void {

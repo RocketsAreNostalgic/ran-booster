@@ -41,11 +41,13 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		foreach ( array(
 			'composer.json',
 			'composer.lock',
+			'runtime-packaging-policy.json',
 			'package.json',
 			'pnpm-lock.yaml',
 			'.github/workflows/quality.yml',
 			'.github/workflows/release-please.yml',
 			'scripts/build-release.sh',
+			'scripts/verify-runtime-dependencies.php',
 			'scripts/verify-release.sh',
 			'scripts/validate-release-candidate.sh',
 			'scripts/select-merged-release-pr.sh',
@@ -90,40 +92,32 @@ final class ReleaseWorkflowContractTest extends TestCase {
 	}
 
 	public function testQualityMaterializesTheExactLockedUpdaterForFreshArchives(): void {
-		$workflow    = $this->workflow( 'quality.yml' );
-		$runtimeCopy = json_decode(
-			(string) file_get_contents( dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/runtime-copy.json' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local workflow contract.
-			true,
-			512,
-			JSON_THROW_ON_ERROR
-		);
+		$workflow = $this->workflow( 'quality.yml' );
 
-		self::assertSame( 2, substr_count( $workflow, 'Check out locked neutral updater source' ) );
-		self::assertStringContainsString( 'git show "${source_commit}:composer.lock"', $workflow );
-		self::assertStringContainsString( '.name == "ran/wp-release-updater"', $workflow );
-		self::assertStringContainsString( '.dist.type == "zip"', $workflow );
-		self::assertStringContainsString( 'updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"', $workflow );
-		self::assertSame( 2, substr_count( $workflow, 'git -C "$updater_repository" fetch --quiet --no-tags --depth=1 origin "$updater_commit"' ) );
-		self::assertStringContainsString( 'test "$(git -C "$updater_repository" rev-parse HEAD)" = "$updater_commit"', $workflow );
-		self::assertIsArray( $runtimeCopy );
-		self::assertMatchesRegularExpression( '/^[0-9a-f]{64}$/', $runtimeCopy['package_revision'] ?? '' );
-		self::assertStringContainsString( '"package_revision" => "' . $runtimeCopy['package_revision'] . '"', $workflow );
-		self::assertStringNotContainsString( '0b506753fb45115f946bf01253ab76b893b3804e33d0f5b6f8a14c2026d59516', $workflow );
-		self::assertStringNotContainsString( '320fb89e1a93813907419cecab7e05892b6d9419', $workflow );
+		self::assertSame( 0, substr_count( $workflow, 'Check out locked neutral updater source' ) );
+		self::assertStringContainsString( 'runtime-packaging-policy.json', $workflow );
+		self::assertStringNotContainsString( '.name == "ran/wp-release-updater"', $workflow );
+		self::assertStringNotContainsString( 'updater_repository="$(dirname "$GITHUB_WORKSPACE")/ran-wp-release-updater"', $workflow );
+		self::assertStringNotContainsString( 'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3', $workflow );
 	}
-
 	public function testQualityReadbackUsesNeutralRuntimeMetadataRatherThanTheRemovedGitHubFacade(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
 		self::assertStringContainsString( 'Read back the neutral updater runtime contract', $workflow );
-		self::assertStringContainsString( 'WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater"', $workflow );
-		self::assertStringContainsString( '"package_version" => "0.1.0-beta.4"', $workflow );
-		self::assertStringContainsString( '"runtime_protocol" => 4', $workflow );
-		self::assertStringContainsString( 'RAN\\\\\\\\WPReleaseUpdater\\\\\\\\V1\\\\\\\\WordPress\\\\\\\\NativePluginUpdater', $workflow );
+		self::assertStringContainsString( 'RAN_SOURCE_COMMIT: ${{ needs.runtime-archive.outputs.source-commit }}', $workflow );
+		self::assertStringContainsString( 'php "$verifier_file" --packaging "$lock_file" "$policy_file"', $workflow );
+		self::assertStringContainsString( '$7 == "neutral-updater"', $workflow );
+		self::assertStringContainsString( 'runtime_version=${package_version#v}', $workflow );
+		self::assertStringContainsString( '.extra["ran-updater-runtime-protocol"]', $workflow );
+		self::assertStringContainsString( 'composer install \', $workflow );
+		self::assertStringContainsString( 'cmp -s "$expected_runtime_copy" "$runtime_copy"', $workflow );
+		self::assertStringContainsString( 'cmp -s "$expected_runtime_file" "$runtime_file"', $workflow );
+		self::assertStringContainsString( 'RAN\\\\WPReleaseUpdater\\\\V1\\\\WordPress\\\\NativePluginUpdater', $workflow );
+		self::assertStringNotContainsString( 'WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater"', $workflow );
+		self::assertStringNotContainsString( '"package_version" => "0.1.0-beta.4"', $workflow );
 		self::assertStringNotContainsString( 'ran_booster_release_updater', $workflow );
 		self::assertStringNotContainsString( 'selection_fixed', $workflow );
 	}
-
 	public function testCandidateBehaviorInvokesTheValidatorThroughBash(): void {
 		$contract = file_get_contents( __DIR__ . '/release-candidate-contract.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local workflow contract.
 		self::assertIsString( $contract );

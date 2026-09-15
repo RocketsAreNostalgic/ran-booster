@@ -218,6 +218,7 @@ final class ReleasePlatformContractTest extends TestCase {
 				dirname( __DIR__ ) . '/runtime-packaging-policy.json'
 			);
 			self::assertNotSame( 0, $result['exit'] );
+			self::assertStringContainsString( 'unexpected production package', $result['stderr'] );
 		} finally {
 			$this->removeTemporaryFile( $path );
 		}

@@ -20,9 +20,37 @@ review gate rather than release evidence.
 
 A merge does not itself authorize privileged release mutation. Quality must
 successfully qualify that exact merged `main` revision. Changes to release
-workflows, release scripts, dependency manifests, the runtime packaging policy,
-and other evidence inputs continue to force a fresh main Runtime archive and
-Quality run rather than reusing pull-request evidence.
+control and ordinary evidence inputs continue to force a fresh main Runtime
+archive and Quality run rather than reusing pull-request evidence.
+
+The fresh-evidence classifier distinguishes ordinary evidence inputs from the
+executable release-control/release-execution surface. The ordinary evidence
+inputs are:
+
+- `composer.json`;
+- `composer.lock`;
+- `runtime-packaging-policy.json`;
+- `package.json`; and
+- `pnpm-lock.yaml`.
+
+The release-control/release-execution paths are:
+
+- `.github/workflows/quality.yml`;
+- `.github/workflows/release-please.yml`;
+- `scripts/build-release.sh`;
+- `scripts/verify-runtime-dependencies.php`;
+- `scripts/verify-release.sh`;
+- `scripts/validate-release-candidate.sh`;
+- `scripts/select-merged-release-pr.sh`;
+- `scripts/reconcile-release-candidate-marker.sh`;
+- `scripts/verify-release-tag-target.sh`;
+- `scripts/has-trusted-release-candidate-run.sh`; and
+- `scripts/verify-immutable-release-assets.sh`.
+
+`Quality` is the executable authority for whether a changed path invalidates
+pull-request evidence. Contract tests keep this human-readable inventory aligned
+with that classifier; do not add a second independent path catalogue to Release
+Please.
 
 Release Please runs only after a successful push-triggered `main` Quality run
 for this repository. It checks out that exact Quality commit and proves the

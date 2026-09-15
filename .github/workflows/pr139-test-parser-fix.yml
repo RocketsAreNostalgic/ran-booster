@@ -1,0 +1,45 @@
+name: Fix PR 139 trust-path test parser
+
+on:
+  push:
+    branches:
+      - refactor/runtime-packaging-policy
+    paths:
+      - .github/workflows/pr139-test-parser-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out topic branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/runtime-packaging-policy
+          fetch-depth: 0
+
+      - name: Replace brittle trust-path regex
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/ReleasePlatformContractTest.php')
+          text = path.read_text()
+          old = '''\tprivate function trustPathBlock( string $workflow ): string {\n\t\t$matched = preg_match(\n\t\t\t'/for trust_path in \\\\\\n(?<paths>.*?)\\; do/s',\n\t\t\t$workflow,\n\t\t\t$matches\n\t\t);\n\t\tself::assertSame( 1, $matched );\n\t\treturn (string) $matches['paths'];\n\t}\n'''
+          new = '''\tprivate function trustPathBlock( string $workflow ): string {\n\t\t$start = strpos( $workflow, 'for trust_path in \\\\' );\n\t\tself::assertIsInt( $start );\n\n\t\t$end = strpos( $workflow, '; do', $start );\n\t\tself::assertIsInt( $end );\n\n\t\treturn substr( $workflow, $start, $end - $start );\n\t}\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one trustPathBlock target, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          git diff --check -- tests/ReleasePlatformContractTest.php
+          git diff --exit-code -- . ':!.github/workflows/pr139-test-parser-fix.yml' || true
+          git config user.name 'Benjamin Rush'
+          git config user.email 'bnjmnrsh@gmail.com'
+          git add tests/ReleasePlatformContractTest.php
+          git commit -m 'test: make release trust-path parsing robust'
+          git push origin HEAD:refactor/runtime-packaging-policy

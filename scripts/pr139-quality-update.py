@@ -27,25 +27,26 @@ new_trust = '''            for trust_path in \\
               runtime-packaging-policy.json \\
               package.json \\
 '''
-if quality.count(old_trust) != 1:
-    raise SystemExit(f'Quality trust-path insertion target count: {quality.count(old_trust)}')
-quality = quality.replace(old_trust, new_trust, 1)
+if old_trust in quality:
+    quality = quality.replace(old_trust, new_trust, 1)
+elif new_trust not in quality:
+    raise SystemExit('Quality trust-path block is neither old nor updated')
 
 first_checkout = re.compile(
     r'\n      - name: Check out locked neutral updater source\n.*?(?=\n      - name: Build and verify fresh runtime archive)',
     re.S,
 )
-quality, count = first_checkout.subn('', quality, count=1)
-if count != 1:
-    raise SystemExit(f'Runtime-archive updater checkout removal count: {count}')
+quality, first_count = first_checkout.subn('', quality, count=1)
+if first_count not in (0, 1):
+    raise SystemExit(f'Runtime-archive updater checkout removal count: {first_count}')
 
 second_checkout = re.compile(
     r'\n          - name: Check out locked neutral updater source\n.*?(?=\n          - name: Prepare private test temporary directory)',
     re.S,
 )
-quality, count = second_checkout.subn('', quality, count=1)
-if count != 1:
-    raise SystemExit(f'Quality updater checkout removal count: {count}')
+quality, second_count = second_checkout.subn('', quality, count=1)
+if second_count not in (0, 1):
+    raise SystemExit(f'Quality updater checkout removal count: {second_count}')
 
 readback = re.compile(
     r'\n          - name: Read back the neutral updater runtime contract\n.*?(?=\n          - name: Prove database activation and storage)',
@@ -133,25 +134,29 @@ quality_path.write_text(quality)
 
 platform_path = Path('tests/ReleasePlatformContractTest.php')
 platform = platform_path.read_text()
-needle = "\t\t\tself::assertNotSame( 0, $result['exit'] );\n\t\t} finally {\n\t\t\t$this->removeTemporaryFile( $path );\n\t\t}\n\t}\n\n\tpublic function testRuntimeDependencyVerifierRejectsRepositoryDrift"
-replacement_test = "\t\t\tself::assertNotSame( 0, $result['exit'] );\n\t\t\tself::assertStringContainsString( 'unexpected production package', $result['stderr'] );\n\t\t} finally {\n\t\t\t$this->removeTemporaryFile( $path );\n\t\t}\n\t}\n\n\tpublic function testRuntimeDependencyVerifierRejectsRepositoryDrift"
-if platform.count(needle) != 1:
-    raise SystemExit(f'Unexpected-package assertion target count: {platform.count(needle)}')
-platform_path.write_text(platform.replace(needle, replacement_test, 1))
+if "self::assertStringContainsString( 'unexpected production package', $result['stderr'] );" not in platform:
+    needle = "\t\t\tself::assertNotSame( 0, $result['exit'] );\n\t\t} finally {\n\t\t\t$this->removeTemporaryFile( $path );\n\t\t}\n\t}\n\n\tpublic function testRuntimeDependencyVerifierRejectsRepositoryDrift"
+    replacement_test = "\t\t\tself::assertNotSame( 0, $result['exit'] );\n\t\t\tself::assertStringContainsString( 'unexpected production package', $result['stderr'] );\n\t\t} finally {\n\t\t\t$this->removeTemporaryFile( $path );\n\t\t}\n\t}\n\n\tpublic function testRuntimeDependencyVerifierRejectsRepositoryDrift"
+    if platform.count(needle) != 1:
+        raise SystemExit(f'Unexpected-package assertion target count: {platform.count(needle)}')
+    platform = platform.replace(needle, replacement_test, 1)
+platform_path.write_text(platform)
 
 workflow_test_path = Path('tests/ReleaseWorkflowContractTest.php')
 workflow_test = workflow_test_path.read_text()
 trust_old = "\t\t\t'composer.json',\n\t\t\t'composer.lock',\n\t\t\t'package.json',"
 trust_new = "\t\t\t'composer.json',\n\t\t\t'composer.lock',\n\t\t\t'runtime-packaging-policy.json',\n\t\t\t'package.json',"
-if workflow_test.count(trust_old) != 1:
-    raise SystemExit(f'Workflow contract trust-path target count: {workflow_test.count(trust_old)}')
-workflow_test = workflow_test.replace(trust_old, trust_new, 1)
+if trust_old in workflow_test:
+    workflow_test = workflow_test.replace(trust_old, trust_new, 1)
+elif trust_new not in workflow_test:
+    raise SystemExit('Workflow contract trust-path block is neither old nor updated')
 
 build_verify_old = "\t\t\t'scripts/build-release.sh',\n\t\t\t'scripts/verify-release.sh',"
 build_verify_new = "\t\t\t'scripts/build-release.sh',\n\t\t\t'scripts/verify-runtime-dependencies.php',\n\t\t\t'scripts/verify-release.sh',"
-if workflow_test.count(build_verify_old) != 1:
-    raise SystemExit(f'Workflow contract verifier-path target count: {workflow_test.count(build_verify_old)}')
-workflow_test = workflow_test.replace(build_verify_old, build_verify_new, 1)
+if build_verify_old in workflow_test:
+    workflow_test = workflow_test.replace(build_verify_old, build_verify_new, 1)
+elif build_verify_new not in workflow_test:
+    raise SystemExit('Workflow contract verifier-path block is neither old nor updated')
 
 workflow_test = replace_method(
     workflow_test,

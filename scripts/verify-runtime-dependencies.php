@@ -16,10 +16,9 @@ if ( '--packaging' === ( $arguments[0] ?? null ) ) {
 }
 
 if ( PHP_SAPI !== 'cli' || 2 !== count( $arguments ) ) {
-	fwrite(
-		STDERR,
-		"Usage: php scripts/verify-runtime-dependencies.php [--packaging] <composer.lock> <runtime-packaging-policy.json>\n"
-	);
+	$usage = 'Usage: php scripts/verify-runtime-dependencies.php '
+		. '[--packaging] <composer.lock> <runtime-packaging-policy.json>' . "\n";
+	fwrite( STDERR, $usage );
 	exit( 2 );
 }
 
@@ -132,7 +131,10 @@ foreach ( $policy['packages'] as $record ) {
 				|| str_starts_with( $surface, $existingSurface . '/' )
 				|| str_starts_with( $existingSurface, $surface . '/' )
 			) {
-				fwrite( STDERR, "Runtime packaging policy contains a duplicate or overlapping surface path.\n" );
+				fwrite(
+					STDERR,
+					"Runtime packaging policy contains a duplicate or overlapping surface path.\n"
+				);
 				exit( 1 );
 			}
 		}
@@ -159,7 +161,10 @@ if ( 1 !== $neutralUpdaters ) {
 
 $packages = $lock['packages'] ?? null;
 if ( ! is_array( $packages ) || count( $expected ) !== count( $packages ) ) {
-	fwrite( STDERR, "Runtime dependency lock must contain exactly the policy-approved production package set.\n" );
+	fwrite(
+		STDERR,
+		"Runtime dependency lock must contain exactly the policy-approved production package set.\n"
+	);
 	exit( 1 );
 }
 
@@ -178,6 +183,9 @@ foreach ( $packages as $package ) {
 	$actual[ $name ] = $package;
 }
 
+$versionPattern = '/^v?[0-9]+\.[0-9]+\.[0-9]+'
+	. '(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D';
+
 foreach ( $expected as $name => $identity ) {
 	$package = $actual[ $name ] ?? null;
 	$source  = is_array( $package ) ? ( $package['source'] ?? null ) : null;
@@ -187,7 +195,7 @@ foreach ( $expected as $name => $identity ) {
 	if (
 		! is_array( $package )
 		|| ! is_string( $version )
-		|| 1 !== preg_match( '/^v?[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D', $version )
+		|| 1 !== preg_match( $versionPattern, $version )
 		|| ! is_array( $source )
 		|| 'git' !== ( $source['type'] ?? null )
 		|| ! is_string( $source['reference'] ?? null )

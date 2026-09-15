@@ -1,0 +1,47 @@
+name: Repair PR 139 workflow contract syntax
+
+on:
+  push:
+    branches:
+      - refactor/runtime-packaging-policy
+    paths:
+      - .github/workflows/pr139-fix-contract-syntax.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out topic branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refactor/runtime-packaging-policy
+          fetch-depth: 0
+
+      - name: Correct the single malformed contract assertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/ReleaseWorkflowContractTest.php')
+          text = path.read_text()
+          old = "\t\tself::assertStringContainsString( 'composer install \\\\', $workflow );"
+          new = "\t\tself::assertStringContainsString( 'composer install', $workflow );"
+          if text.count(old) != 1:
+              raise SystemExit(f'contract syntax replacement count: {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          php -l tests/ReleaseWorkflowContractTest.php
+          composer install --no-interaction --prefer-dist --no-progress
+          vendor/bin/phpunit --configuration phpunit.xml --filter ReleaseWorkflowContractTest
+          git diff --check -- tests/ReleaseWorkflowContractTest.php
+          git config user.name 'Benjamin Rush'
+          git config user.email 'bnjmnrsh@gmail.com'
+          git add tests/ReleaseWorkflowContractTest.php
+          git commit -m 'test: fix runtime packaging workflow contract syntax'
+          git push origin HEAD:refactor/runtime-packaging-policy

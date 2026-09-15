@@ -16,6 +16,7 @@ use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\RepositoryBrowseRequest;
 use RAN\RepositoryProvider\RepositoryBrowseResult;
+use RAN\WordPress\BranchUpdaterBootstrap;
 
 $checks = 0;
 $assert = static function ( bool $condition, string $message ) use ( &$checks ): void {
@@ -38,6 +39,9 @@ $assert( ! class_exists( 'RAN\\Deployment\\DeploymentHistoryItem' ), 'The legacy
 $assert( ! class_exists( 'RAN\\Deployment\\RetryableDeploymentFailure' ), 'Automatic retry infrastructure must stay removed.' );
 $assert( ! class_exists( 'RAN\\Deployment\\WorkerCliCommand' ), 'The direct worker CLI must stay removed.' );
 $assert( 'ran_booster_run_deployment' === WordPressWorkerWakeup::HOOK, 'One real WP-Cron hook must own execution.' );
+
+BranchUpdaterBootstrap::register();
+$assert( class_exists( RAN\UpdaterSupport\V1\RepositoryRelativePath::class ), 'The shared updater-support runtime must autoload after dependency registration.' );
 
 $request = new DeploymentRequest( 'org/package', 'profile_1', true, 'main', 'package', 'wordpress', DeploymentPolicy::AUTOMATIC, 7 );
 $assert( $request->toJson() === DeploymentRequest::fromJson( $request->toJson() )->toJson(), 'Deployment requests must round-trip canonically.' );

@@ -198,7 +198,11 @@ final class ReleaseArtifactCustodian {
 			}
 
 			$copyCleanupSuccessful = $inputClosed && $outputClosed;
-			$copyCleanupSuccessful = self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity ) && $copyCleanupSuccessful;
+			try {
+				$copyCleanupSuccessful = self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity ) && $copyCleanupSuccessful;
+			} catch ( Throwable ) {
+				$copyCleanupSuccessful = false;
+			}
 			throw new RuntimeException();
 		} finally {
 			if ( is_resource( $input ) ) {

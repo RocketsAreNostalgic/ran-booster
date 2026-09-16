@@ -54,3 +54,13 @@ function fclose( $stream ): bool {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Test-only deterministic filesystem seam.
 	return \fclose( $stream );
 }
+
+
+function unlink( string $filename ): bool {
+	if ( ! empty( $GLOBALS['ran_booster_custody_unlink_throw'] ) ) {
+		throw new \RuntimeException( 'Test-only Core-copy removal failure.' );
+	}
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only deterministic filesystem seam.
+	return \unlink( $filename );
+}

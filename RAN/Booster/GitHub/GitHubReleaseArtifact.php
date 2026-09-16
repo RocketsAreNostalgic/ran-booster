@@ -7,6 +7,7 @@ namespace RAN\Booster\GitHub;
 use RAN\RepositoryProvider\RepositoryReleaseArtifact;
 use RAN\RepositoryProvider\RepositoryReleaseArtifactCustody;
 use RuntimeException;
+use Throwable;
 
 /**
  * GitHub-owned release source retained until Core claims or discards it.
@@ -40,28 +41,35 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact, Reposito
 	}
 
 	public function __destruct() {
-		if ( true !== $this->discardResult ) {
+		if ( null === $this->discardResult ) {
 			try {
 				$this->discard();
 			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- The synchronous caller owns the reportable cleanup postcondition.
-			} catch ( \Throwable ) {
+			} catch ( Throwable ) {
 				// The synchronous caller owns the reportable cleanup postcondition.
 			}
 		}
 	}
 
 	public function discard(): bool {
-		if ( true === $this->discardResult ) {
-			return true;
+		if ( null !== $this->discardResult ) {
+			return $this->discardResult;
 		}
-		$discarded           = true === $this->artifact->discard();
-		$this->discardResult = $discarded ? true : null;
+		try {
+			$discarded           = true === $this->artifact->discard();
+			$this->discardResult = $discarded ? true : ( $this->handedOff ? false : null );
 
-		return $discarded;
+			return $discarded;
+		} catch ( Throwable $failure ) {
+			if ( $this->handedOff ) {
+				$this->discardResult = false;
+			}
+			throw $failure;
+		}
 	}
 
 	public function handoffToCore(): RepositoryReleaseArtifactCustody {
-		if ( $this->handedOff || true === $this->discardResult ) {
+		if ( $this->handedOff || null !== $this->discardResult ) {
 			throw new RuntimeException( 'The GitHub release artifact is unavailable.' );
 		}
 
@@ -72,7 +80,7 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact, Reposito
 
 	/** @param callable(string): mixed $inspection */
 	public function inspect( callable $inspection ): mixed {
-		if ( ! $this->handedOff || true === $this->discardResult ) {
+		if ( ! $this->handedOff || null !== $this->discardResult ) {
 			throw new RuntimeException( 'The GitHub release artifact is unavailable.' );
 		}
 

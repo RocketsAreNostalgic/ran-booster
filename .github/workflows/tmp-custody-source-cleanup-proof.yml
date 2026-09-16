@@ -1,0 +1,38 @@
+name: Temporary split custody cleanup proof
+
+on:
+  push:
+    branches:
+      - refactor/release-artifact-custody
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/release-artifact-custody
+          fetch-depth: 0
+      - name: Assert provider source cleanup independently
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php')
+          text = path.read_text()
+          old = "\t\t\tself::assertFileExists( $source->prepared->getPath() );\n\t\t\tself::assertFalse( $artifact->discard() );\n"
+          new = "\t\t\tself::assertFileExists( $source->prepared->getPath() );\n\t\t\tself::assertTrue( $artifact->discard() );\n\t\t\tself::assertFileDoesNotExist( $path );\n"
+          assert text.count(old) == 1
+          path.write_text(text.replace(old, new, 1))
+          Path('.github/workflows/tmp-custody-source-cleanup-proof.yml').unlink()
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php .github/workflows/tmp-custody-source-cleanup-proof.yml
+          git commit -m 'test: separate provider and Core cleanup outcomes'
+          git push origin HEAD:refactor/release-artifact-custody

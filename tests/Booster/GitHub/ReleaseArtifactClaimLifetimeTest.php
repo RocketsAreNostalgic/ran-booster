@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubReleaseArtifact;
+use RAN\Deployment\ReleaseArtifactCustodian;
 use RuntimeException;
 
 final class ReleaseArtifactClaimLifetimeTest extends TestCase {
@@ -25,7 +26,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 			$this->resetFilesystemHooks();
 			[ $artifact, $path ] = $this->artifact();
 
-			$prepared = $artifact->handoffToCore();
+			$prepared = ReleaseArtifactCustodian::claim( $artifact->handoffToCore() );
 			self::assertFileDoesNotExist( $path );
 			$prepared->assertUnchanged();
 			$ownedPath = $prepared->getPath();
@@ -274,7 +275,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 
 	private function expectHandoffFailure( GitHubReleaseArtifact $artifact ): void {
 		try {
-			$artifact->handoffToCore();
+			ReleaseArtifactCustodian::claim( $artifact->handoffToCore() );
 			self::fail( 'Unsafe custody handoff must fail closed.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 'The GitHub release artifact could not be prepared.', $exception->getMessage() );

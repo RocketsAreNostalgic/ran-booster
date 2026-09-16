@@ -7,6 +7,7 @@ namespace RAN\AddOn\ReleaseTracking;
 use InvalidArgumentException;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\ReleaseArtifactCustodian;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
 use RAN\ManagedRepository;
@@ -307,7 +308,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					$outcome = ProspectiveReleaseResult::failure( 'package_already_exists' );
 				} else {
 					PackageMutationGuard::assertFilesystemMutationAllowed();
-					$artifact            = $release->handoffToCore();
+					$artifact            = ReleaseArtifactCustodian::claim( $release->handoffToCore() );
 					$result              = 'plugin' === $type
 						? $this->executor->installPlugin( $artifact, $release->packageRoot(), null )
 						: $this->executor->installTheme( $artifact, $release->packageRoot(), null );

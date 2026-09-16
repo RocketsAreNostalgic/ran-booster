@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RAN\Booster\GitHub;
+namespace RAN\Deployment;
 
 function random_bytes( int $length ): string {
 	$value = $GLOBALS['ran_booster_custody_random_bytes'] ?? null;

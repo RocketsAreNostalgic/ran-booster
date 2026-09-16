@@ -19,6 +19,7 @@ use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
 use RAN\RepositoryProvider\RepositoryReleaseAcquisitionRejected;
 use RAN\RepositoryProvider\RepositoryReleaseArtifact;
+use RAN\RepositoryProvider\RepositoryReleaseArtifactCustody;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -251,7 +252,7 @@ final class ProviderContractsTest extends TestCase {
 			$methods
 		);
 		self::assertSame(
-			\RAN\Deployment\PreparedArtifact::class,
+			RepositoryReleaseArtifactCustody::class,
 			(string) ( new \ReflectionMethod( RepositoryReleaseArtifact::class, 'handoffToCore' ) )->getReturnType()
 		);
 	}

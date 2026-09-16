@@ -14,32 +14,33 @@ use Throwable;
  */
 final class ReleaseArtifactCustodian {
 	public static function claim( RepositoryReleaseArtifactCustody $custody ): PreparedArtifact {
-		$maximumArtifactBytes = PackageArtifactLimit::resolve();
-		$resolvedRef          = $custody->resolvedRef();
-		$version              = $custody->version();
-		$size                 = $custody->size();
-		$sha256               = $custody->sha256();
-
-		if ( $size < 1
-			|| $size > $maximumArtifactBytes
-			|| 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $sha256 ) ) {
-			throw new RuntimeException( 'The release artifact custody evidence is invalid.' );
-		}
-
-		// API-10 providers may still return PreparedArtifact covariantly. Keep
-		// those implementations load-compatible while new providers can return
-		// provider-owned custody without importing this Core concrete type.
-		if ( $custody instanceof PreparedArtifact ) {
-			$custody->assertUnchanged();
-
-			return $custody;
-		}
-
-		$prepared                = null;
+		$prepared                = $custody instanceof PreparedArtifact ? $custody : null;
 		$inspectionInvoked       = false;
 		$sourceDiscardAttempted  = false;
 		$sourceDiscardSuccessful = false;
+
 		try {
+			$maximumArtifactBytes = PackageArtifactLimit::resolve();
+			$resolvedRef          = $custody->resolvedRef();
+			$version              = $custody->version();
+			$size                 = $custody->size();
+			$sha256               = $custody->sha256();
+
+			if ( $size < 1
+				|| $size > $maximumArtifactBytes
+				|| 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $sha256 ) ) {
+				throw new RuntimeException( 'The release artifact custody evidence is invalid.' );
+			}
+
+			// API-10 providers may still return PreparedArtifact covariantly. Keep
+			// those implementations load-compatible while new providers can return
+			// provider-owned custody without importing this Core concrete type.
+			if ( $custody instanceof PreparedArtifact ) {
+				$custody->assertUnchanged();
+
+				return $custody;
+			}
+
 			$result = $custody->inspect(
 				function ( string $source ) use ( &$prepared, &$inspectionInvoked, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
 					if ( $inspectionInvoked ) {

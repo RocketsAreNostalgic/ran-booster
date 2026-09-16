@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace RAN\RepositoryProvider;
 
-use RAN\Deployment\PreparedArtifact;
-
 /** One exact verified release archive with single-use Core handoff. */
 interface RepositoryReleaseArtifact {
 	public function discard(): bool;
 
-	public function handoffToCore(): PreparedArtifact;
+	public function handoffToCore(): RepositoryReleaseArtifactCustody;
 
 	public function version(): string;
 

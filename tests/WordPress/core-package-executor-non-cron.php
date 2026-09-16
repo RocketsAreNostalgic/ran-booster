@@ -8,6 +8,15 @@ use RAN\Deployment\PreparedArtifact;
 use RAN\WordPress\CorePackageExecutionFailure;
 use RAN\WordPress\CorePackageExecutor;
 
+$wordpressPath = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
+if ( ! is_string( $wordpressPath ) || '' === trim( $wordpressPath ) ) {
+	throw new RuntimeException( 'The non-cron installed runtime path is unavailable.' );
+}
+$sharedPath = rtrim( $wordpressPath, '/\\' ) . '/wp-content/plugins/ran-booster/vendor/ran/updater-support/src/RepositoryRelativePath.php';
+if ( ! is_file( $sharedPath ) ) {
+	throw new RuntimeException( 'The non-cron shared path dependency is unavailable.' );
+}
+require_once $sharedPath;
 require_once dirname( __DIR__, 2 ) . '/RAN/PackageSubdirectory.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Deployment/PreparedArtifact.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Runtime/RuntimeSupport.php';

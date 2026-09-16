@@ -7,7 +7,7 @@ namespace RAN\Booster\GitHub;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\RepositoryRelativePath;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\RepositoryProvider\GitReferenceSyntax;
 use RAN\RepositoryProvider\CredentialValidationResult;
@@ -300,8 +300,13 @@ class RepositoryBrowser {
 	/** Check one normalized repository-relative directory at an immutable ref. */
 	public function pathExists( string $fullName, string $ref, string $path, ?string $credentialId = null, bool $private = false ): bool {
 		$fullName = $this->validateRepositoryName( $fullName );
-		$path     = PackageSubdirectory::normalize( $path );
-		if ( null === $path || 1 !== preg_match( '/^[0-9a-f]{40}$/i', $ref ) ) {
+		try {
+			$path = RepositoryRelativePath::normalize( $path );
+		} catch ( InvalidArgumentException $exception ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.
+			throw new RuntimeException( 'The GitHub repository path check is invalid.', 400, $exception );
+		}
+		if ( 1 !== preg_match( '/^[0-9a-f]{40}$/i', $ref ) ) {
 			throw new RuntimeException( 'The GitHub repository path check is invalid.', 400 );
 		}
 

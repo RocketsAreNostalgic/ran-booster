@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b75cf29ba5bca332f689367060b050b3",
+    "content-hash": "1ebd9e49ea26b49fc539df0619b3937e",
     "packages": [
         {
             "name": "ran/updater-support",
-            "version": "v0.1.0-beta.2",
+            "version": "v0.1.0-beta.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-updater-support.git",
-                "reference": "83384bb6f4652d8988374867f4103fde63878451"
+                "reference": "333e652a2662880a89361cf92b2454b81c75d61b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-updater-support/zipball/83384bb6f4652d8988374867f4103fde63878451",
-                "reference": "83384bb6f4652d8988374867f4103fde63878451",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-updater-support/zipball/333e652a2662880a89361cf92b2454b81c75d61b",
+                "reference": "333e652a2662880a89361cf92b2454b81c75d61b",
                 "shasum": ""
             },
             "require": {
@@ -76,20 +76,20 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-updater-support/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-updater-support"
             },
-            "time": "2026-09-14T16:25:11+00:00"
+            "time": "2026-09-15T20:41:13+00:00"
         },
         {
             "name": "ran/wp-branch-updater",
-            "version": "v1.0.0-beta.4",
+            "version": "v1.0.0-beta.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater.git",
-                "reference": "e325811348cc5e24ec2364483698533ca061cb59"
+                "reference": "5cc732f70ae8597196e97ff99bbcf48fe1c27009"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/e325811348cc5e24ec2364483698533ca061cb59",
-                "reference": "e325811348cc5e24ec2364483698533ca061cb59",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/5cc732f70ae8597196e97ff99bbcf48fe1c27009",
+                "reference": "5cc732f70ae8597196e97ff99bbcf48fe1c27009",
                 "shasum": ""
             },
             "require": {
@@ -97,7 +97,7 @@
                 "ext-json": "*",
                 "ext-zip": "*",
                 "php": "^8.2",
-                "ran/updater-support": "0.1.0-beta.2"
+                "ran/updater-support": "0.1.0-beta.3"
             },
             "require-dev": {
                 "phpcompatibility/php-compatibility": "10.0.0-alpha2",
@@ -178,7 +178,7 @@
                     "composer validate --strict --no-check-publish"
                 ],
                 "test:release-publisher": [
-                    "node --test tests/release-publisher-decision.test.mjs tests/release-publisher.test.mjs tests/release-publisher-version.test.mjs tests/release-publisher-recovery.test.mjs"
+                    "node --test tests/release-classification.test.mjs tests/release-publisher-decision.test.mjs tests/release-publisher.test.mjs tests/release-publisher-version.test.mjs tests/release-publisher-recovery.test.mjs"
                 ]
             },
             "license": [
@@ -190,7 +190,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater"
             },
-            "time": "2026-09-14T18:12:40+00:00"
+            "time": "2026-09-15T22:17:26+00:00"
         },
         {
             "name": "ran/wp-release-updater",

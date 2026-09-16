@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RAN;
 
+use InvalidArgumentException;
+use RAN\UpdaterSupport\V1\RepositoryRelativePath;
+
 /**
  * Normalize and validate a repository-relative package directory.
  */
@@ -23,34 +26,19 @@ final class PackageSubdirectory {
 			throw self::invalid();
 		}
 
-		$value = trim( $value );
-
-		if ( '' === $value ) {
-			return null;
-		}
-
-		if ( str_starts_with( $value, '/' )
-			|| str_contains( $value, '\\' )
-			|| preg_match( '/^[A-Za-z]:/', $value )
-			|| preg_match( '/[\x00-\x1F\x7F]/', $value ) ) {
-			throw self::invalid();
-		}
-
-		if ( str_ends_with( $value, '/' ) ) {
-			$value = substr( $value, 0, -1 );
-		}
-
-		$segments = explode( '/', $value );
-
-		foreach ( $segments as $segment ) {
-			if ( '' === $segment || '.' === $segment || '..' === $segment ) {
+		if ( '' === trim( $value ) ) {
+			if ( 1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ) {
 				throw self::invalid();
 			}
 
-			self::assertDecodedSegmentIsSafe( $segment );
+			return null;
 		}
 
-		return implode( '/', $segments );
+		try {
+			return RepositoryRelativePath::normalize( $value );
+		} catch ( InvalidArgumentException ) {
+			throw self::invalid();
+		}
 	}
 
 	/**
@@ -98,28 +86,6 @@ final class PackageSubdirectory {
 	 */
 	public static function deploymentSlug( mixed $providerSlug, mixed $subdirectory ): string {
 		return strtolower( self::installationSlug( $providerSlug, $subdirectory ) );
-	}
-
-	private static function assertDecodedSegmentIsSafe( string $segment ): void {
-		$decoded = $segment;
-
-		for ( $pass = 0, $limit = strlen( $segment ); $pass < $limit; ++$pass ) {
-			$next = rawurldecode( $decoded );
-
-			if ( $next === $decoded ) {
-				break;
-			}
-
-			$decoded = $next;
-
-			if ( '.' === $decoded
-				|| '..' === $decoded
-				|| str_contains( $decoded, '/' )
-				|| str_contains( $decoded, '\\' )
-				|| preg_match( '/[\x00-\x1F\x7F]/', $decoded ) ) {
-				throw self::invalid();
-			}
-		}
 	}
 
 	private static function invalid(): InvalidPackageSubdirectory {

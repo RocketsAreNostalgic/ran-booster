@@ -17,7 +17,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\\WordPress\\',
 	);
 
-	private const ALLOWED_CORE_IMPORTS = array(
+	private const ALLOWED_IMPORTS = array(
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryClient',
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\GitHubRepositoryReleaseWorkflow',
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore',
@@ -25,7 +25,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\TemplatePackRepositoryClient',
 		'RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\WorkflowApplicationCoordinator',
 		'RAN\Deployment\PreparedArtifact',
-		'RAN\PackageSubdirectory',
+		'RAN\UpdaterSupport\V1\RepositoryRelativePath',
 		'RAN\RepositoryProvider\Admin\CredentialFieldMetadata',
 		'RAN\RepositoryProvider\Admin\CredentialKindMetadata',
 		'RAN\RepositoryProvider\Admin\ProviderAdminMetadata',
@@ -98,7 +98,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 		'RAN\RepositoryProvider\WebhookRequest',
 	);
 
-	public function testModuleImportsOnlyTheExplicitProviderApiAllowlist(): void {
+	public function testModuleImportsOnlyTheExplicitBoundaryAllowlist(): void {
 		$imports = array();
 		foreach ( $this->moduleFiles() as $path ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local architecture boundary under test.
@@ -115,7 +115,7 @@ final class ModuleDependencyBoundaryTest extends TestCase {
 
 		$imports = array_values( array_unique( $imports ) );
 		sort( $imports );
-		$allowed = self::ALLOWED_CORE_IMPORTS;
+		$allowed = self::ALLOWED_IMPORTS;
 		sort( $allowed );
 		self::assertSame( $allowed, $imports );
 	}

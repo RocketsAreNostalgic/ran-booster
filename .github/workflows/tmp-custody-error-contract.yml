@@ -1,0 +1,62 @@
+name: Temporary custody error contract
+
+on:
+  push:
+    branches:
+      - refactor/release-artifact-custody
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/release-artifact-custody
+          fetch-depth: 0
+      - name: Align Core custody failure assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php')
+          text = path.read_text()
+
+          old = "\tprivate function expectHandoffFailure( GitHubReleaseArtifact $artifact ): void {\n"
+          new = "\tprivate function expectHandoffFailure( GitHubReleaseArtifact $artifact, bool $cleanupFailure = false ): void {\n"
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+
+          old = "\t\t} catch ( RuntimeException $exception ) {\n\t\t\tself::assertSame( 'The GitHub release artifact could not be prepared.', $exception->getMessage() );\n\t\t}\n"
+          new = "\t\t} catch ( RuntimeException $exception ) {\n\t\t\tself::assertSame(\n\t\t\t\t$cleanupFailure\n\t\t\t\t\t? 'The release artifact transfer could not be cleaned up safely.'\n\t\t\t\t\t: 'The release artifact could not be transferred to Core.',\n\t\t\t\t$exception->getMessage()\n\t\t\t);\n\t\t}\n"
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+
+          for method in (
+              'testFirstFailedHandoffDiscardCannotBeHiddenByRetry',
+              'testThrownHandoffDiscardCannotBeHiddenByLaterSuccess',
+              'testPreparedCopyCleanupUncertaintyRemainsReportable',
+          ):
+              start = text.index('public function ' + method)
+              end = text.find('\n\t#[', start + 1)
+              if end == -1:
+                  end = text.index('\n\t\t/**', start)
+              chunk = text[start:end]
+              needle = '$this->expectHandoffFailure( $artifact );'
+              assert chunk.count(needle) == 1, method
+              chunk = chunk.replace(needle, '$this->expectHandoffFailure( $artifact, true );', 1)
+              text = text[:start] + chunk + text[end:]
+
+          path.write_text(text)
+          Path('.github/workflows/tmp-custody-error-contract.yml').unlink()
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php .github/workflows/tmp-custody-error-contract.yml
+          git commit -m 'test: assert Core custody failure outcomes'
+          git push origin HEAD:refactor/release-artifact-custody

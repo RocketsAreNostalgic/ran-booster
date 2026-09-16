@@ -7,6 +7,7 @@ namespace RAN\AddOn\ReleaseTracking;
 use InvalidArgumentException;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\ReleaseArtifactCleanupFailure;
 use RAN\Deployment\ReleaseArtifactCustodian;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
@@ -368,6 +369,14 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					}
 				}
 			} while ( false );
+		} catch ( ReleaseArtifactCleanupFailure $failure ) {
+			$finalizationFailed = true;
+			$outcome            = ProspectiveReleaseResult::failure( 'install_failed' );
+			BoosterLogger::logException(
+				'prospective release Core artifact cleanup failed',
+				$failure,
+				array( 'step' => 'prospective_release_cleanup' )
+			);
 		} catch ( Throwable ) {
 			$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
 		} finally {

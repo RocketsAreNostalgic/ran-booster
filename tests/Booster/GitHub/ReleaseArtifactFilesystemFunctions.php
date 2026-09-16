@@ -32,3 +32,15 @@ function fopen( string $filename, string $mode, bool $useIncludePath = false, mi
 
 	return $stream;
 }
+
+
+/** @param resource $stream */
+function fclose( $stream ): bool {
+	$remaining = (int) ( $GLOBALS['ran_booster_custody_fclose_failures'] ?? 0 );
+	if ( $remaining > 0 ) {
+		$GLOBALS['ran_booster_custody_fclose_failures'] = $remaining - 1;
+		throw new \RuntimeException( 'Test-only stream close failure.' );
+	}
+
+	return \fclose( $stream );
+}

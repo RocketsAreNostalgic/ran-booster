@@ -158,6 +158,43 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function testThrownStreamCloseStillAttemptsCoreCopyCleanup(): void {
+		$this->resetFilesystemHooks();
+		$random       = str_repeat( "\x35", 16 );
+		$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( $random );
+		$archive      = $directory . '/archive.zip';
+		$providerPath = $this->archivePath();
+
+		try {
+			$GLOBALS['ran_booster_custody_random_bytes']    = $random;
+			$GLOBALS['ran_booster_custody_fclose_failures'] = 1;
+			$digest = hash_file( 'sha256', $providerPath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only artifact identity.
+			self::assertIsString( $digest );
+			$artifact = new GitHubReleaseArtifact(
+				new StructuralReleaseArtifact( $providerPath ),
+				'1.2.3',
+				str_repeat( 'a', 40 ),
+				'example',
+				'example.php',
+				strlen( 'verified-release-archive' ) - 1,
+				52428800,
+				$digest
+			);
+			$this->expectHandoffFailure( $artifact, true );
+
+			self::assertFileDoesNotExist( $providerPath );
+			self::assertFileDoesNotExist( $archive );
+			self::assertDirectoryDoesNotExist( $directory );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $providerPath );
+			$this->removeExactPath( $archive );
+			$this->removeExactDirectory( $directory );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testFirstFailedHandoffDiscardCannotBeHiddenByRetry(): void {
 		$this->resetFilesystemHooks();
 		$path = $this->archivePath();
@@ -293,7 +330,8 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 			$GLOBALS['ran_booster_custody_random_bytes'],
 			$GLOBALS['ran_booster_custody_mkdir_failure'],
 			$GLOBALS['ran_booster_custody_after_source_open'],
-			$GLOBALS['ran_booster_custody_after_destination_open']
+			$GLOBALS['ran_booster_custody_after_destination_open'],
+			$GLOBALS['ran_booster_custody_fclose_failures']
 		);
 	}
 

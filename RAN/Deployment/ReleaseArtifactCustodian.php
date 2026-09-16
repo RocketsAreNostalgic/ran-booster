@@ -80,11 +80,11 @@ final class ReleaseArtifactCustodian {
 				}
 			}
 
-			throw new RuntimeException(
-				$copyCleanupSuccessful && $sourceDiscardSuccessful
-					? 'The release artifact could not be transferred to Core.'
-					: 'The release artifact transfer could not be cleaned up safely.'
-			);
+			if ( $copyCleanupSuccessful && $sourceDiscardSuccessful ) {
+				throw new RuntimeException( 'The release artifact could not be transferred to Core.' );
+			}
+
+			throw new ReleaseArtifactCleanupFailure();
 		}
 	}
 
@@ -173,15 +173,23 @@ final class ReleaseArtifactCustodian {
 		} catch ( Throwable ) {
 			$inputClosed = true;
 			if ( is_resource( $input ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy input before cleanup.
-				$inputClosed = fclose( $input );
-				$input       = false;
+				try {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy input before cleanup.
+					$inputClosed = fclose( $input );
+				} catch ( Throwable ) {
+					$inputClosed = false;
+				}
+				$input = false;
 			}
 			$outputClosed = true;
 			if ( is_resource( $output ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy output before cleanup.
-				$outputClosed = fclose( $output );
-				$output       = false;
+				try {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy output before cleanup.
+					$outputClosed = fclose( $output );
+				} catch ( Throwable ) {
+					$outputClosed = false;
+				}
+				$output = false;
 			}
 
 			$copyCleanupSuccessful = $inputClosed && $outputClosed;

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0-beta.29](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.28...v1.0.0-beta.29) (2026-09-16)
+
+
+### Bug Fixes
+
+* centralize repository-relative package path policy ([#141](https://github.com/RocketsAreNostalgic/ran-booster/issues/141)) ([3dce645](https://github.com/RocketsAreNostalgic/ran-booster/commit/3dce645de43a13c7260dc08c8ddabe8b0931014b))
+* enforce WordPress compatibility floor ([4e48739](https://github.com/RocketsAreNostalgic/ran-booster/commit/4e4873988de19ffeb0d934b97da9b0fe67e3f509))
+* reconcile signed release merge lineage ([e45b196](https://github.com/RocketsAreNostalgic/ran-booster/commit/e45b196d386d298c2309079c27fb918afb846fd1))
+* validate release readiness before merge ([99de67e](https://github.com/RocketsAreNostalgic/ran-booster/commit/99de67e7736f27d4a8e8ec3329fdde9fc1abd453))
+* validate release readiness before merge ([b1d7a33](https://github.com/RocketsAreNostalgic/ran-booster/commit/b1d7a332d91982f9802d67f5e7dc9990fa6c7c67))
+
 ## [1.0.0-beta.28](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.27...v1.0.0-beta.28) (2026-09-03)
 
 

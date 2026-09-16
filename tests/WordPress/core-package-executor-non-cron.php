@@ -17,6 +17,7 @@ if ( ! is_file( $sharedPath ) ) {
 	throw new RuntimeException( 'The non-cron shared path dependency is unavailable.' );
 }
 require_once $sharedPath;
+require_once dirname( __DIR__, 2 ) . '/RAN/RepositoryProvider/RepositoryReleaseArtifactCustody.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/PackageSubdirectory.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Deployment/PreparedArtifact.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Runtime/RuntimeSupport.php';

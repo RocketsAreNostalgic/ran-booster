@@ -72,6 +72,7 @@ use RAN\Webhook\SignedWebhookVerifier;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
+use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
 
 final class BoosterServiceProvider {
@@ -84,7 +85,6 @@ final class BoosterServiceProvider {
 
 	/** @internal Core bootstrap composition only. */
 	public function register( CoreContainer $container, Booster $runtime, object $releaseUpdater, string $selfPluginIdentifier ): void {
-		// Core owns host runtime state; provider packages receive only composed dependencies.
 		$database       = new Database();
 		$secretsRuntime = new SecretsRuntimeAvailability();
 		$secretPolicies = new ProviderSecretPolicyCatalog();
@@ -201,7 +201,8 @@ final class BoosterServiceProvider {
 		$container->bind(
 			BlueprintRepositoryVerifier::class,
 			static fn ( CoreContainer $container ): BlueprintRepositoryVerifier => new BlueprintRepositoryVerifier(
-				$container->make( ProviderRegistry::class ),
+				$container->make( PluginRepository::class ),
+				$container->make( ThemeRepository::class ),
 				$container->make( SecretsFile::class )
 			)
 		);
@@ -221,7 +222,8 @@ final class BoosterServiceProvider {
 				);
 			}
 		);
-		$providers = new ProviderRegistry(
+		$releaseRegistrar = new ManagedReleaseUpdaterRegistrar( $releaseUpdater );
+		$providers        = new ProviderRegistry(
 			array(),
 			$secretPolicies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
@@ -237,7 +239,7 @@ final class BoosterServiceProvider {
 			static fn ( ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(
 				$credentials,
 				$deliveryEvidence,
-				$releaseUpdater,
+				$releaseRegistrar,
 				static fn (): int => PackageArtifactLimit::resolve()
 			)
 		);

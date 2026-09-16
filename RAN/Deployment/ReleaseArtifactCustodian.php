@@ -36,17 +36,22 @@ final class ReleaseArtifactCustodian {
 		}
 
 		$prepared                = null;
+		$inspectionInvoked       = false;
 		$sourceDiscardAttempted  = false;
 		$sourceDiscardSuccessful = false;
 		try {
 			$result = $custody->inspect(
-				function ( string $source ) use ( &$prepared, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
-					$prepared = self::copyToCore( $source, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 );
+				function ( string $source ) use ( &$prepared, &$inspectionInvoked, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
+					if ( $inspectionInvoked ) {
+						throw new RuntimeException();
+					}
+					$inspectionInvoked = true;
+					$prepared          = self::copyToCore( $source, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 );
 
 					return $prepared;
 				}
 			);
-			if ( ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {
+			if ( ! $inspectionInvoked || ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {
 				throw new RuntimeException();
 			}
 

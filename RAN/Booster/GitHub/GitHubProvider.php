@@ -76,9 +76,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	public const VERSION   = 3;
 
 	private ProviderMetadata $metadata;
-
 	private ProviderCredentialStore $credentials;
-
 	private RepositoryBrowser $browser;
 	private RepositoryWebhookClient $webhookClient;
 	private WebhookNormalizer $webhooks;
@@ -486,7 +484,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! is_string( $release['published_at'] ?? null )
 				|| ! is_array( $release['expected_asset_names'] ?? null )
 				|| ! is_string( $release['details_url'] ?? null )
-				|| ! hash_equals( $this->releaseDetailsUrl( $repository, $release['tag'] ), $release['details_url'] ) ) {
+				|| ! hash_equals( $this->releaseDetailsUrl( $repository ), $release['details_url'] ) ) {
 				throw new RuntimeException( 'GitHub returned invalid release candidates.', 502 );
 			}
 			$candidates[] = new RepositoryReleaseCandidate(

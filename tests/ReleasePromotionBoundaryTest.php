@@ -30,16 +30,20 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 	);
 
 	public function testQualityFreshEvidenceClassifierMatchesTheDocumentedBoundary(): void {
-		$quality    = $this->readText( '.github/workflows/quality.yml' );
-		$releaseDoc = $this->readText( 'RELEASE.md' );
-		$ciDoc      = $this->readText( 'docs/ci-architecture.md' );
-		$trustPaths = $this->trustPathBlock( $quality );
+		$quality         = $this->readText( '.github/workflows/quality.yml' );
+		$releaseDoc      = $this->readText( 'RELEASE.md' );
+		$ciDoc           = $this->readText( 'docs/ci-architecture.md' );
+		$expectedPaths   = array_merge( self::EVIDENCE_INPUT_PATHS, self::RELEASE_CONTROL_PATHS );
+		$executablePaths = $this->trustPaths( $quality );
+		$documentedPaths = $this->documentedTrustPaths( $releaseDoc );
 
-		foreach ( array_merge( self::EVIDENCE_INPUT_PATHS, self::RELEASE_CONTROL_PATHS ) as $path ) {
-			self::assertStringContainsString( $path, $trustPaths, $path . ' is missing from the Quality freshness classifier.' );
-			self::assertStringContainsString( '`' . $path . '`', $releaseDoc, $path . ' is missing from the documented inventory.' );
-		}
+		sort( $expectedPaths );
+		sort( $executablePaths );
+		sort( $documentedPaths );
 
+		self::assertSame( $expectedPaths, $executablePaths, 'Quality trust paths drifted from the release boundary.' );
+		self::assertSame( $expectedPaths, $documentedPaths, 'RELEASE.md trust paths drifted from the release boundary.' );
+		self::assertSame( $documentedPaths, $executablePaths, 'Documented and executable trust paths must match both ways.' );
 		self::assertStringContainsString( '`RELEASE.md` is the canonical human-readable inventory', $ciDoc );
 		self::assertStringNotContainsString( 'for trust_path in \\', $this->readText( '.github/workflows/release-please.yml' ) );
 	}
@@ -51,12 +55,14 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		foreach ( array(
 			"github.event.workflow_run.event == 'push'",
 			"github.event.workflow_run.conclusion == 'success'",
+			"github.event.workflow_run.path == '.github/workflows/quality.yml'",
 			"github.event.workflow_run.head_branch == 'main'",
 			'github.event.workflow_run.head_repository.full_name == github.repository',
 		) as $requiredPredicate ) {
 			self::assertStringContainsString( $requiredPredicate, $jobGate );
 		}
 
+		self::assertStringNotContainsString( 'github.event.workflow_run.name', $jobGate );
 		self::assertStringNotContainsString( "\n  pull_request_target:", $workflow );
 		self::assertStringNotContainsString( "\n  pull_request:", $workflow );
 		self::assertStringContainsString( 'test "$(git rev-parse HEAD)" = "$RAN_QUALITY_COMMIT"', $workflow );
@@ -68,6 +74,69 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 				'[[ "$current_main" == "$RAN_QUALITY_COMMIT" ]] && release_please_required=true'
 			)
 		);
+
+		$repository = 'RocketsAreNostalgic/ran-booster';
+		$qualified  = array(
+			'event'           => 'push',
+			'conclusion'      => 'success',
+			'path'            => '.github/workflows/quality.yml',
+			'head_branch'     => 'main',
+			'head_repository' => $repository,
+			'repository'      => $repository,
+		);
+		self::assertTrue( $this->releaseJobGateAllows( $jobGate, $qualified ) );
+
+		foreach ( array(
+			array( 'event', 'pull_request' ),
+			array( 'conclusion', 'failure' ),
+			array( 'path', '.github/workflows/same-name-quality.yml' ),
+			array( 'head_branch', 'feature' ),
+			array( 'head_repository', 'someone/else' ),
+		) as array( $field, $value ) ) {
+			$unqualified           = $qualified;
+			$unqualified[ $field ] = $value;
+			self::assertFalse( $this->releaseJobGateAllows( $jobGate, $unqualified ), $field . ' should fail admission.' );
+		}
+	}
+
+	public function testOrdinaryReconciliationGuardsExecuteForCurrentAndStaleMain(): void {
+		$workflow = $this->readText( '.github/workflows/release-please.yml' );
+		$guards   = $this->ordinaryReconciliationGuards( $workflow );
+		self::assertCount( 2, $guards, 'Both ordinary reconciliation guard branches must stay contract-covered.' );
+
+		$qualityCommit = str_repeat( 'a', 40 );
+		foreach ( $guards as $guard ) {
+			$current = $this->executeReconciliationGuard( $guard, $qualityCommit, $qualityCommit );
+			self::assertSame( "release-required=false\nrelease-please-required=true\n", $current['github_output'] );
+			self::assertSame( '', $current['stdout'] );
+
+			$stale = $this->executeReconciliationGuard( $guard, str_repeat( 'b', 40 ), $qualityCommit );
+			self::assertSame( "release-required=false\nrelease-please-required=false\n", $stale['github_output'] );
+			self::assertStringContainsString( 'skipping stale reconciliation', $stale['stdout'] );
+		}
+	}
+
+	public function testMergedCandidateStateTransitionFeedsLaterPrivilegedSteps(): void {
+		$workflow   = $this->readText( '.github/workflows/release-please.yml' );
+		$transition = $this->mergedCandidateTransition( $workflow );
+
+		self::assertStringContainsString(
+			"printf 'release-required=true\\nrelease-please-required=false\\n' >> \"\$GITHUB_OUTPUT\"",
+			$transition
+		);
+		foreach ( array(
+			'RAN_RELEASE_BASE_COMMIT',
+			'RAN_RELEASE_COMMIT',
+			'RAN_RELEASE_HEAD_COMMIT',
+			'RAN_RELEASE_PENDING',
+			'RAN_RELEASE_PR_NUMBER',
+			'RAN_RELEASE_STATE',
+			'RAN_RELEASE_TAG',
+			'RAN_RELEASE_TREE',
+			'RAN_RELEASE_VERSION',
+		) as $releaseState ) {
+			self::assertStringContainsString( $releaseState, $transition, $releaseState . ' is missing from candidate state.' );
+		}
 
 		$this->assertStepGate(
 			$workflow,
@@ -94,33 +163,98 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 			'Read back immutable release and reconcile exact PR',
 			"if: steps.release-state.outputs.release-required == 'true'"
 		);
-
-		$repository = 'RocketsAreNostalgic/ran-booster';
-		foreach ( array(
-			array( 'pull_request', 'success', 'main', $repository ),
-			array( 'push', 'failure', 'main', $repository ),
-			array( 'push', 'success', 'feature', $repository ),
-			array( 'push', 'success', 'main', 'someone/else' ),
-		) as $unqualified ) {
-			self::assertFalse( $this->workflowRunQualifies( ...$unqualified ) );
-		}
-		self::assertTrue( $this->workflowRunQualifies( 'push', 'success', 'main', $repository ) );
 	}
 
-	private function workflowRunQualifies(
-		string $event,
-		string $conclusion,
-		string $branch,
-		string $headRepository
-	): bool {
-		return 'push' === $event
-			&& 'success' === $conclusion
-			&& 'main' === $branch
-			&& 'RocketsAreNostalgic/ran-booster' === $headRepository;
+	/**
+	 * @param array<string, string> $context Workflow-run fields used by the real admission expression.
+	 */
+	private function releaseJobGateAllows( string $jobGate, array $context ): bool {
+		$matches = array();
+		$count   = preg_match_all(
+			"/github\\.event\\.workflow_run\\.(event|conclusion|path|head_branch) == '([^']+)'/",
+			$jobGate,
+			$matches,
+			PREG_SET_ORDER
+		);
+		self::assertSame( 4, $count, 'Unexpected workflow_run scalar predicate count in the real job gate.' );
+		self::assertStringContainsString(
+			'github.event.workflow_run.head_repository.full_name == github.repository',
+			$jobGate
+		);
+
+		foreach ( $matches as $match ) {
+			self::assertArrayHasKey( $match[1], $context );
+			if ( $context[ $match[1] ] !== $match[2] ) {
+				return false;
+			}
+		}
+
+		return $context['head_repository'] === $context['repository'];
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private function ordinaryReconciliationGuards( string $workflow ): array {
+		$guards = array();
+		$offset = 0;
+		$startMarker = "            release_please_required=false\n";
+		$endMarker   = "            exit 0\n";
+
+		while ( false !== ( $start = strpos( $workflow, $startMarker, $offset ) ) ) {
+			$end = strpos( $workflow, $endMarker, $start );
+			self::assertIsInt( $end );
+			$end += strlen( $endMarker );
+			$guard = substr( $workflow, $start, $end - $start );
+			$guard = preg_replace( '/^ {12}/m', '', $guard );
+			self::assertIsString( $guard );
+			$guards[] = $guard;
+			$offset   = $end;
+		}
+
+		return $guards;
+	}
+
+	/**
+	 * @return array{github_output: string, stdout: string}
+	 */
+	private function executeReconciliationGuard( string $guard, string $currentMain, string $qualityCommit ): array {
+		$outputFile = tempnam( sys_get_temp_dir(), 'ran-release-gate-' );
+		self::assertIsString( $outputFile );
+		$command = sprintf(
+			'current_main=%s RAN_QUALITY_COMMIT=%s GITHUB_OUTPUT=%s bash -eu -o pipefail -c %s 2>&1',
+			escapeshellarg( $currentMain ),
+			escapeshellarg( $qualityCommit ),
+			escapeshellarg( $outputFile ),
+			escapeshellarg( $guard )
+		);
+		$stdout = array();
+		$status = 0;
+		exec( $command, $stdout, $status ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_exec -- Executes the checked-in release guard as a local contract fixture.
+		self::assertSame( 0, $status, implode( "\n", $stdout ) );
+		$githubOutput = file_get_contents( $outputFile ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local temporary contract fixture.
+		self::assertIsString( $githubOutput );
+		unlink( $outputFile );
+
+		return array(
+			'github_output' => $githubOutput,
+			'stdout'        => implode( "\n", $stdout ),
+		);
+	}
+
+	private function mergedCandidateTransition( string $workflow ): string {
+		$start = strpos( $workflow, "          printf 'release-required=true\\nrelease-please-required=false\\n'" );
+		self::assertIsInt( $start );
+		$end = strpos( $workflow, "\n      - name: Open or update release pull request", $start );
+		self::assertIsInt( $end );
+
+		return substr( $workflow, $start, $end - $start );
 	}
 
 	private function releaseJobGate( string $workflow ): string {
-		$start = strpos( $workflow, "    if: >-\n" );
+		$job = strpos( $workflow, "  release-please:\n" );
+		self::assertIsInt( $job );
+		$start = strpos( $workflow, "    if: >-\n", $job );
 		self::assertIsInt( $start );
 		$end = strpos( $workflow, "\n    runs-on:", $start );
 		self::assertIsInt( $end );
@@ -140,11 +274,45 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		self::assertStringContainsString( $expectedGate, $step, $stepName . ' is not bound to release admission.' );
 	}
 
+	/**
+	 * @return list<string>
+	 */
+	private function trustPaths( string $workflow ): array {
+		$matches = array();
+		$count   = preg_match_all(
+			'/^\s+([.A-Za-z0-9_\/-]+)(?: \\\\|; do)$/m',
+			$this->trustPathBlock( $workflow ),
+			$matches
+		);
+		self::assertIsInt( $count );
+		self::assertGreaterThan( 0, $count );
+
+		return $matches[1];
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private function documentedTrustPaths( string $releaseDoc ): array {
+		$start = strpos( $releaseDoc, 'The ordinary evidence inputs are:' );
+		self::assertIsInt( $start );
+		$end = strpos( $releaseDoc, '`Quality` is the executable authority', $start );
+		self::assertIsInt( $end );
+		$inventory = substr( $releaseDoc, $start, $end - $start );
+		$matches   = array();
+		$count     = preg_match_all( '/`([^`]+)`/', $inventory, $matches );
+		self::assertIsInt( $count );
+		self::assertGreaterThan( 0, $count );
+
+		return $matches[1];
+	}
+
 	private function trustPathBlock( string $workflow ): string {
 		$start = strpos( $workflow, 'for trust_path in \\' );
 		self::assertIsInt( $start );
 		$end = strpos( $workflow, '; do', $start );
 		self::assertIsInt( $end );
+		$end += strlen( '; do' );
 
 		return substr( $workflow, $start, $end - $start );
 	}

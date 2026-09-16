@@ -72,7 +72,6 @@ use RAN\Webhook\SignedWebhookVerifier;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
-use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
 
 final class BoosterServiceProvider {
@@ -221,8 +220,7 @@ final class BoosterServiceProvider {
 				);
 			}
 		);
-		$releaseRegistrar = new ManagedReleaseUpdaterRegistrar( $releaseUpdater );
-		$providers        = new ProviderRegistry(
+		$providers = new ProviderRegistry(
 			array(),
 			$secretPolicies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
@@ -238,7 +236,8 @@ final class BoosterServiceProvider {
 			static fn ( ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(
 				$credentials,
 				$deliveryEvidence,
-				$releaseRegistrar
+				$releaseUpdater,
+				static fn (): int => PackageArtifactLimit::resolve()
 			)
 		);
 		$container->bind( ProviderRegistry::class, $providers );

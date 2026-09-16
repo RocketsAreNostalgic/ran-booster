@@ -267,11 +267,12 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 	 * @return list<string>
 	 */
 	private function documentedTrustPaths( string $releaseDoc ): array {
-		$start = strpos( $releaseDoc, 'The ordinary evidence inputs are:' );
+		$normalized = $this->normalizeWhitespace( $releaseDoc );
+		$start      = strpos( $normalized, 'The ordinary evidence inputs are:' );
 		self::assertIsInt( $start );
-		$end = strpos( $releaseDoc, '`Quality` is the executable authority', $start );
+		$end = strpos( $normalized, '`Quality` is the executable authority', $start );
 		self::assertIsInt( $end );
-		$inventory = substr( $releaseDoc, $start, $end - $start );
+		$inventory = substr( $normalized, $start, $end - $start );
 		$matches   = array();
 		$count     = preg_match_all( '/`([^`]+)`/', $inventory, $matches );
 		self::assertIsInt( $count );

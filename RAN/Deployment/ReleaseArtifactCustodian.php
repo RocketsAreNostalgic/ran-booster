@@ -18,6 +18,7 @@ final class ReleaseArtifactCustodian {
 		$inspectionInvoked       = false;
 		$sourceDiscardAttempted  = false;
 		$sourceDiscardSuccessful = false;
+		$copyCleanupSuccessful   = true;
 
 		try {
 			$maximumArtifactBytes = PackageArtifactLimit::resolve();
@@ -42,12 +43,12 @@ final class ReleaseArtifactCustodian {
 			}
 
 			$result = $custody->inspect(
-				function ( string $source ) use ( &$prepared, &$inspectionInvoked, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
+				function ( string $source ) use ( &$prepared, &$inspectionInvoked, &$copyCleanupSuccessful, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
 					if ( $inspectionInvoked ) {
 						throw new RuntimeException();
 					}
 					$inspectionInvoked = true;
-					$prepared          = self::copyToCore( $source, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 );
+					$prepared          = self::copyToCore( $source, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256, $copyCleanupSuccessful );
 
 					return $prepared;
 				}
@@ -64,7 +65,6 @@ final class ReleaseArtifactCustodian {
 
 			return $prepared;
 		} catch ( Throwable ) {
-			$copyCleanupSuccessful = true;
 			if ( $prepared instanceof PreparedArtifact ) {
 				try {
 					$prepared->cleanup();
@@ -94,7 +94,8 @@ final class ReleaseArtifactCustodian {
 		string $version,
 		int $artifactSize,
 		int $maximumArtifactBytes,
-		string $artifactSha256
+		string $artifactSha256,
+		bool &$copyCleanupSuccessful
 	): PreparedArtifact {
 		$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( random_bytes( 16 ) );
 		$path         = $directory . '/archive.zip';
@@ -108,6 +109,7 @@ final class ReleaseArtifactCustodian {
 		}
 		$directoryIdentity = self::privateDirectoryIdentity( $directory );
 		if ( null === $directoryIdentity ) {
+			$copyCleanupSuccessful = false;
 			throw new RuntimeException();
 		}
 
@@ -169,7 +171,21 @@ final class ReleaseArtifactCustodian {
 				$directory
 			);
 		} catch ( Throwable ) {
-			self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity );
+			$inputClosed = true;
+			if ( is_resource( $input ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy input before cleanup.
+				$inputClosed = fclose( $input );
+				$input       = false;
+			}
+			$outputClosed = true;
+			if ( is_resource( $output ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy output before cleanup.
+				$outputClosed = fclose( $output );
+				$output       = false;
+			}
+
+			$copyCleanupSuccessful = $inputClosed && $outputClosed;
+			$copyCleanupSuccessful = self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity ) && $copyCleanupSuccessful;
 			throw new RuntimeException();
 		} finally {
 			if ( is_resource( $input ) ) {
@@ -187,27 +203,35 @@ final class ReleaseArtifactCustodian {
 	 * @param array{device:int,inode:int,owner:int,group:int}                $directoryIdentity
 	 * @param array{device:int,inode:int,links:int,owner:int,group:int}|null $copyIdentity
 	 */
-	private static function removeCopy( string $path, string $directory, array $directoryIdentity, ?array $copyIdentity ): void {
+	private static function removeCopy( string $path, string $directory, array $directoryIdentity, ?array $copyIdentity ): bool {
 		if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
-			return;
+			return false;
 		}
 		if ( null !== $copyIdentity ) {
 			if ( $copyIdentity !== self::pathFileIdentity( $path ) ) {
-				return;
+				return false;
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes only the failed Core-owned copy.
-			unlink( $path );
+			if ( ! unlink( $path ) ) {
+				return false;
+			}
 			clearstatcache( true, $path );
 			if ( file_exists( $path ) || is_link( $path ) ) {
-				return;
+				return false;
 			}
 		} elseif ( file_exists( $path ) || is_link( $path ) ) {
-			return;
+			return false;
 		}
-		if ( $directoryIdentity === self::privateDirectoryIdentity( $directory ) ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes only the failed Core-owned random directory.
-			rmdir( $directory );
+		if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
+			return false;
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes only the failed Core-owned random directory.
+		if ( ! rmdir( $directory ) ) {
+			return false;
+		}
+		clearstatcache( true, $directory );
+
+		return ! file_exists( $directory ) && ! is_link( $directory );
 	}
 
 	/** @return array{device:int,inode:int,owner:int,group:int}|null */

@@ -111,7 +111,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 				file_put_contents( $sentinel, 'unrelated' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test-only replacement sentinel.
 			};
 				[ $artifact, $providerPath ]                  = $this->artifact();
-				$this->expectHandoffFailure( $artifact );
+				$this->expectHandoffFailure( $artifact, true );
 
 				self::assertFileDoesNotExist( $providerPath );
 				self::assertSame( 'unrelated', file_get_contents( $sentinel ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only replacement sentinel.
@@ -142,7 +142,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 				chmod( $directory, 0755 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only identity drift.
 			};
 				[ $artifact, $providerPath ]                       = $this->artifact();
-				$this->expectHandoffFailure( $artifact );
+				$this->expectHandoffFailure( $artifact, true );
 
 				self::assertFileDoesNotExist( $providerPath );
 				self::assertFileExists( $archive );

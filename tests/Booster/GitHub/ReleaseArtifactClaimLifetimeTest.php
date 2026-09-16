@@ -165,7 +165,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		try {
 			$source   = new StructuralReleaseArtifact( $path, array( false, true ) );
 			$artifact = $this->artifactFromSource( $source );
-			$this->expectHandoffFailure( $artifact );
+			$this->expectHandoffFailure( $artifact, true );
 
 			self::assertSame( 1, $source->discardCalls );
 			self::assertFalse( $artifact->discard() );
@@ -185,7 +185,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		try {
 			$source   = new ThrowingDiscardStructuralReleaseArtifact( $path );
 			$artifact = $this->artifactFromSource( $source );
-			$this->expectHandoffFailure( $artifact );
+			$this->expectHandoffFailure( $artifact, true );
 
 			self::assertSame( 1, $source->discardCalls );
 			self::assertFalse( $artifact->discard() );
@@ -226,7 +226,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		try {
 			$source   = new FaultingStructuralReleaseArtifact( $path, true );
 			$artifact = $this->artifactFromSource( $source );
-			$this->expectHandoffFailure( $artifact );
+			$this->expectHandoffFailure( $artifact, true );
 
 			self::assertNotNull( $source->prepared );
 			self::assertFileExists( $source->prepared->getPath() );
@@ -273,12 +273,17 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		return new GitHubReleaseArtifact( $source, '1.2.3', str_repeat( 'a', 40 ), 'example', 'example.php', strlen( 'verified-release-archive' ), 52428800, hash( 'sha256', 'verified-release-archive' ) );
 	}
 
-	private function expectHandoffFailure( GitHubReleaseArtifact $artifact ): void {
+	private function expectHandoffFailure( GitHubReleaseArtifact $artifact, bool $cleanupFailure = false ): void {
 		try {
 			ReleaseArtifactCustodian::claim( $artifact->handoffToCore() );
 			self::fail( 'Unsafe custody handoff must fail closed.' );
 		} catch ( RuntimeException $exception ) {
-			self::assertSame( 'The GitHub release artifact could not be prepared.', $exception->getMessage() );
+			self::assertSame(
+				$cleanupFailure
+					? 'The release artifact transfer could not be cleaned up safely.'
+					: 'The release artifact could not be transferred to Core.',
+				$exception->getMessage()
+			);
 		}
 	}
 

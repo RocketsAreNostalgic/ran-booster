@@ -93,20 +93,10 @@ jobs:
                   raise SystemExit(f'patch anchor missing in {path}: {old[:80]!r}')
               p.write_text(text.replace(old, new, count))
 
-          # GitHub artifact: V2 custody only; no legacy PreparedArtifact contract.
           path = 'RAN/Booster/GitHub/GitHubReleaseArtifact.php'
-          replace(path,
-              "use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifactCustody;",
-              "use RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2;"
-          )
-          replace(path,
-              'final class GitHubReleaseArtifact implements RepositoryReleaseArtifact, RepositoryReleaseArtifactCustody {',
-              'final class GitHubReleaseArtifact implements RepositoryReleaseArtifactV2 {'
-          )
-          replace(path,
-              "\tprivate bool $handedOff      = false;\n\tprivate ?bool $discardResult = null;",
-              "\tprivate bool $inspectionStarted = false;\n\tprivate ?bool $discardResult  = null;"
-          )
+          replace(path, "use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifactCustody;", "use RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2;")
+          replace(path, 'final class GitHubReleaseArtifact implements RepositoryReleaseArtifact, RepositoryReleaseArtifactCustody {', 'final class GitHubReleaseArtifact implements RepositoryReleaseArtifactV2 {')
+          replace(path, "\tprivate bool $handedOff      = false;\n\tprivate ?bool $discardResult = null;", "\tprivate bool $inspectionStarted = false;\n\tprivate ?bool $discardResult  = null;")
           replace(path,
               "\t\t\t$discarded           = true === $this->artifact->discard();\n\t\t\t$this->discardResult = $discarded ? true : ( $this->handedOff ? false : null );\n\n\t\t\treturn $discarded;\n\t\t} catch ( Throwable $failure ) {\n\t\t\tif ( $this->handedOff ) {\n\t\t\t\t$this->discardResult = false;\n\t\t\t}\n\t\t\tthrow $failure;\n\t\t}",
               "\t\t\t$discarded           = true === $this->artifact->discard();\n\t\t\t$this->discardResult = $discarded;\n\n\t\t\treturn $discarded;\n\t\t} catch ( Throwable $failure ) {\n\t\t\t$this->discardResult = false;\n\t\t\tthrow $failure;\n\t\t}"
@@ -120,18 +110,13 @@ jobs:
               "\tpublic function inspect( callable $inspection ): mixed {\n\t\tif ( $this->inspectionStarted || null !== $this->discardResult ) {\n\t\t\tthrow new RuntimeException( 'The GitHub release artifact is unavailable.' );\n\t\t}\n\n\t\t$this->inspectionStarted = true;\n\n\t\treturn $this->artifact->inspect( $inspection );\n\t}"
           )
 
-          # Bundled GitHub provider exposes additive acquisition V2, not legacy acquisition.
           path = 'RAN/Booster/GitHub/GitHubProvider.php'
           replace(path, 'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;', 'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirerV2;')
           replace(path, 'use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;', 'use RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2;')
-          replace(path,
-              'RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets',
-              'RepositoryReleaseInspector, RepositoryReleaseAcquirerV2, RepositoryReleaseNativeTargets'
-          )
+          replace(path, 'RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets', 'RepositoryReleaseInspector, RepositoryReleaseAcquirerV2, RepositoryReleaseNativeTargets')
           replace(path, 'public function acquireRelease(', 'public function acquireReleaseArtifact(')
           replace(path, '): RepositoryReleaseArtifact {', '): RepositoryReleaseArtifactV2 {')
 
-          # Core prefers V2 but preserves the exact legacy API10 fallback.
           path = 'RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php'
           replace(path,
               'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;\nuse RAN\\RepositoryProvider\\RepositoryReleaseAcquisitionRejected;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifact;',
@@ -141,15 +126,11 @@ jobs:
           new = """\t\ttry {\n\t\t\t$release = $acquirer instanceof RepositoryReleaseAcquirerV2\n\t\t\t\t? $acquirer->acquireReleaseArtifact(\n\t\t\t\t\t$type,\n\t\t\t\t\t$repositoryReference,\n\t\t\t\t\t$releaseId,\n\t\t\t\t\t$tag,\n\t\t\t\t\t$expectedFingerprint,\n\t\t\t\t\t$channel\n\t\t\t\t)\n\t\t\t\t: $acquirer->acquireRelease(\n\t\t\t\t\t$type,\n\t\t\t\t\t$repositoryReference,\n\t\t\t\t\t$releaseId,\n\t\t\t\t\t$tag,\n\t\t\t\t\t$expectedFingerprint,\n\t\t\t\t\t$channel\n\t\t\t\t);\n"""
           replace(path, old, new)
           replace(path, 'RepositoryReleaseArtifact $release,', 'RepositoryReleaseArtifact|RepositoryReleaseArtifactV2 $release,')
-          replace(path,
-              '$artifact            = ReleaseArtifactCustodian::claim( $release->handoffToCore() );',
-              "$custody             = $release instanceof RepositoryReleaseArtifactV2 ? $release : $release->handoffToCore();\n\t\t\t\t\t$artifact            = ReleaseArtifactCustodian::claim( $custody );"
-          )
+          replace(path, '$artifact            = ReleaseArtifactCustodian::claim( $release->handoffToCore() );', "$custody             = $release instanceof RepositoryReleaseArtifactV2 ? $release : $release->handoffToCore();\n\t\t\t\t\t$artifact            = ReleaseArtifactCustodian::claim( $custody );")
           old = """\t/** @param array<string, mixed> $repositoryRequest */\n\tprivate function releaseAcquirer( array $repositoryRequest ): ?RepositoryReleaseAcquirer {\n\t\t$provider = $repositoryRequest['provider'] ?? null;\n\t\tif ( ! is_string( $provider ) ) {\n\t\t\treturn null;\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );\n\t\t} catch ( Throwable ) {\n\t\t\treturn null;\n\t\t}\n\n\t\treturn $capability instanceof RepositoryReleaseAcquirer ? $capability : null;\n\t}\n"""
-          new = """\t/** @param array<string, mixed> $repositoryRequest */\n\tprivate function releaseAcquirer( array $repositoryRequest ): RepositoryReleaseAcquirerV2|RepositoryReleaseAcquirer|null {\n\t\t$provider = $repositoryRequest['provider'] ?? null;\n\t\tif ( ! is_string( $provider ) ) {\n\t\t\treturn null;\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirerV2::class );\n\t\t\tif ( $capability instanceof RepositoryReleaseAcquirerV2 ) {\n\t\t\t\treturn $capability;\n\t\t\t}\n\t\t} catch ( Throwable ) {\n\t\t\t// Fall through to the unchanged API10 acquisition capability.\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );\n\t\t} catch ( Throwable ) {\n\t\t\treturn null;\n\t\t}\n\n\t\treturn $capability instanceof RepositoryReleaseAcquirer ? $capability : null;\n\t}\n"""
+          new = """\t/** @param array<string, mixed> $repositoryRequest */\n\tprivate function releaseAcquirer( array $repositoryRequest ): RepositoryReleaseAcquirerV2|RepositoryReleaseAcquirer|null {\n\t\t$provider = $repositoryRequest['provider'] ?? null;\n\t\tif ( ! is_string( $provider ) ) {\n\t\t\treturn null;\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirerV2::class );\n\t\t} catch ( Throwable ) {\n\t\t\t$capability = null;\n\t\t}\n\t\tif ( $capability instanceof RepositoryReleaseAcquirerV2 ) {\n\t\t\treturn $capability;\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );\n\t\t} catch ( Throwable ) {\n\t\t\treturn null;\n\t\t}\n\n\t\treturn $capability instanceof RepositoryReleaseAcquirer ? $capability : null;\n\t}\n"""
           replace(path, old, new)
 
-          # Cleanup warnings converted to exceptions remain cleanup uncertainty.
           path = 'RAN/Deployment/ReleaseArtifactCustodian.php'
           replace(path,
               "\t\t\t$copyCleanupSuccessful = $inputClosed && $outputClosed;\n\t\t\t$copyCleanupSuccessful = self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity ) && $copyCleanupSuccessful;\n\t\t\tthrow new RuntimeException();",
@@ -170,7 +151,6 @@ jobs:
                   raise SystemExit(f'test patch anchor missing in {path}: {old[:80]!r}')
               p.write_text(text.replace(old, new, count))
 
-          # Bounded GitHub suite follows the V2 provider boundary.
           path = 'tests/Booster/GitHub/ModuleDependencyBoundaryTest.php'
           replace(path, "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseAcquirer',", "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseAcquirerV2',")
           replace(path, "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseArtifact',\n\t\t'RAN\\RepositoryProvider\\RepositoryReleaseArtifactCustody',", "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2',")
@@ -205,7 +185,6 @@ jobs:
               text += """\n\nfunction unlink( string $filename ): bool {\n\tif ( ! empty( $GLOBALS['ran_booster_custody_unlink_throw'] ) ) {\n\t\tthrow new \\RuntimeException( 'Test-only Core-copy removal failure.' );\n\t}\n\n\t// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only deterministic filesystem seam.\n\treturn \\unlink( $filename );\n}\n"""
           p.write_text(text)
 
-          # Contract tests prove legacy API10 remains unchanged and V2 is additive.
           path = 'tests/RepositoryProvider/ProviderContractsTest.php'
           p = Path(path)
           text = p.read_text()

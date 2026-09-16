@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster\GitHub\GitHubReleaseArtifact;
+use RAN\Deployment\ReleaseArtifactCustodian;
 use RuntimeException;
 
 final class ReleaseArtifactClaimLifetimeTest extends TestCase {
@@ -25,7 +26,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 			$this->resetFilesystemHooks();
 			[ $artifact, $path ] = $this->artifact();
 
-			$prepared = $artifact->handoffToCore();
+			$prepared = ReleaseArtifactCustodian::claim( $artifact->handoffToCore() );
 			self::assertFileDoesNotExist( $path );
 			$prepared->assertUnchanged();
 			$ownedPath = $prepared->getPath();
@@ -110,7 +111,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 				file_put_contents( $sentinel, 'unrelated' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test-only replacement sentinel.
 			};
 				[ $artifact, $providerPath ]                  = $this->artifact();
-				$this->expectHandoffFailure( $artifact );
+				$this->expectHandoffFailure( $artifact, true );
 
 				self::assertFileDoesNotExist( $providerPath );
 				self::assertSame( 'unrelated', file_get_contents( $sentinel ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only replacement sentinel.
@@ -141,12 +142,49 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 				chmod( $directory, 0755 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only identity drift.
 			};
 				[ $artifact, $providerPath ]                       = $this->artifact();
-				$this->expectHandoffFailure( $artifact );
+				$this->expectHandoffFailure( $artifact, true );
 
 				self::assertFileDoesNotExist( $providerPath );
 				self::assertFileExists( $archive );
 				self::assertSame( 'verified-release-archive', file_get_contents( $archive ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only retained fail-closed copy.
 				self::assertSame( 0755, fileperms( $directory ) & 0777 );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $providerPath );
+			$this->removeExactPath( $archive );
+			$this->removeExactDirectory( $directory );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testThrownStreamCloseStillAttemptsCoreCopyCleanup(): void {
+		$this->resetFilesystemHooks();
+		$random       = str_repeat( "\x35", 16 );
+		$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( $random );
+		$archive      = $directory . '/archive.zip';
+		$providerPath = $this->archivePath();
+
+		try {
+			$GLOBALS['ran_booster_custody_random_bytes']    = $random;
+			$GLOBALS['ran_booster_custody_fclose_failures'] = 1;
+			$digest = hash_file( 'sha256', $providerPath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only artifact identity.
+			self::assertIsString( $digest );
+			$artifact = new GitHubReleaseArtifact(
+				new StructuralReleaseArtifact( $providerPath ),
+				'1.2.3',
+				str_repeat( 'a', 40 ),
+				'example',
+				'example.php',
+				strlen( 'verified-release-archive' ) - 1,
+				52428800,
+				$digest
+			);
+			$this->expectHandoffFailure( $artifact, true );
+
+			self::assertFileDoesNotExist( $providerPath );
+			self::assertFileDoesNotExist( $archive );
+			self::assertDirectoryDoesNotExist( $directory );
 		} finally {
 			$this->resetFilesystemHooks();
 			$this->removeExactPath( $providerPath );
@@ -164,7 +202,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		try {
 			$source   = new StructuralReleaseArtifact( $path, array( false, true ) );
 			$artifact = $this->artifactFromSource( $source );
-			$this->expectHandoffFailure( $artifact );
+			$this->expectHandoffFailure( $artifact, true );
 
 			self::assertSame( 1, $source->discardCalls );
 			self::assertFalse( $artifact->discard() );
@@ -184,7 +222,7 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		try {
 			$source   = new ThrowingDiscardStructuralReleaseArtifact( $path );
 			$artifact = $this->artifactFromSource( $source );
-			$this->expectHandoffFailure( $artifact );
+			$this->expectHandoffFailure( $artifact, true );
 
 			self::assertSame( 1, $source->discardCalls );
 			self::assertFalse( $artifact->discard() );
@@ -218,6 +256,60 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function testThrownCoreCopyRemovalRemainsCleanupFailure(): void {
+		$this->resetFilesystemHooks();
+		$random       = str_repeat( "\x36", 16 );
+		$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( $random );
+		$archive      = $directory . '/archive.zip';
+		$providerPath = $this->archivePath();
+
+		try {
+			$GLOBALS['ran_booster_custody_random_bytes'] = $random;
+			$GLOBALS['ran_booster_custody_unlink_throw'] = true;
+			$digest                                      = hash_file( 'sha256', $providerPath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only artifact identity.
+			self::assertIsString( $digest );
+			$artifact = new GitHubReleaseArtifact(
+				new StructuralReleaseArtifact( $providerPath ),
+				'1.2.3',
+				str_repeat( 'a', 40 ),
+				'example',
+				'example.php',
+				strlen( 'verified-release-archive' ) - 1,
+				52428800,
+				$digest
+			);
+			$this->expectHandoffFailure( $artifact, true );
+
+			self::assertFileDoesNotExist( $providerPath );
+			self::assertFileExists( $archive );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $providerPath );
+			$this->removeExactPath( $archive );
+			$this->removeExactDirectory( $directory );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testFalseCloseResultRemainsCleanupFailure(): void {
+		$this->resetFilesystemHooks();
+		$path = '';
+
+		try {
+			$GLOBALS['ran_booster_custody_fclose_false_results'] = 1;
+			[ $artifact, $path ]                                 = $this->artifact();
+			$this->expectHandoffFailure( $artifact, true );
+
+			self::assertFileDoesNotExist( $path );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $path );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testPreparedCopyCleanupUncertaintyRemainsReportable(): void {
 		$this->resetFilesystemHooks();
 		$path = $this->archivePath();
@@ -225,11 +317,12 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		try {
 			$source   = new FaultingStructuralReleaseArtifact( $path, true );
 			$artifact = $this->artifactFromSource( $source );
-			$this->expectHandoffFailure( $artifact );
+			$this->expectHandoffFailure( $artifact, true );
 
 			self::assertNotNull( $source->prepared );
 			self::assertFileExists( $source->prepared->getPath() );
-			self::assertFalse( $artifact->discard() );
+			self::assertTrue( $artifact->discard() );
+			self::assertFileDoesNotExist( $path );
 			chmod( $source->prepared->getPath(), 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only retained-copy cleanup.
 			$source->prepared->cleanup();
 		} finally {
@@ -272,12 +365,17 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 		return new GitHubReleaseArtifact( $source, '1.2.3', str_repeat( 'a', 40 ), 'example', 'example.php', strlen( 'verified-release-archive' ), 52428800, hash( 'sha256', 'verified-release-archive' ) );
 	}
 
-	private function expectHandoffFailure( GitHubReleaseArtifact $artifact ): void {
+	private function expectHandoffFailure( GitHubReleaseArtifact $artifact, bool $cleanupFailure = false ): void {
 		try {
-			$artifact->handoffToCore();
+			ReleaseArtifactCustodian::claim( $artifact->handoffToCore() );
 			self::fail( 'Unsafe custody handoff must fail closed.' );
 		} catch ( RuntimeException $exception ) {
-			self::assertSame( 'The GitHub release artifact could not be prepared.', $exception->getMessage() );
+			self::assertSame(
+				$cleanupFailure
+					? 'The release artifact transfer could not be cleaned up safely.'
+					: 'The release artifact could not be transferred to Core.',
+				$exception->getMessage()
+			);
 		}
 	}
 
@@ -286,7 +384,10 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 			$GLOBALS['ran_booster_custody_random_bytes'],
 			$GLOBALS['ran_booster_custody_mkdir_failure'],
 			$GLOBALS['ran_booster_custody_after_source_open'],
-			$GLOBALS['ran_booster_custody_after_destination_open']
+			$GLOBALS['ran_booster_custody_after_destination_open'],
+			$GLOBALS['ran_booster_custody_fclose_failures'],
+			$GLOBALS['ran_booster_custody_fclose_false_results'],
+			$GLOBALS['ran_booster_custody_unlink_throw']
 		);
 	}
 

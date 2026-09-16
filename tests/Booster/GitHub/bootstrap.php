@@ -39,6 +39,18 @@ spl_autoload_register(
 			require $ranBoosterRoot . '/RAN/PackageSubdirectory.php';
 			return;
 		}
+		if ( 'RAN\\PackageArtifactLimit' === $class ) {
+			require $ranBoosterRoot . '/RAN/PackageArtifactLimit.php';
+			return;
+		}
+		if ( 'RAN\\Deployment\\ReleaseArtifactCustodian' === $class ) {
+			require $ranBoosterRoot . '/RAN/Deployment/ReleaseArtifactCustodian.php';
+			return;
+		}
+		if ( 'RAN\\Deployment\\ReleaseArtifactCleanupFailure' === $class ) {
+			require $ranBoosterRoot . '/RAN/Deployment/ReleaseArtifactCleanupFailure.php';
+			return;
+		}
 		if ( 'RAN\\Deployment\\PreparedArtifact' === $class ) {
 			// Exact reviewed one-shot custody handoff from the provider module to Core.
 			require $ranBoosterRoot . '/RAN/Deployment/PreparedArtifact.php';

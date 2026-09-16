@@ -19,6 +19,7 @@ namespace Tests\AddOn;
 	use RAN\Admin\PackageRepositoryRequestResolver;
 	use RAN\Deployment\DeploymentPolicy;
 	use RAN\Deployment\PreparedArtifact;
+use RAN\Deployment\ReleaseArtifactCleanupFailure;
 	use RAN\PackageSource;
 	use RAN\Plugin;
 	use RAN\RepositoryProvider\ArchiveRequest;
@@ -705,6 +706,35 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'installation_cleanup_failed', $result->code() );
 		self::assertSame( 0, $executor->installCalls );
 		self::assertSame( 0, $plugins->adoptionCalls );
+	}
+
+	public function testCoreCustodyCleanupFailureIsPreservedThroughInstallFacade(): void {
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$lock     = new ProspectiveUpdaterLock();
+		$facade   = $this->facade( $plugins, $executor, 7, $lock );
+		$this->setReadyRelease();
+		self::assertNotNull( $this->acquisition );
+		$this->acquisition->handoffFailure = new ReleaseArtifactCleanupFailure();
+
+		$result = $facade->install(
+			'plugin',
+			$this->repositoryRequest(),
+			'42',
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce'
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'installation_cleanup_failed', $result->code() );
+		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 1, $this->acquisition->handoffCalls );
+		self::assertSame( 1, $this->acquisition->discardCalls );
+		self::assertSame( 1, $lock->releaseCalls );
+		self::assertFileDoesNotExist( (string) $this->artifactPath );
 	}
 
 	public function testSuccessfulInstallUsesCoreExecutorAndAdoptsReleaseAssetWithManualPolicy(): void {
@@ -1932,11 +1962,12 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 }
 
 final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArtifact {
-	public int $handoffCalls   = 0;
-	public int $discardCalls   = 0;
-	public bool $discardResult = true;
-	private bool $handedOff    = false;
-	private bool $discarded    = false;
+	public int $handoffCalls          = 0;
+	public int $discardCalls          = 0;
+	public bool $discardResult        = true;
+	public ?Throwable $handoffFailure = null;
+	private bool $handedOff           = false;
+	private bool $discarded           = false;
 
 	public function __construct(
 		private string $path,
@@ -1970,6 +2001,9 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 			throw new RuntimeException( 'The release artifact is unavailable.' );
 		}
 		++$this->handoffCalls;
+		if ( null !== $this->handoffFailure ) {
+			throw $this->handoffFailure;
+		}
 		$identity = PreparedArtifact::regularFileIdentity( $this->path );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only immutable artifact evidence.
 		$digest = hash_file( 'sha256', $this->path );

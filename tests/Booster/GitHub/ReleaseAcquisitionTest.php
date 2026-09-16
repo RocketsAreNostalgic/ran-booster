@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use RAN\Booster\GitHub\GitHubProvider;
 use RAN\Deployment\PreparedArtifact;
+use RAN\Deployment\ReleaseArtifactCustodian;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\RepositoryReference;
@@ -43,7 +44,7 @@ final class ReleaseAcquisitionTest extends TestCase {
 		self::assertNotEmpty( $providerPaths );
 		self::assertFileExists( $providerPaths[ count( $providerPaths ) - 1 ] );
 
-		$prepared = $artifact->handoffToCore();
+		$prepared = ReleaseArtifactCustodian::claim( $artifact->handoffToCore() );
 		self::assertInstanceOf( PreparedArtifact::class, $prepared );
 		self::assertSame( str_repeat( 'a', 40 ), $prepared->getResolvedRef() );
 		self::assertNotContains( $prepared->getPath(), $providerPaths );

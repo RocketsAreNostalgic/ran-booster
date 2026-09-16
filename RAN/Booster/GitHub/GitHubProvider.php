@@ -98,14 +98,16 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 	public static function create(
 		ProviderCredentialStore $credentials,
 		AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-		object $registrar
+		object $registrar,
+		?callable $maximumArtifactBytes = null
 	): RepositoryProvider {
 		return new self(
 			$credentials,
 			new RepositoryBrowser( $credentials ),
 			new WebhookNormalizer( $credentials, $deliveryEvidence ),
 			new RepositoryWebhookClient(),
-			$registrar
+			$registrar,
+			$maximumArtifactBytes
 		);
 	}
 
@@ -137,11 +139,11 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 		RepositoryBrowser $browser,
 		WebhookNormalizer $webhooks,
 		RepositoryWebhookClient $webhookClient,
-		object $registrar
+		object $registrar,
+		?callable $maximumArtifactBytes = null
 	) {
-		$resolver                   = array( $registrar, 'maximumArtifactBytes' );
 		$this->registrar            = $registrar;
-		$this->maximumArtifactBytes = is_callable( $resolver ) ? Closure::fromCallable( $resolver ) : null;
+		$this->maximumArtifactBytes = null === $maximumArtifactBytes ? null : Closure::fromCallable( $maximumArtifactBytes );
 		$this->credentials          = $credentials;
 		$this->browser              = $browser;
 		$this->webhooks             = $webhooks;

@@ -1,0 +1,126 @@
+name: Temporary custody preflight cleanup
+
+on:
+  push:
+    branches:
+      - refactor/release-artifact-custody
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/release-artifact-custody
+          fetch-depth: 0
+      - name: Put all post-handoff preflight under cleanup guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('RAN/Deployment/ReleaseArtifactCustodian.php')
+          text = path.read_text()
+          start = text.index("\tpublic static function claim( RepositoryReleaseArtifactCustody $custody ): PreparedArtifact {\n")
+          end = text.index("\n\tprivate static function copyToCore(", start)
+          replacement = '''\tpublic static function claim( RepositoryReleaseArtifactCustody $custody ): PreparedArtifact {
+\t\t$prepared                = $custody instanceof PreparedArtifact ? $custody : null;
+\t\t$inspectionInvoked       = false;
+\t\t$sourceDiscardAttempted  = false;
+\t\t$sourceDiscardSuccessful = false;
+
+\t\ttry {
+\t\t\t$maximumArtifactBytes = PackageArtifactLimit::resolve();
+\t\t\t$resolvedRef          = $custody->resolvedRef();
+\t\t\t$version              = $custody->version();
+\t\t\t$size                 = $custody->size();
+\t\t\t$sha256               = $custody->sha256();
+
+\t\t\tif ( $size < 1
+\t\t\t\t|| $size > $maximumArtifactBytes
+\t\t\t\t|| 1 !== preg_match( '/\\A[a-f0-9]{64}\\z/D', $sha256 ) ) {
+\t\t\t\tthrow new RuntimeException( 'The release artifact custody evidence is invalid.' );
+\t\t\t}
+
+\t\t\t// API-10 providers may still return PreparedArtifact covariantly. Keep
+\t\t\t// those implementations load-compatible while new providers can return
+\t\t\t// provider-owned custody without importing this Core concrete type.
+\t\t\tif ( $custody instanceof PreparedArtifact ) {
+\t\t\t\t$custody->assertUnchanged();
+
+\t\t\t\treturn $custody;
+\t\t\t}
+
+\t\t\t$result = $custody->inspect(
+\t\t\t\tfunction ( string $source ) use ( &$prepared, &$inspectionInvoked, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
+\t\t\t\t\tif ( $inspectionInvoked ) {
+\t\t\t\t\t\tthrow new RuntimeException();
+\t\t\t\t\t}
+\t\t\t\t\t$inspectionInvoked = true;
+\t\t\t\t\t$prepared          = self::copyToCore( $source, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 );
+
+\t\t\t\t\treturn $prepared;
+\t\t\t\t}
+\t\t\t);
+\t\t\tif ( ! $inspectionInvoked || ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {
+\t\t\t\tthrow new RuntimeException();
+\t\t\t}
+
+\t\t\t$sourceDiscardAttempted  = true;
+\t\t\t$sourceDiscardSuccessful = true === $custody->discard();
+\t\t\tif ( ! $sourceDiscardSuccessful ) {
+\t\t\t\tthrow new RuntimeException();
+\t\t\t}
+
+\t\t\treturn $prepared;
+\t\t} catch ( Throwable ) {
+\t\t\t$copyCleanupSuccessful = true;
+\t\t\tif ( $prepared instanceof PreparedArtifact ) {
+\t\t\t\ttry {
+\t\t\t\t\t$prepared->cleanup();
+\t\t\t\t} catch ( Throwable ) {
+\t\t\t\t\t$copyCleanupSuccessful = false;
+\t\t\t\t}
+\t\t\t}
+\t\t\tif ( ! $sourceDiscardAttempted ) {
+\t\t\t\ttry {
+\t\t\t\t\t$sourceDiscardSuccessful = true === $custody->discard();
+\t\t\t\t} catch ( Throwable ) {
+\t\t\t\t\t$sourceDiscardSuccessful = false;
+\t\t\t\t}
+\t\t\t}
+
+\t\t\tthrow new RuntimeException(
+\t\t\t\t$copyCleanupSuccessful && $sourceDiscardSuccessful
+\t\t\t\t\t? 'The release artifact could not be transferred to Core.'
+\t\t\t\t\t: 'The release artifact transfer could not be cleaned up safely.'
+\t\t\t);
+\t\t}
+\t}
+'''
+          path.write_text(text[:start] + replacement + text[end:])
+
+          contract = Path('tests/RepositoryProvider/ProviderContractsTest.php')
+          text = contract.read_text()
+          needle = "use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;\n"
+          replacement = needle + "use RAN\\RepositoryProvider\\RepositoryReleaseArtifactCustody;\n"
+          assert text.count(needle) == 1
+          text = text.replace(needle, replacement, 1)
+          old = "\t\t\t\\RAN\\Deployment\\PreparedArtifact::class,\n\t\t\t(string) ( new \\ReflectionMethod( RepositoryReleaseArtifact::class, 'handoffToCore' ) )->getReturnType()\n"
+          new = "\t\t\tRepositoryReleaseArtifactCustody::class,\n\t\t\t(string) ( new \\ReflectionMethod( RepositoryReleaseArtifact::class, 'handoffToCore' ) )->getReturnType()\n"
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+          contract.write_text(text)
+
+          Path('.github/workflows/tmp-custody-preflight-cleanup.yml').unlink()
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add RAN/Deployment/ReleaseArtifactCustodian.php tests/RepositoryProvider/ProviderContractsTest.php .github/workflows/tmp-custody-preflight-cleanup.yml
+          git commit -m 'fix: clean custody on preflight failure'
+          git push origin HEAD:refactor/release-artifact-custody

@@ -26,7 +26,7 @@ jobs:
 
           facade = Path('RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php')
           text = facade.read_text()
-          needle = "use RAN\\Deployment\\PreparedArtifact;\n"
+          needle = "use RAN\\Deployment\\DeploymentPolicy;\n"
           replacement = needle + "use RAN\\Deployment\\ReleaseArtifactCustodian;\n"
           assert text.count(needle) == 1
           text = text.replace(needle, replacement, 1)

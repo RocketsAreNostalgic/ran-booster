@@ -230,7 +230,8 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 
 			self::assertNotNull( $source->prepared );
 			self::assertFileExists( $source->prepared->getPath() );
-			self::assertFalse( $artifact->discard() );
+			self::assertTrue( $artifact->discard() );
+			self::assertFileDoesNotExist( $path );
 			chmod( $source->prepared->getPath(), 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Test-only retained-copy cleanup.
 			$source->prepared->cleanup();
 		} finally {

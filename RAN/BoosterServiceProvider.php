@@ -85,6 +85,7 @@ final class BoosterServiceProvider {
 	/** @internal Core bootstrap composition only. */
 	public function register( CoreContainer $container, Booster $runtime, object $releaseUpdater, string $selfPluginIdentifier ): void {
 		$database       = new Database();
+
 		$secretsRuntime = new SecretsRuntimeAvailability();
 		$secretPolicies = new ProviderSecretPolicyCatalog();
 		$secrets        = null === $this->secretsFactory

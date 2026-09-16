@@ -49,8 +49,8 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 	}
 
 	public function testPrivilegedMutationRemainsBoundToQualifiedMainEvidence(): void {
-		$workflow = $this->readText( '.github/workflows/release-please.yml' );
-		$jobGate  = $this->releaseJobGate( $workflow );
+		$workflow     = $this->readText( '.github/workflows/release-please.yml' );
+		$jobGate      = $this->releaseJobGate( $workflow );
 		$expectedGate = implode(
 			' ',
 			array(
@@ -167,15 +167,19 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		$startMarker = "            release_please_required=false\n";
 		$endMarker   = "            exit 0\n";
 
-		while ( false !== ( $start = strpos( $workflow, $startMarker, $offset ) ) ) {
+		$start = strpos( $workflow, $startMarker, $offset );
+		while ( false !== $start ) {
 			$end = strpos( $workflow, $endMarker, $start );
 			self::assertIsInt( $end );
-			$end += strlen( $endMarker );
+			$end = $end + strlen( $endMarker );
+
 			$guard = substr( $workflow, $start, $end - $start );
 			$guard = preg_replace( '/^ {12}/m', '', $guard );
 			self::assertIsString( $guard );
 			$guards[] = $guard;
-			$offset   = $end;
+
+			$offset = $end;
+			$start  = strpos( $workflow, $startMarker, $offset );
 		}
 
 		return $guards;
@@ -194,13 +198,13 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 			escapeshellarg( $outputFile ),
 			escapeshellarg( $guard )
 		);
-		$stdout = array();
-		$status = 0;
+		$stdout  = array();
+		$status  = 0;
 		exec( $command, $stdout, $status ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_exec -- Executes the checked-in release guard as a local contract fixture.
 		self::assertSame( 0, $status, implode( "\n", $stdout ) );
 		$githubOutput = file_get_contents( $outputFile ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local temporary contract fixture.
 		self::assertIsString( $githubOutput );
-		unlink( $outputFile );
+		unlink( $outputFile ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Deletes only the local temporary contract fixture.
 
 		return array(
 			'github_output' => $githubOutput,

@@ -1,0 +1,120 @@
+name: Temporary custody close-result fix
+
+on:
+  push:
+    branches:
+      - refactor/release-artifact-custody
+    paths:
+      - .github/workflows/tmp-custody-close-result-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/release-artifact-custody
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+      - name: Apply substantive review fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('RAN/Deployment/ReleaseArtifactCustodian.php')
+          text = path.read_text()
+          old = """\t\t$input        = false;\n\t\t$output       = false;\n\t\t$copyIdentity = null;\n"""
+          new = """\t\t$input        = false;\n\t\t$output       = false;\n\t\t$copyIdentity = null;\n\t\t$inputClosed  = true;\n\t\t$outputClosed = true;\n"""
+          if old not in text:
+              raise SystemExit('custodian variable block not found')
+          text = text.replace(old, new, 1)
+
+          old = """\t\t\t$input = fopen( $source, 'rb' );\n\t\t\tif ( false === $input || $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n"""
+          new = """\t\t\t$input = fopen( $source, 'rb' );\n\t\t\tif ( false === $input ) {\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n\t\t\t$inputClosed = false;\n\t\t\tif ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n"""
+          if old not in text:
+              raise SystemExit('custodian input-open block not found')
+          text = text.replace(old, new, 1)
+
+          old = """\t\t\t$output = fopen( $path, 'x+b' );\n\t\t\tif ( false === $output ) {\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n"""
+          new = """\t\t\t$output = fopen( $path, 'x+b' );\n\t\t\tif ( false === $output ) {\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n\t\t\t$outputClosed = false;\n"""
+          if old not in text:
+              raise SystemExit('custodian output-open block not found')
+          text = text.replace(old, new, 1)
+
+          old = """\t\t\t// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close before Core identity capture.\n\t\t\tif ( ! fclose( $output ) ) {\n\t\t\t\t$output = false;\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n\t\t\t$output = false;\n\t\t\t// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close provider inspection before TOCTOU recheck.\n\t\t\tif ( ! fclose( $input ) ) {\n\t\t\t\t$input = false;\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n\t\t\t$input            = false;\n"""
+          new = """\t\t\t// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close before Core identity capture.\n\t\t\t$outputClosed = fclose( $output );\n\t\t\t$output       = false;\n\t\t\tif ( ! $outputClosed ) {\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n\t\t\t// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close provider inspection before TOCTOU recheck.\n\t\t\t$inputClosed = fclose( $input );\n\t\t\t$input       = false;\n\t\t\tif ( ! $inputClosed ) {\n\t\t\t\tthrow new RuntimeException();\n\t\t\t}\n\t\t\t$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );\n"""
+          if old not in text:
+              raise SystemExit('custodian normal close block not found')
+          text = text.replace(old, new, 1)
+          # replacement includes preparedIdentity; remove the original next assignment.
+          text = text.replace("\t\t\t$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );\n\t\t\t$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );\n", "\t\t\t$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );\n", 1)
+
+          text = text.replace("\t\t} catch ( Throwable ) {\n\t\t\t$inputClosed = true;\n", "\t\t} catch ( Throwable ) {\n", 1)
+          text = text.replace("\t\t\t$outputClosed = true;\n\t\t\tif ( is_resource( $output ) ) {", "\t\t\tif ( is_resource( $output ) ) {", 1)
+          path.write_text(text)
+
+          seam = Path('tests/Booster/GitHub/ReleaseArtifactFilesystemFunctions.php')
+          text = seam.read_text()
+          old = """function fclose( $stream ): bool {\n\t$remaining = (int) ( $GLOBALS['ran_booster_custody_fclose_failures'] ?? 0 );\n"""
+          new = """function fclose( $stream ): bool {\n\t$falseResults = (int) ( $GLOBALS['ran_booster_custody_fclose_false_results'] ?? 0 );\n\tif ( $falseResults > 0 ) {\n\t\t$GLOBALS['ran_booster_custody_fclose_false_results'] = $falseResults - 1;\n\t\t\\fclose( $stream );\n\n\t\treturn false;\n\t}\n\n\t$remaining = (int) ( $GLOBALS['ran_booster_custody_fclose_failures'] ?? 0 );\n"""
+          if old not in text:
+              raise SystemExit('fclose seam block not found')
+          seam.write_text(text.replace(old, new, 1))
+
+          test = Path('tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php')
+          text = test.read_text()
+          anchor = """\t#[RunInSeparateProcess]\n\t#[PreserveGlobalState( false )]\n\tpublic function testPreparedCopyCleanupUncertaintyRemainsReportable(): void {\n"""
+          new_test = """\t#[RunInSeparateProcess]\n\t#[PreserveGlobalState( false )]\n\tpublic function testFalseCloseResultRemainsCleanupFailure(): void {\n\t\t$this->resetFilesystemHooks();\n\t\t$path = '';\n\n\t\ttry {\n\t\t\t$GLOBALS['ran_booster_custody_fclose_false_results'] = 1;\n\t\t\t[ $artifact, $path ] = $this->artifact();\n\t\t\t$this->expectHandoffFailure( $artifact, true );\n\n\t\t\tself::assertFileDoesNotExist( $path );\n\t\t} finally {\n\t\t\t$this->resetFilesystemHooks();\n\t\t\t$this->removeExactPath( $path );\n\t\t}\n\t}\n\n"""
+          if anchor not in text:
+              raise SystemExit('custody test anchor not found')
+          text = text.replace(anchor, new_test + anchor, 1)
+          old = """\t\t\t$GLOBALS['ran_booster_custody_after_destination_open'],\n\t\t\t$GLOBALS['ran_booster_custody_fclose_failures']\n"""
+          new = """\t\t\t$GLOBALS['ran_booster_custody_after_destination_open'],\n\t\t\t$GLOBALS['ran_booster_custody_fclose_failures'],\n\t\t\t$GLOBALS['ran_booster_custody_fclose_false_results']\n"""
+          if old not in text:
+              raise SystemExit('reset hook block not found')
+          test.write_text(text.replace(old, new, 1))
+          PY
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Normalize with repository PHPCBF
+        shell: bash
+        run: |
+          set +e
+          vendor/bin/phpcbf --standard=.phpcs.xml \
+            RAN/Deployment/ReleaseArtifactCustodian.php \
+            tests/AddOn/NativeProspectiveReleaseFacadeTest.php \
+            tests/Booster/GitHub/ReleaseArtifactFilesystemFunctions.php \
+            tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php
+          status=$?
+          set -e
+          if [ "$status" -gt 1 ]; then exit "$status"; fi
+      - name: Verify repository PHPCS
+        run: |
+          vendor/bin/phpcs --standard=.phpcs.xml \
+            RAN/Deployment/ReleaseArtifactCustodian.php \
+            tests/AddOn/NativeProspectiveReleaseFacadeTest.php \
+            tests/Booster/GitHub/ReleaseArtifactFilesystemFunctions.php \
+            tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php
+      - name: Verify focused custody tests
+        run: |
+          composer test:github-module
+          vendor/bin/phpunit --configuration phpunit.xml --filter NativeProspectiveReleaseFacadeTest
+      - name: Commit normalized fix and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-custody-close-result-fix.yml
+          git add RAN/Deployment/ReleaseArtifactCustodian.php tests/AddOn/NativeProspectiveReleaseFacadeTest.php tests/Booster/GitHub/ReleaseArtifactFilesystemFunctions.php tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php
+          git commit -m "fix: preserve false stream-close cleanup state"
+          git push origin HEAD:refactor/release-artifact-custody

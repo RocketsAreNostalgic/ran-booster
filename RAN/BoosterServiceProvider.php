@@ -85,7 +85,7 @@ final class BoosterServiceProvider {
 	/** @internal Core bootstrap composition only. */
 	public function register( CoreContainer $container, Booster $runtime, object $releaseUpdater, string $selfPluginIdentifier ): void {
 		$database       = new Database();
-
+		// Core owns host runtime state; provider packages receive only composed dependencies.
 		$secretsRuntime = new SecretsRuntimeAvailability();
 		$secretPolicies = new ProviderSecretPolicyCatalog();
 		$secrets        = null === $this->secretsFactory

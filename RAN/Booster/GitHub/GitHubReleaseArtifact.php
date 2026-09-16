@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace RAN\Booster\GitHub;
 
-use RAN\Deployment\PreparedArtifact;
 use RAN\RepositoryProvider\RepositoryReleaseArtifact;
+use RAN\RepositoryProvider\RepositoryReleaseArtifactCustody;
 use RuntimeException;
 
 /**
- * GitHub updater custody retained until Core finishes with the prepared file.
+ * GitHub-owned release source retained until Core claims or discards it.
  *
  * @internal
  */
-final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
+final class GitHubReleaseArtifact implements RepositoryReleaseArtifact, RepositoryReleaseArtifactCustody {
 
 	private bool $handedOff      = false;
 	private ?bool $discardResult = null;
+
 	public function __construct(
 		private object $artifact,
 		private string $version,
@@ -24,7 +25,7 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 		private string $packageRoot,
 		private string $mainFile,
 		private int $artifactSize,
-		private int $maximumArtifactBytes,
+		int $maximumArtifactBytes,
 		private string $artifactSha256
 	) {
 		if ( 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._+-]{0,63}\z/D', $version )
@@ -39,7 +40,7 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 	}
 
 	public function __destruct() {
-		if ( ! $this->handedOff ) {
+		if ( true !== $this->discardResult ) {
 			try {
 				$this->discard();
 			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- The synchronous caller owns the reportable cleanup postcondition.
@@ -50,11 +51,8 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 	}
 
 	public function discard(): bool {
-		if ( $this->handedOff ) {
+		if ( true === $this->discardResult ) {
 			return true;
-		}
-		if ( null !== $this->discardResult ) {
-			return $this->discardResult;
 		}
 		$discarded           = true === $this->artifact->discard();
 		$this->discardResult = $discarded ? true : null;
@@ -62,53 +60,35 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 		return $discarded;
 	}
 
-	public function handoffToCore(): PreparedArtifact {
-		if ( $this->handedOff || null !== $this->discardResult ) {
+	public function handoffToCore(): RepositoryReleaseArtifactCustody {
+		if ( $this->handedOff || true === $this->discardResult ) {
 			throw new RuntimeException( 'The GitHub release artifact is unavailable.' );
 		}
 
-		$prepared                = null;
-		$sourceDiscardAttempted  = false;
-		$sourceDiscardSuccessful = false;
-		try {
-			$prepared = $this->artifact->inspect(
-				function ( string $source ) use ( &$prepared ): PreparedArtifact {
-					$prepared = $this->copyToCore( $source );
+		$this->handedOff = true;
 
-					return $prepared;
-				}
-			);
-			if ( ! $prepared instanceof PreparedArtifact ) {
-				throw new RuntimeException();
-			}
-			$sourceDiscardAttempted  = true;
-			$sourceDiscardSuccessful = true === $this->artifact->discard();
-			if ( ! $sourceDiscardSuccessful ) {
-				throw new RuntimeException();
-			}
-			$this->handedOff = true;
+		return $this;
+	}
 
-			return $prepared;
-		} catch ( \Throwable ) {
-			if ( $prepared instanceof PreparedArtifact ) {
-				try {
-					$prepared->cleanup();
-				} catch ( \Throwable ) {
-					$this->discardResult = false;
-				}
-			}
-			if ( ! $sourceDiscardAttempted ) {
-				try {
-					$sourceDiscardSuccessful = true === $this->artifact->discard();
-				} catch ( \Throwable ) {
-					$sourceDiscardSuccessful = false;
-				}
-			}
-			if ( ! $sourceDiscardSuccessful ) {
-				$this->discardResult = false;
-			}
-			throw new RuntimeException( 'The GitHub release artifact could not be prepared.' );
+	/** @param callable(string): mixed $inspection */
+	public function inspect( callable $inspection ): mixed {
+		if ( ! $this->handedOff || true === $this->discardResult ) {
+			throw new RuntimeException( 'The GitHub release artifact is unavailable.' );
 		}
+
+		return $this->artifact->inspect( $inspection );
+	}
+
+	public function resolvedRef(): string {
+		return $this->providerCommitId;
+	}
+
+	public function size(): int {
+		return $this->artifactSize;
+	}
+
+	public function sha256(): string {
+		return $this->artifactSha256;
 	}
 
 	public function version(): string {
@@ -137,185 +117,5 @@ final class GitHubReleaseArtifact implements RepositoryReleaseArtifact {
 		return '' !== $value
 			&& strlen( $value ) <= $maximumBytes
 			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $value );
-	}
-
-	private function copyToCore( string $source ): PreparedArtifact {
-		$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( random_bytes( 16 ) );
-		$path         = $directory . '/archive.zip';
-		$input        = false;
-		$output       = false;
-		$copyIdentity = null;
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- The random directory is the Core-owned custody boundary.
-		if ( ! mkdir( $directory, 0700 ) ) {
-			throw new RuntimeException();
-		}
-		$directoryIdentity = self::privateDirectoryIdentity( $directory );
-		if ( null === $directoryIdentity ) {
-			throw new RuntimeException();
-		}
-
-		try {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The provider source is copied only while its artifact permits inspection.
-			$input = fopen( $source, 'rb' );
-			if ( false === $input || $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
-				throw new RuntimeException();
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The exclusive Core destination is the temporary custody boundary.
-			$output = fopen( $path, 'x+b' );
-			if ( false === $output ) {
-				throw new RuntimeException();
-			}
-			$copyIdentity = self::createdFileIdentity( $path, $output );
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- The Core copy must remain private.
-			if ( null === $copyIdentity || ! chmod( $path, 0600 ) ) {
-				throw new RuntimeException();
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_copy_to_stream -- The source is copied in a fixed upper bound without holding the archive in memory.
-			$size = stream_copy_to_stream( $input, $output, $this->artifactSize + 1 );
-			if ( false === $size || $this->artifactSize !== $size || $size > $this->maximumArtifactBytes ) {
-				throw new RuntimeException();
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close before Core identity capture.
-			if ( ! fclose( $output ) ) {
-				$output = false;
-				throw new RuntimeException();
-			}
-			$output = false;
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close provider inspection before TOCTOU recheck.
-			if ( ! fclose( $input ) ) {
-				$input = false;
-				throw new RuntimeException();
-			}
-			$input            = false;
-			$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
-			$copyDigest = hash_file( 'sha256', $path );
-			if ( ! is_string( $copyDigest )
-				|| ! hash_equals( $this->artifactSha256, $copyDigest )
-				|| $directoryIdentity !== self::privateDirectoryIdentity( $directory )
-				|| $copyIdentity !== self::pathFileIdentity( $path )
-				|| null === $preparedIdentity
-				|| $size !== $preparedIdentity['size'] ) {
-				throw new RuntimeException();
-			}
-
-			return new PreparedArtifact( $path, $this->providerCommitId, $this->version, $this->artifactSha256, $preparedIdentity['device'], $preparedIdentity['inode'], $preparedIdentity['size'], $preparedIdentity['permissions'], $preparedIdentity['links'], $directory );
-		} catch ( \Throwable ) {
-			$this->removeCopy( $path, $directory, $directoryIdentity, $copyIdentity );
-			throw new RuntimeException();
-		} finally {
-			if ( is_resource( $input ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Release the failed bounded copy input.
-				fclose( $input );
-			}
-			if ( is_resource( $output ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Release the failed bounded copy output.
-				fclose( $output );
-			}
-		}
-	}
-
-	/**
-	 * @param array{device:int,inode:int,owner:int,group:int}                $directoryIdentity
-	 * @param array{device:int,inode:int,links:int,owner:int,group:int}|null $copyIdentity
-	 */
-	private function removeCopy( string $path, string $directory, array $directoryIdentity, ?array $copyIdentity ): void {
-		if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
-			return;
-		}
-		if ( null !== $copyIdentity ) {
-			if ( $copyIdentity !== self::pathFileIdentity( $path ) ) {
-				return;
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes only the failed Core-owned copy.
-			unlink( $path );
-			clearstatcache( true, $path );
-			if ( file_exists( $path ) || is_link( $path ) ) {
-				return;
-			}
-		} elseif ( file_exists( $path ) || is_link( $path ) ) {
-			return;
-		}
-		if ( $directoryIdentity === self::privateDirectoryIdentity( $directory ) ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes only the failed Core-owned random directory.
-			rmdir( $directory );
-		}
-	}
-
-	/** @return array{device:int,inode:int,owner:int,group:int}|null */
-	private static function privateDirectoryIdentity( string $directory ): ?array {
-		clearstatcache( true, $directory );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- Symlink-aware identity is required for the Core-owned directory.
-		$stat = lstat( $directory );
-		$mode = false === $stat ? 0 : (int) ( $stat['mode'] ?? 0 );
-		if ( false === $stat
-			|| 0040000 !== ( $mode & 0170000 )
-			|| 0700 !== ( $mode & 0777 ) ) {
-			return null;
-		}
-
-		$identity = array(
-			'device' => (int) ( $stat['dev'] ?? -1 ),
-			'inode'  => (int) ( $stat['ino'] ?? 0 ),
-			'owner'  => (int) ( $stat['uid'] ?? -1 ),
-			'group'  => (int) ( $stat['gid'] ?? -1 ),
-		);
-
-		return $identity['device'] >= 0
-			&& $identity['inode'] > 0
-			&& $identity['owner'] >= 0
-			&& $identity['group'] >= 0
-			? $identity
-			: null;
-	}
-
-	/** @param resource $stream @return array{device:int,inode:int,links:int,owner:int,group:int}|null */
-	private static function createdFileIdentity( string $path, $stream ): ?array {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fstat -- The exclusive file handle must identify the same Core-owned path.
-		$streamStat = fstat( $stream );
-		$pathStat   = self::pathFileStat( $path );
-		if ( false === $streamStat || null === $pathStat ) {
-			return null;
-		}
-		$streamIdentity = self::stableIdentity( $streamStat );
-		$pathIdentity   = self::stableIdentity( $pathStat );
-		if ( $pathIdentity['device'] < 0
-			|| $pathIdentity['inode'] <= 0
-			|| 1 !== $pathIdentity['links']
-			|| $pathIdentity['owner'] < 0
-			|| $pathIdentity['group'] < 0 ) {
-			return null;
-		}
-
-		return $streamIdentity === $pathIdentity ? $pathIdentity : null;
-	}
-
-	/** @return array{device:int,inode:int,links:int,owner:int,group:int}|null */
-	private static function pathFileIdentity( string $path ): ?array {
-		$stat = self::pathFileStat( $path );
-
-		return null === $stat ? null : self::stableIdentity( $stat );
-	}
-
-	/** @return array<string, int>|null */
-	private static function pathFileStat( string $path ): ?array {
-		clearstatcache( true, $path );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- Symlink-aware identity is required for the exclusive Core-owned file.
-		$stat = lstat( $path );
-		$mode = false === $stat ? 0 : (int) ( $stat['mode'] ?? 0 );
-
-		return false !== $stat && 0100000 === ( $mode & 0170000 ) ? $stat : null;
-	}
-
-	/** @param array<string, int> $stat @return array{device:int,inode:int,links:int,owner:int,group:int} */
-	private static function stableIdentity( array $stat ): array {
-		return array(
-			'device' => (int) ( $stat['dev'] ?? -1 ),
-			'inode'  => (int) ( $stat['ino'] ?? 0 ),
-			'links'  => (int) ( $stat['nlink'] ?? 0 ),
-			'owner'  => (int) ( $stat['uid'] ?? -1 ),
-			'group'  => (int) ( $stat['gid'] ?? -1 ),
-		);
 	}
 }

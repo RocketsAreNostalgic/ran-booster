@@ -484,7 +484,7 @@ final class GitHubProvider implements RepositoryProvider, RepositoryPathInspecto
 				|| ! is_string( $release['published_at'] ?? null )
 				|| ! is_array( $release['expected_asset_names'] ?? null )
 				|| ! is_string( $release['details_url'] ?? null )
-				|| ! hash_equals( $this->releaseDetailsUrl( $repository ), $release['details_url'] ) ) {
+				|| ! hash_equals( $this->releaseDetailsUrl( $repository, $release['tag'] ), $release['details_url'] ) ) {
 				throw new RuntimeException( 'GitHub returned invalid release candidates.', 502 );
 			}
 			$candidates[] = new RepositoryReleaseCandidate(

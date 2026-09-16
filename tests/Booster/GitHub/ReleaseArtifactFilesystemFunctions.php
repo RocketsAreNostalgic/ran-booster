@@ -36,11 +36,21 @@ function fopen( string $filename, string $mode, bool $useIncludePath = false, mi
 
 /** @param resource $stream */
 function fclose( $stream ): bool {
+	$falseResults = (int) ( $GLOBALS['ran_booster_custody_fclose_false_results'] ?? 0 );
+	if ( $falseResults > 0 ) {
+		$GLOBALS['ran_booster_custody_fclose_false_results'] = $falseResults - 1;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Test-only seam must close the real stream while reporting a false result.
+		\fclose( $stream );
+
+		return false;
+	}
+
 	$remaining = (int) ( $GLOBALS['ran_booster_custody_fclose_failures'] ?? 0 );
 	if ( $remaining > 0 ) {
 		$GLOBALS['ran_booster_custody_fclose_failures'] = $remaining - 1;
 		throw new \RuntimeException( 'Test-only stream close failure.' );
 	}
 
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Test-only deterministic filesystem seam.
 	return \fclose( $stream );
 }

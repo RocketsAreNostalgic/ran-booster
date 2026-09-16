@@ -256,6 +256,24 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function testFalseCloseResultRemainsCleanupFailure(): void {
+		$this->resetFilesystemHooks();
+		$path = '';
+
+		try {
+			$GLOBALS['ran_booster_custody_fclose_false_results'] = 1;
+			[ $artifact, $path ]                                 = $this->artifact();
+			$this->expectHandoffFailure( $artifact, true );
+
+			self::assertFileDoesNotExist( $path );
+		} finally {
+			$this->resetFilesystemHooks();
+			$this->removeExactPath( $path );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testPreparedCopyCleanupUncertaintyRemainsReportable(): void {
 		$this->resetFilesystemHooks();
 		$path = $this->archivePath();
@@ -331,7 +349,8 @@ final class ReleaseArtifactClaimLifetimeTest extends TestCase {
 			$GLOBALS['ran_booster_custody_mkdir_failure'],
 			$GLOBALS['ran_booster_custody_after_source_open'],
 			$GLOBALS['ran_booster_custody_after_destination_open'],
-			$GLOBALS['ran_booster_custody_fclose_failures']
+			$GLOBALS['ran_booster_custody_fclose_failures'],
+			$GLOBALS['ran_booster_custody_fclose_false_results']
 		);
 	}
 

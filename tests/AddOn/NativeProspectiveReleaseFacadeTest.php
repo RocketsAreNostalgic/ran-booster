@@ -1962,12 +1962,12 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 }
 
 final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArtifact {
-	public int $handoffCalls   = 0;
-	public int $discardCalls   = 0;
-	public bool $discardResult = true;
+	public int $handoffCalls          = 0;
+	public int $discardCalls          = 0;
+	public bool $discardResult        = true;
 	public ?Throwable $handoffFailure = null;
-	private bool $handedOff    = false;
-	private bool $discarded    = false;
+	private bool $handedOff           = false;
+	private bool $discarded           = false;
 
 	public function __construct(
 		private string $path,

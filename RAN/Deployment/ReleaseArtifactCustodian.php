@@ -102,6 +102,8 @@ final class ReleaseArtifactCustodian {
 		$input        = false;
 		$output       = false;
 		$copyIdentity = null;
+		$inputClosed  = true;
+		$outputClosed = true;
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- The random directory is the Core-owned custody boundary.
 		if ( ! mkdir( $directory, 0700 ) ) {
@@ -116,7 +118,11 @@ final class ReleaseArtifactCustodian {
 		try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Provider custody grants this bounded source inspection.
 			$input = fopen( $source, 'rb' );
-			if ( false === $input || $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
+			if ( false === $input ) {
+				throw new RuntimeException();
+			}
+			$inputClosed = false;
+			if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The exclusive Core destination is the temporary custody boundary.
@@ -124,6 +130,7 @@ final class ReleaseArtifactCustodian {
 			if ( false === $output ) {
 				throw new RuntimeException();
 			}
+			$outputClosed = false;
 			$copyIdentity = self::createdFileIdentity( $path, $output );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- The Core copy must remain private.
 			if ( null === $copyIdentity || ! chmod( $path, 0600 ) ) {
@@ -135,17 +142,17 @@ final class ReleaseArtifactCustodian {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close before Core identity capture.
-			if ( ! fclose( $output ) ) {
-				$output = false;
+			$outputClosed = fclose( $output );
+			$output       = false;
+			if ( ! $outputClosed ) {
 				throw new RuntimeException();
 			}
-			$output = false;
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close provider inspection before TOCTOU recheck.
-			if ( ! fclose( $input ) ) {
-				$input = false;
+			$inputClosed = fclose( $input );
+			$input       = false;
+			if ( ! $inputClosed ) {
 				throw new RuntimeException();
 			}
-			$input            = false;
 			$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
 			$copyDigest = hash_file( 'sha256', $path );
@@ -171,7 +178,6 @@ final class ReleaseArtifactCustodian {
 				$directory
 			);
 		} catch ( Throwable ) {
-			$inputClosed = true;
 			if ( is_resource( $input ) ) {
 				try {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy input before cleanup.
@@ -181,7 +187,6 @@ final class ReleaseArtifactCustodian {
 				}
 				$input = false;
 			}
-			$outputClosed = true;
 			if ( is_resource( $output ) ) {
 				try {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy output before cleanup.

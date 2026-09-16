@@ -201,8 +201,7 @@ final class BoosterServiceProvider {
 		$container->bind(
 			BlueprintRepositoryVerifier::class,
 			static fn ( CoreContainer $container ): BlueprintRepositoryVerifier => new BlueprintRepositoryVerifier(
-				$container->make( PluginRepository::class ),
-				$container->make( ThemeRepository::class ),
+				$container->make( ProviderRegistry::class ),
 				$container->make( SecretsFile::class )
 			)
 		);

@@ -22,87 +22,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import base64
           from pathlib import Path
 
           path = Path('RAN/Deployment/ReleaseArtifactCustodian.php')
           text = path.read_text()
           start = text.index("\tpublic static function claim( RepositoryReleaseArtifactCustody $custody ): PreparedArtifact {\n")
           end = text.index("\n\tprivate static function copyToCore(", start)
-          replacement = '''\tpublic static function claim( RepositoryReleaseArtifactCustody $custody ): PreparedArtifact {
-\t\t$prepared                = $custody instanceof PreparedArtifact ? $custody : null;
-\t\t$inspectionInvoked       = false;
-\t\t$sourceDiscardAttempted  = false;
-\t\t$sourceDiscardSuccessful = false;
-
-\t\ttry {
-\t\t\t$maximumArtifactBytes = PackageArtifactLimit::resolve();
-\t\t\t$resolvedRef          = $custody->resolvedRef();
-\t\t\t$version              = $custody->version();
-\t\t\t$size                 = $custody->size();
-\t\t\t$sha256               = $custody->sha256();
-
-\t\t\tif ( $size < 1
-\t\t\t\t|| $size > $maximumArtifactBytes
-\t\t\t\t|| 1 !== preg_match( '/\\A[a-f0-9]{64}\\z/D', $sha256 ) ) {
-\t\t\t\tthrow new RuntimeException( 'The release artifact custody evidence is invalid.' );
-\t\t\t}
-
-\t\t\t// API-10 providers may still return PreparedArtifact covariantly. Keep
-\t\t\t// those implementations load-compatible while new providers can return
-\t\t\t// provider-owned custody without importing this Core concrete type.
-\t\t\tif ( $custody instanceof PreparedArtifact ) {
-\t\t\t\t$custody->assertUnchanged();
-
-\t\t\t\treturn $custody;
-\t\t\t}
-
-\t\t\t$result = $custody->inspect(
-\t\t\t\tfunction ( string $source ) use ( &$prepared, &$inspectionInvoked, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
-\t\t\t\t\tif ( $inspectionInvoked ) {
-\t\t\t\t\t\tthrow new RuntimeException();
-\t\t\t\t\t}
-\t\t\t\t\t$inspectionInvoked = true;
-\t\t\t\t\t$prepared          = self::copyToCore( $source, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 );
-
-\t\t\t\t\treturn $prepared;
-\t\t\t\t}
-\t\t\t);
-\t\t\tif ( ! $inspectionInvoked || ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {
-\t\t\t\tthrow new RuntimeException();
-\t\t\t}
-
-\t\t\t$sourceDiscardAttempted  = true;
-\t\t\t$sourceDiscardSuccessful = true === $custody->discard();
-\t\t\tif ( ! $sourceDiscardSuccessful ) {
-\t\t\t\tthrow new RuntimeException();
-\t\t\t}
-
-\t\t\treturn $prepared;
-\t\t} catch ( Throwable ) {
-\t\t\t$copyCleanupSuccessful = true;
-\t\t\tif ( $prepared instanceof PreparedArtifact ) {
-\t\t\t\ttry {
-\t\t\t\t\t$prepared->cleanup();
-\t\t\t\t} catch ( Throwable ) {
-\t\t\t\t\t$copyCleanupSuccessful = false;
-\t\t\t\t}
-\t\t\t}
-\t\t\tif ( ! $sourceDiscardAttempted ) {
-\t\t\t\ttry {
-\t\t\t\t\t$sourceDiscardSuccessful = true === $custody->discard();
-\t\t\t\t} catch ( Throwable ) {
-\t\t\t\t\t$sourceDiscardSuccessful = false;
-\t\t\t\t}
-\t\t\t}
-
-\t\t\tthrow new RuntimeException(
-\t\t\t\t$copyCleanupSuccessful && $sourceDiscardSuccessful
-\t\t\t\t\t? 'The release artifact could not be transferred to Core.'
-\t\t\t\t\t: 'The release artifact transfer could not be cleaned up safely.'
-\t\t\t);
-\t\t}
-\t}
-'''
+          replacement = base64.b64decode('CXB1YmxpYyBzdGF0aWMgZnVuY3Rpb24gY2xhaW0oIFJlcG9zaXRvcnlSZWxlYXNlQXJ0aWZhY3RDdXN0b2R5ICRjdXN0b2R5ICk6IFByZXBhcmVkQXJ0aWZhY3QgewoJCSRwcmVwYXJlZCAgICAgICAgICAgICAgICA9ICRjdXN0b2R5IGluc3RhbmNlb2YgUHJlcGFyZWRBcnRpZmFjdCA/ICRjdXN0b2R5IDogbnVsbDsKCQkkaW5zcGVjdGlvbkludm9rZWQgICAgICAgPSBmYWxzZTsKCQkkc291cmNlRGlzY2FyZEF0dGVtcHRlZCAgPSBmYWxzZTsKCQkkc291cmNlRGlzY2FyZFN1Y2Nlc3NmdWwgPSBmYWxzZTsKCgkJdHJ5IHsKCQkJJG1heGltdW1BcnRpZmFjdEJ5dGVzID0gUGFja2FnZUFydGlmYWN0TGltaXQ6OnJlc29sdmUoKTsKCQkJJHJlc29sdmVkUmVmICAgICAgICAgID0gJGN1c3RvZHktPnJlc29sdmVkUmVmKCk7CgkJCSR2ZXJzaW9uICAgICAgICAgICAgICA9ICRjdXN0b2R5LT52ZXJzaW9uKCk7CgkJCSRzaXplICAgICAgICAgICAgICAgICA9ICRjdXN0b2R5LT5zaXplKCk7CgkJCSRzaGEyNTYgICAgICAgICAgICAgICA9ICRjdXN0b2R5LT5zaGEyNTYoKTsKCgkJCWlmICggJHNpemUgPCAxCgkJCQl8fCAkc2l6ZSA+ICRtYXhpbXVtQXJ0aWZhY3RCeXRlcwoJCQkJfHwgMSAhPT0gcHJlZ19tYXRjaCggJy9cQVthLWYwLTldezY0fVx6L0QnLCAkc2hhMjU2ICkgKSB7CgkJCQl0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbiggJ1RoZSByZWxlYXNlIGFydGlmYWN0IGN1c3RvZHkgZXZpZGVuY2UgaXMgaW52YWxpZC4nICk7CgkJCX0KCgkJCS8vIEFQSS0xMCBwcm92aWRlcnMgbWF5IHN0aWxsIHJldHVybiBQcmVwYXJlZEFydGlmYWN0IGNvdmFyaWFudGx5LiBLZWVwCgkJCS8vIHRob3NlIGltcGxlbWVudGF0aW9ucyBsb2FkLWNvbXBhdGlibGUgd2hpbGUgbmV3IHByb3ZpZGVycyBjYW4gcmV0dXJuCgkJCS8vIHByb3ZpZGVyLW93bmVkIGN1c3RvZHkgd2l0aG91dCBpbXBvcnRpbmcgdGhpcyBDb3JlIGNvbmNyZXRlIHR5cGUuCgkJCWlmICggJGN1c3RvZHkgaW5zdGFuY2VvZiBQcmVwYXJlZEFydGlmYWN0ICkgewoJCQkJJGN1c3RvZHktPmFzc2VydFVuY2hhbmdlZCgpOwoKCQkJCXJldHVybiAkY3VzdG9keTsKCQkJfQoKCQkJJHJlc3VsdCA9ICRjdXN0b2R5LT5pbnNwZWN0KAoJCQkJZnVuY3Rpb24gKCBzdHJpbmcgJHNvdXJjZSApIHVzZSAoICYkcHJlcGFyZWQsICYkaW5zcGVjdGlvbkludm9rZWQsICRyZXNvbHZlZFJlZiwgJHZlcnNpb24sICRzaXplLCAkbWF4aW11bUFydGlmYWN0Qnl0ZXMsICRzaGEyNTYgKTogUHJlcGFyZWRBcnRpZmFjdCB7CgkJCQkJaWYgKCAkaW5zcGVjdGlvbkludm9rZWQgKSB7CgkJCQkJCXRocm93IG5ldyBSdW50aW1lRXhjZXB0aW9uKCk7CgkJCQkJfQoJCQkJCSRpbnNwZWN0aW9uSW52b2tlZCA9IHRydWU7CgkJCQkJJHByZXBhcmVkICAgICAgICAgID0gc2VsZjo6Y29weVRvQ29yZSggJHNvdXJjZSwgJHJlc29sdmVkUmVmLCAkdmVyc2lvbiwgJHNpemUsICRtYXhpbXVtQXJ0aWZhY3RCeXRlcywgJHNoYTI1NiApOwoKCQkJCQlyZXR1cm4gJHByZXBhcmVkOwoJCQkJfQoJCQkpOwoJCQlpZiAoICEgJGluc3BlY3Rpb25JbnZva2VkIHx8ICEgJHByZXBhcmVkIGluc3RhbmNlb2YgUHJlcGFyZWRBcnRpZmFjdCB8fCAkcmVzdWx0ICE9PSAkcHJlcGFyZWQgKSB7CgkJCQl0aHJvdyBuZXcgUnVudGltZUV4Y2VwdGlvbigpOwoJCQl9CgoJCQkkc291cmNlRGlzY2FyZEF0dGVtcHRlZCAgPSB0cnVlOwoJCQkkc291cmNlRGlzY2FyZFN1Y2Nlc3NmdWwgPSB0cnVlID09PSAkY3VzdG9keS0+ZGlzY2FyZCgpOwoJCQlpZiAoICEgJHNvdXJjZURpc2NhcmRTdWNjZXNzZnVsICkgewoJCQkJdGhyb3cgbmV3IFJ1bnRpbWVFeGNlcHRpb24oKTsKCQkJfQoKCQkJcmV0dXJuICRwcmVwYXJlZDsKCQl9IGNhdGNoICggVGhyb3dhYmxlICkgewoJCQkkY29weUNsZWFudXBTdWNjZXNzZnVsID0gdHJ1ZTsKCQkJaWYgKCAkcHJlcGFyZWQgaW5zdGFuY2VvZiBQcmVwYXJlZEFydGlmYWN0ICkgewoJCQkJdHJ5IHsKCQkJCQkkcHJlcGFyZWQtPmNsZWFudXAoKTsKCQkJCX0gY2F0Y2ggKCBUaHJvd2FibGUgKSB7CgkJCQkJJGNvcHlDbGVhbnVwU3VjY2Vzc2Z1bCA9IGZhbHNlOwoJCQkJfQoJCQl9CgkJCWlmICggISAkc291cmNlRGlzY2FyZEF0dGVtcHRlZCApIHsKCQkJCXRyeSB7CgkJCQkJJHNvdXJjZURpc2NhcmRTdWNjZXNzZnVsID0gdHJ1ZSA9PT0gJGN1c3RvZHktPmRpc2NhcmQoKTsKCQkJCX0gY2F0Y2ggKCBUaHJvd2FibGUgKSB7CgkJCQkJJHNvdXJjZURpc2NhcmRTdWNjZXNzZnVsID0gZmFsc2U7CgkJCQl9CgkJCX0KCgkJCXRocm93IG5ldyBSdW50aW1lRXhjZXB0aW9uKAoJCQkJJGNvcHlDbGVhbnVwU3VjY2Vzc2Z1bCAmJiAkc291cmNlRGlzY2FyZFN1Y2Nlc3NmdWwKCQkJCQk/ICdUaGUgcmVsZWFzZSBhcnRpZmFjdCBjb3VsZCBub3QgYmUgdHJhbnNmZXJyZWQgdG8gQ29yZS4nCgkJCQkJOiAnVGhlIHJlbGVhc2UgYXJ0aWZhY3QgdHJhbnNmZXIgY291bGQgbm90IGJlIGNsZWFuZWQgdXAgc2FmZWx5LicKCQkJKTsKCQl9Cgl9Cg==').decode()
           path.write_text(text[:start] + replacement + text[end:])
 
           contract = Path('tests/RepositoryProvider/ProviderContractsTest.php')

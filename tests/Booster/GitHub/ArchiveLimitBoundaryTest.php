@@ -22,16 +22,10 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 	}
 
 	public function testReleaseInspectionResolvesAndValidatesSuppliedLimitLazily(): void {
+		$limitReads = 0;
 		$registrar  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
-			public int $limitReads  = 0;
-
-			public function maximumArtifactBytes(): int {
-				++$this->limitReads;
-
-				return 1048576;
-			}
 
 			public function releases( mixed ...$arguments ): object {
 				$this->arguments = $arguments;
@@ -67,16 +61,21 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		$provider   = GitHubProvider::create(
 			new RepositoryResolverSecretsStub(),
 			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
-			$registrar
+			$registrar,
+			static function () use ( &$limitReads ): int {
+				++$limitReads;
+
+				return 1048576;
+			}
 		);
 		$repository = new RepositoryReference( 'owner/example', '123456789', false, null );
 
-		self::assertSame( 0, $registrar->limitReads );
+		self::assertSame( 0, $limitReads );
 		self::assertSame(
 			'v2:' . str_repeat( 'b', 64 ),
 			$provider->inspectRelease( 'plugin', $repository, '42', 'v1.2.3', 'stable' )->fingerprint
 		);
-		self::assertSame( 2, $registrar->limitReads );
+		self::assertSame( 2, $limitReads );
 		self::assertCount( 7, $registrar->arguments );
 		self::assertSame( 1048576, $registrar->arguments[6] );
 	}
@@ -85,6 +84,10 @@ final class ArchiveLimitBoundaryTest extends TestCase {
 		$registrar  = new class() {
 			/** @var list<mixed> */
 			public array $arguments = array();
+
+			public function maximumArtifactBytes(): int {
+				throw new \LogicException( 'GitHub must not discover host policy from the updater registrar.' );
+			}
 
 			public function releases(
 				mixed $provider,

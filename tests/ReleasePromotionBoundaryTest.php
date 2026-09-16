@@ -51,17 +51,29 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 	public function testPrivilegedMutationRemainsBoundToQualifiedMainEvidence(): void {
 		$workflow = $this->readText( '.github/workflows/release-please.yml' );
 		$jobGate  = $this->releaseJobGate( $workflow );
+		$expectedGate = implode(
+			' ',
+			array(
+				'if: >-',
+				'${{',
+				"github.event.workflow_run.event == 'push'",
+				'&&',
+				"github.event.workflow_run.conclusion == 'success'",
+				'&&',
+				"github.event.workflow_run.path == '.github/workflows/quality.yml'",
+				'&&',
+				"github.event.workflow_run.head_branch == 'main'",
+				'&&',
+				'github.event.workflow_run.head_repository.full_name == github.repository',
+				'}}',
+			)
+		);
 
-		foreach ( array(
-			"github.event.workflow_run.event == 'push'",
-			"github.event.workflow_run.conclusion == 'success'",
-			"github.event.workflow_run.path == '.github/workflows/quality.yml'",
-			"github.event.workflow_run.head_branch == 'main'",
-			'github.event.workflow_run.head_repository.full_name == github.repository',
-		) as $requiredPredicate ) {
-			self::assertStringContainsString( $requiredPredicate, $jobGate );
-		}
-
+		self::assertSame(
+			$expectedGate,
+			$this->normalizeWhitespace( $jobGate ),
+			'The complete privileged job gate must remain the canonical all-conjunct admission expression.'
+		);
 		self::assertStringNotContainsString( 'github.event.workflow_run.name', $jobGate );
 		self::assertStringNotContainsString( "\n  pull_request_target:", $workflow );
 		self::assertStringNotContainsString( "\n  pull_request:", $workflow );
@@ -74,29 +86,6 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 				'[[ "$current_main" == "$RAN_QUALITY_COMMIT" ]] && release_please_required=true'
 			)
 		);
-
-		$repository = 'RocketsAreNostalgic/ran-booster';
-		$qualified  = array(
-			'event'           => 'push',
-			'conclusion'      => 'success',
-			'path'            => '.github/workflows/quality.yml',
-			'head_branch'     => 'main',
-			'head_repository' => $repository,
-			'repository'      => $repository,
-		);
-		self::assertTrue( $this->releaseJobGateAllows( $jobGate, $qualified ) );
-
-		foreach ( array(
-			array( 'event', 'pull_request' ),
-			array( 'conclusion', 'failure' ),
-			array( 'path', '.github/workflows/same-name-quality.yml' ),
-			array( 'head_branch', 'feature' ),
-			array( 'head_repository', 'someone/else' ),
-		) as array( $field, $value ) ) {
-			$unqualified           = $qualified;
-			$unqualified[ $field ] = $value;
-			self::assertFalse( $this->releaseJobGateAllows( $jobGate, $unqualified ), $field . ' should fail admission.' );
-		}
 	}
 
 	public function testOrdinaryReconciliationGuardsExecuteForCurrentAndStaleMain(): void {
@@ -125,17 +114,21 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 			$transition
 		);
 		foreach ( array(
-			'RAN_RELEASE_BASE_COMMIT',
-			'RAN_RELEASE_COMMIT',
-			'RAN_RELEASE_HEAD_COMMIT',
-			'RAN_RELEASE_PENDING',
-			'RAN_RELEASE_PR_NUMBER',
-			'RAN_RELEASE_STATE',
-			'RAN_RELEASE_TAG',
-			'RAN_RELEASE_TREE',
-			'RAN_RELEASE_VERSION',
-		) as $releaseState ) {
-			self::assertStringContainsString( $releaseState, $transition, $releaseState . ' is missing from candidate state.' );
+			"printf 'RAN_RELEASE_BASE_COMMIT=%s\\n' \"\$release_base\"",
+			"printf 'RAN_RELEASE_COMMIT=%s\\n' \"\$RAN_QUALITY_COMMIT\"",
+			"printf 'RAN_RELEASE_HEAD_COMMIT=%s\\n' \"\$release_head\"",
+			"printf 'RAN_RELEASE_PENDING=%s\\n' \"\$release_pending\"",
+			"printf 'RAN_RELEASE_PR_NUMBER=%s\\n' \"\$release_pr_number\"",
+			"printf 'RAN_RELEASE_STATE=%s\\n' \"\$state\"",
+			"printf 'RAN_RELEASE_TAG=%s\\n' \"\$tag\"",
+			"printf 'RAN_RELEASE_TREE=%s\\n' \"\$main_tree\"",
+			"printf 'RAN_RELEASE_VERSION=%s\\n' \"\$version\"",
+		) as $releaseStateAssignment ) {
+			self::assertStringContainsString(
+				$releaseStateAssignment,
+				$transition,
+				$releaseStateAssignment . ' is missing from candidate state.'
+			);
 		}
 
 		$this->assertStepGate(
@@ -166,38 +159,11 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 	}
 
 	/**
-	 * @param array<string, string> $context Workflow-run fields used by the real admission expression.
-	 */
-	private function releaseJobGateAllows( string $jobGate, array $context ): bool {
-		$matches = array();
-		$count   = preg_match_all(
-			"/github\\.event\\.workflow_run\\.(event|conclusion|path|head_branch) == '([^']+)'/",
-			$jobGate,
-			$matches,
-			PREG_SET_ORDER
-		);
-		self::assertSame( 4, $count, 'Unexpected workflow_run scalar predicate count in the real job gate.' );
-		self::assertStringContainsString(
-			'github.event.workflow_run.head_repository.full_name == github.repository',
-			$jobGate
-		);
-
-		foreach ( $matches as $match ) {
-			self::assertArrayHasKey( $match[1], $context );
-			if ( $context[ $match[1] ] !== $match[2] ) {
-				return false;
-			}
-		}
-
-		return $context['head_repository'] === $context['repository'];
-	}
-
-	/**
 	 * @return list<string>
 	 */
 	private function ordinaryReconciliationGuards( string $workflow ): array {
-		$guards = array();
-		$offset = 0;
+		$guards      = array();
+		$offset      = 0;
 		$startMarker = "            release_please_required=false\n";
 		$endMarker   = "            exit 0\n";
 
@@ -260,6 +226,13 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		self::assertIsInt( $end );
 
 		return substr( $workflow, $start, $end - $start );
+	}
+
+	private function normalizeWhitespace( string $value ): string {
+		$normalized = preg_replace( '/\s+/', ' ', trim( $value ) );
+		self::assertIsString( $normalized );
+
+		return $normalized;
 	}
 
 	private function assertStepGate( string $workflow, string $stepName, string $expectedGate ): void {

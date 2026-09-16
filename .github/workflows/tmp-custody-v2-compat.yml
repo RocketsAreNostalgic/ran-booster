@@ -1,0 +1,285 @@
+name: Temporary custody V2 compatibility repair
+
+on:
+  push:
+    branches:
+      - refactor/release-artifact-custody
+    paths:
+      - .github/workflows/tmp-custody-v2-compat.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/release-artifact-custody
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+      - name: Restore legacy API10 contract and add V2 facet
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout origin/main -- RAN/RepositoryProvider/RepositoryReleaseArtifact.php
+          cat > RAN/RepositoryProvider/RepositoryReleaseArtifactV2.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          namespace RAN\RepositoryProvider;
+
+          /**
+           * Provider-neutral release artifact for acquisition API 2.
+           *
+           * This additive facet is deliberately separate from the API10
+           * RepositoryReleaseArtifact contract so providers can feature-detect it
+           * without changing or invalidating the legacy handoff signature.
+           */
+          interface RepositoryReleaseArtifactV2 extends RepositoryReleaseArtifactCustody {
+              public function packageRoot(): string;
+
+              public function mainFile(): string;
+
+              public function identifier( string $packageType ): string;
+          }
+          PHP
+          cat > RAN/RepositoryProvider/RepositoryReleaseAcquirerV2.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          namespace RAN\RepositoryProvider;
+
+          use RAN\Provider\ProviderCapability;
+
+          /**
+           * Provider-neutral release acquisition lifecycle.
+           *
+           * Provider packages that support API10 hosts predating this facet must
+           * feature-detect the interface before declaring their V2 implementation.
+           */
+          interface RepositoryReleaseAcquirerV2 extends ProviderCapability {
+              public const RELEASE_ACQUISITION_API_VERSION = 2;
+
+              /** @throws RepositoryReleaseAcquisitionRejected When acquisition rejects the release or cannot clean up its bytes. */
+              public function acquireReleaseArtifact(
+                  string $packageType,
+                  RepositoryReference $repository,
+                  string $providerReleaseId,
+                  string $tag,
+                  string $expectedFingerprint,
+                  string $channel
+              ): RepositoryReleaseArtifactV2;
+          }
+          PHP
+      - name: Apply production compatibility repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=1):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'patch anchor missing in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, count))
+
+          # GitHub artifact: V2 custody only; no legacy PreparedArtifact contract.
+          path = 'RAN/Booster/GitHub/GitHubReleaseArtifact.php'
+          replace(path,
+              "use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifactCustody;",
+              "use RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2;"
+          )
+          replace(path,
+              'final class GitHubReleaseArtifact implements RepositoryReleaseArtifact, RepositoryReleaseArtifactCustody {',
+              'final class GitHubReleaseArtifact implements RepositoryReleaseArtifactV2 {'
+          )
+          replace(path,
+              "\tprivate bool $handedOff      = false;\n\tprivate ?bool $discardResult = null;",
+              "\tprivate bool $inspectionStarted = false;\n\tprivate ?bool $discardResult  = null;"
+          )
+          replace(path,
+              "\t\t\t$discarded           = true === $this->artifact->discard();\n\t\t\t$this->discardResult = $discarded ? true : ( $this->handedOff ? false : null );\n\n\t\t\treturn $discarded;\n\t\t} catch ( Throwable $failure ) {\n\t\t\tif ( $this->handedOff ) {\n\t\t\t\t$this->discardResult = false;\n\t\t\t}\n\t\t\tthrow $failure;\n\t\t}",
+              "\t\t\t$discarded           = true === $this->artifact->discard();\n\t\t\t$this->discardResult = $discarded;\n\n\t\t\treturn $discarded;\n\t\t} catch ( Throwable $failure ) {\n\t\t\t$this->discardResult = false;\n\t\t\tthrow $failure;\n\t\t}"
+          )
+          replace(path,
+              "\n\tpublic function handoffToCore(): RepositoryReleaseArtifactCustody {\n\t\tif ( $this->handedOff || null !== $this->discardResult ) {\n\t\t\tthrow new RuntimeException( 'The GitHub release artifact is unavailable.' );\n\t\t}\n\n\t\t$this->handedOff = true;\n\n\t\treturn $this;\n\t}\n",
+              "\n"
+          )
+          replace(path,
+              "\tpublic function inspect( callable $inspection ): mixed {\n\t\tif ( ! $this->handedOff || null !== $this->discardResult ) {\n\t\t\tthrow new RuntimeException( 'The GitHub release artifact is unavailable.' );\n\t\t}\n\n\t\treturn $this->artifact->inspect( $inspection );\n\t}",
+              "\tpublic function inspect( callable $inspection ): mixed {\n\t\tif ( $this->inspectionStarted || null !== $this->discardResult ) {\n\t\t\tthrow new RuntimeException( 'The GitHub release artifact is unavailable.' );\n\t\t}\n\n\t\t$this->inspectionStarted = true;\n\n\t\treturn $this->artifact->inspect( $inspection );\n\t}"
+          )
+
+          # Bundled GitHub provider exposes additive acquisition V2, not legacy acquisition.
+          path = 'RAN/Booster/GitHub/GitHubProvider.php'
+          replace(path, 'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;', 'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirerV2;')
+          replace(path, 'use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;', 'use RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2;')
+          replace(path,
+              'RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets',
+              'RepositoryReleaseInspector, RepositoryReleaseAcquirerV2, RepositoryReleaseNativeTargets'
+          )
+          replace(path, 'public function acquireRelease(', 'public function acquireReleaseArtifact(')
+          replace(path, '): RepositoryReleaseArtifact {', '): RepositoryReleaseArtifactV2 {')
+
+          # Core prefers V2 but preserves the exact legacy API10 fallback.
+          path = 'RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php'
+          replace(path,
+              'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;\nuse RAN\\RepositoryProvider\\RepositoryReleaseAcquisitionRejected;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifact;',
+              'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;\nuse RAN\\RepositoryProvider\\RepositoryReleaseAcquirerV2;\nuse RAN\\RepositoryProvider\\RepositoryReleaseAcquisitionRejected;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifact;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2;'
+          )
+          old = """\t\ttry {\n\t\t\t$release = $acquirer->acquireRelease(\n\t\t\t\t$type,\n\t\t\t\t$repositoryReference,\n\t\t\t\t$releaseId,\n\t\t\t\t$tag,\n\t\t\t\t$expectedFingerprint,\n\t\t\t\t$channel\n\t\t\t);\n"""
+          new = """\t\ttry {\n\t\t\t$release = $acquirer instanceof RepositoryReleaseAcquirerV2\n\t\t\t\t? $acquirer->acquireReleaseArtifact(\n\t\t\t\t\t$type,\n\t\t\t\t\t$repositoryReference,\n\t\t\t\t\t$releaseId,\n\t\t\t\t\t$tag,\n\t\t\t\t\t$expectedFingerprint,\n\t\t\t\t\t$channel\n\t\t\t\t)\n\t\t\t\t: $acquirer->acquireRelease(\n\t\t\t\t\t$type,\n\t\t\t\t\t$repositoryReference,\n\t\t\t\t\t$releaseId,\n\t\t\t\t\t$tag,\n\t\t\t\t\t$expectedFingerprint,\n\t\t\t\t\t$channel\n\t\t\t\t);\n"""
+          replace(path, old, new)
+          replace(path, 'RepositoryReleaseArtifact $release,', 'RepositoryReleaseArtifact|RepositoryReleaseArtifactV2 $release,')
+          replace(path,
+              '$artifact            = ReleaseArtifactCustodian::claim( $release->handoffToCore() );',
+              "$custody             = $release instanceof RepositoryReleaseArtifactV2 ? $release : $release->handoffToCore();\n\t\t\t\t\t$artifact            = ReleaseArtifactCustodian::claim( $custody );"
+          )
+          old = """\t/** @param array<string, mixed> $repositoryRequest */\n\tprivate function releaseAcquirer( array $repositoryRequest ): ?RepositoryReleaseAcquirer {\n\t\t$provider = $repositoryRequest['provider'] ?? null;\n\t\tif ( ! is_string( $provider ) ) {\n\t\t\treturn null;\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );\n\t\t} catch ( Throwable ) {\n\t\t\treturn null;\n\t\t}\n\n\t\treturn $capability instanceof RepositoryReleaseAcquirer ? $capability : null;\n\t}\n"""
+          new = """\t/** @param array<string, mixed> $repositoryRequest */\n\tprivate function releaseAcquirer( array $repositoryRequest ): RepositoryReleaseAcquirerV2|RepositoryReleaseAcquirer|null {\n\t\t$provider = $repositoryRequest['provider'] ?? null;\n\t\tif ( ! is_string( $provider ) ) {\n\t\t\treturn null;\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirerV2::class );\n\t\t\tif ( $capability instanceof RepositoryReleaseAcquirerV2 ) {\n\t\t\t\treturn $capability;\n\t\t\t}\n\t\t} catch ( Throwable ) {\n\t\t\t// Fall through to the unchanged API10 acquisition capability.\n\t\t}\n\n\t\ttry {\n\t\t\t$capability = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );\n\t\t} catch ( Throwable ) {\n\t\t\treturn null;\n\t\t}\n\n\t\treturn $capability instanceof RepositoryReleaseAcquirer ? $capability : null;\n\t}\n"""
+          replace(path, old, new)
+
+          # Cleanup warnings converted to exceptions remain cleanup uncertainty.
+          path = 'RAN/Deployment/ReleaseArtifactCustodian.php'
+          replace(path,
+              "\t\t\t$copyCleanupSuccessful = $inputClosed && $outputClosed;\n\t\t\t$copyCleanupSuccessful = self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity ) && $copyCleanupSuccessful;\n\t\t\tthrow new RuntimeException();",
+              "\t\t\t$copyCleanupSuccessful = $inputClosed && $outputClosed;\n\t\t\ttry {\n\t\t\t\t$copyCleanupSuccessful = self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity ) && $copyCleanupSuccessful;\n\t\t\t} catch ( Throwable ) {\n\t\t\t\t$copyCleanupSuccessful = false;\n\t\t\t}\n\t\t\tthrow new RuntimeException();"
+          )
+          PY
+      - name: Apply compatibility and regression test updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=1):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'test patch anchor missing in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, count))
+
+          # Bounded GitHub suite follows the V2 provider boundary.
+          path = 'tests/Booster/GitHub/ModuleDependencyBoundaryTest.php'
+          replace(path, "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseAcquirer',", "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseAcquirerV2',")
+          replace(path, "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseArtifact',\n\t\t'RAN\\RepositoryProvider\\RepositoryReleaseArtifactCustody',", "\t\t'RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2',")
+
+          path = 'tests/Booster/GitHub/ReleaseAcquisitionTest.php'
+          replace(path, 'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;', 'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirerV2;')
+          p = Path(path)
+          text = p.read_text().replace('->acquireRelease(', '->acquireReleaseArtifact(')
+          text = text.replace('ReleaseArtifactCustodian::claim( $artifact->handoffToCore() )', 'ReleaseArtifactCustodian::claim( $artifact )')
+          text = text.replace('GitHubProvider&RepositoryReleaseAcquirer', 'GitHubProvider&RepositoryReleaseAcquirerV2')
+          text = text.replace('self::assertInstanceOf( RepositoryReleaseAcquirer::class, $provider );', 'self::assertInstanceOf( RepositoryReleaseAcquirerV2::class, $provider );')
+          p.write_text(text)
+
+          path = 'tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php'
+          p = Path(path)
+          text = p.read_text().replace('ReleaseArtifactCustodian::claim( $artifact->handoffToCore() )', 'ReleaseArtifactCustodian::claim( $artifact )')
+          anchor = """\t#[RunInSeparateProcess]\n\t#[PreserveGlobalState( false )]\n\tpublic function testFalseCloseResultRemainsCleanupFailure(): void {\n"""
+          new_test = """\t#[RunInSeparateProcess]\n\t#[PreserveGlobalState( false )]\n\tpublic function testThrownCoreCopyRemovalRemainsCleanupFailure(): void {\n\t\t$this->resetFilesystemHooks();\n\t\t$random       = str_repeat( \"\\x36\", 16 );\n\t\t$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( $random );\n\t\t$archive      = $directory . '/archive.zip';\n\t\t$providerPath = $this->archivePath();\n\n\t\ttry {\n\t\t\t$GLOBALS['ran_booster_custody_random_bytes'] = $random;\n\t\t\t$GLOBALS['ran_booster_custody_unlink_throw'] = true;\n\t\t\t$digest = hash_file( 'sha256', $providerPath ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only artifact identity.\n\t\t\tself::assertIsString( $digest );\n\t\t\t$artifact = new GitHubReleaseArtifact(\n\t\t\t\tnew StructuralReleaseArtifact( $providerPath ),\n\t\t\t\t'1.2.3',\n\t\t\t\tstr_repeat( 'a', 40 ),\n\t\t\t\t'example',\n\t\t\t\t'example.php',\n\t\t\t\tstrlen( 'verified-release-archive' ) - 1,\n\t\t\t\t52428800,\n\t\t\t\t$digest\n\t\t\t);\n\t\t\t$this->expectHandoffFailure( $artifact, true );\n\n\t\t\tself::assertFileDoesNotExist( $providerPath );\n\t\t\tself::assertFileExists( $archive );\n\t\t} finally {\n\t\t\t$this->resetFilesystemHooks();\n\t\t\t$this->removeExactPath( $providerPath );\n\t\t\t$this->removeExactPath( $archive );\n\t\t\t$this->removeExactDirectory( $directory );\n\t\t}\n\t}\n\n"""
+          if anchor not in text:
+              raise SystemExit('lifetime test insertion anchor missing')
+          text = text.replace(anchor, new_test + anchor, 1)
+          old = "\t\t\t$GLOBALS['ran_booster_custody_fclose_failures'],\n\t\t\t$GLOBALS['ran_booster_custody_fclose_false_results']\n"
+          new = "\t\t\t$GLOBALS['ran_booster_custody_fclose_failures'],\n\t\t\t$GLOBALS['ran_booster_custody_fclose_false_results'],\n\t\t\t$GLOBALS['ran_booster_custody_unlink_throw']\n"
+          if old not in text:
+              raise SystemExit('lifetime reset hook anchor missing')
+          p.write_text(text.replace(old, new, 1))
+
+          path = 'tests/Booster/GitHub/ReleaseArtifactFilesystemFunctions.php'
+          p = Path(path)
+          text = p.read_text()
+          if 'function unlink( string $filename ): bool' not in text:
+              text += """\n\nfunction unlink( string $filename ): bool {\n\tif ( ! empty( $GLOBALS['ran_booster_custody_unlink_throw'] ) ) {\n\t\tthrow new \\RuntimeException( 'Test-only Core-copy removal failure.' );\n\t}\n\n\t// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only deterministic filesystem seam.\n\treturn \\unlink( $filename );\n}\n"""
+          p.write_text(text)
+
+          # Contract tests prove legacy API10 remains unchanged and V2 is additive.
+          path = 'tests/RepositoryProvider/ProviderContractsTest.php'
+          p = Path(path)
+          text = p.read_text()
+          text = text.replace('use PHPUnit\\Framework\\TestCase;\n', 'use PHPUnit\\Framework\\TestCase;\nuse RAN\\Deployment\\PreparedArtifact;\n', 1)
+          text = text.replace('use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;\n', 'use RAN\\RepositoryProvider\\RepositoryReleaseAcquirer;\nuse RAN\\RepositoryProvider\\RepositoryReleaseAcquirerV2;\n', 1)
+          text = text.replace('use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;\n', 'use RAN\\RepositoryProvider\\RepositoryReleaseArtifact;\nuse RAN\\RepositoryProvider\\RepositoryReleaseArtifactV2;\n', 1)
+          text = text.replace(
+              'RepositoryReleaseArtifactCustody::class,\n\t\t\t(string) ( new \\ReflectionMethod( RepositoryReleaseArtifact::class, \'handoffToCore\' ) )->getReturnType()',
+              'PreparedArtifact::class,\n\t\t\t(string) ( new \\ReflectionMethod( RepositoryReleaseArtifact::class, \'handoffToCore\' ) )->getReturnType()',
+              1
+          )
+          anchor = """\tpublic function testReleaseArtifactIsOneShotAndPathFree(): void {\n"""
+          new_test = """\tpublic function testReleaseAcquisitionV2IsAdditiveAndProviderNeutral(): void {\n\t\tself::assertTrue( is_subclass_of( RepositoryReleaseAcquirerV2::class, \\RAN\\Provider\\ProviderCapability::class ) );\n\t\tself::assertSame( 2, RepositoryReleaseAcquirerV2::RELEASE_ACQUISITION_API_VERSION );\n\t\tself::assertSame( array( 'acquireReleaseArtifact' ), get_class_methods( RepositoryReleaseAcquirerV2::class ) );\n\n\t\t$method     = new \\ReflectionMethod( RepositoryReleaseAcquirerV2::class, 'acquireReleaseArtifact' );\n\t\t$parameters = $method->getParameters();\n\t\tself::assertSame( RepositoryReleaseArtifactV2::class, (string) $method->getReturnType() );\n\t\tself::assertSame( RepositoryReference::class, (string) $parameters[1]->getType() );\n\t\tself::assertTrue( is_subclass_of( RepositoryReleaseArtifactV2::class, RepositoryReleaseArtifactCustody::class ) );\n\n\t\t$methods = get_class_methods( RepositoryReleaseArtifactV2::class );\n\t\tsort( $methods );\n\t\tself::assertSame(\n\t\t\tarray( 'discard', 'identifier', 'inspect', 'mainFile', 'packageRoot', 'resolvedRef', 'sha256', 'size', 'version' ),\n\t\t\t$methods\n\t\t);\n\t}\n\n"""
+          if anchor not in text:
+              raise SystemExit('provider contracts insertion anchor missing')
+          text = text.replace(anchor, new_test + anchor, 1)
+          p.write_text(text)
+          PY
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Normalize touched PHP with repository PHPCBF
+        shell: bash
+        run: |
+          set +e
+          vendor/bin/phpcbf --standard=.phpcs.xml \
+            RAN/RepositoryProvider/RepositoryReleaseArtifact.php \
+            RAN/RepositoryProvider/RepositoryReleaseArtifactCustody.php \
+            RAN/RepositoryProvider/RepositoryReleaseArtifactV2.php \
+            RAN/RepositoryProvider/RepositoryReleaseAcquirerV2.php \
+            RAN/Booster/GitHub/GitHubReleaseArtifact.php \
+            RAN/Booster/GitHub/GitHubProvider.php \
+            RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php \
+            RAN/Deployment/ReleaseArtifactCustodian.php \
+            tests/RepositoryProvider/ProviderContractsTest.php \
+            tests/Booster/GitHub/ModuleDependencyBoundaryTest.php \
+            tests/Booster/GitHub/ReleaseAcquisitionTest.php \
+            tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php \
+            tests/Booster/GitHub/ReleaseArtifactFilesystemFunctions.php
+          status=$?
+          set -e
+          if [ "$status" -gt 1 ]; then exit "$status"; fi
+      - name: Verify PHPCS and focused contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          vendor/bin/phpcs --standard=.phpcs.xml \
+            RAN/RepositoryProvider/RepositoryReleaseArtifact.php \
+            RAN/RepositoryProvider/RepositoryReleaseArtifactCustody.php \
+            RAN/RepositoryProvider/RepositoryReleaseArtifactV2.php \
+            RAN/RepositoryProvider/RepositoryReleaseAcquirerV2.php \
+            RAN/Booster/GitHub/GitHubReleaseArtifact.php \
+            RAN/Booster/GitHub/GitHubProvider.php \
+            RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php \
+            RAN/Deployment/ReleaseArtifactCustodian.php \
+            tests/RepositoryProvider/ProviderContractsTest.php \
+            tests/Booster/GitHub/ModuleDependencyBoundaryTest.php \
+            tests/Booster/GitHub/ReleaseAcquisitionTest.php \
+            tests/Booster/GitHub/ReleaseArtifactClaimLifetimeTest.php \
+            tests/Booster/GitHub/ReleaseArtifactFilesystemFunctions.php
+          composer test:github-module
+          vendor/bin/phpunit --configuration phpunit.xml --filter 'ProviderContractsTest|NativeProspectiveReleaseFacadeTest'
+      - name: Verify legacy external fixture is unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code origin/main -- tests/fixtures/ran-booster-release-capability-provider/src/Providers.php
+          git diff --exit-code origin/main -- RAN/RepositoryProvider/RepositoryReleaseArtifact.php
+      - name: Commit repair and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-custody-v2-compat.yml
+          git add RAN tests
+          git commit -m "fix: make custody acquisition additive to API10"
+          git push origin HEAD:refactor/release-artifact-custody

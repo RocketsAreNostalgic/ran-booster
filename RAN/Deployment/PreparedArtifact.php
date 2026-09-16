@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\RepositoryReleaseArtifactCustody;
 use RuntimeException;
 
 /**
  * One locally downloaded archive whose identity is frozen for mutation.
  */
-final class PreparedArtifact {
+final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 
 	private bool $cleaned = false;
 
@@ -53,6 +54,35 @@ final class PreparedArtifact {
 
 	public function getExpectedVersion(): string {
 		return $this->expectedVersion;
+	}
+
+	/** @param callable(string): mixed $inspection */
+	public function inspect( callable $inspection ): mixed {
+		$this->assertUnchanged();
+
+		return $inspection( $this->path );
+	}
+
+	public function discard(): bool {
+		$this->cleanup();
+
+		return true;
+	}
+
+	public function resolvedRef(): string {
+		return $this->resolvedRef;
+	}
+
+	public function version(): string {
+		return $this->expectedVersion;
+	}
+
+	public function size(): int {
+		return $this->size;
+	}
+
+	public function sha256(): string {
+		return $this->digest;
 	}
 
 	/**

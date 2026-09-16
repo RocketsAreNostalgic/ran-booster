@@ -1,0 +1,46 @@
+name: Temporary one-shot custody guard
+
+on:
+  push:
+    branches:
+      - refactor/release-artifact-custody
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: refactor/release-artifact-custody
+          fetch-depth: 0
+      - name: Enforce one-shot provider inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('RAN/Deployment/ReleaseArtifactCustodian.php')
+          text = path.read_text()
+          old = "\t\t$prepared                = null;\n\t\t$sourceDiscardAttempted  = false;"
+          new = "\t\t$prepared                = null;\n\t\t$inspectionInvoked       = false;\n\t\t$sourceDiscardAttempted  = false;"
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+          old = "function ( string $source ) use ( &$prepared, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {\n\t\t\t\t\t$prepared = self::copyToCore"
+          new = "function ( string $source ) use ( &$prepared, &$inspectionInvoked, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {\n\t\t\t\t\tif ( $inspectionInvoked ) {\n\t\t\t\t\t\tthrow new RuntimeException();\n\t\t\t\t\t}\n\t\t\t\t\t$inspectionInvoked = true;\n\t\t\t\t\t$prepared          = self::copyToCore"
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+          old = "if ( ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {"
+          new = "if ( ! $inspectionInvoked || ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {"
+          assert text.count(old) == 1
+          path.write_text(text.replace(old, new, 1))
+          Path('.github/workflows/tmp-artifact-custody-one-shot.yml').unlink()
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add RAN/Deployment/ReleaseArtifactCustodian.php .github/workflows/tmp-artifact-custody-one-shot.yml
+          git commit -m 'fix: enforce one-shot release custody inspection'
+          git push origin HEAD:refactor/release-artifact-custody

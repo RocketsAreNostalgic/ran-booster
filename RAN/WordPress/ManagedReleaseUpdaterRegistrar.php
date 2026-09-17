@@ -9,18 +9,14 @@ use LogicException;
 use RAN\PackageArtifactLimit;
 
 /**
- * Bounded adapter over the selected release-updater registrar.
+ * Bounded compatibility adapter over the selected release-updater registrar.
  *
- * Provider code receives only resolved Booster policy. This host-owned adapter
- * also owns compatibility with release-updater versions that omit the optional
- * maximum-artifact argument when Booster is using its default ceiling.
+ * Booster owns the compatibility decision for selected updater versions that
+ * omit the optional maximum-artifact argument when the host uses its default
+ * ceiling. Artifact-limit policy itself is supplied separately to providers.
  */
 final readonly class ManagedReleaseUpdaterRegistrar {
 	public function __construct( private object $registrar ) {
-	}
-
-	public function maximumArtifactBytes(): int {
-		return PackageArtifactLimit::resolve();
 	}
 
 	public function plugin( mixed ...$arguments ): object {

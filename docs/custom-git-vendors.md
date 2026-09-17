@@ -371,6 +371,17 @@ The main types you will usually touch while adding a new vendor are:
 For a deeper discussion of the provider contract itself, see the
 [provider extension contract](provider-extension-contract.md).
 
-The bundled GitHub module uses this same ordinary-vendor contract and remains
-owned and shipped by Core. Provider API 10 does not authorize extracting it into
-a separate package or release stream; extraction remains NO-GO.
+The first-party GitHub implementation is maintained and released independently
+from `RocketsAreNostalgic/ran-booster-github-provider` as the Composer package
+`ran/booster-github-provider`. Booster consumes an immutable released version,
+bundles it in the runtime archive, and registers its `gh` provider through the
+same bounded Provider API semantics used by external implementations.
+
+Booster remains the owner of Provider API contracts and host policy during the
+current pre-release phase. The GitHub package targets the current certified
+Booster contract without taking a production dependency on the whole Booster
+plugin; arbitrary compatibility with historical pre-release hosts is not a
+supported promise. GitHub-specific implementation bugs and feature work belong
+in the provider repository. Booster remains the issue owner for host integration,
+provider registration/sealing, credential custody, administration, deployment
+orchestration, and other provider-neutral policy.

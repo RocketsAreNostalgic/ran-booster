@@ -134,11 +134,12 @@ coordinate two implementations pointed at the same remote repository.
 ## Bundled GitHub is not currently optional at runtime
 
 The bundled GitHub package implementation uses the ordinary Provider API
-boundary, but Booster always registers it as `gh`. Its implementation, tests,
-issues, and releases are owned by `RocketsAreNostalgic/ran-booster-github-provider`;
-Booster retains host composition, registration, credential custody, and other
-provider-neutral policy. There is no current preference to hide or disable the
-bundled provider.
+boundary, but Booster always registers it as `gh`. Its implementation,
+implementation-owned tests, issues, and releases are owned by
+`RocketsAreNostalgic/ran-booster-github-provider`; Booster retains host
+composition, registration, credential custody, provider-neutral policy, and the
+host-integration tests that prove the package works through Core. There is no
+current preference to hide or disable the bundled provider.
 
 Several first-party surfaces still know explicitly about `gh`, but repository
 webhook-management placement no longer does. Core places its fixed controls for

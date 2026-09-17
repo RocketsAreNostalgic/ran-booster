@@ -691,15 +691,25 @@ GitHub or Bitbucket code.
 The bundled first-party GitHub implementation is maintained and versioned in
 `RocketsAreNostalgic/ran-booster-github-provider` and consumed by Booster as the
 Composer package `ran/booster-github-provider`. Booster pins an immutable
-released version, packages only its approved runtime surfaces, and registers its
-`gh` implementation through this same bounded provider model.
+released version and packages only its approved runtime surfaces. The `gh`
+aggregate enters `ProviderRegistry::registerWithCredentialStore()` and implements
+the same public Provider API contracts and capability interfaces available to
+external providers.
+
+The bundled factory is intentionally host-composed rather than identical to an
+external provider factory: Booster additionally supplies its host-owned
+`ManagedReleaseUpdaterRegistrar` compatibility adapter and a lazy
+`PackageArtifactLimit` supplier. Those bounded inputs carry selected native
+updater composition and resolved host archive-limit policy without exposing the
+Core container, storage implementations, logger, credential writer, or a generic
+service resolver to the package.
 
 Booster remains the owner of Provider API contracts, registry lifecycle,
 credential custody, administration, deployment orchestration, and other
 provider-neutral host policy. The provider package owns GitHub-specific
-transport, browsing, diagnostics, webhook behavior, release behavior, and
-release-workflow assistance. The package has no production dependency on the
-whole Booster plugin.
+transport, credential interpretation and validation, browsing, diagnostics,
+webhook behavior, release behavior, and release-workflow assistance. The package
+has no production dependency on the whole Booster plugin.
 
 Provider API 10 remains pre-release. The package therefore targets the current
 certified Booster host contract rather than promising arbitrary compatibility

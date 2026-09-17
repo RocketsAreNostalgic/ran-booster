@@ -27,7 +27,8 @@ had a chance to run.
 ## Registration pattern
 
 A provider attaches its callback on `plugins_loaded` before Booster seals the
-registry:
+registry. The original Provider API 10 factory remains the compatibility floor;
+feature-detect the bounded registration context before requiring it:
 
 ```php
 add_action(
@@ -38,36 +39,70 @@ add_action(
       return;
     }
 
-    $registry->registerWithCredentialStore(
-      'example-vendor',
-      static fn (
+    $factory = static fn (
+      \RAN\RepositoryProvider\ProviderCredentialStore $credentials,
+      \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+    ): \RAN\RepositoryProvider\RepositoryProvider => new ExampleVendorProvider( $credentials, $deliveryEvidence );
+
+    if ( class_exists( \RAN\RepositoryProvider\ProviderRegistrationContext::class ) ) {
+      $factory = static function (
         \RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-        \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
-      ): \RAN\RepositoryProvider\RepositoryProvider => new ExampleVendorProvider( $credentials, $deliveryEvidence )
-    );
+        \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+        \RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
+      ): \RAN\RepositoryProvider\RepositoryProvider {
+        return new ExampleVendorProvider(
+          $credentials,
+          $deliveryEvidence,
+          static fn (): int => $registrationContext->maximumArtifactBytes()
+        );
+      };
+    }
+
+    $registry->registerWithCredentialStore( 'example-vendor', $factory );
   }
 );
 ```
 
 Use `registerWithCredentialStore()` when the provider reads stored credentials.
-Its callback receives two read-only values already bound to the requested
-provider code. `ProviderCredentialStore` exposes display-safe profiles, one
-selected or default credential and the boolean `hasWebhookProfile()` diagnostic
-readiness check. `AuthenticatedWebhookDeliveryEvidenceReader` exposes only
-`latestAuthenticatedDelivery()` for that provider. Neither value accepts a
-provider argument, selects another provider, writes state or exposes sidecar
-paths, signing material, a credential writer or a database/deployment
-repository. The factory must remain local and non-I/O, and the returned provider
-must use exactly the code that was requested. Activating a credential-bearing
-provider therefore trusts it with credentials saved under its code;
-registration order is not publisher authentication, and Core cannot control the
-provider's private code after authorized disclosure.
+Every API-10 factory receives the original two read-only values already bound to
+the requested provider code. A factory explicitly opts into the additive
+`ProviderRegistrationContext` only by declaring a non-variadic, by-value third parameter
+  typed exactly to that class. Existing two-argument factories, variadic factories, and factories whose
+third parameter is passed by reference therefore continue to receive exactly
+two arguments.
+
+`ProviderCredentialStore` exposes display-safe profiles, one selected or
+default credential and the boolean `hasWebhookProfile()` diagnostic readiness
+check. `AuthenticatedWebhookDeliveryEvidenceReader` exposes only
+`latestAuthenticatedDelivery()` for that provider. The registration context
+currently exposes only `maximumArtifactBytes()`. That method lazily resolves
+Core's provider-neutral archive ceiling so invalid site configuration still
+fails at the operation/admission boundary rather than during plugin bootstrap.
+A provider that retains the policy should therefore retain the bounded supplier
+and call it only when the operation actually needs the archive ceiling, not
+while its registration factory is constructing the provider aggregate.
+
+The context is not a service locator and exposes no container, logger, database,
+sidecar, credential writer or other Core implementation service. Because older
+Provider API 10 hosts predate this additive class, the API marker alone does not
+prove the context exists; a provider that wants to remain load-compatible with
+those hosts must feature-detect `ProviderRegistrationContext` before declaring a
+factory that requires it.
+
+Neither provider-bound value accepts a provider argument, selects another
+provider, writes state or exposes sidecar paths, signing material, a credential
+writer or a database/deployment repository. The factory must remain local and
+non-I/O, and the returned provider must use exactly the code that was requested.
+Activating a credential-bearing provider therefore trusts it with credentials
+saved under its code; registration order is not publisher authentication, and
+Core cannot control the provider's private code after authorized disclosure.
 
 Provider API 10 supplies no logger, service container or generic service
-resolver. An
-unexpected caught diagnostic failure may be attached only to a bounded
-request-local `ProviderDiagnosticResult` for Core to log; it is omitted from
-serialization and administrator copy.
+resolver. The additive registration context does not change that marker or turn
+registration into generic dependency injection. An unexpected caught diagnostic
+failure may be attached only to a bounded request-local
+`ProviderDiagnosticResult` for Core to log; it is omitted from serialization and
+administrator copy.
 
 ## Core contract
 
@@ -346,6 +381,7 @@ is exactly `10`.
 The main types you will usually touch while adding a new vendor are:
 
 - `RAN\RepositoryProvider\ProviderRegistry`
+- `RAN\RepositoryProvider\ProviderRegistrationContext`
 - `RAN\RepositoryProvider\RepositoryProvider`
 - `RAN\RepositoryProvider\ProviderMetadata`
 - `RAN\RepositoryProvider\ProviderCode`

@@ -221,8 +221,11 @@ final class BoosterServiceProvider {
 				);
 			}
 		);
-		$releaseRegistrar = new ManagedReleaseUpdaterRegistrar( $releaseUpdater );
-		$providers        = new ProviderRegistry(
+		$releaseRegistrar            = new ManagedReleaseUpdaterRegistrar( $releaseUpdater );
+		$providerRegistrationContext = new \RAN\RepositoryProvider\ProviderRegistrationContext(
+			static fn (): int => PackageArtifactLimit::resolve()
+		);
+		$providers                   = new ProviderRegistry(
 			array(),
 			$secretPolicies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
@@ -231,15 +234,20 @@ final class BoosterServiceProvider {
 				static fn ( ProviderCode $boundCode ): ?\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence => $container
 					->make( DeploymentAttemptRepository::class )
 					->latestAuthenticatedDelivery( $boundCode )
-			)
+			),
+			$providerRegistrationContext
 		);
 		$providers->registerWithCredentialStore(
 			'gh',
-			static fn ( ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence ): RepositoryProvider => GitHubProvider::create(
+			static fn (
+				ProviderCredentialStore $credentials,
+				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				\RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
+			): RepositoryProvider => GitHubProvider::create(
 				$credentials,
 				$deliveryEvidence,
 				$releaseRegistrar,
-				static fn (): int => PackageArtifactLimit::resolve()
+				static fn (): int => $registrationContext->maximumArtifactBytes()
 			)
 		);
 		$container->bind( ProviderRegistry::class, $providers );

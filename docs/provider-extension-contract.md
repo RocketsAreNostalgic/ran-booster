@@ -688,7 +688,21 @@ unsupported-capability behavior in WordPress. The fixture is excluded from the
 runtime release archive and requires no provider-name branches in Booster,
 GitHub or Bitbucket code.
 
-GitHub remains bundled and owned by Core under this same public boundary.
-Provider API 10 proves ordinary-vendor independence; it does not authorize a
-separate GitHub package, repository, dependency or release stream. Extraction
-remains NO-GO unless separately approved after isolation evidence is complete.
+The bundled first-party GitHub implementation is maintained and versioned in
+`RocketsAreNostalgic/ran-booster-github-provider` and consumed by Booster as the
+Composer package `ran/booster-github-provider`. Booster pins an immutable
+released version, packages only its approved runtime surfaces, and registers its
+`gh` implementation through this same bounded provider model.
+
+Booster remains the owner of Provider API contracts, registry lifecycle,
+credential custody, administration, deployment orchestration, and other
+provider-neutral host policy. The provider package owns GitHub-specific
+transport, browsing, diagnostics, webhook behavior, release behavior, and
+release-workflow assistance. The package has no production dependency on the
+whole Booster plugin.
+
+Provider API 10 remains pre-release. The package therefore targets the current
+certified Booster host contract rather than promising arbitrary compatibility
+with historical pre-release hosts. GitHub-specific implementation issues belong
+in the provider repository; host-integration or provider-neutral contract issues
+belong in Booster.

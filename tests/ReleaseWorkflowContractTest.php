@@ -150,7 +150,10 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'expected_files=\'[".release-please-manifest.json","CHANGELOG.md","ran-booster.php","readme.txt"]\'', $workflow );
 		self::assertStringContainsString( '(.files | type) == "array"', $workflow );
 		self::assertStringContainsString( '(.files | length) == 0', $workflow );
-		self::assertStringContainsString( 'commits(last: 1)', $workflow );
+		self::assertStringContainsString( 'git/ref/heads/${release_branch}', $workflow );
+		self::assertStringContainsString( 'query($owner: String!, $name: String!, $head: GitObjectID!)', $workflow );
+		self::assertStringContainsString( 'object(oid: $head)', $workflow );
+		self::assertStringNotContainsString( 'commits(last: 1)', $workflow );
 		self::assertStringContainsString( 'signature {', $workflow );
 		self::assertStringContainsString( 'bash scripts/reconcile-release-candidate-marker.sh', $workflow );
 		self::assertStringContainsString( 'bash scripts/has-trusted-release-candidate-run.sh', $workflow );
@@ -162,11 +165,16 @@ final class ReleaseWorkflowContractTest extends TestCase {
 	public function testReleaseFetchesCandidatesWithEphemeralTokenCredentials(): void {
 		$workflow         = $this->workflow( 'release-please.yml' );
 		$credentialHelper = 'credential.helper=!f() { printf "%s\\n" "username=x-access-token" "password=$GH_TOKEN"; }; f';
+		$authenticatedFetch = 'git "${git_auth[@]}" fetch --no-tags origin';
 
 		self::assertStringContainsString( 'persist-credentials: false', $workflow );
 		self::assertSame( 2, substr_count( $workflow, 'test -n "$GH_TOKEN"' ) );
 		self::assertSame( 2, substr_count( $workflow, $credentialHelper ) );
-		self::assertSame( 4, substr_count( $workflow, 'git "${git_auth[@]}" fetch --no-tags origin' ) );
+		self::assertSame( 3, substr_count( $workflow, $authenticatedFetch ) );
+		self::assertStringContainsString( $authenticatedFetch . ' "$release_base"', $workflow );
+		self::assertStringContainsString( $authenticatedFetch . ' "refs/pull/${release_pr_number}/head"', $workflow );
+		self::assertStringContainsString( $authenticatedFetch . ' "refs/heads/${release_branch}"', $workflow );
+		self::assertStringNotContainsString( 'refs/pull/${pr_number}/head', $workflow );
 		self::assertStringNotContainsString( 'git fetch --no-tags origin', $workflow );
 		self::assertStringNotContainsString( 'password=${GH_TOKEN}', $workflow );
 	}

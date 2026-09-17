@@ -52,7 +52,6 @@ use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
-use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
@@ -115,11 +114,6 @@ $ran_booster_core_development_notice->register();
 	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
 	$ran_booster_runtime->boosterUrl  = plugin_dir_url( __FILE__ );
 	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater, plugin_basename( __FILE__ ) );
-	if ( ! defined( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION' ) ) {
-		define( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION', 1 );
-	} elseif ( 1 !== RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION ) {
-		throw new LogicException( 'RAN Booster bundled GitHub webhook management conflicts with an existing feature marker.' );
-	}
 	$ran_booster_container->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
 	$ran_booster_container->bind( CoreSelfUpdateDevelopmentNotice::class, $ran_booster_core_development_notice );
 	register_activation_hook( __FILE__, array( $ran_booster_runtime, 'activate' ) );
@@ -189,11 +183,7 @@ $ran_booster_core_development_notice->register();
 				},
 				PHP_INT_MAX
 			);
-			if ( GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
-				RepositoryWebhookManagementControls::registerLegacyAssistedHooksAddOnNotice();
-			} else {
-				$ran_booster_container->make( RepositoryWebhookManagementControls::class )->register();
-			}
+			$ran_booster_container->make( RepositoryWebhookManagementControls::class )->register();
 			$addOnRegistry = new AdminAddOnRegistry(
 				array(),
 				RAN_BOOSTER_ADDON_API_VERSION,

@@ -47,11 +47,9 @@ jq -e \
 	def merge_wrapper:
 		valid_web_flow
 		and .committer.email == $committer_email;
-	.identity.data.repository.pullRequest.commits.nodes
-	| length == 1
-	and .[0].commit.oid == $head
-	and (.[0].commit as $head_commit
-		| $head_commit.parents as $parents
+	.identity.data.repository.object as $head_commit
+	| $head_commit.oid == $head
+	and ($head_commit.parents as $parents
 		| ($parents.totalCount == 1 and ($parents.nodes | length) == 1 and $parents.nodes[0].oid == $base and ($head_commit | generated_release))
 			or ($parents.totalCount == 2 and ($parents.nodes | length) == 2 and ($head_commit | merge_wrapper)
 				and any($parents.nodes[]; .oid == $base)

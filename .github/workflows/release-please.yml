@@ -175,6 +175,7 @@ jobs:
         if: steps.release-state.outputs.release-please-required == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RAN_QUALITY_COMMIT: ${{ github.event.workflow_run.head_sha }}
           RAN_RELEASE_PRS: ${{ steps.release-please.outputs.prs }}
           RAN_RELEASE_PRS_CREATED: ${{ steps.release-please.outputs.prs_created }}
         shell: bash
@@ -246,16 +247,19 @@ jobs:
           fi
 
           pr_number="$(jq -er '.number' <<< "$release_pr")"
-          base_sha="$(jq -er '.base.sha' <<< "$release_pr")"
-          head_sha="$(jq -er '.head.sha' <<< "$release_pr")"
+          base_sha="$RAN_QUALITY_COMMIT"
           head_ref="$(jq -er '.head.ref' <<< "$release_pr")"
+          test "$head_ref" = "$release_branch"
+          head_sha="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/git/ref/heads/${release_branch}" \
+            --jq '.object.sha')"
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
           if [[ "$action_output" == true ]]; then
             test "$pr_number" = "$action_pr_number"
           fi
-          if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
-            git "${git_auth[@]}" fetch --no-tags origin "$base_sha"
-          fi
-          git "${git_auth[@]}" fetch --no-tags origin "refs/pull/${pr_number}/head"
+          test "$(git rev-parse HEAD)" = "$base_sha"
+          git "${git_auth[@]}" fetch --no-tags origin "refs/heads/${release_branch}"
           test "$(git rev-parse FETCH_HEAD)" = "$head_sha"
           bash scripts/validate-release-candidate.sh "$base_sha" "$head_sha"
 
@@ -268,31 +272,17 @@ jobs:
           commit_identity="$(gh api graphql \
             -F owner="$owner" \
             -F name="$repository_name" \
-            -F number="$pr_number" \
+            -F head="$head_sha" \
             -f query='
-              query($owner: String!, $name: String!, $number: Int!) {
+              query($owner: String!, $name: String!, $head: GitObjectID!) {
                 repository(owner: $owner, name: $name) {
-                  pullRequest(number: $number) {
-                    commits(last: 1) {
-                      nodes {
-                        commit {
+                  object(oid: $head) {
+                    ... on Commit {
+                      oid
+                      parents(first: 3) {
+                        totalCount
+                        nodes {
                           oid
-                          parents(first: 3) {
-                            totalCount
-                            nodes {
-                              oid
-                              signature {
-                                isValid
-                                state
-                                signer { login }
-                              }
-                              author {
-                                email
-                                user { login }
-                              }
-                              committer { email }
-                            }
-                          }
                           signature {
                             isValid
                             state
@@ -305,6 +295,16 @@ jobs:
                           committer { email }
                         }
                       }
+                      signature {
+                        isValid
+                        state
+                        signer { login }
+                      }
+                      author {
+                        email
+                        user { login }
+                      }
+                      committer { email }
                     }
                   }
                 }

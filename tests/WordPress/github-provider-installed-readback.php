@@ -28,7 +28,7 @@ $metadata  = $provider->getMetadata();
 $admin     = $metadata->admin;
 
 if ( ! $registry->isSealed()
-	|| ! $provider instanceof RAN\Booster\GitHub\GitHubProvider
+	|| ! $provider instanceof RAN\BoosterGitHubProvider\V1\GitHubProvider
 	|| 'gh' !== $metadata->code->value
 	|| 'GitHub' !== $metadata->label
 	|| 'https://github.com/' !== $metadata->repositoryUrlBase
@@ -85,12 +85,17 @@ if ( array( 'overview', 'gh', 'portability', 'documentation', 'troubleshooting' 
 	throw new RuntimeException( 'The installed GitHub provider navigation does not match the bundled contract.' );
 }
 
-$module_root = $plugin_root . '/RAN/Booster/GitHub/';
+$module_root = $plugin_root . '/vendor/ran/booster-github-provider/src/';
+if ( is_dir( $plugin_root . '/RAN/Booster/GitHub' )
+	|| ! is_file( $plugin_root . '/vendor/ran/booster-github-provider/LICENSE' )
+) {
+	throw new RuntimeException( 'The installed GitHub provider package boundary is invalid.' );
+}
 foreach ( array( $provider, $credential_policy, $webhook_policy ) as $module_object ) {
 	$source = ( new ReflectionClass( $module_object ) )->getFileName();
 	$source = is_string( $source ) ? realpath( $source ) : false;
 	if ( false === $source || ! str_starts_with( $source, $module_root ) ) {
-		throw new RuntimeException( 'The installed GitHub provider loaded outside the bundled module tree.' );
+		throw new RuntimeException( 'The installed GitHub provider loaded outside the bundled provider package tree.' );
 	}
 }
 

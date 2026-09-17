@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\RepositoryProvider\Support;
 
-use RAN\Booster\GitHub\CredentialPolicy as GitHubCredentialPolicy;
-use RAN\Booster\GitHub\WebhookPolicy as GitHubWebhookPolicy;
+use RAN\BoosterGitHubProvider\V1\CredentialPolicy as GitHubCredentialPolicy;
+use RAN\BoosterGitHubProvider\V1\WebhookPolicy as GitHubWebhookPolicy;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialPolicy;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;

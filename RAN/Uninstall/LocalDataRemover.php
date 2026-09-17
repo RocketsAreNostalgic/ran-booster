@@ -14,7 +14,7 @@ use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
-use RAN\Booster\GitHub\GitHubProvider;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\PrivateLocationCandidateResolver;

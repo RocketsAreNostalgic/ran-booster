@@ -39,7 +39,7 @@ use RAN\Admin\ManagedPluginFailureRows;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\SecretsRuntimeAvailabilityNotice;
 use RAN\Admin\DatabaseCompatibilityNotice;
-use RAN\Booster\GitHub\GitHubProvider;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Internal\CoreContainer;
 use RAN\Internal\ReleaseManagement\ProspectiveReleaseCandidateReader;

@@ -5,6 +5,9 @@ set -euo pipefail
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 artifact_directory="${repository_root}/build/test-artifacts/published-template-packs"
 php_binary="${PHP_BIN:-php}"
+provider_root="${repository_root}/vendor/ran/booster-github-provider"
+provider_bootstrap="${provider_root}/tests/Booster/GitHub/bootstrap.php"
+provider_test="${provider_root}/tests/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/TemplatePackApi2ContractTest.php"
 
 download_and_verify() {
 	local destination="$1"
@@ -50,10 +53,16 @@ download_and_verify \
 	2c223e14287a1fab28aa91e92d6a454b27e647cfb33f1bb3df965ed995cd89db \
 	https://github.com/RocketsAreNostalgic/ran-booster-release-bootstrap-templates/releases/download/v0.2.0/ran-booster-release-bootstrap-templates.zip
 
+[[ -f "$provider_bootstrap" ]]
+[[ -f "$provider_test" ]]
+
 export RAN_TEMPLATE_PACK_ZIP="$api2_archive"
 export RAN_TEMPLATE_PACK_API1_ZIP="$api1_archive"
+export RAN_BOOSTER_CORE_PATH="$repository_root"
 
 exec "$php_binary" "${repository_root}/vendor/bin/phpunit" \
-	--configuration "${repository_root}/phpunit.published-template-pack.xml" \
+	--bootstrap "$provider_bootstrap" \
+	--group published-template-pack \
 	--fail-on-skipped \
-	--fail-on-phpunit-deprecation
+	--fail-on-phpunit-deprecation \
+	"$provider_test"

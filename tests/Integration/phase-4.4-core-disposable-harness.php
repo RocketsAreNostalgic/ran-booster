@@ -199,7 +199,7 @@ function phase44_worker(): void {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 	require_once ABSPATH . 'wp-admin/includes/class-wp-automatic-updater.php';
 	$origin = WP_PLUGIN_DIR . '/ran-booster';
-	foreach ( array( RAN\Booster::class, RAN\WordPress\CorePackageExecutor::class, RAN\Deployment\PreparedArtifact::class, RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade::class, RAN\Booster\GitHub\GitHubReleaseNativeTarget::class ) as $class ) {
+	foreach ( array( RAN\Booster::class, RAN\WordPress\CorePackageExecutor::class, RAN\Deployment\PreparedArtifact::class, RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade::class, RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget::class ) as $class ) {
 		$file = ( new ReflectionClass( $class ) )->getFileName();
 		if ( ! is_string( $file ) || ! str_starts_with( $file, $origin . '/' ) ) {
 			throw new RuntimeException( 'A Core class did not originate in the installed release.' );
@@ -283,7 +283,7 @@ function phase44_native( string $site, string $type, string $policy, string $mod
 	$beforeDigest = hash_file( 'sha256', 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css' );
 	$archive  = phase44_archive( $site, $type, $slug, '2.0.0', $uri );
 	$GLOBALS['ran_booster_phase44_github_fixture'] = array( 'archive' => $archive, 'mode' => $mode, 'type' => $type );
-	$target = new RAN\Booster\GitHub\GitHubReleaseNativeTarget( $type, 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css', 'phase44-owner/' . $slug, '101', $slug, $id, static fn (): string => 'phase44-token', 'stable', $policy );
+	$target = new RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget( $type, 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css', 'phase44-owner/' . $slug, '101', $slug, $id, static fn (): string => 'phase44-token', 'stable', $policy );
 	if ( ! $target->register() ) throw new RuntimeException( 'Installed Core target registration failed.' );
 	$headers = 'plugin' === $type ? get_plugin_data( WP_PLUGIN_DIR . '/' . $id, false, false ) : get_file_data( get_theme_root() . '/' . $id . '/style.css', array( 'Name' => 'Theme Name', 'Version' => 'Version', 'UpdateURI' => 'Update URI' ), 'theme' );
 	$offer = apply_filters( 'update_' . ( 'plugin' === $type ? 'plugins_' : 'themes_' ) . 'github.com', false, $headers, $id, array() );

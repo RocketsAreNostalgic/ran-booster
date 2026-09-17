@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	private const EXPLICIT_CORE_HOST_INTEGRATIONS = array(
+		'tests/Admin/WebhookManagement/GitHubLegacyAssistedHooksRetirementTest.php',
+		'tests/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',
 		'tests/Logging/GitHubDiagnosticsLoggingTest.php',
 		'tests/Portability/BlueprintRepositoryVerifierTest.php',
@@ -31,8 +33,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {
 		$allowed    = array(
-			'RAN/BoosterServiceProvider.php'     => 'use RAN\Booster\GitHub\GitHubProvider;',
-			'RAN/Uninstall/LocalDataRemover.php' => 'use RAN\Booster\GitHub\GitHubProvider;',
+			'RAN/BoosterServiceProvider.php'     => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
+			'RAN/Uninstall/LocalDataRemover.php' => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
 		);
 		$references = array();
 		$root       = dirname( __DIR__, 2 ) . '/RAN';
@@ -44,7 +46,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local architecture boundary under test.
 			$source = file_get_contents( $file->getPathname() );
 			self::assertIsString( $source );
-			if ( str_contains( $source, 'RAN\Booster\GitHub\\' ) ) {
+			if ( str_contains( $source, 'RAN\BoosterGitHubProvider\V1\\' ) ) {
 				$relative     = str_replace( dirname( __DIR__, 2 ) . '/', '', $file->getPathname() );
 				$references[] = $relative;
 				self::assertArrayHasKey( $relative, $allowed );
@@ -89,7 +91,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local architecture boundary under test.
 			$source = file_get_contents( $path );
 			self::assertIsString( $source );
-			self::assertStringNotContainsString( 'RAN\\Booster\\GitHub', $source, $path );
+			self::assertStringNotContainsString( 'RAN\\BoosterGitHubProvider\\V1', $source, $path );
 			self::assertStringNotContainsString( 'GitHubProvider', $source, $path );
 			self::assertDoesNotMatchRegularExpression( "/(?:===|!==)\\s*['\"]gh['\"]|['\"]gh['\"]\\s*(?:===|!==)/", $source, $path );
 			self::assertStringNotContainsString( 'dispatchCapability', $source, $path );
@@ -109,7 +111,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local test-ownership boundary under test.
 			$source = file_get_contents( $file->getPathname() );
 			self::assertIsString( $source );
-			if ( str_contains( $source, 'RAN\\Booster\\GitHub\\' ) ) {
+			if ( str_contains( $source, 'RAN\\BoosterGitHubProvider\\V1\\' ) ) {
 				$references[] = str_replace( $root . '/', '', $file->getPathname() );
 			}
 		}
@@ -118,5 +120,25 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		$expected = self::EXPLICIT_CORE_HOST_INTEGRATIONS;
 		sort( $expected );
 		self::assertSame( $expected, $references );
+	}
+
+	public function testReleasedProviderIsTheOnlyBundledGitHubImplementation(): void {
+		$root = dirname( __DIR__, 2 );
+		self::assertDirectoryDoesNotExist( $root . '/RAN/Booster/GitHub' );
+		self::assertTrue( class_exists( \RAN\BoosterGitHubProvider\V1\GitHubProvider::class ) );
+
+		$source = ( new \ReflectionClass( \RAN\BoosterGitHubProvider\V1\GitHubProvider::class ) )->getFileName();
+		self::assertIsString( $source );
+		self::assertSame(
+			realpath( $root . '/vendor/ran/booster-github-provider/src/GitHubProvider.php' ),
+			realpath( $source )
+		);
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static host/package ownership boundary under test.
+		$bootstrap = file_get_contents( $root . '/ran-booster.php' );
+		self::assertIsString( $bootstrap );
+		self::assertStringContainsString( 'GitHubProvider::legacyAssistedHooksAddOnIsActive()', $bootstrap );
+		self::assertStringContainsString( 'RepositoryWebhookManagementControls::registerLegacyAssistedHooksAddOnNotice()', $bootstrap );
+		self::assertStringNotContainsString( 'GitHubProvider::registerLegacyAssistedHooksAddOnNotice()', $bootstrap );
 	}
 }

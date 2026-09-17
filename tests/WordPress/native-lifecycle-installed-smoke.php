@@ -3,7 +3,7 @@
 // A fresh WP-CLI request proves the installed Core's eager managed-target scan.
 // phpcs:disable
 
-use RAN\Booster\GitHub\GitHubProvider;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 
@@ -100,7 +100,7 @@ add_filter(
 );
 
 $origin = WP_PLUGIN_DIR . '/ran-booster/';
-foreach ( array( GitHubProvider::class, RAN\Booster\GitHub\GitHubReleaseNativeTarget::class, RAN\WordPress\ManagedReleaseTargetRegistrar::class ) as $class ) {
+foreach ( array( GitHubProvider::class, RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget::class, RAN\WordPress\ManagedReleaseTargetRegistrar::class ) as $class ) {
 	$file = ( new ReflectionClass( $class ) )->getFileName();
 	if ( ! is_string( $file ) || ! str_starts_with( $file, $origin ) ) {
 		throw new RuntimeException( 'The native lifecycle class is not from the installed Core archive.' );

@@ -5,6 +5,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Load the bundled GitHub provider package without shipping Composer's
+ * runtime autoloader in the WordPress release archive.
+ */
+spl_autoload_register(
+	function ( $class ) {
+		$prefix   = 'RAN\\BoosterGitHubProvider\\V1\\';
+		$base_dir = __DIR__ . '/vendor/ran/booster-github-provider/src/';
+		$len      = strlen( $prefix );
+
+		if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+			return;
+		}
+
+		$relative_class = substr( $class, $len );
+		$file           = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+
+		if ( file_exists( $file ) ) {
+			require $file;
+		}
+	}
+);
+
+/**
  * PSR-4 autoloader function, as suggested by the PHP-FIG.
  * See: https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-4-autoloader-examples.md
  */

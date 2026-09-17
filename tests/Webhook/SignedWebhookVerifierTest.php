@@ -6,7 +6,7 @@ namespace Tests\Webhook;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\Booster\GitHub\WebhookPolicy as GitHubWebhookPolicy;
+use RAN\BoosterGitHubProvider\V1\WebhookPolicy as GitHubWebhookPolicy;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\WebhookRejected;
 use RAN\RepositoryProvider\WebhookRequest;

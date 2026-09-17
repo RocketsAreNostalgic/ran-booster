@@ -158,6 +158,25 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		);
 	}
 
+	public function testFreshCandidateIdentityUsesCanonicalReleaseBranchReadback(): void {
+		$workflow      = $this->readText( '.github/workflows/release-please.yml' );
+		$candidateStep = $this->workflowStep( $workflow, 'Validate and dispatch exact Release Please candidate' );
+		$markerScript  = $this->readText( 'scripts/reconcile-release-candidate-marker.sh' );
+
+		self::assertStringContainsString( 'RAN_QUALITY_COMMIT: ${{ github.event.workflow_run.head_sha }}', $candidateStep );
+		self::assertStringContainsString( 'base_sha="$RAN_QUALITY_COMMIT"', $candidateStep );
+		self::assertStringContainsString( 'test "$(git rev-parse HEAD)" = "$base_sha"', $candidateStep );
+		self::assertStringContainsString( 'git/ref/heads/${release_branch}', $candidateStep );
+		self::assertStringContainsString( 'fetch --no-tags origin "refs/heads/${release_branch}"', $candidateStep );
+		self::assertStringContainsString( 'object(oid: $head)', $candidateStep );
+		self::assertStringContainsString( 'query($owner: String!, $name: String!, $head: GitObjectID!)', $candidateStep );
+		self::assertStringNotContainsString( "jq -er '.head.sha'", $candidateStep );
+		self::assertStringNotContainsString( 'refs/pull/${pr_number}/head', $candidateStep );
+		self::assertStringNotContainsString( 'pullRequest(number: $number)', $candidateStep );
+		self::assertStringContainsString( '.identity.data.repository.object as $head_commit', $markerScript );
+		self::assertStringNotContainsString( '.identity.data.repository.pullRequest.commits.nodes', $markerScript );
+	}
+
 	/**
 	 * @return list<string>
 	 */
@@ -240,6 +259,11 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 	}
 
 	private function assertStepGate( string $workflow, string $stepName, string $expectedGate ): void {
+		$step = $this->workflowStep( $workflow, $stepName );
+		self::assertStringContainsString( $expectedGate, $step, $stepName . ' is not bound to release admission.' );
+	}
+
+	private function workflowStep( string $workflow, string $stepName ): string {
 		$marker = '      - name: ' . $stepName;
 		$start  = strpos( $workflow, $marker );
 		self::assertIsInt( $start, $stepName . ' step is missing.' );
@@ -247,8 +271,8 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		if ( false === $end ) {
 			$end = strlen( $workflow );
 		}
-		$step = substr( $workflow, $start, $end - $start );
-		self::assertStringContainsString( $expectedGate, $step, $stepName . ' is not bound to release admission.' );
+
+		return substr( $workflow, $start, $end - $start );
 	}
 
 	/**

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Runtime;
 
-require_once dirname( __DIR__ ) . '/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/WorkflowAssistanceTestBootstrap.php';
+require_once __DIR__ . '/Support/GitHubWorkflowAssistanceWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
-use RAN\Booster\GitHub\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
+use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 
 final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 	public function testReleaseUpdaterIsBoundBeforeEveryBootstrapCapture(): void {

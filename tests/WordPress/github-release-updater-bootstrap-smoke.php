@@ -55,7 +55,7 @@ $assert( 4 === $broker->protocolVersion(), 'The public registrar must use Protoc
 $credentialReads = 0;
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated registration fixture.
 $wpdb   = new stdClass();
-$target = new RAN\Booster\GitHub\GitHubReleaseNativeTarget(
+$target = new RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget(
 	$registrar,
 	'plugin',
 	dirname( __DIR__, 2 ) . '/ran-booster.php',

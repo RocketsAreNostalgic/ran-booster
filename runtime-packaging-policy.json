@@ -3,6 +3,22 @@
     "schema_version": 1,
     "packages": [
         {
+            "name": "ran/booster-github-provider",
+            "repository": "RocketsAreNostalgic/ran-booster-github-provider",
+            "archive_root": "vendor/ran/booster-github-provider",
+            "surfaces": [
+                {
+                    "path": "LICENSE",
+                    "kind": "file"
+                },
+                {
+                    "path": "src",
+                    "kind": "directory"
+                }
+            ],
+            "build_role": null
+        },
+        {
             "name": "ran/updater-support",
             "repository": "RocketsAreNostalgic/ran-updater-support",
             "archive_root": "vendor/ran/updater-support",

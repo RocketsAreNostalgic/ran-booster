@@ -48,6 +48,23 @@ final class RepositoryWebhookManagementControls {
 		$this->controller->useAdminInteractionFacade( $adminInteraction );
 	}
 
+	/** Register the host-owned stop notice while a pre-retirement assisted-hooks add-on owns webhook management. */
+	public static function registerLegacyAssistedHooksAddOnNotice(): void {
+		add_action(
+			'admin_notices',
+			static function (): void {
+				if ( ! current_user_can( 'activate_plugins' ) ) {
+					return;
+				}
+
+				printf(
+					'<div class="notice notice-warning"><p>%s</p></div>',
+					esc_html__( 'Bundled GitHub webhook management is inactive because a pre-retirement RAN Booster Assisted Hooks release is active. Deactivate that add-on to use the bundled feature.', 'ran-booster' )
+				);
+			}
+		);
+	}
+
 	public function register(): void {
 		$this->enabled = true;
 		foreach ( $this->controller->providerMetadataList() as $metadata ) {

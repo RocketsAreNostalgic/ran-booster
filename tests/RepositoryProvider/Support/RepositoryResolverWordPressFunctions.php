@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RAN\Booster\GitHub;
+namespace RAN\BoosterGitHubProvider\V1;
 
 require_once __DIR__ . '/RepositoryResolverWpError.php';
 

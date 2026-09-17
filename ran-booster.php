@@ -52,7 +52,7 @@ use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Booster;
-use RAN\Booster\GitHub\GitHubProvider;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
@@ -190,7 +190,7 @@ $ran_booster_core_development_notice->register();
 				PHP_INT_MAX
 			);
 			if ( GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
-				GitHubProvider::registerLegacyAssistedHooksAddOnNotice();
+				RepositoryWebhookManagementControls::registerLegacyAssistedHooksAddOnNotice();
 			} else {
 				$ran_booster_container->make( RepositoryWebhookManagementControls::class )->register();
 			}

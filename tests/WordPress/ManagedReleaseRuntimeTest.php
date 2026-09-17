@@ -20,7 +20,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
-use RAN\Booster\GitHub\GitHubReleaseNativeTarget;
+use RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;

@@ -4,8 +4,101 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1ebd9e49ea26b49fc539df0619b3937e",
+    "content-hash": "d4a5c0fe253131cca890f54521b1cb49",
     "packages": [
+        {
+            "name": "ran/booster-github-provider",
+            "version": "v0.1.0-beta.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
+                "reference": "ad034dd0d2d4434d0ca6fbcb0750731d25f300d5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/ad034dd0d2d4434d0ca6fbcb0750731d25f300d5",
+                "reference": "ad034dd0d2d4434d0ca6fbcb0750731d25f300d5",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2",
+                "ran/updater-support": "0.1.0-beta.3",
+                "ran/wp-release-updater": "0.1.0-beta.4"
+            },
+            "require-dev": {
+                "php-stubs/wordpress-stubs": "7.0.*",
+                "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+                "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",
+                "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^11.0",
+                "ran/coding-standards": "dev-main",
+                "szepeviktor/phpstan-wordpress": "^2.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "RAN\\BoosterGitHubProvider\\V1\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "check": [
+                    "@validate:strict",
+                    "@lint:syntax",
+                    "@lint:php",
+                    "@test:foundation",
+                    "@test:release-publisher"
+                ],
+                "validate:strict": [
+                    "composer validate --strict --no-check-publish"
+                ],
+                "test:foundation": [
+                    "@php tests/foundation-contract.php"
+                ],
+                "test:implementation": [
+                    "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation"
+                ],
+                "test:release-publisher": [
+                    "node --test tests/release-classification.test.mjs tests/release-workflow-contract.test.mjs tests/release-publisher-decision.test.mjs tests/release-publisher.test.mjs"
+                ],
+                "lint:syntax": [
+                    "find src tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l"
+                ],
+                "lint:php": [
+                    "phpcs --standard=.phpcs.xml --report=summary"
+                ],
+                "format:php": [
+                    "phpcbf --standard=.phpcs.xml --report=summary"
+                ],
+                "standards": [
+                    "@lint:php"
+                ],
+                "standards:fix": [
+                    "@format:php"
+                ],
+                "analyze": [
+                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=512M"
+                ],
+                "format": [
+                    "@format:php"
+                ]
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "First-party GitHub provider implementation for RAN Booster.",
+            "support": {
+                "issues": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/issues",
+                "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
+                "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
+            },
+            "time": "2026-09-17T12:26:45+00:00"
+        },
         {
             "name": "ran/updater-support",
             "version": "v0.1.0-beta.3",
@@ -2972,6 +3065,7 @@
         "phpcompatibility/phpcompatibility-paragonie": 15,
         "phpcompatibility/phpcompatibility-wp": 15,
         "ran/admin-shell": 20,
+        "ran/booster-github-provider": 10,
         "ran/coding-standards": 20,
         "ran/updater-support": 10,
         "ran/wp-branch-updater": 10,

@@ -12,7 +12,22 @@ use PHPUnit\Framework\TestCase;
 
 final class ReleasePlatformContractTest extends TestCase {
 	private const RUNTIME_PACKAGING_POLICY = array(
-		'ran/updater-support'    => array(
+		'ran/booster-github-provider' => array(
+			'repository'   => 'RocketsAreNostalgic/ran-booster-github-provider',
+			'archive_root' => 'vendor/ran/booster-github-provider',
+			'surfaces'     => array(
+				array(
+					'path' => 'LICENSE',
+					'kind' => 'file',
+				),
+				array(
+					'path' => 'src',
+					'kind' => 'directory',
+				),
+			),
+			'build_role'   => null,
+		),
+		'ran/updater-support'         => array(
 			'repository'   => 'RocketsAreNostalgic/ran-updater-support',
 			'archive_root' => 'vendor/ran/updater-support',
 			'surfaces'     => array(
@@ -27,7 +42,7 @@ final class ReleasePlatformContractTest extends TestCase {
 			),
 			'build_role'   => null,
 		),
-		'ran/wp-branch-updater'  => array(
+		'ran/wp-branch-updater'       => array(
 			'repository'   => 'RocketsAreNostalgic/ran-wp-branch-updater',
 			'archive_root' => 'vendor/ran/wp-branch-updater',
 			'surfaces'     => array(
@@ -46,7 +61,7 @@ final class ReleasePlatformContractTest extends TestCase {
 			),
 			'build_role'   => null,
 		),
-		'ran/wp-release-updater' => array(
+		'ran/wp-release-updater'      => array(
 			'repository'   => 'RocketsAreNostalgic/ran-wp-release-updater',
 			'archive_root' => 'vendor/ran/wp-release-updater',
 			'surfaces'     => array(

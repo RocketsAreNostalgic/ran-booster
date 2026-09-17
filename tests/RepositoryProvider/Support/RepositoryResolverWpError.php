@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RAN\Booster\GitHub;
+namespace RAN\BoosterGitHubProvider\V1;
 
 final readonly class RepositoryResolverWpError {
 

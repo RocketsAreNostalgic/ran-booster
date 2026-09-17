@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\BlueprintPackage;
 use RAN\Portability\PackageBlueprint;
-use RAN\Booster\GitHub\CredentialPolicy as GitHubCredentialPolicy;
+use RAN\BoosterGitHubProvider\V1\CredentialPolicy as GitHubCredentialPolicy;
 use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;

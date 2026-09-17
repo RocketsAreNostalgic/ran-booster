@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Tests\RepositoryProvider;
 
-require_once dirname( __DIR__ ) . '/Booster/GitHub/Support/RepositoryResolverWordPressFunctions.php';
+require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
 require_once __DIR__ . '/AuthenticatedPreparedArchiveWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\Booster\GitHub\GitHubProvider;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\AuthenticatedPreparedArchive;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\StaleDeployment;
 use RuntimeException;
-use Tests\Booster\GitHub\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
-use Tests\Booster\GitHub\Support\RepositoryResolverSecretsStub;
+use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use Tests\RepositoryProvider\Support\RepositoryResolverSecretsStub;
 
 final class GitHubArchiveHostIntegrationTest extends TestCase {
 
@@ -26,7 +26,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		parent::setUp();
 
 		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
-		\RAN\Booster\GitHub\repository_resolver_http_reset(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_reset(
 			$this->response(
 				200,
 				array(
@@ -47,7 +47,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 	public function testWebhookCommitChecksCurrentPublicBranchBeforePreparingImmutableArchive(): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse(),
 				$this->response(
@@ -64,7 +64,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		$archive  = $provider->prepareArchive(
 			$this->archiveRequest( $commit, false, null, 'release/candidate' )
 		);
-		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();
 
 		self::assertSame(
 			'https://api.github.com/repos/RocketsAreNostalgic/example-plugin/branches/release%2Fcandidate',
@@ -83,7 +83,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 	public function testPrivateWebhookHeadResolutionUsesSelectedCredentialBeforeArchiveAuthentication(): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse( true ),
 				$this->response(
@@ -100,7 +100,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		$archive  = $provider->prepareArchive(
 			$this->archiveRequest( $commit, true, 'private-profile', 'main' )
 		);
-		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();
 
 		self::assertSame( 'Bearer ' . self::TOKEN, $requests[0]['arguments']['headers']['Authorization'] );
 		self::assertSame( 'Bearer ' . self::TOKEN, $requests[1]['arguments']['headers']['Authorization'] );
@@ -115,7 +115,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 	public function testStaleWebhookCommitFailsBeforeArchiveAuthenticationIsRegistered(): void {
 		$current = '0123456789abcdef0123456789abcdef01234567';
 		$stale   = '89abcdef0123456789abcdef0123456789abcdef';
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse( true ),
 				$this->response(
@@ -138,12 +138,12 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			self::assertSame( 'The GitHub deployment event is stale because the configured branch has moved.', $exception->getMessage() );
 		}
 
-		self::assertCount( 2, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 		$this->assertNoArchiveHooks();
 	}
 
 	public function testRepositoryIdentityMismatchFailsBeforeBranchLookupOrArchiveAuthentication(): void {
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array( $this->repositoryIdentityResponse( true, 'different-repository-id' ) )
 		);
 		$secrets  = new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) );
@@ -164,7 +164,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			self::assertSame( 'GitHub returned an invalid repository identity while resolving the branch.', $exception->getMessage() );
 		}
 
-		self::assertCount( 1, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 1, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 		$this->assertNoArchiveHooks();
 	}
 
@@ -174,7 +174,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		int $expectedCode,
 		?int $retryAfterSeconds = null
 	): void {
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array( $this->repositoryIdentityResponse( true ), $response )
 		);
 		$secrets  = new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) );
@@ -196,7 +196,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			self::assertStringNotContainsString( 'upstream-response-canary', $exception->getMessage() );
 		}
 
-		self::assertCount( 2, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 		$this->assertNoArchiveHooks();
 	}
 
@@ -205,10 +205,10 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 	 */
 	public static function branchHeadFailureProvider(): array {
 		return array(
-			'transport error'    => array( new \RAN\Booster\GitHub\RepositoryResolverWpError( 'http_request_failed' ), 502, null ),
-			'blocked transport'  => array( new \RAN\Booster\GitHub\RepositoryResolverWpError( 'http_request_not_executed' ), 502, null ),
-			'local policy error' => array( new \RAN\Booster\GitHub\RepositoryResolverWpError( 'local_policy_canary' ), 502, null ),
-			'no transport'       => array( new \RAN\Booster\GitHub\RepositoryResolverWpError( 'http_failure' ), 502, null ),
+			'transport error'    => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_failed' ), 502, null ),
+			'blocked transport'  => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_not_executed' ), 502, null ),
+			'local policy error' => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'local_policy_canary' ), 502, null ),
+			'no transport'       => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_failure' ), 502, null ),
 			'rate limit'         => array(
 				array(
 					'response' => array( 'code' => 429 ),
@@ -288,7 +288,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 	public function testManualBranchResolvesOnceToAnImmutableGitHubCommit(): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse(),
 				$this->shaResponse( strtoupper( $commit ) ),
@@ -298,22 +298,22 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		$provider = $this->provider( $secrets );
 		$archive  = $provider->prepareArchive( $this->archiveRequest( 'release', false ) );
 
-		self::assertCount( 2, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 		self::assertSame(
 			'https://api.github.com/repos/RocketsAreNostalgic/example-plugin/zipball/' . $commit,
 			$archive->getUrl()
 		);
 		self::assertSame( $commit, $archive->getResolvedRef() );
-		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();
 		self::assertSame( 'application/vnd.github.sha', $requests[1]['arguments']['headers']['Accept'] );
 		self::assertSame( 128, $requests[1]['arguments']['limit_response_size'] );
 		$archive->verifyCurrentHead();
-		self::assertCount( 2, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 		$this->assertNoArchiveHooks();
 	}
 
 	public function testManualRefRejectsAnOversizedShaOnlyResponseAtTheBoundedHttpLayer(): void {
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse(),
 				array(
@@ -332,14 +332,14 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			self::assertStringContainsString( 'invalid revision-resolution response', $exception->getMessage() );
 		}
 
-		$requests = \RAN\Booster\GitHub\repository_resolver_http_requests();
+		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();
 		self::assertSame( 128, $requests[1]['arguments']['limit_response_size'] );
 	}
 
 	public function testAutomaticArchiveRechecksTheBranchImmediatelyBeforeMutation(): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
 		$moved  = '89abcdef0123456789abcdef0123456789abcdef';
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse(),
 				$this->response(
@@ -368,14 +368,14 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			self::assertSame( 409, $exception->getCode() );
 		}
 
-		self::assertCount( 3, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 3, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 	}
 
 	public function testManualTagAndCommitAlsoResolveToImmutableGitHubCommits(): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
 
 		foreach ( array( 'v1.2.3', strtoupper( $commit ) ) as $ref ) {
-			\RAN\Booster\GitHub\repository_resolver_http_queue(
+			\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 				array(
 					$this->repositoryIdentityResponse(),
 					$this->shaResponse( strtoupper( $commit ) ),
@@ -386,7 +386,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 			self::assertSame( $commit, $archive->getResolvedRef(), $ref );
 			self::assertStringEndsWith( '/zipball/' . $commit, $archive->getUrl(), $ref );
-			self::assertCount( 2, \RAN\Booster\GitHub\repository_resolver_http_requests(), $ref );
+			self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests(), $ref );
 			$archive->cleanup();
 		}
 	}
@@ -402,7 +402,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			self::assertSame( 400, $exception->getCode() );
 		}
 
-		self::assertSame( array(), \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertSame( array(), \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 		self::assertSame( array(), $secrets->lookups );
 		$this->assertNoArchiveHooks();
 	}
@@ -484,7 +484,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 	public function testCleanupIsIdempotentAndAutomaticHeadVerificationSurvivesArchiveAuthenticationCleanup(): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse( true ),
 				$this->response(
@@ -511,7 +511,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			$archive->getUrl()
 		);
 		$archive->verifyCurrentHead();
-		self::assertCount( 3, \RAN\Booster\GitHub\repository_resolver_http_requests() );
+		self::assertCount( 3, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 
 		$archive->cleanup();
 		$archive->cleanup();
@@ -520,7 +520,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 	private function privateImmutableArchive( RepositoryResolverSecretsStub $secrets ): AuthenticatedPreparedArchive {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
-		\RAN\Booster\GitHub\repository_resolver_http_queue(
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->repositoryIdentityResponse( true ),
 				$this->shaResponse( $commit ),

@@ -356,6 +356,36 @@ jobs:
               exit 1
             }
 
+          projection_ready=false
+          for delay in 0 1 2 4 8; do
+            sleep "$delay"
+            if projection="$(gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" 2>/dev/null)" \
+              && jq -e \
+                --arg base "$base_sha" \
+                --arg bot 'github-actions[bot]' \
+                --arg head "$release_branch" \
+                --arg head_sha "$head_sha" \
+                --arg repository "$GITHUB_REPOSITORY" \
+                '.state == "open"
+                  and .merged_at == null
+                  and .base.ref == "main"
+                  and .base.sha == $base
+                  and .head.ref == $head
+                  and .head.sha == $head_sha
+                  and .head.repo.full_name == $repository
+                  and .user.login == $bot' \
+                <<< "$projection" >/dev/null; then
+              projection_ready=true
+              break
+            fi
+          done
+          if [[ "$projection_ready" != true ]]; then
+            echo '::error::The Release Please pull-request projection did not converge to the exact admitted candidate.'
+            exit 1
+          fi
+
           workflow_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/quality.yml" --jq '.id')"
           runs="$(gh api \
             "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs?head_sha=${head_sha}&per_page=100")"

@@ -1,17 +1,17 @@
 # Provider registration and coexistence: current state
 
 **Status:** Current-source characterization for Provider API 10, reviewed on
-17 August 2026. This document records behavior that exists now. It does not
+17 September 2026. This document records behavior that exists now. It does not
 reserve new vendor names, change registration, or authorize the proposed
 hardening work.
 
 ## Short answer
 
 Booster currently prevents two provider implementations from owning the same
-exact provider code. The bundled GitHub provider registers `gh` before the
-public provider-registration action, so a community provider cannot also
-register `gh` through the supported API or receive the credential store bound
-to that code.
+exact provider code. The bundled first-party GitHub package implementation
+registers `gh` before the public provider-registration action, so a community
+provider cannot also register `gh` through the supported API or receive the
+credential store bound to that code.
 
 That is the strongest current overlap protection. It is code-level isolation,
 not vendor-level exclusivity:
@@ -48,8 +48,11 @@ This ordering means the bundled `gh` claim is established before community
 callbacks run. Registration after sealing is rejected, and a provider
 activated during the current request becomes available on the next request.
 
-The relevant composition paths are `RAN/BoosterServiceProvider.php`,
-`ran-booster.php`, and `RAN/RepositoryProvider/ProviderRegistry.php`.
+The relevant host composition paths are `RAN/BoosterServiceProvider.php`,
+`ran-booster.php`, and `RAN/RepositoryProvider/ProviderRegistry.php`. The
+GitHub-specific implementation source is maintained separately in
+`RocketsAreNostalgic/ran-booster-github-provider` and is consumed by Booster as
+the released Composer package `ran/booster-github-provider`.
 
 ## What exact-code registration protects
 
@@ -130,9 +133,12 @@ coordinate two implementations pointed at the same remote repository.
 
 ## Bundled GitHub is not currently optional at runtime
 
-The bundled GitHub module uses the ordinary Provider API boundary, but Core
-always registers it as `gh`. There is no current preference to hide or disable
-it.
+The bundled GitHub package implementation uses the ordinary Provider API
+boundary, but Booster always registers it as `gh`. Its implementation, tests,
+issues, and releases are owned by `RocketsAreNostalgic/ran-booster-github-provider`;
+Booster retains host composition, registration, credential custody, and other
+provider-neutral policy. There is no current preference to hide or disable the
+bundled provider.
 
 Several first-party surfaces still know explicitly about `gh`, but repository
 webhook-management placement no longer does. Core places its fixed controls for
@@ -178,9 +184,9 @@ three runtime provider families:
 | GitLab          | `gl`            | GitLab.com or a configured self-managed GitLab base |
 
 The inherited Branch material was product marketing, not a fourth runtime Git
-provider. RAN Booster currently bundles GitHub; Bitbucket is an optional
-provider add-on; GitLab remains historical migration context rather than a
-bundled current provider.
+provider. RAN Booster currently bundles the GitHub provider package; Bitbucket
+is an optional provider add-on; GitLab remains historical migration context
+rather than a bundled current provider.
 
 ## Current guarantee
 

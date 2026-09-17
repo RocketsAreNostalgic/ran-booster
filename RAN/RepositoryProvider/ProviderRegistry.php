@@ -25,6 +25,7 @@ final class ProviderRegistry {
 	private ProviderSecretPolicyCatalog $secretPolicies;
 	private ?\Closure $credentialStoreFactory;
 	private ?\Closure $deliveryEvidenceReaderFactory;
+	private ?ProviderRegistrationContext $registrationContext;
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
@@ -33,7 +34,8 @@ final class ProviderRegistry {
 		iterable $providers = array(),
 		?ProviderSecretPolicyCatalog $secretPolicies = null,
 		?callable $credentialStoreFactory = null,
-		?callable $deliveryEvidenceReaderFactory = null
+		?callable $deliveryEvidenceReaderFactory = null,
+		?ProviderRegistrationContext $registrationContext = null
 	) {
 		$this->secretPolicies                = $secretPolicies ?? new ProviderSecretPolicyCatalog();
 		$this->credentialStoreFactory        = null === $credentialStoreFactory
@@ -42,6 +44,7 @@ final class ProviderRegistry {
 		$this->deliveryEvidenceReaderFactory = null === $deliveryEvidenceReaderFactory
 			? null
 			: \Closure::fromCallable( $deliveryEvidenceReaderFactory );
+		$this->registrationContext           = $registrationContext;
 
 		foreach ( $providers as $provider ) {
 			$this->register( $provider );
@@ -55,7 +58,11 @@ final class ProviderRegistry {
 	 * The factory must construct its aggregate locally without network or other
 	 * side effects. Registration remains atomic after the aggregate is returned.
 	 *
-	 * @param callable(ProviderCredentialStore, AuthenticatedWebhookDeliveryEvidenceReader): RepositoryProvider $factory Provider factory.
+	 * Provider API 10 factories continue to receive exactly the original two
+	 * arguments unless they explicitly opt into the additive context by declaring
+	 * a non-variadic, by-value third parameter typed ProviderRegistrationContext.
+	 *
+	 * @param callable $factory Provider factory.
 	 */
 	public function registerWithCredentialStore( ProviderCode|string $code, callable $factory ): void {
 		$this->beginRegistration();
@@ -93,7 +100,9 @@ final class ProviderRegistry {
 			}
 
 			try {
-				$provider = $factory( $credentials, $deliveryEvidence );
+				$provider = null !== $this->registrationContext && $this->factoryRequestsRegistrationContext( $factory )
+					? $factory( $credentials, $deliveryEvidence, $this->registrationContext )
+					: $factory( $credentials, $deliveryEvidence );
 			} catch ( \Throwable $exception ) {
 				BoosterLogger::logException( 'provider registration provider factory failed', $exception, array( 'step' => 'provider_factory' ) );
 				throw InvalidProviderPolicy::invalidProviderFactory();
@@ -264,6 +273,19 @@ final class ProviderRegistry {
 			BoosterLogger::logException( 'provider registration metadata unavailable', $exception, array( 'step' => 'provider_metadata' ) );
 			throw InvalidProviderPolicy::unavailableMetadata();
 		}
+	}
+
+	private function factoryRequestsRegistrationContext( callable $factory ): bool {
+		$parameters = ( new \ReflectionFunction( \Closure::fromCallable( $factory ) ) )->getParameters();
+		if ( ! isset( $parameters[2] ) || $parameters[2]->isVariadic() || $parameters[2]->isPassedByReference() ) {
+			return false;
+		}
+
+		$type = $parameters[2]->getType();
+
+		return $type instanceof \ReflectionNamedType
+			&& ! $type->isBuiltin()
+			&& ProviderRegistrationContext::class === $type->getName();
 	}
 
 	private function assertCanRegisterCode( ProviderCode $code ): void {

@@ -8,8 +8,10 @@ use LogicException;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
+use RAN\RepositoryProvider\ProviderRegistrationContext;
 use RAN\RepositoryProvider\ProviderRegistry;
 use ReflectionClass;
+use ReflectionNamedType;
 
 final class ProviderApiLifecycleTest extends TestCase {
 
@@ -36,10 +38,16 @@ final class ProviderApiLifecycleTest extends TestCase {
 	}
 
 	public function testProviderRegistryExposesNoLoggingFacade(): void {
-		$registry = new ReflectionClass( ProviderRegistry::class );
+		$registry   = new ReflectionClass( ProviderRegistry::class );
+		$parameters = $registry->getConstructor()?->getParameters() ?? array();
 
 		self::assertFalse( $registry->hasMethod( 'logging' ) );
-		self::assertCount( 4, $registry->getConstructor()?->getParameters() ?? array() );
+		self::assertCount( 5, $parameters );
+		self::assertSame( 'registrationContext', $parameters[4]->getName() );
+		self::assertTrue( $parameters[4]->isOptional() );
+		self::assertTrue( $parameters[4]->allowsNull() );
+		self::assertInstanceOf( ReflectionNamedType::class, $parameters[4]->getType() );
+		self::assertSame( ProviderRegistrationContext::class, $parameters[4]->getType()?->getName() );
 	}
 
 	public function testProviderRegistryRequiresNoLoggingFacade(): void {

@@ -2,7 +2,9 @@
 
 RAN Booster Provider API 10 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
-file during normal plugin loading:
+file during normal plugin loading. The original two-argument factory remains the
+API-10 compatibility floor; feature-detect the bounded registration context
+before requiring it:
 
 ```php
 add_action(
@@ -13,13 +15,26 @@ add_action(
 			return;
 		}
 
-		$registry->registerWithCredentialStore(
-			'example',
-			static fn (
+		$factory = static fn (
+			\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
+			\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+		): ExampleProvider => new ExampleProvider( $credentials, $deliveryEvidence );
+
+		if ( class_exists( \RAN\RepositoryProvider\ProviderRegistrationContext::class ) ) {
+			$factory = static function (
 				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
-			): ExampleProvider => new ExampleProvider( $credentials, $deliveryEvidence )
-		);
+				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				\RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
+			): ExampleProvider {
+				return new ExampleProvider(
+					$credentials,
+					$deliveryEvidence,
+					static fn (): int => $registrationContext->maximumArtifactBytes()
+				);
+			};
+		}
+
+		$registry->registerWithCredentialStore( 'example', $factory );
 	}
 );
 ```
@@ -42,8 +57,12 @@ a newly activated provider becomes available on the next request.
 
 `registerWithCredentialStore()` is the required path for a provider that reads
 stored credentials. Booster verifies that the requested code is novel before it
-issues two read-only values bound to that code, then verifies that the returned
-provider uses the same code before atomic registration:
+issues the original two read-only values bound to that code. A factory explicitly
+opts into the additive provider-neutral registration context only by declaring a
+non-variadic, by-value third parameter typed exactly `ProviderRegistrationContext`; all
+other API-10 factories, including variadic or by-reference third-parameter
+factories, continue to receive exactly two arguments. Core then verifies that the returned provider uses the
+same requested code before atomic registration:
 
 - `ProviderCredentialStore` exposes display-safe `credentialProfiles()`, one
   selected/default `credentialMaterial()` read and boolean
@@ -53,18 +72,39 @@ provider uses the same code before atomic registration:
   `latestAuthenticatedDelivery()` for the already-bound provider. It has no
   provider argument and exposes neither the deployment database repository nor
   general attempt history.
+- `ProviderRegistrationContext` currently exposes only
+  `maximumArtifactBytes()`. That method lazily resolves Core's provider-neutral
+  archive ceiling and returns it as an integer. The lazy resolution preserves
+  the existing operation/admission failure boundary: an invalid site override
+  does not make plugin bootstrap fatal. The context is not a service locator and
+  exposes no container, logger, database, credential writer, sidecar, storage
+  repository or other Core implementation service.
 
-Core binds both values before invoking the callback, so retaining either value
-cannot cross provider namespaces. Repeated exact credential reads mean an
-activated credential-bearing provider is trusted with all credentials saved
-under its code. Core does not authenticate the provider publisher, and cannot
-control private provider logging or exfiltration after authorized disclosure.
-The factory and provider constructor must remain local and non-I/O and must not
-read either supplied value during construction: provider policy becomes active
-only after the factory returns successfully. Validators, discovery clients and
-archive clients may retain the credential store and read it after registration;
-webhook diagnostics may retain the evidence reader. Both use Core's live state
-without receiving its storage implementations.
+A provider that retains the host artifact policy should retain the bounded
+supplier and invoke `maximumArtifactBytes()` only when the relevant archive or
+release operation needs the ceiling, not while its registration factory is
+constructing the aggregate. Because older Provider API 10 hosts predate this
+additive class, the global API marker alone does not prove the context exists; a
+provider that wants to remain load-compatible with those hosts must
+feature-detect `ProviderRegistrationContext` before declaring a factory that
+requires it. This bounded addition does not change the global Provider API 10
+marker and does not create a generic dependency-injection seam.
+
+Core binds the two provider-specific values before invoking the callback and
+makes the same host registration context available to explicitly opted-in
+credential-bearing provider factories, so retaining either provider-bound value
+cannot cross provider namespaces and the artifact policy does not vary by
+provider. Repeated exact credential reads mean an activated credential-bearing
+provider is trusted with all credentials saved under its code. Core does not
+authenticate the provider publisher, and cannot control private provider logging
+or exfiltration after authorized disclosure. The factory and provider
+constructor must remain local and non-I/O and must not read either supplied
+provider-bound value or resolve the host artifact policy during construction:
+provider policy becomes active only after the factory returns successfully.
+Validators, discovery clients and archive clients may retain the credential
+store and read it after registration; webhook diagnostics may retain the
+evidence reader. Those values use Core's live state without receiving its
+storage implementations.
 
 Registration failures expose fixed, redacted messages and retain no upstream
 exception. A rejected provider publishes neither provider nor policy state, so
@@ -201,8 +241,9 @@ Deployment tabs and independently supported release consumption remain usable.
 Remote inspection requires an explicit action. Outcomes return to the exact
 repository Releases tab, with diagnostics inside its notice area.
 
-These optional workflow facets do not change Provider API 10 or its registration
-factory, and introduce no repository settings object or shared workflow storage.
+These optional workflow facets do not further widen Provider API 10's bounded
+registration context and introduce no repository settings object or shared
+workflow storage.
 
 Because the global Provider API marker remains 10, an API-2-aware provider must
 feature-detect `RepositoryReleaseWorkflowManagementV2` with `interface_exists()`

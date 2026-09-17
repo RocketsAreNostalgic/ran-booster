@@ -6,11 +6,14 @@ namespace Tests\RepositoryProvider;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private registration spies belong with this host-boundary test.
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\BoosterServiceProvider;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Internal\CoreContainer;
+use RAN\PackageArtifactLimit;
 use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\CredentialValidator;
@@ -88,9 +91,59 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertSame( 1, $secrets->credentialStoresIssued );
 		self::assertSame( 0, $secrets->credentialStore->reads );
 
+		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximumArtifactBytes' ) )->getValue( $provider );
+		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
+		self::assertSame( PackageArtifactLimit::resolve(), $artifactLimitSupplier() );
+
 		$firstControls  = $container->make( RepositoryWebhookManagementControls::class );
 		$secondControls = $container->make( RepositoryWebhookManagementControls::class );
 		self::assertSame( $firstControls, $secondControls );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testCoreSuppliesConfiguredArtifactLimitToBundledGitHub(): void {
+		$configuredLimit = 67_108_864;
+		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $configuredLimit );
+
+		$container = new CoreContainer();
+		$runtime   = new Booster( $container );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
+		$GLOBALS['wpdb'] = new class() {
+			public string $prefix = 'wp_';
+		};
+
+		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+
+		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
+		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximumArtifactBytes' ) )->getValue( $provider );
+
+		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
+		self::assertSame( $configuredLimit, $artifactLimitSupplier() );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testInvalidConfiguredArtifactLimitDoesNotAbortCoreRegistration(): void {
+		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 512 );
+
+		$container = new CoreContainer();
+		$runtime   = new Booster( $container );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
+		$GLOBALS['wpdb'] = new class() {
+			public string $prefix = 'wp_';
+		};
+
+		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+
+		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
+		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximumArtifactBytes' ) )->getValue( $provider );
+
+		self::assertInstanceOf( GitHubProvider::class, $provider );
+		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
+
+		$this->expectException( \InvalidArgumentException::class );
+		$artifactLimitSupplier();
 	}
 }
 

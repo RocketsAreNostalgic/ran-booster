@@ -147,10 +147,11 @@ to existing `gh` credentials. Leaving `gh` absent would instead make existing
 packages unavailable, reject its webhook deliveries, and impair operations
 that require its registered secret policy.
 
-The existing Assisted Hooks compatibility check is a narrow historical bridge:
-when its old standalone integration is detected, Core webhook-management
-presentation is suppressed and an administrator warning is shown.
-It is not a general provider-collision system.
+The retired standalone Assisted Hooks add-on has no runtime coexistence path in
+current Booster. Pre-retirement beta builds must be deactivated and removed
+before deploying this cut; current provider-driven webhook management remains
+the only supported runtime path. Historical persisted records are handled
+separately as a state-custody question and do not alter provider registration.
 
 ## Failure behavior and operational caveats
 

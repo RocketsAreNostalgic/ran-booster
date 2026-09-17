@@ -9,7 +9,6 @@ use PHPUnit\Framework\TestCase;
 final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	private const EXPLICIT_CORE_HOST_INTEGRATIONS = array(
-		'tests/Admin/WebhookManagement/GitHubLegacyAssistedHooksRetirementTest.php',
 		'tests/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',
 		'tests/Logging/GitHubDiagnosticsLoggingTest.php',
@@ -33,8 +32,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {
 		$allowed    = array(
-			'RAN/BoosterServiceProvider.php'     => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
-			'RAN/Uninstall/LocalDataRemover.php' => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
+			'RAN/BoosterServiceProvider.php' => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
 		);
 		$references = array();
 		$root       = dirname( __DIR__, 2 ) . '/RAN';
@@ -137,8 +135,10 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static host/package ownership boundary under test.
 		$bootstrap = file_get_contents( $root . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
-		self::assertStringContainsString( 'GitHubProvider::legacyAssistedHooksAddOnIsActive()', $bootstrap );
-		self::assertStringContainsString( 'RepositoryWebhookManagementControls::registerLegacyAssistedHooksAddOnNotice()', $bootstrap );
-		self::assertStringNotContainsString( 'GitHubProvider::registerLegacyAssistedHooksAddOnNotice()', $bootstrap );
+		self::assertStringContainsString( '$ran_booster_container->make( RepositoryWebhookManagementControls::class )->register();', $bootstrap );
+		self::assertStringNotContainsString( 'legacyAssistedHooksAddOnIsActive', $bootstrap );
+		self::assertStringNotContainsString( 'registerLegacyAssistedHooksAddOnNotice', $bootstrap );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION', $bootstrap );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION', $bootstrap );
 	}
 }

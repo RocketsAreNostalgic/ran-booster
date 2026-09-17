@@ -14,7 +14,6 @@ use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
-use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\PrivateLocationCandidateResolver;
@@ -33,6 +32,7 @@ class LocalDataRemover {
 		CredentialExpiryObservationStore::OPTION_NAME,
 		PublicRepositoryLookupProfileStore::OPTION_NAME,
 		RepositoryBranchCheckEvidenceStore::OPTION_NAME,
+		WordPressInstallationStore::OPTION_NAME,
 		'ran_booster_release_deployments_assessment_observations',
 		'ran_booster_release_deployments_failure_history',
 	);
@@ -175,11 +175,7 @@ class LocalDataRemover {
 		}
 
 		$missing = new \stdClass();
-		$options = self::OPTION_NAMES;
-		if ( ! GitHubProvider::legacyAssistedHooksAddOnIsActive() ) {
-			$options[] = WordPressInstallationStore::OPTION_NAME;
-		}
-		foreach ( array_values( array_unique( $options ) ) as $option ) {
+		foreach ( array_values( array_unique( self::OPTION_NAMES ) ) as $option ) {
 			delete_option( $option );
 			if ( $missing !== get_option( $option, $missing ) ) {
 				throw new RuntimeException( 'Booster options could not be removed.' );

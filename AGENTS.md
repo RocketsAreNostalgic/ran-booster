@@ -51,15 +51,14 @@ never remove or silently weaken those local guarantees.
 - Core owns the fixed webhook-management control surface under
   `RAN\Admin\WebhookManagement`. It resolves the selected provider's exact
   webhook fitness and management facets, reuses the existing admin-interaction
-  services and retains the schema-3 `ran_booster_assisted_hooks_installations`
-  option without migration. Providers own webhook operations and bounded
-  remediation; they do not supply Core UI, routes or schemas.
-  `RAN_BOOSTER_BUNDLED_GITHUB_WEBHOOK_MANAGEMENT_VERSION` and
-  `RAN_BOOSTER_ASSISTED_HOOKS_RETIREMENT_BRIDGE_VERSION` are exact,
-  request-local coexistence markers. An exact retirement bridge is inert; a
-  loaded pre-retirement add-on keeps temporary runtime and uninstall custody
-  while Core suppresses its bundled presentation and shows one administrator
-  notice.
+  services and retains the current `ran_booster_assisted_hooks_installations`
+  state only until its ownership is explicitly reconciled under #150 Gap 4.
+  Providers own webhook operations and bounded remediation; they do not supply
+  Core UI, routes or schemas. Booster is pre-release: do not add or restore
+  runtime adapters, coexistence markers, notices or dispatch branches for the
+  retired Assisted Hooks add-on. Any historical persisted-record migration must
+  be justified separately by concrete state that the controlled installations
+  deliberately need to retain.
 - Extend existing administration surfaces only through the documented
   WordPress-native actions and filters. Preserve the separate, bounded public
   add-on tab registry for add-ons that genuinely need their own dashboard

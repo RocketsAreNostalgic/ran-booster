@@ -163,8 +163,8 @@ final class ReleaseWorkflowContractTest extends TestCase {
 	}
 
 	public function testReleaseFetchesCandidatesWithEphemeralTokenCredentials(): void {
-		$workflow         = $this->workflow( 'release-please.yml' );
-		$credentialHelper = 'credential.helper=!f() { printf "%s\\n" "username=x-access-token" "password=$GH_TOKEN"; }; f';
+		$workflow           = $this->workflow( 'release-please.yml' );
+		$credentialHelper   = 'credential.helper=!f() { printf "%s\\n" "username=x-access-token" "password=$GH_TOKEN"; }; f';
 		$authenticatedFetch = 'git "${git_auth[@]}" fetch --no-tags origin';
 
 		self::assertStringContainsString( 'persist-credentials: false', $workflow );

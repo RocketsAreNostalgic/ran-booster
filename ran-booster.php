@@ -134,7 +134,7 @@ $ran_booster_core_development_notice->register();
 			$coreReleaseTarget = null;
 			if ( $ran_booster_self_update_policy->allowsNativeDiscovery() ) {
 				try {
-					$coreUpdater = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
+					$coreUpdater       = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
 						'github',
 						__FILE__,
 						'RocketsAreNostalgic/ran-booster',

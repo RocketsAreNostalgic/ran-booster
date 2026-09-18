@@ -126,7 +126,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		$bootstrap = file_get_contents( $root . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
 		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $coreUpdater )', $bootstrap );
-		self::assertStringContainsString( "->make( ManagedReleaseUpdaterRegistrar::class )->plugin(", $bootstrap );
+		self::assertStringContainsString( '->make( ManagedReleaseUpdaterRegistrar::class )->plugin(', $bootstrap );
 		self::assertStringNotContainsString( 'RepositoryReleaseNativeTargets', $bootstrap );
 		self::assertStringNotContainsString( 'RepositoryReference', $bootstrap );
 

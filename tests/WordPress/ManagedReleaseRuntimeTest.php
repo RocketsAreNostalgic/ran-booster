@@ -2094,7 +2094,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			DeploymentPolicy::MANUAL,
 			source: PackageSource::BRANCH
 		);
-		$plugins = $this->createStub( PluginRepository::class );
+		$plugins    = $this->createStub( PluginRepository::class );
 		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore();

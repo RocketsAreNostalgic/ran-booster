@@ -15,7 +15,7 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 	public function testDelegatesRegistrationRefreshAndBoundedPassiveStatus(): void {
 		$updater = new class() {
 			public int $registrations = 0;
-			public int $refreshes = 0;
+			public int $refreshes     = 0;
 
 			public function register(): bool {
 				++$this->registrations;
@@ -31,16 +31,16 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 					'hooks_registered'     => true,
 					'code'                 => 'target_active',
 					'native'               => array(
-						'candidate_header_version'   => null,
-						'candidate_tag'              => null,
+						'candidate_header_version'  => null,
+						'candidate_tag'             => null,
 						'candidate_validation_code' => null,
-						'candidate_version'          => null,
-						'failure_code'               => null,
-						'installed_version'           => '1.0.0',
-						'last_check'                  => 1_700_000_000,
-						'offered_release_identity'    => 'release:42',
-						'offered_version'             => '1.1.0',
-						'relationship'                => 'newer',
+						'candidate_version'         => null,
+						'failure_code'              => null,
+						'installed_version'         => '1.0.0',
+						'last_check'                => 1_700_000_000,
+						'offered_release_identity'  => 'release:42',
+						'offered_version'           => '1.1.0',
+						'relationship'              => 'newer',
 					),
 				);
 			}
@@ -111,16 +111,16 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 					'hooks_registered'     => true,
 					'code'                 => 'target_active',
 					'native'               => array(
-						'candidate_header_version'   => null,
-						'candidate_tag'              => null,
+						'candidate_header_version'  => null,
+						'candidate_tag'             => null,
 						'candidate_validation_code' => null,
-						'candidate_version'          => null,
-						'failure_code'               => null,
-						'installed_version'           => '1.0.0',
-						'last_check'                  => 1_700_000_000,
-						'offered_release_identity'    => null,
-						'offered_version'             => '1.1.0',
-						'relationship'                => 'newer',
+						'candidate_version'         => null,
+						'failure_code'              => null,
+						'installed_version'         => '1.0.0',
+						'last_check'                => 1_700_000_000,
+						'offered_release_identity'  => null,
+						'offered_version'           => '1.1.0',
+						'relationship'              => 'newer',
 					),
 				);
 			}

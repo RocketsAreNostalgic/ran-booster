@@ -6,6 +6,7 @@
 use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\Troubleshooting\CoreSelfUpdateStatus;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE' ) ) {
 	throw new RuntimeException( 'The native lifecycle smoke requires the marked installed CI site.' );
@@ -222,9 +223,9 @@ if ( 1 > $counts['http'] || 1 > $counts['zip_bytes'] || 1 > $counts['zip_count']
 	throw new RuntimeException( 'The controlled GitHub fixture did not serve native metadata and ZIP bytes.' );
 }
 
-$selfOffer = $pluginUpdates->response['ran-booster/ran-booster.php'] ?? null;
-$selfStatus = ( $targets['plugin:ran-booster/ran-booster.php'] ?? null )?->status();
-if ( ! is_object( $selfOffer ) || null === $selfStatus || '2.0.0-beta.1' !== $selfStatus->offeredVersion
+$selfOffer       = $pluginUpdates->response['ran-booster/ran-booster.php'] ?? null;
+$selfDiagnostics = $container->make( CoreSelfUpdateStatus::class )->diagnostics();
+if ( ! is_object( $selfOffer ) || '2.0.0-beta.1' !== ( $selfDiagnostics['offered_version'] ?? null )
 	|| false !== apply_filters( 'auto_update_plugin', true, $selfOffer ) ) {
 	throw new RuntimeException( 'Self Manual offer or Automatic denial is unavailable.' );
 }

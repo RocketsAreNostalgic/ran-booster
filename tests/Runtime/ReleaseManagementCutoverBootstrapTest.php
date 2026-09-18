@@ -14,7 +14,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
-		$coreTarget   = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
+		$coreTarget   = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
 		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
 		self::assertIsInt( $registration );
@@ -25,25 +25,32 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( 'ReleaseUpdaterBootstrap::activate()', $bootstrap );
 	}
 
-	public function testCoreSelfTargetUsesTheSealedGitHubReleaseCapability(): void {
+	public function testCoreSelfTargetUsesTheSelectedUpdaterWithoutProviderCapability(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$seal        = strpos( $bootstrap, '$providerRegistry->seal()' );
 		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allowsNativeDiscovery() )' );
-		$capability  = strpos( $bootstrap, "->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )" );
-		$reference   = strpos( $bootstrap, "new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null )" );
+		$coreUpdater = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
+		$repository  = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
+		$adapter     = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $coreUpdater )' );
 		$statusBind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )' );
 
 		self::assertIsInt( $seal );
 		self::assertIsInt( $policyGuard );
-		self::assertIsInt( $capability );
-		self::assertIsInt( $reference );
+		self::assertIsInt( $coreUpdater );
+		self::assertIsInt( $repository );
+		self::assertIsInt( $adapter );
 		self::assertIsInt( $statusBind );
 		self::assertLessThan( $policyGuard, $seal );
-		self::assertLessThan( $capability, $policyGuard );
-		self::assertLessThan( $reference, $capability );
-		self::assertLessThan( $statusBind, $reference );
+		self::assertLessThan( $coreUpdater, $policyGuard );
+		self::assertLessThan( $repository, $coreUpdater );
+		self::assertLessThan( $adapter, $repository );
+		self::assertLessThan( $statusBind, $adapter );
+		self::assertStringContainsString( "\t\t\t\t\t\t'github'", $bootstrap );
 		self::assertStringContainsString( "\t\t\t\t\t\t'manual'", $bootstrap );
+		self::assertStringContainsString( 'PackageArtifactLimit::resolve()', $bootstrap );
+		self::assertStringNotContainsString( "requireCapability( 'gh', RepositoryReleaseNativeTargets::class )", $bootstrap );
+		self::assertStringNotContainsString( 'new RepositoryReference(', $bootstrap );
 		self::assertStringNotContainsString( "? 'forced-off' : 'disabled'", $bootstrap );
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}

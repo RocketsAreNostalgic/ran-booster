@@ -56,15 +56,16 @@ use RAN\BoosterServiceProvider;
 use RAN\Dashboard;
 use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\ProviderRegistry;
-use RAN\RepositoryProvider\RepositoryReference;
-use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\PackageArtifactLimit;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedMultisiteBootstrap;
 use RAN\Storage\Database;
 use RAN\Troubleshooting\CoreSelfUpdateStatus;
 use RAN\WordPress\BranchUpdaterBootstrap;
+use RAN\WordPress\CoreSelfUpdateNativeTarget;
 use RAN\WordPress\CoreSelfUpdatePolicy;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
+use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 use RAN\WordPress\ReleaseUpdaterBootstrap;
 use RAN\WordPress\WordPressOrgUpdateRequestFilter;
 
@@ -133,19 +134,23 @@ $ran_booster_core_development_notice->register();
 			$coreReleaseTarget = null;
 			if ( $ran_booster_self_update_policy->allowsNativeDiscovery() ) {
 				try {
-					$coreReleaseTarget = $providerRegistry
-						->requireCapability( 'gh', RepositoryReleaseNativeTargets::class )
-						->createNativeTarget(
-							'plugin',
-							new RepositoryReference( 'RocketsAreNostalgic/ran-booster', '1319710173', false, null ),
-							__FILE__,
-							'ran-booster',
-							plugin_basename( __FILE__ ),
-							str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
-							'manual'
-						);
+					$coreUpdater       = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
+						'github',
+						__FILE__,
+						'RocketsAreNostalgic/ran-booster',
+						'1319710173',
+						str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
+						'manual',
+						null,
+						PackageArtifactLimit::resolve()
+					);
+					$coreReleaseTarget = new CoreSelfUpdateNativeTarget( $coreUpdater );
 					if ( ! $coreReleaseTarget->register() ) {
 						$coreReleaseTarget = null;
+					} else {
+						$ran_booster_container
+							->make( ManagedReleaseTargetRegistrar::class )
+							->reserveCoreSelfUpdateTarget( plugin_basename( __FILE__ ) );
 					}
 				} catch ( Throwable $exception ) {
 					\RAN\Logging\BoosterLogger::logException(

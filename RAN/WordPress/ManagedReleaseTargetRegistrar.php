@@ -36,7 +36,8 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, string> */
 	private array $failures = array();
 
-	private bool $registered = false;
+	private bool $registered                        = false;
+	private ?string $coreSelfUpdatePluginIdentifier = null;
 	private RepositorySourceGuard $sourceGuard;
 
 	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool}> */
@@ -101,6 +102,19 @@ final class ManagedReleaseTargetRegistrar {
 		$conflicts = $this->releaseRepositoryConflicts( $plugins, $themes );
 		$this->registerPackages( 'plugin', $plugins, $conflicts );
 		$this->registerPackages( 'theme', $themes, $conflicts );
+	}
+
+	public function reserveCoreSelfUpdateTarget( string $installedIdentifier ): void {
+		$identity = self::pluginTargetIdentity( $installedIdentifier );
+		if ( '' !== $identity ) {
+			$this->coreSelfUpdatePluginIdentifier = $identity;
+		}
+	}
+
+	public function hasReservedCoreSelfUpdateTarget( string $packageType, string $installedIdentifier ): bool {
+		return 'plugin' === $packageType
+			&& null !== $this->coreSelfUpdatePluginIdentifier
+			&& hash_equals( $this->coreSelfUpdatePluginIdentifier, self::pluginTargetIdentity( $installedIdentifier ) );
 	}
 
 	public function suppressUnauthorizedPluginOffers( mixed $transient ): mixed {
@@ -672,6 +686,10 @@ final class ManagedReleaseTargetRegistrar {
 		return 'plugin' === $type
 			? rtrim( $root, '/\\' ) . '/' . $installedIdentity
 			: rtrim( $root, '/\\' ) . '/' . $installedIdentity . '/' . $configuration->metadataFile();
+	}
+
+	private static function pluginTargetIdentity( string $identifier ): string {
+		return ltrim( strtolower( str_replace( '\\', '/', $identifier ) ), '/' );
 	}
 
 	private static function key( string $type, string $identifier ): string {

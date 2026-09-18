@@ -835,8 +835,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $packageRoot,
 		RepositoryReleaseNativeTargets $nativeTargets
 	): ReleaseTrackingEligibility {
+		$targetIdentity = $this->targetIdentity( $type, $identifier );
 		if ( PackageSource::BRANCH === $package->getSource()
-			&& $this->hasRegisteredTarget( $nativeTargets, $type, $this->targetIdentity( $type, $identifier ) ) ) {
+			&& ( $this->registrar->hasReservedCoreSelfUpdateTarget( $type, $targetIdentity )
+				|| $this->hasRegisteredTarget( $nativeTargets, $type, $targetIdentity ) ) ) {
 			return new ReleaseTrackingEligibility(
 				ReleaseTrackingEligibility::TARGET_ALREADY_USES_RAN_UPDATER,
 				$expectedUpdateUri,

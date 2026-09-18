@@ -138,6 +138,12 @@ declaration. No Core native discovery or installation hooks are registered, and
 no self-update credential or feed request is made. Managed targets retain their
 own declarations and policies.
 
+Core's own target is declared directly through that retained public updater
+registrar; it does not resolve provider code `gh` or require the GitHub provider
+extension to be registered. Managed plugin and theme targets remain separate:
+they continue to resolve the selected repository provider's
+`RepositoryReleaseNativeTargets` capability.
+
 When discovery is enabled, Core declares the target with the public `manual`
 policy. A newer verified public release may appear in WordPress's manual update
 UI. Automatic installation remains disabled. Core separately rejects bulk

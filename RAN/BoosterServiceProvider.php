@@ -221,7 +221,8 @@ final class BoosterServiceProvider {
 				);
 			}
 		);
-		$releaseRegistrar            = new ManagedReleaseUpdaterRegistrar( $releaseUpdater );
+		$releaseRegistrar = new ManagedReleaseUpdaterRegistrar( $releaseUpdater );
+		$container->bind( ManagedReleaseUpdaterRegistrar::class, $releaseRegistrar );
 		$providerRegistrationContext = new \RAN\RepositoryProvider\ProviderRegistrationContext(
 			static fn (): int => PackageArtifactLimit::resolve()
 		);

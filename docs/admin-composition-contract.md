@@ -494,9 +494,10 @@ Repository-scoped release workflow management belongs on the selected repository
 page. Core composes `ReleaseWorkflowControls` directly with the repository
 renderer; there is no provider HTML action or competing provider-rendered shell.
 The optional `RepositoryReleaseWorkflowManagementV2` capability supplies bounded
-immutable status, preview and result values to the current workflow helper.
-`RepositoryReleaseWorkflowManagement` remains the frozen, load-compatible API 1
-facet, but current Core does not resolve it for workflow-helper calls. Core keeps
+immutable status, preview and result values to the current workflow helper. It is
+the release-workflow management contract in the v1 baseline; the earlier API 1
+facet was retired before 1.0 after the maintained-repository audit found no
+current consumer. Core keeps
 the heading, setup-status line, credential selector, labels and help links
 stable, varying only values, notices and enabled states. Rendering uses local
 evidence only.
@@ -507,7 +508,7 @@ installation and update-policy controls. Repository history uses normalized
 `webhook` and `release_workflow` categories, not provider key prefixes or English
 headings; only exact current summary projections contribute to review counts.
 See the [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management)
-and the [API 1 to API 2 migration and feature-detection contract](provider-release-workflow-api.md).
+and the [API 2 baseline and feature-detection contract](provider-release-workflow-api.md).
 
 ## Structured administration actions
 

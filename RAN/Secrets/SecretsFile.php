@@ -1848,12 +1848,6 @@ class SecretsFile {
 
 			return $this->absoluteCanonicalConfiguredPath( $path ) ? $path : null;
 		}
-		if ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' )
-			&& is_string( RAN_BOOSTER_ENCRYPTED_SECRETS_FILE )
-			&& $this->absoluteCanonicalConfiguredPath( RAN_BOOSTER_ENCRYPTED_SECRETS_FILE ) ) {
-			return RAN_BOOSTER_ENCRYPTED_SECRETS_FILE;
-		}
-
 		return null;
 	}
 

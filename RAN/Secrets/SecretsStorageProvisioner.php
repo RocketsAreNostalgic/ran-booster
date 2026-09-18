@@ -487,6 +487,9 @@ class SecretsStorageProvisioner {
 
 	/** @return string|false|null False means defined with an invalid value. */
 	protected function configuredPath(): string|false|null {
+		if ( defined( self::UNSUPPORTED_FILE_CONSTANT_NAME ) ) {
+			return false;
+		}
 		if ( defined( self::DIRECTORY_CONSTANT_NAME ) ) {
 			$value = constant( self::DIRECTORY_CONSTANT_NAME );
 			if ( ! is_string( $value ) || '' === trim( $value ) ) {
@@ -498,7 +501,7 @@ class SecretsStorageProvisioner {
 
 			return $this->absoluteCanonicalPath( $path ) ? $path : false;
 		}
-		return defined( self::UNSUPPORTED_FILE_CONSTANT_NAME ) ? false : null;
+		return null;
 	}
 
 	protected function isMultisiteInstallation(): bool {

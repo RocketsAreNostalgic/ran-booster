@@ -442,7 +442,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		unset( $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		$ran_booster_storage_test_option_apply_write  = false;
 		$ran_booster_storage_test_option_write_result = false;
-		$database                                    = new Database();
+		$database                                     = new Database();
 
 		foreach ( array( 1, 2 ) as $_attempt ) {
 			try {

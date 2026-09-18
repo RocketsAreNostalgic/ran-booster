@@ -88,8 +88,10 @@ cmp -s "$normalised_pot" "$normalised_all_domains_pot" \
 	|| fail 'domain-filtered and all-domain catalogues differ; every runtime string must use ran-booster.'
 
 if [[ "$mode" == '--check' ]]; then
-	cmp -s "$temporary_pot" "$pot" \
-		|| fail 'languages/ran-booster.pot is stale; run scripts/make-pot.sh.'
+	if ! cmp -s "$temporary_pot" "$pot"; then
+		diff -u "$pot" "$temporary_pot" || true
+		fail 'languages/ran-booster.pot is stale; run scripts/make-pot.sh.'
+	fi
 	exit 0
 fi
 

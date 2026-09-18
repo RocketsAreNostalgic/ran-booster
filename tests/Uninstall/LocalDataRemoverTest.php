@@ -81,6 +81,7 @@ final class LocalDataRemoverTest extends TestCase {
 			'wp_ran_booster_packages',
 			'wp_ran_booster_deployment_attempts',
 			'wp_ran_booster_rejected_admission_audit',
+			'wp_ran_booster_native_update_activity',
 			'wp_unrelated',
 		);
 		$this->database->userMeta = array(
@@ -113,7 +114,14 @@ final class LocalDataRemoverTest extends TestCase {
 		$remover->remove();
 		$remover->remove();
 
-		self::assertSame( array( 'wp_unrelated' ), $this->database->tables );
+		self::assertSame(
+			array(
+				'wp_ran_booster_rejected_admission_audit',
+				'wp_ran_booster_native_update_activity',
+				'wp_unrelated',
+			),
+			$this->database->tables
+		);
 		self::assertSame( array( 'unrelated_meta' => array( 4 ) ), $this->database->userMeta );
 		self::assertSame(
 			array(

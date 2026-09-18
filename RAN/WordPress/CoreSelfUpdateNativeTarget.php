@@ -122,7 +122,31 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 			&& ( null === $status['offered_version'] || '' !== $this->statusVersion( $status['offered_version'] ) )
 			&& ( null === $status['offered_release_identity'] || '' !== $this->statusText( $status['offered_release_identity'], 191 ) )
 			&& ( ( null === $status['offered_version'] ) === ( null === $status['offered_release_identity'] ) )
-			&& ( null === $status['relationship'] || '' !== $this->statusRelationship( $status['relationship'] ) );
+			&& ( null === $status['relationship'] || '' !== $this->statusRelationship( $status['relationship'] ) )
+			&& $this->validCandidateTuple( $status );
+	}
+
+	/** @param array<string, mixed> $status */
+	private function validCandidateTuple( array $status ): bool {
+		$present = array(
+			null !== $status['candidate_validation_code'],
+			null !== $status['candidate_tag'],
+			null !== $status['candidate_version'],
+		);
+		$count   = count( array_filter( $present ) );
+		if ( 0 !== $count && 3 !== $count ) {
+			return false;
+		}
+		if ( 0 === $count ) {
+			return null === $status['candidate_header_version'];
+		}
+		if ( 'archive_identity_verified' === $status['candidate_validation_code']
+			&& null === $status['candidate_header_version'] ) {
+			return false;
+		}
+
+		return null === $status['offered_release_identity']
+			|| 'archive_identity_verified' === $status['candidate_validation_code'];
 	}
 
 	private function unavailableStatus(): RepositoryReleaseNativeTargetStatus {

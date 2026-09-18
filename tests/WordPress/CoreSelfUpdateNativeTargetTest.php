@@ -97,8 +97,22 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		self::assertSame( 'github_updater_runtime_environment_invalid', $status->failureCode );
 	}
 
-	public function testRejectsOfferVersionWithoutReleaseIdentity(): void {
+	public function testRejectsIncompleteReleaseAndCandidateIdentityTuples(): void {
 		$updater = new class() {
+			/** @var array<string, mixed> */
+			public array $native = array(
+				'candidate_header_version'  => null,
+				'candidate_tag'             => null,
+				'candidate_validation_code' => null,
+				'candidate_version'         => null,
+				'failure_code'              => null,
+				'installed_version'         => '1.0.0',
+				'last_check'                => 1_700_000_000,
+				'offered_release_identity'  => null,
+				'offered_version'           => '1.1.0',
+				'relationship'              => 'newer',
+			);
+
 			public function register(): bool {
 				return true;
 			}
@@ -110,18 +124,7 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 					'declaration_accepted' => true,
 					'hooks_registered'     => true,
 					'code'                 => 'target_active',
-					'native'               => array(
-						'candidate_header_version'  => null,
-						'candidate_tag'             => null,
-						'candidate_validation_code' => null,
-						'candidate_version'         => null,
-						'failure_code'              => null,
-						'installed_version'         => '1.0.0',
-						'last_check'                => 1_700_000_000,
-						'offered_release_identity'  => null,
-						'offered_version'           => '1.1.0',
-						'relationship'              => 'newer',
-					),
+					'native'               => $this->native,
 				);
 			}
 
@@ -129,9 +132,21 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 				return false;
 			}
 		};
+		$target  = new CoreSelfUpdateNativeTarget( $updater );
 
-		$status = ( new CoreSelfUpdateNativeTarget( $updater ) )->status();
+		$status = $target->status();
+		self::assertFalse( $status->active );
+		self::assertSame( 'github_updater_status_unavailable', $status->failureCode );
 
+		$updater->native['offered_version'] = null;
+		$updater->native['candidate_tag']   = 'v1.1.0';
+		$status                             = $target->status();
+		self::assertFalse( $status->active );
+		self::assertSame( 'github_updater_status_unavailable', $status->failureCode );
+
+		$updater->native['candidate_validation_code'] = 'archive_identity_verified';
+		$updater->native['candidate_version']         = '1.1.0';
+		$status                                       = $target->status();
 		self::assertFalse( $status->active );
 		self::assertSame( 'github_updater_status_unavailable', $status->failureCode );
 	}

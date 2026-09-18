@@ -19,13 +19,13 @@ use Throwable;
  */
 class WpConfigSecretsPathWriter {
 
-	private const DIRECTORY_CONSTANT_NAME   = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
+	private const DIRECTORY_CONSTANT_NAME        = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
 	private const UNSUPPORTED_FILE_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
-	private const OWNED_MARKER              = '/* RAN Booster encrypted secrets storage. */';
-	private const MARKER                    = "/* That's all, stop editing! Happy publishing. */";
-	private const MAX_BYTES                 = 1048576;
-	private const LOCK_SUFFIX               = '.ran-booster.lock';
-	private const TEMP_PREFIX               = '.ran-booster-wp-config-';
+	private const OWNED_MARKER                   = '/* RAN Booster encrypted secrets storage. */';
+	private const MARKER                         = "/* That's all, stop editing! Happy publishing. */";
+	private const MAX_BYTES                      = 1048576;
+	private const LOCK_SUFFIX                    = '.ran-booster.lock';
+	private const TEMP_PREFIX                    = '.ran-booster-wp-config-';
 
 	public function write( string $configPath, string $sidecarPath ): WpConfigPathWriteResult {
 		$this->edit( $configPath, $sidecarPath, false, null );

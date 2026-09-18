@@ -323,20 +323,20 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testLegacyFileConstantAcceptsTheNormalizedWpConfigRelativeForm(): void {
+	public function testLegacyFileConstantIsRejectedEvenWhenItsPathIsOtherwiseValid(): void {
 		$wpConfigDirectory = $this->root . '/public';
 		$directory         = dirname( $wpConfigDirectory ) . '/operator-file';
 		self::assertTrue( mkdir( $directory, 0700 ) );
-		$file = $directory . '/secrets.json';
-		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $file );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $directory . '/secrets.json' );
 
 		$provisioner                           = $this->provisioner();
 		$provisioner->readRuntimeConfiguration = true;
 		$result                                = $provisioner->status();
 
-		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
-		self::assertSame( $file, $result->candidatePath() );
-		self::assertSame( $file, ( new SecretsFile() )->path() );
+		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
+		self::assertSame( 'configured_path_invalid', $result->code() );
+		self::assertNull( $result->candidatePath() );
+		self::assertNull( ( new SecretsFile() )->path() );
 	}
 
 	#[RunInSeparateProcess]

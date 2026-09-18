@@ -5876,7 +5876,7 @@ msgstr ""
 msgid "Before deleting Booster, export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use that you may need. A Transporter Blueprint does not include webhook secrets, provider-side webhook registrations, deployment history or constants, and every restored package starts with deployment Disabled."
 msgstr ""
 
-#: views/documentation.php:291
+#: views/documentation.php:293
 msgid "Uninstall cannot revoke provider credentials or remove remote webhooks. Revoke credentials with each provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php storage definition it created; any manually authored storage definition remains under the site operator’s control."
 msgstr ""
 

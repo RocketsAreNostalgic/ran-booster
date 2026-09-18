@@ -513,7 +513,9 @@ class Database {
 		if ( ! is_string( $value ) || 1 !== preg_match( '/^[0-9]+\.[0-9]+$/D', $value ) ) {
 			throw new DatabaseLifecycleFailure( 'malformed_schema_version' );
 		}
-		if ( in_array( $value, array( '10.0', '11.0', '12.0' ), true ) ) {
+		if ( version_compare( $value, '10.0', '<' )
+			|| in_array( $value, array( '10.0', '11.0', '12.0' ), true )
+		) {
 			throw new DatabaseLifecycleFailure( 'unsupported_old_schema' );
 		}
 		if ( version_compare( $value, self::$booster_db_version, '>' ) ) {

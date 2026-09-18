@@ -36,7 +36,7 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, string> */
 	private array $failures = array();
 
-	private bool $registered                     = false;
+	private bool $registered                        = false;
 	private ?string $coreSelfUpdatePluginIdentifier = null;
 	private RepositorySourceGuard $sourceGuard;
 

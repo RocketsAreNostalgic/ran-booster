@@ -21,6 +21,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/RepositoryProvider/GitHubAnonymousBrowserHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubArchiveHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubCredentialPolicyHostIntegrationTest.php',
+		'tests/RepositoryProvider/GitHubExternalExtensionParityTest.php',
 		'tests/RepositoryProvider/Support/ShippedSecretPolicyCatalog.php',
 		'tests/Runtime/ReleaseManagementCutoverBootstrapTest.php',
 		'tests/Webhook/SignedWebhookVerifierTest.php',
@@ -28,6 +29,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',
 		'tests/WordPress/github-provider-installed-readback.php',
 		'tests/WordPress/native-lifecycle-installed-smoke.php',
+		'tests/fixtures/ran-booster-github-provider-extension/src/Plugin.php',
 	);
 
 	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {

@@ -1,14 +1,14 @@
 # Provider registration and coexistence: current state
 
-**Status:** Current-source characterization for Provider API 10, reviewed on
-17 August 2026. This document records behavior that exists now. It does not
-reserve new vendor names, change registration, or authorize the proposed
-hardening work.
+**Status:** Current-source characterization for Provider API 10, reconciled on
+18 September 2026 after the first-party GitHub package extraction and external
+composition proof. This document records behavior that exists now. It does not
+reserve new vendor names or change registration semantics.
 
 ## Short answer
 
 Booster currently prevents two provider implementations from owning the same
-exact provider code. The bundled GitHub provider registers `gh` before the
+exact provider code. The bundled GitHub package registers `gh` before the
 public provider-registration action, so a community provider cannot also
 register `gh` through the supported API or receive the credential store bound
 to that code.
@@ -37,10 +37,12 @@ Core publishes the exact integer marker
 callback to `ran_booster_register_providers` during normal plugin loading and
 must fail closed unless the marker is exactly the generation they support.
 
-On `plugins_loaded` at priority 100, Core:
+During Core composition and the subsequent `plugins_loaded` registration
+boundary, Booster:
 
 1. creates the `ProviderRegistry`;
-2. registers the bundled GitHub implementation as `gh`;
+2. registers the bundled released GitHub package as `gh` through
+   `registerWithCredentialStore()`;
 3. fires `ran_booster_register_providers` once; and
 4. seals the registry.
 
@@ -130,9 +132,16 @@ coordinate two implementations pointed at the same remote repository.
 
 ## Bundled GitHub is not currently optional at runtime
 
-The bundled GitHub module uses the ordinary Provider API boundary, but Core
-always registers it as `gh`. There is no current preference to hide or disable
-it.
+The `gh` implementation is no longer Core-owned source. It is the independently
+maintained `ran/booster-github-provider` package, pinned and bundled by Booster
+as its first-party distribution. That packaging choice does not grant hidden
+provider authority: the aggregate is registered through the same public
+provider registry semantics used by external implementations, and the
+maintained Phase 5 external-wrapper fixture proves the released package can be
+composed without Booster private services.
+
+Booster always registers its bundled GitHub package as `gh`. There is no
+current preference to hide or disable that first-party distribution.
 
 Several first-party surfaces still know explicitly about `gh`, but repository
 webhook-management placement no longer does. Core places its fixed controls for
@@ -148,10 +157,11 @@ packages unavailable, reject its webhook deliveries, and impair operations
 that require its registered secret policy.
 
 The retired standalone Assisted Hooks add-on has no runtime coexistence path in
-current Booster. Pre-retirement beta builds must be deactivated and removed
-before deploying this cut; current provider-driven webhook management remains
-the only supported runtime path. Historical persisted records are handled
-separately as a state-custody question and do not alter provider registration.
+current Booster. Pre-retirement beta builds must be deactivated and removed;
+current provider-driven webhook management remains the only supported runtime
+path. Current release-workflow assistance state is owned by the GitHub provider
+package, while obsolete prerelease records are cleanup-only. Neither affects
+provider registration.
 
 ## Failure behavior and operational caveats
 

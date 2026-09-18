@@ -4671,8 +4671,8 @@ msgid "The private storage location and WordPress configuration are not on one v
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:180
-#: RAN/Secrets/SecretsStorageProvisioner.php:1057
-#: RAN/Secrets/SecretsStorageProvisioner.php:1065
+#: RAN/Secrets/SecretsStorageProvisioner.php:1054
+#: RAN/Secrets/SecretsStorageProvisioner.php:1062
 msgid "The WordPress configuration could not be updated safely."
 msgstr ""
 
@@ -4745,254 +4745,254 @@ msgstr ""
 msgid "The recoverable storage path could not be adopted safely."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:732
+#: RAN/Secrets/SecretsStorageProvisioner.php:729
 msgid "PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:738
+#: RAN/Secrets/SecretsStorageProvisioner.php:735
 msgid "The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:746
+#: RAN/Secrets/SecretsStorageProvisioner.php:743
 msgid "Booster could not verify the configured secrets directory."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:763
+#: RAN/Secrets/SecretsStorageProvisioner.php:760
 msgid "The configured secrets file must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:770
+#: RAN/Secrets/SecretsStorageProvisioner.php:767
 msgid "Booster could not verify the configured secrets file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:775
+#: RAN/Secrets/SecretsStorageProvisioner.php:772
 msgid "The configured secrets file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:788
+#: RAN/Secrets/SecretsStorageProvisioner.php:785
 msgid "The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:794
+#: RAN/Secrets/SecretsStorageProvisioner.php:791
 msgid "The configured secrets lock must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:801
+#: RAN/Secrets/SecretsStorageProvisioner.php:798
 msgid "Booster could not verify the configured secrets lock file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:806
+#: RAN/Secrets/SecretsStorageProvisioner.php:803
 msgid "The configured secrets lock file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:824
+#: RAN/Secrets/SecretsStorageProvisioner.php:821
 msgctxt "Configured secrets storage item"
 msgid "directory"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:825
+#: RAN/Secrets/SecretsStorageProvisioner.php:822
 msgctxt "Configured secrets storage item"
 msgid "file"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:826
+#: RAN/Secrets/SecretsStorageProvisioner.php:823
 msgctxt "Configured secrets storage item"
 msgid "lock file"
 msgstr ""
 
 #. translators: 1: configured secrets storage item, 2: current octal mode, 3: required octal mode.
-#: RAN/Secrets/SecretsStorageProvisioner.php:834
+#: RAN/Secrets/SecretsStorageProvisioner.php:831
 #, php-format
 msgid "The configured secrets %1$s uses mode %2$04o; mode %3$04o is required."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:843
+#: RAN/Secrets/SecretsStorageProvisioner.php:840
 #, php-format
 msgid "The configured secrets %s is not owned by the PHP process user."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:850
+#: RAN/Secrets/SecretsStorageProvisioner.php:847
 #, php-format
 msgid "The configured secrets %s is not readable by PHP."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:857
+#: RAN/Secrets/SecretsStorageProvisioner.php:854
 #, php-format
 msgid "The configured secrets %s is not writable by PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:876
+#: RAN/Secrets/SecretsStorageProvisioner.php:873
 msgid "secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:880
+#: RAN/Secrets/SecretsStorageProvisioner.php:877
 msgid "The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:884
+#: RAN/Secrets/SecretsStorageProvisioner.php:881
 msgid "Only secrets.json.lock remains; no secrets file or database encryption key was found."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:888
+#: RAN/Secrets/SecretsStorageProvisioner.php:885
 msgid "Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:892
+#: RAN/Secrets/SecretsStorageProvisioner.php:889
 msgid "Booster could not safely use the encrypted secrets store."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:902
+#: RAN/Secrets/SecretsStorageProvisioner.php:899
 msgid "The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:906
+#: RAN/Secrets/SecretsStorageProvisioner.php:903
 msgid "The secrets file could not be authenticated with this site's database key. Restore both from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:911
+#: RAN/Secrets/SecretsStorageProvisioner.php:908
 msgid "The secrets file authenticated but its encrypted document is invalid."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:915
+#: RAN/Secrets/SecretsStorageProvisioner.php:912
 msgid "Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:921
+#: RAN/Secrets/SecretsStorageProvisioner.php:918
 msgid "The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:929
+#: RAN/Secrets/SecretsStorageProvisioner.php:926
 msgid "The secrets lock file could not be used safely. Verify its ownership and mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:933
+#: RAN/Secrets/SecretsStorageProvisioner.php:930
 msgid "Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1033
+#: RAN/Secrets/SecretsStorageProvisioner.php:1030
 msgid "The encrypted secrets path is already configured."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1034
+#: RAN/Secrets/SecretsStorageProvisioner.php:1031
 msgid "The WordPress configuration directory is not safe and writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1035
+#: RAN/Secrets/SecretsStorageProvisioner.php:1032
 msgid "The encrypted secrets path is not safe for automatic configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1036
+#: RAN/Secrets/SecretsStorageProvisioner.php:1033
 msgid "The supplied WordPress configuration path is not an absolute safe POSIX file path."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1037
+#: RAN/Secrets/SecretsStorageProvisioner.php:1034
 msgid "The WordPress configuration changed before it could be edited."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1038
+#: RAN/Secrets/SecretsStorageProvisioner.php:1035
 msgid "Could not secure the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1039
+#: RAN/Secrets/SecretsStorageProvisioner.php:1036
 msgid "Could not lock the WordPress configuration for editing."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1040
+#: RAN/Secrets/SecretsStorageProvisioner.php:1037
 msgid "The WordPress configuration does not pass Booster's writable private regular-file checks."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1041
+#: RAN/Secrets/SecretsStorageProvisioner.php:1038
 msgid "The WordPress configuration is group- or world-writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1042
+#: RAN/Secrets/SecretsStorageProvisioner.php:1039
 msgid "The WordPress configuration has an unsupported size."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1043
+#: RAN/Secrets/SecretsStorageProvisioner.php:1040
 msgid "The WordPress configuration is not owned by the current process owner."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1044
+#: RAN/Secrets/SecretsStorageProvisioner.php:1041
 msgid "Could not read the complete WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1045
+#: RAN/Secrets/SecretsStorageProvisioner.php:1042
 msgid "The WordPress configuration must contain one standard stop-editing marker."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1046
+#: RAN/Secrets/SecretsStorageProvisioner.php:1043
 msgid "The encrypted secrets path constant is already defined."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1047
+#: RAN/Secrets/SecretsStorageProvisioner.php:1044
 msgid "The automatic encrypted secrets definition is ambiguous."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1048
+#: RAN/Secrets/SecretsStorageProvisioner.php:1045
 msgid "The edited WordPress configuration did not pass the expected definition check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1049
+#: RAN/Secrets/SecretsStorageProvisioner.php:1046
 msgid "Could not secure the temporary WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1050
+#: RAN/Secrets/SecretsStorageProvisioner.php:1047
 msgid "Could not preserve WordPress configuration ownership."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1051
+#: RAN/Secrets/SecretsStorageProvisioner.php:1048
 msgid "Could not flush the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1052
+#: RAN/Secrets/SecretsStorageProvisioner.php:1049
 msgid "Could not synchronize the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1053
+#: RAN/Secrets/SecretsStorageProvisioner.php:1050
 msgid "The edited WordPress configuration failed its read-back check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1054
+#: RAN/Secrets/SecretsStorageProvisioner.php:1051
 msgid "The edited WordPress configuration metadata could not be verified."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1055
+#: RAN/Secrets/SecretsStorageProvisioner.php:1052
 msgid "Could not atomically replace the WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1056
+#: RAN/Secrets/SecretsStorageProvisioner.php:1053
 msgid "The installed WordPress configuration failed verification."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1058
+#: RAN/Secrets/SecretsStorageProvisioner.php:1055
 msgid "The WordPress configuration does not parse as supported PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1059
+#: RAN/Secrets/SecretsStorageProvisioner.php:1056
 msgid "The WordPress configuration uses unsupported line endings."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1060
+#: RAN/Secrets/SecretsStorageProvisioner.php:1057
 msgid "The WordPress configuration edit lock is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1061
+#: RAN/Secrets/SecretsStorageProvisioner.php:1058
 msgid "Could not write the complete edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1062
+#: RAN/Secrets/SecretsStorageProvisioner.php:1059
 msgid "The temporary WordPress configuration is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1063
+#: RAN/Secrets/SecretsStorageProvisioner.php:1060
 msgid "Could not open the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1064
+#: RAN/Secrets/SecretsStorageProvisioner.php:1061
 msgid "Could not create a private temporary WordPress configuration."
 msgstr ""
 

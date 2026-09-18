@@ -305,12 +305,11 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testDirectoryConstantWinsAndAppendsTheManagedFilename(): void {
+	public function testDirectoryConstantAppendsTheManagedFilename(): void {
 		$wpConfigDirectory = $this->root . '/public';
 		$directory         = dirname( $wpConfigDirectory ) . '/operator-private';
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $directory );
-		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $this->root . '/legacy/secrets.json' );
 
 		$provisioner                           = $this->provisioner();
 		$provisioner->readRuntimeConfiguration = true;
@@ -319,6 +318,25 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
 		self::assertSame( $directory . '/secrets.json', $result->candidatePath() );
 		self::assertSame( $directory . '/secrets.json', ( new SecretsFile() )->path() );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testLegacyFileConstantBlocksOtherwiseValidDirectoryConfiguration(): void {
+		$wpConfigDirectory = $this->root . '/public';
+		$directory         = dirname( $wpConfigDirectory ) . '/operator-private';
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $directory );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $directory . '/legacy-secrets.json' );
+
+		$provisioner                           = $this->provisioner();
+		$provisioner->readRuntimeConfiguration = true;
+		$result                                = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
+		self::assertSame( 'configured_path_invalid', $result->code() );
+		self::assertNull( $result->candidatePath() );
+		self::assertNull( ( new SecretsFile() )->path() );
 	}
 
 	#[RunInSeparateProcess]

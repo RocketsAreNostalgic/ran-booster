@@ -1835,6 +1835,9 @@ class SecretsFile {
 	}
 
 	private function defaultPath(): ?string {
+		if ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ) ) {
+			return null;
+		}
 		if ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) ) {
 			$value = constant( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' );
 			if ( ! is_string( $value ) || '' === trim( $value ) ) {

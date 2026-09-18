@@ -72,7 +72,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-credential-storage"', $html );
 		self::assertStringContainsString( '<h3>Use a different storage location</h3>', $html );
 		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );", $html );
-		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', dirname( __DIR__ ) . '/private/ran-booster/secrets.json' );", $html );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $html );
 		self::assertStringContainsString( 'Do not add group access as a workaround', $html );
 		self::assertStringContainsString( 'dirname( __DIR__ ) is its parent', $html );
 		self::assertStringContainsString( 'do not append public_html again', $html );
@@ -301,7 +301,7 @@ final class DocumentationViewTest extends TestCase {
 		$html = $this->renderView( $this->providerDocumentation() );
 
 		self::assertStringContainsString( '<code>RAN_BOOSTER_ENCRYPTED_SECRETS_DIR</code>', $html );
-		self::assertStringContainsString( '<code>RAN_BOOSTER_ENCRYPTED_SECRETS_FILE</code>', $html );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $html );
 		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster'", $html );
 		self::assertStringContainsString( 'Raw unanchored relative strings are rejected', $html );
 		self::assertStringContainsString( 'authenticated ciphertext in a private JSON file', $html );
@@ -325,7 +325,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'does not include webhook secrets, provider-side webhook registrations, deployment history or constants', $html );
 		self::assertStringContainsString( 'starts with deployment Disabled', $html );
 		self::assertStringContainsString( 'Uninstall cannot revoke provider credentials or remove remote webhooks', $html );
-		self::assertStringContainsString( 'removes only the exact wp-config.php definition it created', $html );
+		self::assertStringContainsString( 'removes only the exact wp-config.php storage definition it created', $html );
 		self::assertStringContainsString( 'remains under the site operator’s control', $html );
 		self::assertStringNotContainsString( 'gitignored', $html );
 		self::assertStringNotContainsString( 'sidecar', $html );

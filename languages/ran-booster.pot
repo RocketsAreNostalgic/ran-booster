@@ -6457,7 +6457,7 @@ msgid "Choose a durable absolute directory outside the public web root. Create i
 msgstr ""
 
 #: views/onboarding.php:235
-msgid "Define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
+msgid "Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
 msgstr ""
 
 #: views/onboarding.php:237

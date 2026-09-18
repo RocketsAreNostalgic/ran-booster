@@ -147,6 +147,10 @@ $ran_booster_core_development_notice->register();
 					$coreReleaseTarget = new CoreSelfUpdateNativeTarget( $coreUpdater );
 					if ( ! $coreReleaseTarget->register() ) {
 						$coreReleaseTarget = null;
+					} else {
+						$ran_booster_container
+							->make( ManagedReleaseTargetRegistrar::class )
+							->reserveCoreSelfUpdateTarget( plugin_basename( __FILE__ ) );
 					}
 				} catch ( Throwable $exception ) {
 					\RAN\Logging\BoosterLogger::logException(

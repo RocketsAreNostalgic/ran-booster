@@ -70,7 +70,8 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 			$status = $outer['native'];
 			if ( ! is_array( $status )
 				|| 10 !== count( $status )
-				|| array_diff( array_keys( $status ), self::NATIVE_STATUS_KEYS ) !== array() ) {
+				|| array_diff( array_keys( $status ), self::NATIVE_STATUS_KEYS ) !== array()
+				|| ! $this->validUpdaterStatus( $status ) ) {
 				return $this->unavailableStatus();
 			}
 			$offeredVersion = $this->statusVersion( $status['offered_version'] );
@@ -109,6 +110,21 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 		}
 	}
 
+	/** @param array<string, mixed> $status */
+	private function validUpdaterStatus( array $status ): bool {
+		return ( null === $status['candidate_tag'] || '' !== $this->statusText( $status['candidate_tag'], 100 ) )
+			&& ( null === $status['candidate_validation_code'] || '' !== $this->statusCode( $status['candidate_validation_code'] ) )
+			&& ( null === $status['candidate_version'] || '' !== $this->statusVersion( $status['candidate_version'] ) )
+			&& ( null === $status['candidate_header_version'] || '' !== $this->statusVersion( $status['candidate_header_version'] ) )
+			&& ( null === $status['failure_code'] || '' !== $this->statusCode( $status['failure_code'] ) )
+			&& ( null === $status['installed_version'] || '' !== $this->statusVersion( $status['installed_version'] ) )
+			&& ( null === $status['last_check'] || ( is_int( $status['last_check'] ) && 0 < $status['last_check'] ) )
+			&& ( null === $status['offered_version'] || '' !== $this->statusVersion( $status['offered_version'] ) )
+			&& ( null === $status['offered_release_identity'] || '' !== $this->statusText( $status['offered_release_identity'], 191 ) )
+			&& ( ( null === $status['offered_version'] ) === ( null === $status['offered_release_identity'] ) )
+			&& ( null === $status['relationship'] || '' !== $this->statusRelationship( $status['relationship'] ) );
+	}
+
 	private function unavailableStatus(): RepositoryReleaseNativeTargetStatus {
 		return new RepositoryReleaseNativeTargetStatus( false, failureCode: 'github_updater_status_unavailable' );
 	}
@@ -119,6 +135,10 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 
 	private function statusRelationship( mixed $value ): string {
 		return is_string( $value ) && in_array( $value, array( 'newer', 'same', 'older', 'invalid' ), true ) ? $value : '';
+	}
+
+	private function statusText( mixed $value, int $maximumLength ): string {
+		return is_string( $value ) && strlen( $value ) <= $maximumLength && 0 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ? $value : '';
 	}
 
 	private function statusVersion( mixed $value ): string {

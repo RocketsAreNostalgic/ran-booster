@@ -2085,6 +2085,51 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
+	public function testFacadeRefusesBranchPackageReservedByCoreSelfUpdater(): void {
+		$identifier = 'ran-booster/ran-booster.php';
+		$package    = $this->package(
+			'plugin',
+			$identifier,
+			'ran-booster',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore();
+		$providers = $this->releaseMetadataRegistry();
+		$registrar = $this->registrar(
+			$plugins,
+			$themes,
+			$store,
+			new RuntimeUpdaterLock(),
+			$providers
+		);
+		$registrar->reserveCoreSelfUpdateTarget( $identifier );
+		$expectedAction = 'ran-booster-release-tracking-enable-plugin-' . $identifier . '-1';
+		$facade         = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$providers,
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && $expectedAction === $action,
+			metadataEligible: static fn (): bool => true
+		);
+
+		$status = $facade->status( 'plugin', $identifier );
+		$result = $facade->enable( 'plugin', $identifier, 1, 'stable', 'valid' );
+
+		self::assertSame( ReleaseTrackingEligibility::TARGET_ALREADY_USES_RAN_UPDATER, $status->eligibility()->code() );
+		self::assertFalse( $status->eligible() );
+		self::assertSame( 'target_already_uses_ran_updater', $result->code() );
+		self::assertFalse( $result->successful() );
+		self::assertCount( 0, $store->transitions );
+	}
+
 	public function testFacadeRefusesBranchPackageAlreadyRegisteredByTheRANUpdater(): void {
 		$package = $this->package(
 			'plugin',

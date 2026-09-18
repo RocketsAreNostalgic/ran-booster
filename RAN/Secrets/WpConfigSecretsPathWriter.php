@@ -20,7 +20,7 @@ use Throwable;
 class WpConfigSecretsPathWriter {
 
 	private const DIRECTORY_CONSTANT_NAME   = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
-	private const LEGACY_FILE_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
+	private const UNSUPPORTED_FILE_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
 	private const OWNED_MARKER              = '/* RAN Booster encrypted secrets storage. */';
 	private const MARKER                    = "/* That's all, stop editing! Happy publishing. */";
 	private const MAX_BYTES                 = 1048576;
@@ -385,7 +385,7 @@ class WpConfigSecretsPathWriter {
 			if ( self::DIRECTORY_CONSTANT_NAME === $name ) {
 				++$definitions;
 			}
-			if ( self::LEGACY_FILE_CONSTANT_NAME === $name ) {
+			if ( self::UNSUPPORTED_FILE_CONSTANT_NAME === $name ) {
 				$this->fail( 'candidate_parse_failed', 'The edited WordPress configuration retained a legacy encrypted secrets definition.' );
 			}
 		}
@@ -568,7 +568,7 @@ class WpConfigSecretsPathWriter {
 				$name = $tokens[ $constantAt ] ?? null;
 				if ( is_array( $name )
 					&& T_STRING === $name[0]
-					&& in_array( $name[1], array( self::DIRECTORY_CONSTANT_NAME, self::LEGACY_FILE_CONSTANT_NAME ), true )
+					&& in_array( $name[1], array( self::DIRECTORY_CONSTANT_NAME, self::UNSUPPORTED_FILE_CONSTANT_NAME ), true )
 				) {
 					return true;
 				}
@@ -578,7 +578,7 @@ class WpConfigSecretsPathWriter {
 			}
 			if ( in_array(
 				$this->literalDefineName( $tokens, $index ),
-				array( self::DIRECTORY_CONSTANT_NAME, self::LEGACY_FILE_CONSTANT_NAME ),
+				array( self::DIRECTORY_CONSTANT_NAME, self::UNSUPPORTED_FILE_CONSTANT_NAME ),
 				true
 			) ) {
 				return true;

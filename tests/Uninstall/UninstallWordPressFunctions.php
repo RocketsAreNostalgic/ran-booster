@@ -66,6 +66,9 @@ if ( ! function_exists( 'get_file_data' ) ) {
 if ( ! function_exists( 'delete_option' ) ) {
 	function delete_option( string $name ): bool {
 		$GLOBALS['ran_booster_uninstall_deleted_options'][] = $name;
+		if ( ( $GLOBALS['ran_booster_uninstall_undeletable_option'] ?? null ) === $name ) {
+			return false;
+		}
 		unset( $GLOBALS['ran_booster_uninstall_options'][ $name ] );
 
 		return true;

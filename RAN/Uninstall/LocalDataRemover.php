@@ -14,6 +14,7 @@ use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
+use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowAssistanceState;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\PrivateLocationCandidateResolver;
@@ -23,7 +24,7 @@ use RAN\Storage\Database;
 use RuntimeException;
 
 /**
- * Removes only verified Core-owned local state during WordPress uninstall.
+ * Removes verified local state owned by Core and bundled components during WordPress uninstall.
  */
 class LocalDataRemover {
 
@@ -33,8 +34,6 @@ class LocalDataRemover {
 		PublicRepositoryLookupProfileStore::OPTION_NAME,
 		RepositoryBranchCheckEvidenceStore::OPTION_NAME,
 		WordPressInstallationStore::OPTION_NAME,
-		'ran_booster_release_deployments_assessment_observations',
-		'ran_booster_release_deployments_failure_history',
 	);
 
 	private const USER_META_KEYS = array(
@@ -84,6 +83,9 @@ class LocalDataRemover {
 		$this->secrets->deleteManagedStorage();
 		$this->clearScheduledWork();
 		$this->clearUpdaterState();
+		if ( ! ( new WorkflowAssistanceState() )->removeDurableState() ) {
+			throw new RuntimeException( 'Bundled GitHub provider state could not be removed.' );
+		}
 		$this->clearUserMetadata();
 		$this->dropTables();
 		$this->deleteOptions();

@@ -17,6 +17,7 @@ use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
+use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowAssistanceState;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\SecretsFile;
@@ -46,6 +47,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_main_site_id']                      = 1;
 		$GLOBALS['ran_booster_uninstall_deleted_transients']                = array();
 		$GLOBALS['ran_booster_uninstall_deleted_options']                   = array();
+		$GLOBALS['ran_booster_uninstall_undeletable_option']                = null;
 		$GLOBALS['ran_booster_uninstall_plugin_basename']                   = 'renamed-booster/ran-booster.php';
 		$GLOBALS['ran_booster_uninstall_cron']                              = array(
 			WordPressWorkerWakeup::HOOK => true,
@@ -65,6 +67,16 @@ final class LocalDataRemoverTest extends TestCase {
 			WordPressInstallationStore::OPTION_NAME       => array( 'current-webhook-record' ),
 			'unrelated_option'                            => 'preserved',
 		);
+		foreach (
+			array(
+				WorkflowAssistanceState::SETUP_OPTION,
+				WorkflowAssistanceState::ASSESSMENT_OPTION,
+				WorkflowAssistanceState::FAILURE_OPTION,
+			) as $providerOption
+		) {
+			$GLOBALS['ran_booster_uninstall_options'][ $providerOption ] = array( 'current-provider-state' );
+		}
+		$GLOBALS['ran_booster_uninstall_options']['ran_booster_release_deployments_setup_records'] = array( 'obsolete-provider-state' );
 		$this->database->tables   = array(
 			'wp_ran_booster_packages',
 			'wp_ran_booster_deployment_attempts',
@@ -125,6 +137,29 @@ final class LocalDataRemoverTest extends TestCase {
 			),
 			$GLOBALS['ran_booster_uninstall_cron_calls']
 		);
+	}
+
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testProviderCleanupFailureStopsBeforeCoreDatabaseCleanup(): void {
+		$this->setUp();
+		$GLOBALS['ran_booster_uninstall_undeletable_option'] = WorkflowAssistanceState::SETUP_OPTION;
+
+		try {
+			$this->remover(
+				$this->secrets( null ),
+				$this->createStub( WpConfigSecretsPathWriter::class )
+			)->remove();
+			self::fail( 'An unverifiable bundled-provider cleanup must abort uninstall.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'Bundled GitHub provider state could not be removed.', $failure->getMessage() );
+		}
+
+		self::assertArrayHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayHasKey( WordPressInstallationStore::OPTION_NAME, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayHasKey( DevelopmentSafetyNoticeController::USER_META_KEY, $this->database->userMeta );
+		self::assertContains( 'wp_ran_booster_packages', $this->database->tables );
 	}
 
 	#[RunInSeparateProcess]

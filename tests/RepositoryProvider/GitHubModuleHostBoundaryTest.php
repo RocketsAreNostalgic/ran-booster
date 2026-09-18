@@ -10,6 +10,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	private const EXPLICIT_CORE_HOST_INTEGRATIONS = array(
 		'tests/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php',
+		'tests/Uninstall/LocalDataRemoverTest.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',
 		'tests/Logging/GitHubDiagnosticsLoggingTest.php',
 		'tests/Portability/BlueprintRepositoryVerifierTest.php',
@@ -31,7 +32,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {
 		$allowed    = array(
-			'RAN/BoosterServiceProvider.php' => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
+			'RAN/BoosterServiceProvider.php'     => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
+			'RAN/Uninstall/LocalDataRemover.php' => 'use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowAssistanceState;',
 		);
 		$references = array();
 		$root       = dirname( __DIR__, 2 ) . '/RAN';

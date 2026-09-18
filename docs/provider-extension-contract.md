@@ -729,7 +729,26 @@ unsupported-capability behavior in WordPress. The fixture is excluded from the
 runtime release archive and requires no provider-name branches in Booster,
 GitHub or Bitbucket code.
 
-GitHub remains bundled and owned by Core under this same public boundary.
-Provider API 10 proves ordinary-vendor independence; it does not authorize a
-separate GitHub package, repository, dependency or release stream. Extraction
-remains NO-GO unless separately approved after isolation evidence is complete.
+The first-party GitHub implementation now lives in the independently maintained
+Composer package `ran/booster-github-provider`. Booster pins and bundles an
+immutable released version, but the package still enters the host through this
+public provider boundary. Bundled versus external is therefore a distribution
+choice, not a separate capability or authority model.
+
+The two composition roots are deliberately not identical. Booster's bundled
+factory supplies its bounded host-owned release-updater compatibility adapter
+and the lazy artifact-limit supplier exposed by
+`ProviderRegistrationContext`. A physically separate wrapper instead owns its
+release-updater dependency and feature-detects the additive registration
+context before retaining host artifact policy. Both paths construct the same
+released `GitHubProvider` aggregate and expose the same provider capability
+contracts; neither path receives the Core container, private storage,
+credential writer, logger or other implementation service.
+
+`tests/RepositoryProvider/GitHubExternalExtensionParityTest.php` and
+`tests/fixtures/ran-booster-github-provider-extension/` are the maintained
+pluginisability proof. They load the provider and updater from a physically
+separate extension tree, exercise registration, browsing, archive composition
+and richer optional capabilities, prove configured artifact-limit parity, and
+verify that Booster self-update does not depend on the GitHub provider being
+active.

@@ -407,6 +407,25 @@ The main types you will usually touch while adding a new vendor are:
 For a deeper discussion of the provider contract itself, see the
 [provider extension contract](provider-extension-contract.md).
 
-The bundled GitHub module uses this same ordinary-vendor contract and remains
-owned and shipped by Core. Provider API 10 does not authorize extracting it into
-a separate package or release stream; extraction remains NO-GO.
+The first-party GitHub implementation is maintained and released independently
+as the Composer package `ran/booster-github-provider`, while Booster pins and
+bundles an immutable released version as part of its distribution. Bundled
+status is a distribution choice, not a privileged provider architecture: the
+`gh` aggregate is registered through the same `ProviderRegistry` /
+`registerWithCredentialStore()` boundary and implements the same public
+capability contracts available to an external provider.
+
+Booster retains provider-neutral host responsibilities such as registry
+lifecycle, credential custody, admission, deployment coordination and host
+policy. The GitHub package owns GitHub-specific transport, browsing,
+credential interpretation, webhook behavior, release behavior, workflow
+assistance and provider-owned workflow state. It receives no Core container,
+logger, credential writer, database repository, sidecar path or other private
+host implementation service.
+
+The maintained Phase 5 fixture in
+`tests/fixtures/ran-booster-github-provider-extension/` composes the released
+GitHub package as a physically separate WordPress extension using only public
+Provider API inputs and a wrapper-owned updater dependency. That proof is the
+reference for the invariant: bundled and external differ in distribution, not
+in capability authority.

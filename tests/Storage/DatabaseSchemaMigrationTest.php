@@ -177,7 +177,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		);
 		self::assertSame( array(), $wpdb->schemas );
 		self::assertSame( array(), $wpdb->queries );
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '10.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	public function testCurrentVersionRecreatesOnlyAMissingTableWithoutDeletingHistory(): void {
@@ -329,7 +329,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			self::assertSame( 'wrong_storage_engine', $failure->reason() );
 		}
 
-		self::assertSame( '10.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	public function testChangedAttemptColumnTypeIsIncompatibleAndPreserved(): void {

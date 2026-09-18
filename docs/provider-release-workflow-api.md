@@ -4,26 +4,22 @@ Provider API 10 keeps release-workflow setup as an optional, separately versione
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
-## API 1 compatibility contract
+## Pre-1.0 baseline
 
-`RepositoryReleaseWorkflowManagement` is the frozen API 1 contract and retains
-`RELEASE_WORKFLOW_API_VERSION = 1`. Its method signatures continue to accept
-Core `ReleaseTrackingStatus` and `ReleaseTrackingPreflight` values so a provider
-already compiled against API 1 can still declare and load without a PHP method-
-compatibility fatal after Core introduces the next workflow facet.
+`RepositoryReleaseWorkflowManagementV2` is the only release-workflow management
+facet in the v1 baseline and retains `RELEASE_WORKFLOW_API_VERSION = 2`.
 
-Core does not rewrite this published interface in place. Existing API 1 classes
-remain valid implementations of `RepositoryReleaseWorkflowManagement`, but the
-current workflow helper no longer resolves API 1 for workflow operations.
+The earlier Core-bound `RepositoryReleaseWorkflowManagement` API 1 facet was
+removed before 1.0 after the maintained-repository audit found no current
+consumer. It is not a compatibility contract for v1.
 
 ## API 2 provider-neutral contract
 
-`RepositoryReleaseWorkflowManagementV2` is a separate `ProviderCapability` with
-`RELEASE_WORKFLOW_API_VERSION = 2`. It intentionally does **not** extend API 1:
-loading the API 2 facet must not load API 1's Core release-tracking parameter
-types into an external provider runtime.
+`RepositoryReleaseWorkflowManagementV2` is a `ProviderCapability` whose method
+signatures accept only provider-neutral workflow inputs. Loading the facet does
+not load Core release-tracking parameter types into an external provider runtime.
 
-API 2 keeps the same fixed workflow operation shape while accepting only
+API 2 keeps the fixed workflow operation shape while accepting only
 provider-neutral inputs:
 
 - `RepositoryReleaseWorkflowTarget` contains only the package type, installed
@@ -44,11 +40,9 @@ model, credential material, callback or service resolver. Core constructs fresh
 API 2 values at the provider call boundary. Provider-owned workflow status,
 preview and result outputs remain unchanged.
 
-The bundled GitHub provider implements only API 2 for workflow management.
-Core's current workflow helper resolves `RepositoryReleaseWorkflowManagementV2`
-directly. An API 1 implementation remains load-compatible but receives no
-workflow-helper calls from this Core generation until it explicitly adopts the
-API 2 capability.
+The bundled GitHub provider implements API 2 for workflow management. Core's
+current workflow helper resolves `RepositoryReleaseWorkflowManagementV2`
+directly.
 
 The API 2 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,

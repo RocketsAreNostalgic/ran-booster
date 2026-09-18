@@ -9,8 +9,8 @@ use RAN\Provider\ProviderCapability;
 /**
  * Provider-neutral release workflow lifecycle.
  *
- * API 2 is deliberately separate from the Core-bound API 1 interface so a
- * provider implementing this facet does not load Core release-tracking types.
+ * API 2 is the current pre-1.0 baseline. Its provider-neutral inputs keep Core
+ * release-tracking types out of external provider runtimes.
  */
 interface RepositoryReleaseWorkflowManagementV2 extends ProviderCapability {
 	public const RELEASE_WORKFLOW_API_VERSION = 2;

@@ -256,8 +256,9 @@ them:
 - `RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2` for optional
   release workflow assessment, draft pull requests, outcome checks and template
   updates. Current Core resolves this standalone workflow API 2 facet directly.
-  API-1 providers remain load-compatible, but must explicitly migrate to V2 to
-  receive workflow-helper calls. It requires all five release-consumption
+  API 2 is the v1 release-workflow baseline; the earlier Core-bound API 1 facet
+  was retired before 1.0 after the maintained-repository audit found no current
+  consumer. It requires all five release-consumption
   contracts and non-null `ProviderAdminMetadata` on the same provider aggregate.
   The projected expected Update URI may be empty; when present it must be an
   HTTPS URL with a host and no userinfo. A non-HTTPS canonical Update URI may

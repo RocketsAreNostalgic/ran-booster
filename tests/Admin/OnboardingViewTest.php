@@ -311,7 +311,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Use a different storage location', $broken );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $broken );
 		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster'", $broken );
-		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $broken );
+		self::assertStringContainsString( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition', $broken );
+		self::assertStringNotContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE'", $broken );
 		self::assertStringContainsString( 'getenv', $broken );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="storage_needs_attention"', $broken );
 		self::assertStringContainsString( '<strong>Diagnostic code:</strong> <code>storage_needs_attention</code>', $broken );

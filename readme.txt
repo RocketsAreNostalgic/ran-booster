@@ -206,10 +206,13 @@ Credentials and webhook secrets are authenticated ciphertext in an owner-only
 private JSON file outside the WordPress and plugin directories. Conventional
 single-site POSIX installations can use the protected Overview's automatic
 location. Containers and uncommon layouts can define
-`RAN_BOOSTER_ENCRYPTED_SECRETS_FILE` as an absolute `secrets.json` path outside
-the public web root on durable local storage whose immediate parent is owned by
-PHP, readable and writable by PHP, and mode 0700. Its independent key is stored
-in the non-autoloaded
+`RAN_BOOSTER_ENCRYPTED_SECRETS_DIR` as an absolute private directory outside
+the public web root on durable local storage. The directory must be owned by
+PHP, readable and writable by PHP, and mode 0700; Booster manages
+`secrets.json` inside it. If an earlier prerelease configuration still defines
+`RAN_BOOSTER_ENCRYPTED_SECRETS_FILE`, remove that definition before configuring
+the directory constant; Booster rejects the retired exact-file constant. Its
+independent key is stored in the non-autoloaded
 `ran_booster_secrets_key_v1` WordPress option. Deactivation, updates and
 reinstalling over Booster preserve the encrypted file, lock and key. Restore
 the matching encrypted file and database key from the same backup; neither half

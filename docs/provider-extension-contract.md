@@ -163,15 +163,13 @@ HTML seam.
 
 ### Optional release workflow management
 
-`RepositoryReleaseWorkflowManagement` is the frozen, load-compatible workflow
-API 1 contract with `RELEASE_WORKFLOW_API_VERSION = 1`. Existing API 1 provider
-classes may continue to declare and load against that unchanged interface, but
-the current workflow helper no longer resolves API 1 for operations.
+`RepositoryReleaseWorkflowManagementV2` is the release-workflow management
+contract in the v1 baseline, with `RELEASE_WORKFLOW_API_VERSION = 2`. The earlier
+Core-bound API 1 facet was retired before 1.0 after the maintained-repository
+audit found no current consumer.
 
 The current helper resolves `RepositoryReleaseWorkflowManagementV2` directly.
-API 2 is a separate `ProviderCapability` with
-`RELEASE_WORKFLOW_API_VERSION = 2`; it intentionally does not extend API 1, so
-loading the neutral facet does not load Core `ReleaseTrackingStatus` or
+Its provider-neutral contract does not load Core `ReleaseTrackingStatus` or
 `ReleaseTrackingPreflight` parameter types into an external provider runtime.
 
 API 2 keeps the same fixed workflow operation shape and accepts only neutral
@@ -210,7 +208,7 @@ releases, detected automation, verified configuration, recorded setup pull
 requests and latest outcomes remain separate evidence.
 
 See [Provider release-workflow capability](provider-release-workflow-api.md) for
-the frozen API 1 compatibility contract and standalone neutral API 2 boundary.
+the v1 API 2 baseline and feature-detection boundary.
 
 `RepositoryReleaseWorkflowResult::failureStage()` is a closed, Core-owned
 display category, never a provider-defined value. Successful results must use

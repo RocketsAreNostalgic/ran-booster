@@ -288,7 +288,14 @@ final class LocalDataRemoverTest extends TestCase {
 
 		$this->database->failureContains = null;
 		$remover->remove();
-		self::assertSame( array( 'wp_unrelated' ), $this->database->tables );
+		self::assertSame(
+			array(
+				'wp_ran_booster_rejected_admission_audit',
+				'wp_ran_booster_native_update_activity',
+				'wp_unrelated',
+			),
+			$this->database->tables
+		);
 		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
 	}
 

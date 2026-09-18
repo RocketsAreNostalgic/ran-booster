@@ -185,7 +185,6 @@ class Database {
 			$this->verifyTable( $table, $contract['columns'], $contract['indexes'] );
 		}
 
-
 		if ( ! update_option( self::VERSION_OPTION, self::$booster_db_version, false )
 			&& self::$booster_db_version !== get_option( self::VERSION_OPTION, false ) ) {
 			throw new DatabaseLifecycleFailure( 'version_write_failed' );

@@ -409,7 +409,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			),
 			$wpdb->rows
 		);
-		self::assertSame( '10.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		self::assertFalse( $database->isReady() );
 	}
 
@@ -429,7 +429,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		}
 
 		self::assertSame( array(), $wpdb->schemas );
-		self::assertSame( '10.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	public function testVersionWriteFailureIsCachedAndRetryableWithANewLifecycle(): void {
@@ -441,8 +441,8 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		( new Database() )->install();
 		unset( $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		$ran_booster_storage_test_option_apply_write  = false;
-		$ran_booster_storage_test_option_write_result                  = false;
-		$database = new Database();
+		$ran_booster_storage_test_option_write_result = false;
+		$database                                    = new Database();
 
 		foreach ( array( 1, 2 ) as $_attempt ) {
 			try {
@@ -522,7 +522,6 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		( new Database() )->install();
 	}
 
-
 	private function assertIncompatibleSchemaFailsBeforeDdl( StorageTestWpdb $wpdb ): void {
 		global $ran_booster_storage_test_options;
 
@@ -535,7 +534,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		}
 
 		self::assertSame( array(), $wpdb->schemas );
-		self::assertSame( '10.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 }
 

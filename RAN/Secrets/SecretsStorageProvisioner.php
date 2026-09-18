@@ -19,7 +19,7 @@ use Throwable;
 class SecretsStorageProvisioner {
 
 	private const DIRECTORY_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
-	private const FILE_CONSTANT_NAME      = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
+	private const UNSUPPORTED_FILE_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
 	private const RECOVERY_MAX_ENTRIES    = 64;
 	public const RESET_CONFIRMATION       = 'RESET STORAGE';
 
@@ -498,13 +498,7 @@ class SecretsStorageProvisioner {
 
 			return $this->absoluteCanonicalPath( $path ) ? $path : false;
 		}
-		if ( ! defined( self::FILE_CONSTANT_NAME ) ) {
-			return null;
-		}
-
-		$value = constant( self::FILE_CONSTANT_NAME );
-
-		return is_string( $value ) && $this->absoluteCanonicalPath( $value ) ? $value : false;
+		return defined( self::UNSUPPORTED_FILE_CONSTANT_NAME ) ? false : null;
 	}
 
 	protected function isMultisiteInstallation(): bool {

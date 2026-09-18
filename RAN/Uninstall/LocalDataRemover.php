@@ -160,8 +160,6 @@ class LocalDataRemover {
 			array(
 				$this->verifiedTablePrefix . 'ran_booster_packages',
 				$this->verifiedTablePrefix . 'ran_booster_deployment_attempts',
-				$this->verifiedTablePrefix . 'ran_booster_rejected_admission_audit',
-				$this->verifiedTablePrefix . 'ran_booster_native_update_activity',
 			) as $table
 		) {
 			$query = $this->database->prepare( 'DROP TABLE IF EXISTS %i', $table );

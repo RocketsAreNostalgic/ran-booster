@@ -18,10 +18,10 @@ use Throwable;
  */
 class SecretsStorageProvisioner {
 
-	private const DIRECTORY_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
-	private const FILE_CONSTANT_NAME      = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
-	private const RECOVERY_MAX_ENTRIES    = 64;
-	public const RESET_CONFIRMATION       = 'RESET STORAGE';
+	private const DIRECTORY_CONSTANT_NAME        = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
+	private const UNSUPPORTED_FILE_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
+	private const RECOVERY_MAX_ENTRIES           = 64;
+	public const RESET_CONFIRMATION              = 'RESET STORAGE';
 
 	public function __construct(
 		private readonly PrivateLocationCandidateResolver $resolver = new PrivateLocationCandidateResolver(),
@@ -487,6 +487,9 @@ class SecretsStorageProvisioner {
 
 	/** @return string|false|null False means defined with an invalid value. */
 	protected function configuredPath(): string|false|null {
+		if ( defined( self::UNSUPPORTED_FILE_CONSTANT_NAME ) ) {
+			return false;
+		}
 		if ( defined( self::DIRECTORY_CONSTANT_NAME ) ) {
 			$value = constant( self::DIRECTORY_CONSTANT_NAME );
 			if ( ! is_string( $value ) || '' === trim( $value ) ) {
@@ -498,13 +501,7 @@ class SecretsStorageProvisioner {
 
 			return $this->absoluteCanonicalPath( $path ) ? $path : false;
 		}
-		if ( ! defined( self::FILE_CONSTANT_NAME ) ) {
-			return null;
-		}
-
-		$value = constant( self::FILE_CONSTANT_NAME );
-
-		return is_string( $value ) && $this->absoluteCanonicalPath( $value ) ? $value : false;
+		return null;
 	}
 
 	protected function isMultisiteInstallation(): bool {

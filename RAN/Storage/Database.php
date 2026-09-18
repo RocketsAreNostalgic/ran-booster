@@ -154,45 +154,35 @@ class Database {
 		$charsetCollate = $wpdb->get_charset_collate();
 		$tables         = array(
 			$packageTable => array(
-				'schema'          => $this->packageSchema( $packageTable, $charsetCollate ),
-				'columns'         => $this->packageColumns(),
-				'indexes'         => $this->packageIndexes(),
-				'additiveColumns' => array(),
-				'additiveIndexes' => array(),
+				'schema'  => $this->packageSchema( $packageTable, $charsetCollate ),
+				'columns' => $this->packageColumns(),
+				'indexes' => $this->packageIndexes(),
 			),
 			$attemptTable => array(
-				'schema'          => $this->attemptSchema( $attemptTable, $charsetCollate ),
-				'columns'         => $this->attemptColumns(),
-				'indexes'         => $this->attemptIndexes(),
-				'additiveColumns' => array( 'resolved_at', 'resolved_by' ),
-				'additiveIndexes' => array(),
+				'schema'  => $this->attemptSchema( $attemptTable, $charsetCollate ),
+				'columns' => $this->attemptColumns(),
+				'indexes' => $this->attemptIndexes(),
 			),
 		);
 
-		$needsDelta = array();
+		$missingTables = array();
 		foreach ( $tables as $table => $contract ) {
-			$needsDelta[ $table ] = $this->needsAdditiveUpdate(
+			$missingTables[ $table ] = $this->needsCurrentTableCreation(
 				$table,
 				$contract['columns'],
-				$contract['indexes'],
-				$contract['additiveColumns'],
-				$contract['additiveIndexes']
+				$contract['indexes']
 			);
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		foreach ( $tables as $table => $contract ) {
-			if ( $needsDelta[ $table ] ) {
+			if ( $missingTables[ $table ] ) {
 				dbDelta( $contract['schema'] );
 			}
 		}
 
 		foreach ( $tables as $table => $contract ) {
 			$this->verifyTable( $table, $contract['columns'], $contract['indexes'] );
-		}
-
-		if ( null !== $installedVersion && version_compare( $installedVersion, self::$booster_db_version, '<' ) ) {
-			$this->retireRejectedAdmissionAuditTable();
 		}
 
 		if ( ! update_option( self::VERSION_OPTION, self::$booster_db_version, false )
@@ -273,15 +263,11 @@ class Database {
 	/**
 	 * @param array<string, array{type: string, nullable: bool, default: ?string, extra: string}> $expectedColumns
 	 * @param array<string, array{0: bool, 1: list<string>}> $expectedIndexes
-	 * @param list<string> $additiveColumns
-	 * @param list<string> $additiveIndexes
 	 */
-	private function needsAdditiveUpdate(
+	private function needsCurrentTableCreation(
 		string $tableName,
 		array $expectedColumns,
-		array $expectedIndexes,
-		array $additiveColumns,
-		array $additiveIndexes
+		array $expectedIndexes
 	): bool {
 		$wpdb = $this->connection();
 
@@ -301,29 +287,11 @@ class Database {
 		}
 
 		$actual = $this->inspectTable( $tableName );
-		if ( array_diff_key( $actual['columns'], $expectedColumns )
-			|| array_diff_key( $actual['indexes'], $expectedIndexes ) ) {
-			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
-		}
-		foreach ( $actual['columns'] as $name => $type ) {
-			if ( $type !== $expectedColumns[ $name ] ) {
-				throw new DatabaseLifecycleFailure( 'incompatible_schema' );
-			}
-		}
-		foreach ( $actual['indexes'] as $name => $index ) {
-			if ( $index !== $expectedIndexes[ $name ] ) {
-				throw new DatabaseLifecycleFailure( 'incompatible_schema' );
-			}
-		}
-
-		$missingColumns = array_diff_key( $expectedColumns, $actual['columns'] );
-		$missingIndexes = array_diff_key( $expectedIndexes, $actual['indexes'] );
-		if ( array_diff_key( $missingColumns, array_flip( $additiveColumns ) )
-			|| array_diff_key( $missingIndexes, array_flip( $additiveIndexes ) ) ) {
+		if ( $actual['columns'] !== $expectedColumns || $actual['indexes'] !== $expectedIndexes ) {
 			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
 		}
 
-		return array() !== $missingColumns || array() !== $missingIndexes;
+		return false;
 	}
 
 	/**
@@ -544,51 +512,19 @@ class Database {
 		if ( ! is_string( $value ) || 1 !== preg_match( '/^[0-9]+\.[0-9]+$/D', $value ) ) {
 			throw new DatabaseLifecycleFailure( 'malformed_schema_version' );
 		}
-		if ( version_compare( $value, '10.0', '<' ) ) {
+		if ( version_compare( $value, '10.0', '<' )
+			|| in_array( $value, array( '10.0', '11.0', '12.0' ), true )
+		) {
 			throw new DatabaseLifecycleFailure( 'unsupported_old_schema' );
 		}
 		if ( version_compare( $value, self::$booster_db_version, '>' ) ) {
 			throw new DatabaseLifecycleFailure( 'newer_schema' );
 		}
-		if ( ! in_array( $value, array( '10.0', '11.0', '12.0', self::$booster_db_version ), true ) ) {
+		if ( self::$booster_db_version !== $value ) {
 			throw new DatabaseLifecycleFailure( 'unknown_schema_version' );
 		}
 
 		return $value;
-	}
-
-	private function retireRejectedAdmissionAuditTable(): void {
-		$wpdb     = $this->connection();
-		$table    = $wpdb->prefix . 'ran_booster_rejected_admission_audit';
-		$readback = function () use ( $table, $wpdb ): mixed {
-			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) );
-			$wpdb->last_error = '';
-			// The exact current-prefix table identity is prepared immediately above.
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$result = $wpdb->get_var( $query );
-			if ( '' !== trim( (string) $wpdb->last_error ) ) {
-				throw new DatabaseLifecycleFailure( 'legacy_audit_read_failed' );
-			}
-
-			return $result;
-		};
-		$existing = $readback();
-		if ( null === $existing ) {
-			return;
-		}
-		if ( ! is_string( $existing ) || ! hash_equals( $table, $existing ) ) {
-			throw new DatabaseLifecycleFailure( 'legacy_audit_identity_failed' );
-		}
-
-		$query = $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table );
-		// The exact current-prefix table identifier is prepared immediately above.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		if ( false === $wpdb->query( $query ) ) {
-			throw new DatabaseLifecycleFailure( 'legacy_audit_drop_failed' );
-		}
-		if ( null !== $readback() ) {
-			throw new DatabaseLifecycleFailure( 'legacy_audit_drop_unverified' );
-		}
 	}
 
 	private function normalizeColumnType( string $type ): string {

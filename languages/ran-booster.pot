@@ -338,7 +338,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:248
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:338
 #: views/documentation.php:117
-#: views/documentation.php:392
+#: views/documentation.php:390
 msgid "Push-to-deploy"
 msgstr ""
 
@@ -2154,9 +2154,9 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:292
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:303
-#: views/documentation.php:334
+#: views/documentation.php:332
+#: views/documentation.php:425
 #: views/documentation.php:427
-#: views/documentation.php:429
 msgid " (opens in a new tab)"
 msgstr ""
 
@@ -2805,7 +2805,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1000
 #: views/documentation.php:181
-#: views/documentation.php:405
+#: views/documentation.php:403
 msgid "Open Troubleshooting"
 msgstr ""
 
@@ -4671,8 +4671,8 @@ msgid "The private storage location and WordPress configuration are not on one v
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:180
-#: RAN/Secrets/SecretsStorageProvisioner.php:1057
-#: RAN/Secrets/SecretsStorageProvisioner.php:1065
+#: RAN/Secrets/SecretsStorageProvisioner.php:1054
+#: RAN/Secrets/SecretsStorageProvisioner.php:1062
 msgid "The WordPress configuration could not be updated safely."
 msgstr ""
 
@@ -4745,254 +4745,254 @@ msgstr ""
 msgid "The recoverable storage path could not be adopted safely."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:732
+#: RAN/Secrets/SecretsStorageProvisioner.php:729
 msgid "PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:738
+#: RAN/Secrets/SecretsStorageProvisioner.php:735
 msgid "The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:746
+#: RAN/Secrets/SecretsStorageProvisioner.php:743
 msgid "Booster could not verify the configured secrets directory."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:763
+#: RAN/Secrets/SecretsStorageProvisioner.php:760
 msgid "The configured secrets file must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:770
+#: RAN/Secrets/SecretsStorageProvisioner.php:767
 msgid "Booster could not verify the configured secrets file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:775
+#: RAN/Secrets/SecretsStorageProvisioner.php:772
 msgid "The configured secrets file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:788
+#: RAN/Secrets/SecretsStorageProvisioner.php:785
 msgid "The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:794
+#: RAN/Secrets/SecretsStorageProvisioner.php:791
 msgid "The configured secrets lock must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:801
+#: RAN/Secrets/SecretsStorageProvisioner.php:798
 msgid "Booster could not verify the configured secrets lock file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:806
+#: RAN/Secrets/SecretsStorageProvisioner.php:803
 msgid "The configured secrets lock file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:824
+#: RAN/Secrets/SecretsStorageProvisioner.php:821
 msgctxt "Configured secrets storage item"
 msgid "directory"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:825
+#: RAN/Secrets/SecretsStorageProvisioner.php:822
 msgctxt "Configured secrets storage item"
 msgid "file"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:826
+#: RAN/Secrets/SecretsStorageProvisioner.php:823
 msgctxt "Configured secrets storage item"
 msgid "lock file"
 msgstr ""
 
 #. translators: 1: configured secrets storage item, 2: current octal mode, 3: required octal mode.
-#: RAN/Secrets/SecretsStorageProvisioner.php:834
+#: RAN/Secrets/SecretsStorageProvisioner.php:831
 #, php-format
 msgid "The configured secrets %1$s uses mode %2$04o; mode %3$04o is required."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:843
+#: RAN/Secrets/SecretsStorageProvisioner.php:840
 #, php-format
 msgid "The configured secrets %s is not owned by the PHP process user."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:850
+#: RAN/Secrets/SecretsStorageProvisioner.php:847
 #, php-format
 msgid "The configured secrets %s is not readable by PHP."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:857
+#: RAN/Secrets/SecretsStorageProvisioner.php:854
 #, php-format
 msgid "The configured secrets %s is not writable by PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:876
+#: RAN/Secrets/SecretsStorageProvisioner.php:873
 msgid "secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:880
+#: RAN/Secrets/SecretsStorageProvisioner.php:877
 msgid "The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:884
+#: RAN/Secrets/SecretsStorageProvisioner.php:881
 msgid "Only secrets.json.lock remains; no secrets file or database encryption key was found."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:888
+#: RAN/Secrets/SecretsStorageProvisioner.php:885
 msgid "Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:892
+#: RAN/Secrets/SecretsStorageProvisioner.php:889
 msgid "Booster could not safely use the encrypted secrets store."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:902
+#: RAN/Secrets/SecretsStorageProvisioner.php:899
 msgid "The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:906
+#: RAN/Secrets/SecretsStorageProvisioner.php:903
 msgid "The secrets file could not be authenticated with this site's database key. Restore both from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:911
+#: RAN/Secrets/SecretsStorageProvisioner.php:908
 msgid "The secrets file authenticated but its encrypted document is invalid."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:915
+#: RAN/Secrets/SecretsStorageProvisioner.php:912
 msgid "Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:921
+#: RAN/Secrets/SecretsStorageProvisioner.php:918
 msgid "The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:929
+#: RAN/Secrets/SecretsStorageProvisioner.php:926
 msgid "The secrets lock file could not be used safely. Verify its ownership and mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:933
+#: RAN/Secrets/SecretsStorageProvisioner.php:930
 msgid "Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1033
+#: RAN/Secrets/SecretsStorageProvisioner.php:1030
 msgid "The encrypted secrets path is already configured."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1034
+#: RAN/Secrets/SecretsStorageProvisioner.php:1031
 msgid "The WordPress configuration directory is not safe and writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1035
+#: RAN/Secrets/SecretsStorageProvisioner.php:1032
 msgid "The encrypted secrets path is not safe for automatic configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1036
+#: RAN/Secrets/SecretsStorageProvisioner.php:1033
 msgid "The supplied WordPress configuration path is not an absolute safe POSIX file path."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1037
+#: RAN/Secrets/SecretsStorageProvisioner.php:1034
 msgid "The WordPress configuration changed before it could be edited."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1038
+#: RAN/Secrets/SecretsStorageProvisioner.php:1035
 msgid "Could not secure the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1039
+#: RAN/Secrets/SecretsStorageProvisioner.php:1036
 msgid "Could not lock the WordPress configuration for editing."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1040
+#: RAN/Secrets/SecretsStorageProvisioner.php:1037
 msgid "The WordPress configuration does not pass Booster's writable private regular-file checks."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1041
+#: RAN/Secrets/SecretsStorageProvisioner.php:1038
 msgid "The WordPress configuration is group- or world-writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1042
+#: RAN/Secrets/SecretsStorageProvisioner.php:1039
 msgid "The WordPress configuration has an unsupported size."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1043
+#: RAN/Secrets/SecretsStorageProvisioner.php:1040
 msgid "The WordPress configuration is not owned by the current process owner."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1044
+#: RAN/Secrets/SecretsStorageProvisioner.php:1041
 msgid "Could not read the complete WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1045
+#: RAN/Secrets/SecretsStorageProvisioner.php:1042
 msgid "The WordPress configuration must contain one standard stop-editing marker."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1046
+#: RAN/Secrets/SecretsStorageProvisioner.php:1043
 msgid "The encrypted secrets path constant is already defined."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1047
+#: RAN/Secrets/SecretsStorageProvisioner.php:1044
 msgid "The automatic encrypted secrets definition is ambiguous."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1048
+#: RAN/Secrets/SecretsStorageProvisioner.php:1045
 msgid "The edited WordPress configuration did not pass the expected definition check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1049
+#: RAN/Secrets/SecretsStorageProvisioner.php:1046
 msgid "Could not secure the temporary WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1050
+#: RAN/Secrets/SecretsStorageProvisioner.php:1047
 msgid "Could not preserve WordPress configuration ownership."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1051
+#: RAN/Secrets/SecretsStorageProvisioner.php:1048
 msgid "Could not flush the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1052
+#: RAN/Secrets/SecretsStorageProvisioner.php:1049
 msgid "Could not synchronize the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1053
+#: RAN/Secrets/SecretsStorageProvisioner.php:1050
 msgid "The edited WordPress configuration failed its read-back check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1054
+#: RAN/Secrets/SecretsStorageProvisioner.php:1051
 msgid "The edited WordPress configuration metadata could not be verified."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1055
+#: RAN/Secrets/SecretsStorageProvisioner.php:1052
 msgid "Could not atomically replace the WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1056
+#: RAN/Secrets/SecretsStorageProvisioner.php:1053
 msgid "The installed WordPress configuration failed verification."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1058
+#: RAN/Secrets/SecretsStorageProvisioner.php:1055
 msgid "The WordPress configuration does not parse as supported PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1059
+#: RAN/Secrets/SecretsStorageProvisioner.php:1056
 msgid "The WordPress configuration uses unsupported line endings."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1060
+#: RAN/Secrets/SecretsStorageProvisioner.php:1057
 msgid "The WordPress configuration edit lock is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1061
+#: RAN/Secrets/SecretsStorageProvisioner.php:1058
 msgid "Could not write the complete edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1062
+#: RAN/Secrets/SecretsStorageProvisioner.php:1059
 msgid "The temporary WordPress configuration is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1063
+#: RAN/Secrets/SecretsStorageProvisioner.php:1060
 msgid "Could not open the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1064
+#: RAN/Secrets/SecretsStorageProvisioner.php:1061
 msgid "Could not create a private temporary WordPress configuration."
 msgstr ""
 
@@ -5502,18 +5502,18 @@ msgstr ""
 
 #. translators: %s: Repository provider name.
 #: views/documentation.php:95
-#: views/documentation.php:312
+#: views/documentation.php:310
 #, php-format
 msgid "%s credentials and access"
 msgstr ""
 
 #: views/documentation.php:116
-#: views/documentation.php:351
+#: views/documentation.php:349
 msgid "Installing and managing packages"
 msgstr ""
 
 #: views/documentation.php:127
-#: views/documentation.php:440
+#: views/documentation.php:438
 msgid "About RAN Booster"
 msgstr ""
 
@@ -5527,7 +5527,7 @@ msgstr ""
 
 #: views/documentation.php:139
 #: views/documentation.php:162
-#: views/documentation.php:458
+#: views/documentation.php:456
 msgid "or"
 msgstr ""
 
@@ -5577,7 +5577,7 @@ msgid "Install a package."
 msgstr ""
 
 #: views/documentation.php:161
-#: views/documentation.php:355
+#: views/documentation.php:353
 #: views/onboarding.php:73
 #: views/provider.php:439
 msgid "Install a plugin"
@@ -5816,11 +5816,7 @@ msgid "as a private directory outside the public web root on durable local stora
 msgstr ""
 
 #: views/documentation.php:272
-msgid "provides a safe relative layout anchored to that file. The directory must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json inside it. Existing configurations may continue using the exact-file"
-msgstr ""
-
-#: views/documentation.php:272
-msgid "with the same dirname( __DIR__ ) anchoring. Raw unanchored relative strings are rejected because web, cron and CLI processes may have different working directories. Booster never displays a saved secret back to you once it is stored."
+msgid "provides a safe relative layout anchored to that file. The directory must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json inside it. Raw unanchored relative strings are rejected because web, cron and CLI processes may have different working directories. Booster never displays a saved secret back to you once it is stored."
 msgstr ""
 
 #: views/documentation.php:273
@@ -5849,314 +5845,306 @@ msgid "To use a hosting environment variable, bridge it to the PHP constant in w
 msgstr ""
 
 #: views/documentation.php:284
-msgid "The legacy exact-file constant remains supported and can use the same wp-config.php-relative anchor:"
-msgstr ""
-
-#: views/documentation.php:286
 msgid "If credentials already exist, move or restore secrets.json, secrets.json.lock and the matching database key together. Do not create an empty secrets file, copy only the encrypted file, or reset only the database key. If either the file or database key is permanently unavailable, the protected Overview can offer an explicit typed reset after Booster verifies the remaining filesystem material and private path; this discards unrecoverable credentials and webhook secrets before fresh storage can be initialized."
 msgstr ""
 
-#: views/documentation.php:287
+#: views/documentation.php:285
 msgid "Moving credentials between sites"
 msgstr ""
 
-#: views/documentation.php:288
+#: views/documentation.php:286
 msgid "A plugin ZIP export or a database-only site migration cannot recreate the encrypted store. Transporter, described above, is the supported way to move selected repository credentials: it protects them inside the Transporter Blueprint ZIP, confirms repository identity and access on the target, and re-encrypts them with the target site’s key. Installing or adopting a package associates the imported credential with that package. Credential-only recovery for an already-managed package imports the credential under a new target-local ID but deliberately leaves the package’s saved credential selection unchanged; assign the recovered credential through the package settings if needed. Constants, webhook secrets and credentials already saved on the target are never exported. When Transporter is not the right fit, add credentials directly through the provider settings screens on the target site, or use the supported deployment constants instead."
 msgstr ""
 
-#: views/documentation.php:289
+#: views/documentation.php:287
 msgid "Do not overwrite an existing target site’s credentials file. If you ever need to restore the whole file as a recovery step, keep a copy of the target’s existing file first, and treat that restore as something only an approved recovery process should do."
 msgstr ""
 
-#: views/documentation.php:290
+#: views/documentation.php:288
 msgid "Keep the encrypted file and key protected, and exclude the file from version control and from any release archive."
 msgstr ""
 
-#: views/documentation.php:292
+#: views/documentation.php:290
 msgid "What happens on uninstall"
 msgstr ""
 
-#: views/documentation.php:293
+#: views/documentation.php:291
 msgid "Deactivating Booster keeps all credentials, package settings and deployment history in place. Deleting Booster through WordPress is the permanent local cleanup action: it removes both Booster custom tables, the encrypted credentials file and its separate database key, other Booster options, user notices, scheduled work, locks and temporary Logging capture. If Booster cannot verify or remove one of those artifacts safely, WordPress keeps the plugin files so an administrator can correct the problem and retry."
 msgstr ""
 
-#: views/documentation.php:294
+#: views/documentation.php:292
 msgid "Before deleting Booster, export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use that you may need. A Transporter Blueprint does not include webhook secrets, provider-side webhook registrations, deployment history or constants, and every restored package starts with deployment Disabled."
 msgstr ""
 
-#: views/documentation.php:295
-msgid "Uninstall cannot revoke provider credentials or remove remote webhooks. Revoke credentials with each provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php definition it created; a manually authored"
+#: views/documentation.php:293
+msgid "Uninstall cannot revoke provider credentials or remove remote webhooks. Revoke credentials with each provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php storage definition it created; any manually authored storage definition remains under the site operator’s control."
 msgstr ""
 
-#: views/documentation.php:295
-msgid "definition remains under the site operator’s control."
-msgstr ""
-
-#: views/documentation.php:317
+#: views/documentation.php:315
 msgid "Minimum credential permissions"
 msgstr ""
 
 #. translators: %s: Repository provider name.
-#: views/documentation.php:323
+#: views/documentation.php:321
 #, php-format
 msgctxt "Repository provider settings link"
 msgid "Open %s settings"
 msgstr ""
 
-#: views/documentation.php:328
+#: views/documentation.php:326
 msgid "Official setup guidance"
 msgstr ""
 
-#: views/documentation.php:342
+#: views/documentation.php:340
 msgid "Setup guidance is not available for this provider yet."
 msgstr ""
 
-#: views/documentation.php:343
+#: views/documentation.php:341
 msgid "You can still use a public repository or enter repository details manually when the provider supports package deployment."
 msgstr ""
 
-#: views/documentation.php:353
+#: views/documentation.php:351
 msgid "Choose a provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation."
 msgstr ""
 
-#: views/documentation.php:356
+#: views/documentation.php:354
 #: views/onboarding.php:74
 #: views/provider.php:440
 msgid "Install a theme"
 msgstr ""
 
-#: views/documentation.php:357
+#: views/documentation.php:355
 msgid "Manage deployed plugins"
 msgstr ""
 
-#: views/documentation.php:358
+#: views/documentation.php:356
 msgid "Manage deployed themes"
 msgstr ""
 
-#: views/documentation.php:360
+#: views/documentation.php:358
 msgid "A saved credential is required only when the selected repository is private or otherwise inaccessible anonymously. Keep the configured branch aligned with the branch you intend to deploy."
 msgstr ""
 
-#: views/documentation.php:362
+#: views/documentation.php:360
 msgid "Large repository archives"
 msgstr ""
 
 #. translators: %s: registered repository provider labels.
-#: views/documentation.php:366
+#: views/documentation.php:364
 #, php-format
 msgid "%s provide Booster with a ZIP of the whole repository. Choosing a plugin or theme subdirectory does not make that download smaller. Keep development-only trees such as committed node_modules, caches, test artifacts and unused build output out of the deployed repository ref."
 msgstr ""
 
 #. translators: 1: compressed ZIP limit in MiB, 2: expanded ZIP limit in MiB, 3: configuration source.
-#: views/documentation.php:374
+#: views/documentation.php:372
 #, php-format
 msgid "This site currently allows repository ZIPs up to %1$d MiB compressed and %2$d MiB expanded (%3$s)."
 msgstr ""
 
-#: views/documentation.php:377
+#: views/documentation.php:375
 #: views/onboarding.php:37
 msgid "Booster default"
 msgstr ""
 
-#: views/documentation.php:377
+#: views/documentation.php:375
 msgid "configured in wp-config.php"
 msgstr ""
 
-#: views/documentation.php:383
+#: views/documentation.php:381
 msgid "Archive deployments are currently blocked:"
 msgstr ""
 
-#: views/documentation.php:383
+#: views/documentation.php:381
 msgid "RAN_BOOSTER_MAX_ARCHIVE_BYTES must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB)."
 msgstr ""
 
-#: views/documentation.php:385
+#: views/documentation.php:383
 msgid "If a legitimate repository needs more room, set one target-local, site-wide compressed limit in wp-config.php before WordPress loads Booster:"
 msgstr ""
 
-#: views/documentation.php:387
+#: views/documentation.php:385
 msgid "The value may range from 1 MiB through 536,870,911 bytes (just under 512 MiB). Booster derives an expanded-content limit four times as large and still applies its entry-count, path, identity and free-space checks. The setting affects manual installs, manual and webhook updates, and package installation from a Transporter Blueprint; reviewing a Transporter Blueprint and adopting an already-installed package do not download a repository archive."
 msgstr ""
 
-#: views/documentation.php:394
+#: views/documentation.php:392
 msgid "Push-to-Deploy is optional and configured separately on every target site. Use the matching provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic."
 msgstr ""
 
-#: views/documentation.php:395
+#: views/documentation.php:393
 msgid "The provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote provider webhook exists. Configure and verify every remote webhook separately."
 msgstr ""
 
-#: views/documentation.php:396
+#: views/documentation.php:394
 msgid "Security, delivery history and hosting"
 msgstr ""
 
-#: views/documentation.php:397
+#: views/documentation.php:395
 msgid "HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret."
 msgstr ""
 
-#: views/documentation.php:398
+#: views/documentation.php:396
 msgid "Do not cache, challenge, redirect or transform either accepted callback form: the pretty /wp-json/ route or the equivalent ?rest_route= query route. Proxies must preserve the raw body and signature headers. WordPress may already have buffered the body before Booster runs, so Core enforces its measured 256 KiB limit but does not trust or parse Content-Length as transport protection."
 msgstr ""
 
-#: views/documentation.php:399
+#: views/documentation.php:397
 msgid "A provider can time out after Booster has durably admitted work. Provider delivery history remains authoritative for request duration, response status and redelivery. GitHub does not automatically redeliver failed deliveries. For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts. Compare the provider identifier with the Provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
 msgstr ""
 
-#: views/documentation.php:400
+#: views/documentation.php:398
 msgid "At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. Provider-published IP ranges are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity."
 msgstr ""
 
-#: views/documentation.php:401
+#: views/documentation.php:399
 msgid "Retained webhook setup and cleanup"
 msgstr ""
 
-#: views/documentation.php:402
+#: views/documentation.php:400
 msgid "Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup. That package ignores pushes while it remains release-managed, while any branch-managed package using the same repository can continue to need the webhook. Keeping the setup is useful for a temporary switch back and forth."
 msgstr ""
 
-#: views/documentation.php:403
+#: views/documentation.php:401
 msgid "For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source."
 msgstr ""
 
-#: views/documentation.php:404
+#: views/documentation.php:402
 msgid "For an identified GitHub hook, the verified Remove action can remove the remote hook and release only a repository secret created specifically for it. For other providers, open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
 msgstr ""
 
-#: views/documentation.php:405
+#: views/documentation.php:403
 msgid "The provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the provider, then review Deployment activity in Troubleshooting for Booster-managed results."
 msgstr ""
 
 #. translators: %s: Repository provider name.
-#: views/documentation.php:413
+#: views/documentation.php:411
 #, php-format
 msgid "%s webhook settings"
 msgstr ""
 
-#: views/documentation.php:417
+#: views/documentation.php:415
 msgid "Provider location"
 msgstr ""
 
-#: views/documentation.php:419
+#: views/documentation.php:417
 #: views/provider.php:362
 msgid "Payload URL"
 msgstr ""
 
-#: views/documentation.php:421
+#: views/documentation.php:419
 #: views/provider.php:365
 msgid "Content type"
 msgstr ""
 
-#: views/documentation.php:423
+#: views/documentation.php:421
 #: views/provider.php:369
 msgid "Event"
 msgstr ""
 
-#: views/documentation.php:427
+#: views/documentation.php:425
 msgid "Webhook setup instructions"
 msgstr ""
 
-#: views/documentation.php:429
+#: views/documentation.php:427
 #: views/provider.php:377
 msgid "Delivery troubleshooting"
 msgstr ""
 
-#: views/documentation.php:442
+#: views/documentation.php:440
 msgid "Where this came from"
 msgstr ""
 
-#: views/documentation.php:443
+#: views/documentation.php:441
 msgid "Booster is a developer-focused repository deployment plugin for WordPress. It began as a modified derivative of WP Pusher 3.0.13. WP Pusher was created by Peter Suhm, and the inherited source was distributed under GPLv2. We are grateful for Peter’s original work and its central idea: use WordPress’s updater to deploy plugins and themes from version-controlled repositories."
 msgstr ""
 
-#: views/documentation.php:444
+#: views/documentation.php:442
 msgid "WP Pusher changed ownership in 2021 and is a separate product. Booster is an independent fork maintained by Rockets Are Nostalgic. It is not affiliated with or endorsed by Peter Suhm, WP Pusher or its owners. The distributed NOTICE.md and license.txt record the full source provenance and license."
 msgstr ""
 
-#: views/documentation.php:446
+#: views/documentation.php:444
 msgid "Why we built this"
 msgstr ""
 
-#: views/documentation.php:447
+#: views/documentation.php:445
 msgid "The inherited release depended on a vendor-hosted licensing, OAuth and repository-picker service just to work at all — repository access, credential storage and even the repository browser all ran through that service. We forked it to remove that dependency. Every credential, webhook and deployment decision now lives on your own site, not a third party’s."
 msgstr ""
 
-#: views/documentation.php:449
+#: views/documentation.php:447
 msgid "What’s different"
 msgstr ""
 
-#: views/documentation.php:451
+#: views/documentation.php:449
 msgid "Safety."
 msgstr ""
 
-#: views/documentation.php:451
+#: views/documentation.php:449
 msgid "Booster verifies a repository’s identity and an archive’s contents before it touches a file, and will not let a delayed or out-of-order webhook roll back code that has already been updated. Saved credentials use authenticated encryption in a file with restrictive"
 msgstr ""
 
-#: views/documentation.php:451
+#: views/documentation.php:449
 msgid "permissions; the independent key remains in the WordPress database, so neither a file-only nor database-only copy contains usable credentials."
 msgstr ""
 
-#: views/documentation.php:452
+#: views/documentation.php:450
 msgid "Transporter."
 msgstr ""
 
-#: views/documentation.php:452
+#: views/documentation.php:450
 msgid "A password-protected Transporter Blueprint moves package and repository configuration, and any credentials you choose, between sites without copying a development checkout."
 msgstr ""
 
-#: views/documentation.php:453
+#: views/documentation.php:451
 msgid "Independence & Security."
 msgstr ""
 
-#: views/documentation.php:453
+#: views/documentation.php:451
 msgid "No vendor-hosted licensing, OAuth broker or repository-picker service. Further, the inherited codebase stored a private repository’s access token as a WordPress option in the database; Booster instead saves your repository credential in a file on your own site, never in the WordPress database."
 msgstr ""
 
-#: views/documentation.php:454
+#: views/documentation.php:452
 msgid "Extensibility."
 msgstr ""
 
-#: views/documentation.php:454
+#: views/documentation.php:452
 msgid "Additional git providers can be added through a documented registration hook without modifying Booster itself."
 msgstr ""
 
-#: views/documentation.php:457
+#: views/documentation.php:455
 msgid "How a deployment stays honest"
 msgstr ""
 
-#: views/documentation.php:458
+#: views/documentation.php:456
 msgid "Every deployment is recorded as one attempt with a clear status —"
 msgstr ""
 
-#: views/documentation.php:458
+#: views/documentation.php:456
 msgid "— so there is always an honest history and something concrete to point to if something goes wrong. Beyond that record, Booster protects a deployment in a few concrete ways:"
 msgstr ""
 
-#: views/documentation.php:460
+#: views/documentation.php:458
 msgid "It will not deploy an old version over a newer one."
 msgstr ""
 
-#: views/documentation.php:460
+#: views/documentation.php:458
 msgid "If a webhook arrives late or out of order, Booster checks the repository’s current commit before replacing anything, so a delayed notification cannot roll back code that has already been updated."
 msgstr ""
 
-#: views/documentation.php:461
+#: views/documentation.php:459
 msgid "It verifies the download before touching any files."
 msgstr ""
 
-#: views/documentation.php:461
+#: views/documentation.php:459
 msgid "Before installing anything, Booster checks the downloaded archive’s exact contents, confirms it matches the expected package, and confirms every file it contains stays inside the expected folder."
 msgstr ""
 
-#: views/documentation.php:462
+#: views/documentation.php:460
 msgid "WordPress Core does the actual file replacement."
 msgstr ""
 
-#: views/documentation.php:462
+#: views/documentation.php:460
 msgid "Booster hands the verified files to WordPress’s own updater, which owns backup behaviour during the swap. Booster then checks the result and will show you a warning rather than reporting success when the outcome is unclear."
 msgstr ""
 
-#: views/documentation.php:464
+#: views/documentation.php:462
 msgid "Booster delegates package replacement to WordPress Core. It does not build, test or make untrusted repository code safe."
 msgstr ""
 
@@ -6469,7 +6457,7 @@ msgid "Choose a durable absolute directory outside the public web root. Create i
 msgstr ""
 
 #: views/onboarding.php:235
-msgid "Replace any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition with this preferred directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
+msgid "Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
 msgstr ""
 
 #: views/onboarding.php:237
@@ -6481,42 +6469,38 @@ msgid "For environment-managed hosting, replace the existing definition with thi
 msgstr ""
 
 #: views/onboarding.php:244
-msgid "The legacy exact-file constant can use the same anchor:"
-msgstr ""
-
-#: views/onboarding.php:246
 msgid "If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half."
 msgstr ""
 
-#: views/onboarding.php:253
+#: views/onboarding.php:251
 msgid "Set up manually instead"
 msgstr ""
 
-#: views/onboarding.php:253
+#: views/onboarding.php:251
 msgid "Manual setup instructions"
 msgstr ""
 
-#: views/onboarding.php:256
+#: views/onboarding.php:254
 msgid "Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json within it."
 msgstr ""
 
-#: views/onboarding.php:257
+#: views/onboarding.php:255
 msgid "Create the owner-only private directories:"
 msgstr ""
 
-#: views/onboarding.php:263
+#: views/onboarding.php:261
 msgid "Then choose one configuration method, not both:"
 msgstr ""
 
-#: views/onboarding.php:266
+#: views/onboarding.php:264
 msgid "Add this line to wp-config.php:"
 msgstr ""
 
-#: views/onboarding.php:271
+#: views/onboarding.php:269
 msgid "Or run this WP-CLI command:"
 msgstr ""
 
-#: views/onboarding.php:281
+#: views/onboarding.php:279
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 

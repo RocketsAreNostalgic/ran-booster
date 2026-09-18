@@ -116,8 +116,8 @@ final class OnboardingViewTest extends TestCase {
 					"mkdir -p -- '/private/<canary>'",
 				),
 				'config_alternatives' => array(
-					'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '/private/<canary>/secrets.json' );",
-					'wp_cli' => "wp --path='/wordpress' config set RAN_BOOSTER_ENCRYPTED_SECRETS_FILE '/private/<canary>/secrets.json' --type=constant",
+					'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/<canary>' );",
+					'wp_cli' => "wp --path='/wordpress' config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR '/private/<canary>' --type=constant",
 				),
 			)
 		);
@@ -311,7 +311,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Use a different storage location', $broken );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $broken );
 		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster'", $broken );
-		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster/secrets.json'", $broken );
+		self::assertStringContainsString( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition', $broken );
+		self::assertStringNotContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE'", $broken );
 		self::assertStringContainsString( 'getenv', $broken );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="storage_needs_attention"', $broken );
 		self::assertStringContainsString( '<strong>Diagnostic code:</strong> <code>storage_needs_attention</code>', $broken );
@@ -330,7 +331,7 @@ final class OnboardingViewTest extends TestCase {
 				'manual_preflight'    => 'Verify the private directory.',
 				'directory_commands'  => array( "install -d '/private/canary'" ),
 				'config_alternatives' => array(
-					'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '/private/canary/secrets.json' );",
+					'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/canary' );",
 					'wp_cli' => '',
 				),
 			)

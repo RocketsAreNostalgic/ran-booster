@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1ea6b8ad1fe931fab4afb749d886507b",
+    "content-hash": "84ec5ffd0439fae0a391c9399de51770",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "v0.1.0-beta.2",
+            "version": "v0.1.0-beta.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "babbf2031bd085666c739b77297533ea36abd0ec"
+                "reference": "572d5a2614faf01aeb6e7e0669a8d8f8d32c31ae"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/babbf2031bd085666c739b77297533ea36abd0ec",
-                "reference": "babbf2031bd085666c739b77297533ea36abd0ec",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/572d5a2614faf01aeb6e7e0669a8d8f8d32c31ae",
+                "reference": "572d5a2614faf01aeb6e7e0669a8d8f8d32c31ae",
                 "shasum": ""
             },
             "require": {
@@ -97,7 +97,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
             },
-            "time": "2026-09-17T23:26:23+00:00"
+            "time": "2026-09-18T02:21:07+00:00"
         },
         {
             "name": "ran/updater-support",

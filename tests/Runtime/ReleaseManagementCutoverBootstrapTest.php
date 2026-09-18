@@ -121,26 +121,25 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 15", $bootstrap );
 	}
 
-	public function testCutoverPreservesExactSetupRecordBytesWithoutMigrationOrWrite(): void {
+	public function testCutoverIgnoresObsoleteSetupRecordWithoutMigrationOrWrite(): void {
 		$record  = $this->record();
 		$records = array( '123456789' => $record );
 		$GLOBALS['ran_booster_release_deployments_test_options']        = array(
 			'ran_booster_release_deployments_setup_records' => $records,
 		);
 		$GLOBALS['ran_booster_release_deployments_test_option_updates'] = array();
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact ordered scalar-array bytes are the compatibility subject.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact obsolete bytes are the clean-reset subject.
 		$before = serialize( $records );
 
-		$readback = ( new SetupRecordStore() )->find( '123456789' );
-
-		self::assertSame( $record, $readback );
+		self::assertNull( ( new SetupRecordStore() )->find( '123456789' ) );
 		self::assertSame( array(), $GLOBALS['ran_booster_release_deployments_test_option_updates'] );
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact ordered scalar-array bytes are the compatibility subject.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- The provider must not migrate or rewrite obsolete state.
 		self::assertSame( $before, serialize( $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_setup_records'] ) );
+		self::assertCount( 1, $GLOBALS['ran_booster_release_deployments_test_options'] );
 
-		$bootstrap = $this->source( 'ran-booster.php' );
-		self::assertStringNotContainsString( 'ran_booster_release_deployments_setup_records', $bootstrap );
-		self::assertStringNotContainsString( 'delete_option', $bootstrap );
+		$uninstall = $this->source( 'RAN/Uninstall/LocalDataRemover.php' );
+		self::assertStringContainsString( 'WorkflowAssistanceState', $uninstall );
+		self::assertStringNotContainsString( 'ran_booster_release_deployments_', $uninstall );
 	}
 
 	public function testInstalledReleaseCapabilityProofIsAutomatedAndDisposable(): void {

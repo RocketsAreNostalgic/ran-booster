@@ -26,7 +26,6 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',
 		'tests/WordPress/github-provider-installed-readback.php',
-		'tests/WordPress/github-release-updater-bootstrap-smoke.php',
 		'tests/WordPress/native-lifecycle-installed-smoke.php',
 	);
 
@@ -118,6 +117,27 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		$expected = self::EXPLICIT_CORE_HOST_INTEGRATIONS;
 		sort( $expected );
 		self::assertSame( $expected, $references );
+	}
+
+	public function testCoreSelfUpdateUsesTheSelectedUpdaterWithoutProviderCapability(): void {
+		$root = dirname( __DIR__, 2 );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static Core composition boundary under test.
+		$bootstrap = file_get_contents( $root . '/ran-booster.php' );
+		self::assertIsString( $bootstrap );
+		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $coreUpdater )', $bootstrap );
+		self::assertStringContainsString( "->make( ManagedReleaseUpdaterRegistrar::class )->plugin(", $bootstrap );
+		self::assertStringNotContainsString( 'RepositoryReleaseNativeTargets', $bootstrap );
+		self::assertStringNotContainsString( 'RepositoryReference', $bootstrap );
+
+		// Managed packages remain provider-capability-owned after Core self-update is decoupled.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static provider-capability boundary under test.
+		$managed = file_get_contents( $root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php' );
+		self::assertIsString( $managed );
+		self::assertStringContainsString(
+			'$this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );',
+			$managed
+		);
 	}
 
 	public function testReleasedProviderIsTheOnlyBundledGitHubImplementation(): void {

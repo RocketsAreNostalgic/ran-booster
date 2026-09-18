@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Isolated WordPress hook and header readers for the real broker-to-target path.
+// Isolated WordPress hook and header readers for the real broker-to-Core-target path.
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 $GLOBALS['ran_booster_updater_smoke_hooks'] = array();
 
@@ -27,7 +27,7 @@ function get_file_data( string $file, array $headers, string $context = '' ): ar
 	$data     = array();
 	foreach ( $headers as $field => $header ) {
 		$matched        = is_string( $contents )
-			&& 1 === preg_match( '/^[ \t\/*#@]*' . preg_quote( $header, '/' ) . ':(.*)$/mi', $contents, $matches );
+			&& 1 === preg_match( '/^[ 	\/*#@]*' . preg_quote( $header, '/' ) . ':(.*)$/mi', $contents, $matches );
 		$data[ $field ] = $matched ? trim( $matches[1] ) : '';
 	}
 
@@ -52,25 +52,19 @@ $assert( is_object( $broker ), 'The release updater broker must register before 
 $assert( is_object( $registrar ), 'The release updater must return its public registrar.' );
 $assert( 4 === $broker->protocolVersion(), 'The public registrar must use Protocol 4.' );
 
-$credentialReads = 0;
-// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated registration fixture.
-$wpdb   = new stdClass();
-$target = new RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget(
-	$registrar,
-	'plugin',
+$coreUpdater = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $registrar ) )->plugin(
+	'github',
 	dirname( __DIR__, 2 ) . '/ran-booster.php',
 	'RocketsAreNostalgic/ran-booster',
 	'1319710173',
-	static function () use ( &$credentialReads ): string {
-		++$credentialReads;
-
-		return 'github_pat_smoke';
-	},
 	'prerelease',
-	'manual'
+	'manual',
+	null,
+	RAN\PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES
 );
+$target      = new RAN\WordPress\CoreSelfUpdateNativeTarget( $coreUpdater );
+
 $assert( $target->register(), 'The Core target must register through the selected neutral runtime.' );
 $assert( ! $target->status()->active, 'A queued public target must not claim native authority.' );
-$assert( 0 === $credentialReads, 'Target registration must not resolve GitHub credentials.' );
 
-printf( "Release updater bootstrap smoke passed.\n" );
+printf( "Core release updater bootstrap smoke passed.\n" );

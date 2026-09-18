@@ -18,9 +18,9 @@ use Throwable;
  */
 class SecretsStorageProvisioner {
 
-	private const DIRECTORY_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
+	private const DIRECTORY_CONSTANT_NAME        = 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR';
 	private const UNSUPPORTED_FILE_CONSTANT_NAME = 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE';
-	private const RECOVERY_MAX_ENTRIES    = 64;
+	private const RECOVERY_MAX_ENTRIES           = 64;
 	public const RESET_CONFIRMATION       = 'RESET STORAGE';
 
 	public function __construct(

@@ -308,7 +308,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 					static fn (
 						ProviderCredentialStore $store,
 						AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+						ProviderRegistrationContext $registrationContext
 					): ExternalFixtureProvider => new ExternalFixtureProvider( 'nested', $store )
 				);
 			} else {
@@ -336,7 +336,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 				static function (
 					ProviderCredentialStore $store,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				) use ( $callback ): RepositoryProvider {
 					$callback( 'provider_factory' );
 

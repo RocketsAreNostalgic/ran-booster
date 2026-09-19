@@ -149,6 +149,86 @@ final class ProviderRegistrationContextTest extends TestCase {
 	}
 
 
+
+	public function testApi11RejectsNullableRegistrationContext(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
+
+		$registry->registerWithCredentialStore(
+			'nullable-context',
+			static function (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				?ProviderRegistrationContext $registrationContext
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext );
+
+				return new ExternalFixtureProvider( 'nullable-context', $credentials );
+			}
+		);
+	}
+
+	public function testApi11RejectsIncorrectFirstParameterType(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+
+		$registry->registerWithCredentialStore(
+			'wrong-credentials',
+			static function (
+				object $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext );
+				assert( $credentials instanceof ProviderCredentialStore );
+
+				return new ExternalFixtureProvider( 'wrong-credentials', $credentials );
+			}
+		);
+	}
+
+	public function testApi11RejectsIncorrectSecondParameterType(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+
+		$registry->registerWithCredentialStore(
+			'wrong-evidence',
+			static function (
+				ProviderCredentialStore $credentials,
+				object $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext );
+
+				return new ExternalFixtureProvider( 'wrong-evidence', $credentials );
+			}
+		);
+	}
+
+	public function testApi11RejectsAdditionalFactoryParameters(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+
+		$registry->registerWithCredentialStore(
+			'extra-argument',
+			static function (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext,
+				?string $extra = null
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext, $extra );
+
+				return new ExternalFixtureProvider( 'extra-argument', $credentials );
+			}
+		);
+	}
+
 	private function registry( ProviderRegistrationContext $context ): ProviderRegistry {
 		$credentials      = new class() implements ProviderCredentialStore {
 			public function credentialProfiles(): array {

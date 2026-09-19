@@ -52,9 +52,6 @@ final class InvalidProviderPolicy extends RuntimeException {
 		return new self( 'The provider factory does not implement the Provider API 11 registration signature.' );
 	}
 
-	public static function registrationContextUnavailable(): self {
-		return new self( 'The provider registration context is unavailable.' );
-	}
 
 	public static function invalidProviderFactory(): self {
 		return new self( 'The provider factory returned an invalid provider.' );

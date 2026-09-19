@@ -125,7 +125,14 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertSame( array( 'unrelated_meta' => array( 4 ) ), $this->database->userMeta );
 		self::assertSame(
 			array(
+				'ran_booster_release_deployments_assessment_observations' => array(
+					array( 'kind' => 'existing_automation_detected' ),
+				),
+				'ran_booster_release_deployments_failure_history' => array(
+					array( 'correlation_reference' => str_repeat( 'a', 32 ) ),
+				),
 				'unrelated_option' => 'preserved',
+				'ran_booster_release_deployments_setup_records' => array( 'obsolete-provider-state' ),
 			),
 			$GLOBALS['ran_booster_uninstall_options']
 		);

@@ -36,7 +36,7 @@ if ( ! is_string( $expectedRoot ) || false === $wordpressRoot || $wordpressRoot 
 }
 foreach (
 	array(
-		'RAN_BOOSTER_PROVIDER_API_VERSION'          => 10,
+		'RAN_BOOSTER_PROVIDER_API_VERSION'          => 11,
 		'RAN_BOOSTER_ADDON_API_VERSION'             => 16,
 		'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 2,
 		'RAN_BOOSTER_PORTABILITY_API_VERSION'       => 2,

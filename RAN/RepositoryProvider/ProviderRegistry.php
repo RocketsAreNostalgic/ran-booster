@@ -6,6 +6,7 @@ namespace RAN\RepositoryProvider;
 
 use LogicException;
 use RAN\Logging\BoosterLogger;
+use RAN\PackageArtifactLimit;
 use RAN\Provider\ProviderCapability as ProviderCapabilityContract;
 use RAN\RepositoryProvider\Admin\ProviderNavigationOrderer;
 
@@ -25,7 +26,7 @@ final class ProviderRegistry {
 	private ProviderSecretPolicyCatalog $secretPolicies;
 	private ?\Closure $credentialStoreFactory;
 	private ?\Closure $deliveryEvidenceReaderFactory;
-	private ?ProviderRegistrationContext $registrationContext;
+	private ProviderRegistrationContext $registrationContext;
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
@@ -44,7 +45,9 @@ final class ProviderRegistry {
 		$this->deliveryEvidenceReaderFactory = null === $deliveryEvidenceReaderFactory
 			? null
 			: \Closure::fromCallable( $deliveryEvidenceReaderFactory );
-		$this->registrationContext           = $registrationContext;
+		$this->registrationContext           = $registrationContext ?? new ProviderRegistrationContext(
+			static fn (): int => PackageArtifactLimit::resolve()
+		);
 
 		foreach ( $providers as $provider ) {
 			$this->register( $provider );
@@ -73,9 +76,6 @@ final class ProviderRegistry {
 
 			$this->assertProviderFactorySignature( $factory );
 
-			if ( null === $this->registrationContext ) {
-				throw InvalidProviderPolicy::registrationContextUnavailable();
-			}
 			if ( null === $this->credentialStoreFactory ) {
 				throw InvalidProviderPolicy::credentialStoreUnavailable();
 			}

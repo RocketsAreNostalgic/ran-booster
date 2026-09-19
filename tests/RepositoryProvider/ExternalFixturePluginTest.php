@@ -46,7 +46,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPresenterSuppressesManagementPresentationForAPartialCapabilityProvider(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
 		$this->loadFixturePlugin();
 		list( $registry, , $path ) = $this->registry();
 
@@ -115,7 +115,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	public function testPluginLoadedBeforeTheApiMarkerRegistersOnTheLaterHook(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
 
 		list( $registry, , $path ) = $this->registry();
 		$this->runRegistrationHook( $registry );
@@ -127,7 +127,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterTheApiMarkerExercisesTheCompleteProviderContract(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
 		$this->loadFixturePlugin();
 		list( $registry, $secrets, $path ) = $this->registry();
 
@@ -334,7 +334,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function testPluginDoesNotRegisterWithAnOlderProviderApi(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 9 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
 		$this->loadFixturePlugin();
 		list( $registry, , $path ) = $this->registry();
 
@@ -377,7 +377,8 @@ final class ExternalFixturePluginTest extends TestCase {
 				public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
 					return null;
 				}
-			}
+			},
+			new \RAN\RepositoryProvider\ProviderRegistrationContext( static fn (): int => 52_428_800 )
 		);
 
 		return array( $registry, $secrets, $path );

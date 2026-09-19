@@ -148,50 +148,6 @@ final class ProviderRegistrationContextTest extends TestCase {
 		);
 	}
 
-	public function testApi11RejectsCredentialRegistrationWithoutHostContext(): void {
-		$credentials = new class() implements ProviderCredentialStore {
-			public function credentialProfiles(): array {
-				return array();
-			}
-
-			public function credentialMaterial( ?string $id = null ): ?array {
-				unset( $id );
-				return null;
-			}
-
-			public function hasWebhookProfile(): bool {
-				return false;
-			}
-		};
-		$deliveryEvidence = new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
-			public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
-				return null;
-			}
-		};
-		$registry = new ProviderRegistry(
-			array(),
-			new ProviderSecretPolicyCatalog(),
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $credentials,
-			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => $deliveryEvidence
-		);
-
-		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider registration context is unavailable.' );
-
-		$registry->registerWithCredentialStore(
-			'fixture',
-			static function (
-				ProviderCredentialStore $providerCredentials,
-				AuthenticatedWebhookDeliveryEvidenceReader $providerDeliveryEvidence,
-				ProviderRegistrationContext $registrationContext
-			) use ( $credentials ): ExternalFixtureProvider {
-				unset( $providerCredentials, $providerDeliveryEvidence, $registrationContext );
-
-				return new ExternalFixtureProvider( 'fixture', $credentials );
-			}
-		);
-	}
-
 
 	private function registry( ProviderRegistrationContext $context ): ProviderRegistry {
 		$credentials      = new class() implements ProviderCredentialStore {

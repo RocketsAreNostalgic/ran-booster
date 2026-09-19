@@ -58,9 +58,9 @@ final class ProviderRegistry {
 	 * The factory must construct its aggregate locally without network or other
 	 * side effects. Registration remains atomic after the aggregate is returned.
 	 *
-	 * Provider API 10 factories continue to receive exactly the original two
-	 * arguments unless they explicitly opt into the additive context by declaring
-	 * a non-variadic, by-value third parameter typed ProviderRegistrationContext.
+	 * Provider API 11 factories must declare a non-variadic, by-value third
+	 * parameter typed exactly ProviderRegistrationContext. The registry validates
+	 * that callable contract before invoking the factory.
 	 *
 	 * @param callable $factory Provider factory.
 	 */
@@ -71,6 +71,11 @@ final class ProviderRegistry {
 			$code = $this->normalizeCode( $code );
 			$this->assertCanRegisterCode( $code );
 
+			$this->assertProviderFactorySignature( $factory );
+
+			if ( null === $this->registrationContext ) {
+				throw InvalidProviderPolicy::registrationContextUnavailable();
+			}
 			if ( null === $this->credentialStoreFactory ) {
 				throw InvalidProviderPolicy::credentialStoreUnavailable();
 			}
@@ -100,9 +105,7 @@ final class ProviderRegistry {
 			}
 
 			try {
-				$provider = null !== $this->registrationContext && $this->factoryRequestsRegistrationContext( $factory )
-					? $factory( $credentials, $deliveryEvidence, $this->registrationContext )
-					: $factory( $credentials, $deliveryEvidence );
+				$provider = $factory( $credentials, $deliveryEvidence, $this->registrationContext );
 			} catch ( \Throwable $exception ) {
 				BoosterLogger::logException( 'provider registration provider factory failed', $exception, array( 'step' => 'provider_factory' ) );
 				throw InvalidProviderPolicy::invalidProviderFactory();
@@ -275,18 +278,24 @@ final class ProviderRegistry {
 		}
 	}
 
-	private function factoryRequestsRegistrationContext( callable $factory ): bool {
+	private function assertProviderFactorySignature( callable $factory ): void {
 		$parameters = ( new \ReflectionFunction( \Closure::fromCallable( $factory ) ) )->getParameters();
-		if ( ! isset( $parameters[2] ) || $parameters[2]->isVariadic() || $parameters[2]->isPassedByReference() ) {
-			return false;
+		if ( ! isset( $parameters[2] )
+			|| $parameters[2]->isVariadic()
+			|| $parameters[2]->isPassedByReference()
+		) {
+			throw InvalidProviderPolicy::invalidProviderFactorySignature();
 		}
 
 		$type = $parameters[2]->getType();
-
-		return $type instanceof \ReflectionNamedType
-			&& ! $type->isBuiltin()
-			&& ProviderRegistrationContext::class === $type->getName();
+		if ( ! $type instanceof \ReflectionNamedType
+			|| $type->isBuiltin()
+			|| ProviderRegistrationContext::class !== $type->getName()
+		) {
+			throw InvalidProviderPolicy::invalidProviderFactorySignature();
+		}
 	}
+
 
 	private function assertCanRegisterCode( ProviderCode $code ): void {
 		$this->assertNotSealed();

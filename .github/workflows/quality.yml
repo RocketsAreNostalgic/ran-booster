@@ -1056,7 +1056,7 @@ jobs:
               php -r 'exit( version_compare( $argv[1], $argv[2], "<=" ) ? 0 : 1 );' \
                 "$runtime_wordpress_floor" "$booster_requires_wordpress" \
                 || { echo 'Neutral updater WordPress floor exceeds Booster support.' >&2; exit 1; }
-              grep -Fq 'RAN\WPReleaseUpdater\V1\WordPress\NativePluginUpdater' "$runtime_file"
+              grep -Fq 'RAN\WPReleaseUpdater\V1\WordPress\NativePackageUpdater' "$runtime_file"
           - name: Prove database activation and storage
             env:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress

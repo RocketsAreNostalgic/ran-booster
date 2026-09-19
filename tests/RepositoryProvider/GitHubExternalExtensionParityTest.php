@@ -168,7 +168,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		self::assertStringNotContainsString( 'class_exists( ProviderRegistrationContext::class )', $plugin );
 		self::assertStringContainsString( 'ProviderRegistrationContext $registrationContext', $plugin );
 		self::assertMatchesRegularExpression(
-			'/\$factory = static fn \([\s\S]*?ProviderCredentialStore \$credentials,[\s\S]*?AuthenticatedWebhookDeliveryEvidenceReader \$deliveryEvidence[\s\S]*?\): RepositoryProvider => GitHubProvider::create\([\s\S]*?\$registrar\s*\);/',
+			'/\$factory = static function \([\s\S]*?ProviderCredentialStore \$credentials,[\s\S]*?AuthenticatedWebhookDeliveryEvidenceReader \$deliveryEvidence,[\s\S]*?ProviderRegistrationContext \$registrationContext[\s\S]*?\): RepositoryProvider \{[\s\S]*?GitHubProvider::create\([\s\S]*?\$registrar,[\s\S]*?maximumArtifactBytes\(\)[\s\S]*?\);[\s\S]*?\};/',
 			$plugin
 		);
 		self::assertStringNotContainsString( 'CoreContainer', $plugin );

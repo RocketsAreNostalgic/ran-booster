@@ -534,7 +534,7 @@ The facet grants no WordPress installation or adoption authority. Core retains
 the updater claim through `PreparedArtifact`, owns installation and installed
 readback, and discards the exact claim after use.
 
-The bundled GitHub provider uses the public beta.4 registrar's `releases()`
+The bundled GitHub provider uses the public beta.7 registrar's `releases()`
 source. It maps operation-specific result envelopes into these existing Core
 contracts; it does not import updater implementation classes. Inspection returns
 an opaque `v2:` fingerprint after discarding its validation archive. Acquisition

@@ -127,7 +127,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'composer install', $workflow );
 		self::assertStringContainsString( 'cmp -s "$expected_runtime_copy" "$runtime_copy"', $workflow );
 		self::assertStringContainsString( 'cmp -s "$expected_runtime_file" "$runtime_file"', $workflow );
-		self::assertStringContainsString( 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePluginUpdater', $workflow );
+		self::assertStringContainsString( 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePackageUpdater', $workflow );
 		self::assertStringNotContainsString( 'WP_PLUGIN_DIR . "/ran-booster/vendor/ran/wp-release-updater"', $workflow );
 		self::assertStringNotContainsString( '"package_version" => "0.1.0-beta.4"', $workflow );
 		self::assertStringNotContainsString( 'ran_booster_release_updater', $workflow );

@@ -173,7 +173,7 @@ These controls do not change managed plugin or theme release policies.
 | Trigger                    | Initiator                                                                                 | Immediate handoff                                                                                                          | Can download a ZIP?                           | Can change files? |
 | ----------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------- |
 | **Use releases**           | Administrator in Booster                                                                  | Core handler → internal coordinator → provider listing and exact inspection → atomic source transition                     | Yes, for eligibility and identity validation  | No                |
-| Request bootstrap       | Booster                                                                                   | Registers each eligible managed target with the shared updater before public activation at `after_setup_theme` priority 100 | No                                            | No                |
+| Request bootstrap       | Booster                                                                                   | Registers each eligible managed target with the shared updater before public selection/activation at `after_setup_theme` priority `PHP_INT_MAX` | No                                            | No                |
 | Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | Yes, for candidate validation on a cache miss | No                |
 | **Check releases**         | Administrator in Booster                                                                  | Core handler → internal coordinator → updater cache clear → WordPress native update check                                  | Yes, for fresh candidate validation           | No                |
 | Prospective **Install**    | Administrator selecting an exact release                                                  | Core prospective facade → selected provider → Core installer and adoption                                                  | Yes, one exact installation archive           | Yes               |
@@ -264,7 +264,7 @@ The candidate-validation ZIP is temporary. It proves that the release is safe
 to advertise, then its temporary file is discarded. The cached native offer is
 metadata, not an installation archive.
 
-The bundled `ran/wp-release-updater` beta.4 binds managed release configuration,
+The bundled `ran/wp-release-updater` beta.7 binds managed release configuration,
 cached offers and release fingerprints to the provider's stable repository ID.
 Discovery and acquisition also compare that ID with live GitHub repository
 metadata. Reusing the same `owner/repository` locator for a deleted and recreated

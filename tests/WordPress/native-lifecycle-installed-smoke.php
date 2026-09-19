@@ -108,7 +108,7 @@ foreach ( array( GitHubProvider::class, RAN\BoosterGitHubProvider\V1\GitHubRelea
 	}
 }
 
-foreach ( array( 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePluginUpdater', 'RAN\\WPReleaseUpdater\\V1\\Runtime\\RequestBroker' ) as $class ) {
+foreach ( array( 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePackageUpdater', 'RAN\\WPReleaseUpdater\\V1\\Runtime\\RequestBroker' ) as $class ) {
 	$file = ( new ReflectionClass( $class ) )->getFileName();
 	if ( ! is_string( $file ) || ! str_starts_with( $file, $origin . 'vendor/ran/wp-release-updater/' ) ) {
 		throw new RuntimeException( 'The native runtime did not originate in the installed dependency.' );

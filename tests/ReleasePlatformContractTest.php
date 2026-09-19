@@ -341,14 +341,17 @@ final class ReleasePlatformContractTest extends TestCase {
 		$updater            = $this->readText(
 			dirname( __DIR__ )
 				. '/' . $releaseUpdaterPath
-				. '/src/Provider/GitHub/GitHubReleaseService.php'
+				. '/src/Provider/GitHub/GitHubApiClient.php'
 		);
 		$fixture            = $this->readText(
 			dirname( __DIR__ )
 				. '/tests/Integration/phase-4.4-core-disposable-harness.php'
 		);
 
-		self::assertStringContainsString( "'User-Agent' => 'ran-wp-release-updater',", $updater );
+		self::assertMatchesRegularExpression(
+			"/'User-Agent'\\s*=>\\s*'ran-wp-release-updater'/",
+			$updater
+		);
 		self::assertStringContainsString(
 			"'ran-wp-release-updater' !== ( \$headers['User-Agent'] ?? null )",
 			$fixture

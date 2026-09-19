@@ -734,14 +734,16 @@ public provider boundary. Bundled versus external is therefore a distribution
 choice, not a separate capability or authority model.
 
 The two composition roots are deliberately not identical. Booster's bundled
-factory supplies its bounded host-owned release-updater compatibility adapter
-and the lazy artifact-limit supplier exposed by
-`ProviderRegistrationContext`. A physically separate wrapper instead owns its
-release-updater dependency and feature-detects the additive registration
-context before retaining host artifact policy. Both paths construct the same
-released `GitHubProvider` aggregate and expose the same provider capability
-contracts; neither path receives the Core container, private storage,
-credential writer, logger or other implementation service.
+factory supplies its fail-closed host wrapper around the current release-updater
+registrar and the lazy artifact-limit supplier exposed by
+`ProviderRegistrationContext`. The wrapper validates registrar callability and
+returned handles while forwarding the current updater argument vector unchanged.
+A physically separate wrapper instead owns its release-updater dependency and
+feature-detects the additive registration context before retaining host artifact
+policy. Both paths construct the same released `GitHubProvider` aggregate and
+expose the same provider capability contracts; neither path receives the Core
+container, private storage, credential writer, logger or other implementation
+service.
 
 `tests/RepositoryProvider/GitHubExternalExtensionParityTest.php` and
 `tests/fixtures/ran-booster-github-provider-extension/` are the maintained

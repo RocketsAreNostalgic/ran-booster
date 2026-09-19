@@ -292,7 +292,7 @@ remains lazy and is not read merely to register those targets.
 
 Core declares targets after provider registration and sealing at
 `plugins_loaded`. The public updater registrar activates once after theme
-loading at `after_setup_theme`, priority 100. Declaration acceptance is not an
+loading at `after_setup_theme`, priority `PHP_INT_MAX`. Declaration acceptance is not an
 active native target; Core projects active status only after the public handle
 reports that its hooks are registered.
 Deferring it based on `REST_REQUEST`, URI shape, admin, cron, or WP-CLI state

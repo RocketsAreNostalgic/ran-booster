@@ -32,6 +32,7 @@ use RAN\RepositoryProvider\ProviderDiagnostics;
 use RAN\RepositoryProvider\ProviderCredentialPolicy;
 use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
 use RAN\RepositoryProvider\ProviderCredentialStore;
+use RAN\RepositoryProvider\ProviderRegistrationContext;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -68,7 +69,8 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			'fixture',
 			static function (
 				ProviderCredentialStore $credentials,
-				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext
 			) use ( &$provider ): ExternalFixtureProvider {
 				$provider = new ExternalFixtureProvider( 'fixture', $credentials );
 
@@ -305,7 +307,8 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 					'nested',
 					static fn (
 						ProviderCredentialStore $store,
-						AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+						AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext
 					): ExternalFixtureProvider => new ExternalFixtureProvider( 'nested', $store )
 				);
 			} else {
@@ -332,7 +335,8 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 				'outer',
 				static function (
 					ProviderCredentialStore $store,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext
 				) use ( $callback ): RepositoryProvider {
 					$callback( 'provider_factory' );
 

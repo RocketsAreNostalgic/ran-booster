@@ -24,7 +24,7 @@ add_action( 'init', static function (): void {
 			foreach ( $callbacks as $entry ) {
 				$callback = $entry['function'];
 				if ( is_array( $callback ) && isset( $callback[0] ) && is_object( $callback[0] )
-					&& 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePluginUpdater' === get_class( $callback[0] ) ) { ++$p['native_hooks']; }
+					&& 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePackageUpdater' === get_class( $callback[0] ) ) { ++$p['native_hooks']; }
 			}
 		}
 	}

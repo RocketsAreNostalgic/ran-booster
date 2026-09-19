@@ -341,7 +341,7 @@ final class ReleasePlatformContractTest extends TestCase {
 		$updater            = $this->readText(
 			dirname( __DIR__ )
 				. '/' . $releaseUpdaterPath
-				. '/src/Provider/GitHub/GitHubReleaseService.php'
+				. '/src/Provider/GitHub/GitHubApiClient.php'
 		);
 		$fixture            = $this->readText(
 			dirname( __DIR__ )

@@ -9,9 +9,9 @@ use RAN\PackageArtifactLimit;
 use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 use Tests\Support\RecordingReleaseUpdaterRuntime;
 
-/** Proves updater-version compatibility remains a Booster host concern. */
+/** Proves the current release-updater registrar argument contract. */
 final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
-	public function testDefaultNativeTargetLimitUsesSevenArgumentUpdaterContract(): void {
+	public function testDefaultNativeTargetLimitUsesEightArgumentUpdaterContract(): void {
 		$runtime   = new RecordingReleaseUpdaterRuntime();
 		$registrar = new ManagedReleaseUpdaterRegistrar( $runtime );
 
@@ -26,7 +26,8 @@ final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 			PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES
 		);
 
-		self::assertCount( 7, $runtime->arguments );
+		self::assertCount( 8, $runtime->arguments );
+		self::assertSame( PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES, $runtime->arguments[7] );
 	}
 
 	public function testNonDefaultNativeTargetLimitUsesEightArgumentUpdaterContract(): void {

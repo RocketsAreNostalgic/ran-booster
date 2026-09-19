@@ -229,7 +229,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 			);
 			self::fail( 'A failing internal store factory must reject registration.' );
@@ -258,7 +258,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				static function (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				): RepositoryProvider {
 					throw new RuntimeException( 'provider-factory-path-canary' );
 				}
@@ -297,7 +297,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				): RepositoryProvider => $provider
 			);
 			self::fail( 'A provider with unavailable metadata must be rejected.' );
@@ -353,7 +353,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				static function (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				): ExternalFixtureProvider {
 					$credentials->credentialMaterial();
 
@@ -392,7 +392,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 			);
 			self::fail( 'A duplicate code must fail before credentials are issued.' );
@@ -425,7 +425,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				static function (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				) use ( &$providerCalls ): RepositoryProvider {
 					++$providerCalls;
 
@@ -460,7 +460,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+					ProviderRegistrationContext $registrationContext
 				): ExternalFixtureProvider => new ExternalFixtureProvider( 'other-fixture', $credentials )
 			);
 			self::fail( 'A mismatched provider factory must reject registration.' );

@@ -51,7 +51,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testReleasedGitHubPackageComposesAsAPhysicallySeparateExternalPlugin(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
 		define( 'RAN_BOOSTER_RUNTIME_MODE', 'single_site_supported' );
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 
@@ -165,7 +165,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		self::assertStringContainsString( "require __DIR__ . '/vendor/autoload.php';", $entrypoint );
 		self::assertStringContainsString( 'vendor/ran/wp-release-updater/bootstrap.php', $plugin );
 		self::assertStringContainsString( "registerWithCredentialStore( 'gh', \$factory )", $plugin );
-		self::assertStringContainsString( 'class_exists( ProviderRegistrationContext::class )', $plugin );
+		self::assertStringNotContainsString( 'class_exists( ProviderRegistrationContext::class )', $plugin );
 		self::assertStringContainsString( 'ProviderRegistrationContext $registrationContext', $plugin );
 		self::assertMatchesRegularExpression(
 			'/\$factory = static fn \([\s\S]*?ProviderCredentialStore \$credentials,[\s\S]*?AuthenticatedWebhookDeliveryEvidenceReader \$deliveryEvidence[\s\S]*?\): RepositoryProvider => GitHubProvider::create\([\s\S]*?\$registrar\s*\);/',

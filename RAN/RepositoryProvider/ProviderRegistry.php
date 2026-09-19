@@ -280,19 +280,28 @@ final class ProviderRegistry {
 
 	private function assertProviderFactorySignature( callable $factory ): void {
 		$parameters = ( new \ReflectionFunction( \Closure::fromCallable( $factory ) ) )->getParameters();
-		if ( ! isset( $parameters[2] )
-			|| $parameters[2]->isVariadic()
-			|| $parameters[2]->isPassedByReference()
-		) {
+		$types      = array(
+			ProviderCredentialStore::class,
+			AuthenticatedWebhookDeliveryEvidenceReader::class,
+			ProviderRegistrationContext::class,
+		);
+
+		if ( count( $types ) !== count( $parameters ) ) {
 			throw InvalidProviderPolicy::invalidProviderFactorySignature();
 		}
 
-		$type = $parameters[2]->getType();
-		if ( ! $type instanceof \ReflectionNamedType
-			|| $type->isBuiltin()
-			|| ProviderRegistrationContext::class !== $type->getName()
-		) {
-			throw InvalidProviderPolicy::invalidProviderFactorySignature();
+		foreach ( $parameters as $index => $parameter ) {
+			$type = $parameter->getType();
+			if ( $parameter->isOptional()
+				|| $parameter->isVariadic()
+				|| $parameter->isPassedByReference()
+				|| ! $type instanceof \ReflectionNamedType
+				|| $type->isBuiltin()
+				|| $type->allowsNull()
+				|| $types[ $index ] !== $type->getName()
+			) {
+				throw InvalidProviderPolicy::invalidProviderFactorySignature();
+			}
 		}
 	}
 

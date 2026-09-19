@@ -1,6 +1,6 @@
 # Provider release-workflow capability
 
-Provider API 10 keeps release-workflow setup as an optional, separately versioned
+Provider API 11 keeps release-workflow setup as an optional, separately versioned
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
@@ -52,31 +52,15 @@ workflow-helper controls and calls also require that aggregate's
 `ProviderMetadata` to expose non-null `ProviderAdminMetadata`. Admin metadata
 remains optional for ordinary provider registration and other capabilities.
 
-## Provider API 10 feature detection
+## Provider API 11 baseline
 
-The unchanged `RAN_BOOSTER_PROVIDER_API_VERSION === 10` guard proves only that
-the base Provider API 10 registration contract is present. Older Provider API 10
-Booster releases do not define `RepositoryReleaseWorkflowManagementV2`, so a
-provider that supports API 2 must feature-detect that interface before loading
-or declaring any class that implements it:
+Provider API 11 hosts publish
+`RepositoryReleaseWorkflowManagementV2` as the current provider-neutral
+workflow-management contract. Providers targeting API 11 may load and implement
+that optional facet directly; providers that do not adopt workflow management
+need no additional feature check.
 
-```php
-$workflowV2Available = interface_exists(
-	\RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2::class
-);
+The workflow facet remains separately versioned at API 2 so a future workflow
+contract can evolve independently without widening the base provider
+registration surface.
 
-if ( $workflowV2Available ) {
-	require_once __DIR__ . '/ExampleProviderV2.php';
-}
-```
-
-The API-2 implementation must therefore live behind that feature gate; do not
-unconditionally require, instantiate or otherwise autoload the V2 class before
-`interface_exists()` has succeeded. A provider that also supports older API-10
-hosts may load/register its ordinary Provider API 10 implementation when the
-facet is absent and use its V2-capable aggregate only when the interface exists.
-Providers that do not adopt workflow API 2 need no additional feature check.
-
-This versioned facet does not change `RAN_BOOSTER_PROVIDER_API_VERSION`, which
-remains 10, and does not introduce a separate Provider API package or a second
-provider registration mechanism.

@@ -348,7 +348,10 @@ final class ReleasePlatformContractTest extends TestCase {
 				. '/tests/Integration/phase-4.4-core-disposable-harness.php'
 		);
 
-		self::assertStringContainsString( "'User-Agent' => 'ran-wp-release-updater',", $updater );
+		self::assertMatchesRegularExpression(
+			"/'User-Agent'\\s*=>\\s*'ran-wp-release-updater'/",
+			$updater
+		);
 		self::assertStringContainsString(
 			"'ran-wp-release-updater' !== ( \$headers['User-Agent'] ?? null )",
 			$fixture

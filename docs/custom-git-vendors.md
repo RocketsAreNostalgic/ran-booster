@@ -326,9 +326,9 @@ shape check.
    single-use `RepositoryReleaseArtifact`. Do not return a path, URL, archive
    bytes, provider result payload or reusable claim. Report a bounded cleanup
    failure when provider-owned bytes cannot be discarded before handoff.
-1. If adopting `RepositoryReleaseWorkflowManagementV2`, feature-detect that
-   interface before the V2 implementation class is loaded so the provider stays
-   non-fatal on older Booster releases that still advertise Provider API 11.
+1. When targeting Provider API 11, `RepositoryReleaseWorkflowManagementV2` is
+   available as the current optional workflow facet; older Booster releases that
+   advertise Provider API 10 remain outside this API-11 contract.
 1. Test registration from the main plugin file with the version guard in place.
 1. Verify the provider registers cleanly, seals cleanly, and surfaces the
    correct optional capabilities.

@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: RAN Booster Release Capability Fixture
- * Description: Test-only installed Provider API 10 release-capability fixture.
+ * Description: Test-only installed Provider API 11 release-capability fixture.
  * Version: 0.0.0
  * Requires PHP: 8.2
  * License: GPL-2.0-only
@@ -17,7 +17,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( object $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 10 !== RAN_BOOSTER_PROVIDER_API_VERSION
+			|| 11 !== RAN_BOOSTER_PROVIDER_API_VERSION
 			|| ! $registry instanceof \RAN\RepositoryProvider\ProviderRegistry
 		) {
 			return;

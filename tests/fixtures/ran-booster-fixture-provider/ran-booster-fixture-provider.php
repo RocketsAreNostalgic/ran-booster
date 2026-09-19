@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: RAN Booster Fixture Provider
- * Description: Test-only external Provider API 10 conformance fixture.
+ * Description: Test-only external Provider API 11 conformance fixture.
  * Version: 0.0.0
  * Requires PHP: 8.2
  * License: GPL-2.0-only
@@ -17,7 +17,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( object $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 10 !== RAN_BOOSTER_PROVIDER_API_VERSION
+			|| 11 !== RAN_BOOSTER_PROVIDER_API_VERSION
 			|| ! $registry instanceof \RAN\RepositoryProvider\ProviderRegistry
 		) {
 			return;
@@ -40,7 +40,8 @@ add_action(
 			'fixture-provider',
 			static fn (
 				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
+				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				\RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
 			): \RAN\RepositoryProvider\RepositoryProvider => new \RANBoosterFixtureProvider\Provider( $credentials, $deliveryEvidence )
 		);
 	}

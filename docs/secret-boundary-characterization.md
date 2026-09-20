@@ -200,7 +200,7 @@ preserve failed, partial and ambiguous outcomes and contain no raw response,
 headers, vendor messages or secret-derived material. This is a supported
 capability boundary, not hostile same-process PHP confidentiality.
 
-The current Provider API 10 contract is `repository-webhook-management/3` and
+The current Provider API 11 contract is `repository-webhook-management/3` and
 adds `test`/`assessTest` to those four operations. The earlier checkpoint above
 records the original cutover. Release workflow management follows the same
 bound-store rule: Core sends a selected saved profile ID after authorization;

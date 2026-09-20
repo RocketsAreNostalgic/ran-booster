@@ -1,27 +1,22 @@
 # Provider extension contract
 
-RAN Booster Provider API 10 accepts trusted repository providers through its late
+RAN Booster Provider API 11 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
-file during normal plugin loading. The original two-argument factory remains the
-API-10 compatibility floor; feature-detect the bounded registration context
-before requiring it:
+file during normal plugin loading. Credential-bearing providers use one required
+three-argument factory contract:
 
 ```php
 add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 10 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 11 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
-		$factory = static fn (
-			\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-			\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
-		): ExampleProvider => new ExampleProvider( $credentials, $deliveryEvidence );
-
-		if ( class_exists( \RAN\RepositoryProvider\ProviderRegistrationContext::class ) ) {
-			$factory = static function (
+		$registry->registerWithCredentialStore(
+			'example',
+			static function (
 				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
 				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
 				\RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
@@ -31,20 +26,18 @@ add_action(
 					$deliveryEvidence,
 					static fn (): int => $registrationContext->maximumArtifactBytes()
 				);
-			};
-		}
-
-		$registry->registerWithCredentialStore( 'example', $factory );
+			}
+		);
 	}
 );
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 10.
+registration action can run. The callback must check for exact Provider API 11.
 `Requires Plugins: ran-booster` only tells WordPress about the package
 dependency; it does not replace this exact runtime marker check or make a
 mismatched provider contract safe.
-Provider API 10 publishes no logging facade, generic service resolver, Core
+Provider API 11 publishes no logging facade, generic service resolver, Core
 container, credential writer, sidecar path or database/deployment repository.
 Providers report bounded diagnostics and operation results. Core owns logging
 at its call boundaries and never supplies a logger to provider code.
@@ -57,12 +50,11 @@ a newly activated provider becomes available on the next request.
 
 `registerWithCredentialStore()` is the required path for a provider that reads
 stored credentials. Booster verifies that the requested code is novel before it
-issues the original two read-only values bound to that code. A factory explicitly
-opts into the additive provider-neutral registration context only by declaring a
-non-variadic, by-value third parameter typed exactly `ProviderRegistrationContext`; all
-other API-10 factories, including variadic or by-reference third-parameter
-factories, continue to receive exactly two arguments. Core then verifies that the returned provider uses the
-same requested code before atomic registration:
+issues three bounded values bound to that registration. The factory must declare
+a non-variadic, by-value third parameter typed exactly
+`ProviderRegistrationContext`; two-argument, variadic or by-reference context
+signatures are rejected before provider construction. Core then verifies that the
+returned provider uses the same requested code before atomic registration:
 
 - `ProviderCredentialStore` exposes display-safe `credentialProfiles()`, one
   selected/default `credentialMaterial()` read and boolean
@@ -83,16 +75,14 @@ same requested code before atomic registration:
 A provider that retains the host artifact policy should retain the bounded
 supplier and invoke `maximumArtifactBytes()` only when the relevant archive or
 release operation needs the ceiling, not while its registration factory is
-constructing the aggregate. Because older Provider API 10 hosts predate this
-additive class, the global API marker alone does not prove the context exists; a
-provider that wants to remain load-compatible with those hosts must
-feature-detect `ProviderRegistrationContext` before declaring a factory that
-requires it. This bounded addition does not change the global Provider API 10
-marker and does not create a generic dependency-injection seam.
+constructing the aggregate. Provider API 11 guarantees that the registration
+context is part of the credential-bearing factory contract; providers targeting
+API 11 must not feature-detect or fall back to the retired two-argument shape.
+The context remains bounded and does not create a generic dependency-injection
+seam.
 
-Core binds the two provider-specific values before invoking the callback and
-makes the same host registration context available to explicitly opted-in
-credential-bearing provider factories, so retaining either provider-bound value
+Core binds the two provider-specific values and the host registration context
+before invoking the factory, so retaining either provider-bound value
 cannot cross provider namespaces and the artifact policy does not vary by
 provider. Repeated exact credential reads mean an activated credential-bearing
 provider is trusted with all credentials saved under its code. Core does not
@@ -113,7 +103,7 @@ registration window.
 
 The current collision and same-vendor coexistence behavior is characterized in
 [Provider registration and coexistence](provider-registration-and-coexistence.md).
-Provider API 10 rejects an exact duplicate code but does not reserve vendor
+Provider API 11 rejects an exact duplicate code but does not reserve vendor
 aliases, identify two implementations of the same vendor, or merge their
 capabilities and state.
 
@@ -239,19 +229,14 @@ Deployment tabs and independently supported release consumption remain usable.
 Remote inspection requires an explicit action. Outcomes return to the exact
 repository Releases tab, with diagnostics inside its notice area.
 
-These optional workflow facets do not further widen Provider API 10's bounded
+These optional workflow facets do not further widen Provider API 11's bounded
 registration context and introduce no repository settings object or shared
 workflow storage.
 
-Because the global Provider API marker remains 10, an API-2-aware provider must
-feature-detect `RepositoryReleaseWorkflowManagementV2` with `interface_exists()`
-before loading or declaring any class that implements it. Older Provider API 10
-Booster releases may not define that facet. Keep the V2-capable implementation
-behind the feature gate so the provider's ordinary API-10 implementation remains
-loadable when the interface is absent; providers that do not adopt workflow API
-2 need no additional check. The
-[workflow API feature-detection guidance](provider-release-workflow-api.md#provider-api-10-feature-detection)
-shows the safe conditional-loading pattern.
+Provider API 11 hosts publish `RepositoryReleaseWorkflowManagementV2` as the
+current workflow-management contract. Providers targeting API 11 may implement
+that optional facet directly; providers that do not adopt workflow management
+need no additional check.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
@@ -380,7 +365,7 @@ archive into its private preflight file; WordPress receives only that verified
 local file. Providers remain responsible for any stricter origin, path and
 signed query policy required by their service.
 
-Provider API 10 owns two shared helpers for ordinary vendor implementations:
+Provider API 11 owns two shared helpers for ordinary vendor implementations:
 
 - `GitReferenceSyntax::isValidNamedReference()` applies Core's bounded generic
   branch/ref syntax check without assuming a particular hosting vendor.
@@ -739,7 +724,7 @@ registrar and the lazy artifact-limit supplier exposed by
 `ProviderRegistrationContext`. The wrapper validates registrar callability and
 returned handles while forwarding the current updater argument vector unchanged.
 A physically separate wrapper instead owns its release-updater dependency and
-feature-detects the additive registration context before retaining host artifact
+receives the required registration context directly before retaining host artifact
 policy. Both paths construct the same released `GitHubProvider` aggregate and
 expose the same provider capability contracts; neither path receives the Core
 container, private storage, credential writer, logger or other implementation

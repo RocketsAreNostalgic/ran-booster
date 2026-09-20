@@ -286,7 +286,7 @@ class Booster {
 				'image'         => 'bitbucket-cloud.svg',
 				'availability'  => __( 'Free', 'ran-booster' ),
 				'required_apis' => array(
-					'RAN_BOOSTER_PROVIDER_API_VERSION' => 10,
+					'RAN_BOOSTER_PROVIDER_API_VERSION' => 11,
 					'RAN_BOOSTER_ADDON_API_VERSION'    => 16,
 				),
 				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',

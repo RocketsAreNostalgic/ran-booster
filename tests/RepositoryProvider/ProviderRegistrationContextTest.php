@@ -89,89 +89,144 @@ final class ProviderRegistrationContextTest extends TestCase {
 		self::assertSame( $context, $observed[1] );
 	}
 
-	public function testCurrentBitbucketStyleTwoArgumentFactoryStillReceivesExactlyTwoArguments(): void {
-		$argumentCount = null;
-		$registry      = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+	public function testApi11RejectsTwoArgumentFactoriesBeforeInvocation(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'bb',
 			static function (
 				ProviderCredentialStore $credentials,
 				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
-			) use ( &$argumentCount ): ExternalFixtureProvider {
+			): ExternalFixtureProvider {
 				unset( $deliveryEvidence );
-				$argumentCount = func_num_args();
 
 				return new ExternalFixtureProvider( 'bb', $credentials );
 			}
 		);
-
-		self::assertSame( 2, $argumentCount );
-		self::assertInstanceOf( ExternalFixtureProvider::class, $registry->get( 'bb' ) );
 	}
 
-	public function testVariadicApi10FactoryDoesNotImplicitlyOptIntoTheContext(): void {
-		$additionalArguments = null;
-		$registry            = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+	public function testApi11RejectsVariadicThirdParameter(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
 
 		$registry->registerWithCredentialStore(
-			'legacy-variadic',
+			'variadic',
 			static function (
 				ProviderCredentialStore $credentials,
 				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
 				mixed ...$additional
-			) use ( &$additionalArguments ): ExternalFixtureProvider {
-				unset( $deliveryEvidence );
-				$additionalArguments = $additional;
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $additional );
 
-				return new ExternalFixtureProvider( 'legacy-variadic', $credentials );
+				return new ExternalFixtureProvider( 'variadic', $credentials );
 			}
 		);
-
-		self::assertSame( array(), $additionalArguments );
 	}
 
+	public function testApi11RejectsByReferenceContextParameter(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
-	public function testByReferenceContextParameterCannotReplaceRegistryContext(): void {
-		$context     = new ProviderRegistrationContext( static fn (): int => 52_428_800 );
-		$replacement = new ProviderRegistrationContext( static fn (): int => 67_108_864 );
-		$registry    = $this->registry( $context );
+		$this->expectException( InvalidProviderPolicy::class );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
 
-		try {
-			$registry->registerWithCredentialStore(
-				'by-reference',
-				static function (
-					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext &$registrationContext
-				) use ( $replacement ): ExternalFixtureProvider {
-					unset( $deliveryEvidence );
-					$registrationContext = $replacement;
-
-					return new ExternalFixtureProvider( 'by-reference', $credentials );
-				}
-			);
-			self::fail( 'A by-reference registration context parameter must not opt into the host context.' );
-		} catch ( InvalidProviderPolicy $exception ) {
-			self::assertSame( 'The provider factory returned an invalid provider.', $exception->getMessage() );
-		}
-
-		$observed = null;
 		$registry->registerWithCredentialStore(
-			'after-by-reference',
+			'by-reference',
 			static function (
 				ProviderCredentialStore $credentials,
 				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
-			) use ( &$observed ): ExternalFixtureProvider {
-				unset( $deliveryEvidence );
-				$observed = $registrationContext;
+				ProviderRegistrationContext &$registrationContext
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext );
 
-				return new ExternalFixtureProvider( 'after-by-reference', $credentials );
+				return new ExternalFixtureProvider( 'by-reference', $credentials );
 			}
 		);
+	}
 
-		self::assertSame( $context, $observed );
+
+
+	public function testApi11RejectsNullableRegistrationContext(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
+
+		$registry->registerWithCredentialStore(
+			'nullable-context',
+			static function (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				?ProviderRegistrationContext $registrationContext
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext );
+
+				return new ExternalFixtureProvider( 'nullable-context', $credentials );
+			}
+		);
+	}
+
+	public function testApi11RejectsIncorrectFirstParameterType(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+
+		$registry->registerWithCredentialStore(
+			'wrong-credentials',
+			static function (
+				object $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext );
+				assert( $credentials instanceof ProviderCredentialStore );
+
+				return new ExternalFixtureProvider( 'wrong-credentials', $credentials );
+			}
+		);
+	}
+
+	public function testApi11RejectsIncorrectSecondParameterType(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+
+		$registry->registerWithCredentialStore(
+			'wrong-evidence',
+			static function (
+				ProviderCredentialStore $credentials,
+				object $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext );
+
+				return new ExternalFixtureProvider( 'wrong-evidence', $credentials );
+			}
+		);
+	}
+
+	public function testApi11RejectsAdditionalFactoryParameters(): void {
+		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
+
+		$this->expectException( InvalidProviderPolicy::class );
+
+		$registry->registerWithCredentialStore(
+			'extra-argument',
+			static function (
+				ProviderCredentialStore $credentials,
+				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+				ProviderRegistrationContext $registrationContext,
+				?string $extra = null
+			): ExternalFixtureProvider {
+				unset( $deliveryEvidence, $registrationContext, $extra );
+
+				return new ExternalFixtureProvider( 'extra-argument', $credentials );
+			}
+		);
 	}
 
 	private function registry( ProviderRegistrationContext $context ): ProviderRegistry {

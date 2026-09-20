@@ -48,6 +48,11 @@ final class InvalidProviderPolicy extends RuntimeException {
 		return new self( 'The provider delivery-evidence factory returned an invalid reader.' );
 	}
 
+	public static function invalidProviderFactorySignature(): self {
+		return new self( 'The provider factory does not implement the Provider API 11 registration signature.' );
+	}
+
+
 	public static function invalidProviderFactory(): self {
 		return new self( 'The provider factory returned an invalid provider.' );
 	}

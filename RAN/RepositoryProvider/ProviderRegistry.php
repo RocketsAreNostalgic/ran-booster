@@ -6,6 +6,7 @@ namespace RAN\RepositoryProvider;
 
 use LogicException;
 use RAN\Logging\BoosterLogger;
+use RAN\PackageArtifactLimit;
 use RAN\Provider\ProviderCapability as ProviderCapabilityContract;
 use RAN\RepositoryProvider\Admin\ProviderNavigationOrderer;
 
@@ -25,7 +26,7 @@ final class ProviderRegistry {
 	private ProviderSecretPolicyCatalog $secretPolicies;
 	private ?\Closure $credentialStoreFactory;
 	private ?\Closure $deliveryEvidenceReaderFactory;
-	private ?ProviderRegistrationContext $registrationContext;
+	private ProviderRegistrationContext $registrationContext;
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
@@ -44,7 +45,9 @@ final class ProviderRegistry {
 		$this->deliveryEvidenceReaderFactory = null === $deliveryEvidenceReaderFactory
 			? null
 			: \Closure::fromCallable( $deliveryEvidenceReaderFactory );
-		$this->registrationContext           = $registrationContext;
+		$this->registrationContext           = $registrationContext ?? new ProviderRegistrationContext(
+			static fn (): int => PackageArtifactLimit::resolve()
+		);
 
 		foreach ( $providers as $provider ) {
 			$this->register( $provider );
@@ -58,9 +61,9 @@ final class ProviderRegistry {
 	 * The factory must construct its aggregate locally without network or other
 	 * side effects. Registration remains atomic after the aggregate is returned.
 	 *
-	 * Provider API 10 factories continue to receive exactly the original two
-	 * arguments unless they explicitly opt into the additive context by declaring
-	 * a non-variadic, by-value third parameter typed ProviderRegistrationContext.
+	 * Provider API 11 factories must declare a non-variadic, by-value third
+	 * parameter typed exactly ProviderRegistrationContext. The registry validates
+	 * that callable contract before invoking the factory.
 	 *
 	 * @param callable $factory Provider factory.
 	 */
@@ -70,6 +73,8 @@ final class ProviderRegistry {
 		try {
 			$code = $this->normalizeCode( $code );
 			$this->assertCanRegisterCode( $code );
+
+			$this->assertProviderFactorySignature( $factory );
 
 			if ( null === $this->credentialStoreFactory ) {
 				throw InvalidProviderPolicy::credentialStoreUnavailable();
@@ -100,9 +105,7 @@ final class ProviderRegistry {
 			}
 
 			try {
-				$provider = null !== $this->registrationContext && $this->factoryRequestsRegistrationContext( $factory )
-					? $factory( $credentials, $deliveryEvidence, $this->registrationContext )
-					: $factory( $credentials, $deliveryEvidence );
+				$provider = $factory( $credentials, $deliveryEvidence, $this->registrationContext );
 			} catch ( \Throwable $exception ) {
 				BoosterLogger::logException( 'provider registration provider factory failed', $exception, array( 'step' => 'provider_factory' ) );
 				throw InvalidProviderPolicy::invalidProviderFactory();
@@ -275,18 +278,33 @@ final class ProviderRegistry {
 		}
 	}
 
-	private function factoryRequestsRegistrationContext( callable $factory ): bool {
+	private function assertProviderFactorySignature( callable $factory ): void {
 		$parameters = ( new \ReflectionFunction( \Closure::fromCallable( $factory ) ) )->getParameters();
-		if ( ! isset( $parameters[2] ) || $parameters[2]->isVariadic() || $parameters[2]->isPassedByReference() ) {
-			return false;
+		$types      = array(
+			ProviderCredentialStore::class,
+			AuthenticatedWebhookDeliveryEvidenceReader::class,
+			ProviderRegistrationContext::class,
+		);
+
+		if ( count( $types ) !== count( $parameters ) ) {
+			throw InvalidProviderPolicy::invalidProviderFactorySignature();
 		}
 
-		$type = $parameters[2]->getType();
-
-		return $type instanceof \ReflectionNamedType
-			&& ! $type->isBuiltin()
-			&& ProviderRegistrationContext::class === $type->getName();
+		foreach ( $parameters as $index => $parameter ) {
+			$type = $parameter->getType();
+			if ( $parameter->isOptional()
+				|| $parameter->isVariadic()
+				|| $parameter->isPassedByReference()
+				|| ! $type instanceof \ReflectionNamedType
+				|| $type->isBuiltin()
+				|| $type->allowsNull()
+				|| $types[ $index ] !== $type->getName()
+			) {
+				throw InvalidProviderPolicy::invalidProviderFactorySignature();
+			}
+		}
 	}
+
 
 	private function assertCanRegisterCode( ProviderCode $code ): void {
 		$this->assertNotSealed();

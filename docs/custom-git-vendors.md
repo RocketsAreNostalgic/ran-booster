@@ -27,25 +27,21 @@ had a chance to run.
 ## Registration pattern
 
 A provider attaches its callback on `plugins_loaded` before Booster seals the
-registry. The original Provider API 10 factory remains the compatibility floor;
-feature-detect the bounded registration context before requiring it:
+registry. Provider API 11 uses one required three-argument credential-bearing
+factory contract:
 
 ```php
 add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 10 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+      || 11 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
-    $factory = static fn (
-      \RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-      \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
-    ): \RAN\RepositoryProvider\RepositoryProvider => new ExampleVendorProvider( $credentials, $deliveryEvidence );
-
-    if ( class_exists( \RAN\RepositoryProvider\ProviderRegistrationContext::class ) ) {
-      $factory = static function (
+    $registry->registerWithCredentialStore(
+      'example-vendor',
+      static function (
         \RAN\RepositoryProvider\ProviderCredentialStore $credentials,
         \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
         \RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
@@ -55,21 +51,17 @@ add_action(
           $deliveryEvidence,
           static fn (): int => $registrationContext->maximumArtifactBytes()
         );
-      };
-    }
-
-    $registry->registerWithCredentialStore( 'example-vendor', $factory );
+      }
+    );
   }
 );
 ```
 
 Use `registerWithCredentialStore()` when the provider reads stored credentials.
-Every API-10 factory receives the original two read-only values already bound to
-the requested provider code. A factory explicitly opts into the additive
-`ProviderRegistrationContext` only by declaring a non-variadic, by-value third parameter
-  typed exactly to that class. Existing two-argument factories, variadic factories, and factories whose
-third parameter is passed by reference therefore continue to receive exactly
-two arguments.
+Every API-11 factory receives the two provider-bound read-only values plus the
+bounded `ProviderRegistrationContext`. The third parameter must be
+non-variadic, by-value and typed exactly to that class; two-argument, variadic
+or by-reference context signatures are rejected before provider construction.
 
 `ProviderCredentialStore` exposes display-safe profiles, one selected or
 default credential and the boolean `hasWebhookProfile()` diagnostic readiness
@@ -83,11 +75,10 @@ and call it only when the operation actually needs the archive ceiling, not
 while its registration factory is constructing the provider aggregate.
 
 The context is not a service locator and exposes no container, logger, database,
-sidecar, credential writer or other Core implementation service. Because older
-Provider API 10 hosts predate this additive class, the API marker alone does not
-prove the context exists; a provider that wants to remain load-compatible with
-those hosts must feature-detect `ProviderRegistrationContext` before declaring a
-factory that requires it.
+sidecar, credential writer or other Core implementation service. Provider API 11
+guarantees this context as part of credential-bearing registration; providers
+targeting API 11 must not feature-detect or fall back to the retired
+two-argument factory shape.
 
 Neither provider-bound value accepts a provider argument, selects another
 provider, writes state or exposes sidecar paths, signing material, a credential
@@ -97,7 +88,7 @@ Activating a credential-bearing provider therefore trusts it with credentials
 saved under its code; registration order is not publisher authentication, and
 Core cannot control the provider's private code after authorized disclosure.
 
-Provider API 10 supplies no logger, service container or generic service
+Provider API 11 supplies no logger, service container or generic service
 resolver. The additive registration context does not change that marker or turn
 registration into generic dependency injection. An unexpected caught diagnostic
 failure may be attached only to a bounded request-local
@@ -188,7 +179,7 @@ branch, credential selection, and package slug.
 a host, and must not contain user info or fragments. Providers must not place
 reusable secrets in archive URLs.
 
-Provider API 10 supplies `GitReferenceSyntax::isValidNamedReference()` for the
+Provider API 11 supplies `GitReferenceSyntax::isValidNamedReference()` for the
 generic bounded branch/ref syntax check and `AuthenticatedPreparedArchive` for
 the one-request archive authentication, redirect scrubbing, head verification
 and cleanup lifecycle. A vendor may impose stricter syntax or origin rules, but
@@ -268,15 +259,12 @@ them:
   operations. See the
   [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
-Because the global Provider API marker remains 10, that marker alone does not
-prove workflow API 2 exists. A provider adopting
-`RepositoryReleaseWorkflowManagementV2` must call `interface_exists()` for that
-exact interface before loading or declaring any class that implements it. Keep
-the V2-capable implementation behind that feature gate; an older API-10 Booster
-host can then continue loading the provider's ordinary API-10 implementation
-without the V2 file being loaded. Providers that do not adopt workflow API 2
-need no additional feature check. See the
-[dedicated workflow API contract](provider-release-workflow-api.md#provider-api-10-feature-detection).
+Provider API 11 hosts publish
+`RepositoryReleaseWorkflowManagementV2` as the current optional workflow
+management facet. Providers targeting API 11 may implement that interface
+directly; providers that do not adopt workflow API 2 need no additional feature
+check. See the
+[dedicated workflow API contract](provider-release-workflow-api.md).
 
 Each optional capability stays behind Booster's capability gate. If the provider
 omits an automation helper, Booster omits that helper's setup component without
@@ -338,9 +326,9 @@ shape check.
    single-use `RepositoryReleaseArtifact`. Do not return a path, URL, archive
    bytes, provider result payload or reusable claim. Report a bounded cleanup
    failure when provider-owned bytes cannot be discarded before handoff.
-1. If adopting `RepositoryReleaseWorkflowManagementV2`, feature-detect that
-   interface before the V2 implementation class is loaded so the provider stays
-   non-fatal on older Booster releases that still advertise Provider API 10.
+1. When targeting Provider API 11, `RepositoryReleaseWorkflowManagementV2` is
+   available as the current optional workflow facet; older Booster releases that
+   advertise Provider API 10 remain outside this API-11 contract.
 1. Test registration from the main plugin file with the version guard in place.
 1. Verify the provider registers cleanly, seals cleanly, and surfaces the
    correct optional capabilities.

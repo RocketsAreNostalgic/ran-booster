@@ -27,29 +27,18 @@ final class Plugin {
 		$innerRegistrar = require dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/bootstrap.php';
 		$registrar      = new ReleaseUpdaterRegistrar( $innerRegistrar );
 
-		$factory = static fn (
+		$factory = static function (
 			ProviderCredentialStore $credentials,
-			AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence
-		): RepositoryProvider => GitHubProvider::create(
-			$credentials,
-			$deliveryEvidence,
-			$registrar
-		);
-
-		if ( class_exists( ProviderRegistrationContext::class ) ) {
-			$factory = static function (
-				ProviderCredentialStore $credentials,
-				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
-			) use ( $registrar ): RepositoryProvider {
-				return GitHubProvider::create(
-					$credentials,
-					$deliveryEvidence,
-					$registrar,
-					static fn (): int => $registrationContext->maximumArtifactBytes()
-				);
-			};
-		}
+			AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
+			ProviderRegistrationContext $registrationContext
+		) use ( $registrar ): RepositoryProvider {
+			return GitHubProvider::create(
+				$credentials,
+				$deliveryEvidence,
+				$registrar,
+				static fn (): int => $registrationContext->maximumArtifactBytes()
+			);
+		};
 
 		$registry->registerWithCredentialStore( 'gh', $factory );
 	}
@@ -57,6 +46,6 @@ final class Plugin {
 	private static function hasCompatibleCore(): bool {
 		return ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) || 'single_site_supported' === RAN_BOOSTER_RUNTIME_MODE )
 			&& defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			&& 10 === RAN_BOOSTER_PROVIDER_API_VERSION;
+			&& 11 === RAN_BOOSTER_PROVIDER_API_VERSION;
 	}
 }

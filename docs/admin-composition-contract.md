@@ -42,7 +42,7 @@ if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
 Add-on API 16 publishes only the named service documented for its surviving
 ready action. Core does not deliver an add-on logging facade, generic resolver
 or container.
-Provider API 10 remains a separate contract. Provider add-ons must continue to
+Provider API 11 remains a separate contract. Provider add-ons must continue to
 perform the exact checks described in the
 [Provider extension contract](provider-extension-contract.md).
 

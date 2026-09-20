@@ -1,6 +1,6 @@
 # Provider registration and coexistence: current state
 
-**Status:** Current-source characterization for Provider API 10, reconciled on
+**Status:** Current-source characterization for Provider API 11, reconciled on
 18 September 2026 after the first-party GitHub package extraction and external
 composition proof. This document records behavior that exists now. It does not
 reserve new vendor names or change registration semantics.
@@ -33,7 +33,7 @@ filesystem, database, hook, or process access.
 ## Registration lifecycle
 
 Core publishes the exact integer marker
-`RAN_BOOSTER_PROVIDER_API_VERSION = 10`. Compatible provider plugins attach a
+`RAN_BOOSTER_PROVIDER_API_VERSION = 11`. Compatible provider plugins attach a
 callback to `ran_booster_register_providers` during normal plugin loading and
 must fail closed unless the marker is exactly the generation they support.
 
@@ -62,9 +62,10 @@ a different code is also rejected, and failed registration publishes neither
 provider nor secret policy state.
 
 For a credential-bearing provider, Core supplies a read-only
-`ProviderCredentialStore` and an
-`AuthenticatedWebhookDeliveryEvidenceReader`, both already bound to the
-requested code. Neither accepts a provider selector. This makes the provider
+`ProviderCredentialStore`, an
+`AuthenticatedWebhookDeliveryEvidenceReader`, and the bounded
+`ProviderRegistrationContext`. The first two are already bound to the requested
+code and neither accepts a provider selector. This makes the provider
 code a custody boundary rather than a display-only identifier.
 
 The registration path therefore guards against these accidental cases:

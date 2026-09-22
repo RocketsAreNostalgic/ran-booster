@@ -56,9 +56,6 @@
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<severity>0</severity>
 	</rule>
-	<rule ref="Generic.CodeAnalysis.UselessOverridingMethod">
-		<severity>0</severity>
-	</rule>
 	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
 		<severity>0</severity>
 	</rule>

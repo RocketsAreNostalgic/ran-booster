@@ -12,7 +12,7 @@ List the focused checks you ran and their results.
 
 ## Checklist
 
-- [ ] The commits use Conventional Commit subjects.
+- [ ] The pull-request title uses the repository's Conventional Commit classification so the squash subject is truthful Release Please metadata.
 - [ ] The change is focused and does not include unrelated files.
 - [ ] I ran `composer check` and `pnpm check`.
 - [ ] I updated public documentation when behavior or support expectations changed.

@@ -21,5 +21,6 @@ full production logs, private workbench material, or Dex identifiers in an
 issue or pull request. Report vulnerabilities through the private route in
 [SECURITY.md](SECURITY.md).
 
-Reports about conduct belong through the private enforcement route in
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), not through a public issue.
+Reports about conduct belong through the private enforcement route in the
+[RAN Code of Conduct](https://github.com/RocketsAreNostalgic/.github/blob/main/CODE_OF_CONDUCT.md),
+not through a public issue.

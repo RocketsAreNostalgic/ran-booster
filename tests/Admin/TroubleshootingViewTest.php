@@ -67,7 +67,7 @@ final class TroubleshootingViewTest extends TestCase {
 	public function testTranslatesTheDiagnosticsEyebrowWithoutChangingTheActivePanel(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Diagnostics'] = 'Diagnostic traduit';
 		$troubleshootingPanel = 'diagnostics';
-		$troubleshooting      = array();
+		$troubleshooting      = array( 'providers' => array() );
 		$debugCapture         = array(
 			'state'    => 'inactive',
 			'filename' => 'ran-booster-debug.php',

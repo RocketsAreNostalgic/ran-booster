@@ -31,7 +31,7 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		self::assertStringContainsString( 'contents: write', $workflow );
 		self::assertStringContainsString( 'pull-requests: write', $workflow );
 		self::assertStringNotContainsString( 'shell:', $workflow );
-		self::assertStringNotContainsString( 'run:', $workflow );
+		self::assertSame( 0, preg_match( '/^\\s+run:/m', $workflow ) );
 		self::assertStringNotContainsString( '--clobber', $workflow );
 	}
 

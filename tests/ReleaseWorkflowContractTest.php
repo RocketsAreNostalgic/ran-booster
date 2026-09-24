@@ -15,7 +15,10 @@ final class ReleaseWorkflowContractTest extends TestCase {
 			$workflow
 		);
 		self::assertStringContainsString( 'expected-workflow-path: .github/workflows/quality.yml', $workflow );
-		self::assertStringContainsString( 'release-pr-head: release-please--branches--main--components--ran-booster', $workflow );
+		self::assertStringContainsString(
+			'release-pr-head: release-please--branches--main--components--ran-booster',
+			$workflow
+		);
 		self::assertStringContainsString( 'artifact-prefix: ran-booster-runtime', $workflow );
 		self::assertStringNotContainsString( 'googleapis/release-please-action', $workflow );
 		self::assertStringNotContainsString( 'gh release', $workflow );

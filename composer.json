@@ -96,7 +96,7 @@
             "@standards",
             "@analyze"
         ],
-        "standards": "phpcs --standard=.phpcs.xml --report=full -s",
+        "standards": "phpcs --standard=.phpcs.xml --report=summary",
         "standards:fix": "phpcbf --standard=.phpcs.xml --report=summary",
         "lint:syntax": "bash -o pipefail -c 'find . -path ./vendor -prune -o -path ./node_modules -prune -o -path ./ran-booster-workbench -prune -o -type f -name \"*.php\" -print0 | xargs -0 -r -n1 php -l'"
     },

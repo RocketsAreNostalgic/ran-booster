@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-beta.30](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.29...v1.0.0-beta.30) (2026-09-24)
+
+
+### Bug Fixes
+
+* **release:** adopt shared Profile B lifecycle ([#170](https://github.com/RocketsAreNostalgic/ran-booster/issues/170)) ([68c30b5](https://github.com/RocketsAreNostalgic/ran-booster/commit/68c30b5216f89dc87e40e1d768cab730ef3fbc58))
+
 ## [1.0.0-beta.29](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.28...v1.0.0-beta.29) (2026-09-20)
 
 

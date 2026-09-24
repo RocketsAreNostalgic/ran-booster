@@ -76,7 +76,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'name: Quality', $workflow );
 		self::assertStringContainsString( '- repository-quality', $workflow );
 		self::assertStringContainsString( '- wordpress-release-candidate', $workflow );
-		self::assertStringContainsString( '- wordpress', $workflow );
+		self::assertStringContainsString( '- wordpress', $workflow ); // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText -- YAML job key is lowercase.
 		self::assertStringContainsString( 'test "$WORDPRESS_RESULT" = success', $workflow );
 		self::assertStringContainsString( 'test "$RELEASE_CANDIDATE_RESULT" = success', $workflow );
 	}

@@ -1,44 +1,30 @@
 # CI architecture
 
-RAN Booster follows the same organization-level quality policy as the sibling updater packages, but its GitHub Actions topology remains local because the workflow is also part of the release and runtime-evidence trust boundary.
+RAN Booster follows the organization-level quality policy while retaining a local Quality workflow because Core owns substantially stronger product evidence than a generic PHP package: deterministic runtime dependency projection, a verified installable ZIP, WordPress/MySQL/MariaDB execution, Plugin Check, localisation/generated-state proof, and exact installed-archive readback.
 
-The common policy is:
-
+The common policy remains:
 - test the exact source revision;
 - use locked dependency manifests;
 - retain PHP 8.2 as the supported floor;
 - use pinned third-party Actions and declared toolchain versions;
-- keep project-controlled build/test execution read-only and credential-free; where runtime admission must query GitHub metadata, expose only the read-only, step-scoped `GITHUB_TOKEN` permissions required for that classifier;
-- make repository-owned aggregate checks (`composer check`, `pnpm check`) authoritative for their code surfaces;
-- keep product-specific installation, compatibility, packaging, provenance, and release proofs in the owning repository.
+- keep project-controlled build/test execution read-only and credential-free;
+- make repository aggregates (`composer check`, `pnpm check`) authoritative for their code surfaces; and
+- preserve product-specific installation, compatibility, packaging and provenance evidence in Core.
 
-For the updater libraries, ordinary PHP quality execution is centralized through the versioned reusable workflow in `RocketsAreNostalgic/.github`. Booster does not call that reusable library workflow because its `Quality` workflow additionally creates and admits exact runtime archives, separates full and Release Please candidate lanes, and feeds verified artifacts into installed WordPress/database proofs. Those responsibilities must remain coupled to Booster's own provenance model rather than becoming parameters of a generic reusable workflow.
+Protected `main` continues to require `Runtime archive`, terminal `Quality`, and `Release candidate install readback`. Terminal `Quality` fans in the full repository and WordPress/database lanes for ordinary changes, or the exact candidate install/readback lane for a Release Please candidate. The Profile B migration does not weaken those contexts or change their enforcement.
 
-Booster therefore retains the protected `Runtime archive`, `Quality`, and `Release candidate install readback` checks. Any future move to a single fan-in status must be coordinated with the repository ruleset so required checks are never silently dropped or left pointing at statuses that no longer exist.
+## Exact artifact boundary
+
+`Runtime archive` checks out the exact source revision, builds the deterministic Core ZIP from the committed dependency lock and runtime packaging policy, verifies the archive, and uploads one run/attempt-bound artifact: `ran-booster-runtime-<run-id>-<attempt>`.
+
+That artifact contains the installable ZIP, its checksum, repository-local runtime metadata, and `ran-profile-b-promotion.json`. The promotion manifest binds the repository, exact tested source/Quality commit, expected tag, public asset names, and SHA-256 digests. Quality never publishes or mutates a GitHub Release.
+
+The canonical Release Please branch is handled as a candidate lane only when it is the unique open bot-owned release proposal for `main`. Candidate Quality remains read-only and installs/reads back the exact ZIP. Generic candidate comments, lifecycle markers, trusted-run rediscovery, changed-path evidence catalogues, and main-push artifact-reuse fallback are no longer local architecture.
 
 ## Release promotion boundary
 
-Booster uses successful exact-main qualification as its release promotion
-boundary. The Quality workflow remains read-only evidence infrastructure. Its
-admission classifier forces a fresh main Runtime archive and Quality run when
-release-control or evidence-input paths change, so a changed workflow, release
-script, dependency manifest, or runtime packaging policy cannot promote stale
-pull-request evidence.
+The release workflow is a thin caller to the pinned shared Profile B contract in `RocketsAreNostalgic/.github`. The shared workflow admits only the exact successful push-triggered `main` Quality revision from the canonical workflow, invokes Release Please, ensures the exact release candidate has successful Quality, resolves the exact draft release ID and prerelease classification, downloads the exact main Quality artifact, validates every promotion digest, publishes, and reads back the immutable release.
 
-`RELEASE.md` is the canonical human-readable inventory that separates the
-release-control/release-execution paths from ordinary evidence-input paths.
-Contract tests compare that inventory with Quality's executable changed-file
-classifier. This document deliberately does not repeat the full catalogue.
+Release Please remains the sole generic version/changelog/release-PR/tag/release lifecycle authority. A failed artifact is fixed through source → fresh qualification → new version; Core retains no standing mutable recovery path.
 
-The Release Please workflow is the bounded mutator. It is triggered only by a
-successful push-triggered Quality run on `main`, checks out that exact Quality
-commit, and re-establishes the merged pull-request identity before exercising
-repository or release write permissions. Release-control changes do not require
-a later ceremonial pull request once their own exact merged revision has passed
-that trusted-main qualification.
-
-The repository currently has one maintainer, so this model does not claim an
-independent human authorization principal. Exact-head Copilot/Codex review may
-be required by repository process or settings as a pre-merge review gate, but
-release authorization remains bound to exact-main evidence and the existing
-artifact/publication provenance chain.
+The repository currently has one maintainer, so this model does not claim an independent human authorization principal. Exact-head code/security review remains a pre-merge review gate; privileged publication remains bound to successful exact-main evidence and the shared Profile B contract.

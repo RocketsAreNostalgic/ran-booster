@@ -308,32 +308,18 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertStringContainsString( 'runtime-packaging-policy.json', $manifest );
 	}
 
-	public function testQualityTreatsPackagingPolicyAsFreshEvidenceInputOnly(): void {
-		$quality           = $this->readText( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
-		$release           = $this->readText( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );
-		$qualityTrustPaths = $this->trustPathBlock( $quality );
+	public function testQualityKeepsPackagingPolicyInTheRepositoryOwnedArchiveBoundary(): void {
+		$quality = $this->readText( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
+		$release = $this->readText( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );
+		$builder = $this->readText( dirname( __DIR__ ) . '/scripts/build-release.sh' );
 
-		self::assertStringContainsString( 'runtime-packaging-policy.json', $qualityTrustPaths );
+		self::assertStringContainsString( 'bash scripts/build-release.sh', $quality );
+		self::assertStringContainsString( 'runtime-packaging-policy.json', $builder );
+		self::assertStringContainsString( 'scripts/verify-runtime-dependencies.php', $builder );
 		self::assertStringNotContainsString( 'runtime-packaging-policy.json', $release );
-		self::assertStringNotContainsString( 'for trust_path in \\', $release );
+		self::assertStringNotContainsString( 'for trust_path in \\', $quality );
 		self::assertStringNotContainsString( 'Check out locked neutral updater source', $quality );
-		self::assertStringContainsString(
-			'git show "${source_commit}:scripts/verify-runtime-dependencies.php"',
-			$quality
-		);
-		self::assertStringContainsString( 'php "$verifier_file" --packaging', $quality );
-		self::assertStringContainsString( 'Requires PHP:', $quality );
-		self::assertStringContainsString( 'Requires at least:', $quality );
-		self::assertStringContainsString( '.php_floor', $quality );
-		self::assertStringContainsString( '.wordpress_floor', $quality );
-		self::assertStringContainsString( 'version_compare( $argv[1], $argv[2], "<=" )', $quality );
-		self::assertStringContainsString( 'booster_requires_php="${booster_requires_php}.0"', $quality );
-		self::assertStringContainsString( 'booster_requires_wordpress="${booster_requires_wordpress}.0"', $quality );
-		self::assertStringNotContainsString( '[[ "$package_version" =~ ^v?', $quality );
-		self::assertStringNotContainsString(
-			'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3',
-			$quality
-		);
+		self::assertStringNotContainsString( 'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3', $quality );
 	}
 
 	public function testDisposableLifecycleFixtureUsesTheVendoredUpdatersStableUserAgent(): void {

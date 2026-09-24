@@ -95,14 +95,13 @@ never remove or silently weaken those local guarantees.
   the intended site root. Never mutate a symlinked or shared development
   checkout.
 - Use the Release Please skill before release-automation work.
+- Release Please owns version/changelog/release-PR/tag/draft lifecycle. The pinned shared Profile B workflow owns exact successful-main admission and promotion of the exact tested Core ZIP; do not restore local candidate markers, generic publisher state, mutable recovery, or a second version engine.
 - Preserve the negotiated Prospective Release API boundary: inspection
   downloads, verifies and discards the exact release ZIP; installation freshly
   reacquires it. The shared updater owns archive custody and verification,
   WordPress Core owns installation, new targets remain inactive, and partial or
   uncertain outcomes never claim adoption.
-- The required development gates are `composer check` and `pnpm check`. For
-  runtime-affecting work, also run PHP lint and the WordPress activation smoke
-  check used by CI.
+- The required development gates are `composer check` and `pnpm check`. `composer check` retains Core's i18n/generated-state, deterministic tests, Admin Shell, parser sweep, PHPCS/WPCS/PHPCompatibility, and blocking PHPStan evidence through the canonical `lint:syntax`, `standards`, and `analyze` commands. `standards:fix` is mutating and is never part of `check`. For runtime-affecting work, also run the focused WordPress/archive proof used by CI.
 - Booster requires Node 24.11.0 and the exact pnpm version pinned by
   `packageManager`.
   Before blaming a project check, confirm `command -v node`, `node --version`,

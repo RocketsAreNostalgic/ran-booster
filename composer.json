@@ -81,12 +81,7 @@
             "@test:github-release-updater-bootstrap",
             "@test:release-candidate-contract"
         ],
-        "lint:php": "phpcs --standard=.phpcs.xml --report=summary",
-        "lint:php:fix": "phpcbf --standard=.phpcs.xml --report=summary",
         "test:release-candidate-contract": "bash tests/release-candidate-contract.sh",
-        "test:release-candidate-marker": "bash tests/reconcile-release-candidate-marker.sh",
-        "test:release-state-contracts": "bash tests/release-state-contracts.sh",
-        "test:quality-fallback-contract": "bash tests/quality-fallback-contract.sh",
         "admin-shell:check": "ran-admin-shell check --config=ran-admin-shell.json --immutable",
         "admin-shell:sync": "ran-admin-shell sync --config=ran-admin-shell.json",
         "build:release": "bash scripts/build-release.sh",
@@ -96,13 +91,14 @@
             "@i18n:fixture:check",
             "@test:localisation-installed-safety",
             "@test",
-            "@test:release-candidate-marker",
-            "@test:release-state-contracts",
-            "@test:quality-fallback-contract",
             "@admin-shell:check",
-            "@lint:php",
+            "@lint:syntax",
+            "@standards",
             "@analyze"
-        ]
+        ],
+        "standards": "phpcs --standard=.phpcs.xml --report=summary",
+        "standards:fix": "phpcbf --standard=.phpcs.xml --report=summary",
+        "lint:syntax": "bash -o pipefail -c 'find . -path ./vendor -prune -o -path ./node_modules -prune -o -path ./ran-booster-workbench -prune -o -type f -name \"*.php\" -print0 | xargs -0 -r -n1 php -l'"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",

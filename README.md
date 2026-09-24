@@ -217,6 +217,11 @@ composer check
 pnpm check
 ```
 
+The PHP aggregate uses the canonical focused commands `composer lint:syntax`,
+`composer standards`, `composer analyze`, and `composer test` while retaining
+the existing localisation/generated-state and Admin Shell checks. Use
+`composer standards:fix` only when intentionally applying PHPCBF fixes.
+
 Build and verify the runtime-only deployment archive from the exact committed
 tree:
 

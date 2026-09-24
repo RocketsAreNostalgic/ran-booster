@@ -25,7 +25,7 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		$workflow = $this->readText( '.github/workflows/release-please.yml' );
 
 		self::assertStringContainsString(
-			'uses: RocketsAreNostalgic/.github/.github/workflows/release-profile-b.yml@e2fb19244a301a62f8fae2a80536898adf21fe22',
+			'uses: RocketsAreNostalgic/.github/.github/workflows/release-profile-b.yml@593768db30a0101e940e85b9a084b2c773322785',
 			$workflow
 		);
 		self::assertStringContainsString( 'contents: write', $workflow );

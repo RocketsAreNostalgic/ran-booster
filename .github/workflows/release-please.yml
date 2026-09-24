@@ -15,7 +15,7 @@ jobs:
       issues: write
       pull-requests: write
       actions: write
-    uses: RocketsAreNostalgic/.github/.github/workflows/release-profile-b.yml@e2fb19244a301a62f8fae2a80536898adf21fe22
+    uses: RocketsAreNostalgic/.github/.github/workflows/release-profile-b.yml@593768db30a0101e940e85b9a084b2c773322785
     with:
       expected-workflow-path: .github/workflows/quality.yml
       release-pr-head: release-please--branches--main--components--ran-booster

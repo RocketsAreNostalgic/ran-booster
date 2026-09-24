@@ -54,7 +54,7 @@ ordinary PR / main
 
 `workflow_dispatch` on `Quality` is intentionally input-free. The shared Profile B workflow dispatches the canonical Release Please branch when exact candidate qualification is required. Core treats a dispatched revision as a release candidate only when it is the unique open bot-owned Release Please pull request for `main`; ordinary manual dispatch remains the full quality lane.
 
-The release workflow is a thin caller pinned to shared Profile B at `e2fb19244a301a62f8fae2a80536898adf21fe22`. It does not rebuild release bytes. Shared promotion downloads the exact run/attempt artifact named `ran-booster-runtime-<run-id>-<attempt>` and requires `ran-profile-b-promotion.json` to bind repository, admitted SHA, tag, asset names, and SHA-256 digests.
+The release workflow is a thin caller pinned to shared Profile B at `593768db30a0101e940e85b9a084b2c773322785`. It does not rebuild release bytes. Shared promotion downloads the exact run/attempt artifact named `ran-booster-runtime-<run-id>-<attempt>` and requires `ran-profile-b-promotion.json` to bind repository, admitted SHA, tag, asset names, and SHA-256 digests.
 
 Release Please is configured with `draft: true` and `force-tag-creation: true`. The shared promoter captures the Release Please release ID and stable/prerelease classification, attaches only the expected tested assets, then requires the published release to become immutable with the same identity and target commit.
 

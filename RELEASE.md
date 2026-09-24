@@ -36,6 +36,14 @@ Before a release proposal is merged:
 4. preserve the committed runtime dependency/packaging policy and the existing WordPress/database/install evidence; and
 5. do not manually create, publish, replace, or clobber a release asset.
 
+## Merge method for Booster release proposals
+
+After the exact candidate checks and independent review are complete, obtain the owner's explicit authorization for that specific pull request. Merge Booster's bot-owned `chore(main): release ...` proposals with **Create a merge commit**. **Do not squash or rebase-merge these release proposals.** Ordinary iterative or agent-developed pull requests still prefer squash under `AGENTS.md`.
+
+This is the [owner-approved Booster merge policy](https://github.com/RocketsAreNostalgic/.github/issues/54#issuecomment-5818889056), not a claim that Release Please universally requires merge commits. [Release PR #172](https://github.com/RocketsAreNostalgic/ran-booster/pull/172) followed this policy: its two-parent merge `1c8283bc814ac593171d608d532226fcea83c6f4` was qualified on `main` and published as immutable `v1.0.0-beta.30`.
+
+A merged release proposal is not itself proof of publication. Verify successful Quality on the resulting exact merged-main commit, then shared Profile B publication and immutable tag/release/asset readback. The publisher must consume that merged-main artifact, not the pre-merge candidate artifact.
+
 ## Automated release path
 
 ```text

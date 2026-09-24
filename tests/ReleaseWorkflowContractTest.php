@@ -61,6 +61,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'run: pnpm check', $workflow );
 		self::assertStringContainsString( 'fromJSON(needs.runtime-archive.outputs.wordpress-matrix)', $workflow );
 		self::assertSame( 1, substr_count( $workflow, 'bash scripts/build-release.sh' ) );
+		self::assertSame( 3, substr_count( $workflow, 'name: Verify exact source checkout' ) );
 	}
 
 	public function testTerminalQualityFansInFullAndCandidateProductEvidence(): void {

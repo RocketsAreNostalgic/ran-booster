@@ -192,6 +192,13 @@ jobs:
             with:
                 fetch-depth: 0
                 persist-credentials: false
+                ref: ${{ needs.runtime-archive.outputs.source-commit }}
+
+          - name: Verify exact source checkout
+            shell: bash
+            run: |
+                set -euo pipefail
+                test "$(git rev-parse HEAD)" = '${{ needs.runtime-archive.outputs.source-commit }}'
 
           - name: Prepare private test temporary directory
             shell: bash
@@ -263,6 +270,13 @@ jobs:
             with:
                 fetch-depth: 0
                 persist-credentials: false
+                ref: ${{ needs.runtime-archive.outputs.source-commit }}
+
+          - name: Verify exact source checkout
+            shell: bash
+            run: |
+                set -euo pipefail
+                test "$(git rev-parse HEAD)" = '${{ needs.runtime-archive.outputs.source-commit }}'
 
           - name: Set up PHP and WP-CLI
             uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
@@ -399,6 +413,13 @@ jobs:
             with:
                 fetch-depth: 0
                 persist-credentials: false
+                ref: ${{ needs.runtime-archive.outputs.source-commit }}
+
+          - name: Verify exact source checkout
+            shell: bash
+            run: |
+                set -euo pipefail
+                test "$(git rev-parse HEAD)" = '${{ needs.runtime-archive.outputs.source-commit }}'
 
           - name: Set up PHP and WP-CLI
             uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2

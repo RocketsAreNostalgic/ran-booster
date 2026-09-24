@@ -102,7 +102,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 	public function testWorkflowActionsArePinnedToImmutableCommits(): void {
 		foreach ( array( 'quality.yml', 'release-please.yml' ) as $workflow_name ) {
 			$workflow = $this->workflow( $workflow_name );
-			$matches = array();
+			$matches  = array();
 
 			self::assertGreaterThan(
 				0,

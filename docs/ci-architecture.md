@@ -27,4 +27,6 @@ The release workflow is a thin caller to the pinned shared Profile B contract in
 
 Release Please remains the sole generic version/changelog/release-PR/tag/release lifecycle authority. A failed artifact is fixed through source → fresh qualification → new version; Core retains no standing mutable recovery path.
 
+Post-migration liveness acceptance requires a real push-triggered `Quality` run on protected `main`. Manual `workflow_dispatch` remains useful for bounded diagnostics and exact Release Please candidate qualification, but it does not satisfy shared Profile B admission, which intentionally accepts only successful `push` evidence from the canonical main workflow.
+
 The repository currently has one maintainer, so this model does not claim an independent human authorization principal. Exact-head code/security review remains a pre-merge review gate; privileged publication remains bound to successful exact-main evidence and the shared Profile B contract.

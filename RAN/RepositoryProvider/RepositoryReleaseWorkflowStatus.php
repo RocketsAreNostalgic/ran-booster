@@ -15,7 +15,7 @@ final readonly class RepositoryReleaseWorkflowStatus {
 		}
 		if ( ! $this->text( $this->providerCode, 32 ) || ! $this->text( $this->repositoryId, 191 ) || ! $this->url( $this->pullRequestUrl, true )
 			|| ! in_array( $this->packageType, array( '', 'plugin', 'theme' ), true ) || ! $this->text( $this->packageIdentifier, 255, true ) || $this->sourceRevision < 0
-			|| ! in_array( $this->recordOperation, array( '', 'bootstrap', 'template_update' ), true ) || ! in_array( $this->observationKind, array( '', 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true )
+			|| ! in_array( $this->recordOperation, array( '', 'bootstrap' ), true ) || ! in_array( $this->observationKind, array( '', 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true )
 			|| ! $this->timestamp( $this->observedAt, true ) || count( $this->failureHistory ) > 12 || count( $this->credentialChoices ) > 16 || count( $this->documentationLinks ) > 16 || ! $this->url( $this->providerWorkflowUrl, true ) || ! $this->optionalText( $this->writeGuidance, 512 ) ) {
 			throw new InvalidArgumentException( 'Release workflow status is invalid.' ); }
 		foreach ( $this->credentialChoices as $choice ) {
@@ -25,7 +25,7 @@ final readonly class RepositoryReleaseWorkflowStatus {
 		foreach ( $this->failureHistory as $failure ) {
 			if ( ! is_array( $failure )
 				|| array_keys( $failure ) !== array( 'operation', 'outcome_code', 'failure_stage', 'diagnostic_code', 'diagnostic_available', 'correlation_reference', 'recorded_at' )
-				|| ! in_array( $failure['operation'], array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ), true )
+				|| ! in_array( $failure['operation'], array( 'inspect', 'setup', 'outcome' ), true )
 				|| ! is_string( $failure['outcome_code'] ) || 1 !== preg_match( '/\Aworkflow_[a-z0-9_]{1,55}\z/D', $failure['outcome_code'] )
 				|| ! in_array( $failure['failure_stage'], array( 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true )
 				|| ! is_string( $failure['diagnostic_code'] ) || ! $this->text( $failure['diagnostic_code'], 96 )

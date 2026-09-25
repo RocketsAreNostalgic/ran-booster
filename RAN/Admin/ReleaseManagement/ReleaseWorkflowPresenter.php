@@ -9,7 +9,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
@@ -605,7 +605,7 @@ final class ReleaseWorkflowPresenter {
 			$reason = __( 'A workflow record belongs to a different package. Review the recorded repository state before setup.', 'ran-booster' );
 		}
 		$credentials = $state?->credentialChoices() ?? array();
-		$channel     = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : $status->channel();
+		$channel     = 'stable';
 		$preview     = null;
 		if ( '' === $reason && '' !== $previewKey ) {
 			$preview = $this->requestBoundary( fn () => $provider->workflowPreview( ReleaseWorkflowProviderProjection::target( $status ), $previewKey ), null );
@@ -619,12 +619,10 @@ final class ReleaseWorkflowPresenter {
 			$forms['inspect']['credentials'] = $credentials;
 		}
 		if ( null !== $preview ) {
-			$operation           = 'template_update' === $preview->kind() ? 'update_setup' : 'setup';
-			$forms[ $operation ] = $this->workflowForm( $operation, $status, $previewKey, $preview->confirmation(), $preview->channel(), $credentials, $anonymous );
+			$forms['setup'] = $this->workflowForm( 'setup', $status, $previewKey, $preview->confirmation(), $preview->channel(), $credentials, $anonymous );
 		}
 		if ( '' === $reason && $this->recordMatchesPackageStatus( $state, $status ) ) {
-			$forms['outcome']        = $this->workflowForm( 'outcome', $status, credentials: $credentials, anonymousInspection: $anonymous );
-			$forms['update_inspect'] = $this->workflowForm( 'update_inspect', $status, credentials: $credentials, anonymousInspection: $anonymous );
+			$forms['outcome'] = $this->workflowForm( 'outcome', $status, credentials: $credentials, anonymousInspection: $anonymous );
 		}
 		foreach ( $forms as &$form ) {
 			if ( is_array( $form ) ) {
@@ -727,7 +725,7 @@ final class ReleaseWorkflowPresenter {
 	): ?array {
 		$preflight = '';
 		if ( in_array( $operation, array( 'inspect', 'setup' ), true ) ) {
-			if ( null === $this->releases || ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
+			if ( null === $this->releases || 'stable' !== $channel ) {
 				return null;
 			}
 			$action = $this->releases->nonceAction( 'assessment_preflight', $status->type(), $status->identifier(), $status->sourceRevision(), $channel );
@@ -775,17 +773,17 @@ final class ReleaseWorkflowPresenter {
 	}
 
 	/** @return list<array{id:string,label:string}> */
-	private function workflowCapability( string $providerCode ): ?RepositoryReleaseWorkflowManagementV2 {
+	private function workflowCapability( string $providerCode ): ?RepositoryReleaseWorkflowManagementV3 {
 		try {
-			return $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagementV2::class );
+			return $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagementV3::class );
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
-	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagementV2 {
+	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagementV3 {
 		$provider = $this->workflowCapability( $providerCode );
-		return null !== $provider && 2 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
+		return null !== $provider && 3 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null ) && $this->releaseProviderSupported( $providerCode ) ? $provider : null;
 	}
 
 	private function releaseProviderSupported( string $providerCode ): bool {

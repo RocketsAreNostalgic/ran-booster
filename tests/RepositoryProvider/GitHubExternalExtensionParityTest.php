@@ -38,7 +38,7 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\Secrets\SecretsFile;
@@ -95,7 +95,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 					RepositoryReleaseInspector::class,
 					RepositoryReleaseAcquirer::class,
 					RepositoryReleaseNativeTargets::class,
-					RepositoryReleaseWorkflowManagementV2::class,
+					RepositoryReleaseWorkflowManagementV3::class,
 				) as $capability
 			) {
 				self::assertSame( $provider, $registry->requireCapability( 'gh', $capability ), $capability );

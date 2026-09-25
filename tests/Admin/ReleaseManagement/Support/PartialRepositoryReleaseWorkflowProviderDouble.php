@@ -13,7 +13,7 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
@@ -22,7 +22,7 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RuntimeException;
 
 /** Deliberately lacks the five release-consumption capabilities required by Core. */
-final class PartialRepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV2 {
+final class PartialRepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV3 {
 	public function getMetadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'partial' ), 'Partial workflow fixture', 'https://partial.example/', 'Owner' ); }
 	public function getProviderDiagnostics(): ProviderDiagnostics {
@@ -48,11 +48,5 @@ final class PartialRepositoryReleaseWorkflowProviderDouble implements Repository
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
 	public function workflowOutcome( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status, $credentialId );
-		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
-	public function workflowInspectUpdate( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
-		unset( $status, $credentialId );
-		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
-	public function workflowSetupUpdate( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
-		unset( $status, $key, $confirmation, $credentialId );
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
 }

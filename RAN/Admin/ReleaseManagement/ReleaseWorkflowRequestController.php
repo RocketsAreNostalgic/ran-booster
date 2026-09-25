@@ -9,7 +9,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
@@ -88,11 +88,11 @@ final class ReleaseWorkflowRequestController {
 		$exact        = false;
 		try {
 			do {
-				if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ), true )
+				if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome' ), true )
 					|| '' === $type || '' === $identifier || $revision < 1 || null === $previewKey || '' === $nonce
 					|| '' === $providerCode || strlen( $providerCode ) > 32 || $providerCode !== sanitize_key( $providerCode )
 					|| '' === $repositoryId || strlen( $repositoryId ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId )
-					|| ( 'inspect' === $operation && '' === $channel ) ) {
+					|| ( 'inspect' === $operation && 'stable' !== $channel ) ) {
 					break; }
 				if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
 					$outcome['diagnostic_code'] = 'permissions_unavailable';
@@ -123,7 +123,7 @@ final class ReleaseWorkflowRequestController {
 					$outcome['diagnostic_code'] = $sourceGuard['code'];
 					break;
 				}
-				$write              = in_array( $operation, array( 'setup', 'update_setup' ), true );
+				$write              = ( 'setup' === $operation );
 				$credentialId       = is_string( $request['booster_credential_id'] ?? null ) ? wp_unslash( $request['booster_credential_id'] ) : '';
 				$local              = $this->workflowProviderStatus( $status, $providerTarget );
 				$credentialRequired = $write || ! $this->anonymousWorkflowInspectionAllowed( $package );
@@ -137,13 +137,13 @@ final class ReleaseWorkflowRequestController {
 					$preview = $provider->workflowPreview( $providerTarget, $previewKey );
 					if ( null === $preview || $preview->key() !== $previewKey || $preview->providerCode() !== $providerCode
 						|| $preview->repositoryId() !== $repositoryId || $preview->confirmation() !== $confirmation
-						|| $preview->kind() !== ( 'setup' === $operation ? 'bootstrap' : 'template_update' ) ) {
+						|| $preview->kind() !== 'bootstrap' ) {
 						$outcome['diagnostic_code'] = 'package_source_changed';
 						break;
 					}
 					$channel = $preview->channel();
 				}
-				if ( in_array( $operation, array( 'outcome', 'update_inspect', 'update_setup' ), true ) && ! $this->recordMatchesPackageStatus( $local, $status ) ) {
+				if ( ( 'outcome' === $operation ) && ! $this->recordMatchesPackageStatus( $local, $status ) ) {
 					$outcome['diagnostic_code'] = 'package_source_changed';
 					break;
 				}
@@ -160,8 +160,6 @@ final class ReleaseWorkflowRequestController {
 					'inspect' => $provider->workflowInspect( $providerTarget, $channel, $providerPreflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), '' === $credentialId ? null : $credentialId ),
 					'setup' => $provider->workflowSetup( $providerTarget, $previewKey, $confirmation, $providerPreflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), $credentialId ),
 					'outcome' => $provider->workflowOutcome( $providerTarget, '' === $credentialId ? null : $credentialId ),
-					'update_inspect' => $provider->workflowInspectUpdate( $providerTarget, '' === $credentialId ? null : $credentialId ),
-					'update_setup' => $provider->workflowSetupUpdate( $providerTarget, $previewKey, $confirmation, $credentialId ),
 				};
 				$outcome = $this->workflowResult( $type, $identifier, $result->workflowCode(), $result->successful(), $result->previewKey(), $result->failureStage(), $result->diagnosticCode(), '' !== $result->correlationReference(), $result->correlationReference(), $result->message(), $result->remediation() );
 			} while ( false );
@@ -265,7 +263,7 @@ final class ReleaseWorkflowRequestController {
 	private function workflowPreflightNonce( array $request, string $channel ): string {
 		$key = 'core_preflight_nonce_' . $channel;
 
-		return in_array( $channel, array( 'stable', 'prerelease' ), true ) && is_string( $request[ $key ] ?? null )
+		return ( 'stable' === $channel ) && is_string( $request[ $key ] ?? null )
 			? wp_unslash( $request[ $key ] ) : '';
 	}
 
@@ -294,7 +292,7 @@ final class ReleaseWorkflowRequestController {
 			'Provider release workflow request refused',
 			array(
 				'provider'       => $providerCode,
-				'operation'      => in_array( $operation, array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ), true ) ? $operation : 'invalid',
+				'operation'      => in_array( $operation, array( 'inspect', 'setup', 'outcome' ), true ) ? $operation : 'invalid',
 				'outcome_code'   => $outcome['code'],
 				'diagnostic_id'  => $diagnostic,
 				'step'           => $outcome['failure_stage'],
@@ -360,11 +358,11 @@ final class ReleaseWorkflowRequestController {
 			&& hash_equals( $status->identifier(), $record->packageIdentifier() );
 	}
 
-	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagementV2 {
+	private function workflowProvider( string $providerCode ): ?RepositoryReleaseWorkflowManagementV3 {
 		try {
-			$provider = $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagementV2::class );
+			$provider = $this->providers->requireCapability( $providerCode, RepositoryReleaseWorkflowManagementV3::class );
 			$release  = $this->providers->get( $providerCode );
-			return 2 === $provider::RELEASE_WORKFLOW_API_VERSION
+			return 3 === $provider::RELEASE_WORKFLOW_API_VERSION
 				&& null !== ( ( $this->providers->metadata()[ $providerCode ] ?? null )?->admin ?? null )
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseMetadata
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseCandidateListing
@@ -443,7 +441,7 @@ final class ReleaseWorkflowRequestController {
 		$code                                 = sanitize_key( $outcome['code'] );
 		$code                                 = strlen( $code ) <= 64 ? $code : 'invalid_request';
 		$successful                           = $outcome['successful'];
-		$channel                              = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : '';
+		$channel                              = ( 'stable' === $channel ) ? $channel : '';
 		$stage                                = in_array( $outcome['failure_stage'], array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ? $outcome['failure_stage'] : '';
 		$diagnostic                           = $this->failureDiagnosticCode( $outcome['diagnostic_code'], $stage );
 		$diagnosticAvailable                  = true === ( $outcome['diagnostic_available'] ?? false );
@@ -491,7 +489,7 @@ final class ReleaseWorkflowRequestController {
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| $identifier !== sanitize_text_field( $identifier ) || strlen( $identifier ) > 255
 			|| 1 !== preg_match( '/\A(?:0|[1-9][0-9]{0,9})\z/D', $revision )
-			|| ! in_array( $channel, array( '', 'stable', 'prerelease' ), true )
+			|| ! in_array( $channel, array( '', 'stable' ), true )
 			|| ! in_array( $stage, array( '', 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true )
 			|| ! in_array( $diagnostic, array( '', ...self::FAILURE_DIAGNOSTIC_CODES ), true )
 			|| ! in_array( $available, array( '0', '1' ), true )
@@ -568,6 +566,6 @@ final class ReleaseWorkflowRequestController {
 	private function releaseChannelFrom( array $request ): string {
 		$channel = is_string( $request['release_channel'] ?? null ) ? sanitize_key( wp_unslash( $request['release_channel'] ) ) : '';
 
-		return in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : '';
+		return ( 'stable' === $channel ) ? $channel : '';
 	}
 }

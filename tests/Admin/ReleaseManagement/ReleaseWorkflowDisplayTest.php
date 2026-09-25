@@ -387,7 +387,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Manage credentials', $html );
 	}
 
-	public function testSchemaTwoRecordRendersOnlyCurrentOutcomeAndUpdateControls(): void {
+	public function testRecordedSetupRendersOutcomeWithoutTemplateUpdateControls(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => '',
@@ -409,14 +409,14 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Review recorded setup pull request', $html );
 		self::assertStringNotContainsString( 'github.com', $html );
 		self::assertStringContainsString( 'Check pull request outcome', $html );
-		self::assertStringContainsString( 'Check for template updates', $html );
+		self::assertStringNotContainsString( 'Check for template updates', $html );
 		self::assertStringContainsString( 'Assess release setup', $html );
 		self::assertStringNotContainsString( 'Legacy, unverified', $html );
 		self::assertStringContainsString( '<div class="ran-booster-release-workflow">', $html );
 		self::assertStringNotContainsString( '<details', $html );
 	}
 
-	public function testRecordedWorkflowKeepsOutcomeAndUpdateControlsWhenItsPullRequestUrlIsUnavailable(): void {
+	public function testRecordedWorkflowKeepsOutcomeControlWhenItsPullRequestUrlIsUnavailable(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'record' => array( 'pull_request_url' => '' ),
@@ -429,7 +429,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'Check pull request outcome', $html );
-		self::assertStringContainsString( 'Check for template updates', $html );
+		self::assertStringNotContainsString( 'Check for template updates', $html );
 		self::assertStringNotContainsString( 'Review recorded setup pull request', $html );
 	}
 
@@ -577,10 +577,10 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( '<form', $unknown );
 	}
 
-	public function testAllFiveFormKindsUseNewActionsAndExpectedCredentialRequirements(): void {
+	public function testAllThreeFormKindsUseNewActionsAndExpectedCredentialRequirements(): void {
 		$display = new ReleaseWorkflowDisplay();
 		$method  = new ReflectionMethod( $display, 'form' );
-		foreach ( array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ) as $operation ) {
+		foreach ( array( 'inspect', 'setup', 'outcome' ) as $operation ) {
 			$html = $method->invoke( $display, $this->form( $operation, str_contains( $operation, 'setup' ) ? 'owner/example' : '' ) );
 			self::assertStringContainsString( 'data-ran-booster-enhanced-mutation data-ran-booster-package-mutation', $html, $operation );
 			self::assertStringNotContainsString( 'data-ran-booster-relocate-rendered-error', $html, $operation );
@@ -590,7 +590,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			self::assertStringContainsString( 'name="workflow_operation" value="' . $operation . '"', $html, $operation );
 			self::assertStringNotContainsString( 'release_deployments', $html, $operation );
 			self::assertStringNotContainsString( 'workflow_workflow', $html, $operation );
-			if ( in_array( $operation, array( 'setup', 'update_setup' ), true ) ) {
+			if ( ( 'setup' === $operation ) ) {
 				self::assertStringContainsString( 'name="booster_credential_id" required', $html, $operation );
 			} else {
 				self::assertStringContainsString( 'name="booster_credential_id"', $html, $operation );
@@ -602,8 +602,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		$display = new ReleaseWorkflowDisplay();
 
 		foreach ( array(
-			'setup'        => 'Open draft pull request',
-			'update_setup' => 'Open template update draft pull request',
+			'setup' => 'Open draft pull request',
 		) as $operation => $label ) {
 			$form                = $this->form( $operation, 'owner/example' );
 			$form['credentials'] = array();
@@ -611,7 +610,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			$html                = $display->workflow(
 				array(
 					'preview' => array(
-						'kind'                  => 'update_setup' === $operation ? 'template_update' : 'bootstrap',
+						'kind'                  => 'bootstrap',
 						'repository'            => 'owner/example',
 						'default_branch'        => 'main',
 						'base_sha'              => str_repeat( 'a', 40 ),

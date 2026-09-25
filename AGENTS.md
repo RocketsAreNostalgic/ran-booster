@@ -42,9 +42,13 @@ never remove or silently weaken those local guarantees.
   authorizes that specific pull request. This includes Release Please pull
   requests even when repository permissions or branch rules allow a direct
   merge. For ordinary iterative or agent-developed PRs, prefer squash so the
-  reviewed PR lands as one meaningful default-branch commit. Use a merge commit
-  only when the PR's internal commit sequence is deliberately meaningful and
-  worth preserving. Rebase merge is not part of the normal RAN workflow.
+  reviewed PR lands as one meaningful default-branch commit; a merge commit is
+  appropriate only when that ordinary PR's internal sequence is deliberately
+  worth preserving. **Booster's bot-owned `chore(main): release ...` proposals
+  are the explicit exception: use Create a merge commit, never squash or rebase
+  merge**, as required by [the release guide](RELEASE.md#merge-method-for-booster-release-proposals).
+  This is Booster policy, not a universal Release Please limitation. Rebase
+  merge is not part of the normal RAN workflow.
 - Never commit or print personal access tokens, Bitbucket tokens, webhook
   secrets, the site-owned secrets sidecar, logs, `vendor`, or `node_modules`.
 - Keep GitHub and Bitbucket behavior behind provider contracts.

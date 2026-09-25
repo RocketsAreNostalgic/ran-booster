@@ -318,7 +318,7 @@ msgid "Manage webhook"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:200
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:316
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:309
 msgid "Assess release setup"
 msgstr ""
 
@@ -796,7 +796,7 @@ msgid "This repository conflicts with another managed package source. Review the
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:31
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:408
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:397
 msgid "Booster could not safely read the repository source relationship. Check package storage and retry."
 msgstr ""
 
@@ -2954,285 +2954,265 @@ msgstr ""
 msgid "Booster Releases docs"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:192
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:191
 msgid "Review recorded setup pull request"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:209
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:207
 msgid "An earlier workflow record does not match the current package. Review the repository before assessing setup again; Booster will not overwrite that record."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:249
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:247
 msgid "Failure details"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:251
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:249
 #: views/onboarding.php:131
 msgid "Diagnostic code:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:254
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:252
 msgid "Failure reference:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:289
-msgid "Template update:"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:293
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:286
 msgid "Template pack:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:317
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:310
 msgid "Open draft pull request"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:318
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:311
 msgid "Check pull request outcome"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:319
-msgid "Check for template updates"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:320
-msgid "Open template update draft pull request"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:333
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:324
 msgid "Type the exact repository name to confirm"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:338
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:329
 #, php-format
 msgid "Saved %s credential"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:338
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:329
 msgid "Saved repository credential"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:341
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:332
 msgid "Anonymous public inspection"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:342
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:333
 #: RAN/Admin/WebhookManagement/views/panel.php:34
 #: views/portability-review.php:128
 msgid "Choose a saved credential"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:350
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:341
 #: RAN/Admin/WebhookManagement/views/panel.php:39
 #: views/provider.php:211
 #: assets/ran-booster-repository-picker.js:789
 msgid "Manage credentials"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:355
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:346
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:585
 msgid "Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:357
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:348
 msgid "Inspect anonymously, or use a saved credential to avoid anonymous API limits."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:358
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:349
 msgid "Private repository inspection needs a saved credential."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:367
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:358
 msgid "Source-ready assessment passed. Review the exact template identity and changed paths."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:368
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:359
 msgid "The atomic draft pull request is open. Booster did not merge or change the default branch."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:369
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:360
 msgid "The existing exact draft pull request was recovered and verified."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:370
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:361
 msgid "The recorded draft pull request remains open."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:371
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:362
 msgid "The recorded pull request was closed without a verified merge."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:372
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:363
 msgid "Booster verified that the recorded setup pull request was merged and its managed receipt is on the default branch. This does not prove a workflow ran or produced a release."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:373
-msgid "The managed template pack is current."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:374
-msgid "A newer compatible template pack is available. Review its exact changed paths before opening a draft."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:375
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:364
 msgid "The repository provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:376
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:365
 msgid "The repository provider did not authorise the operation with the selected saved credential."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:377
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:366
 msgid "The repository provider has temporarily rate-limited the release workflow request. Booster made no change."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:378
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:367
 msgid "The repository provider returned an incomplete or invalid response. Booster made no change."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:379
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:368
 msgid "The canonical release template source is temporarily unavailable. Booster made no change."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:380
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:369
 msgid "Booster could not validate the package release before continuing. No draft was opened."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:381
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:370
 msgid "The repository provider or the canonical template source did not provide trustworthy current state. Booster made no change."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:382
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:371
 msgid "Published releases are available, but Booster cannot tell whether a release workflow produced them."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:383
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:372
 msgid "An existing release workflow was found. Booster will not overwrite it. Review it before using Booster setup."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:384
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:373
 msgid "Booster verified an exact canonical release setup in this repository. No setup pull request is needed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:385
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:374
 msgid "One or more files Booster would manage already exist. Review and reconcile them before setting up a release workflow."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:386
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:375
 msgid "Booster could not identify exactly one WordPress package header. Resolve the ambiguity before setting up a release workflow."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:387
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:376
 msgid "The installed version does not match the repository package header. Reconcile the versions before setting up a release workflow."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:388
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:377
 msgid "Booster found version sources it cannot safely update. Review and reconcile the version contract before setting up a release workflow."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:389
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:378
 msgid "Booster could not safely determine the package runtime files. Review and reconcile the package layout before setting up a release workflow."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:390
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:379
 msgid "Booster found a Prettier ignore contract it cannot safely change. Review and reconcile it before setting up a release workflow."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:391
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:380
 msgid "This repository does not match the supported WordPress release configuration. Review and reconcile it before setting up a release workflow."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:392
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:381
 msgid "The managed release profile is missing or modified. Booster made no change."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:393
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:382
 msgid "The repository or template identity changed. Assess the current state again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:394
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:383
 msgid "Booster stopped before contacting the repository provider because this request no longer matched the current page or package."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:395
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:384
 msgid "The release workflow request was refused, changed or expired. Assess the repository again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:401
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:390
 msgid "Booster found a recognizable release workflow in the inspected repository. It did not verify that setup as Booster-managed or prove that it produced the available releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:402
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:391
 msgid "The request was incomplete or malformed. Reload the release workflow page and try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:403
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:392
 msgid "Your current account no longer has the permissions required to manage this package. Sign in with an administrator account and try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:404
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:393
 msgid "The saved package or source changed before Booster could act. Reload the current package state and assess it again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:405
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:394
 msgid "This form has expired. Reload the release workflow page and try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:406
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:395
 msgid "Booster could not read release data using the package's saved repository access. The credential selected for workflow setup is used only after this release check."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:407
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:396
 msgid "Another managed package now uses this repository. Review the repository package list, then change or remove the conflicting relationship before retrying."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:409
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:398
 msgid "Another managed package already uses this repository for releases. Return that package to Branch deployments or stop managing it before retrying."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:410
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:399
 msgid "The page or request state expired or changed. Reload the page and retry."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:411
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:400
 msgid "Correct the package Requires PHP or Requires at least header, publish a compatible release ZIP, then assess it again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:418
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:407
 msgid "Booster refused the request before reading saved credentials or contacting the repository provider."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:419
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:408
 msgid "Choose a saved repository credential with the required repository permissions, then retry."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:420
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:409
 msgid "Booster could not validate the package release before continuing. Review the release readiness details, then retry."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:421
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:410
 msgid "The repository provider did not provide a trustworthy current repository snapshot. Check repository access and try the assessment again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:422
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:411
 msgid "The canonical release template pack changed or could not be verified. Assess the repository again before opening a draft."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:423
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:412
 msgid "Booster could not retain the review preview locally. No draft was opened; retry the assessment."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:424
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:413
 msgid "The repository provider may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:425
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:414
 msgid "The draft may exist on the repository provider, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:426
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:415
 msgid "Booster stopped before it could verify the release-workflow request. Retry the assessment and use the failure reference when seeking support."
 msgstr ""
 
@@ -3461,35 +3441,35 @@ msgstr ""
 msgid "A workflow record belongs to a different package. Review the recorded repository state before setup."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:707
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:705
 msgid "Open package settings for the required Update URI, add it to the package header, then deploy the corrected package."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:708
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:706
 msgid "This package Update URI must match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:709
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:707
 msgid "This repository provider cannot use published-release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:710
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:708
 msgid "The saved repository needs attention before a release workflow can be assessed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:711
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:709
 msgid "The installed package identity must match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:712
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:710
 msgid "Published releases require this package at the repository root; continue using Branch for a repository subdirectory."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:713
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:711
 msgid "This package already has its own release updater, so Booster cannot manage published releases as well."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:714
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:712
 msgid "Resolve Release readiness before assessing a workflow."
 msgstr ""
 

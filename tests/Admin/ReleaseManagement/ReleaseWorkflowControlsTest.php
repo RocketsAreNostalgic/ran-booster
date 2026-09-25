@@ -297,16 +297,14 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 				'fixture',
 				'101',
 				'bootstrap',
-				'prerelease',
+				'stable',
 				'example/example',
 				array(
-					'repository'       => 'example/example',
-					'default_branch'   => 'main',
-					'base_sha'         => str_repeat( 'b', 40 ),
-					'pack_version'     => '1.0.0',
-					'template_digest'  => str_repeat( 'c', 64 ),
-					'old_template_tag' => '',
-					'new_template_tag' => 'v1.0.0',
+					'repository'      => 'example/example',
+					'default_branch'  => 'main',
+					'base_sha'        => str_repeat( 'b', 40 ),
+					'pack_version'    => '1.0.0',
+					'template_digest' => str_repeat( 'c', 64 ),
 				),
 				array()
 			),
@@ -770,7 +768,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			$request['release_channel']             = 'stable';
 			$request['core_preflight_nonce_stable'] = 'preflight-stable'; }
 		if ( 'setup' === $operation ) {
-			$request['core_preflight_nonce_prerelease'] = 'preflight-prerelease'; }
+			$request['core_preflight_nonce_stable'] = 'preflight-stable'; }
 		$request['_wpnonce'] = 'nonce-for-ran-booster-release-workflow-' . $operation . '-' . hash( 'sha256', (string) \RAN\Admin\ReleaseManagement\wp_json_encode( array( 'fixture', '101', 'plugin', 'example/example.php', 3, $preview ) ) );
 		return $request;
 	}

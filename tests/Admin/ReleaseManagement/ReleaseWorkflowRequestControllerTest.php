@@ -33,9 +33,9 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	public function resetWordPress(): void {
 		ReleaseManagementFixture::resetWordPress(); }
 
-	public function testNonGitHubFixtureCompletesAllFiveOperationsThroughTheSingleNeutralRoute(): void {
-		foreach ( array( 'inspect', 'setup', 'outcome', 'update_inspect', 'update_setup' ) as $operation ) {
-			$preview  = in_array( $operation, array( 'setup', 'update_setup' ), true ) ? str_repeat( 'a', 32 ) : '';
+	public function testNonGitHubFixtureCompletesAllThreeOperationsThroughTheSingleNeutralRoute(): void {
+		foreach ( array( 'inspect', 'setup', 'outcome' ) as $operation ) {
+			$preview  = ( 'setup' === $operation ) ? str_repeat( 'a', 32 ) : '';
 			$provider = $this->providerFor( $operation, $preview );
 			$url      = $this->controller( provider: $provider )->processWorkflowRequest( $this->request( $operation, $preview ) );
 			self::assertStringContainsString( 'ran_booster_release_workflow_result=workflow_' . $operation . '_complete', $url );
@@ -43,6 +43,24 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			self::assertSame( $operation, $call['operation'] );
 			self::assertSame( 'credential_1', $call['credential_id'] );
 			self::assertSame( 'fixture', $provider->getMetadata()->code->value );
+		}
+	}
+
+	public function testForgedLegacyAndPrereleaseOperationsFailBeforeProviderOrPreflightAccess(): void {
+		foreach ( array( 'update_inspect', 'update_setup', 'inspect' ) as $operation ) {
+			$provider                         = new RepositoryReleaseWorkflowProviderDouble();
+			$tracking                         = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+			$request                          = $this->request( $operation );
+			$request['booster_credential_id'] = array( 'forged-secret' );
+			if ( 'inspect' === $operation ) {
+				$request['release_channel'] = 'prerelease';
+			}
+			$url = $this->controller( tracking: $tracking, provider: $provider )->processWorkflowRequest( $request );
+			self::assertStringContainsString( 'workflow_invalid_request', $url );
+			self::assertSame( array(), $provider->calls );
+			self::assertSame( array(), $tracking->calls );
+			self::assertSame( 0, $tracking->statusReads );
+			self::assertSame( 0, $provider->statusReads );
 		}
 	}
 
@@ -169,16 +187,14 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 				'fixture',
 				'101',
 				'bootstrap',
-				'prerelease',
+				'stable',
 				'other/repository',
 				array(
-					'repository'       => 'example/example',
-					'default_branch'   => 'main',
-					'base_sha'         => str_repeat( 'b', 40 ),
-					'pack_version'     => '1.0.0',
-					'template_digest'  => str_repeat( 'c', 64 ),
-					'old_template_tag' => '',
-					'new_template_tag' => 'v1.0.0',
+					'repository'      => 'example/example',
+					'default_branch'  => 'main',
+					'base_sha'        => str_repeat( 'b', 40 ),
+					'pack_version'    => '1.0.0',
+					'template_digest' => str_repeat( 'c', 64 ),
 				),
 				array()
 			)
@@ -222,16 +238,14 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 				'other',
 				'101',
 				'bootstrap',
-				'prerelease',
+				'stable',
 				'example/example',
 				array(
-					'repository'       => 'example/example',
-					'default_branch'   => 'main',
-					'base_sha'         => str_repeat( 'b', 40 ),
-					'pack_version'     => '1.0.0',
-					'template_digest'  => str_repeat( 'c', 64 ),
-					'old_template_tag' => '',
-					'new_template_tag' => 'v1.0.0',
+					'repository'      => 'example/example',
+					'default_branch'  => 'main',
+					'base_sha'        => str_repeat( 'b', 40 ),
+					'pack_version'    => '1.0.0',
+					'template_digest' => str_repeat( 'c', 64 ),
 				),
 				array()
 			)
@@ -262,32 +276,30 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	}
 
 	public function testSetupUsesThePreviewChannelForCorePreflight(): void {
-		$key                                        = str_repeat( 'a', 32 );
-		$preview                                    = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview(
+		$key                                    = str_repeat( 'a', 32 );
+		$preview                                = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview(
 			$key,
 			'fixture',
 			'101',
 			'bootstrap',
-			'prerelease',
+			'stable',
 			'example/example',
 			array(
-				'repository'       => 'example/example',
-				'default_branch'   => 'main',
-				'base_sha'         => str_repeat( 'b', 40 ),
-				'pack_version'     => '1.0.0',
-				'template_digest'  => str_repeat( 'c', 64 ),
-				'old_template_tag' => '',
-				'new_template_tag' => 'v1.0.0',
+				'repository'      => 'example/example',
+				'default_branch'  => 'main',
+				'base_sha'        => str_repeat( 'b', 40 ),
+				'pack_version'    => '1.0.0',
+				'template_digest' => str_repeat( 'c', 64 ),
 			),
 			array()
 		);
-		$provider                                   = new RepositoryReleaseWorkflowProviderDouble( preview: $preview );
-		$tracking                                   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
-		$request                                    = $this->request( 'setup', $key );
-		$request['core_preflight_nonce_prerelease'] = 'preflight-prerelease';
+		$provider                               = new RepositoryReleaseWorkflowProviderDouble( preview: $preview );
+		$tracking                               = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$request                                = $this->request( 'setup', $key );
+		$request['core_preflight_nonce_stable'] = 'preflight-stable';
 		$this->controller( tracking: $tracking, provider: $provider )->processWorkflowRequest( $request );
 
-		self::assertSame( array( 'assessment_preflight', 'plugin', 'example/example.php', 3, 'prerelease', 'preflight-prerelease' ), $tracking->calls[0] );
+		self::assertSame( array( 'assessment_preflight', 'plugin', 'example/example.php', 3, 'stable', 'preflight-stable' ), $tracking->calls[0] );
 		self::assertSame( 'setup', $provider->calls[1]['operation'] );
 	}
 
@@ -351,7 +363,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	}
 
 	private function providerFor( string $operation, string $previewKey ): RepositoryReleaseWorkflowProviderDouble {
-		$record  = in_array( $operation, array( 'outcome', 'update_inspect', 'update_setup' ), true )
+		$record  = ( 'outcome' === $operation )
 			? new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 				'fixture',
 				'101',
@@ -373,17 +385,15 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 				$previewKey,
 				'fixture',
 				'101',
-				'setup' === $operation ? 'bootstrap' : 'template_update',
-				'setup' === $operation ? 'prerelease' : '',
+				'bootstrap',
+				'stable',
 				'example/example',
 				array(
-					'repository'       => 'example/example',
-					'default_branch'   => 'main',
-					'base_sha'         => str_repeat( 'b', 40 ),
-					'pack_version'     => '1.0.0',
-					'template_digest'  => str_repeat( 'c', 64 ),
-					'old_template_tag' => 'setup' === $operation ? '' : 'v0.9.0',
-					'new_template_tag' => 'v1.0.0',
+					'repository'      => 'example/example',
+					'default_branch'  => 'main',
+					'base_sha'        => str_repeat( 'b', 40 ),
+					'pack_version'    => '1.0.0',
+					'template_digest' => str_repeat( 'c', 64 ),
 				),
 				array()
 			) : null;
@@ -406,7 +416,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			$request['release_channel']             = 'stable';
 			$request['core_preflight_nonce_stable'] = 'preflight-stable'; }
 		if ( 'setup' === $operation ) {
-			$request['core_preflight_nonce_prerelease'] = 'preflight-prerelease'; }
+			$request['core_preflight_nonce_stable'] = 'preflight-stable'; }
 		$request['_wpnonce'] = 'nonce-for-ran-booster-release-workflow-' . $operation . '-' . hash( 'sha256', (string) \RAN\Admin\ReleaseManagement\wp_json_encode( array( 'fixture', '101', 'plugin', 'example/example.php', 3, $preview ) ) );
 		return $request;
 	}

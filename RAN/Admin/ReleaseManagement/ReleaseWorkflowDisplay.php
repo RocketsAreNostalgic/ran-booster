@@ -183,16 +183,14 @@ final class ReleaseWorkflowDisplay {
 		$legacy  = is_array( $view['legacy'] ?? null ) ? $view['legacy'] : null;
 		$detail  = '';
 		if ( null !== $preview ) {
-			$key     = 'template_update' === ( $preview['kind'] ?? null ) ? 'update_setup' : 'setup';
 			$detail  = $this->preview( $preview );
-			$detail .= $this->form( is_array( $forms[ $key ] ?? null ) ? $forms[ $key ] : array() );
+			$detail .= $this->form( is_array( $forms['setup'] ?? null ) ? $forms['setup'] : array() );
 		} elseif ( null !== $record ) {
 			$detail = '<hr>';
 			if ( is_string( $record['pull_request_url'] ?? null ) && '' !== $record['pull_request_url'] ) {
 				$detail .= '<p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . '</a></p>';
 			}
 			$detail .= $this->form( is_array( $forms['outcome'] ?? null ) ? $forms['outcome'] : array() );
-			$detail .= $this->form( is_array( $forms['update_inspect'] ?? null ) ? $forms['update_inspect'] : array() );
 		} elseif ( null !== $legacy ) {
 			$detail = $this->legacyDetail( $legacy );
 		}
@@ -283,13 +281,8 @@ final class ReleaseWorkflowDisplay {
 			|| ! is_array( $preview['changes'] ?? null ) ) {
 			return '';
 		}
-		$html = '<p><strong>' . esc_html( $preview['repository'] ) . '</strong> · ' . esc_html( $preview['default_branch'] )
+		$html  = '<p><strong>' . esc_html( $preview['repository'] ) . '</strong> · ' . esc_html( $preview['default_branch'] )
 			. ' · <code>' . esc_html( substr( $preview['base_sha'], 0, 12 ) ) . '</code></p>';
-		if ( 'template_update' === ( $preview['kind'] ?? null ) && is_string( $preview['old_template_tag'] ?? null ) ) {
-			$html .= '<p>' . esc_html__( 'Template update:', 'ran-booster' ) . ' <strong>'
-				. esc_html( $preview['old_template_tag'] ) . ' → '
-				. esc_html( (string) ( $preview['new_template_tag'] ?? '' ) ) . '</strong></p>';
-		}
 		$html .= '<p>' . esc_html__( 'Template pack:', 'ran-booster' ) . ' <strong>' . esc_html( $preview['pack_version'] )
 			. '</strong> · <code>' . esc_html( substr( $preview['template_digest'], 0, 16 ) ) . '</code></p><ul>';
 		foreach ( $preview['changes'] as $change ) {
@@ -313,11 +306,9 @@ final class ReleaseWorkflowDisplay {
 		$disabled       = true === ( $form['disabled'] ?? false );
 		$confirm        = is_string( $form['confirm'] ?? null ) ? $form['confirm'] : '';
 		$buttons        = array(
-			'inspect'        => __( 'Assess release setup', 'ran-booster' ),
-			'setup'          => __( 'Open draft pull request', 'ran-booster' ),
-			'outcome'        => __( 'Check pull request outcome', 'ran-booster' ),
-			'update_inspect' => __( 'Check for template updates', 'ran-booster' ),
-			'update_setup'   => __( 'Open template update draft pull request', 'ran-booster' ),
+			'inspect' => __( 'Assess release setup', 'ran-booster' ),
+			'setup'   => __( 'Open draft pull request', 'ran-booster' ),
+			'outcome' => __( 'Check pull request outcome', 'ran-booster' ),
 		);
 		if ( ! isset( $buttons[ $operation ] ) || ( ! $disabled && ( '' === $action || array() === $fields ) ) ) {
 			return '';
@@ -333,7 +324,7 @@ final class ReleaseWorkflowDisplay {
 			$html .= '<p><label>' . esc_html__( 'Type the exact repository name to confirm', 'ran-booster' )
 				. '<br><input type="text" name="confirm_repository" required autocomplete="off" class="regular-text" placeholder="' . esc_attr( $confirm ) . '"></label></p>';
 		}
-		$write              = in_array( $operation, array( 'setup', 'update_setup' ), true );
+		$write              = ( 'setup' === $operation );
 		$credentialRequired = $write || ! $anonymous;
 		$html              .= '<p><label>' . esc_html( isset( $form['provider_label'] ) ? sprintf( /* translators: %s is the repository provider name. */ __( 'Saved %s credential', 'ran-booster' ), $form['provider_label'] ) : __( 'Saved repository credential', 'ran-booster' ) )
 			. '<br><select name="booster_credential_id"' . ( $disabled ? ' disabled aria-disabled="true"' : ( $credentialRequired ? ' required' : '' ) ) . '>';
@@ -370,8 +361,6 @@ final class ReleaseWorkflowDisplay {
 			'workflow_pr_open' => __( 'The recorded draft pull request remains open.', 'ran-booster' ),
 			'workflow_pr_closed' => __( 'The recorded pull request was closed without a verified merge.', 'ran-booster' ),
 			'workflow_pr_merged' => __( 'Booster verified that the recorded setup pull request was merged and its managed receipt is on the default branch. This does not prove a workflow ran or produced a release.', 'ran-booster' ),
-			'workflow_template_current' => __( 'The managed template pack is current.', 'ran-booster' ),
-			'workflow_template_update_available' => __( 'A newer compatible template pack is available. Review its exact changed paths before opening a draft.', 'ran-booster' ),
 			'workflow_partial' => __( 'The repository provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
 			'workflow_unauthorised' => __( 'The repository provider did not authorise the operation with the selected saved credential.', 'ran-booster' ),
 			'workflow_rate_limited' => __( 'The repository provider has temporarily rate-limited the release workflow request. Booster made no change.', 'ran-booster' ),

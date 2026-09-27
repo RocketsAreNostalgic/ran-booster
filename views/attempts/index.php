@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * View locals supplied by views/troubleshooting.php.
+ *
+ * @var array<string, mixed> $deploymentActivity
+ * @var string $troubleshootingBase
+ */
+
 use RAN\Admin\DeploymentOutcomeMessage;
 use RAN\Deployment\DeploymentAttempt;
 

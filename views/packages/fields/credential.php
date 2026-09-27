@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var string $providerCode
+ * @var list<array<string, mixed>> $providerOptions
+ * @var string $selectedCredentialId
+ */
+
 defined( 'WPINC' ) || die;
 
 $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayout;

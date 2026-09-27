@@ -13,5 +13,8 @@ if ( isset( $addOnTab, $addOnContext ) && $addOnTab instanceof \RAN\Admin\AdminA
 		<div class="notice notice-error"><p><?php esc_html_e( 'This Booster add-on could not render its tab. Check the plugin compatibility and error log.', 'ran-booster' ); ?></p></div>
 	<?php } ?>
 <?php } else { ?>
-	<?php require __DIR__ . '/' . $tabView; ?>
+	<?php
+	/** @var string $tabView Built-in tab path supplied by Dashboard::getIndex() in this branch. */
+	require __DIR__ . '/' . $tabView;
+	?>
 <?php } ?>

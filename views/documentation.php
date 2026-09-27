@@ -1,4 +1,10 @@
 <?php
+
+/**
+ * View locals supplied by Dashboard::render().
+ *
+ * @var list<array{key: string, label: string, url: string, active: bool, provider: bool}> $tabs
+ */
 defined( 'WPINC' ) || die;
 $providerDocumentation = isset( $providerDocumentation ) && is_array( $providerDocumentation ) ? $providerDocumentation : array();
 $documentationUrl      = isset( $documentationUrl ) && is_string( $documentationUrl ) ? $documentationUrl : '';

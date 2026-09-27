@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * PackagePagePresenter projection passed through Dashboard::render().
+ *
+ * @var \RAN\Plugin|\RAN\Theme $package
+ * @var array{default_provider: string, providers: list<array<string, mixed>>} $packageProviderSettings
+ * @var array<string, mixed> $packageSource
+ * @var \RAN\Admin\PackagePagePresenter $packageView
+ */
+
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;

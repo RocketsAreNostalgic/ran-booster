@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * PackagePagePresenter projection passed through Dashboard::render().
+ *
+ * @var bool $explicitProvider
+ * @var bool $openRepositoryPicker
+ * @var array{default_provider: string, providers: list<array<string, mixed>>} $packageProviderSettings
+ * @var \RAN\Admin\PackagePagePresenter $packageView
+ */
+
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -53,9 +62,9 @@ $packageMutationAvailable = isset( $packageMutationAvailable ) ? true === $packa
 $releaseManaged           = false;
 $repositoryReadOnly       = false;
 $branchReadOnly           = false;
-$packageSourceChoices     = is_array( $packageSource['choices'] ?? null ) ? $packageSource['choices'] : array();
-$packageAdvancedSections  = is_array( $packageSource['advanced_sections'] ?? null ) ? $packageSource['advanced_sections'] : array();
-$packageAdvancedSummary   = is_string( $packageSource['advanced_summary'] ?? null )
+$packageSourceChoices     = isset( $packageSource ) && is_array( $packageSource['choices'] ?? null ) ? $packageSource['choices'] : array();
+$packageAdvancedSections  = isset( $packageSource ) && is_array( $packageSource['advanced_sections'] ?? null ) ? $packageSource['advanced_sections'] : array();
+$packageAdvancedSummary   = isset( $packageSource ) && is_string( $packageSource['advanced_summary'] ?? null )
 	? $packageSource['advanced_summary']
 	: __( 'Branch · provider default', 'ran-booster' );
 $packageSourceView        = 'branch';

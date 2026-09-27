@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var list<string> $packageAdvancedSections
+ * @var bool $packageMutationAvailable
+ * @var string $packageSourceView
+ * @var bool $releaseManaged
+ */
+
 defined( 'WPINC' ) || die;
 
 $packageSourceMode      = isset( $packageSourceMode ) && 'create' === $packageSourceMode ? 'create' : 'edit';
@@ -30,9 +39,9 @@ ob_start();
 		aria-labelledby="ran-booster-source-tab-branch"
 		data-ran-booster-source-pane="branch"
 		data-ran-booster-branch-fields
-		<?php echo $isPackageEdit && ! $showBranchSettings ? 'hidden' : ''; ?>
+		<?php echo $isPackageEdit && ! ( $showBranchSettings ?? false ) ? 'hidden' : ''; ?>
 	>
-		<?php if ( $isPackageEdit && $showBranchSettings && isset( $packageSourceChoices['branch']['description'] ) ) { ?>
+		<?php if ( $isPackageEdit && ( $showBranchSettings ?? false ) && isset( $packageSourceChoices['branch']['description'] ) ) { ?>
 			<p class="ran-booster-package-source-pane__description"><?php echo esc_html( (string) $packageSourceChoices['branch']['description'] ); ?></p>
 		<?php } ?>
 		<?php if ( $isPackageEdit && 'branch' === $packageSourceView ) { ?>

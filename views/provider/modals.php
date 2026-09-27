@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Modal inputs inherited from the Dashboard provider page projection.
+ *
+ * @var bool $hasCredentialSettings
+ * @var bool $hasWebhookSettings
+ * @var array<string, mixed> $provider
+ * @var list<array<string, mixed>> $webhook_profiles
+ */
+
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;

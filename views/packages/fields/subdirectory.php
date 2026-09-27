@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var \RAN\Admin\PackagePagePresenter $packageView
+ * @var string $subdirectoryValue
+ */
+
 defined( 'WPINC' ) || die;
 
 $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayout;

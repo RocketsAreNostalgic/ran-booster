@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var string $deploymentPolicy
+ * @var string $providerCode
+ * @var bool $providerWebhookAvailable
+ */
+
 defined( 'WPINC' ) || die;
 
 $pushToDeployDocumentationUrl = admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' );

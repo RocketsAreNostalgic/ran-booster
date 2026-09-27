@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var string $deploymentPolicy
+ * @var bool $packageMutationAvailable
+ * @var string $settingsUrl
+ */
+
 defined( 'WPINC' ) || die;
 
 $reinstallAvailable = $packageMutationAvailable

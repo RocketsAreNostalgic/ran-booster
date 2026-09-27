@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var \RAN\Plugin|\RAN\Theme $package
+ */
+
 defined( 'WPINC' ) || die;
 
 ?>

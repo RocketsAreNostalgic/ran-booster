@@ -9,7 +9,7 @@ $packageAdvancedOpen                     = isset( $packageAdvancedOpen ) && true
 $packageAdvancedBody                     = isset( $packageAdvancedBody ) && is_string( $packageAdvancedBody )
 	? $packageAdvancedBody
 	: '';
-$packageAdvancedSummaryProjection        = is_array( $packageSource['advanced_summary_projection'] ?? null )
+$packageAdvancedSummaryProjection        = isset( $packageSource ) && is_array( $packageSource['advanced_summary_projection'] ?? null )
 	? $packageSource['advanced_summary_projection']
 	: null;
 $packageAdvancedSummaryProjectionHeading = null === $packageAdvancedSummaryProjection || ! is_string( $packageAdvancedSummaryProjection['heading'] ?? null )

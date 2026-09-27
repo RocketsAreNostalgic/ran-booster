@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var \RAN\Admin\PackagePagePresenter $packageView
+ * @var bool $providerBrowseAvailable
+ * @var string $repositoryValue
+ */
+
 defined( 'WPINC' ) || die;
 
 $repositoryPickerHiddenAttribute = $providerBrowseAvailable ? '' : ' hidden';

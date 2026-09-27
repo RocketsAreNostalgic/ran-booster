@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var bool $packageMutationAvailable
+ */
+
 defined( 'WPINC' ) || die;
 
 $packageRepositoryDescription = isset( $packageRepositoryDescription ) && is_string( $packageRepositoryDescription )

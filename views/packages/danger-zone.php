@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var string $identifierValue
+ * @var \RAN\Plugin|\RAN\Theme $package
+ * @var bool $packageDangerOpen
+ * @var \RAN\Admin\PackagePagePresenter $packageView
+ */
+
 defined( 'WPINC' ) || die;
 
 $packageTypeLabel  = strtolower( $packageView->getSingularLabel() );

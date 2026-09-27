@@ -10,5 +10,7 @@ parameters:
 		- ran-booster.php
 		- uninstall.php
 		- RAN
+		- views
+		- assets
 	scanDirectories:
 		- vendor/ran/wp-release-updater/src

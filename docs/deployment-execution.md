@@ -241,7 +241,7 @@ The key fields are:
 - `request_json`: the canonical execution snapshot, including the admitted
   `maximum_artifact_bytes` value
 
-`DeploymentAttempt::fromDatabase()` enforces the integrity rules for those
+`DeploymentAttempt::from_database()` enforces the integrity rules for those
 fields. For example, queued rows cannot already contain a mutation fence, and a
 terminal row must contain both an outcome and a finished timestamp. During the
 pre-release Phase C cutover, only the current nine-key `DeploymentRequest`

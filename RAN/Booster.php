@@ -213,7 +213,7 @@ class Booster {
 	}
 
 	public function registerWebhookRoutes(): void {
-		$this->service( 'RAN\Webhook\WebhookController' )->registerRoutes();
+		$this->service( 'RAN\Webhook\WebhookController' )->register_routes();
 	}
 
 	public function adminMenu() {

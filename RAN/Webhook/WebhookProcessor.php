@@ -34,13 +34,13 @@ final readonly class WebhookProcessor {
 		}
 
 		try {
-			$providerCode = ProviderCode::parse( $provider );
-			$normalizer   = $this->providers->requireCapability( $providerCode, WebhookNormalizer::class );
-			$policy       = $normalizer->getWebhookPolicy();
-			$input        = $request();
-			$webhook      = new WebhookRequest( $providerCode, $input['body'], $input['headers'], $policy->getRetainedHeaders() );
-			$verification = $this->verifier->verify( $webhook, $policy );
-			$envelope     = $normalizer->normalizeWebhook( $webhook->withVerification( $verification ) );
+			$provider_code = ProviderCode::parse( $provider );
+			$normalizer    = $this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
+			$policy        = $normalizer->getWebhookPolicy();
+			$input         = $request();
+			$webhook       = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->getRetainedHeaders() );
+			$verification  = $this->verifier->verify( $webhook, $policy );
+			$envelope      = $normalizer->normalizeWebhook( $webhook->withVerification( $verification ) );
 			if ( count( $envelope->getEvents() ) > 32 ) {
 				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.' );
 			}
@@ -69,11 +69,11 @@ final readonly class WebhookProcessor {
 
 			return $this->response( 202, 'Webhook accepted.', $result );
 		} catch ( WebhookRejected $exception ) {
-			$status = $this->rejectionStatus( $exception->getStatusCode() );
+			$status = $this->rejection_status( $exception->getStatusCode() );
 
 			return $this->response(
 				$status,
-				$this->rejectionMessage( $status )
+				$this->rejection_message( $status )
 			);
 		} catch ( InvalidProviderCode | UnknownProvider ) {
 			return $this->response( 404, 'Webhook provider not found.' );
@@ -94,7 +94,7 @@ final readonly class WebhookProcessor {
 		}
 	}
 
-	private function rejectionStatus( int $status ): int {
+	private function rejection_status( int $status ): int {
 		if ( in_array( $status, array( 401, 403, 503 ), true ) ) {
 			return 401;
 		}
@@ -102,7 +102,7 @@ final readonly class WebhookProcessor {
 		return in_array( $status, array( 400, 401, 413 ), true ) ? $status : 500;
 	}
 
-	private function rejectionMessage( int $status ): string {
+	private function rejection_message( int $status ): string {
 		return match ( $status ) {
 			400 => 'Invalid webhook request.',
 			401 => 'Webhook authentication failed.',

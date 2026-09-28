@@ -12,7 +12,7 @@ final readonly class WebhookController {
 	public function __construct( private WebhookProcessor $processor ) {
 	}
 
-	public function registerRoutes(): void {
+	public function register_routes(): void {
 		register_rest_route(
 			'ran-booster/v1',
 			'/webhooks/(?P<provider>[a-z0-9-]+)',
@@ -25,15 +25,15 @@ final readonly class WebhookController {
 	}
 
 	public function receive( WP_REST_Request $request ): WP_REST_Response {
-		if ( ! $this->isCanonicalRequest( $request ) ) {
+		if ( ! $this->is_canonical_request( $request ) ) {
 			return $this->response( array( 'message' => 'Invalid webhook request.' ), 400 );
 		}
 
-		$urlParams = $request->get_url_params();
-		$provider  = isset( $urlParams['provider'] ) && is_scalar( $urlParams['provider'] )
-			? (string) $urlParams['provider']
+		$url_params = $request->get_url_params();
+		$provider   = isset( $url_params['provider'] ) && is_scalar( $url_params['provider'] )
+			? (string) $url_params['provider']
 			: '';
-		$response  = $this->processor->handle(
+		$response   = $this->processor->handle(
 			$provider,
 			static fn (): array => array(
 				'body'    => $request->get_body(),
@@ -41,13 +41,13 @@ final readonly class WebhookController {
 			)
 		);
 
-		return $this->response( $response->getData(), $response->getStatus() );
+		return $this->response( $response->get_data(), $response->get_status() );
 	}
 
-	private function isCanonicalRequest( WP_REST_Request $request ): bool {
-		$originalMethod = $_SERVER['REQUEST_METHOD'] ?? $request->get_method();
-		if ( ! is_string( $originalMethod )
-			|| 'POST' !== strtoupper( $originalMethod )
+	private function is_canonical_request( WP_REST_Request $request ): bool {
+		$original_method = $_SERVER['REQUEST_METHOD'] ?? $request->get_method();
+		if ( ! is_string( $original_method )
+			|| 'POST' !== strtoupper( $original_method )
 			|| 'POST' !== strtoupper( $request->get_method() )
 			|| ! in_array( $request->get_header( 'x-http-method-override' ), array( null, '' ), true )
 		) {

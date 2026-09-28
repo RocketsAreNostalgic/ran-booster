@@ -63,11 +63,13 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/BulkPackageResult.php`, `RAN/Admin/BulkPackageActionService.php`,
 `RAN/Secrets/SecretsStorageProvisioningResult.php`,
 `RAN/Secrets/WpConfigPathWriteResult.php`,
-`RAN/Secrets/SecretsStorageUnavailable.php` and
-`RAN/Secrets/SecretsRuntimeAvailability.php`.
+`RAN/Secrets/SecretsStorageUnavailable.php`,
+`RAN/Secrets/SecretsRuntimeAvailability.php`,
+`RAN/Webhook/SignedWebhookVerifier.php`, `RAN/Webhook/WebhookController.php`,
+`RAN/Webhook/WebhookProcessor.php` and `RAN/Webhook/WebhookResponse.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This twenty-nine-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This thirty-three-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -121,3 +123,10 @@ methods and variables. Signed notice keys and ordering, operation/error/skip
 codes, selection limits, guard ordering and updater-lock behavior are unchanged.
 Inherited Throwable methods and separately owned receiver contracts retain their
 names. This naming migration does not change presentation or UI behavior.
+
+The webhook-ingress cohort (`SignedWebhookVerifier`, `WebhookController`,
+`WebhookProcessor` and `WebhookResponse`) enforces owned snake_case methods and
+variables. Raw-body signature verification, authentication and dispatch ordering,
+route and callback strings, response keys, status codes and headers are unchanged.
+Repository-provider contracts, WordPress methods and other service receivers
+retain their existing names.

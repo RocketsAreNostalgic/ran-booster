@@ -43,7 +43,7 @@ final class DeploymentOutcomeTest extends TestCase {
 
 	public function testCheckFailureCannotRepresentSuccess(): void {
 		$this->expectException( InvalidArgumentException::class );
-		new \RAN\Deployment\DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYED, 'not a failure' );
+		new \RAN\Deployment\DeploymentCheckFailure( outcome_code: DeploymentOutcome::CODE_DEPLOYED, message: 'not a failure' );
 	}
 
 	/** @return list<array{int, string}> */
@@ -69,6 +69,11 @@ final class DeploymentOutcomeTest extends TestCase {
 
 		self::assertSame( $expected, $outcome->get_code() );
 		self::assertSame( DeploymentState::FAILED, $outcome->get_state() );
+
+		$failure = \RAN\Deployment\DeploymentCheckFailure::provider_status( status: $status, message: 'Provider check failed.' );
+		self::assertSame( $expected, $failure->outcome_code );
+		self::assertSame( 'Provider check failed.', $failure->getMessage() );
+		self::assertSame( 0, $failure->getCode() );
 	}
 
 	public function testStaleProviderFailureMapsToStaleEvent(): void {

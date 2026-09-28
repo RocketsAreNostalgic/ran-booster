@@ -46,9 +46,17 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Deployment/DeploymentPolicy.php`, `RAN/Deployment/DeploymentState.php`,
-`RAN/PackageSource.php`, and `RAN/Deployment/DeploymentOutcome.php`.
+`RAN/PackageSource.php`, `RAN/Deployment/DeploymentOutcome.php`, and
+`RAN/Deployment/DeploymentRequest.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
 are unchanged. Callers on other types, including `DeploymentAttempt`, retain
-their current contracts until separately audited. This four-file scope does not
+their current contracts until separately audited. This five-file scope does not
 complete Core naming, condition or exception acceptance.
+
+DeploymentRequest uses owned snake_case properties and constructor parameters,
+including `is_private`; its persisted JSON retains the `private` key and exact
+canonical field order. Its JSON conversion methods use snake_case. Existing
+named-argument tests exercise the renamed constructor parameters. Reserved-keyword
+parameter enforcement is enabled for this file; other signature cohorts remain
+subject to their own audit.

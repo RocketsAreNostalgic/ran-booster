@@ -58,7 +58,7 @@ final readonly class DeploymentAttempt {
 			$mutationStartedAt     = self::nullableDate( $row['mutation_started_at'] ?? null );
 			$outcomeCode           = self::nullableIdentifier( $row['outcome_code'] ?? null, 64 );
 			$outcome               = null === $outcomeCode ? null : DeploymentOutcome::from_code( $outcomeCode );
-			$request               = DeploymentRequest::fromJson( self::safeText( $row['request_json'] ?? null, 4096 ) );
+			$request               = DeploymentRequest::from_json( self::safeText( $row['request_json'] ?? null, 4096 ) );
 			$createdAt             = self::date( $row['created_at'] ?? null );
 			$finishedAt            = self::nullableDate( $row['finished_at'] ?? null );
 			$resolvedAt            = self::nullableDate( $row['resolved_at'] ?? null );
@@ -67,7 +67,7 @@ final readonly class DeploymentAttempt {
 			if ( ( null === $deliveryId ) !== ( null === $deliveryDigest ) || ( 'webhook' === $source ) !== ( null !== $deliveryId ) ) {
 				throw new InvalidArgumentException( 'The stored delivery identity is incomplete.' );
 			}
-			if ( $request->packageSlug !== $packageSlug ) {
+			if ( $request->package_slug !== $packageSlug ) {
 				throw new InvalidArgumentException( 'The stored request identity is inconsistent.' );
 			}
 			if ( $state->is_terminal() ) {

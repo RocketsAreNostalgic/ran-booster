@@ -88,7 +88,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		if ( 'update' === $data['operation'] ) {
 			try {
-				$identifier = (string) $this->packageBySlug( (string) $data['package_type'], $request->packageSlug )->getIdentifier();
+				$identifier = (string) $this->packageBySlug( (string) $data['package_type'], $request->package_slug )->getIdentifier();
 			} catch ( PackageStorageFailure $failure ) {
 				$this->stagePackageStorageFailure( $failure );
 			} catch ( Throwable ) {
@@ -105,10 +105,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		return new BranchDeploymentDeclaration(
 			(string) $this->attempt->getId(),
 			(string) $data['package_type'],
-			$request->packageSlug,
+			$request->package_slug,
 			$request->repository,
 			(string) $data['provider_repository_id'],
-			$request->configuredBranch,
+			$request->configured_branch,
 			'webhook' === $data['source'] ? (string) $data['requested_ref'] : null,
 			(string) $data['operation'],
 			$request->subdirectory,
@@ -156,13 +156,13 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		$data                 = $this->attempt->safeData();
 		$request              = $this->attempt->getRequest();
-		$maximumArtifactBytes = $request->maximumArtifactBytes;
+		$maximumArtifactBytes = $request->maximum_artifact_bytes;
 		$provider             = ProviderCode::parse( (string) $data['provider'] );
 		$reference            = new RepositoryReference(
 			$request->repository,
 			(string) $data['provider_repository_id'],
-			$request->private,
-			$request->credentialId
+			$request->is_private,
+			$request->credential_id
 		);
 
 		try {
@@ -170,7 +170,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				new ArchiveRequest(
 					$reference,
 					(string) $data['requested_ref'],
-					'webhook' === $data['source'] ? $request->configuredBranch : null
+					'webhook' === $data['source'] ? $request->configured_branch : null
 				)
 			);
 		} catch ( Throwable $failure ) {
@@ -264,10 +264,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
 			}
 			if ( 'install' === $data['operation'] ) {
-				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->packageSlug ) {
+				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->package_slug ) {
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED );
 				}
-				if ( $this->destinationExists( (string) $data['package_type'], $request->packageSlug ) ) {
+				if ( $this->destinationExists( (string) $data['package_type'], $request->package_slug ) ) {
 					if ( $this->existingManagementMatchesInstallTarget() ) {
 						if ( $deferExisting ) {
 							return null;
@@ -280,13 +280,13 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 					(string) $data['provider'],
 					(string) $data['provider_repository_id'],
 					'plugin' === $data['package_type'] ? 1 : 2,
-					$request->packageSlug,
+					$request->package_slug,
 					PackageSource::BRANCH
 				);
 				return null;
 			}
 
-			$package = $this->packageBySlug( (string) $data['package_type'], $request->packageSlug );
+			$package = $this->packageBySlug( (string) $data['package_type'], $request->package_slug );
 			$this->assertPackageSnapshot( $package, $data, $request );
 			$identifier = (string) $package->getIdentifier();
 			if ( null === $deployment->installedIdentifier || ! hash_equals( $deployment->installedIdentifier, $identifier ) ) {
@@ -307,7 +307,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$data    = $this->attempt->safeData();
 		$request = $this->attempt->getRequest();
 		try {
-			$this->assertPackageSnapshot( $this->packageBySlug( (string) $data['package_type'], $request->packageSlug ), $data, $request );
+			$this->assertPackageSnapshot( $this->packageBySlug( (string) $data['package_type'], $request->package_slug ), $data, $request );
 		} catch ( PackageStorageFailure $failure ) {
 			$this->stagePackageStorageFailure( $failure );
 		}
@@ -341,13 +341,13 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			(string) $data['provider'],
 			$request->repository,
 			(string) $data['provider_repository_id'],
-			$request->configuredBranch,
-			$request->private,
-			$request->credentialId
+			$request->configured_branch,
+			$request->is_private,
+			$request->credential_id
 		);
 		$installed->setRepository( $repository );
 		$installed->setSubdirectory( $request->subdirectory );
-		$installed->setDeploymentPolicy( $request->deploymentPolicy );
+		$installed->setDeploymentPolicy( $request->deployment_policy );
 		$result = 'plugin' === $deployment->packageType ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
 		if ( $result->isSuccessful() ) {
 			return true;
@@ -544,7 +544,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		try {
 			$data       = $this->attempt->safeData();
 			$request    = $this->attempt->getRequest();
-			$installed  = $this->installedPackage( (string) $data['package_type'], $request->packageSlug );
+			$installed  = $this->installedPackage( (string) $data['package_type'], $request->package_slug );
 			$identifier = (string) $installed->getIdentifier();
 			if ( '' === $identifier ) {
 				return false;
@@ -555,7 +555,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 				&& hash_equals( (string) $existing->getRepository(), $request->repository )
 				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
-				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug );
+				&& hash_equals( (string) $existing->getSlug(), $request->package_slug );
 		} catch ( Throwable ) {
 			return false;
 		}
@@ -575,12 +575,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				&& $existing->getProviderCode() === $data['provider']
 				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 				&& hash_equals( (string) $existing->getRepository(), $request->repository )
-				&& hash_equals( (string) $existing->getBranch(), $request->configuredBranch )
-				&& hash_equals( $existing->getCredentialId(), (string) $request->credentialId )
+				&& hash_equals( (string) $existing->getBranch(), $request->configured_branch )
+				&& hash_equals( $existing->getCredentialId(), (string) $request->credential_id )
 				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
-				&& (bool) $existing->getPrivate() === $request->private
-				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug )
-				&& $existing->getDeploymentPolicy() === $request->deploymentPolicy;
+				&& (bool) $existing->getPrivate() === $request->is_private
+				&& hash_equals( (string) $existing->getSlug(), $request->package_slug )
+				&& $existing->getDeploymentPolicy() === $request->deployment_policy;
 		} catch ( Throwable ) {
 			return false;
 		}
@@ -590,12 +590,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		if ( $package->getProviderCode() !== $data['provider']
 			|| ! hash_equals( (string) $package->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->getRepository(), $request->repository )
-			|| ! hash_equals( (string) $package->getBranch(), $request->configuredBranch )
-			|| ! hash_equals( $package->getCredentialId(), (string) $request->credentialId )
+			|| ! hash_equals( (string) $package->getBranch(), $request->configured_branch )
+			|| ! hash_equals( $package->getCredentialId(), (string) $request->credential_id )
 			|| ! hash_equals( (string) $package->getSubdirectory(), (string) $request->subdirectory )
-			|| (bool) $package->getPrivate() !== $request->private
-			|| ! hash_equals( (string) $package->getSlug(), $request->packageSlug )
-			|| $package->getDeploymentPolicy() !== $request->deploymentPolicy
+			|| (bool) $package->getPrivate() !== $request->is_private
+			|| ! hash_equals( (string) $package->getSlug(), $request->package_slug )
+			|| $package->getDeploymentPolicy() !== $request->deployment_policy
 			|| $package->getSource()->value !== ( $data['package_source'] ?? null )
 			|| $package->getSourceRevision() !== ( $data['package_source_revision'] ?? null ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );

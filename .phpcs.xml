@@ -26,18 +26,20 @@
 	<rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
 		<severity>0</severity>
 	</rule>
-	<!-- Enforce only the completed enum and deployment-outcome cohorts. -->
+	<!-- Enforce only the completed enum, deployment-outcome and request cohorts. -->
 	<rule ref="RANOwnedMethods">
 		<include-pattern>/RAN/Deployment/DeploymentPolicy.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
 		<include-pattern>/RAN/PackageSource.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentOutcome.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
 		<include-pattern>/RAN/Deployment/DeploymentPolicy.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
 		<include-pattern>/RAN/PackageSource.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentOutcome.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 	<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->
 	<rule ref="WordPress.PHP.YodaConditions">
@@ -66,8 +68,9 @@
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<severity>0</severity>
 	</rule>
+	<!-- Request has no external signature obligation; enforce its audited parameter names. -->
 	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
-		<severity>0</severity>
+		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 
 	<!-- The focused container unit test keeps its tiny fixture classes beside the assertions. -->

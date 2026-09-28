@@ -16,55 +16,55 @@ final readonly class DeploymentRequest {
 
 	private const MAX_JSON_BYTES = 4096;
 
-	public int $maximumArtifactBytes;
+	public int $maximum_artifact_bytes;
 
 	public function __construct(
 		public string $repository,
-		public ?string $credentialId,
-		public bool $private,
-		public string $configuredBranch,
-		public string $packageSlug,
+		public ?string $credential_id,
+		public bool $is_private,
+		public string $configured_branch,
+		public string $package_slug,
 		public ?string $subdirectory,
-		public DeploymentPolicy $deploymentPolicy,
-		public ?int $initiatingUserId,
-		?int $maximumArtifactBytes = null
+		public DeploymentPolicy $deployment_policy,
+		public ?int $initiating_user_id,
+		?int $maximum_artifact_bytes = null
 	) {
-		self::assertLocator( $repository );
-		self::assertCredentialId( $credentialId );
-		self::assertSafeText( $configuredBranch, 255 );
-		self::assertPackageSlug( $packageSlug );
-		self::assertSubdirectory( $subdirectory );
-		if ( null !== $initiatingUserId && $initiatingUserId < 1 ) {
+		self::assert_locator( $repository );
+		self::assert_credential_id( $credential_id );
+		self::assert_safe_text( $configured_branch, 255 );
+		self::assert_package_slug( $package_slug );
+		self::assert_subdirectory( $subdirectory );
+		if ( null !== $initiating_user_id && $initiating_user_id < 1 ) {
 			throw new InvalidArgumentException( 'The initiating user ID must be positive.' );
 		}
-		$this->maximumArtifactBytes = null === $maximumArtifactBytes
+		$this->maximum_artifact_bytes = null === $maximum_artifact_bytes
 			? PackageArtifactLimit::resolve()
-			: PackageArtifactLimit::requireValid( $maximumArtifactBytes );
-		if ( strlen( $this->toJson() ) > self::MAX_JSON_BYTES ) {
+			: PackageArtifactLimit::requireValid( $maximum_artifact_bytes );
+		if ( strlen( $this->to_json() ) > self::MAX_JSON_BYTES ) {
 			throw new InvalidArgumentException( 'The deployment request is too large.' );
 		}
 	}
 
 	/** @return array{repository: string, credential_id: ?string, private: bool, configured_branch: string, package_slug: string, subdirectory: ?string, deployment_policy: string, initiating_user_id: ?int, maximum_artifact_bytes: int} */
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'repository'             => $this->repository,
-			'credential_id'          => $this->credentialId,
-			'private'                => $this->private,
-			'configured_branch'      => $this->configuredBranch,
-			'package_slug'           => $this->packageSlug,
+			'credential_id'          => $this->credential_id,
+			'private'                => $this->is_private,
+			'configured_branch'      => $this->configured_branch,
+			'package_slug'           => $this->package_slug,
 			'subdirectory'           => $this->subdirectory,
-			'deployment_policy'      => $this->deploymentPolicy->value,
-			'initiating_user_id'     => $this->initiatingUserId,
-			'maximum_artifact_bytes' => $this->maximumArtifactBytes,
+			'deployment_policy'      => $this->deployment_policy->value,
+			'initiating_user_id'     => $this->initiating_user_id,
+			'maximum_artifact_bytes' => $this->maximum_artifact_bytes,
 		);
 	}
 
-	public function toJson(): string {
-		return self::encode( $this->toArray() );
+	public function to_json(): string {
+		return self::encode( $this->to_array() );
 	}
 
-	public static function fromJson( string $json ): self {
+	public static function from_json( string $json ): self {
 		if ( '' === $json || strlen( $json ) > self::MAX_JSON_BYTES ) {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.' );
 		}
@@ -77,7 +77,7 @@ final readonly class DeploymentRequest {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.', 0, $exception );
 		}
 
-		$expectedKeys = array(
+		$expected_keys = array(
 			'repository',
 			'credential_id',
 			'private',
@@ -88,8 +88,8 @@ final readonly class DeploymentRequest {
 			'initiating_user_id',
 			'maximum_artifact_bytes',
 		);
-		$keys         = is_array( $data ) ? array_keys( $data ) : array();
-		if ( $keys !== $expectedKeys
+		$keys          = is_array( $data ) ? array_keys( $data ) : array();
+		if ( $keys !== $expected_keys
 			|| ! is_array( $data )
 			|| ! is_string( $data['repository'] )
 			|| ( null !== $data['credential_id'] && ! is_string( $data['credential_id'] ) )
@@ -114,7 +114,7 @@ final readonly class DeploymentRequest {
 			$data['initiating_user_id'],
 			$data['maximum_artifact_bytes']
 		);
-		if ( ! hash_equals( $request->toJson(), $json ) ) {
+		if ( ! hash_equals( $request->to_json(), $json ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is not canonical.' );
 		}
 
@@ -132,31 +132,31 @@ final readonly class DeploymentRequest {
 		}
 	}
 
-	private static function assertLocator( string $value ): void {
-		self::assertSafeText( $value, 512 );
+	private static function assert_locator( string $value ): void {
+		self::assert_safe_text( $value, 512 );
 		if ( str_starts_with( $value, '/' ) || str_contains( $value, '\\' ) || in_array( '..', explode( '/', $value ), true ) ) {
 			throw new InvalidArgumentException( 'The repository locator is invalid.' );
 		}
 	}
 
-	private static function assertCredentialId( ?string $value ): void {
+	private static function assert_credential_id( ?string $value ): void {
 		if ( null !== $value && preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $value ) !== 1 ) {
 			throw new InvalidArgumentException( 'The credential profile ID is invalid.' );
 		}
 	}
 
-	private static function assertPackageSlug( string $value ): void {
+	private static function assert_package_slug( string $value ): void {
 		if ( preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $value ) !== 1 ) {
 			throw new InvalidArgumentException( 'The package slug is invalid.' );
 		}
 	}
 
-	private static function assertSubdirectory( ?string $value ): void {
+	private static function assert_subdirectory( ?string $value ): void {
 		if ( null === $value ) {
 			return;
 		}
 
-		self::assertSafeText( $value, 255 );
+		self::assert_safe_text( $value, 255 );
 		try {
 			$normalized = PackageSubdirectory::normalize( $value );
 		} catch ( InvalidArgumentException $exception ) {
@@ -168,7 +168,7 @@ final readonly class DeploymentRequest {
 		}
 	}
 
-	private static function assertSafeText( string $value, int $limit ): void {
+	private static function assert_safe_text( string $value, int $limit ): void {
 		if ( '' === $value || strlen( $value ) > $limit || preg_match( '//u', $value ) !== 1
 			|| preg_match( '/[[:cntrl:]]/', $value ) === 1
 			|| preg_match( '/(?:https?:\/\/|[A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s]*@/i', $value ) === 1

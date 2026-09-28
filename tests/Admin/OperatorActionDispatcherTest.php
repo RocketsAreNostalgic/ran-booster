@@ -356,7 +356,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			'state'                   => 'needs_attention',
 			'mutation_started_at'     => '2026-07-26 09:00:00',
 			'outcome_code'            => DeploymentOutcome::CODE_INTERRUPTED,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => '2026-07-26 09:00:00',
 			'finished_at'             => '2026-07-26 09:01:00',
 			'resolved_at'             => null,
@@ -489,7 +489,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			'state'                   => 'running',
 			'mutation_started_at'     => null,
 			'outcome_code'            => null,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => '2026-07-26 09:00:00',
 			'finished_at'             => null,
 		);

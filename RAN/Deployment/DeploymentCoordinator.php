@@ -99,7 +99,7 @@ class DeploymentCoordinator {
 				throw new RuntimeException( 'The package is disabled for Booster deployments.' );
 			}
 			$request      = $this->requestFromPackage( $package, $userId > 0 ? $userId : null );
-			$requestedRef = null !== $command->ref ? $command->ref : $request->configuredBranch;
+			$requestedRef = null !== $command->ref ? $command->ref : $request->configured_branch;
 			$attempt      = $this->attempts->admitAndClaimManual(
 				'update',
 				$type,

@@ -243,7 +243,7 @@ final readonly class BulkPackageActionService {
 				'package_type'            => $action->packageType,
 				'provider'                => $providerCode,
 				'provider_repository_id'  => (string) $package->getProviderRepositoryId(),
-				'requested_ref'           => $request->configuredBranch,
+				'requested_ref'           => $request->configured_branch,
 				'package_source'          => $package->getSource()->value,
 				'package_source_revision' => $package->getSourceRevision(),
 				'request'                 => $request,

@@ -343,7 +343,7 @@ final readonly class PortabilityApplicationService {
 		$reference   = is_string( $result['correlation_id'] ?? null ) && 1 === preg_match( '/^[a-f0-9]{32}$/D', $result['correlation_id'] )
 			? $result['correlation_id']
 			: null;
-		$message     = \RAN\Admin\DeploymentOutcomeMessage::forCode( $outcomeCode );
+		$message     = \RAN\Admin\DeploymentOutcomeMessage::for_code( $outcomeCode );
 		if ( null !== $reference ) {
 			$message = sprintf(
 				/* translators: 1: safe deployment failure reason, 2: random support reference. */

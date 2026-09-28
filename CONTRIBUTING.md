@@ -68,11 +68,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Webhook/SignedWebhookVerifier.php`, `RAN/Webhook/WebhookController.php`,
 `RAN/Webhook/WebhookProcessor.php`, `RAN/Webhook/WebhookResponse.php`,
 `RAN/Admin/CredentialExpiryObservationStore.php`,
-`RAN/Admin/CredentialExpiryReminder.php`, `RAN/Admin/CredentialExpiryNotice.php` and
-`RAN/Admin/CredentialExpiryNoticeController.php`.
+`RAN/Admin/CredentialExpiryReminder.php`, `RAN/Admin/CredentialExpiryNotice.php`,
+`RAN/Admin/CredentialExpiryNoticeController.php`,
+`RAN/Admin/BackgroundDeploymentFailureMonitor.php`,
+`RAN/Admin/BackgroundDeploymentFailureEmail.php`,
+`RAN/Admin/DeploymentOutcomeMessage.php` and `RAN/Admin/ManagedPluginFailureRows.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This thirty-seven-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This forty-one-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -141,3 +144,10 @@ actions, capability ordering, rendered HTML and translated strings are unchanged
 `CredentialExpiryReport::isKnown()` and its `expiresAt` property retain their
 separately scoped provider contract; the single property read has a local naming
 exception. This migration does not change UI behavior.
+
+The background-failure cohort enforces owned snake_case methods and variables in
+its monitor, email, outcome-message catalogue and managed-plugin failure rows.
+Newest-attempt selection, fingerprint inputs, closed outcome messages, email
+filters and payloads, capabilities, hook strings and rendered HTML are unchanged.
+`DeploymentFailureNotifier::notify()` and provider, WordPress and other service
+receiver contracts retain their existing names.

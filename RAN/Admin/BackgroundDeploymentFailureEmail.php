@@ -27,19 +27,19 @@ class BackgroundDeploymentFailureEmail implements DeploymentFailureNotifier {
 			return false;
 		}
 
-		$siteName = wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES );
-		if ( '' === trim( $siteName ) ) {
-			$siteName = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$site_name = wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES );
+		if ( '' === trim( $site_name ) ) {
+			$site_name = (string) wp_parse_url( home_url(), PHP_URL_HOST );
 		}
-		$activityUrl = admin_url(
+		$activity_url = admin_url(
 			'admin.php?page=ran-booster&tab=troubleshooting&panel=activity'
 			. '&attempt=' . rawurlencode( (string) $data['id'] )
 			. '&reference=' . rawurlencode( (string) $data['correlation_id'] )
 		);
-		$subject     = sprintf(
+		$subject      = sprintf(
 			/* translators: %s is the WordPress site name. */
 			__( '[%s] A RAN Booster automatic deployment failed', 'ran-booster' ),
-			$siteName
+			$site_name
 		);
 		$message = implode(
 			"\n\n",
@@ -51,7 +51,7 @@ class BackgroundDeploymentFailureEmail implements DeploymentFailureNotifier {
 					(string) $data['package_type'],
 					strtoupper( (string) $data['provider'] )
 				),
-				DeploymentOutcomeMessage::forCode( (string) $data['outcome_code'] ),
+				DeploymentOutcomeMessage::for_code( (string) $data['outcome_code'] ),
 				sprintf(
 					/* translators: %s is a random support reference. */
 					__( 'Support reference: %s', 'ran-booster' ),
@@ -60,7 +60,7 @@ class BackgroundDeploymentFailureEmail implements DeploymentFailureNotifier {
 				sprintf(
 					/* translators: %s is the deployment activity URL. */
 					__( 'Review deployment activity: %s', 'ran-booster' ),
-					$activityUrl
+					$activity_url
 				),
 			)
 		);

@@ -72,13 +72,13 @@ final class BackgroundDeploymentFailureMonitor {
 				continue;
 			}
 
-			$request       = $attempt->get_request();
-			$provider      = (string) $data['provider'];
-			$providerLabel = strtoupper( $provider );
+			$request        = $attempt->get_request();
+			$provider       = (string) $data['provider'];
+			$provider_label = strtoupper( $provider );
 			try {
-				$providerLabel = $this->providers->get( ProviderCode::parse( $provider ) )->getMetadata()->label;
+				$provider_label = $this->providers->get( ProviderCode::parse( $provider ) )->getMetadata()->label;
 			} catch ( Throwable ) {
-				$providerLabel = strtoupper( $provider );
+				$provider_label = strtoupper( $provider );
 			}
 
 			$failures[] = array(
@@ -87,7 +87,7 @@ final class BackgroundDeploymentFailureMonitor {
 				'package_type'   => (string) $data['package_type'],
 				'package_slug'   => (string) $data['package_slug'],
 				'provider'       => $provider,
-				'provider_label' => $providerLabel,
+				'provider_label' => $provider_label,
 				'credential_id'  => $request->credential_id,
 				'state'          => $attempt->get_state()->value,
 				'outcome_code'   => (string) $data['outcome_code'],
@@ -101,9 +101,9 @@ final class BackgroundDeploymentFailureMonitor {
 	}
 
 	/** @return array<string, int|string|null>|null */
-	public function forPackage( string $packageType, string $packageSlug ): ?array {
+	public function for_package( string $package_type, string $package_slug ): ?array {
 		foreach ( $this->failures() as $failure ) {
-			if ( $packageType === $failure['package_type'] && hash_equals( $packageSlug, (string) $failure['package_slug'] ) ) {
+			if ( $package_type === $failure['package_type'] && hash_equals( $package_slug, (string) $failure['package_slug'] ) ) {
 				return $failure;
 			}
 		}

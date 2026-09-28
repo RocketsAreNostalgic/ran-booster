@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Admin/BackgroundDeploymentFailureMonitor.php</include-pattern>
+		<include-pattern>/RAN/Admin/BackgroundDeploymentFailureEmail.php</include-pattern>
+		<include-pattern>/RAN/Admin/DeploymentOutcomeMessage.php</include-pattern>
+		<include-pattern>/RAN/Admin/ManagedPluginFailureRows.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialExpiryObservationStore.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialExpiryReminder.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialExpiryNotice.php</include-pattern>
@@ -67,6 +71,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Admin/BackgroundDeploymentFailureMonitor.php</include-pattern>
+		<include-pattern>/RAN/Admin/BackgroundDeploymentFailureEmail.php</include-pattern>
+		<include-pattern>/RAN/Admin/DeploymentOutcomeMessage.php</include-pattern>
+		<include-pattern>/RAN/Admin/ManagedPluginFailureRows.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialExpiryObservationStore.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialExpiryReminder.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialExpiryNotice.php</include-pattern>

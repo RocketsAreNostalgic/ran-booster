@@ -57,7 +57,7 @@ final class DeploymentAdminPresenter {
 		echo '<div class="notice notice-error is-dismissible" data-ran-booster-background-failure-notice><p><strong>'
 			. esc_html( __( 'RAN Booster automatic deployment failed:', 'ran-booster' ) ) . '</strong> '
 			. esc_html( $summary ) . ' '
-			. esc_html( (string) $primary['package_slug'] . ' (' . (string) $primary['provider_label'] . '): ' . DeploymentOutcomeMessage::forCode( (string) $primary['outcome_code'] ) )
+			. esc_html( (string) $primary['package_slug'] . ' (' . (string) $primary['provider_label'] . '): ' . DeploymentOutcomeMessage::for_code( (string) $primary['outcome_code'] ) )
 			. '</p><p><a class="button button-primary" href="' . esc_url( $this->activityUrl( $primary ) ) . '">' . esc_html( __( 'Review deployment', 'ran-booster' ) ) . '</a>'
 			. $credentialLink . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value is escaped above.
 	}
@@ -69,7 +69,7 @@ final class DeploymentAdminPresenter {
 		}
 		status_header( 400 );
 		/* translators: 1: safe deployment result, 2: random support reference, 3: activity page URL. */
-		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::forCode( $outcomeCode ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
+		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcomeCode ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
 
 		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcomeCode );
 	}

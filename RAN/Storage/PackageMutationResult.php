@@ -9,9 +9,9 @@ final class PackageMutationResult {
 	private function __construct(
 		private readonly PackageMutationStatus $status,
 		private readonly PackageStorageOperation $operation,
-		private readonly string $diagnosticId,
+		private readonly string $diagnostic_id,
 		private readonly string $message,
-		private readonly bool $recoveryRequired = false
+		private readonly bool $recovery_required = false
 	) {
 	}
 
@@ -33,36 +33,36 @@ final class PackageMutationResult {
 		);
 	}
 
-	public static function conflict( PackageStorageOperation $operation, string $diagnosticId, string $message ): self {
-		return new self( PackageMutationStatus::CONFLICT, $operation, $diagnosticId, $message );
+	public static function conflict( PackageStorageOperation $operation, string $diagnostic_id, string $message ): self {
+		return new self( PackageMutationStatus::CONFLICT, $operation, $diagnostic_id, $message );
 	}
 
 	public static function failed(
 		PackageStorageOperation $operation,
-		string $diagnosticId,
+		string $diagnostic_id,
 		string $message,
-		bool $recoveryRequired = false
+		bool $recovery_required = false
 	): self {
-		return new self( PackageMutationStatus::FAILED, $operation, $diagnosticId, $message, $recoveryRequired );
+		return new self( PackageMutationStatus::FAILED, $operation, $diagnostic_id, $message, $recovery_required );
 	}
 
-	public function getStatus(): PackageMutationStatus {
+	public function get_status(): PackageMutationStatus {
 		return $this->status;
 	}
 
-	public function getDiagnosticId(): string {
-		return $this->diagnosticId;
+	public function get_diagnostic_id(): string {
+		return $this->diagnostic_id;
 	}
 
-	public function getOperation(): PackageStorageOperation {
+	public function get_operation(): PackageStorageOperation {
 		return $this->operation;
 	}
 
-	public function getMessage(): string {
+	public function get_message(): string {
 		return $this->message;
 	}
 
-	public function isSuccessful(): bool {
+	public function is_successful(): bool {
 		return in_array(
 			$this->status,
 			array( PackageMutationStatus::CHANGED, PackageMutationStatus::UNCHANGED ),
@@ -70,14 +70,14 @@ final class PackageMutationResult {
 		);
 	}
 
-	public function isRecoveryRequired(): bool {
-		return $this->recoveryRequired;
+	public function is_recovery_required(): bool {
+		return $this->recovery_required;
 	}
 
-	public function requireSuccess(): void {
-		if ( ! $this->isSuccessful() ) {
+	public function require_success(): void {
+		if ( ! $this->is_successful() ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The exception carries a fixed translated message for the controller boundary.
-			throw PackageStorageFailure::fromMutationResult( $this );
+			throw PackageStorageFailure::from_mutation_result( $this );
 		}
 	}
 }

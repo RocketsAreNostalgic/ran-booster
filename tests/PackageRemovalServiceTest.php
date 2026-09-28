@@ -642,10 +642,10 @@ final class RemovalPluginRepository extends PluginRepository {
 		unset( $file );
 		if ( $this->unlinkFailure ) {
 			return PackageMutationResult::failed(
-				PackageStorageOperation::DELETE,
-				'fixture_unlink_failed',
-				'Fixture unlink failed.',
-				true
+				operation: PackageStorageOperation::DELETE,
+				diagnostic_id: 'fixture_unlink_failed',
+				message: 'Fixture unlink failed.',
+				recovery_required: true
 			);
 		}
 		$this->unlinked = true;

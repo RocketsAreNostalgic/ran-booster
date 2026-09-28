@@ -2340,7 +2340,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'other-example/plugin.php' => $this->managedPackage( 'other-example/plugin.php', 'Other Example Plugin', 'repository-2' ),
 			)
 		);
-		$themes->method( 'allDeploymentThemes' )->willThrowException( PackageStorageFailure::invalidProviderIdentity() );
+		$themes->method( 'allDeploymentThemes' )->willThrowException( PackageStorageFailure::invalid_provider_identity() );
 		$_GET = array(
 			'tab'   => 'troubleshooting',
 			'panel' => 'deployment-activity',
@@ -2740,21 +2740,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 final class FailingDashboardPluginRepository extends PluginRepository {
 	public function allBoosterPlugins(): array {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
 	public function boosterPluginFromFile( $file ) {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 }
 
 final class FailingDashboardThemeRepository extends ThemeRepository {
 	public function allBoosterThemes(): array {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
 	public function boosterThemeFromStylesheet( $stylesheet ) {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 }
 

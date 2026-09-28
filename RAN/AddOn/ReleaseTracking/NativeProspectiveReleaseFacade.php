@@ -559,10 +559,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		int $userId
 	): bool {
 		if ( 'plugin' === $type && $package instanceof Plugin ) {
-			return $this->plugins->adoptRelease( $package, $configuration, $userId )->isSuccessful();
+			return $this->plugins->adoptRelease( $package, $configuration, $userId )->is_successful();
 		}
 		if ( 'theme' === $type && $package instanceof Theme ) {
-			return $this->themes->adoptRelease( $package, $configuration, $userId )->isSuccessful();
+			return $this->themes->adoptRelease( $package, $configuration, $userId )->is_successful();
 		}
 
 		return false;

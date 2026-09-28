@@ -51,10 +51,13 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Deployment/DeploymentCheckFailure.php`,
 `RAN/Deployment/DeploymentStorageFailure.php`, `RAN/PackageSubdirectory.php`,
 `RAN/Deployment/DeploymentAttempt.php`, `RAN/Deployment/DeploymentWorker.php`,
-and `RAN/Deployment/WordPressWorkerWakeup.php`.
+`RAN/Deployment/WordPressWorkerWakeup.php`,
+`RAN/Storage/PackageMutationResult.php`, `RAN/Storage/PackageStorageFailure.php`,
+`RAN/Storage/DatabaseLifecycleFailure.php` and
+`RAN/Storage/DatabaseCompatibilityFailure.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This eleven-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This fifteen-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -82,3 +85,10 @@ private validation helpers. Its durable row keys, request JSON and safe/log
 projection order remain unchanged. DeploymentWorker uses `run_once()` and
 WordPressWorkerWakeup uses snake_case locals; worker result keys, cron hook and
 scheduling behavior retain their existing contracts.
+
+The storage mutation/failure cohort also enforces owned method and variable names
+in `RAN/Storage/PackageMutationResult.php`, `PackageStorageFailure.php`,
+`DatabaseLifecycleFailure.php` and `DatabaseCompatibilityFailure.php`. Fixed
+diagnostics, recovery flags, database requirements and returned outcomes are
+unchanged. `PackageMutationResult::get_message()` is owned; inherited Throwable
+methods such as `PackageStorageFailure::getMessage()` keep their native names.

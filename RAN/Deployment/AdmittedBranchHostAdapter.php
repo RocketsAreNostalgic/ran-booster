@@ -349,10 +349,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$installed->setSubdirectory( $request->subdirectory );
 		$installed->setDeploymentPolicy( $request->deployment_policy );
 		$result = 'plugin' === $deployment->packageType ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
-		if ( $result->isSuccessful() ) {
+		if ( $result->is_successful() ) {
 			return true;
 		}
-		return 'ran_booster_storage_adoption_conflict' === $result->getDiagnosticId()
+		return 'ran_booster_storage_adoption_conflict' === $result->get_diagnostic_id()
 			&& $this->existingManagementMatchesInstalledTarget( $installed );
 	}
 
@@ -640,7 +640,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function stagePackageStorageFailure( PackageStorageFailure $failure ): never {
 		$this->stage(
-			'ran_booster_repository_source_conflict' === $failure->getDiagnosticId()
+			'ran_booster_repository_source_conflict' === $failure->get_diagnostic_id()
 				? DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT
 				: DeploymentOutcome::CODE_REPOSITORY_SOURCE_UNAVAILABLE
 		);

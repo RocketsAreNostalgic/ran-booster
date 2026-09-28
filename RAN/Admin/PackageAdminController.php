@@ -191,7 +191,7 @@ final class PackageAdminController {
 		} catch ( PackageStorageFailure $failure ) {
 			status_header( 400 );
 			$dashboard->addFailureMessage(
-				new WP_Error( $failure->getDiagnosticId(), $failure->getMessage(), array( 'recovery_required' => $failure->isRecoveryRequired() ) ),
+				new WP_Error( $failure->get_diagnostic_id(), $failure->getMessage(), array( 'recovery_required' => $failure->is_recovery_required() ) ),
 				$failure,
 				array(
 					'operation' => $action,

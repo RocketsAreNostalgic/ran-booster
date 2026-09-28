@@ -46,7 +46,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			$storage->allForTest();
 			self::fail( 'Expected a query failure.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_query_failed', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
 			self::assertStringNotContainsString( 'database details', $failure->getMessage() );
 		}
 
@@ -67,7 +67,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			$storage->allForTest();
 			self::fail( 'Unsupported package reads must fail closed.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_database_unsupported', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_database_unsupported', $failure->get_diagnostic_id() );
 		}
 
 		foreach ( array(
@@ -80,8 +80,8 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 				$write();
 				self::fail( 'Unsupported package writes must fail closed.' );
 			} catch ( PackageStorageFailure $failure ) {
-				self::assertSame( 'ran_booster_storage_database_unsupported', $failure->getDiagnosticId() );
-				self::assertSame( $operation, $failure->getOperation() );
+				self::assertSame( 'ran_booster_storage_database_unsupported', $failure->get_diagnostic_id() );
+				self::assertSame( $operation, $failure->get_operation() );
 			}
 		}
 
@@ -115,7 +115,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 				$operation();
 				self::fail( 'Cached lifecycle failures must block package storage.' );
 			} catch ( PackageStorageFailure $failure ) {
-				self::assertSame( 'ran_booster_storage_database_unsupported', $failure->getDiagnosticId() );
+				self::assertSame( 'ran_booster_storage_database_unsupported', $failure->get_diagnostic_id() );
 			}
 		}
 
@@ -150,30 +150,30 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$package = $this->package();
 
 		$wpdb->insertResult = false;
-		self::assertSame( PackageMutationStatus::FAILED, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::FAILED, $storage->storeForTest( $package )->get_status() );
 
 		$wpdb->insertResult = null;
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 
 		$wpdb->updateResult = 0;
-		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->get_status() );
 
 		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
-		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->get_status() );
 
 		$wpdb->updateResult = 1;
 		$wpdb->applyWrites  = false;
 		$result             = $storage->storeForTest( $package );
 
-		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
-		self::assertSame( PackageStorageOperation::UPDATE, $result->getOperation() );
-		self::assertSame( 'ran_booster_storage_verification_conflict', $result->getDiagnosticId() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
+		self::assertSame( PackageStorageOperation::UPDATE, $result->get_operation() );
+		self::assertSame( 'ran_booster_storage_verification_conflict', $result->get_diagnostic_id() );
 
 		$wpdb->rows         = array();
 		$wpdb->updateResult = 0;
 		self::assertSame(
 			PackageMutationStatus::CONFLICT,
-			$storage->editForTest( 'missing/example.php', $this->editInput() )->getStatus()
+			$storage->editForTest( 'missing/example.php', $this->editInput() )->get_status()
 		);
 	}
 
@@ -184,13 +184,13 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$package = $this->package();
 
 		$result = $storage->adoptForTest( $package );
-		self::assertSame( PackageMutationStatus::CHANGED, $result->getStatus() );
-		self::assertSame( PackageStorageOperation::INSERT, $result->getOperation() );
+		self::assertSame( PackageMutationStatus::CHANGED, $result->get_status() );
+		self::assertSame( PackageStorageOperation::INSERT, $result->get_operation() );
 		self::assertCount( 1, $wpdb->inserts );
 
 		$conflict = $storage->adoptForTest( $package );
-		self::assertSame( PackageMutationStatus::CONFLICT, $conflict->getStatus() );
-		self::assertSame( 'ran_booster_storage_adoption_conflict', $conflict->getDiagnosticId() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $conflict->get_status() );
+		self::assertSame( 'ran_booster_storage_adoption_conflict', $conflict->get_diagnostic_id() );
 		self::assertCount( 1, $wpdb->inserts );
 	}
 
@@ -206,12 +206,12 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			$adopt               = $storage->adoptForTest( $package );
 			$edit                = $storage->editForTest( (string) $package->getIdentifier(), $this->editInput() );
 
-			self::assertSame( PackageMutationStatus::FAILED, $store->getStatus() );
-			self::assertSame( PackageMutationStatus::FAILED, $adopt->getStatus() );
-			self::assertSame( PackageMutationStatus::FAILED, $edit->getStatus() );
-			self::assertSame( 'ran_booster_storage_invalid_package_identity', $store->getDiagnosticId() );
-			self::assertSame( 'ran_booster_storage_invalid_package_identity', $adopt->getDiagnosticId() );
-			self::assertSame( 'ran_booster_storage_invalid_package_identity', $edit->getDiagnosticId() );
+			self::assertSame( PackageMutationStatus::FAILED, $store->get_status() );
+			self::assertSame( PackageMutationStatus::FAILED, $adopt->get_status() );
+			self::assertSame( PackageMutationStatus::FAILED, $edit->get_status() );
+			self::assertSame( 'ran_booster_storage_invalid_package_identity', $store->get_diagnostic_id() );
+			self::assertSame( 'ran_booster_storage_invalid_package_identity', $adopt->get_diagnostic_id() );
+			self::assertSame( 'ran_booster_storage_invalid_package_identity', $edit->get_diagnostic_id() );
 		}
 
 		self::assertSame( array(), $wpdb->inserts );
@@ -227,8 +227,8 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 
 		$result = $storage->adoptForTest( $this->package() );
 
-		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
-		self::assertSame( 'ran_booster_storage_adoption_conflict', $result->getDiagnosticId() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
+		self::assertSame( 'ran_booster_storage_adoption_conflict', $result->get_diagnostic_id() );
 	}
 
 	public function testPackagePrivacyMatchesMysqlTinyintScalarsAfterPublicAndPrivateWrites(): void {
@@ -238,18 +238,18 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$storage                           = $this->storage();
 		$package                           = $this->package();
 
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 0, $wpdb->inserts[0][1]['private'] );
 		self::assertSame( '0', $wpdb->rows[0]['private'] );
 
 		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 0, $wpdb->updates[0][1]['private'] );
 		self::assertSame( '0', $wpdb->rows[0]['private'] );
 
 		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next', true, 'private-profile' ) );
 		$package->setSource( PackageSource::BRANCH, 2 );
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 1, $wpdb->updates[1][1]['private'] );
 		self::assertSame( '1', $wpdb->rows[0]['private'] );
 	}
@@ -295,14 +295,14 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		);
 
 		$wpdb->deleteResult = false;
-		self::assertSame( PackageMutationStatus::FAILED, $storage->unlinkForTest( 'example/example.php' )->getStatus() );
+		self::assertSame( PackageMutationStatus::FAILED, $storage->unlinkForTest( 'example/example.php' )->get_status() );
 
 		$wpdb->deleteResult = 0;
 		$wpdb->applyWrites  = false;
-		self::assertSame( PackageMutationStatus::CONFLICT, $storage->unlinkForTest( 'example/example.php' )->getStatus() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $storage->unlinkForTest( 'example/example.php' )->get_status() );
 
 		$wpdb->rows = array();
-		self::assertSame( PackageMutationStatus::UNCHANGED, $storage->unlinkForTest( 'example/example.php' )->getStatus() );
+		self::assertSame( PackageMutationStatus::UNCHANGED, $storage->unlinkForTest( 'example/example.php' )->get_status() );
 	}
 
 	public function testPostWriteVerificationFailuresRequireRecoveryForEveryMutation(): void {
@@ -483,11 +483,11 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 	}
 
 	private function assertAmbiguousWrite( PackageMutationResult $result, PackageStorageOperation $operation ): void {
-		self::assertSame( PackageMutationStatus::FAILED, $result->getStatus() );
-		self::assertSame( $operation, $result->getOperation() );
-		self::assertSame( 'ran_booster_storage_verification_failed', $result->getDiagnosticId() );
-		self::assertTrue( $result->isRecoveryRequired() );
-		self::assertStringContainsString( 'may have changed', $result->getMessage() );
+		self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
+		self::assertSame( $operation, $result->get_operation() );
+		self::assertSame( 'ran_booster_storage_verification_failed', $result->get_diagnostic_id() );
+		self::assertTrue( $result->is_recovery_required() );
+		self::assertStringContainsString( 'may have changed', $result->get_message() );
 	}
 
 	/** @return array<string, mixed> */

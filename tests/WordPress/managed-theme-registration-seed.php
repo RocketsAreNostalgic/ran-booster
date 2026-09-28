@@ -32,7 +32,7 @@ foreach ( $ran_booster_theme_fixtures as $ran_booster_stylesheet => $ran_booster
 		new ManagedReleaseConfiguration( $ran_booster_stylesheet, 'style.css' ),
 		get_current_user_id()
 	);
-	if ( ! $ran_booster_result->isSuccessful() ) {
+	if ( ! $ran_booster_result->is_successful() ) {
 		throw new RuntimeException( 'Could not seed a managed theme fixture.' );
 	}
 }

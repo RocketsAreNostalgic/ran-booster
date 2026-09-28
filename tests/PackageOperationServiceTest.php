@@ -300,7 +300,7 @@ final class PackageOperationServiceTest extends TestCase {
 			);
 			self::fail( 'A mismatched managed package must not be reported as linked.' );
 		} catch ( \RAN\Storage\PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_adoption_conflict', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_adoption_conflict', $failure->get_diagnostic_id() );
 		}
 	}
 

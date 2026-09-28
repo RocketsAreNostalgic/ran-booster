@@ -730,7 +730,7 @@ class Dashboard {
 	}
 
 	private function databaseUnavailableCreate( PackagePagePresenter $packageView, string $type ): mixed {
-		$failure = PackageStorageFailure::unsupportedDatabase();
+		$failure = PackageStorageFailure::unsupported_database();
 		$this->addFailureMessage(
 			$this->packageStorageError( $failure ),
 			$failure,
@@ -751,9 +751,9 @@ class Dashboard {
 
 	private function packageStorageError( PackageStorageFailure $failure ): WP_Error {
 		return new WP_Error(
-			$failure->getDiagnosticId(),
+			$failure->get_diagnostic_id(),
 			$failure->getMessage(),
-			array( 'recovery_required' => $failure->isRecoveryRequired() )
+			array( 'recovery_required' => $failure->is_recovery_required() )
 		);
 	}
 

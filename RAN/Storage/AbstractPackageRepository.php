@@ -929,7 +929,7 @@ abstract class AbstractPackageRepository {
 				'source_revision' => $this->valueFromRow( $row, 'source_revision' ),
 			)
 		);
-		$package->setSource( PackageSource::fromDatabase( $source->source ), $source->source_revision );
+		$package->setSource( PackageSource::from_database( $source->source ), $source->source_revision );
 		$package->setSubdirectory( $this->valueFromRow( $row, 'subdirectory' ) );
 
 		return $package;

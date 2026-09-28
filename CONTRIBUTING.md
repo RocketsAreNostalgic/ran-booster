@@ -45,9 +45,10 @@ and does not raise the analysis level or certify new dependency/host versions.
 ## Audited PHP naming scope
 
 Under #167, `RANOwnedMethods` and variable naming checks cover only
-`RAN/Deployment/DeploymentPolicy.php` and `RAN/Deployment/DeploymentState.php`.
+`RAN/Deployment/DeploymentPolicy.php`, `RAN/Deployment/DeploymentState.php`,
+and `RAN/PackageSource.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
 are unchanged. Callers on other types, including `DeploymentAttempt`, retain
-their current contracts until separately audited. This two-file scope does not
+their current contracts until separately audited. This three-file scope does not
 complete Core naming, condition or exception acceptance.

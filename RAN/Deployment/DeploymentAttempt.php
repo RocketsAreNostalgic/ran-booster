@@ -57,7 +57,7 @@ final readonly class DeploymentAttempt {
 			$state                 = DeploymentState::from_database( $row['state'] ?? null );
 			$mutationStartedAt     = self::nullableDate( $row['mutation_started_at'] ?? null );
 			$outcomeCode           = self::nullableIdentifier( $row['outcome_code'] ?? null, 64 );
-			$outcome               = null === $outcomeCode ? null : DeploymentOutcome::fromCode( $outcomeCode );
+			$outcome               = null === $outcomeCode ? null : DeploymentOutcome::from_code( $outcomeCode );
 			$request               = DeploymentRequest::fromJson( self::safeText( $row['request_json'] ?? null, 4096 ) );
 			$createdAt             = self::date( $row['created_at'] ?? null );
 			$finishedAt            = self::nullableDate( $row['finished_at'] ?? null );
@@ -80,7 +80,7 @@ final readonly class DeploymentAttempt {
 			if ( DeploymentState::QUEUED === $state && null !== $mutationStartedAt ) {
 				throw new InvalidArgumentException( 'A queued attempt cannot contain a mutation fence.' );
 			}
-			if ( null !== $outcome && $outcome->getState() !== $state ) {
+			if ( null !== $outcome && $outcome->get_state() !== $state ) {
 				throw new InvalidArgumentException( 'The stored outcome does not match the attempt state.' );
 			}
 			if ( ( null === $resolvedAt ) !== ( null === $resolvedBy )
@@ -173,7 +173,7 @@ final readonly class DeploymentAttempt {
 			'delivery_id'             => $this->deliveryId,
 			'state'                   => $this->state->value,
 			'mutation_started_at'     => $this->mutationStartedAt,
-			'outcome_code'            => $this->outcome?->getCode(),
+			'outcome_code'            => $this->outcome?->get_code(),
 			'created_at'              => $this->createdAt,
 			'finished_at'             => $this->finishedAt,
 			'resolved_at'             => $this->resolvedAt,

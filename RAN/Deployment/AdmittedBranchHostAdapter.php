@@ -134,7 +134,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function finish( string $code ): void {
 		try {
-			$this->attempt = $this->attempts->finish( $this->attempt->getId(), DeploymentOutcome::fromCode( $code ) );
+			$this->attempt = $this->attempts->finish( $this->attempt->getId(), DeploymentOutcome::from_code( $code ) );
 		} catch ( DeploymentStorageFailure $failure ) {
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
@@ -174,7 +174,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				)
 			);
 		} catch ( Throwable $failure ) {
-			$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );
+			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 
 		$providerArchive = $this->providerArchive;
@@ -191,7 +191,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			throw $failure;
 		} catch ( Throwable $failure ) {
 			$this->cleanupProviderArchive( $providerArchive );
-			$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );
+			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 
 		try {
@@ -435,10 +435,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 					if ( $attempt < self::DOWNLOAD_ATTEMPTS ) {
 						continue;
 					}
-					$this->stage( DeploymentOutcome::fromProviderFailure( new RuntimeException( '', $status ) )->getCode() );
+					$this->stage( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code() );
 				}
 				if ( $status < 200 || $status >= 300 ) {
-					$this->stage( DeploymentOutcome::fromProviderFailure( new RuntimeException( '', $status ) )->getCode() );
+					$this->stage( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code() );
 				}
 				return;
 			}
@@ -453,7 +453,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		} catch ( StaleDeployment ) {
 			$this->stage( DeploymentOutcome::CODE_STALE_EVENT );
 		} catch ( Throwable $failure ) {
-			$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );
+			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 	}
 

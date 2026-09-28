@@ -183,7 +183,7 @@ final class WorkerCoordinator extends DeploymentCoordinator {
 			throw $this->failure;
 		}
 
-		return DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED );
+		return DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED );
 	}
 }
 // phpcs:enable Generic.Files.OneObjectStructurePerFile

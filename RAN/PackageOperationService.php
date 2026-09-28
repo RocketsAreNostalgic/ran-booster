@@ -69,8 +69,8 @@ final readonly class PackageOperationService {
 		) {
 			throw new RuntimeException( 'The manual deployment result is invalid.' );
 		}
-		$outcome = DeploymentOutcome::fromCode( $outcomeCode );
-		if ( ( 'succeeded' === $status ) !== ( 'succeeded' === $outcome->getState()->value ) ) {
+		$outcome = DeploymentOutcome::from_code( $outcomeCode );
+		if ( ( 'succeeded' === $status ) !== ( 'succeeded' === $outcome->get_state()->value ) ) {
 			throw new RuntimeException( 'The manual deployment result is inconsistent.' );
 		}
 

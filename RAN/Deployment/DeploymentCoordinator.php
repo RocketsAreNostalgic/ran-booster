@@ -117,9 +117,9 @@ class DeploymentCoordinator {
 		$outcome = $this->executeRunning( $attempt );
 
 		return array(
-			'status'         => DeploymentState::SUCCEEDED === $outcome->getState() ? 'succeeded' : 'failed',
+			'status'         => DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed',
 			'correlation_id' => $attempt->getCorrelationId(),
-			'outcome_code'   => $outcome->getCode(),
+			'outcome_code'   => $outcome->get_code(),
 		);
 	}
 
@@ -270,7 +270,7 @@ class DeploymentCoordinator {
 			);
 		$code       = $deployment->deploy();
 		$outcome    = $this->finishedOutcome( $host->terminalAttempt() );
-		if ( ! hash_equals( $code, $outcome->getCode() ) ) {
+		if ( ! hash_equals( $code, $outcome->get_code() ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 		return $outcome;
@@ -285,7 +285,7 @@ class DeploymentCoordinator {
 			'attempt finished',
 			$finished->logContext() + array(
 				'step'         => 'attempt_finished',
-				'outcome_code' => $outcome->getCode(),
+				'outcome_code' => $outcome->get_code(),
 			)
 		);
 		$data = $finished->safeData();

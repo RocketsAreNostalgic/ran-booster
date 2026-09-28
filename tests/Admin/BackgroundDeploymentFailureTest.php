@@ -259,7 +259,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 			DeploymentPolicy::AUTOMATIC,
 			null
 		);
-		$state   = DeploymentOutcome::fromCode( $outcome )->getState()->value;
+		$state   = DeploymentOutcome::from_code( $outcome )->get_state()->value;
 
 		return array(
 			'id'                      => $id,

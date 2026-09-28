@@ -56,12 +56,12 @@ $assert( 'profile_1' === $browse->getCredentialId(), 'Repository browsing must u
 $assert( 5 === RepositoryBrowseRequest::MAX_REMOTE_CALLS, 'Repository browsing must retain the five-call limit.' );
 $assert( ( new RepositoryBrowseResult( array(), RepositoryBrowseResult::LIMIT ) )->isPartial(), 'Bounded repository results must report truncation.' );
 
-$success = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED );
-$failed  = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED );
-$unsafe  = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_INTERRUPTED );
-$assert( DeploymentState::SUCCEEDED === $success->getState(), 'Deployed must be successful.' );
-$assert( DeploymentState::FAILED === $failed->getState(), 'Preflight failure must be terminal failure.' );
-$assert( DeploymentState::NEEDS_ATTENTION === $unsafe->getState(), 'Interrupted mutation must require attention.' );
+$success = DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED );
+$failed  = DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED );
+$unsafe  = DeploymentOutcome::from_code( DeploymentOutcome::CODE_INTERRUPTED );
+$assert( DeploymentState::SUCCEEDED === $success->get_state(), 'Deployed must be successful.' );
+$assert( DeploymentState::FAILED === $failed->get_state(), 'Preflight failure must be terminal failure.' );
+$assert( DeploymentState::NEEDS_ATTENTION === $unsafe->get_state(), 'Interrupted mutation must require attention.' );
 
 $source = file_get_contents( dirname( __DIR__ ) . '/ran-booster.php' );
 $assert( is_string( $source ) && ! str_contains( $source, 'WorkerCliCommand' ), 'Bootstrap must not expose a second executor.' );

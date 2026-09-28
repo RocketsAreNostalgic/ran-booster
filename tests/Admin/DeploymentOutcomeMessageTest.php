@@ -104,7 +104,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 				}
 
 				return in_array(
-					DeploymentOutcome::fromCode( $code )->getState(),
+					DeploymentOutcome::from_code( $code )->get_state(),
 					array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ),
 					true
 				);

@@ -62,7 +62,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertTrue( $this->repository->hasUnresolvedPackageAttempt( 'plugin', 'example' ) );
 		$this->repository->finish(
 			$attempt->getId(),
-			DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED )
+			DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED )
 		);
 		self::assertFalse( $this->repository->hasUnresolvedPackageAttempt( 'plugin', 'example' ) );
 	}
@@ -439,7 +439,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function testTerminalManualHistoryDoesNotBlockANewBatchAttempt(): void {
 		$running = $this->manual( 'example' );
-		$this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
+		$this->repository->finish( $running->getId(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
 
 		$result = $this->repository->admitManualBatch( array( $this->manualTarget( 'example' ) ) );
 
@@ -449,7 +449,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function testNeedsAttentionHistoryBlocksANewBatchAttempt(): void {
 		$running = $this->manual( 'example' );
-		$this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_INTERRUPTED ) );
+		$this->repository->finish( $running->getId(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_INTERRUPTED ) );
 		$this->database->queries = array();
 
 		$result = $this->repository->admitManualBatch( array( $this->manualTarget( 'example' ) ) );
@@ -654,12 +654,12 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$running  = $this->manual( 'example' );
 		$resolved = $this->repository->recordResolvedRef( $running->getId(), str_repeat( 'a', 40 ) );
 		$fenced   = $this->repository->markMutationStarted( $running->getId() );
-		$finished = $this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED ) );
+		$finished = $this->repository->finish( $running->getId(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 
 		self::assertSame( str_repeat( 'a', 40 ), $resolved->safeData()['resolved_ref'] );
 		self::assertNotNull( $fenced->safeData()['mutation_started_at'] );
 		self::assertSame( DeploymentState::SUCCEEDED, $finished->getState() );
-		self::assertSame( 'deployed', $finished->getOutcome()?->getCode() );
+		self::assertSame( 'deployed', $finished->getOutcome()?->get_code() );
 	}
 
 	public function testValidButDifferentTerminalTimestampFailsReadback(): void {
@@ -668,7 +668,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->database->tamperUpdateValue  = '2026-07-19 00:00:01';
 
 		$this->expectException( DeploymentStorageFailure::class );
-		$this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED ) );
+		$this->repository->finish( $running->getId(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 	}
 
 	public function testWriteFailuresAndEmptyQueryAreNotConflated(): void {
@@ -684,7 +684,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$result  = $this->repository->reconcileConfirmedStopped( $running->getId() );
 
 		self::assertSame( DeploymentState::FAILED, $result->getState() );
-		self::assertSame( 'worker_stopped', $result->getOutcome()?->getCode() );
+		self::assertSame( 'worker_stopped', $result->getOutcome()?->get_code() );
 	}
 
 	public function testPostFenceReconciliationRequiresAttention(): void {
@@ -693,7 +693,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$result = $this->repository->reconcileConfirmedStopped( $running->getId() );
 
 		self::assertSame( DeploymentState::NEEDS_ATTENTION, $result->getState() );
-		self::assertSame( 'interrupted', $result->getOutcome()?->getCode() );
+		self::assertSame( 'interrupted', $result->getOutcome()?->get_code() );
 	}
 
 	public function testExactOperatorResolutionPreservesOutcomeAndAllowsRetry(): void {
@@ -717,7 +717,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$retry    = $this->manual( 'example' );
 
 		self::assertSame( DeploymentState::NEEDS_ATTENTION, $resolved->getState() );
-		self::assertSame( 'interrupted', $resolved->getOutcome()?->getCode() );
+		self::assertSame( 'interrupted', $resolved->getOutcome()?->get_code() );
 		self::assertSame( '2026-07-19 00:00:00', $resolved->safeData()['resolved_at'] );
 		self::assertSame( 7, $resolved->safeData()['resolved_by'] );
 		self::assertFalse( $resolved->requiresOperatorResolution() );
@@ -789,9 +789,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	public function testPackageActivitySummaryReadsLatestAndLastSuccessInOneBoundedQuery(): void {
 		$successful = $this->manual( 'example' );
 		$this->repository->recordResolvedRef( $successful->getId(), str_repeat( 'a', 40 ) );
-		$successful = $this->repository->finish( $successful->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED ) );
+		$successful = $this->repository->finish( $successful->getId(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 		$failed     = $this->manual( 'example' );
-		$failed     = $this->repository->finish( $failed->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
+		$failed     = $this->repository->finish( $failed->getId(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
 
 		$this->database->queries = array();
 		$summary                 = $this->repository->packageActivitySummary( 'plugin', 'example' );

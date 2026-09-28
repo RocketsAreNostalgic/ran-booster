@@ -10,13 +10,13 @@ use RuntimeException;
 final class DeploymentCheckFailure extends RuntimeException {
 
 	public function __construct( public readonly string $outcomeCode, string $message ) {
-		if ( \RAN\Deployment\DeploymentState::FAILED !== DeploymentOutcome::fromCode( $outcomeCode )->getState() ) {
+		if ( \RAN\Deployment\DeploymentState::FAILED !== DeploymentOutcome::from_code( $outcomeCode )->get_state() ) {
 			throw new \InvalidArgumentException( 'A deployment check failure must have a failed outcome code.' );
 		}
 		parent::__construct( $message );
 	}
 
 	public static function providerStatus( int $status, string $message ): self {
-		return new self( DeploymentOutcome::fromProviderFailure( new RuntimeException( '', $status ) )->getCode(), $message );
+		return new self( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code(), $message );
 	}
 }

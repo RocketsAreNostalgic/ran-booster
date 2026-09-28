@@ -18,7 +18,7 @@ $attempt              = $deploymentActivity['detail'] ?? null;
 $unavailable          = true === ( $deploymentActivity['unavailable'] ?? false );
 $laterVerifiedAttempt = $deploymentActivity['later_verified_attempt'] ?? null;
 $backUrl              = $troubleshootingBase . '&panel=activity';
-$item                 = $attempt instanceof DeploymentAttempt ? $attempt->safeData() : array();
+$item                 = $attempt instanceof DeploymentAttempt ? $attempt->safe_data() : array();
 $packageType          = is_string( $item['package_type'] ?? null ) ? $item['package_type'] : '';
 $packageSlug          = is_string( $item['package_slug'] ?? null ) ? $item['package_slug'] : '';
 $settingsUrls         = is_array( $deploymentActivity['package_settings_urls'] ?? null )
@@ -60,8 +60,8 @@ $packageSettingsLabel = 'theme' === $packageType
 				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'Before you retry', 'ran-booster' ); ?></h4>
 				<p><?php esc_html_e( 'WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update.', 'ran-booster' ); ?></p>
 				<?php if ( $laterVerifiedAttempt instanceof DeploymentAttempt ) { ?>
-					<?php $laterVerifiedData = $laterVerifiedAttempt->safeData(); ?>
-					<p><?php echo esc_html( sprintf( /* translators: 1: later verified deployment date, 2: later deployment ID. */ __( 'Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state.', 'ran-booster' ), (string) ( $laterVerifiedData['finished_at'] ?? $laterVerifiedData['created_at'] ?? '' ), $laterVerifiedAttempt->getId() ) ); ?></p>
+					<?php $laterVerifiedData = $laterVerifiedAttempt->safe_data(); ?>
+					<p><?php echo esc_html( sprintf( /* translators: 1: later verified deployment date, 2: later deployment ID. */ __( 'Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state.', 'ran-booster' ), (string) ( $laterVerifiedData['finished_at'] ?? $laterVerifiedData['created_at'] ?? '' ), $laterVerifiedAttempt->get_id() ) ); ?></p>
 				<?php } else { ?>
 					<p><?php esc_html_e( 'Check that the package is present, has the expected version and activation state, and that the site is not in maintenance mode.', 'ran-booster' ); ?></p>
 				<?php } ?>
@@ -93,7 +93,7 @@ $packageSettingsLabel = 'theme' === $packageType
 				<div><dt><?php esc_html_e( 'Operator review', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: review date and time, 2: WordPress user ID. */ __( 'Resolved %1$s by user #%2$d', 'ran-booster' ), $item['resolved_at'], $item['resolved_by'] ) ); ?></dd></div>
 			<?php } ?>
 		</dl>
-		<?php if ( $attempt->requiresOperatorResolution() ) { ?>
+		<?php if ( $attempt->requires_operator_resolution() ) { ?>
 			<form method="post" action="<?php echo esc_url( $packageSettingsUrl ); ?>">
 				<?php wp_nonce_field( 'ran-booster-resolve-needs-attention' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="resolve-needs-attention">

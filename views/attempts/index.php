@@ -15,7 +15,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 $items        = array_map(
-	static fn ( DeploymentAttempt $attempt ): array => $attempt->safeData(),
+	static fn ( DeploymentAttempt $attempt ): array => $attempt->safe_data(),
 	array_filter(
 		$deploymentActivity['items'] ?? array(),
 		static fn ( mixed $item ): bool => $item instanceof DeploymentAttempt

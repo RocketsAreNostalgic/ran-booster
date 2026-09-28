@@ -118,7 +118,7 @@ class DeploymentCoordinator {
 
 		return array(
 			'status'         => DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed',
-			'correlation_id' => $attempt->getCorrelationId(),
+			'correlation_id' => $attempt->get_correlation_id(),
 			'outcome_code'   => $outcome->get_code(),
 		);
 	}
@@ -211,8 +211,8 @@ class DeploymentCoordinator {
 		if ( array() === $attempts ) {
 			return $this->admission( 'duplicate', substr( hash( 'sha256', $provider . "\0" . $deliveryId ), 0, 32 ), 0, 'not_required' );
 		}
-		$status = count( array_filter( $attempts, static fn ( DeploymentAttempt $attempt ): bool => DeploymentState::QUEUED === $attempt->getState() ) ) > 0 ? 'accepted' : 'duplicate';
-		return $this->admission( $status, $attempts[0]->getCorrelationId(), count( $attempts ), $this->requestWorker() );
+		$status = count( array_filter( $attempts, static fn ( DeploymentAttempt $attempt ): bool => DeploymentState::QUEUED === $attempt->get_state() ) ) > 0 ? 'accepted' : 'duplicate';
+		return $this->admission( $status, $attempts[0]->get_correlation_id(), count( $attempts ), $this->requestWorker() );
 	}
 
 	/** Execute one queued row claimed by the real WordPress cron worker. */
@@ -226,11 +226,11 @@ class DeploymentCoordinator {
 
 	/** Execute one durably running row through the normalized admitted branch runner. */
 	private function executeRunning( DeploymentAttempt $attempt ): DeploymentOutcome {
-		if ( DeploymentState::RUNNING !== $attempt->getState() ) {
+		if ( DeploymentState::RUNNING !== $attempt->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
-		$context = $attempt->logContext();
+		$context = $attempt->log_context();
 		BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 		$host = new AdmittedBranchHostAdapter(
 			$attempt,
@@ -277,21 +277,21 @@ class DeploymentCoordinator {
 	}
 
 	private function finishedOutcome( DeploymentAttempt $finished ): DeploymentOutcome {
-		if ( ! $finished->getState()->is_terminal() ) {
+		if ( ! $finished->get_state()->is_terminal() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		$outcome = $finished->getOutcome() ?? throw DeploymentStorageFailure::inconsistent();
+		$outcome = $finished->get_outcome() ?? throw DeploymentStorageFailure::inconsistent();
 		BoosterLogger::log(
 			'attempt finished',
-			$finished->logContext() + array(
+			$finished->log_context() + array(
 				'step'         => 'attempt_finished',
 				'outcome_code' => $outcome->get_code(),
 			)
 		);
-		$data = $finished->safeData();
+		$data = $finished->safe_data();
 		if ( null !== $this->failureNotifier
 			&& 'webhook' === $data['source']
-			&& in_array( $finished->getState(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
+			&& in_array( $finished->get_state(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
 		) {
 			try {
 				$this->failureNotifier->notify( $finished );
@@ -299,7 +299,7 @@ class DeploymentCoordinator {
 				BoosterLogger::logException(
 					'background deployment failure notification unavailable',
 					$exception,
-					$finished->logContext() + array( 'step' => 'background_failure_notification' )
+					$finished->log_context() + array( 'step' => 'background_failure_notification' )
 				);
 			}
 		}
@@ -309,10 +309,10 @@ class DeploymentCoordinator {
 	/** Reconcile only after the protected controller confirms the worker stopped. */
 	public function reconcileConfirmedStopped( int $attemptId, string $correlationId ): DeploymentAttempt {
 		$attempt = $this->attempts->findExact( $attemptId );
-		if ( null === $attempt || ! hash_equals( $attempt->getCorrelationId(), $correlationId ) ) {
+		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlationId ) ) {
 			throw DeploymentStorageFailure::not_found();
 		}
-		if ( DeploymentState::RUNNING !== $attempt->getState() ) {
+		if ( DeploymentState::RUNNING !== $attempt->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 		$result = $this->attempts->reconcileConfirmedStopped( $attemptId );

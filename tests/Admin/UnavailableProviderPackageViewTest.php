@@ -635,7 +635,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			default => null,
 		};
 
-		return DeploymentAttempt::fromDatabase(
+		return DeploymentAttempt::from_database(
 			array(
 				'id'                      => $id,
 				'correlation_id'          => str_pad( dechex( $id ), 32, '0', STR_PAD_LEFT ),

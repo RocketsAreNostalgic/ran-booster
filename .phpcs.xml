@@ -35,6 +35,9 @@
 		<include-pattern>/RAN/Deployment/DeploymentCheckFailure.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentStorageFailure.php</include-pattern>
 		<include-pattern>/RAN/PackageSubdirectory.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentAttempt.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentWorker.php</include-pattern>
+		<include-pattern>/RAN/Deployment/WordPressWorkerWakeup.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
@@ -45,6 +48,9 @@
 		<include-pattern>/RAN/Deployment/DeploymentCheckFailure.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentStorageFailure.php</include-pattern>
 		<include-pattern>/RAN/PackageSubdirectory.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentAttempt.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentWorker.php</include-pattern>
+		<include-pattern>/RAN/Deployment/WordPressWorkerWakeup.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 	<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->

@@ -260,7 +260,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 				'status'        => 'unavailable',
 				'runner_status' => 'not_required',
 			),
-			$worker->runOnce()
+			$worker->run_once()
 		);
 	}
 

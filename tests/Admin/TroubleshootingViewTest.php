@@ -194,7 +194,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function testDeploymentActivityShowsTheRecordedFailureReason(): void {
-		$attempt             = DeploymentAttempt::fromDatabase(
+		$attempt             = DeploymentAttempt::from_database(
 			array(
 				'id'                      => 1,
 				'correlation_id'          => str_repeat( 'a', 32 ),
@@ -255,7 +255,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function testDeploymentActivityRendersKnownPackageVersionFailureInIndexAndDetail(): void {
-		$attempt             = DeploymentAttempt::fromDatabase(
+		$attempt             = DeploymentAttempt::from_database(
 			array(
 				'id'                      => 2,
 				'correlation_id'          => str_repeat( 'd', 32 ),
@@ -313,7 +313,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function testNeedsAttentionDetailShowsOriginAndProtectedResolutionConfirmation(): void {
-		$attempt             = DeploymentAttempt::fromDatabase(
+		$attempt             = DeploymentAttempt::from_database(
 			array(
 				'id'                      => 7,
 				'correlation_id'          => str_repeat( 'b', 32 ),
@@ -392,7 +392,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function testHistoricalRestorationUncertaintyExplainsLaterVerifiedRecovery(): void {
-		$uncertain           = DeploymentAttempt::fromDatabase(
+		$uncertain           = DeploymentAttempt::from_database(
 			array(
 				'id'                      => 7,
 				'correlation_id'          => str_repeat( 'b', 32 ),
@@ -418,7 +418,7 @@ final class TroubleshootingViewTest extends TestCase {
 				'resolved_by'             => null,
 			)
 		);
-		$laterSuccess        = DeploymentAttempt::fromDatabase(
+		$laterSuccess        = DeploymentAttempt::from_database(
 			array(
 				'id'                      => 8,
 				'correlation_id'          => str_repeat( 'c', 32 ),

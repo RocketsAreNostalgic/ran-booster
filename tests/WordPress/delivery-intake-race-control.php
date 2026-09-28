@@ -77,7 +77,7 @@ if ( 'assert' === $mode ) {
 	$new_request = new DeploymentRequest( 'group/subgroup/new-' . $run_id, 'race-credential', true, 'main', 'new-' . $run_id, null, DeploymentPolicy::AUTOMATIC, null );
 	$new_target  = array( 'operation' => 'update', 'package_type' => 'plugin', 'provider_repository_id' => 'new-repository-' . $run_id, 'requested_ref' => 'new-commit-' . $run_id, 'package_source' => 'branch', 'package_source_revision' => 1, 'request' => $new_request );
 	$replay      = $repository->admitWebhookBatch( $provider, $delivery_id, $digest, array( $target, $new_target ) );
-	if ( 1 !== count( $replay ) || $replay[0]->getId() !== $winner['attempt_id'] || $replay[0]->getCorrelationId() !== $winner['correlation_id'] ) {
+	if ( 1 !== count( $replay ) || $replay[0]->get_id() !== $winner['attempt_id'] || $replay[0]->get_correlation_id() !== $winner['correlation_id'] ) {
 		throw new RuntimeException( 'A fresh provider replay did not preserve the winning target set.' );
 	}
 	$repository->admitWebhookBatch( $provider, $zero_id, $digest, array() );

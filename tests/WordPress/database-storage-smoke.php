@@ -216,8 +216,8 @@ try {
 		'branch',
 		1
 	);
-	$finished = $attempts->finish( $attempt->getId(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
-	if ( $finished->getId() !== $attempts->findExact( $attempt->getId() )?->getId() ) {
+	$finished = $attempts->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
+	if ( $finished->get_id() !== $attempts->findExact( $attempt->get_id() )?->get_id() ) {
 		throw new RuntimeException( 'The database smoke could not verify its attempt record.' );
 	}
 } finally {

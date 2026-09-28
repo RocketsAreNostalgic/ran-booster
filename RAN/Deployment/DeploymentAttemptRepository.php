@@ -83,7 +83,7 @@ final class DeploymentAttemptRepository {
 				$active = $this->activePackageAttempt( $packageType, $request->package_slug );
 				if ( null !== $active ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
-					throw DeploymentStorageFailure::contention( $active->safeData() );
+					throw DeploymentStorageFailure::contention( $active->safe_data() );
 				}
 
 				$this->reserveCapacity( 1 );
@@ -102,15 +102,15 @@ final class DeploymentAttemptRepository {
 						null
 					)
 				);
-				$query  = $this->updateQuery( $queued->getId(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
+				$query  = $this->updateQuery( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
 				if ( 1 !== $this->database->query( $query ) ) {
 					throw DeploymentStorageFailure::unavailable();
 				}
-				$running = $this->requireExact( $queued->getId() );
-				if ( DeploymentState::RUNNING !== $running->getState() ) {
+				$running = $this->requireExact( $queued->get_id() );
+				if ( DeploymentState::RUNNING !== $running->get_state() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
-				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->logContext() + array( 'transition' => 'queued->running' ) );
+				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->log_context() + array( 'transition' => 'queued->running' ) );
 
 				return $running;
 			},
@@ -165,7 +165,7 @@ final class DeploymentAttemptRepository {
 					$request = $target['request'];
 					$active  = $this->activePackageAttempt( $target['package_type'], $request->package_slug );
 					if ( null !== $active ) {
-						$busy[] = $active->safeData();
+						$busy[] = $active->safe_data();
 						continue;
 					}
 
@@ -202,7 +202,7 @@ final class DeploymentAttemptRepository {
 		);
 
 		foreach ( $result['admitted'] as $attempt ) {
-			BoosterLogger::log( 'attempt queued (manual batch)', $attempt->logContext() + array( 'transition' => 'new->queued' ) );
+			BoosterLogger::log( 'attempt queued (manual batch)', $attempt->log_context() + array( 'transition' => 'new->queued' ) );
 		}
 
 		return $result;
@@ -264,8 +264,8 @@ final class DeploymentAttemptRepository {
 						$this->assertDeliveryAcknowledgement( $row, $provider, $deliveryId, $deliveryDigest );
 						continue;
 					}
-					$attempt          = DeploymentAttempt::fromDatabase( $row );
-					$data             = $attempt->safeData();
+					$attempt          = DeploymentAttempt::from_database( $row );
+					$data             = $attempt->safe_data();
 					$key              = $data['package_type'] . "\0" . $data['package_slug'];
 					$existing[ $key ] = $attempt;
 				}
@@ -299,7 +299,7 @@ final class DeploymentAttemptRepository {
 					);
 				}
 				foreach ( $attempts as $attempt ) {
-					BoosterLogger::log( 'attempt queued (webhook)', $attempt->logContext() + array( 'transition' => 'new->queued' ) );
+					BoosterLogger::log( 'attempt queued (webhook)', $attempt->log_context() + array( 'transition' => 'new->queued' ) );
 				}
 
 				return $attempts;
@@ -354,7 +354,7 @@ final class DeploymentAttemptRepository {
 		$this->assertAttemptData( $attempt, $data );
 		BoosterLogger::log(
 			'attempt finished',
-			$attempt->logContext() + array(
+			$attempt->log_context() + array(
 				'transition'   => 'running->' . $outcome->get_state()->value,
 				'outcome_code' => $outcome->get_code(),
 			)
@@ -370,7 +370,7 @@ final class DeploymentAttemptRepository {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
-		return isset( $rows[0] ) ? DeploymentAttempt::fromDatabase( $rows[0] ) : null;
+		return isset( $rows[0] ) ? DeploymentAttempt::from_database( $rows[0] ) : null;
 	}
 
 	/**
@@ -400,8 +400,8 @@ final class DeploymentAttemptRepository {
 		);
 		$found = array();
 		foreach ( $this->readRows( $query ) as $row ) {
-			$attempt = DeploymentAttempt::fromDatabase( $row );
-			$id      = $attempt->getId();
+			$attempt = DeploymentAttempt::from_database( $row );
+			$id      = $attempt->get_id();
 			if ( ! isset( $ids[ $id ] ) || isset( $found[ $id ] ) ) {
 				throw DeploymentStorageFailure::inconsistent();
 			}
@@ -551,7 +551,7 @@ final class DeploymentAttemptRepository {
 		}
 		$query .= $this->prepare( ' ORDER BY id DESC LIMIT %d', $limit );
 
-		return array_map( array( DeploymentAttempt::class, 'fromDatabase' ), $this->readRows( $query ) );
+		return array_map( array( DeploymentAttempt::class, 'from_database' ), $this->readRows( $query ) );
 	}
 
 	/**
@@ -582,10 +582,10 @@ final class DeploymentAttemptRepository {
 			$packageSlug,
 			DeploymentState::SUCCEEDED->value
 		);
-		$attempts = array_map( array( DeploymentAttempt::class, 'fromDatabase' ), $this->readRows( $query ) );
+		$attempts = array_map( array( DeploymentAttempt::class, 'from_database' ), $this->readRows( $query ) );
 		$success  = null;
 		foreach ( $attempts as $attempt ) {
-			if ( DeploymentState::SUCCEEDED === $attempt->getState() ) {
+			if ( DeploymentState::SUCCEEDED === $attempt->get_state() ) {
 				$success = $attempt;
 				break;
 			}
@@ -608,9 +608,9 @@ final class DeploymentAttemptRepository {
 		return $this->transaction(
 			function () use ( $id, $at ): DeploymentAttempt {
 				$row    = $this->lockedAttemptRow( $id );
-				$stored = DeploymentAttempt::fromDatabase( $row );
-				$safe   = $stored->safeData();
-				if ( DeploymentState::RUNNING !== $stored->getState() ) {
+				$stored = DeploymentAttempt::from_database( $row );
+				$safe   = $stored->safe_data();
+				if ( DeploymentState::RUNNING !== $stored->get_state() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				$outcome = null === $safe['mutation_started_at']
@@ -628,7 +628,7 @@ final class DeploymentAttemptRepository {
 				$this->assertAttemptData( $attempt, $data );
 				BoosterLogger::log(
 					'attempt reconciled as stopped',
-					$attempt->logContext() + array(
+					$attempt->log_context() + array(
 						'transition'   => 'running->' . $outcome->get_state()->value,
 						'outcome_code' => $outcome->get_code(),
 					)
@@ -653,8 +653,8 @@ final class DeploymentAttemptRepository {
 		return $this->transaction(
 			function () use ( $id, $correlationId, $userId, $at ): DeploymentAttempt {
 				$row    = $this->lockedAttemptRow( $id, $correlationId );
-				$stored = DeploymentAttempt::fromDatabase( $row );
-				if ( ! $stored->requiresOperatorResolution() ) {
+				$stored = DeploymentAttempt::from_database( $row );
+				if ( ! $stored->requires_operator_resolution() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				$data = array(
@@ -666,12 +666,12 @@ final class DeploymentAttemptRepository {
 				}
 				$attempt = $this->requireExact( $id );
 				$this->assertAttemptData( $attempt, $data );
-				if ( ! hash_equals( $correlationId, $attempt->getCorrelationId() ) || $attempt->requiresOperatorResolution() ) {
+				if ( ! hash_equals( $correlationId, $attempt->get_correlation_id() ) || $attempt->requires_operator_resolution() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				BoosterLogger::log(
 					'attempt operator resolution recorded',
-					$attempt->logContext() + array(
+					$attempt->log_context() + array(
 						'resolved_by' => $userId,
 						'transition'  => 'needs_attention->resolved',
 					)
@@ -690,16 +690,16 @@ final class DeploymentAttemptRepository {
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		$queued = DeploymentAttempt::fromDatabase( $rows[0] );
-		$query  = $this->updateQuery( $queued->getId(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
+		$queued = DeploymentAttempt::from_database( $rows[0] );
+		$query  = $this->updateQuery( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
 		if ( 1 !== $this->database->query( $query ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		$running = $this->requireExact( $queued->getId() );
-		if ( DeploymentState::RUNNING !== $running->getState() ) {
+		$running = $this->requireExact( $queued->get_id() );
+		if ( DeploymentState::RUNNING !== $running->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		BoosterLogger::log( 'attempt claimed from queue', $running->logContext() + array( 'transition' => 'queued->running' ) );
+		BoosterLogger::log( 'attempt claimed from queue', $running->log_context() + array( 'transition' => 'queued->running' ) );
 
 		return $running;
 	}
@@ -711,7 +711,7 @@ final class DeploymentAttemptRepository {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		$attempt = $this->requireExact( $id );
-		$safe    = $attempt->safeData();
+		$safe    = $attempt->safe_data();
 		foreach ( $data as $key => $value ) {
 			if ( (string) ( $safe[ $key ] ?? '' ) !== (string) $value ) {
 				throw DeploymentStorageFailure::inconsistent();
@@ -793,7 +793,7 @@ final class DeploymentAttemptRepository {
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		$attempt = DeploymentAttempt::fromDatabase( $rows[0] );
+		$attempt = DeploymentAttempt::from_database( $rows[0] );
 		$this->assertRowData( $rows[0], $data );
 
 		return $attempt;
@@ -899,7 +899,7 @@ final class DeploymentAttemptRepository {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
-		return isset( $rows[0] ) ? DeploymentAttempt::fromDatabase( $rows[0] ) : null;
+		return isset( $rows[0] ) ? DeploymentAttempt::from_database( $rows[0] ) : null;
 	}
 
 	private function reserveCapacity( int $incomingRows ): void {
@@ -991,7 +991,7 @@ final class DeploymentAttemptRepository {
 
 	/** @param array<string, string|null> $expected */
 	private function assertAttemptData( DeploymentAttempt $attempt, array $expected ): void {
-		$stored = $attempt->safeData();
+		$stored = $attempt->safe_data();
 		foreach ( $expected as $column => $value ) {
 			if ( ! array_key_exists( $column, $stored ) || ! $this->sameStoredValue( $stored[ $column ], $value ) ) {
 				throw DeploymentStorageFailure::inconsistent();

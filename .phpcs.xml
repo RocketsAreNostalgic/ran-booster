@@ -28,6 +28,8 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Deployment/PackageMutationGuard.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CoreSelfUpdatePolicy.php</include-pattern>
 		<include-pattern>/RAN/PackageOperation.php</include-pattern>
 		<include-pattern>/RAN/PackageRemoval/PackageRemovalResult.php</include-pattern>
 		<include-pattern>/RAN/WordPress/CorePackageExecutionResult.php</include-pattern>
@@ -49,6 +51,8 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Deployment/PackageMutationGuard.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CoreSelfUpdatePolicy.php</include-pattern>
 		<include-pattern>/RAN/PackageOperation.php</include-pattern>
 		<include-pattern>/RAN/PackageRemoval/PackageRemovalResult.php</include-pattern>
 		<include-pattern>/RAN/WordPress/CorePackageExecutionResult.php</include-pattern>

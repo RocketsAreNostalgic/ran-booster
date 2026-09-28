@@ -35,7 +35,7 @@ final readonly class PackageOperationService {
 
 	/** @return array{status: string, package?: Package, correlation_id?: string, outcome_code?: string} */
 	public function execute( PackageOperation $operation ): array {
-		PackageMutationGuard::assertPackageMutationAllowed();
+		PackageMutationGuard::assert_package_mutation_allowed();
 		if ( $operation->is_deployment() ) {
 			return $this->deploy( $operation );
 		}
@@ -118,7 +118,7 @@ final readonly class PackageOperationService {
 			? ( null === $operation->identifier ? $this->plugins->fromSlug( $slug ) : $this->plugins->installedPluginFromFile( $operation->identifier ) )
 			: ( null === $operation->identifier ? $this->themes->fromSlug( $slug ) : $this->themes->installedThemeFromStylesheet( $operation->identifier ) );
 		if ( $package instanceof Plugin ) {
-			PackageMutationGuard::assertPluginFileAllowed( $package->getIdentifier() );
+			PackageMutationGuard::assert_plugin_file_allowed( $package->getIdentifier() );
 		}
 		$this->applyRepository( $package, $operation );
 		$this->sourceGuard->assertAllowed( (string) $package->getProviderCode(), (string) $package->getProviderRepositoryId(), 'plugin' === $operation->package_type ? 1 : 2, (string) $package->getIdentifier(), PackageSource::BRANCH );

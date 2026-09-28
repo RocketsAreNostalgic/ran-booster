@@ -29,7 +29,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$seal        = strpos( $bootstrap, '$providerRegistry->seal()' );
-		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allowsNativeDiscovery() )' );
+		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
 		$coreUpdater = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
 		$repository  = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
 		$adapter     = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $coreUpdater )' );

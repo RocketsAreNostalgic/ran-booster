@@ -22,38 +22,38 @@ final class CoreSelfUpdatePolicy {
 	private const MAX_MARKER_SIZE = 4096;
 
 	private function __construct(
-		private readonly string $requestedMode,
-		private readonly string $effectiveMode,
+		private readonly string $requested_mode,
+		private readonly string $effective_mode,
 		private readonly string $reason,
-		private readonly ?string $markerVersion = null,
-		private readonly ?string $markerCommit = null
+		private readonly ?string $marker_version = null,
+		private readonly ?string $marker_commit = null
 	) {
 	}
 
-	public static function detect( string $pluginFile, string $pluginVersion ): self {
-		$requestedMode = self::requestedMode();
-		if ( self::MODE_ENABLED === $requestedMode ) {
-			return new self( $requestedMode, self::MODE_ENABLED, 'configuration_enabled' );
+	public static function detect( string $plugin_file, string $plugin_version ): self {
+		$requested_mode = self::requested_mode();
+		if ( self::MODE_ENABLED === $requested_mode ) {
+			return new self( $requested_mode, self::MODE_ENABLED, 'configuration_enabled' );
 		}
-		if ( self::MODE_DISABLED === $requestedMode ) {
-			return new self( $requestedMode, self::MODE_DISABLED, 'configuration_disabled' );
+		if ( self::MODE_DISABLED === $requested_mode ) {
+			return new self( $requested_mode, self::MODE_DISABLED, 'configuration_disabled' );
 		}
-		if ( self::MODE_AUTO !== $requestedMode ) {
+		if ( self::MODE_AUTO !== $requested_mode ) {
 			return new self( 'invalid', self::MODE_DISABLED, 'configuration_invalid' );
 		}
 
-		$pluginRoot = dirname( $pluginFile );
-		if ( self::hasSourceTreeIndicator( $pluginRoot ) ) {
-			return new self( $requestedMode, self::MODE_DISABLED, 'source_checkout' );
+		$plugin_root = dirname( $plugin_file );
+		if ( self::has_source_tree_indicator( $plugin_root ) ) {
+			return new self( $requested_mode, self::MODE_DISABLED, 'source_checkout' );
 		}
 
-		$marker = self::releaseMarker( $pluginRoot, $pluginVersion );
+		$marker = self::release_marker( $plugin_root, $plugin_version );
 		if ( null === $marker ) {
-			return new self( $requestedMode, self::MODE_DISABLED, 'release_marker_missing_or_invalid' );
+			return new self( $requested_mode, self::MODE_DISABLED, 'release_marker_missing_or_invalid' );
 		}
 
 		return new self(
-			$requestedMode,
+			$requested_mode,
 			self::MODE_ENABLED,
 			'verified_release',
 			$marker['version'],
@@ -61,8 +61,8 @@ final class CoreSelfUpdatePolicy {
 		);
 	}
 
-	public function allowsNativeDiscovery(): bool {
-		return self::MODE_ENABLED === $this->effectiveMode;
+	public function allows_native_discovery(): bool {
+		return self::MODE_ENABLED === $this->effective_mode;
 	}
 
 	/**
@@ -78,15 +78,15 @@ final class CoreSelfUpdatePolicy {
 	 */
 	public function diagnostics(): array {
 		return array(
-			'requested_mode' => $this->requestedMode,
-			'effective_mode' => $this->effectiveMode,
+			'requested_mode' => $this->requested_mode,
+			'effective_mode' => $this->effective_mode,
 			'reason'         => $this->reason,
-			'marker_version' => $this->markerVersion,
-			'marker_commit'  => $this->markerCommit,
+			'marker_version' => $this->marker_version,
+			'marker_commit'  => $this->marker_commit,
 		);
 	}
 
-	private static function requestedMode(): string {
+	private static function requested_mode(): string {
 		if ( ! defined( self::CONFIGURATION ) ) {
 			return self::MODE_AUTO;
 		}
@@ -95,18 +95,18 @@ final class CoreSelfUpdatePolicy {
 		return is_string( $value ) ? strtolower( trim( $value ) ) : 'invalid';
 	}
 
-	private static function hasSourceTreeIndicator( string $pluginRoot ): bool {
-		return is_dir( $pluginRoot . '/.git' )
-			|| is_file( $pluginRoot . '/.git' )
-			|| is_link( $pluginRoot . '/.git' )
-			|| is_file( $pluginRoot . '/composer.json' );
+	private static function has_source_tree_indicator( string $plugin_root ): bool {
+		return is_dir( $plugin_root . '/.git' )
+			|| is_file( $plugin_root . '/.git' )
+			|| is_link( $plugin_root . '/.git' )
+			|| is_file( $plugin_root . '/composer.json' );
 	}
 
 	/**
 	 * @return array{version:string,commit:string}|null
 	 */
-	private static function releaseMarker( string $pluginRoot, string $pluginVersion ): ?array {
-		$path = $pluginRoot . '/' . self::MARKER_FILE;
+	private static function release_marker( string $plugin_root, string $plugin_version ): ?array {
+		$path = $plugin_root . '/' . self::MARKER_FILE;
 		if ( is_link( $path ) || ! is_file( $path ) || ! is_readable( $path ) ) {
 			return null;
 		}
@@ -138,7 +138,7 @@ final class CoreSelfUpdatePolicy {
 			|| self::MARKER_VERSION !== ( $marker['schema_version'] ?? null )
 			|| ! is_string( $marker['version'] ?? null )
 			|| 1 !== preg_match( '/\A[0-9A-Za-z][0-9A-Za-z.+-]{0,79}\z/D', $marker['version'] )
-			|| $pluginVersion !== ( $marker['version'] ?? null )
+			|| $plugin_version !== ( $marker['version'] ?? null )
 			|| ! is_string( $marker['commit'] ?? null )
 			|| 1 !== preg_match( '/\A[0-9a-f]{40}\z/D', $marker['commit'] )
 		) {

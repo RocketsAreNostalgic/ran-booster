@@ -33,7 +33,7 @@ final class PackageMutationGuardTest extends TestCase {
 
 		foreach ( array( 'install-plugin', 'install-theme', 'edit-plugin', 'edit-theme', 'update-plugin', 'update-theme', 'unlink-plugin', 'unlink-theme', 'unlink-delete-plugin', 'unlink-delete-theme' ) as $action ) {
 			try {
-				PackageMutationGuard::assertAdminActionAllowed( $action, array() );
+				PackageMutationGuard::assert_admin_action_allowed( action: $action, request: array() );
 				self::fail( 'Expected multisite package operations to be rejected.' );
 			} catch ( RuntimeException $exception ) {
 				self::assertSame(
@@ -47,7 +47,7 @@ final class PackageMutationGuardTest extends TestCase {
 	public function testOnlyTheExactBoosterPluginFileIsRejected(): void {
 		foreach ( array( 'ran-booster/ran-booster.php', 'ran-booster\\ran-booster.php' ) as $identifier ) {
 			try {
-				PackageMutationGuard::assertAdminActionAllowed( 'update-plugin', array( 'file' => $identifier ) );
+				PackageMutationGuard::assert_admin_action_allowed( 'update-plugin', array( 'file' => $identifier ) );
 				self::fail( 'Expected Booster to reject its exact plugin file.' );
 			} catch ( RuntimeException $exception ) {
 				self::assertStringContainsString( 'own plugin files', $exception->getMessage() );
@@ -60,12 +60,14 @@ final class PackageMutationGuardTest extends TestCase {
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'Deactivate WP Pusher' );
-		PackageMutationGuard::assertWebhookDispatchAllowed();
+		PackageMutationGuard::assert_webhook_dispatch_allowed();
 	}
 
 	public function testSimilarPluginFileNamesRemainAllowed(): void {
+		PackageMutationGuard::assert_bulk_admin_allowed( package_type: 'plugin', identifiers: array( 'other/plugin.php' ) );
+
 		foreach ( array( 'ran-booster/ran-booster-extra.php', 'ran-booster-extra/ran-booster.php', 'other/ran-booster.php' ) as $identifier ) {
-			PackageMutationGuard::assertAdminActionAllowed( 'update-plugin', array( 'file' => $identifier ) );
+			PackageMutationGuard::assert_admin_action_allowed( 'update-plugin', array( 'file' => $identifier ) );
 		}
 
 		self::assertTrue( true );
@@ -73,27 +75,27 @@ final class PackageMutationGuardTest extends TestCase {
 
 	public function testInstalledPluginLinkGuardRejectsOnlyTheExactBoosterFile(): void {
 		$this->expectException( RuntimeException::class );
-		PackageMutationGuard::assertPluginFileAllowed( 'ran-booster/ran-booster.php' );
+		PackageMutationGuard::assert_plugin_file_allowed( 'ran-booster/ran-booster.php' );
 	}
 
 	public function testInstalledPluginLinkGuardAllowsASimilarName(): void {
-		PackageMutationGuard::assertPluginFileAllowed( 'ran-booster-extra/ran-booster.php' );
+		PackageMutationGuard::assert_plugin_file_allowed( 'ran-booster-extra/ran-booster.php' );
 
 		self::assertTrue( true );
 	}
 
 	public function testTargetCapAllowsSixtyFourTargetsAndRejectsTheSixtyFifth(): void {
-		PackageMutationGuard::assertDeploymentTargetCount( 64 );
+		PackageMutationGuard::assert_deployment_target_count( 64 );
 		$this->expectException( RuntimeException::class );
-		PackageMutationGuard::assertDeploymentTargetCount( 65 );
+		PackageMutationGuard::assert_deployment_target_count( 65 );
 	}
 
 	public function testFilesystemMutationRequiresTheWordPressPolicyToAllowBooster(): void {
-		PackageMutationGuard::assertFilesystemMutationAllowed();
+		PackageMutationGuard::assert_filesystem_mutation_allowed();
 		self::assertSame( array( 'ran-booster' ), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
 
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
 		$this->expectException( RuntimeException::class );
-		PackageMutationGuard::assertFilesystemMutationAllowed();
+		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 }

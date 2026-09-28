@@ -251,7 +251,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function assertMutationAllowed(): void {
-		PackageMutationGuard::assertFilesystemMutationAllowed();
+		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 
 	public function frozenTarget( BranchDeploymentDeclaration $deployment, bool $deferExisting ): ?array {

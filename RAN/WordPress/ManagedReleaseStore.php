@@ -58,7 +58,7 @@ class ManagedReleaseStore {
 		?ManagedReleaseConfiguration $configuration,
 		int $userId
 	): bool {
-		PackageMutationGuard::assertPackageMutationAllowed();
+		PackageMutationGuard::assert_package_mutation_allowed();
 
 		$this->assertIdentity( $type, $identifier );
 		if ( $expectedRevision < 1 || PHP_INT_MAX === $expectedRevision || $userId < 0 || $expectedSource === $newSource ) {
@@ -161,7 +161,7 @@ class ManagedReleaseStore {
 		string $channel,
 		int $userId
 	): bool {
-		PackageMutationGuard::assertPackageMutationAllowed();
+		PackageMutationGuard::assert_package_mutation_allowed();
 
 		$this->assertIdentity( $type, $identifier );
 		if ( $expectedRevision < 1

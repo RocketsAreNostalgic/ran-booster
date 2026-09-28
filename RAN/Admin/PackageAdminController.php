@@ -65,7 +65,7 @@ final class PackageAdminController {
 			check_admin_referer( str_replace( 'edit-', 'update-', $action ), '_ran_booster_reinstall_nonce' );
 		}
 		try {
-			PackageMutationGuard::assertAdminActionAllowed( $action, $request );
+			PackageMutationGuard::assert_admin_action_allowed( $action, $request );
 		} catch ( RuntimeException $failure ) {
 			$dashboard->addFailureMessage(
 				new WP_Error( 'ran_booster_unsupported_package_operation', $failure->getMessage() ),

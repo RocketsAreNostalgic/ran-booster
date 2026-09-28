@@ -175,7 +175,7 @@ final class ManagedReleaseTargetRegistrar {
 			return $this->nativeUpdateError( 'authority_changed' );
 		}
 		try {
-			PackageMutationGuard::assertPackageMutationAllowed();
+			PackageMutationGuard::assert_package_mutation_allowed();
 		} catch ( Throwable ) {
 			return $this->nativeUpdateError( 'authority_changed' );
 		}
@@ -245,7 +245,7 @@ final class ManagedReleaseTargetRegistrar {
 			return $this->nativeUpdateError( 'authority_changed' );
 		}
 		try {
-			PackageMutationGuard::assertPackageMutationAllowed();
+			PackageMutationGuard::assert_package_mutation_allowed();
 			if ( $pending['automatic'] ) {
 				if ( ! function_exists( 'doing_action' )
 					|| ! doing_action( 'wp_maybe_auto_update' )

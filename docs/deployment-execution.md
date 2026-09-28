@@ -173,15 +173,16 @@ It refuses to run outside `wp_doing_cron()`.
 
 `PackageMutationGuard` defines the site envelope for package mutation.
 
-- `assertSingleSite()` rejects multisite.
-- `assertFilesystemMutationAllowed()` checks `DISALLOW_FILE_MODS` and
+- `assert_package_mutation_allowed()` enforces the supported runtime envelope
+  (including rejecting multisite) and the WP Pusher coexistence policy.
+- `assert_filesystem_mutation_allowed()` checks `DISALLOW_FILE_MODS` and
   `wp_is_file_mod_allowed()` before synchronous manual admission and again when
   execution begins.
-- `assertWebhookDispatchAllowed()` applies the same single-site gate to web hook
-  admission.
-- `assertPluginFileAllowed()` prevents RAN Booster from attempting to manage
+- `assert_webhook_dispatch_allowed()` applies the same package-mutation gate to
+  web hook admission.
+- `assert_plugin_file_allowed()` prevents RAN Booster from attempting to manage
   its own plugin files.
-- `assertDeploymentTargetCount()` caps web hook fan-out at 64 targets.
+- `assert_deployment_target_count()` caps web hook fan-out at 64 targets.
 
 After archive preparation and lock acquisition, the admitted runner asks the
 host boundary to recheck the frozen target, provider head where applicable,

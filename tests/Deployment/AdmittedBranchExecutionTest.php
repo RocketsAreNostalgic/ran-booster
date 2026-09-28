@@ -325,10 +325,10 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 		$this->artifact = new BoundaryAdmittedArtifact( $this->events );
 	}
 
-	public function recordResolvedRef( string $ref ): void {
+	public function record_resolved_ref( string $ref ): void {
 		$this->events[] = 'resolved';
 	}
-	public function markMutationStarted(): void {
+	public function mark_mutation_started(): void {
 		$this->events[] = 'mutation';
 	}
 	public function finish( string $code ): void {

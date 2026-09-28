@@ -60,10 +60,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/WordPress/CorePackageExecutionFailure.php`,
 `RAN/Deployment/PackageMutationGuard.php`, `RAN/WordPress/CoreSelfUpdatePolicy.php`,
 `RAN/Admin/BulkPackageAction.php`, `RAN/Admin/BulkPackageActionFailure.php`,
-`RAN/Admin/BulkPackageResult.php` and `RAN/Admin/BulkPackageActionService.php`.
+`RAN/Admin/BulkPackageResult.php`, `RAN/Admin/BulkPackageActionService.php`,
+`RAN/Secrets/SecretsStorageProvisioningResult.php`,
+`RAN/Secrets/WpConfigPathWriteResult.php`,
+`RAN/Secrets/SecretsStorageUnavailable.php` and
+`RAN/Secrets/SecretsRuntimeAvailability.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This twenty-five-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This twenty-nine-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,

@@ -251,7 +251,7 @@ class Dispatcher {
 
 		try {
 			$result = null === $this->secretsStorage
-				? SecretsStorageProvisioningResult::manualRequired(
+				? SecretsStorageProvisioningResult::manual_required(
 					'provisioner_unavailable',
 					__( 'Automatic secure storage setup is unavailable.', 'ran-booster' )
 				)
@@ -270,13 +270,13 @@ class Dispatcher {
 					'step'          => 'provision',
 				)
 			);
-			$result = SecretsStorageProvisioningResult::manualRequired(
+			$result = SecretsStorageProvisioningResult::manual_required(
 				'provisioning_failed',
 				__( 'Automatic secure storage setup could not be completed.', 'ran-booster' )
 			);
 		}
 
-		if ( $result->requiresNextRequestVerification() ) {
+		if ( $result->requires_next_request_verification() ) {
 			$adminUrl = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
@@ -309,7 +309,7 @@ class Dispatcher {
 
 		try {
 			$result = null === $this->secretsStorage
-				? SecretsStorageProvisioningResult::manualRequired(
+				? SecretsStorageProvisioningResult::manual_required(
 					'provisioner_unavailable',
 					__( 'Automatic storage recovery is unavailable.', 'ran-booster' )
 				)
@@ -328,13 +328,13 @@ class Dispatcher {
 					'step'          => 'adopt',
 				)
 			);
-			$result = SecretsStorageProvisioningResult::manualRequired(
+			$result = SecretsStorageProvisioningResult::manual_required(
 				'recovery_failed',
 				__( 'Automatic storage recovery could not be completed.', 'ran-booster' )
 			);
 		}
 
-		if ( $result->requiresNextRequestVerification() ) {
+		if ( $result->requires_next_request_verification() ) {
 			$adminUrl = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
@@ -365,7 +365,7 @@ class Dispatcher {
 
 		try {
 			$result = null === $this->secretsStorage
-				? SecretsStorageProvisioningResult::manualRequired(
+				? SecretsStorageProvisioningResult::manual_required(
 					'provisioner_unavailable',
 					__( 'Empty credential storage reset is unavailable.', 'ran-booster' )
 				)
@@ -384,7 +384,7 @@ class Dispatcher {
 					'step'          => 'reset',
 				)
 			);
-			$result = SecretsStorageProvisioningResult::manualRequired(
+			$result = SecretsStorageProvisioningResult::manual_required(
 				'storage_reset_failed',
 				__( 'Empty credential storage could not be reset safely.', 'ran-booster' )
 			);

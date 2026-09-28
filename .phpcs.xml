@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Secrets/SecretsStorageProvisioningResult.php</include-pattern>
+		<include-pattern>/RAN/Secrets/WpConfigPathWriteResult.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsStorageUnavailable.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsRuntimeAvailability.php</include-pattern>
 		<include-pattern>/RAN/Admin/BulkPackageAction.php</include-pattern>
 		<include-pattern>/RAN/Admin/BulkPackageActionFailure.php</include-pattern>
 		<include-pattern>/RAN/Admin/BulkPackageResult.php</include-pattern>
@@ -55,6 +59,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Secrets/SecretsStorageProvisioningResult.php</include-pattern>
+		<include-pattern>/RAN/Secrets/WpConfigPathWriteResult.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsStorageUnavailable.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsRuntimeAvailability.php</include-pattern>
 		<include-pattern>/RAN/Admin/BulkPackageAction.php</include-pattern>
 		<include-pattern>/RAN/Admin/BulkPackageActionFailure.php</include-pattern>
 		<include-pattern>/RAN/Admin/BulkPackageResult.php</include-pattern>

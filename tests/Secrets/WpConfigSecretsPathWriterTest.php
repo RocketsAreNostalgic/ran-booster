@@ -42,7 +42,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$result = ( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->sidecarPath );
 
 		self::assertSame( WpConfigPathWriteResult::STATUS_PENDING_VERIFICATION, $result->status() );
-		self::assertTrue( $result->requiresNextRequestVerification() );
+		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertSame( 0640, fileperms( $this->configPath ) & 0777 );
 		self::assertSame( fileowner( $this->configPath . '.ran-booster.lock' ), fileowner( $this->configPath ) );
 		self::assertSame( 0600, fileperms( $this->configPath . '.ran-booster.lock' ) & 0777 );
@@ -124,7 +124,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$result  = $writer->retargetOwnedDefinition( $this->configPath, $this->sidecarPath, $replacement );
 		$written = (string) file_get_contents( $this->configPath );
 
-		self::assertTrue( $result->requiresNextRequestVerification() );
+		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertStringNotContainsString(
 			"define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->sidecarPath ) . "' );",
 			$written
@@ -513,7 +513,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 		$result = $writer->write( $this->configPath, $this->sidecarPath );
 
-		self::assertTrue( $result->requiresNextRequestVerification() );
+		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertSame( 0640, fileperms( $this->configPath ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->configPath ) );
 		self::assertSame( $group, filegroup( $this->configPath ) );

@@ -39,7 +39,7 @@ class SecretsStorageProvisioner {
 
 		$configured = $this->configuredPath();
 		if ( false === $configured ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'configured_path_invalid',
 				__( 'The encrypted secrets path constant is not a valid absolute path.', 'ran-booster' )
 			);
@@ -48,7 +48,7 @@ class SecretsStorageProvisioner {
 			$pathIsSafe = $this->validateConfiguredCandidate( $configured );
 			$source     = $this->configuredPathSource( $configured, $pathIsSafe );
 			if ( ! $pathIsSafe ) {
-				return SecretsStorageProvisioningResult::storageNeedsAttention(
+				return SecretsStorageProvisioningResult::storage_needs_attention(
 					$configured,
 					$source,
 					'configured_path_unsafe',
@@ -58,7 +58,7 @@ class SecretsStorageProvisioner {
 
 			$pathFailure = $this->inspectReadyPath( $configured );
 			if ( null !== $pathFailure ) {
-				return SecretsStorageProvisioningResult::storageNeedsAttention(
+				return SecretsStorageProvisioningResult::storage_needs_attention(
 					$configured,
 					$source,
 					$pathFailure['code'],
@@ -68,19 +68,19 @@ class SecretsStorageProvisioner {
 
 			try {
 				return $this->managedStorageHealthy()
-					? SecretsStorageProvisioningResult::storageHealthy( $configured, $source )
-					: SecretsStorageProvisioningResult::pathConfigured( $configured, $source );
+					? SecretsStorageProvisioningResult::storage_healthy( $configured, $source )
+					: SecretsStorageProvisioningResult::path_configured( $configured, $source );
 			} catch ( SecretsStorageUnavailable $failure ) {
 				$diagnostic = $this->managedStorageDiagnostic( $failure );
 
-				return SecretsStorageProvisioningResult::storageNeedsAttention(
+				return SecretsStorageProvisioningResult::storage_needs_attention(
 					$configured,
 					$source,
 					$diagnostic['code'],
 					$diagnostic['message']
 				);
 			} catch ( Throwable ) {
-				return SecretsStorageProvisioningResult::storageNeedsAttention( $configured, $source );
+				return SecretsStorageProvisioningResult::storage_needs_attention( $configured, $source );
 			}
 		}
 
@@ -95,7 +95,7 @@ class SecretsStorageProvisioner {
 		try {
 			$candidate = $this->resolveCandidate( $discarded );
 		} catch ( Throwable ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'location_unavailable',
 				__( 'Booster could not determine a safe private storage location.', 'ran-booster' ),
 				null,
@@ -103,7 +103,7 @@ class SecretsStorageProvisioner {
 			);
 		}
 		if ( null === $candidate ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'location_unavailable',
 				__( 'Booster could not determine a safe private storage location.', 'ran-booster' ),
 				null,
@@ -112,26 +112,26 @@ class SecretsStorageProvisioner {
 		}
 
 		if ( null === $this->loadedWpConfigPath() ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'wp_config_unavailable',
 				__( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ),
 				$candidate
 			);
 		}
 
-		return SecretsStorageProvisioningResult::setupAvailable( $candidate );
+		return SecretsStorageProvisioningResult::setup_available( $candidate );
 	}
 
 	public function provision(): SecretsStorageProvisioningResult {
 		$status = $this->status();
-		if ( ! $status->canProvisionAutomatically() ) {
+		if ( ! $status->can_provision_automatically() ) {
 			return $status;
 		}
 
-		$candidate = $status->candidatePath();
+		$candidate = $status->candidate_path();
 		$config    = $this->loadedWpConfigPath();
 		if ( null === $candidate || null === $config ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'wp_config_unavailable',
 				__( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ),
 				$candidate
@@ -144,14 +144,14 @@ class SecretsStorageProvisioner {
 			$passed = false;
 		}
 		if ( ! $passed ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'filesystem_probe_failed',
 				__( 'The private storage filesystem did not pass Booster\'s safety checks.', 'ran-booster' ),
 				$candidate
 			);
 		}
 		if ( ! $this->validateConfiguredCandidate( $candidate ) ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'candidate_path_unsafe',
 				__( 'The private storage location changed or did not pass Booster\'s final path-safety check.', 'ran-booster' ),
 				$candidate
@@ -159,7 +159,7 @@ class SecretsStorageProvisioner {
 		}
 
 		if ( ! $this->sameFilesystemDevice( dirname( $candidate ), $config ) ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'filesystem_device_mismatch',
 				__( 'The private storage location and WordPress configuration are not on one verified local filesystem.', 'ran-booster' ),
 				$candidate
@@ -169,28 +169,28 @@ class SecretsStorageProvisioner {
 		try {
 			$result = $this->writeConfiguration( $config, $candidate );
 		} catch ( WpConfigPathWriteException $exception ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				$this->stableCode( $exception->reason(), 'wp_config_write_failed' ),
 				$this->wpConfigWriteFailureMessage( $exception->reason() ),
 				$candidate
 			);
 		} catch ( Throwable ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+			return SecretsStorageProvisioningResult::manual_required(
 				'wp_config_write_failed',
 				__( 'The WordPress configuration could not be updated safely.', 'ran-booster' ),
 				$candidate
 			);
 		}
 
-		if ( ! $result->requiresNextRequestVerification() ) {
-			return SecretsStorageProvisioningResult::manualRequired(
+		if ( ! $result->requires_next_request_verification() ) {
+			return SecretsStorageProvisioningResult::manual_required(
 				'wp_config_verification_unavailable',
 				__( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ),
 				$candidate
 			);
 		}
 
-		return SecretsStorageProvisioningResult::pendingVerification( $candidate );
+		return SecretsStorageProvisioningResult::pending_verification( $candidate );
 	}
 
 	/**
@@ -205,7 +205,7 @@ class SecretsStorageProvisioner {
 	 * }|null
 	 */
 	public function recoveryState( SecretsStorageProvisioningResult $status ): ?array {
-		$current           = $status->candidatePath();
+		$current           = $status->candidate_path();
 		$missingCiphertext = null !== $current && $this->currentCiphertextIsAbsent( $current );
 		$missingKey        = 'storage_key_missing' === $status->code();
 		if ( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION !== $status->status()
@@ -325,8 +325,8 @@ class SecretsStorageProvisioner {
 
 	public function resetOrphanedStorage( string $confirmation ): SecretsStorageProvisioningResult {
 		$status  = $this->status();
-		$current = $status->candidatePath();
-		$source  = $status->pathSource();
+		$current = $status->candidate_path();
+		$source  = $status->path_source();
 		if ( null === $current
 			|| null === $source
 			|| ! hash_equals( self::RESET_CONFIRMATION, $confirmation )
@@ -349,12 +349,12 @@ class SecretsStorageProvisioner {
 			return $this->resetFailure( $status, 'storage_reset_failed', __( 'The incomplete credential storage could not be reset safely. No storage reset was confirmed.', 'ran-booster' ) );
 		}
 
-		return SecretsStorageProvisioningResult::storageReset( $current, $source );
+		return SecretsStorageProvisioningResult::storage_reset( $current, $source );
 	}
 
 	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
 		$status  = $this->status();
-		$current = $status->candidatePath();
+		$current = $status->candidate_path();
 		if ( 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $token ) || null === $current ) {
 			return $this->recoveryFailure( $current, 'recovery_request_invalid', __( 'The storage recovery request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
 		}
@@ -386,8 +386,8 @@ class SecretsStorageProvisioner {
 			return $this->recoveryFailure( $current, 'recovery_write_failed', __( 'The recoverable storage path could not be adopted safely.', 'ran-booster' ) );
 		}
 
-		return false !== $result && $result->requiresNextRequestVerification()
-			? SecretsStorageProvisioningResult::pendingVerification( $offer['candidate_path'] )
+		return false !== $result && $result->requires_next_request_verification()
+			? SecretsStorageProvisioningResult::pending_verification( $offer['candidate_path'] )
 			: $this->recoveryFailure( $current, 'wp_config_verification_unavailable', __( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ) );
 	}
 
@@ -702,8 +702,8 @@ class SecretsStorageProvisioner {
 
 	private function recoveryFailure( ?string $current, string $code, string $message ): SecretsStorageProvisioningResult {
 		return null === $current
-			? SecretsStorageProvisioningResult::manualRequired( $code, $message )
-			: SecretsStorageProvisioningResult::storageNeedsAttention(
+			? SecretsStorageProvisioningResult::manual_required( $code, $message )
+			: SecretsStorageProvisioningResult::storage_needs_attention(
 				$current,
 				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL,
 				$code,
@@ -712,12 +712,12 @@ class SecretsStorageProvisioner {
 	}
 
 	private function resetFailure( SecretsStorageProvisioningResult $status, string $code, string $message ): SecretsStorageProvisioningResult {
-		$current = $status->candidatePath();
-		$source  = $status->pathSource();
+		$current = $status->candidate_path();
+		$source  = $status->path_source();
 
 		return null === $current || null === $source
-			? SecretsStorageProvisioningResult::manualRequired( $code, $message )
-			: SecretsStorageProvisioningResult::storageNeedsAttention( $current, $source, $code, $message );
+			? SecretsStorageProvisioningResult::manual_required( $code, $message )
+			: SecretsStorageProvisioningResult::storage_needs_attention( $current, $source, $code, $message );
 	}
 
 	/** @return array{code: string, message: string}|null */

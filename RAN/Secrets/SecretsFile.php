@@ -87,7 +87,7 @@ class SecretsFile {
 	 * @return bool True when insecure permissions were repaired.
 	 */
 	public function verifyAndSecure(): bool {
-		if ( ! $this->availability->isAvailable() || ! $this->hasManagedMaterial() ) {
+		if ( ! $this->availability->is_available() || ! $this->hasManagedMaterial() ) {
 			return false;
 		}
 
@@ -325,7 +325,7 @@ class SecretsFile {
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function credentialProfiles( ProviderCode|string $provider ): array {
-		if ( ! $this->availability->isAvailable() ) {
+		if ( ! $this->availability->is_available() ) {
 			return array();
 		}
 
@@ -372,7 +372,7 @@ class SecretsFile {
 	 * @return array<string, mixed>|null
 	 */
 	public function credentialMaterial( ProviderCode|string $provider, ?string $id = null ): ?array {
-		if ( ! $this->availability->isAvailable() && self::CONSTANT_PROFILE !== $id ) {
+		if ( ! $this->availability->is_available() && self::CONSTANT_PROFILE !== $id ) {
 			$this->assertAvailable();
 		}
 
@@ -657,7 +657,7 @@ class SecretsFile {
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function webhookProfiles( ProviderCode|string $provider ): array {
-		if ( ! $this->availability->isAvailable() ) {
+		if ( ! $this->availability->is_available() ) {
 			return array();
 		}
 
@@ -1965,7 +1965,7 @@ class SecretsFile {
 	}
 
 	private function assertAvailable(): void {
-		if ( ! $this->availability->isAvailable() ) {
+		if ( ! $this->availability->is_available() ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Availability exposes one fixed, pathless operator message.
 			throw $this->unavailable( $this->availability->message() );
 		}

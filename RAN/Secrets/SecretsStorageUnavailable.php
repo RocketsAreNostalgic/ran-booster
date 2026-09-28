@@ -21,7 +21,7 @@ final class SecretsStorageUnavailable extends RuntimeException {
 		parent::__construct( $message );
 	}
 
-	public function getDiagnosticId(): string {
+	public function get_diagnostic_id(): string {
 		return self::DIAGNOSTIC_ID;
 	}
 

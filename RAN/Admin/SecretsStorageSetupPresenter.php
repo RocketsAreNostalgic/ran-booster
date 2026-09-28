@@ -45,13 +45,13 @@ final readonly class SecretsStorageSetupPresenter {
 		bool $includeSensitiveDetails = true,
 		?array $recovery = null
 	): array {
-		$candidate          = $includeSensitiveDetails ? $result->candidatePath() : null;
+		$candidate          = $includeSensitiveDetails ? $result->candidate_path() : null;
 		$directoryCommands  = array();
 		$configAlternatives = null;
 		$manualPreflight    = null;
 		if ( null !== $candidate
-			&& ! $result->hasConfiguredPath()
-			&& ! $result->requiresNextRequestVerification()
+			&& ! $result->has_configured_path()
+			&& ! $result->requires_next_request_verification()
 		) {
 			$directory = dirname( $candidate );
 			$parent    = dirname( $directory );
@@ -103,7 +103,7 @@ final readonly class SecretsStorageSetupPresenter {
 			);
 		}
 		$discardedCandidates = $includeSensitiveDetails
-			? $this->localizedDiscardedCandidates( $result->discardedCandidates() )
+			? $this->localizedDiscardedCandidates( $result->discarded_candidates() )
 			: array();
 
 		return array(
@@ -112,9 +112,9 @@ final readonly class SecretsStorageSetupPresenter {
 			'message'              => $result->message(),
 			'candidate_path'       => $candidate,
 			'candidate_directory'  => null === $candidate ? null : dirname( $candidate ),
-			'path_source'          => $includeSensitiveDetails ? $result->pathSource() : null,
+			'path_source'          => $includeSensitiveDetails ? $result->path_source() : null,
 			'discarded_candidates' => $discardedCandidates,
-			'can_provision'        => $includeSensitiveDetails && $result->canProvisionAutomatically(),
+			'can_provision'        => $includeSensitiveDetails && $result->can_provision_automatically(),
 			'action_url'           => $actionUrl,
 			'recovery'             => $recoveryPayload,
 			'manual_preflight'     => $manualPreflight,

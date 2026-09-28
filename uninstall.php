@@ -7,7 +7,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 try {
 	require_once __DIR__ . '/autoload.php';
 	$ran_booster_secrets = new \RAN\Secrets\SecretsFile(
-		availability: \RAN\Secrets\SecretsRuntimeAvailability::forConfirmedUninstall( __DIR__ . '/ran-booster.php' )
+		availability: \RAN\Secrets\SecretsRuntimeAvailability::for_confirmed_uninstall( __DIR__ . '/ran-booster.php' )
 	);
 	( new \RAN\Uninstall\LocalDataRemover(
 		$ran_booster_secrets,

@@ -70,8 +70,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::SETUP_AVAILABLE, $result->status() );
 		self::assertSame( 'setup_available', $result->code() );
-		self::assertSame( $this->candidate, $result->candidatePath() );
-		self::assertTrue( $result->canProvisionAutomatically() );
+		self::assertSame( $this->candidate, $result->candidate_path() );
+		self::assertTrue( $result->can_provision_automatically() );
 		self::assertFalse( $provisioner->probeCalled );
 		self::assertFalse( $provisioner->writerCalled );
 		self::assertDirectoryDoesNotExist( dirname( $this->candidate ) );
@@ -86,17 +86,17 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner = $this->provisioner();
 		$status      = $provisioner->status();
 		$pending     = $provisioner->provision();
-		$attention   = SecretsStorageProvisioningResult::storageNeedsAttention(
+		$attention   = SecretsStorageProvisioningResult::storage_needs_attention(
 			$this->candidate,
 			SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 		);
 
 		self::assertSame( 'Stockage sécurisé prêt.', $status->message() );
 		self::assertSame( 'setup_available', $status->code() );
-		self::assertSame( $this->candidate, $status->candidatePath() );
+		self::assertSame( $this->candidate, $status->candidate_path() );
 		self::assertSame( 'WordPress doit recharger.', $pending->message() );
 		self::assertSame( 'pending_verification', $pending->code() );
-		self::assertSame( $this->candidate, $pending->candidatePath() );
+		self::assertSame( $this->candidate, $pending->candidate_path() );
 		self::assertSame( 'Stockage chiffré incomplet.', $attention->message() );
 	}
 
@@ -115,7 +115,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$directoryResult         = $provisioner->status();
 
 		self::assertSame( 'storage_directory_unusable', $directoryResult->code() );
-		self::assertSame( $provisioner->configured, $directoryResult->candidatePath() );
+		self::assertSame( $provisioner->configured, $directoryResult->candidate_path() );
 		self::assertStringContainsString( 'répertoire', $directoryResult->message() );
 		self::assertStringContainsString( '0755', $directoryResult->message() );
 		self::assertStringContainsString( '0700', $directoryResult->message() );
@@ -127,7 +127,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$fileResult = $provisioner->status();
 
 		self::assertSame( 'storage_file_unusable', $fileResult->code() );
-		self::assertSame( $file, $fileResult->candidatePath() );
+		self::assertSame( $file, $fileResult->candidate_path() );
 		self::assertStringContainsString( 'fichier', $fileResult->message() );
 		self::assertStringContainsString( '0644', $fileResult->message() );
 		self::assertStringContainsString( '0600', $fileResult->message() );
@@ -139,7 +139,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$lockResult = $provisioner->status();
 
 		self::assertSame( 'storage_lock_unusable', $lockResult->code() );
-		self::assertSame( $file, $lockResult->candidatePath() );
+		self::assertSame( $file, $lockResult->candidate_path() );
 		self::assertStringContainsString( 'fichier verrou', $lockResult->message() );
 		self::assertStringContainsString( '0644', $lockResult->message() );
 		self::assertStringContainsString( '0600', $lockResult->message() );
@@ -233,7 +233,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 			$result = $provisioner->status();
 
 			self::assertSame( $code, $result->code(), $message );
-			self::assertSame( $provisioner->configured, $result->candidatePath(), $message );
+			self::assertSame( $provisioner->configured, $result->candidate_path(), $message );
 			self::assertSame( 'Diagnostic traduit : ' . $code, $result->message(), $message );
 		}
 	}
@@ -254,7 +254,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
 		self::assertSame( 'location_unavailable', $result->code() );
-		self::assertSame( $provisioner->discardedCandidates, $result->discardedCandidates() );
+		self::assertSame( $provisioner->discardedCandidates, $result->discarded_candidates() );
 		self::assertFalse( $provisioner->probeCalled );
 		self::assertFalse( $provisioner->writerCalled );
 	}
@@ -265,7 +265,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$pending = $provisioner->provision();
 
 		self::assertSame( SecretsStorageProvisioningResult::PENDING_VERIFICATION, $pending->status() );
-		self::assertTrue( $pending->requiresNextRequestVerification() );
+		self::assertTrue( $pending->requires_next_request_verification() );
 		self::assertTrue( $provisioner->probeCalled );
 		self::assertTrue( $provisioner->writerCalled );
 		self::assertDirectoryExists( dirname( $this->candidate ) );
@@ -283,8 +283,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$configured              = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $configured->status() );
-		self::assertTrue( $configured->hasConfiguredPath() );
-		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $configured->pathSource() );
+		self::assertTrue( $configured->has_configured_path() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $configured->path_source() );
 	}
 
 	public function testValidManualOverrideIsHandledBeforeAutomaticSuggestionResolution(): void {
@@ -296,8 +296,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$result = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
-		self::assertSame( $manual . '/secrets.json', $result->candidatePath() );
-		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->pathSource() );
+		self::assertSame( $manual . '/secrets.json', $result->candidate_path() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->path_source() );
 		self::assertTrue( $provisioner->resolverCalled );
 		self::assertFalse( $provisioner->probeCalled );
 		self::assertFalse( $provisioner->writerCalled );
@@ -316,7 +316,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$result                                = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
-		self::assertSame( $directory . '/secrets.json', $result->candidatePath() );
+		self::assertSame( $directory . '/secrets.json', $result->candidate_path() );
 		self::assertSame( $directory . '/secrets.json', ( new SecretsFile() )->path() );
 	}
 
@@ -335,7 +335,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
 		self::assertSame( 'configured_path_invalid', $result->code() );
-		self::assertNull( $result->candidatePath() );
+		self::assertNull( $result->candidate_path() );
 		self::assertNull( ( new SecretsFile() )->path() );
 	}
 
@@ -353,7 +353,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
 		self::assertSame( 'configured_path_invalid', $result->code() );
-		self::assertNull( $result->candidatePath() );
+		self::assertNull( $result->candidate_path() );
 		self::assertNull( ( new SecretsFile() )->path() );
 	}
 
@@ -368,7 +368,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
 		self::assertSame( 'configured_path_invalid', $result->code() );
-		self::assertNull( $result->candidatePath() );
+		self::assertNull( $result->candidate_path() );
 		self::assertNull( ( new SecretsFile() )->path() );
 	}
 
@@ -383,7 +383,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
 		self::assertSame( 'configured_path_invalid', $result->code() );
-		self::assertNull( $result->candidatePath() );
+		self::assertNull( $result->candidate_path() );
 		self::assertNull( ( new SecretsFile() )->path() );
 	}
 
@@ -511,8 +511,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $result->status() );
 		self::assertSame( 'configured_path_unsafe', $result->code() );
-		self::assertSame( $this->wordpressRoot . '/secrets.json', $result->candidatePath() );
-		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->pathSource() );
+		self::assertSame( $this->wordpressRoot . '/secrets.json', $result->candidate_path() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->path_source() );
 		self::assertStringContainsString( 'outside the public web root', $result->message() );
 		self::assertFalse( $provisioner->resolverCalled );
 	}
@@ -526,7 +526,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$result = $provisioner->status();
 
 		self::assertSame( 'configured_path_unsafe', $result->code() );
-		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $result->pathSource() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $result->path_source() );
 		self::assertFalse( $provisioner->resolverCalled );
 	}
 
@@ -707,7 +707,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\A[a-f0-9]{64}\z/D', (string) $recovery['token'] );
 
 		$result = $provisioner->adoptRecovery( (string) $recovery['token'] );
-		self::assertTrue( $result->requiresNextRequestVerification() );
+		self::assertTrue( $result->requires_next_request_verification() );
 		$config = (string) file_get_contents( $this->configPath );
 		self::assertStringContainsString( dirname( $old ), $config );
 		self::assertStringNotContainsString( dirname( $this->candidate ), $config );
@@ -733,7 +733,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( 'config_changed', $result->code() );
 		self::assertSame( 'Configuration changed translation.', $result->message() );
 		self::assertStringNotContainsString( 'Raw recovery writer canary', $result->message() );
-		self::assertSame( $this->candidate, $result->candidatePath() );
+		self::assertSame( $this->candidate, $result->candidate_path() );
 		self::assertSame( array( $old, $old ), $provisioner->authenticatedCandidates );
 	}
 

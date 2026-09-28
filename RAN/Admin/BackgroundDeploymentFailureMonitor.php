@@ -88,7 +88,7 @@ final class BackgroundDeploymentFailureMonitor {
 				'package_slug'   => (string) $data['package_slug'],
 				'provider'       => $provider,
 				'provider_label' => $providerLabel,
-				'credential_id'  => $request->credentialId,
+				'credential_id'  => $request->credential_id,
 				'state'          => $attempt->getState()->value,
 				'outcome_code'   => (string) $data['outcome_code'],
 				'finished_at'    => (string) $data['finished_at'],

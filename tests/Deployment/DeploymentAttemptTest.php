@@ -83,7 +83,7 @@ final class DeploymentAttemptTest extends TestCase {
 			'state'                   => 'queued',
 			'mutation_started_at'     => null,
 			'outcome_code'            => null,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => '2026-07-19 00:00:00',
 			'finished_at'             => null,
 			'resolved_at'             => null,

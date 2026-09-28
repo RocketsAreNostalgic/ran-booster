@@ -44,8 +44,8 @@ BranchUpdaterBootstrap::register();
 $assert( class_exists( RAN\UpdaterSupport\V1\RepositoryRelativePath::class ), 'The shared updater-support runtime must autoload after dependency registration.' );
 
 $request = new DeploymentRequest( 'org/package', 'profile_1', true, 'main', 'package', 'wordpress', DeploymentPolicy::AUTOMATIC, 7 );
-$assert( $request->toJson() === DeploymentRequest::fromJson( $request->toJson() )->toJson(), 'Deployment requests must round-trip canonically.' );
-$assert( ! str_contains( $request->toJson(), 'Authorization' ), 'The durable request must not contain authorization material.' );
+$assert( $request->to_json() === DeploymentRequest::from_json( $request->to_json() )->to_json(), 'Deployment requests must round-trip canonically.' );
+$assert( ! str_contains( $request->to_json(), 'Authorization' ), 'The durable request must not contain authorization material.' );
 $assert( DeploymentPolicy::MANUAL->allows_manual_mutation(), 'Manual policy must allow administrator deployment.' );
 $assert( ! DeploymentPolicy::MANUAL->allows_webhook_mutation(), 'Manual policy must reject webhook deployment.' );
 $assert( DeploymentPolicy::AUTOMATIC->allows_webhook_mutation(), 'Automatic policy must allow webhook deployment.' );

@@ -80,7 +80,7 @@ final class DeploymentAttemptRepository {
 
 		return $this->transaction(
 			function () use ( $operation, $packageType, $provider, $providerRepositoryId, $request, $requestedRef, $packageSource, $packageSourceRevision ): DeploymentAttempt {
-				$active = $this->activePackageAttempt( $packageType, $request->packageSlug );
+				$active = $this->activePackageAttempt( $packageType, $request->package_slug );
 				if ( null !== $active ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
 					throw DeploymentStorageFailure::contention( $active->safeData() );
@@ -148,7 +148,7 @@ final class DeploymentAttemptRepository {
 			$this->assertSafeText( $target['provider_repository_id'], 191 );
 			$this->assertSafeText( $target['requested_ref'], 255 );
 			$this->assertPackageSource( $target['package_source'], $target['package_source_revision'] );
-			$key = $target['package_type'] . "\0" . $target['request']->packageSlug;
+			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
 				throw DeploymentStorageFailure::invalidRecord();
 			}
@@ -163,7 +163,7 @@ final class DeploymentAttemptRepository {
 
 				foreach ( $normalized as $target ) {
 					$request = $target['request'];
-					$active  = $this->activePackageAttempt( $target['package_type'], $request->packageSlug );
+					$active  = $this->activePackageAttempt( $target['package_type'], $request->package_slug );
 					if ( null !== $active ) {
 						$busy[] = $active->safeData();
 						continue;
@@ -238,7 +238,7 @@ final class DeploymentAttemptRepository {
 			$this->assertSafeText( $target['provider_repository_id'], 191 );
 			$this->assertSafeText( $target['requested_ref'], 255 );
 			$this->assertPackageSource( $target['package_source'], $target['package_source_revision'] );
-			$key = $target['package_type'] . "\0" . $target['request']->packageSlug;
+			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
 				throw DeploymentStorageFailure::invalidRecord();
 			}
@@ -762,7 +762,7 @@ final class DeploymentAttemptRepository {
 			'source'                  => $source,
 			'operation'               => $operation,
 			'package_type'            => $packageType,
-			'package_slug'            => $request->packageSlug,
+			'package_slug'            => $request->package_slug,
 			'package_source'          => $packageSource,
 			'package_source_revision' => $packageSourceRevision,
 			'provider'                => $provider,
@@ -774,7 +774,7 @@ final class DeploymentAttemptRepository {
 			'state'                   => DeploymentState::QUEUED->value,
 			'mutation_started_at'     => null,
 			'outcome_code'            => null,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => $this->timeString( $this->now() ),
 			'finished_at'             => null,
 			'resolved_at'             => null,

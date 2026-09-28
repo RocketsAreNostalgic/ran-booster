@@ -280,7 +280,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 			'state'                   => $state,
 			'mutation_started_at'     => null,
 			'outcome_code'            => $outcome,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => sprintf( '2026-07-23 12:%02d:00', $id ),
 			'finished_at'             => sprintf( '2026-07-23 12:%02d:30', $id ),
 		);

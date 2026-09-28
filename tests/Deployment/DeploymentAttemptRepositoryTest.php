@@ -47,9 +47,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$attempt = $this->manual( 'example' );
 
 		self::assertSame( DeploymentState::RUNNING, $attempt->getState() );
-		self::assertSame( 'example', $attempt->getRequest()->packageSlug );
+		self::assertSame( 'example', $attempt->getRequest()->package_slug );
 		self::assertCount( 1, $this->database->rows );
-		self::assertSame( $attempt->getRequest()->toJson(), $this->database->rows[0]['request_json'] );
+		self::assertSame( $attempt->getRequest()->to_json(), $this->database->rows[0]['request_json'] );
 		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $this->database->queries[0] );
 		self::assertSame( 'START TRANSACTION', $this->database->queries[1] );
 		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
@@ -178,7 +178,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertCount( 200, $this->database->rows );
 		self::assertNotContains( 1, array_column( $this->database->rows, 'id' ) );
 		self::assertContains( 2, array_column( $this->database->rows, 'id' ) );
-		self::assertSame( 'available', $result['admitted'][0]->getRequest()->packageSlug );
+		self::assertSame( 'available', $result['admitted'][0]->getRequest()->package_slug );
 	}
 
 	public function testWebhookBatchAndZeroTargetAcknowledgementReserveTheirExactRows(): void {
@@ -395,7 +395,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			array( $this->target( 'zeta', 'theme' ), $this->target( 'alpha', 'plugin' ) )
 		);
 
-		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->packageSlug, $attempts ) );
+		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->package_slug, $attempts ) );
 		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
 		// The integration gate exercises this ordering with two real connections whose session default is READ COMMITTED.
 		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $this->database->queries[0] );
@@ -411,7 +411,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			)
 		);
 
-		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->packageSlug, $result['admitted'] ) );
+		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->package_slug, $result['admitted'] ) );
 		self::assertSame( array(), $result['busy'] );
 		self::assertSame( array( 'manual', 'manual' ), array_column( $this->database->rows, 'source' ) );
 		self::assertSame( array( 'queued', 'queued' ), array_column( $this->database->rows, 'state' ) );
@@ -433,7 +433,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertCount( 1, $result['busy'] );
 		self::assertSame( $active->getCorrelationId(), $result['busy'][0]['correlation_id'] );
 		self::assertCount( 1, $result['admitted'] );
-		self::assertSame( 'available', $result['admitted'][0]->getRequest()->packageSlug );
+		self::assertSame( 'available', $result['admitted'][0]->getRequest()->package_slug );
 		self::assertCount( 2, $this->database->rows );
 	}
 
@@ -532,7 +532,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 		self::assertCount( 1, $replay );
 		self::assertSame( $first[0]->getId(), $replay[0]->getId() );
-		self::assertSame( 'original', $replay[0]->getRequest()->packageSlug );
+		self::assertSame( 'original', $replay[0]->getRequest()->package_slug );
 		self::assertCount( 1, $this->database->rows );
 	}
 
@@ -779,7 +779,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->manual( 'third' );
 		$history = $this->repository->recentHistory( 2 );
 
-		self::assertSame( array( 'third', 'second' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->packageSlug, $history ) );
+		self::assertSame( array( 'third', 'second' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->package_slug, $history ) );
 		foreach ( $history as $attempt ) {
 			self::assertArrayNotHasKey( 'request_json', $attempt->safeData() );
 			self::assertArrayNotHasKey( 'delivery_digest', $attempt->safeData() );
@@ -858,7 +858,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				'state'                   => $state,
 				'mutation_started_at'     => null,
 				'outcome_code'            => $outcome,
-				'request_json'            => $this->request( $slug )->toJson(),
+				'request_json'            => $this->request( $slug )->to_json(),
 				'created_at'              => '2026-07-18 00:00:00',
 				'finished_at'             => null === $outcome ? null : '2026-07-18 00:01:00',
 				'resolved_at'             => null,

@@ -324,7 +324,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						);
 					} elseif ( null !== $package ) {
 						$actualVersion = $package->getVersion();
-						if ( ! $result->isSuccessful()
+						if ( ! $result->is_successful()
 							|| ! hash_equals( $release->version(), $actualVersion )
 							|| ! $activationUnchanged ) {
 							$outcome = $this->installedButUnmanaged( $identifier, $actualVersion );
@@ -354,9 +354,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 							'management_state_uncertain',
 							array( 'identifier' => $identifier )
 						);
-					} elseif ( ! $result->isSuccessful() ) {
+					} elseif ( ! $result->is_successful() ) {
 						$outcome = ProspectiveReleaseResult::failure(
-							$result->getFailure()?->value ?? 'wordpress_failed'
+							$result->get_failure()?->value ?? 'wordpress_failed'
 						);
 					} else {
 						$outcome = ProspectiveReleaseResult::failure(

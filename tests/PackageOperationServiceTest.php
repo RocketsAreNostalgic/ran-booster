@@ -60,10 +60,10 @@ final class PackageOperationServiceTest extends TestCase {
 
 	#[DataProvider( 'operationMatrix' )]
 	public function testTheExplicitOperationMatrixClassifiesDeployments( string $action, bool $deployment ): void {
-		$operation = PackageOperation::fromInput( $action, $this->input( $action ) );
+		$operation = PackageOperation::from_input( action: $action, input: $this->input( $action ) );
 
-		self::assertSame( $deployment, $operation->isDeployment() );
-		self::assertSame( str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme', $operation->packageType );
+		self::assertSame( $deployment, $operation->is_deployment() );
+		self::assertSame( str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme', $operation->package_type );
 	}
 
 	public function testReinstallAfterSaveDeploysTheAuthoritativeEditedPackageAndReturnsToSettings(): void {
@@ -88,8 +88,8 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 1, $coordinator->calls );
 		self::assertInstanceOf( PackageOperation::class, $coordinator->lastCommand );
 		self::assertSame( 'update', $coordinator->lastCommand->operation );
-		self::assertSame( DeploymentPolicy::MANUAL, $coordinator->lastCommand->expectedPackage['deployment_policy'] );
-		self::assertTrue( $coordinator->lastCommand->hasExpectedPackage() );
+		self::assertSame( DeploymentPolicy::MANUAL, $coordinator->lastCommand->expected_package['deployment_policy'] );
+		self::assertTrue( $coordinator->lastCommand->has_expected_package() );
 		self::assertSame( 'manual', $package->getDeploymentPolicy()->value );
 		$query = $this->redirectQuery( $redirect );
 		self::assertSame( 'update', $query['ran_booster_result'] );
@@ -186,7 +186,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$lock             = new OperationUpdaterLock();
 		$service          = $this->service( $plugins, $themes, new OperationCoordinator(), $lock, $database );
 		try {
-			$service->execute( PackageOperation::fromInput( $action, $this->input( $action, array( 'dry-run' => '1' ) ) ) );
+			$service->execute( PackageOperation::from_input( $action, $this->input( $action, array( 'dry-run' => '1' ) ) ) );
 			self::fail( 'The destination Release owner must prevent adoption or reassignment.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertStringContainsString( 'release-owner', $failure->getMessage() );
@@ -209,17 +209,17 @@ final class PackageOperationServiceTest extends TestCase {
 		$coordinator = new OperationCoordinator();
 		$service     = $this->service( $plugins, $themes, $coordinator );
 
-		$link = PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) );
+		$link = PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) );
 		self::assertSame( 'linked', $service->execute( $link )['status'] );
 		self::assertSame( 'owner/example', (string) $plugins->stored?->getRepository() );
 
-		$edit = PackageOperation::fromInput( 'edit-plugin', $this->input( 'edit-plugin' ) );
+		$edit = PackageOperation::from_input( 'edit-plugin', $this->input( 'edit-plugin' ) );
 		self::assertSame( 'edited', $service->execute( $edit )['status'] );
 		self::assertSame( 'R_example', $plugins->edited['provider_repository_id'] );
 		self::assertSame( PackageSource::BRANCH->value, $plugins->edited['expected_source'] );
 		self::assertSame( 1, $plugins->edited['expected_source_revision'] );
 
-		$unlink = PackageOperation::fromInput( 'unlink-plugin', $this->input( 'unlink-plugin' ) );
+		$unlink = PackageOperation::from_input( 'unlink-plugin', $this->input( 'unlink-plugin' ) );
 		self::assertSame( 'unlinked', $service->execute( $unlink )['status'] );
 		self::assertSame( 'example/example.php', $plugins->unlinked );
 		self::assertSame( 0, $coordinator->calls );
@@ -296,7 +296,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 		try {
 			$service->execute(
-				PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
+				PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
 			);
 			self::fail( 'A mismatched managed package must not be reported as linked.' );
 		} catch ( \RAN\Storage\PackageStorageFailure $failure ) {
@@ -315,10 +315,10 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		$service->execute(
-			PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
+			PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
 		);
 		$service->execute(
-			PackageOperation::fromInput( 'edit-plugin', $this->input( 'edit-plugin' ) )
+			PackageOperation::from_input( 'edit-plugin', $this->input( 'edit-plugin' ) )
 		);
 
 		self::assertSame(
@@ -340,7 +340,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		try {
-			$service->execute( PackageOperation::fromInput( $action, $this->input( $action, array( 'dry-run' => '1' ) ) ) );
+			$service->execute( PackageOperation::from_input( $action, $this->input( $action, array( 'dry-run' => '1' ) ) ) );
 			self::fail( 'Lock contention must reject the package mutation.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertSame( 'Another package operation is in progress.', $failure->getMessage() );
@@ -393,7 +393,7 @@ final class PackageOperationServiceTest extends TestCase {
 				$plugins = new OperationPluginRepository( $package );
 			}
 			$service = $this->service( $plugins, $themes, new OperationCoordinator() );
-			$result  = $service->execute( PackageOperation::fromInput( $action, $change( $this->input( $action ) ) ) );
+			$result  = $service->execute( PackageOperation::from_input( $action, $change( $this->input( $action ) ) ) );
 
 			self::assertSame( 'conflict', $result['status'], $case );
 			self::assertSame( $package, $result['package'], $case );
@@ -430,7 +430,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'The package operation lock could not be released.' );
 		$service->execute(
-			PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
+			PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
 		);
 	}
 
@@ -440,15 +440,15 @@ final class PackageOperationServiceTest extends TestCase {
 		$coordinator = new OperationCoordinator();
 		$service     = $this->service( $plugins, $themes, $coordinator );
 
-		$link = PackageOperation::fromInput( 'install-theme', $this->input( 'install-theme', array( 'dry-run' => '1' ) ) );
+		$link = PackageOperation::from_input( 'install-theme', $this->input( 'install-theme', array( 'dry-run' => '1' ) ) );
 		self::assertSame( 'linked', $service->execute( $link )['status'] );
 		self::assertSame( 'owner/example', (string) $themes->stored?->getRepository() );
 
-		$edit = PackageOperation::fromInput( 'edit-theme', $this->input( 'edit-theme' ) );
+		$edit = PackageOperation::from_input( 'edit-theme', $this->input( 'edit-theme' ) );
 		self::assertSame( 'edited', $service->execute( $edit )['status'] );
 		self::assertSame( 'R_example', $themes->edited['provider_repository_id'] );
 
-		$unlink = PackageOperation::fromInput( 'unlink-theme', $this->input( 'unlink-theme' ) );
+		$unlink = PackageOperation::from_input( 'unlink-theme', $this->input( 'unlink-theme' ) );
 		self::assertSame( 'unlinked', $service->execute( $unlink )['status'] );
 		self::assertSame( 'example', $themes->unlinked );
 		self::assertSame( 0, $coordinator->calls );
@@ -488,7 +488,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'expected_source_revision'        => 2,
 			)
 		);
-		self::assertSame( 'edited', $service->execute( PackageOperation::fromInput( 'edit-plugin', $input ) )['status'] );
+		self::assertSame( 'edited', $service->execute( PackageOperation::from_input( 'edit-plugin', $input ) )['status'] );
 		self::assertSame( 'gh', $plugins->edited['provider'] );
 		self::assertSame( 'owner/release', (string) $plugins->edited['repository'] );
 		self::assertSame( 'R_release', $plugins->edited['provider_repository_id'] );
@@ -502,7 +502,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame(
 			'unlinked',
 			$service->execute(
-				PackageOperation::fromInput(
+				PackageOperation::from_input(
 					'unlink-plugin',
 					$this->input( 'unlink-plugin', array( 'expected_source_revision' => '2' ) )
 				)
@@ -532,7 +532,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'must return to Branch first' );
-		$service->execute( PackageOperation::fromInput( 'edit-plugin', $input ) );
+		$service->execute( PackageOperation::from_input( 'edit-plugin', $input ) );
 	}
 
 	public function testLinkOnlyReturnsTheDisabledPackageReadBack(): void {
@@ -542,7 +542,7 @@ final class PackageOperationServiceTest extends TestCase {
 			new OperationThemeRepository( new OperationTheme( 'example' ) ),
 			new OperationCoordinator()
 		);
-		$operation = PackageOperation::fromInput(
+		$operation = PackageOperation::from_input(
 			'install-plugin',
 			$this->input(
 				'install-plugin',
@@ -580,8 +580,8 @@ final class PackageOperationServiceTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'linked', $service->execute( PackageOperation::fromInput( 'install-plugin', $pluginInput ) )['status'] );
-		self::assertSame( 'linked', $service->execute( PackageOperation::fromInput( 'install-theme', $themeInput ) )['status'] );
+		self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-plugin', $pluginInput ) )['status'] );
+		self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-theme', $themeInput ) )['status'] );
 		self::assertSame( 'tnyGmaps', $plugins->requestedSlug );
 		self::assertSame( 'tnyGmaps', $themes->requestedSlug );
 	}
@@ -595,7 +595,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		foreach ( array( 'install-plugin', 'install-theme', 'update-plugin', 'update-theme' ) as $action ) {
-			$result = $service->execute( PackageOperation::fromInput( $action, $this->input( $action ) ) );
+			$result = $service->execute( PackageOperation::from_input( $action, $this->input( $action ) ) );
 			self::assertSame( 'succeeded', $result['status'] );
 			self::assertSame( 'deployed', $result['outcome_code'] );
 			self::assertSame( str_repeat( 'a', 32 ), $result['correlation_id'] );
@@ -617,7 +617,7 @@ final class PackageOperationServiceTest extends TestCase {
 			$coordinator
 		);
 
-		$result = $service->execute( PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin' ) ) );
+		$result = $service->execute( PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin' ) ) );
 
 		self::assertSame( 'already-managed', $result['status'] );
 		self::assertSame( 'already_managed', $result['outcome_code'] );
@@ -683,7 +683,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'correlation_id' => str_repeat( 'b', 32 ),
 				'outcome_code'   => 'provider_failed',
 			),
-			$service->execute( PackageOperation::fromInput( 'install-plugin', $this->input( 'install-plugin' ) ) )
+			$service->execute( PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin' ) ) )
 		);
 	}
 
@@ -853,7 +853,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$themes->freshAfterMutation  = $themeFresh;
 
 		$result = $this->service( $plugins, $themes, new OperationCoordinator() )
-			->execute( PackageOperation::fromInput( $action, $this->input( $action ) ) );
+			->execute( PackageOperation::from_input( $action, $this->input( $action ) ) );
 
 		$original = 'edit-plugin' === $action ? $pluginOriginal : $themeOriginal;
 		$fresh    = 'edit-plugin' === $action ? $pluginFresh : $themeFresh;
@@ -1119,7 +1119,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$this->expectExceptionMessage( 'cannot manage its own plugin files' );
 		try {
 			$service->execute(
-				PackageOperation::fromInput(
+				PackageOperation::from_input(
 					'install-plugin',
 					$this->input(
 						'install-plugin',
@@ -1141,7 +1141,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$service = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
 
 		$result = $service->execute(
-			PackageOperation::fromInput(
+			PackageOperation::from_input(
 				'install-plugin',
 				$this->input(
 					'install-plugin',
@@ -1176,7 +1176,7 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 
 		$this->expectException( InvalidArgumentException::class );
-		PackageOperation::fromInput( $action, $input );
+		PackageOperation::from_input( $action, $input );
 	}
 
 	/** @return array<string, array{string, string, string, string}> */

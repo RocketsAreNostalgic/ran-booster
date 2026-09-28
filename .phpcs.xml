@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/PackageOperation.php</include-pattern>
+		<include-pattern>/RAN/PackageRemoval/PackageRemovalResult.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CorePackageExecutionResult.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CorePackageExecutionFailure.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentPolicy.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
 		<include-pattern>/RAN/PackageSource.php</include-pattern>
@@ -45,6 +49,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/PackageOperation.php</include-pattern>
+		<include-pattern>/RAN/PackageRemoval/PackageRemovalResult.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CorePackageExecutionResult.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CorePackageExecutionFailure.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentPolicy.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
 		<include-pattern>/RAN/PackageSource.php</include-pattern>
@@ -88,8 +96,9 @@
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<severity>0</severity>
 	</rule>
-	<!-- Request has no external signature obligation; enforce its audited parameter names. -->
+	<!-- These request types have no external signature obligation; enforce audited parameter names. -->
 	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
+		<include-pattern>/RAN/PackageOperation.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 

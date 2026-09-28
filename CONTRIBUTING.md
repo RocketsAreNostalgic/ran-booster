@@ -53,11 +53,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Deployment/DeploymentAttempt.php`, `RAN/Deployment/DeploymentWorker.php`,
 `RAN/Deployment/WordPressWorkerWakeup.php`,
 `RAN/Storage/PackageMutationResult.php`, `RAN/Storage/PackageStorageFailure.php`,
-`RAN/Storage/DatabaseLifecycleFailure.php` and
-`RAN/Storage/DatabaseCompatibilityFailure.php`.
+`RAN/Storage/DatabaseLifecycleFailure.php`,
+`RAN/Storage/DatabaseCompatibilityFailure.php`,
+`RAN/PackageOperation.php`, `RAN/PackageRemoval/PackageRemovalResult.php`,
+`RAN/WordPress/CorePackageExecutionResult.php` and
+`RAN/WordPress/CorePackageExecutionFailure.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This fifteen-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This nineteen-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -92,3 +95,11 @@ in `RAN/Storage/PackageMutationResult.php`, `PackageStorageFailure.php`,
 diagnostics, recovery flags, database requirements and returned outcomes are
 unchanged. `PackageMutationResult::get_message()` is owned; inherited Throwable
 methods such as `PackageStorageFailure::getMessage()` keep their native names.
+
+PackageOperation uses owned snake_case methods, properties and parameters,
+including `is_private`. HTTP input keys and the eleven-field expected-package
+map are unchanged. Reserved-keyword parameter enforcement also covers this file.
+PackageRemovalResult keeps its status/outcome values and the service projection's
+`status` and `outcome_code` keys. CorePackageExecutionResult uses snake_case
+accessors; failure enum values and WordPress restoration classification remain
+unchanged. Branch Updater's distinct execution result retains its own contract.

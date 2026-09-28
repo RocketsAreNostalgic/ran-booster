@@ -57,32 +57,32 @@ class DeploymentCoordinator {
 		$userId = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
 
 		if ( 'install' === $command->operation ) {
-			$type       = $command->packageType;
-			$providerId = $command->providerRepositoryId;
+			$type       = $command->package_type;
+			$providerId = $command->provider_repository_id;
 			// The administrator's install request is the one-time authority; this
 			// policy governs the package only after installation.
 			if ( null === $providerId ) {
 				throw new RuntimeException( 'The package request is not eligible for deployment.' );
 			}
-			if ( null === $command->providerCode || null === $command->repository || null === $command->branch || null === $command->packageSlug ) {
+			if ( null === $command->provider_code || null === $command->repository || null === $command->branch || null === $command->package_slug ) {
 				throw new RuntimeException( 'The package request is incomplete.' );
 			}
-			$this->sourceGuard->assertAllowed( $command->providerCode, $providerId, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->packageSlug, PackageSource::BRANCH );
-			$this->providers->get( ProviderCode::parse( $command->providerCode ) );
+			$this->sourceGuard->assertAllowed( $command->provider_code, $providerId, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->package_slug, PackageSource::BRANCH );
+			$this->providers->get( ProviderCode::parse( $command->provider_code ) );
 			$request = new DeploymentRequest(
 				$command->repository,
-				$command->credentialId,
-				$command->private,
+				$command->credential_id,
+				$command->is_private,
 				$command->branch,
-				$command->packageSlug,
+				$command->package_slug,
 				$command->subdirectory,
-				$command->deploymentPolicy,
+				$command->deployment_policy,
 				$userId > 0 ? $userId : null
 			);
 			$attempt = $this->attempts->admitAndClaimManual(
 				'install',
 				$type,
-				$command->providerCode,
+				$command->provider_code,
 				$providerId,
 				$request,
 				(string) $command->branch,
@@ -90,7 +90,7 @@ class DeploymentCoordinator {
 				0
 			);
 		} elseif ( 'update' === $command->operation ) {
-			$type       = $command->packageType;
+			$type       = $command->package_type;
 			$identifier = $command->identifier ?? throw new RuntimeException( 'The package identity is unavailable.' );
 			$package    = $this->packageFromIdentifier( $type, $identifier );
 			$this->assertSubmittedSnapshot( $command, $package );
@@ -142,8 +142,8 @@ class DeploymentCoordinator {
 	}
 
 	private function assertSubmittedSnapshot( PackageOperation $command, Package $package ): void {
-		$expected = $command->expectedPackage;
-		if ( ! $command->hasExpectedPackage()
+		$expected = $command->expected_package;
+		if ( ! $command->has_expected_package()
 			|| $package->getProviderCode() !== $expected['provider']
 			|| ! hash_equals( (string) $package->getProviderRepositoryId(), (string) $expected['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->getRepository(), (string) $expected['repository'] )

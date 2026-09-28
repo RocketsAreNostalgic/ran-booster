@@ -360,7 +360,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 			remove_filter( 'upgrader_pre_download', $veto, 5 );
 			remove_filter( 'upgrader_pre_download', $observer, 20 );
 		}
-		if ( $vetoed->isSuccessful()
+		if ( $vetoed->is_successful()
 			|| ! $preserved
 			|| file_exists( WP_PLUGIN_DIR . '/' . $vetoSlug )
 			|| $this->hasAddedHooks( $before, $this->hookFingerprint() )
@@ -567,8 +567,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 	}
 
 	private function assertSuccess( RAN\WordPress\CorePackageExecutionResult $result ): void {
-		if ( ! $result->isSuccessful() ) {
-			throw new RuntimeException( 'WordPress core did not complete the disposable package operation: ' . $result->getFailure()->value );
+		if ( ! $result->is_successful() ) {
+			throw new RuntimeException( 'WordPress core did not complete the disposable package operation: ' . $result->get_failure()->value );
 		}
 	}
 
@@ -577,8 +577,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 		RAN\WordPress\CorePackageExecutionFailure $failure,
 		RAN\WordPress\CorePackageExecutionFailure ...$alternativeFailures
 	): void {
-		if ( ! in_array( $result->getFailure(), array( $failure, ...$alternativeFailures ), true ) ) {
-			$actual = $result->getFailure();
+		if ( ! in_array( $result->get_failure(), array( $failure, ...$alternativeFailures ), true ) ) {
+			$actual = $result->get_failure();
 			throw new RuntimeException( 'The executor did not return the expected bounded failure: ' . ( null === $actual ? 'success' : $actual->value ) );
 		}
 	}

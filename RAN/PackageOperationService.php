@@ -36,7 +36,7 @@ final readonly class PackageOperationService {
 	/** @return array{status: string, package?: Package, correlation_id?: string, outcome_code?: string} */
 	public function execute( PackageOperation $operation ): array {
 		PackageMutationGuard::assertPackageMutationAllowed();
-		if ( $operation->isDeployment() ) {
+		if ( $operation->is_deployment() ) {
 			return $this->deploy( $operation );
 		}
 
@@ -94,13 +94,13 @@ final readonly class PackageOperationService {
 	private function deployedPackage( PackageOperation $operation ): Package {
 		if ( 'update' === $operation->operation ) {
 			return $this->find(
-				$operation->packageType,
+				$operation->package_type,
 				$operation->identifier ?? throw new RuntimeException( 'The package identity is unavailable.' )
 			);
 		}
 
-		$slug       = $operation->packageSlug ?? throw new RuntimeException( 'The package slug is unavailable.' );
-		$installed  = 'plugin' === $operation->packageType
+		$slug       = $operation->package_slug ?? throw new RuntimeException( 'The package slug is unavailable.' );
+		$installed  = 'plugin' === $operation->package_type
 			? $this->plugins->fromSlug( $slug )
 			: $this->themes->fromSlug( $slug );
 		$identifier = $installed->getIdentifier();
@@ -108,21 +108,21 @@ final readonly class PackageOperationService {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
 		}
 
-		return $this->find( $operation->packageType, $identifier );
+		return $this->find( $operation->package_type, $identifier );
 	}
 
 	/** @return array{status: string, package: Package} */
 	private function linkInstalled( PackageOperation $operation ): array {
-		$slug    = $operation->packageSlug ?? throw new RuntimeException( 'The package slug is unavailable.' );
-		$package = 'plugin' === $operation->packageType
+		$slug    = $operation->package_slug ?? throw new RuntimeException( 'The package slug is unavailable.' );
+		$package = 'plugin' === $operation->package_type
 			? ( null === $operation->identifier ? $this->plugins->fromSlug( $slug ) : $this->plugins->installedPluginFromFile( $operation->identifier ) )
 			: ( null === $operation->identifier ? $this->themes->fromSlug( $slug ) : $this->themes->installedThemeFromStylesheet( $operation->identifier ) );
 		if ( $package instanceof Plugin ) {
 			PackageMutationGuard::assertPluginFileAllowed( $package->getIdentifier() );
 		}
 		$this->applyRepository( $package, $operation );
-		$this->sourceGuard->assertAllowed( (string) $package->getProviderCode(), (string) $package->getProviderRepositoryId(), 'plugin' === $operation->packageType ? 1 : 2, (string) $package->getIdentifier(), PackageSource::BRANCH );
-		$adoption = $this->adopt( $operation->packageType, $package );
+		$this->sourceGuard->assertAllowed( (string) $package->getProviderCode(), (string) $package->getProviderRepositoryId(), 'plugin' === $operation->package_type ? 1 : 2, (string) $package->getIdentifier(), PackageSource::BRANCH );
+		$adoption = $this->adopt( $operation->package_type, $package );
 		if ( 'ran_booster_storage_adoption_conflict' === $adoption->get_diagnostic_id() ) {
 			$existing = $this->matchingExistingTarget( $operation, $package );
 			if ( $existing instanceof Package ) {
@@ -140,7 +140,7 @@ final readonly class PackageOperationService {
 
 		return array(
 			'status'  => 'linked',
-			'package' => $this->find( $operation->packageType, $identifier ),
+			'package' => $this->find( $operation->package_type, $identifier ),
 		);
 	}
 
@@ -150,17 +150,17 @@ final readonly class PackageOperationService {
 			return null;
 		}
 		try {
-			$existing = $this->find( $operation->packageType, $identifier );
+			$existing = $this->find( $operation->package_type, $identifier );
 		} catch ( \Throwable ) {
 			return null;
 		}
 
 		return hash_equals( $identifier, (string) $existing->getIdentifier() )
-			&& $existing->getProviderCode() === $operation->providerCode
-			&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $operation->providerRepositoryId )
+			&& $existing->getProviderCode() === $operation->provider_code
+			&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $operation->provider_repository_id )
 			&& hash_equals( (string) $existing->getRepository(), (string) $operation->repository )
 			&& hash_equals( (string) $existing->getSubdirectory(), (string) $operation->subdirectory )
-			&& hash_equals( (string) $existing->getSlug(), (string) $operation->packageSlug )
+			&& hash_equals( (string) $existing->getSlug(), (string) $operation->package_slug )
 			? $existing
 			: null;
 	}
@@ -168,7 +168,7 @@ final readonly class PackageOperationService {
 	/** @return array{status: 'edited'|'conflict', package: Package} */
 	private function edit( PackageOperation $operation ): array {
 		$identifier = $operation->identifier ?? throw new RuntimeException( 'The package identity is unavailable.' );
-		$existing   = $this->find( $operation->packageType, $identifier );
+		$existing   = $this->find( $operation->package_type, $identifier );
 		if ( ! $this->matchesExpectedPackage( $operation, $existing ) ) {
 			return array(
 				'status'  => 'conflict',
@@ -186,18 +186,18 @@ final readonly class PackageOperationService {
 				(string) $existing->getProviderRepositoryId(),
 				(string) $existing->getBranch(),
 				(bool) $existing->getPrivate(),
-				'' === (string) $operation->credentialId ? null : $operation->credentialId
+				'' === (string) $operation->credential_id ? null : $operation->credential_id
 			)
 			: $this->repository( $operation, $this->providerRepositoryIdForEdit( $operation, $existing ) );
-		$this->sourceGuard->assertAllowed( $repository->provider->value, $repository->reference->providerRepositoryId, 'plugin' === $operation->packageType ? 1 : 2, $identifier, $existing->getSource() );
-		$result = 'plugin' === $operation->packageType
+		$this->sourceGuard->assertAllowed( $repository->provider->value, $repository->reference->providerRepositoryId, 'plugin' === $operation->package_type ? 1 : 2, $identifier, $existing->getSource() );
+		$result = 'plugin' === $operation->package_type
 			? $this->plugins->editPlugin( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) )
 			: $this->themes->editTheme( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) );
 		$result->require_success();
 
 		return array(
 			'status'  => 'edited',
-			'package' => $this->find( $operation->packageType, $identifier ),
+			'package' => $this->find( $operation->package_type, $identifier ),
 		);
 	}
 
@@ -205,39 +205,39 @@ final readonly class PackageOperationService {
 	private function remove( PackageOperation $operation ): array {
 		$result = $this->removals->execute( $operation );
 		$safe   = array( 'status' => $result->status );
-		if ( '' !== $result->outcomeCode ) {
-			$safe['outcome_code'] = $result->outcomeCode;
+		if ( '' !== $result->outcome_code ) {
+			$safe['outcome_code'] = $result->outcome_code;
 		}
 
 		return $safe;
 	}
 
 	private function applyRepository( Package $package, PackageOperation $operation ): void {
-		$package->setRepository( $this->repository( $operation, $operation->providerRepositoryId ) );
-		$package->setDeploymentPolicy( $operation->deploymentPolicy );
+		$package->setRepository( $this->repository( $operation, $operation->provider_repository_id ) );
+		$package->setDeploymentPolicy( $operation->deployment_policy );
 		$package->setSubdirectory( $operation->subdirectory );
 	}
 
 	private function repository( PackageOperation $operation, ?string $providerRepositoryId ): ManagedRepository {
-		if ( null === $operation->providerCode || null === $operation->repository || null === $operation->branch || null === $providerRepositoryId ) {
+		if ( null === $operation->provider_code || null === $operation->repository || null === $operation->branch || null === $providerRepositoryId ) {
 			throw new RuntimeException( 'The package repository is unavailable.' );
 		}
 
 		return new ManagedRepository(
-			$operation->providerCode,
+			$operation->provider_code,
 			$operation->repository,
 			$providerRepositoryId,
 			$operation->branch,
-			$operation->private,
-			$operation->credentialId
+			$operation->is_private,
+			$operation->credential_id
 		);
 	}
 
 	private function providerRepositoryIdForEdit( PackageOperation $operation, Package $existing ): ?string {
-		if ( in_array( $operation->providerRepositoryIdentitySource, array( 'picker', 'resolved' ), true ) ) {
-			return $operation->providerRepositoryId;
+		if ( in_array( $operation->provider_repository_identity_source, array( 'picker', 'resolved' ), true ) ) {
+			return $operation->provider_repository_id;
 		}
-		if ( (string) $existing->getRepository() !== $operation->repository || $existing->getProviderCode() !== $operation->providerCode ) {
+		if ( (string) $existing->getRepository() !== $operation->repository || $existing->getProviderCode() !== $operation->provider_code ) {
 			return null;
 		}
 
@@ -246,8 +246,8 @@ final readonly class PackageOperationService {
 
 	/** @return array<string, mixed> */
 	private function editInput( PackageOperation $operation, ManagedRepository $repository, Package $existing, bool $releaseManaged ): array {
-		$expectedSource         = $operation->expectedPackage['source'] ?? null;
-		$expectedSourceRevision = $operation->getExpectedSourceRevision();
+		$expectedSource         = $operation->expected_package['source'] ?? null;
+		$expectedSourceRevision = $operation->get_expected_source_revision();
 		if ( ! $expectedSource instanceof PackageSource || null === $expectedSourceRevision ) {
 			throw new RuntimeException( 'The expected package source is unavailable.' );
 		}
@@ -255,7 +255,7 @@ final readonly class PackageOperationService {
 		return array(
 			'repository'               => $repository,
 			'branch'                   => $repository->branch,
-			'deployment_policy'        => $operation->deploymentPolicy->value,
+			'deployment_policy'        => $operation->deployment_policy->value,
 			'subdirectory'             => $releaseManaged ? $existing->getSubdirectory() : $operation->subdirectory,
 			'private'                  => $repository->reference->private,
 			'credential_id'            => $repository->reference->credentialId ?? '',
@@ -267,9 +267,9 @@ final readonly class PackageOperationService {
 	}
 
 	private function matchesExpectedPackage( PackageOperation $operation, Package $package ): bool {
-		$expected = $operation->expectedPackage;
+		$expected = $operation->expected_package;
 
-		return $operation->hasExpectedPackage()
+		return $operation->has_expected_package()
 			&& $package->getProviderCode() === $expected['provider']
 			&& hash_equals( (string) $package->getProviderRepositoryId(), (string) $expected['provider_repository_id'] )
 			&& hash_equals( (string) $package->getRepository(), (string) $expected['repository'] )

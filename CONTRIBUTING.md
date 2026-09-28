@@ -46,14 +46,14 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Deployment/DeploymentPolicy.php`, `RAN/Deployment/DeploymentState.php`,
-`RAN/PackageSource.php`, `RAN/Deployment/DeploymentOutcome.php`, and
-`RAN/Deployment/DeploymentRequest.php`, and
-`RAN/Deployment/DeploymentCheckFailure.php`, and
-`RAN/Deployment/DeploymentStorageFailure.php`.
+`RAN/PackageSource.php`, `RAN/Deployment/DeploymentOutcome.php`,
+`RAN/Deployment/DeploymentRequest.php`,
+`RAN/Deployment/DeploymentCheckFailure.php`,
+`RAN/Deployment/DeploymentStorageFailure.php`, and `RAN/PackageSubdirectory.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
 are unchanged. Callers on other types, including `DeploymentAttempt`, retain
-their current contracts until separately audited. This seven-file scope does not
+their current contracts until separately audited. This eight-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -70,3 +70,8 @@ failed-state validation remain unchanged; Branch exceptions are different types.
 DeploymentStorageFailure uses snake_case owned factories/accessors and
 `active_attempt` names. Inherited exception methods, numeric codes, messages and
 the sanitized active-attempt array keys remain unchanged.
+
+PackageSubdirectory uses snake_case slug helpers and the `provider_slug`
+parameter. Repository-relative path validation, destination case handling and
+exception messages remain unchanged. The distinct Branch Updater archive helper
+retains its own contract; this scope applies only to Core `RAN\PackageSubdirectory`.

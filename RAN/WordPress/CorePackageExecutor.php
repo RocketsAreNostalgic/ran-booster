@@ -186,7 +186,7 @@ class CorePackageExecutor {
 	): array|CorePackageExecutionResult {
 		try {
 			$artifact->assertUnchanged();
-			$slug         = PackageSubdirectory::normalizeSlug( $packageSlug );
+			$slug         = PackageSubdirectory::normalize_slug( $packageSlug );
 			$subdirectory = PackageSubdirectory::normalize( $subdirectory );
 			$identifier   = '' === $installedIdentifier ? '' : $this->normalizeInstalledIdentifier( $installedIdentifier );
 		} catch ( Throwable ) {
@@ -402,7 +402,7 @@ class CorePackageExecutor {
 		}
 
 		try {
-			return PackageSubdirectory::normalizeSlug( trim( $match[1] ) );
+			return PackageSubdirectory::normalize_slug( trim( $match[1] ) );
 		} catch ( InvalidArgumentException ) {
 			return false;
 		}

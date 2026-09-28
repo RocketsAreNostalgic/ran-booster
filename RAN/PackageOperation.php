@@ -124,8 +124,8 @@ final readonly class PackageOperation {
 		$subdirectory   = PackageSubdirectory::normalize( $input['subdirectory'] ?? null );
 		$packageSlug    = 'install' === $operation
 			? ( $linkOnly
-				? PackageSubdirectory::installationSlug( $input['package_slug'] ?? '', $subdirectory )
-				: PackageSubdirectory::deploymentSlug( $input['package_slug'] ?? '', $subdirectory ) )
+				? PackageSubdirectory::installation_slug( $input['package_slug'] ?? '', $subdirectory )
+				: PackageSubdirectory::deployment_slug( $input['package_slug'] ?? '', $subdirectory ) )
 			: null;
 
 		return new self(

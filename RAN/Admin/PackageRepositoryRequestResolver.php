@@ -133,7 +133,7 @@ final readonly class PackageRepositoryRequestResolver {
 
 		$request['provider']                            = $provider->value;
 		$request['repository']                          = $repository->locator;
-		$request['package_slug']                        = PackageSubdirectory::installationSlug( $repository->packageSlug, $subdirectory );
+		$request['package_slug']                        = PackageSubdirectory::installation_slug( $repository->packageSlug, $subdirectory );
 		$request['subdirectory']                        = $subdirectory ?? '';
 		$request['provider_repository_id']              = $repository->providerRepositoryId;
 		$request['provider_repository_identity_source'] = 'resolved';

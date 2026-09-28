@@ -2468,7 +2468,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertFalse( $data['unavailable'] );
 		self::assertSame( 1, $data['detail']->getId() );
-		self::assertSame( 'deployed', $data['detail']->getOutcome()?->getCode() );
+		self::assertSame( 'deployed', $data['detail']->getOutcome()?->get_code() );
 		self::assertArrayNotHasKey( 'actions', $data );
 	}
 
@@ -2789,13 +2789,13 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 		);
 		$finished = $this->attempts->finish(
 			$attempt->getId(),
-			DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED )
+			DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED )
 		);
 
 		return array(
 			'status'         => 'failed',
 			'correlation_id' => $finished->getCorrelationId(),
-			'outcome_code'   => (string) $finished->getOutcome()?->getCode(),
+			'outcome_code'   => (string) $finished->getOutcome()?->get_code(),
 		);
 	}
 }

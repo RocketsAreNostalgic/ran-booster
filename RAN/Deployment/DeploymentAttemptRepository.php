@@ -342,8 +342,8 @@ final class DeploymentAttemptRepository {
 
 		$id    = $this->positiveId( $attemptId );
 		$data  = array(
-			'state'        => $outcome->getState()->value,
-			'outcome_code' => $outcome->getCode(),
+			'state'        => $outcome->get_state()->value,
+			'outcome_code' => $outcome->get_code(),
 			'finished_at'  => $this->timeString( $at ?? $this->now() ),
 		);
 		$query = $this->updateQuery( $id, DeploymentState::RUNNING, $data );
@@ -355,8 +355,8 @@ final class DeploymentAttemptRepository {
 		BoosterLogger::log(
 			'attempt finished',
 			$attempt->logContext() + array(
-				'transition'   => 'running->' . $outcome->getState()->value,
-				'outcome_code' => $outcome->getCode(),
+				'transition'   => 'running->' . $outcome->get_state()->value,
+				'outcome_code' => $outcome->get_code(),
 			)
 		);
 
@@ -614,11 +614,11 @@ final class DeploymentAttemptRepository {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				$outcome = null === $safe['mutation_started_at']
-					? DeploymentOutcome::fromCode( DeploymentOutcome::CODE_WORKER_STOPPED )
-					: DeploymentOutcome::fromCode( DeploymentOutcome::CODE_INTERRUPTED );
+					? DeploymentOutcome::from_code( DeploymentOutcome::CODE_WORKER_STOPPED )
+					: DeploymentOutcome::from_code( DeploymentOutcome::CODE_INTERRUPTED );
 				$data    = array(
-					'state'        => $outcome->getState()->value,
-					'outcome_code' => $outcome->getCode(),
+					'state'        => $outcome->get_state()->value,
+					'outcome_code' => $outcome->get_code(),
 					'finished_at'  => $this->timeString( $at ?? $this->now() ),
 				);
 				if ( 1 !== $this->database->query( $this->updateQuery( $id, DeploymentState::RUNNING, $data ) ) ) {
@@ -629,8 +629,8 @@ final class DeploymentAttemptRepository {
 				BoosterLogger::log(
 					'attempt reconciled as stopped',
 					$attempt->logContext() + array(
-						'transition'   => 'running->' . $outcome->getState()->value,
-						'outcome_code' => $outcome->getCode(),
+						'transition'   => 'running->' . $outcome->get_state()->value,
+						'outcome_code' => $outcome->get_code(),
 					)
 				);
 				return $attempt;

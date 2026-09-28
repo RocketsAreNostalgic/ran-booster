@@ -95,7 +95,7 @@ if ( 'reconcile' === $mode ) {
 	$result = $booster->make( RAN\Deployment\DeploymentCoordinator::class )->reconcileConfirmedStopped( (int) $row['id'], (string) $row['correlation_id'] );
 	$expectedState = 'pre' === $phase ? 'failed' : 'needs_attention';
 	$expectedCode  = 'pre' === $phase ? 'worker_stopped' : 'interrupted';
-	if ( $expectedState !== $result->getState()->value || $expectedCode !== $result->getOutcome()?->getCode() ) {
+	if ( $expectedState !== $result->getState()->value || $expectedCode !== $result->getOutcome()?->get_code() ) {
 		throw new RuntimeException( 'Protected reconciliation produced the wrong hard-stop outcome.' );
 	}
 	$webhook = $wpdb->get_row( $wpdb->prepare( 'SELECT state, outcome_code FROM %i WHERE package_slug = %s', $table, $webhookSlug ), ARRAY_A );

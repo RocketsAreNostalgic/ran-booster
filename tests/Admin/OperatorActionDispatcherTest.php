@@ -432,7 +432,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$fresh = $attempts->findExact( 12 );
 		self::assertSame( str_repeat( 'b', 32 ), $fresh?->getCorrelationId() );
 		self::assertSame( 'failed', $fresh?->getState()->value );
-		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh?->getOutcome()?->getCode() );
+		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh?->getOutcome()?->get_code() );
 		self::assertSame( array_fill( 0, 3, array( 'manage_options', 'update_plugins', 'update_themes' ) ), array_chunk( $GLOBALS['ran_booster_test_capability_checks'], 3 ) );
 		self::assertSame( array_fill( 0, 3, 'ran-booster-reconcile-deployment-worker' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 		self::assertStringContainsString( "WHERE id = 12 AND state = 'running'", implode( "\n", $database->queries ) );

@@ -139,7 +139,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		$terminal = $adapter->terminalAttempt();
 
 		self::assertSame( DeploymentState::FAILED, $terminal->getState() );
-		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $terminal->getOutcome()?->getCode() );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $terminal->getOutcome()?->get_code() );
 		self::assertSame( 'failed', $this->database->rows[0]['state'] );
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $this->database->rows[0]['outcome_code'] );
 	}

@@ -25,7 +25,7 @@ if ( 'pre' === $phase ) {
 	if ( ! $lock->release( $token ) ) {
 		throw new RuntimeException( 'The contender could not acquire and exactly release the available core lock.' );
 	}
-	$attempts->finish( $attempt->getId(), RAN\Deployment\DeploymentOutcome::fromCode( RAN\Deployment\DeploymentOutcome::CODE_NO_CHANGE ) );
+	$attempts->finish( $attempt->getId(), RAN\Deployment\DeploymentOutcome::from_code( RAN\Deployment\DeploymentOutcome::CODE_NO_CHANGE ) );
 	$suffix = 'core-lock-available';
 } else {
 	try {
@@ -36,7 +36,7 @@ if ( 'pre' === $phase ) {
 			throw $exception;
 		}
 	}
-	$attempts->finish( $attempt->getId(), RAN\Deployment\DeploymentOutcome::fromCode( RAN\Deployment\DeploymentOutcome::CODE_LOCK_UNAVAILABLE ) );
+	$attempts->finish( $attempt->getId(), RAN\Deployment\DeploymentOutcome::from_code( RAN\Deployment\DeploymentOutcome::CODE_LOCK_UNAVAILABLE ) );
 	$suffix = 'core-lock-contended';
 }
 

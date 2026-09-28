@@ -126,7 +126,7 @@ final class DeploymentAdminPresenter {
 			try {
 				$detail         = $this->attempts->findExact( $attemptId );
 				$base['detail'] = null !== $detail && hash_equals( $detail->getCorrelationId(), $reference ) ? $detail : null;
-				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->getOutcome()?->getCode() ) {
+				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->getOutcome()?->get_code() ) {
 					$data    = $base['detail']->safeData();
 					$summary = $this->attempts->packageActivitySummary( (string) $data['package_type'], (string) $data['package_slug'] );
 					if ( null !== $summary['last_successful'] && $summary['last_successful']->getId() > $base['detail']->getId() ) {

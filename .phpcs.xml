@@ -26,12 +26,13 @@
 	<rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
 		<severity>0</severity>
 	</rule>
-	<!-- Enforce only the completed enum, deployment-outcome and request cohorts. -->
+	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
 		<include-pattern>/RAN/Deployment/DeploymentPolicy.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
 		<include-pattern>/RAN/PackageSource.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentOutcome.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentCheckFailure.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
@@ -39,6 +40,7 @@
 		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
 		<include-pattern>/RAN/PackageSource.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentOutcome.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentCheckFailure.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
 	</rule>
 	<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->

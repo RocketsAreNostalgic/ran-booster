@@ -65,13 +65,13 @@ final readonly class PackageUpdateProgressController {
 
 		$items = array();
 		foreach ( $found as $id => $attempt ) {
-			if ( ! hash_equals( $references[ $id ], $attempt->getCorrelationId() ) ) {
+			if ( ! hash_equals( $references[ $id ], $attempt->get_correlation_id() ) ) {
 				continue;
 			}
 			$items[ (string) $id ] = array(
 				'attempt_id' => $id,
-				'reference'  => $attempt->getCorrelationId(),
-				'state'      => $attempt->getState()->value,
+				'reference'  => $attempt->get_correlation_id(),
+				'state'      => $attempt->get_state()->value,
 			);
 		}
 

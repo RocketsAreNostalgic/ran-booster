@@ -14,9 +14,9 @@ use RAN\Deployment\DeploymentState;
 class BackgroundDeploymentFailureEmail implements DeploymentFailureNotifier {
 
 	public function notify( DeploymentAttempt $attempt ): bool {
-		$data = $attempt->safeData();
+		$data = $attempt->safe_data();
 		if ( 'webhook' !== $data['source']
-			|| ! in_array( $attempt->getState(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
+			|| ! in_array( $attempt->get_state(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
 			|| ! is_string( $data['outcome_code'] )
 		) {
 			return false;

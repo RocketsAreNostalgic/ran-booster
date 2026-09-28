@@ -261,8 +261,8 @@ $policyLabels = array(
 				: array();
 			$latestAttempt           = $packageActivitySummary['latest'] ?? null;
 			$lastSuccessfulAttempt   = $packageActivitySummary['last_successful'] ?? null;
-			$latestActivity          = $latestAttempt instanceof \RAN\Deployment\DeploymentAttempt ? $latestAttempt->safeData() : null;
-			$lastSuccessfulActivity  = $lastSuccessfulAttempt instanceof \RAN\Deployment\DeploymentAttempt ? $lastSuccessfulAttempt->safeData() : null;
+			$latestActivity          = $latestAttempt instanceof \RAN\Deployment\DeploymentAttempt ? $latestAttempt->safe_data() : null;
+			$lastSuccessfulActivity  = $lastSuccessfulAttempt instanceof \RAN\Deployment\DeploymentAttempt ? $lastSuccessfulAttempt->safe_data() : null;
 			$latestActivityState     = is_array( $latestActivity ) && is_string( $latestActivity['state'] ?? null )
 				? $latestActivity['state']
 				: '';
@@ -290,7 +290,7 @@ $policyLabels = array(
 			$updateInProgress        = ! $releaseManaged && in_array( $latestActivityState, array( 'queued', 'running' ), true );
 			$updateNeedsAttention    = ! $releaseManaged
 				&& $latestAttempt instanceof \RAN\Deployment\DeploymentAttempt
-				&& $latestAttempt->requiresOperatorResolution();
+				&& $latestAttempt->requires_operator_resolution();
 			if ( $policyDisabled ) {
 				$updateLabel = __( 'Deployment disabled', 'ran-booster' );
 			} elseif ( $providerUnavailable ) {

@@ -325,8 +325,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $outcome->get_code() );
 		self::assertCount( 1, $notifier->attempts );
 		self::assertSame( 'failed', $notifier->storedStates[0] );
-		self::assertSame( DeploymentState::FAILED, $notifier->attempts[0]->getState() );
-		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $notifier->attempts[0]->getOutcome()?->get_code() );
+		self::assertSame( DeploymentState::FAILED, $notifier->attempts[0]->get_state() );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $notifier->attempts[0]->get_outcome()?->get_code() );
 	}
 
 	private function adoptionConflictOutcome( bool $exact ): string {

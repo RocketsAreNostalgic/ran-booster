@@ -17,13 +17,13 @@ if ( null === $claimed ) {
 if ( 'pre' !== $phase ) {
 	$lock = $booster->make( RAN\WordPress\WordPressUpdaterLock::class );
 	$lock->acquire();
-	$attempts->markMutationStarted( $claimed->getId() );
+	$attempts->markMutationStarted( $claimed->get_id() );
 }
 $marker = fopen( $barrier, 'x' );
 if ( false === $marker ) {
 	throw new RuntimeException( 'The hard-stop barrier could not be created.' );
 }
-fwrite( $marker, $phase . ':' . $claimed->getId() . ':' . $claimed->getCorrelationId() . "\n" );
+fwrite( $marker, $phase . ':' . $claimed->get_id() . ':' . $claimed->get_correlation_id() . "\n" );
 fflush( $marker );
 fclose( $marker );
 while ( true ) {

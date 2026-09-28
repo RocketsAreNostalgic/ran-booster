@@ -368,7 +368,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:02:00 UTC' ),
 			databaseLifecycle: $this->createStub( Database::class )
 		);
-		self::assertTrue( DeploymentAttempt::fromDatabase( $database->rows[0] )->requiresOperatorResolution() );
+		self::assertTrue( DeploymentAttempt::from_database( $database->rows[0] )->requires_operator_resolution() );
 		$_POST['ran_booster'] = array(
 			'action'           => 'resolve-needs-attention',
 			'attempt_id'       => '9',
@@ -419,20 +419,20 @@ final class OperatorActionDispatcherTest extends TestCase {
 
 		$_POST['ran_booster'] = $request;
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
-		self::assertSame( 'running', $attempts->findExact( 12 )?->getState()->value );
+		self::assertSame( 'running', $attempts->findExact( 12 )?->get_state()->value );
 
 		$_POST['ran_booster']                   = $request + array( 'confirm_stopped' => '1' );
 		$_POST['ran_booster']['correlation_id'] = str_repeat( 'c', 32 );
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
-		self::assertSame( 'running', $attempts->findExact( 12 )?->getState()->value );
+		self::assertSame( 'running', $attempts->findExact( 12 )?->get_state()->value );
 
 		$_POST['ran_booster'] = $request + array( 'confirm_stopped' => '1' );
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
 
 		$fresh = $attempts->findExact( 12 );
-		self::assertSame( str_repeat( 'b', 32 ), $fresh?->getCorrelationId() );
-		self::assertSame( 'failed', $fresh?->getState()->value );
-		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh?->getOutcome()?->get_code() );
+		self::assertSame( str_repeat( 'b', 32 ), $fresh?->get_correlation_id() );
+		self::assertSame( 'failed', $fresh?->get_state()->value );
+		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh?->get_outcome()?->get_code() );
 		self::assertSame( array_fill( 0, 3, array( 'manage_options', 'update_plugins', 'update_themes' ) ), array_chunk( $GLOBALS['ran_booster_test_capability_checks'], 3 ) );
 		self::assertSame( array_fill( 0, 3, 'ran-booster-reconcile-deployment-worker' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 		self::assertStringContainsString( "WHERE id = 12 AND state = 'running'", implode( "\n", $database->queries ) );

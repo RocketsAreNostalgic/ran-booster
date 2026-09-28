@@ -209,7 +209,7 @@ class Booster {
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			return;
 		}
-		$this->service( DeploymentWorker::class )->runOnce();
+		$this->service( DeploymentWorker::class )->run_once();
 	}
 
 	public function registerWebhookRoutes(): void {

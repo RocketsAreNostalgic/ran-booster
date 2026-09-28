@@ -57,7 +57,7 @@ final class DeploymentWorkerTest extends TestCase {
 		$GLOBALS['ran_booster_worker_doing_cron'] = false;
 		$this->admit( 'first' );
 
-		self::assertSame( 'unavailable', $this->worker()->runOnce()['status'] );
+		self::assertSame( 'unavailable', $this->worker()->run_once()['status'] );
 		self::assertSame( 0, $this->coordinator->calls );
 		self::assertSame( 'queued', $this->database->rows[0]['state'] );
 	}
@@ -66,7 +66,7 @@ final class DeploymentWorkerTest extends TestCase {
 		$this->admit( 'first' );
 		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
 
-		self::assertSame( 'unavailable', $this->worker()->runOnce()['status'] );
+		self::assertSame( 'unavailable', $this->worker()->run_once()['status'] );
 		self::assertSame( 'queued', $this->database->rows[0]['state'] );
 		self::assertSame( 0, $this->coordinator->calls );
 	}
@@ -75,12 +75,12 @@ final class DeploymentWorkerTest extends TestCase {
 		$first = $this->admit( 'first' );
 		$this->admit( 'second' );
 
-		$result = $this->worker()->runOnce();
+		$result = $this->worker()->run_once();
 
 		self::assertSame( 'processed', $result['status'] );
-		self::assertSame( $first->getCorrelationId(), $result['correlation_id'] );
+		self::assertSame( $first->get_correlation_id(), $result['correlation_id'] );
 		self::assertSame( 'scheduled', $result['runner_status'] );
-		self::assertSame( array( $first->getId() ), $this->coordinator->attemptIds );
+		self::assertSame( array( $first->get_id() ), $this->coordinator->attemptIds );
 		self::assertSame( 'running', $this->database->rows[0]['state'] );
 		self::assertSame( 'queued', $this->database->rows[1]['state'] );
 		self::assertCount( 1, WordPressWorkerWakeupCron::$events );
@@ -92,7 +92,7 @@ final class DeploymentWorkerTest extends TestCase {
 		$manualCorrelation                = $this->database->rows[0]['correlation_id'];
 		$this->admit( 'webhook' );
 
-		$result = $this->worker()->runOnce();
+		$result = $this->worker()->run_once();
 
 		self::assertSame( $manualCorrelation, $result['correlation_id'] );
 		self::assertSame( array( 1 ), $this->coordinator->attemptIds );
@@ -108,7 +108,7 @@ final class DeploymentWorkerTest extends TestCase {
 				'status'        => 'empty',
 				'runner_status' => 'not_required',
 			),
-			$this->worker()->runOnce()
+			$this->worker()->run_once()
 		);
 		self::assertSame( array(), WordPressWorkerWakeupCron::$events );
 	}
@@ -118,11 +118,11 @@ final class DeploymentWorkerTest extends TestCase {
 		$waiting                          = $this->admit( 'waiting' );
 		$this->database->rows[0]['state'] = DeploymentState::RUNNING->value;
 
-		$result = $this->worker()->runOnce();
+		$result = $this->worker()->run_once();
 
 		self::assertSame( 'processed', $result['status'] );
-		self::assertSame( $waiting->getCorrelationId(), $result['correlation_id'] );
-		self::assertSame( array( $waiting->getId() ), $this->coordinator->attemptIds );
+		self::assertSame( $waiting->get_correlation_id(), $result['correlation_id'] );
+		self::assertSame( array( $waiting->get_id() ), $this->coordinator->attemptIds );
 		self::assertSame( 'running', $this->database->rows[0]['state'] );
 		self::assertSame( 'running', $this->database->rows[1]['state'] );
 	}
@@ -131,10 +131,10 @@ final class DeploymentWorkerTest extends TestCase {
 		$attempt                    = $this->admit( 'failure' );
 		$this->coordinator->failure = new RuntimeException( 'sensitive execution failure' );
 
-		$result = $this->worker()->runOnce();
+		$result = $this->worker()->run_once();
 
 		self::assertSame( 'unavailable', $result['status'] );
-		self::assertSame( DeploymentState::RUNNING, $this->attempts->findExact( $attempt->getId() )?->getState() );
+		self::assertSame( DeploymentState::RUNNING, $this->attempts->findExact( $attempt->get_id() )?->get_state() );
 	}
 
 	private function worker(): DeploymentWorker {
@@ -178,7 +178,7 @@ final class WorkerCoordinator extends DeploymentCoordinator {
 
 	public function executeClaimed( DeploymentAttempt $attempt ): DeploymentOutcome {
 		++$this->calls;
-		$this->attemptIds[] = $attempt->getId();
+		$this->attemptIds[] = $attempt->get_id();
 		if ( null !== $this->failure ) {
 			throw $this->failure;
 		}

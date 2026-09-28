@@ -127,7 +127,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 
 		$declaration = $adapter->declaration();
 
-		self::assertSame( (string) $attempt->getId(), $declaration->attemptId );
+		self::assertSame( (string) $attempt->get_id(), $declaration->attemptId );
 		self::assertSame( 'plugin', $declaration->packageType );
 		self::assertSame( 'example', $declaration->slug );
 		self::assertSame( 'owner/example', $declaration->repository );
@@ -138,8 +138,8 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		$adapter->finish( DeploymentOutcome::CODE_PROVIDER_FAILED );
 		$terminal = $adapter->terminalAttempt();
 
-		self::assertSame( DeploymentState::FAILED, $terminal->getState() );
-		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $terminal->getOutcome()?->get_code() );
+		self::assertSame( DeploymentState::FAILED, $terminal->get_state() );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $terminal->get_outcome()?->get_code() );
 		self::assertSame( 'failed', $this->database->rows[0]['state'] );
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $this->database->rows[0]['outcome_code'] );
 	}

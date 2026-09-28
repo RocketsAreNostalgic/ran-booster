@@ -49,11 +49,12 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/PackageSource.php`, `RAN/Deployment/DeploymentOutcome.php`,
 `RAN/Deployment/DeploymentRequest.php`,
 `RAN/Deployment/DeploymentCheckFailure.php`,
-`RAN/Deployment/DeploymentStorageFailure.php`, and `RAN/PackageSubdirectory.php`.
+`RAN/Deployment/DeploymentStorageFailure.php`, `RAN/PackageSubdirectory.php`,
+`RAN/Deployment/DeploymentAttempt.php`, `RAN/Deployment/DeploymentWorker.php`,
+and `RAN/Deployment/WordPressWorkerWakeup.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types, including `DeploymentAttempt`, retain
-their current contracts until separately audited. This eight-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This eleven-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -75,3 +76,9 @@ PackageSubdirectory uses snake_case slug helpers and the `provider_slug`
 parameter. Repository-relative path validation, destination case handling and
 exception messages remain unchanged. The distinct Branch Updater archive helper
 retains its own contract; this scope applies only to Core `RAN\PackageSubdirectory`.
+
+DeploymentAttempt uses snake_case owned hydration, accessors, projections and
+private validation helpers. Its durable row keys, request JSON and safe/log
+projection order remain unchanged. DeploymentWorker uses `run_once()` and
+WordPressWorkerWakeup uses snake_case locals; worker result keys, cron hook and
+scheduling behavior retain their existing contracts.

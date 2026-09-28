@@ -125,7 +125,7 @@ final class PackageAdminController {
 			if ( null === $this->bulkActions ) {
 				throw new RuntimeException( 'Bulk package actions are unavailable.' );
 			}
-			$result = $this->bulkActions->execute( BulkPackageAction::fromInput( $type, $request ) );
+			$result = $this->bulkActions->execute( BulkPackageAction::from_input( $type, $request ) );
 		} catch ( InvalidArgumentException $failure ) {
 			\RAN\Logging\BoosterLogger::logException(
 				'bulk package action rejected',
@@ -322,10 +322,10 @@ final class PackageAdminController {
 	/** @param array<string, string> $listArguments */
 	public function bulkRedirect( string $type, BulkPackageResult $result, array $listArguments ): string {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| ( 'theme' === $type && in_array( $result->operation, BulkPackageAction::pluginActivationOperations(), true ) ) ) {
+			|| ( 'theme' === $type && in_array( $result->operation, BulkPackageAction::plugin_activation_operations(), true ) ) ) {
 			throw new LogicException( 'The bulk package redirect type is invalid.' );
 		}
-		$data = $result->noticeData();
+		$data = $result->notice_data();
 		$args = array();
 		foreach ( $data as $key => $value ) {
 			$args[ 'ran_booster_bulk_' . $key ] = $value;
@@ -361,13 +361,13 @@ final class PackageAdminController {
 			return;
 		}
 		try {
-			$result = BulkPackageResult::fromNoticeData( $data );
+			$result = BulkPackageResult::from_notice_data( $data );
 		} catch ( InvalidArgumentException ) {
 			return;
 		}
 
 		$plural = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
-		if ( '' !== $result->errorCode ) {
+		if ( '' !== $result->error_code ) {
 			$errors = array(
 				'credential_unavailable' => __( 'A selected package does not have its required repository credential.', 'ran-booster' ),
 				'invalid_request'        => __( 'Choose a bulk action and a supported number of managed packages.', 'ran-booster' ),
@@ -379,12 +379,12 @@ final class PackageAdminController {
 			$addContextMessage(
 				array(
 					'type'    => 'error',
-					'message' => $errors[ $result->errorCode ] ?? $errors['unavailable'],
-					'code'    => 'ran_booster_bulk_' . $result->errorCode,
+					'message' => $errors[ $result->error_code ] ?? $errors['unavailable'],
+					'code'    => 'ran_booster_bulk_' . $result->error_code,
 				),
 				array(
 					'operation'    => $result->operation,
-					'outcome_code' => $result->errorCode,
+					'outcome_code' => $result->error_code,
 					'step'         => 'bulk_package_action',
 				)
 			);
@@ -400,7 +400,7 @@ final class PackageAdminController {
 			);
 			$message = $this->appendBulkReasons(
 				$message,
-				$result->skippedByReason,
+				$result->skipped_by_reason,
 				array(
 					'busy'                   => __( 'already queued, running, or needs attention', 'ran-booster' ),
 					'credential_unavailable' => __( 'credential unavailable', 'ran-booster' ),
@@ -411,12 +411,12 @@ final class PackageAdminController {
 					'stale'                  => __( 'selection stale', 'ran-booster' ),
 				)
 			);
-			if ( 'unavailable' === $result->runnerStatus && $result->queued > 0 ) {
+			if ( 'unavailable' === $result->runner_status && $result->queued > 0 ) {
 				$message .= ' ' . __( 'The updates remain queued, but WordPress could not schedule the deployment runner. Open Troubleshooting to request it.', 'ran-booster' );
 			}
 			$addContextMessage(
 				array(
-					'type'            => $result->skipped() > 0 || 'unavailable' === $result->runnerStatus ? 'warning' : 'success',
+					'type'            => $result->skipped() > 0 || 'unavailable' === $result->runner_status ? 'warning' : 'success',
 					'message'         => $message,
 					'code'            => 'bulk_update_queue',
 					'queued_updates'  => $result->queued,
@@ -429,7 +429,7 @@ final class PackageAdminController {
 			);
 			return;
 		}
-		if ( in_array( $result->operation, BulkPackageAction::pluginActivationOperations(), true ) ) {
+		if ( in_array( $result->operation, BulkPackageAction::plugin_activation_operations(), true ) ) {
 			$enabled = BulkPackageAction::ACTIVATE_PLUGINS === $result->operation;
 			$message = sprintf(
 				/* translators: 1: changed count, 2: enabled or disabled label, 3: unchanged count, 4: skipped count. */
@@ -441,7 +441,7 @@ final class PackageAdminController {
 			);
 			$message = $this->appendBulkReasons(
 				$message,
-				$result->skippedByReason,
+				$result->skipped_by_reason,
 				array(
 					'active_dependents'   => __( 'required by active plugins', 'ran-booster' ),
 					'activation_failed'   => __( 'activation failed', 'ran-booster' ),

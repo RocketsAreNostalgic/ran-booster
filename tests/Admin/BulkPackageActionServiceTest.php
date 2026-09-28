@@ -66,7 +66,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 	}
 
 	public function testPluginActivationActionsAreRejectedForThemes(): void {
-		foreach ( BulkPackageAction::pluginActivationOperations() as $operation ) {
+		foreach ( BulkPackageAction::plugin_activation_operations() as $operation ) {
 			$this->expectInvalidBulkAction(
 				'theme',
 				array(
@@ -96,9 +96,9 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
-				'plugin',
-				array(
+			BulkPackageAction::from_input(
+				package_type: 'plugin',
+				input: array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
 					'identifiers' => array(
 						'enable/enable.php',
@@ -118,7 +118,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 				'activation_failed' => 2,
 				'stale'             => 1,
 			),
-			$result->skippedByReason
+			$result->skipped_by_reason
 		);
 		self::assertContains( 'enable/enable.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
 		self::assertStringContainsString(
@@ -135,7 +135,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_capabilities']['activate_plugin'] = false;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
@@ -145,7 +145,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		self::assertSame( 0, $result->changed );
-		self::assertSame( array( 'permission' => 1 ), $result->skippedByReason );
+		self::assertSame( array( 'permission' => 1 ), $result->skipped_by_reason );
 		self::assertNotContains( 'denied/denied.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
 	}
 
@@ -160,7 +160,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_bulk_activation_errors_with_active_state']   = array( 'noisy/noisy.php' );
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
@@ -182,7 +182,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_capabilities']['deactivate_plugin'] = false;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::DEACTIVATE_PLUGINS,
@@ -192,7 +192,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		self::assertSame( 0, $result->changed );
-		self::assertSame( array( 'permission' => 1 ), $result->skippedByReason );
+		self::assertSame( array( 'permission' => 1 ), $result->skipped_by_reason );
 		self::assertContains( 'denied/denied.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
 	}
 
@@ -215,7 +215,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_bulk_plugins_with_active_dependents'] = array( 'required/required.php' );
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::DEACTIVATE_PLUGINS,
@@ -238,7 +238,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 				'deactivation_failed' => 1,
 				'self_deactivation'   => 1,
 			),
-			$result->skippedByReason
+			$result->skipped_by_reason
 		);
 		self::assertNotContains( 'active/active.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
 		self::assertContains( 'ran-booster/ran-booster.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
@@ -251,7 +251,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$plugins = new BulkActionPluginRepository( array( 'example/example.php' => $plugin ) );
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -272,7 +272,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 		try {
 			$this->service( $plugins, true )->execute(
-				BulkPackageAction::fromInput(
+				BulkPackageAction::from_input(
 					'plugin',
 					array(
 						'bulk_action' => 'policy-manual',
@@ -290,7 +290,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$plugins->packages['public/public.php'] = $public;
 		try {
 			$this->service( $plugins, true )->execute(
-				BulkPackageAction::fromInput(
+				BulkPackageAction::from_input(
 					'plugin',
 					array(
 						'bulk_action' => 'policy-automatic',
@@ -310,7 +310,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$plugins = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
 
 		$result = $this->service( $plugins, true )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-automatic',
@@ -344,7 +344,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		$result = $this->service( $plugins, true, $coordinator )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -364,7 +364,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 				'disabled'             => 1,
 				'provider_unavailable' => 1,
 			),
-			$result->skippedByReason
+			$result->skipped_by_reason
 		);
 		self::assertCount( 1, $coordinator->targets );
 		self::assertSame( 'eligible', $coordinator->targets[0]['request']->package_slug );
@@ -384,7 +384,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$coordinator = new BulkActionCoordinator();
 
 		$result = $this->service( $plugins, true, $coordinator )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -397,13 +397,13 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		self::assertSame( 0, $result->queued );
-		self::assertSame( 'not_required', $result->runnerStatus );
+		self::assertSame( 'not_required', $result->runner_status );
 		self::assertSame(
 			array(
 				'disabled'             => 1,
 				'provider_unavailable' => 1,
 			),
-			$result->skippedByReason
+			$result->skipped_by_reason
 		);
 		self::assertSame( array(), $coordinator->targets );
 	}
@@ -415,7 +415,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$coordinator = new BulkActionCoordinator();
 
 		$result = $this->service( $plugins, false, $coordinator )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -424,14 +424,14 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 
-		self::assertSame( array( 'release_source' => 1 ), $result->skippedByReason );
+		self::assertSame( array( 'release_source' => 1 ), $result->skipped_by_reason );
 		self::assertSame( array(), $coordinator->targets );
 	}
 
 	public function testDeploymentRequestsRejectDuplicateIdentifiers(): void {
 		$identifiers = array( 'example/example.php', 'example/example.php' );
 		try {
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::QUEUE_UPDATE,
@@ -448,7 +448,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 20 ) );
 		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 21 ) );
 		foreach ( array( BulkPackageAction::QUEUE_UPDATE, BulkPackageAction::POLICY_DISABLED ) as $operation ) {
-			$action = BulkPackageAction::fromInput(
+			$action = BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => $operation,
@@ -458,7 +458,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			self::assertCount( 20, $action->identifiers );
 
 			try {
-				BulkPackageAction::fromInput(
+				BulkPackageAction::from_input(
 					'plugin',
 					array(
 						'bulk_action' => $operation,
@@ -475,8 +475,8 @@ final class BulkPackageActionServiceTest extends TestCase {
 	public function testActivationRequestsAcceptTwoHundredAndRejectTwoHundredAndOneIdentifiers(): void {
 		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 200 ) );
 		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 201 ) );
-		foreach ( BulkPackageAction::pluginActivationOperations() as $operation ) {
-			$action = BulkPackageAction::fromInput(
+		foreach ( BulkPackageAction::plugin_activation_operations() as $operation ) {
+			$action = BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => $operation,
@@ -486,7 +486,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			self::assertCount( 200, $action->identifiers );
 
 			try {
-				BulkPackageAction::fromInput(
+				BulkPackageAction::from_input(
 					'plugin',
 					array(
 						'bulk_action' => $operation,
@@ -512,7 +512,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			) as [$packageType, $identifier]
 		) {
 			try {
-				BulkPackageAction::fromInput(
+				BulkPackageAction::from_input(
 					$packageType,
 					array(
 						'bulk_action' => 'queue-update',
@@ -529,7 +529,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 	/** @param array<string, mixed> $input */
 	private function expectInvalidBulkAction( string $packageType, array $input ): void {
 		try {
-			BulkPackageAction::fromInput( $packageType, $input );
+			BulkPackageAction::from_input( $packageType, $input );
 			self::fail( 'The invalid bulk action should have been rejected.' );
 		} catch ( \InvalidArgumentException ) {
 			self::assertTrue( true );
@@ -542,7 +542,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$coordinator = new BulkActionCoordinator();
 
 		$result = $this->service( $plugins, true, $coordinator )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -555,7 +555,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		self::assertSame( 1, $result->queued );
-		self::assertSame( array( 'self_update' => 1 ), $result->skippedByReason );
+		self::assertSame( array( 'self_update' => 1 ), $result->skipped_by_reason );
 		self::assertCount( 1, $coordinator->targets );
 	}
 
@@ -578,7 +578,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$service           = $this->service( $plugins, true, $coordinator );
 
 		$policy     = $service->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -587,7 +587,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 		$activation = $service->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
@@ -596,7 +596,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 		$queue      = $service->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::QUEUE_UPDATE,
@@ -605,8 +605,8 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 
-		self::assertTrue( '' === $policy->errorCode );
-		self::assertTrue( '' === $activation->errorCode );
+		self::assertTrue( '' === $policy->error_code );
+		self::assertTrue( '' === $activation->error_code );
 		self::assertSame( 1, $queue->queued );
 		self::assertCount( 1, $coordinator->targets );
 	}
@@ -623,7 +623,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$this->updaterLock = $lock;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -632,7 +632,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'unavailable', $result->errorCode );
+		self::assertSame( 'unavailable', $result->error_code );
 		self::assertSame( array(), $plugins->snapshots );
 	}
 
@@ -646,7 +646,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$this->updaterLock = $lock;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::fromInput(
+			BulkPackageAction::from_input(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -655,7 +655,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'unavailable', $result->errorCode );
+		self::assertSame( 'unavailable', $result->error_code );
 		self::assertCount( 1, $plugins->snapshots );
 	}
 
@@ -676,7 +676,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			$registry,
 			$secrets,
 			$coordinator ?? new BulkActionCoordinator(),
-			$this->updaterLock
+			updater_lock: $this->updaterLock
 		);
 	}
 }

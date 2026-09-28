@@ -2080,7 +2080,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$this->dashboard( $this->throwingSecrets() )->bulkPackageRedirect(
 			'theme',
-			BulkPackageResult::pluginActivation(
+			BulkPackageResult::plugin_activation(
 				BulkPackageAction::ACTIVATE_PLUGINS,
 				1,
 				1,
@@ -2095,13 +2095,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$url       = $dashboard->bulkPackageRedirect(
 			'plugin',
 			BulkPackageResult::queue(
-				4,
-				2,
-				array(
+				selected: 4,
+				queued: 2,
+				skipped_by_reason: array(
 					'busy'     => 1,
 					'disabled' => 1,
 				),
-				'unavailable'
+				runner_status: 'unavailable'
 			)
 		);
 		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
@@ -2178,7 +2178,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
 		$url       = $dashboard->bulkPackageRedirect(
 			'plugin',
-			BulkPackageResult::pluginActivation(
+			BulkPackageResult::plugin_activation(
 				BulkPackageAction::DEACTIVATE_PLUGINS,
 				4,
 				1,

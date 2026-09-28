@@ -32,24 +32,24 @@ final readonly class BulkPackageActionService {
 		private ProviderRegistry $providers,
 		private SecretsFile $secrets,
 		private DeploymentCoordinator $deployments,
-		private WordPressUpdaterLock $updaterLock
+		private WordPressUpdaterLock $updater_lock
 	) {
 	}
 
 	public function execute( BulkPackageAction $action ): BulkPackageResult {
-		PackageMutationGuard::assert_bulk_admin_allowed( $action->packageType, $action->identifiers );
+		PackageMutationGuard::assert_bulk_admin_allowed( $action->package_type, $action->identifiers );
 
-		if ( $action->isUpdateQueue() ) {
-			return $this->queueUpdates( $action );
+		if ( $action->is_update_queue() ) {
+			return $this->queue_updates( $action );
 		}
 
-		return $this->withUpdaterLock(
+		return $this->with_updater_lock(
 			$action,
-			fn (): BulkPackageResult => $action->isPluginActivation()
-				? $this->changePluginActivation( $action )
-				: $this->changePolicy(
+			fn (): BulkPackageResult => $action->is_plugin_activation()
+				? $this->change_plugin_activation( $action )
+				: $this->change_policy(
 					$action,
-					$action->deploymentPolicy() ?? throw new \LogicException( 'The bulk package policy is unavailable.' )
+					$action->deployment_policy() ?? throw new \LogicException( 'The bulk package policy is unavailable.' )
 				)
 		);
 	}
@@ -57,9 +57,9 @@ final readonly class BulkPackageActionService {
 	/**
 	 * @param callable(): BulkPackageResult $mutation
 	 */
-	private function withUpdaterLock( BulkPackageAction $action, callable $mutation ): BulkPackageResult {
+	private function with_updater_lock( BulkPackageAction $action, callable $mutation ): BulkPackageResult {
 		try {
-			$token = $this->updaterLock->acquire();
+			$token = $this->updater_lock->acquire();
 		} catch ( Throwable ) {
 			return BulkPackageResult::error( $action->operation, count( $action->identifiers ), 'unavailable' );
 		}
@@ -73,7 +73,7 @@ final readonly class BulkPackageActionService {
 		}
 
 		try {
-			$released = $this->updaterLock->release( $token );
+			$released = $this->updater_lock->release( $token );
 		} catch ( Throwable ) {
 			$released = false;
 		}
@@ -87,8 +87,8 @@ final readonly class BulkPackageActionService {
 		return $result ?? BulkPackageResult::error( $action->operation, count( $action->identifiers ), 'unavailable' );
 	}
 
-	private function changePluginActivation( BulkPackageAction $action ): BulkPackageResult {
-		if ( 'plugin' !== $action->packageType ) {
+	private function change_plugin_activation( BulkPackageAction $action ): BulkPackageResult {
+		if ( 'plugin' !== $action->package_type ) {
 			throw new \LogicException( 'Plugin activation is unavailable for themes.' );
 		}
 
@@ -114,8 +114,8 @@ final readonly class BulkPackageActionService {
 				continue;
 			}
 
-			$isActive = is_plugin_active( $identifier );
-			if ( $activate === $isActive ) {
+			$is_active = is_plugin_active( $identifier );
+			if ( $activate === $is_active ) {
 				++$unchanged;
 				continue;
 			}
@@ -124,8 +124,8 @@ final readonly class BulkPackageActionService {
 				continue;
 			}
 
-			$metaCapability = $activate ? 'activate_plugin' : 'deactivate_plugin';
-			if ( ! current_user_can( $metaCapability, $identifier ) ) {
+			$meta_capability = $activate ? 'activate_plugin' : 'deactivate_plugin';
+			if ( ! current_user_can( $meta_capability, $identifier ) ) {
 				$this->increment( $skipped, 'permission' );
 				continue;
 			}
@@ -164,7 +164,7 @@ final readonly class BulkPackageActionService {
 			++$changed;
 		}
 
-		return BulkPackageResult::pluginActivation(
+		return BulkPackageResult::plugin_activation(
 			$action->operation,
 			count( $action->identifiers ),
 			$changed,
@@ -173,15 +173,15 @@ final readonly class BulkPackageActionService {
 		);
 	}
 
-	private function changePolicy( BulkPackageAction $action, DeploymentPolicy $policy ): BulkPackageResult {
+	private function change_policy( BulkPackageAction $action, DeploymentPolicy $policy ): BulkPackageResult {
 		$snapshots = array();
 		foreach ( $action->identifiers as $identifier ) {
-			if ( 'plugin' === $action->packageType ) {
+			if ( 'plugin' === $action->package_type ) {
 				PackageMutationGuard::assert_plugin_file_allowed( $identifier );
 			}
-			$package = $this->find( $action->packageType, $identifier );
+			$package = $this->find( $action->package_type, $identifier );
 			if ( DeploymentPolicy::DISABLED !== $policy ) {
-				$this->assertReady(
+				$this->assert_ready(
 					$package,
 					DeploymentPolicy::AUTOMATIC === $policy
 						&& PackageSource::BRANCH === $package->getSource()
@@ -190,25 +190,25 @@ final readonly class BulkPackageActionService {
 			$snapshots[] = $this->snapshot( $package );
 		}
 
-		$result = 'plugin' === $action->packageType
+		$result = 'plugin' === $action->package_type
 			? $this->plugins->setPluginDeploymentPolicies( $snapshots, $policy )
 			: $this->themes->setThemeDeploymentPolicies( $snapshots, $policy );
 
 		return BulkPackageResult::policy( $action->operation, $result );
 	}
 
-	private function queueUpdates( BulkPackageAction $action ): BulkPackageResult {
+	private function queue_updates( BulkPackageAction $action ): BulkPackageResult {
 		$targets = array();
 		$skipped = array();
-		$userId  = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
+		$user_id = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
 
 		foreach ( $action->identifiers as $identifier ) {
-			if ( 'plugin' === $action->packageType && PackageMutationGuard::is_booster_plugin_file( $identifier ) ) {
+			if ( 'plugin' === $action->package_type && PackageMutationGuard::is_booster_plugin_file( $identifier ) ) {
 				$this->increment( $skipped, 'self_update' );
 				continue;
 			}
 			try {
-				$package = $this->find( $action->packageType, $identifier );
+				$package = $this->find( $action->package_type, $identifier );
 			} catch ( BulkPackageActionFailure $failure ) {
 				$this->increment( $skipped, $failure->reason );
 				continue;
@@ -222,14 +222,14 @@ final readonly class BulkPackageActionService {
 				continue;
 			}
 			try {
-				$this->assertReady( $package, false );
+				$this->assert_ready( $package, false );
 			} catch ( BulkPackageActionFailure $failure ) {
 				$this->increment( $skipped, $failure->reason );
 				continue;
 			}
 
-			$providerCode = (string) $package->getProviderCode();
-			$request      = new DeploymentRequest(
+			$provider_code = (string) $package->getProviderCode();
+			$request       = new DeploymentRequest(
 				(string) $package->getRepository(),
 				'' === $package->getCredentialId() ? null : $package->getCredentialId(),
 				(bool) $package->getPrivate(),
@@ -237,11 +237,11 @@ final readonly class BulkPackageActionService {
 				(string) $package->getSlug(),
 				is_string( $package->getSubdirectory() ) ? $package->getSubdirectory() : null,
 				$package->getDeploymentPolicy(),
-				$userId > 0 ? $userId : null
+				$user_id > 0 ? $user_id : null
 			);
-			$targets[]    = array(
-				'package_type'            => $action->packageType,
-				'provider'                => $providerCode,
+			$targets[]     = array(
+				'package_type'            => $action->package_type,
+				'provider'                => $provider_code,
 				'provider_repository_id'  => (string) $package->getProviderRepositoryId(),
 				'requested_ref'           => $request->configured_branch,
 				'package_source'          => $package->getSource()->value,
@@ -267,42 +267,42 @@ final readonly class BulkPackageActionService {
 		);
 	}
 
-	private function find( string $packageType, string $identifier ): Package {
+	private function find( string $package_type, string $identifier ): Package {
 		try {
-			return 'plugin' === $packageType
+			return 'plugin' === $package_type
 				? $this->plugins->boosterPluginFromFile( $identifier )
 				: $this->themes->boosterThemeFromStylesheet( $identifier );
 		} catch ( PluginNotFound | ThemeNotFound ) {
-			throw BulkPackageActionFailure::staleSelection();
+			throw BulkPackageActionFailure::stale_selection();
 		} catch ( PackageStorageFailure $failure ) {
 			throw $failure;
 		}
 	}
 
-	private function assertReady( Package $package, bool $webhookRequired ): void {
-		$providerCode = $package->getProviderCode();
-		if ( null === $providerCode || null === $package->getProviderRepositoryId() ) {
-			throw BulkPackageActionFailure::unavailableProvider();
+	private function assert_ready( Package $package, bool $webhook_required ): void {
+		$provider_code = $package->getProviderCode();
+		if ( null === $provider_code || null === $package->getProviderRepositoryId() ) {
+			throw BulkPackageActionFailure::unavailable_provider();
 		}
 
 		try {
-			$this->providers->get( $providerCode );
+			$this->providers->get( $provider_code );
 		} catch ( UnknownProvider ) {
-			throw BulkPackageActionFailure::unavailableProvider();
+			throw BulkPackageActionFailure::unavailable_provider();
 		}
 
-		if ( $webhookRequired ) {
+		if ( $webhook_required ) {
 			try {
-				$this->providers->requireCapability( $providerCode, WebhookNormalizer::class );
+				$this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
 			} catch ( UnsupportedProviderCapability ) {
-				throw BulkPackageActionFailure::unavailableWebhook();
+				throw BulkPackageActionFailure::unavailable_webhook();
 			}
 		}
 
-		$credentialId = $package->getCredentialId();
-		if ( ( $package->getPrivate() || '' !== $credentialId )
-			&& null === $this->secrets->credentialMaterial( $providerCode, '' === $credentialId ? null : $credentialId ) ) {
-			throw BulkPackageActionFailure::unavailableCredential();
+		$credential_id = $package->getCredentialId();
+		if ( ( $package->getPrivate() || '' !== $credential_id )
+			&& null === $this->secrets->credentialMaterial( $provider_code, '' === $credential_id ? null : $credential_id ) ) {
+			throw BulkPackageActionFailure::unavailable_credential();
 		}
 	}
 

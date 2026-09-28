@@ -58,10 +58,12 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/PackageOperation.php`, `RAN/PackageRemoval/PackageRemovalResult.php`,
 `RAN/WordPress/CorePackageExecutionResult.php`,
 `RAN/WordPress/CorePackageExecutionFailure.php`,
-`RAN/Deployment/PackageMutationGuard.php` and `RAN/WordPress/CoreSelfUpdatePolicy.php`.
+`RAN/Deployment/PackageMutationGuard.php`, `RAN/WordPress/CoreSelfUpdatePolicy.php`,
+`RAN/Admin/BulkPackageAction.php`, `RAN/Admin/BulkPackageActionFailure.php`,
+`RAN/Admin/BulkPackageResult.php` and `RAN/Admin/BulkPackageActionService.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This twenty-one-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This twenty-five-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -108,3 +110,10 @@ unchanged. Branch Updater's distinct execution result retains its own contract.
 Mutation guard and native self-update policy PHP names use snake_case. Guard
 ordering, runtime restrictions, limits, release-marker schema and diagnostic keys
 remain unchanged. Other policy receivers keep their separately audited contracts.
+
+The bulk-action cohort (`BulkPackageAction`, `BulkPackageActionFailure`,
+`BulkPackageResult` and `BulkPackageActionService`) enforces owned snake_case
+methods and variables. Signed notice keys and ordering, operation/error/skip
+codes, selection limits, guard ordering and updater-lock behavior are unchanged.
+Inherited Throwable methods and separately owned receiver contracts retain their
+names. This naming migration does not change presentation or UI behavior.

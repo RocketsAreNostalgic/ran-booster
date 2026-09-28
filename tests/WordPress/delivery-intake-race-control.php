@@ -97,7 +97,7 @@ if ( 'assert' === $mode ) {
 		);
 		throw new RuntimeException( 'Conflicting digest was accepted.' );
 	} catch ( DeploymentStorageFailure $failure ) {
-		if ( ! $failure->isDeliveryConflict() ) {
+		if ( ! $failure->is_delivery_conflict() ) {
 			throw $failure;
 		}
 	}

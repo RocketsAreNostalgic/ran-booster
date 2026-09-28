@@ -200,7 +200,7 @@ final class PackageAdminController {
 			);
 			return false;
 		} catch ( DeploymentStorageFailure $failure ) {
-			return null !== $failure->getActiveCorrelationId()
+			return null !== $failure->get_active_correlation_id()
 				? $this->activeDeployment( $dashboard, $failure, $action )
 				: $this->manualFailure( $dashboard, $addContextMessage, $failure, $action );
 		} catch ( Throwable $failure ) {

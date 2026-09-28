@@ -128,7 +128,7 @@ final class DeploymentAttemptRepository {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		if ( array() === $targets || count( $targets ) > self::MAX_MANUAL_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		$normalized = array();
@@ -141,7 +141,7 @@ final class DeploymentAttemptRepository {
 				|| ! is_string( $target['package_source'] )
 				|| ! is_int( $target['package_source_revision'] )
 				|| ! $target['request'] instanceof DeploymentRequest ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$this->assertPackageType( $target['package_type'] );
 			$this->assertProvider( $target['provider'] );
@@ -150,7 +150,7 @@ final class DeploymentAttemptRepository {
 			$this->assertPackageSource( $target['package_source'], $target['package_source_revision'] );
 			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$normalized[ $key ] = $target;
 		}
@@ -219,7 +219,7 @@ final class DeploymentAttemptRepository {
 		$this->assertSafeText( $deliveryId, 191 );
 		$this->assertHex( $deliveryDigest, 64 );
 		if ( count( $targets ) > self::MAX_WEBHOOK_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 		$normalized = array();
 		foreach ( $targets as $target ) {
@@ -231,7 +231,7 @@ final class DeploymentAttemptRepository {
 				|| ! is_string( $target['package_source'] )
 				|| ! is_int( $target['package_source_revision'] )
 				|| ! $target['request'] instanceof DeploymentRequest ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$this->assertOperation( $target['operation'] );
 			$this->assertPackageType( $target['package_type'] );
@@ -240,7 +240,7 @@ final class DeploymentAttemptRepository {
 			$this->assertPackageSource( $target['package_source'], $target['package_source_revision'] );
 			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$normalized[ $key ] = $target;
 		}
@@ -258,7 +258,7 @@ final class DeploymentAttemptRepository {
 				$existing = array();
 				foreach ( $rows as $row ) {
 					if ( ! hash_equals( $deliveryDigest, (string) ( $row->delivery_digest ?? '' ) ) ) {
-						throw DeploymentStorageFailure::deliveryConflict();
+						throw DeploymentStorageFailure::delivery_conflict();
 					}
 					if ( self::DELIVERY_ACK_TYPE === ( $row->package_type ?? null ) ) {
 						$this->assertDeliveryAcknowledgement( $row, $provider, $deliveryId, $deliveryDigest );
@@ -381,14 +381,14 @@ final class DeploymentAttemptRepository {
 	 */
 	public function findExactBatch( array $attemptIds ): array {
 		if ( array() === $attemptIds || count( $attemptIds ) > self::MAX_MANUAL_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		$ids = array();
 		foreach ( $attemptIds as $attemptId ) {
 			$id = $this->positiveId( $attemptId );
 			if ( isset( $ids[ $id ] ) ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$ids[ $id ] = $id;
 		}
@@ -727,7 +727,7 @@ final class DeploymentAttemptRepository {
 		$arguments   = array( $this->tableName );
 		foreach ( $data as $column => $value ) {
 			if ( preg_match( '/^[a-z_]+$/D', $column ) !== 1 ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$assignments[] = null === $value ? "$column = NULL" : "$column = %s";
 			if ( null !== $value ) {
@@ -907,7 +907,7 @@ final class DeploymentAttemptRepository {
 			return;
 		}
 		if ( $incomingRows < 0 || $incomingRows > self::MAX_WEBHOOK_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		$countRows = $this->readRows(
@@ -938,7 +938,7 @@ final class DeploymentAttemptRepository {
 			)
 		);
 		if ( count( $candidates ) !== $pruneRows ) {
-			throw DeploymentStorageFailure::capacityExhausted();
+			throw DeploymentStorageFailure::capacity_exhausted();
 		}
 
 		$ids = array();
@@ -970,7 +970,7 @@ final class DeploymentAttemptRepository {
 		try {
 			$result = $operation();
 			if ( false === $this->database->query( 'COMMIT' ) ) {
-				throw DeploymentStorageFailure::transactionCommitFailed();
+				throw DeploymentStorageFailure::transaction_commit_failed();
 			}
 
 			return $result;
@@ -1029,7 +1029,7 @@ final class DeploymentAttemptRepository {
 		try {
 			$this->databaseLifecycle->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
-			throw DeploymentStorageFailure::unsupportedDatabase();
+			throw DeploymentStorageFailure::unsupported_database();
 		}
 	}
 
@@ -1045,7 +1045,7 @@ final class DeploymentAttemptRepository {
 
 	private function positiveId( int $id ): int {
 		if ( $id < 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		return $id;
@@ -1053,7 +1053,7 @@ final class DeploymentAttemptRepository {
 
 	private function historyLimit( int $limit ): int {
 		if ( $limit < 1 || $limit > self::MAX_HISTORY ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		return $limit;
@@ -1061,13 +1061,13 @@ final class DeploymentAttemptRepository {
 
 	private function assertOperation( string $operation ): void {
 		if ( ! in_array( $operation, array( 'install', 'update' ), true ) ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertPackageType( string $packageType ): void {
 		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true ) ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
@@ -1076,25 +1076,25 @@ final class DeploymentAttemptRepository {
 		int $packageSourceRevision
 	): void {
 		if ( 'branch' !== $packageSource || $packageSourceRevision < 0 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertPackageSlug( string $packageSlug ): void {
 		if ( preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $packageSlug ) !== 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertProvider( string $provider ): void {
 		if ( preg_match( '/^[a-z][a-z0-9-]{0,31}$/D', $provider ) !== 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertHex( string $value, int $length ): void {
 		if ( preg_match( sprintf( '/^[a-f0-9]{%d}$/D', $length ), $value ) !== 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
@@ -1103,7 +1103,7 @@ final class DeploymentAttemptRepository {
 			|| preg_match( '/[[:cntrl:]]/', $value ) === 1
 			|| preg_match( '/(?:https?:\/\/|[A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s]*@/i', $value ) === 1
 			|| preg_match( '/\b(?:authorization|bearer|token|secret|password|signature)\b\s*[:=]/i', $value ) === 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 }

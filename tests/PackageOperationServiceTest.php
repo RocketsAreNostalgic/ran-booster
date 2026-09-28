@@ -1008,7 +1008,7 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testDashboardExplainsAnAlreadyActiveDeployment(): void {
 		$coordinator          = new OperationCoordinator();
 		$coordinator->failure = DeploymentStorageFailure::contention(
-			array(
+			active_attempt: array(
 				'id'             => 42,
 				'correlation_id' => str_repeat( 'd', 32 ),
 				'state'          => 'running',
@@ -1032,7 +1032,7 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testDashboardExplainsThatAnUnresolvedDeploymentIsNotRunning(): void {
 		$coordinator          = new OperationCoordinator();
 		$coordinator->failure = DeploymentStorageFailure::contention(
-			array(
+			active_attempt: array(
 				'id'             => 43,
 				'correlation_id' => str_repeat( 'e', 32 ),
 				'state'          => 'needs_attention',

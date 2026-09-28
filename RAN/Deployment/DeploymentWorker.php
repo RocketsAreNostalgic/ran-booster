@@ -45,7 +45,7 @@ final readonly class DeploymentWorker {
 				'correlation_id' => $attempt->getCorrelationId(),
 			);
 		} catch ( DeploymentStorageFailure $failure ) {
-			$reference = $failure->getActiveCorrelationId();
+			$reference = $failure->get_active_correlation_id();
 			$result    = array(
 				'status'        => null === $reference ? 'unavailable' : 'contended',
 				'runner_status' => 'not_required',

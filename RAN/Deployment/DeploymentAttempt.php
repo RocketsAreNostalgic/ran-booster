@@ -88,7 +88,7 @@ final readonly class DeploymentAttempt {
 				throw new InvalidArgumentException( 'The stored operator resolution is invalid.' );
 			}
 		} catch ( InvalidArgumentException ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		return new self(

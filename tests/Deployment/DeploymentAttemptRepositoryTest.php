@@ -152,7 +152,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->manual( 'new-attempt' );
 			self::fail( 'Protected deployment work must exhaust storage safely.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertTrue( $failure->isCapacityExhausted() );
+			self::assertTrue( $failure->is_capacity_exhausted() );
 			self::assertStringContainsString( 'Resolve queued, running, or needs-attention deployments', $failure->getMessage() );
 		}
 
@@ -281,14 +281,14 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->repository->recentHistory();
 			self::fail( 'Unsupported history reads must fail closed.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertTrue( $failure->isDatabaseUnsupported() );
+			self::assertTrue( $failure->is_database_unsupported() );
 		}
 
 		try {
 			$this->manual( 'unsupported' );
 			self::fail( 'Unsupported admissions must fail closed.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertTrue( $failure->isDatabaseUnsupported() );
+			self::assertTrue( $failure->is_database_unsupported() );
 		}
 
 		self::assertSame( array(), $this->database->queries );
@@ -309,7 +309,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				$operation();
 				self::fail( 'Cached lifecycle failures must block deployment-attempt storage.' );
 			} catch ( DeploymentStorageFailure $failure ) {
-				self::assertTrue( $failure->isDatabaseUnsupported() );
+				self::assertTrue( $failure->is_database_unsupported() );
 			}
 		}
 
@@ -325,7 +325,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->manual( 'example' );
 			self::fail( 'A second manual mutation must not overlap an active attempt.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertSame( $active->getCorrelationId(), $failure->getActiveCorrelationId() );
+			self::assertSame( $active->getCorrelationId(), $failure->get_active_correlation_id() );
 			self::assertCount( 1, $this->database->rows );
 			self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
 		}
@@ -705,8 +705,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->manual( 'example' );
 			self::fail( 'An unresolved needs-attention attempt must block admission.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertSame( $attention->safeData()['id'], $failure->getActiveAttempt()['id'] ?? null );
-			self::assertSame( 'needs_attention', $failure->getActiveAttempt()['state'] ?? null );
+			self::assertSame( $attention->safeData()['id'], $failure->get_active_attempt()['id'] ?? null );
+			self::assertSame( 'needs_attention', $failure->get_active_attempt()['state'] ?? null );
 		}
 
 		$resolved = $this->repository->resolveNeedsAttention(

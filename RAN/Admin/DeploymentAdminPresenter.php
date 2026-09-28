@@ -76,7 +76,7 @@ final class DeploymentAdminPresenter {
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
 	public function activeDeployment( DeploymentStorageFailure $failure, string $operation ): ?array {
-		$attempt = $failure->getActiveAttempt();
+		$attempt = $failure->get_active_attempt();
 		if ( null === $attempt ) {
 			return null;
 		}

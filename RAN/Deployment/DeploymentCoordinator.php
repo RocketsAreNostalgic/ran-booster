@@ -181,7 +181,7 @@ class DeploymentCoordinator {
 				$matches = $this->matchingPackages( $event );
 			} catch ( PackageStorageFailure $failure ) {
 				if ( $failure->isDatabaseUnsupported() ) {
-					throw DeploymentStorageFailure::unsupportedDatabase();
+					throw DeploymentStorageFailure::unsupported_database();
 				}
 				throw $failure;
 			}
@@ -310,7 +310,7 @@ class DeploymentCoordinator {
 	public function reconcileConfirmedStopped( int $attemptId, string $correlationId ): DeploymentAttempt {
 		$attempt = $this->attempts->findExact( $attemptId );
 		if ( null === $attempt || ! hash_equals( $attempt->getCorrelationId(), $correlationId ) ) {
-			throw DeploymentStorageFailure::notFound();
+			throw DeploymentStorageFailure::not_found();
 		}
 		if ( DeploymentState::RUNNING !== $attempt->getState() ) {
 			throw DeploymentStorageFailure::inconsistent();

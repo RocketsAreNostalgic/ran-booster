@@ -98,7 +98,7 @@ final readonly class BlueprintPackage {
 			return false;
 		}
 		if ( 'theme' === $type ) {
-			return $identifier === PackageSubdirectory::normalizeSlug( $identifier );
+			return $identifier === PackageSubdirectory::normalize_slug( $identifier );
 		}
 		if ( ! str_ends_with( $identifier, '.php' ) ) {
 			return false;

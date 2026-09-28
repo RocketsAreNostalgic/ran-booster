@@ -29,17 +29,17 @@ abstract class AbstractPackage implements Package {
 
 	public function getSlug(): mixed {
 		if ( $this->hasSubdirectory() ) {
-			return PackageSubdirectory::installationSlug( '', $this->getSubdirectory() );
+			return PackageSubdirectory::installation_slug( '', $this->getSubdirectory() );
 		}
 
-		return PackageSubdirectory::installationSlug(
+		return PackageSubdirectory::installation_slug(
 			$this->installationSlug ?? $this->runtimeSlug(),
 			null
 		);
 	}
 
 	public function setInstallationSlug( ?string $slug ): void {
-		$this->installationSlug = null === $slug ? null : PackageSubdirectory::normalizeSlug( $slug );
+		$this->installationSlug = null === $slug ? null : PackageSubdirectory::normalize_slug( $slug );
 	}
 
 	public function getSubdirectory(): mixed {

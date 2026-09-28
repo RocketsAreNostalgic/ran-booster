@@ -59,7 +59,7 @@ final class PackageSubdirectory {
 	/**
 	 * Validate one provider-supplied destination directory name.
 	 */
-	public static function normalizeSlug( mixed $value ): string {
+	public static function normalize_slug( mixed $value ): string {
 		$slug = self::normalize( $value );
 
 		if ( null === $slug
@@ -75,17 +75,17 @@ final class PackageSubdirectory {
 	/**
 	 * Derive the one destination slug shared by package resolution and execution.
 	 */
-	public static function installationSlug( mixed $providerSlug, mixed $subdirectory ): string {
+	public static function installation_slug( mixed $provider_slug, mixed $subdirectory ): string {
 		$path = self::normalize( $subdirectory );
 
-		return null === $path ? self::normalizeSlug( $providerSlug ) : self::slug( $path );
+		return null === $path ? self::normalize_slug( $provider_slug ) : self::slug( $path );
 	}
 
 	/**
 	 * Derive the canonical destination used only for a new deployment.
 	 */
-	public static function deploymentSlug( mixed $providerSlug, mixed $subdirectory ): string {
-		return strtolower( self::installationSlug( $providerSlug, $subdirectory ) );
+	public static function deployment_slug( mixed $provider_slug, mixed $subdirectory ): string {
+		return strtolower( self::installation_slug( $provider_slug, $subdirectory ) );
 	}
 
 	private static function invalid(): InvalidPackageSubdirectory {

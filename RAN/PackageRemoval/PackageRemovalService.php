@@ -40,7 +40,7 @@ final readonly class PackageRemovalService {
 
 		$identifier = $operation->identifier ?? throw new \RuntimeException( 'The package identity is unavailable.' );
 		if ( 'unlink-and-delete' === $operation->operation ) {
-			PackageMutationGuard::assertFilesystemMutationAllowed();
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
 		}
 		try {
 			$lockToken = $this->updaterLock->acquire();

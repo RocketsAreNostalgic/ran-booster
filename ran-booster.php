@@ -132,7 +132,7 @@ $ran_booster_core_development_notice->register();
 
 			$coreVersion       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 			$coreReleaseTarget = null;
-			if ( $ran_booster_self_update_policy->allowsNativeDiscovery() ) {
+			if ( $ran_booster_self_update_policy->allows_native_discovery() ) {
 				try {
 					$coreUpdater       = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
 						'github',

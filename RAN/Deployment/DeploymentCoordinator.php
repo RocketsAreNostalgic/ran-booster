@@ -53,7 +53,7 @@ class DeploymentCoordinator {
 
 	/** @return array{status: 'succeeded'|'failed', correlation_id: string, outcome_code: string} */
 	public function executeManual( PackageOperation $command ): array {
-		PackageMutationGuard::assertFilesystemMutationAllowed();
+		PackageMutationGuard::assert_filesystem_mutation_allowed();
 		$userId = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
 
 		if ( 'install' === $command->operation ) {
@@ -164,7 +164,7 @@ class DeploymentCoordinator {
 	 * @return array{status: string, correlation_id: string, accepted_targets: int, runner_status: string}
 	 */
 	public function acceptWebhook( array $events, string $authenticatedBodyDigest ): array {
-		PackageMutationGuard::assertWebhookDispatchAllowed();
+		PackageMutationGuard::assert_webhook_dispatch_allowed();
 		if ( array() === $events || preg_match( '/^[a-f0-9]{64}$/D', $authenticatedBodyDigest ) !== 1 ) {
 			throw new RuntimeException( 'The authenticated webhook delivery is invalid.' );
 		}
@@ -201,7 +201,7 @@ class DeploymentCoordinator {
 				);
 			}
 		}
-		PackageMutationGuard::assertDeploymentTargetCount( count( $targets ) );
+		PackageMutationGuard::assert_deployment_target_count( count( $targets ) );
 		if ( array() === $targets ) {
 			$this->attempts->admitWebhookBatch( $provider, $deliveryId, $authenticatedBodyDigest, array() );
 			return $this->admission( 'accepted', substr( hash( 'sha256', $provider . "\0" . $deliveryId ), 0, 32 ), 0, 'not_required' );
@@ -381,7 +381,7 @@ class DeploymentCoordinator {
 			foreach ( $packages as $package ) {
 				if ( PackageSource::BRANCH === $package->getSource()
 					&& $package->getDeploymentPolicy()->allows_webhook_mutation()
-					&& ! PackageMutationGuard::isBoosterPluginFile( $package->getIdentifier() )
+					&& ! PackageMutationGuard::is_booster_plugin_file( $package->getIdentifier() )
 					&& $package->getProviderCode() === $event->provider->value
 					&& $policy->repositoryTargetMatches( $event->repository, (string) $package->getRepository() )
 					&& (string) $package->getBranch() === $event->branch

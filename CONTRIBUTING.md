@@ -56,11 +56,12 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Storage/DatabaseLifecycleFailure.php`,
 `RAN/Storage/DatabaseCompatibilityFailure.php`,
 `RAN/PackageOperation.php`, `RAN/PackageRemoval/PackageRemovalResult.php`,
-`RAN/WordPress/CorePackageExecutionResult.php` and
-`RAN/WordPress/CorePackageExecutionFailure.php`.
+`RAN/WordPress/CorePackageExecutionResult.php`,
+`RAN/WordPress/CorePackageExecutionFailure.php`,
+`RAN/Deployment/PackageMutationGuard.php` and `RAN/WordPress/CoreSelfUpdatePolicy.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This nineteen-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This twenty-one-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -103,3 +104,7 @@ PackageRemovalResult keeps its status/outcome values and the service projection'
 `status` and `outcome_code` keys. CorePackageExecutionResult uses snake_case
 accessors; failure enum values and WordPress restoration classification remain
 unchanged. Branch Updater's distinct execution result retains its own contract.
+
+Mutation guard and native self-update policy PHP names use snake_case. Guard
+ordering, runtime restrictions, limits, release-marker schema and diagnostic keys
+remain unchanged. Other policy receivers keep their separately audited contracts.

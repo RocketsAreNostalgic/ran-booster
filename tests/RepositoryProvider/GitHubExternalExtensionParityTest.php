@@ -307,7 +307,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	private function assertSelfUpdateIsProviderIndependent(): void {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
-		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allowsNativeDiscovery() )' );
+		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
 		$end   = strpos( $bootstrap, '$ran_booster_container->bind(', $start );
 		self::assertIsInt( $start );
 		self::assertIsInt( $end );

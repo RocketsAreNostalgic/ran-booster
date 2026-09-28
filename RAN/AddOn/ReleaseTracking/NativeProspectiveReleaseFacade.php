@@ -220,7 +220,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 
 		try {
-			PackageMutationGuard::assertFilesystemMutationAllowed();
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
 			$repository   = $this->resolveRepository( $repositoryRequest );
 			$availability = $this->prospectiveReleaseSourceAvailable( $type, $repository );
 			if ( true !== $availability ) {
@@ -308,7 +308,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					|| $wasActive ) {
 					$outcome = ProspectiveReleaseResult::failure( 'package_already_exists' );
 				} else {
-					PackageMutationGuard::assertFilesystemMutationAllowed();
+					PackageMutationGuard::assert_filesystem_mutation_allowed();
 					$artifact            = ReleaseArtifactCustodian::claim( $release->handoffToCore() );
 					$result              = 'plugin' === $type
 						? $this->executor->installPlugin( $artifact, $release->packageRoot(), null )

@@ -25,16 +25,16 @@ final class PackageMutationGuard {
 	/**
 	 * @param array<string, mixed> $request
 	 */
-	public static function assertAdminActionAllowed( string $action, array $request ): void {
-		self::assertPackageMutationAllowed();
+	public static function assert_admin_action_allowed( string $action, array $request ): void {
+		self::assert_package_mutation_allowed();
 
 		if ( in_array( $action, array( 'edit-plugin', 'update-plugin', 'unlink-plugin', 'unlink-delete-plugin' ), true ) ) {
-			self::assertPluginFileAllowed( $request['file'] ?? null );
+			self::assert_plugin_file_allowed( $request['file'] ?? null );
 		}
 	}
 
-	public static function assertPluginFileAllowed( mixed $identifier ): void {
-		if ( self::isBoosterPluginFile( $identifier ) ) {
+	public static function assert_plugin_file_allowed( mixed $identifier ): void {
+		if ( self::is_booster_plugin_file( $identifier ) ) {
 			BoosterLogger::log(
 				'mutation guard blocked deployment',
 				array(
@@ -49,23 +49,23 @@ final class PackageMutationGuard {
 	/**
 	 * @param list<string> $identifiers
 	 */
-	public static function assertBulkAdminAllowed( string $packageType, array $identifiers ): void {
-		self::assertPackageMutationAllowed();
+	public static function assert_bulk_admin_allowed( string $package_type, array $identifiers ): void {
+		self::assert_package_mutation_allowed();
 
-		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true ) || array() === $identifiers ) {
+		if ( ! in_array( $package_type, array( 'plugin', 'theme' ), true ) || array() === $identifiers ) {
 			throw new RuntimeException( 'The bulk package operation is invalid.' );
 		}
 	}
 
-	public static function assertWebhookDispatchAllowed(): void {
-		self::assertPackageMutationAllowed();
+	public static function assert_webhook_dispatch_allowed(): void {
+		self::assert_package_mutation_allowed();
 	}
 
 	/**
 	 * Re-check the WordPress mutation policy immediately before an upgrader.
 	 */
-	public static function assertFilesystemMutationAllowed(): void {
-		self::assertPackageMutationAllowed();
+	public static function assert_filesystem_mutation_allowed(): void {
+		self::assert_package_mutation_allowed();
 
 		if ( ( defined( 'DISALLOW_FILE_MODS' ) && constant( 'DISALLOW_FILE_MODS' ) )
 			|| ! wp_is_file_mod_allowed( 'ran-booster' ) ) {
@@ -80,7 +80,7 @@ final class PackageMutationGuard {
 		}
 	}
 
-	public static function assertDeploymentTargetCount( int $count ): void {
+	public static function assert_deployment_target_count( int $count ): void {
 		if ( $count > self::MAX_DEPLOYMENT_TARGETS ) {
 			BoosterLogger::log(
 				'mutation guard blocked deployment',
@@ -93,11 +93,11 @@ final class PackageMutationGuard {
 		}
 	}
 
-	public static function isBoosterPluginFile( mixed $identifier ): bool {
+	public static function is_booster_plugin_file( mixed $identifier ): bool {
 		return is_string( $identifier ) && self::BOOSTER_PLUGIN_FILE === trim( str_replace( '\\', '/', $identifier ) );
 	}
 
-	public static function assertPackageMutationAllowed(): void {
+	public static function assert_package_mutation_allowed(): void {
 		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
 			BoosterLogger::log(
 				'mutation guard blocked deployment',

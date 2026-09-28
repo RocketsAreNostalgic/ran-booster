@@ -264,7 +264,7 @@ abstract class AbstractPackageRepository {
 				throw new InvalidArgumentException( 'The bulk package selection is invalid.' );
 			}
 			$snapshot['package']                    = (string) $model->package;
-			$snapshot['deployment_policy']          = DeploymentPolicy::fromDatabase(
+			$snapshot['deployment_policy']          = DeploymentPolicy::from_database(
 				is_string( $snapshot['deployment_policy'] ?? null )
 					? $snapshot['deployment_policy']
 					: ''
@@ -921,7 +921,7 @@ abstract class AbstractPackageRepository {
 
 		$package->setRepository( $repository );
 		$package->setDeploymentPolicy(
-			DeploymentPolicy::fromDatabase( $this->valueFromRow( $row, 'deployment_policy', DeploymentPolicy::MANUAL->value ) )
+			DeploymentPolicy::from_database( $this->valueFromRow( $row, 'deployment_policy', DeploymentPolicy::MANUAL->value ) )
 		);
 		$source = new PackageModel(
 			array(

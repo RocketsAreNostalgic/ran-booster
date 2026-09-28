@@ -110,7 +110,7 @@ final readonly class DeploymentRequest {
 			$data['configured_branch'],
 			$data['package_slug'],
 			$data['subdirectory'],
-			DeploymentPolicy::fromDatabase( $data['deployment_policy'] ),
+			DeploymentPolicy::from_database( $data['deployment_policy'] ),
 			$data['initiating_user_id'],
 			$data['maximum_artifact_bytes']
 		);

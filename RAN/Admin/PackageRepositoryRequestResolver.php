@@ -62,7 +62,7 @@ final readonly class PackageRepositoryRequestResolver {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}
 		try {
-			$deploymentPolicy = DeploymentPolicy::fromDatabase( $deploymentPolicyInput );
+			$deploymentPolicy = DeploymentPolicy::from_database( $deploymentPolicyInput );
 		} catch ( InvalidArgumentException ) {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}

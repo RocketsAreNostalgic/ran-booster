@@ -16,18 +16,18 @@ enum DeploymentState: string {
 	case FAILED          = 'failed';
 	case NEEDS_ATTENTION = 'needs_attention';
 
-	public function isTerminal(): bool {
+	public function is_terminal(): bool {
 		return match ( $this ) {
 			self::SUCCEEDED, self::FAILED, self::NEEDS_ATTENTION => true,
 			self::QUEUED, self::RUNNING => false,
 		};
 	}
 
-	public function requiresOperatorResolution(): bool {
+	public function requires_operator_resolution(): bool {
 		return self::NEEDS_ATTENTION === $this;
 	}
 
-	public static function fromDatabase( mixed $value ): self {
+	public static function from_database( mixed $value ): self {
 		if ( ! is_string( $value ) ) {
 			throw new InvalidArgumentException( 'A deployment state must be a string.' );
 		}

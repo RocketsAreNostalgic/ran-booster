@@ -213,7 +213,7 @@ final readonly class BulkPackageActionService {
 				$this->increment( $skipped, $failure->reason );
 				continue;
 			}
-			if ( ! $package->getDeploymentPolicy()->allowsManualMutation() ) {
+			if ( ! $package->getDeploymentPolicy()->allows_manual_mutation() ) {
 				$this->increment( $skipped, 'disabled' );
 				continue;
 			}

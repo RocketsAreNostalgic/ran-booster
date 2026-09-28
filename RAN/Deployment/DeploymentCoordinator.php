@@ -95,7 +95,7 @@ class DeploymentCoordinator {
 			$package    = $this->packageFromIdentifier( $type, $identifier );
 			$this->assertSubmittedSnapshot( $command, $package );
 			$this->assertBranchSource( $package );
-			if ( ! $package->getDeploymentPolicy()->allowsManualMutation() ) {
+			if ( ! $package->getDeploymentPolicy()->allows_manual_mutation() ) {
 				throw new RuntimeException( 'The package is disabled for Booster deployments.' );
 			}
 			$request      = $this->requestFromPackage( $package, $userId > 0 ? $userId : null );
@@ -277,7 +277,7 @@ class DeploymentCoordinator {
 	}
 
 	private function finishedOutcome( DeploymentAttempt $finished ): DeploymentOutcome {
-		if ( ! $finished->getState()->isTerminal() ) {
+		if ( ! $finished->getState()->is_terminal() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 		$outcome = $finished->getOutcome() ?? throw DeploymentStorageFailure::inconsistent();
@@ -380,7 +380,7 @@ class DeploymentCoordinator {
 		) as $type => $packages ) {
 			foreach ( $packages as $package ) {
 				if ( PackageSource::BRANCH === $package->getSource()
-					&& $package->getDeploymentPolicy()->allowsWebhookMutation()
+					&& $package->getDeploymentPolicy()->allows_webhook_mutation()
 					&& ! PackageMutationGuard::isBoosterPluginFile( $package->getIdentifier() )
 					&& $package->getProviderCode() === $event->provider->value
 					&& $policy->repositoryTargetMatches( $event->repository, (string) $package->getRepository() )

@@ -22,12 +22,18 @@
 
 	<rule ref="RANWordPressPlugin"/>
 
-	<!-- Preserve the inherited camelCase OOP API and its local implementation variables. -->
+	<!-- #167: remaining method cohorts stay deferred to audited connected callers. -->
 	<rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
 		<severity>0</severity>
 	</rule>
+	<!-- Enforce only the completed deployment policy/state enum cohort. -->
+	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Deployment/DeploymentPolicy.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
+	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
-		<severity>0</severity>
+		<include-pattern>/RAN/Deployment/DeploymentPolicy.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentState.php</include-pattern>
 	</rule>
 	<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->
 	<rule ref="WordPress.PHP.YodaConditions">

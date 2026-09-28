@@ -14,15 +14,15 @@ enum DeploymentPolicy: string {
 	case MANUAL    = 'manual';
 	case AUTOMATIC = 'automatic';
 
-	public function allowsManualMutation(): bool {
+	public function allows_manual_mutation(): bool {
 		return self::DISABLED !== $this;
 	}
 
-	public function allowsWebhookMutation(): bool {
+	public function allows_webhook_mutation(): bool {
 		return self::AUTOMATIC === $this;
 	}
 
-	public static function fromDatabase( mixed $value ): self {
+	public static function from_database( mixed $value ): self {
 		if ( ! is_string( $value ) ) {
 			throw new InvalidArgumentException( 'A deployment policy must be a string.' );
 		}

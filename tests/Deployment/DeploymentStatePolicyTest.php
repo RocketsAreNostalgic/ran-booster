@@ -12,24 +12,24 @@ use RAN\Deployment\DeploymentState;
 final class DeploymentStatePolicyTest extends TestCase {
 
 	public function testOnlyTheThreeTerminalStatesAreTerminal(): void {
-		self::assertFalse( DeploymentState::QUEUED->isTerminal() );
-		self::assertFalse( DeploymentState::RUNNING->isTerminal() );
-		self::assertTrue( DeploymentState::SUCCEEDED->isTerminal() );
-		self::assertTrue( DeploymentState::FAILED->isTerminal() );
-		self::assertTrue( DeploymentState::NEEDS_ATTENTION->isTerminal() );
+		self::assertFalse( DeploymentState::QUEUED->is_terminal() );
+		self::assertFalse( DeploymentState::RUNNING->is_terminal() );
+		self::assertTrue( DeploymentState::SUCCEEDED->is_terminal() );
+		self::assertTrue( DeploymentState::FAILED->is_terminal() );
+		self::assertTrue( DeploymentState::NEEDS_ATTENTION->is_terminal() );
 	}
 
 	public function testPoliciesExpressManualAndWebhookAuthorityWithoutBooleanPtdDrift(): void {
-		self::assertFalse( DeploymentPolicy::DISABLED->allowsManualMutation() );
-		self::assertFalse( DeploymentPolicy::DISABLED->allowsWebhookMutation() );
-		self::assertTrue( DeploymentPolicy::MANUAL->allowsManualMutation() );
-		self::assertFalse( DeploymentPolicy::MANUAL->allowsWebhookMutation() );
-		self::assertTrue( DeploymentPolicy::AUTOMATIC->allowsManualMutation() );
-		self::assertTrue( DeploymentPolicy::AUTOMATIC->allowsWebhookMutation() );
+		self::assertFalse( DeploymentPolicy::DISABLED->allows_manual_mutation() );
+		self::assertFalse( DeploymentPolicy::DISABLED->allows_webhook_mutation() );
+		self::assertTrue( DeploymentPolicy::MANUAL->allows_manual_mutation() );
+		self::assertFalse( DeploymentPolicy::MANUAL->allows_webhook_mutation() );
+		self::assertTrue( DeploymentPolicy::AUTOMATIC->allows_manual_mutation() );
+		self::assertTrue( DeploymentPolicy::AUTOMATIC->allows_webhook_mutation() );
 	}
 
 	public function testUnknownPersistedVocabularyIsRejected(): void {
 		$this->expectException( InvalidArgumentException::class );
-		DeploymentState::fromDatabase( 'pending' );
+		DeploymentState::from_database( 'pending' );
 	}
 }

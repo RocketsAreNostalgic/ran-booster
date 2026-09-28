@@ -116,7 +116,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		);
 	}
 
-	public function recordResolvedRef( string $ref ): void {
+	public function record_resolved_ref( string $ref ): void {
 		try {
 			$this->attempt = $this->attempts->recordResolvedRef( $this->attempt->getId(), $ref );
 		} catch ( DeploymentStorageFailure $failure ) {
@@ -124,7 +124,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	public function markMutationStarted(): void {
+	public function mark_mutation_started(): void {
 		try {
 			$this->attempt = $this->attempts->markMutationStarted( $this->attempt->getId() );
 		} catch ( DeploymentStorageFailure $failure ) {

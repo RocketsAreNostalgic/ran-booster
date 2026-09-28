@@ -220,7 +220,7 @@ final readonly class PackageOperation {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}
 		try {
-			return DeploymentPolicy::fromDatabase( $policy );
+			return DeploymentPolicy::from_database( $policy );
 		} catch ( InvalidArgumentException ) {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}

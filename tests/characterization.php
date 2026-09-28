@@ -46,10 +46,10 @@ $assert( class_exists( RAN\UpdaterSupport\V1\RepositoryRelativePath::class ), 'T
 $request = new DeploymentRequest( 'org/package', 'profile_1', true, 'main', 'package', 'wordpress', DeploymentPolicy::AUTOMATIC, 7 );
 $assert( $request->toJson() === DeploymentRequest::fromJson( $request->toJson() )->toJson(), 'Deployment requests must round-trip canonically.' );
 $assert( ! str_contains( $request->toJson(), 'Authorization' ), 'The durable request must not contain authorization material.' );
-$assert( DeploymentPolicy::MANUAL->allowsManualMutation(), 'Manual policy must allow administrator deployment.' );
-$assert( ! DeploymentPolicy::MANUAL->allowsWebhookMutation(), 'Manual policy must reject webhook deployment.' );
-$assert( DeploymentPolicy::AUTOMATIC->allowsWebhookMutation(), 'Automatic policy must allow webhook deployment.' );
-$assert( ! DeploymentPolicy::DISABLED->allowsManualMutation(), 'Disabled policy must reject deployment.' );
+$assert( DeploymentPolicy::MANUAL->allows_manual_mutation(), 'Manual policy must allow administrator deployment.' );
+$assert( ! DeploymentPolicy::MANUAL->allows_webhook_mutation(), 'Manual policy must reject webhook deployment.' );
+$assert( DeploymentPolicy::AUTOMATIC->allows_webhook_mutation(), 'Automatic policy must allow webhook deployment.' );
+$assert( ! DeploymentPolicy::DISABLED->allows_manual_mutation(), 'Disabled policy must reject deployment.' );
 
 $browse = RepositoryBrowseRequest::accessible( 'profile_1' );
 $assert( 'profile_1' === $browse->getCredentialId(), 'Repository browsing must use one explicitly selected credential.' );

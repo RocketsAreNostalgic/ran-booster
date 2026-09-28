@@ -41,3 +41,13 @@ actual fallback/guard. Generated Admin Shell bytes are verified through
 `composer admin-shell:check` and must not be hand-edited. Full path coverage does
 not complete #167's naming, condition, exception or connected-contract work,
 and does not raise the analysis level or certify new dependency/host versions.
+
+## Audited PHP naming scope
+
+Under #167, `RANOwnedMethods` and variable naming checks cover only
+`RAN/Deployment/DeploymentPolicy.php` and `RAN/Deployment/DeploymentState.php`.
+Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
+retain their native names. Enum cases, backed values and persisted representations
+are unchanged. Callers on other types, including `DeploymentAttempt`, retain
+their current contracts until separately audited. This two-file scope does not
+complete Core naming, condition or exception acceptance.

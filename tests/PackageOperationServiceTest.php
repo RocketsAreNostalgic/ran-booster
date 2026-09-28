@@ -1492,7 +1492,7 @@ final class OperationPluginRepository extends PluginRepository {
 	public function editPlugin( $file, $input ): PackageMutationResult {
 		$this->edited = $input;
 		$this->package->setRepository( $input['repository'] );
-		$this->package->setDeploymentPolicy( DeploymentPolicy::fromDatabase( $input['deployment_policy'] ) );
+		$this->package->setDeploymentPolicy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
 		$this->package->setSubdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
@@ -1539,7 +1539,7 @@ final class OperationThemeRepository extends ThemeRepository {
 	public function editTheme( $stylesheet, $input ): PackageMutationResult {
 		$this->edited = $input;
 		$this->package->setRepository( $input['repository'] );
-		$this->package->setDeploymentPolicy( DeploymentPolicy::fromDatabase( $input['deployment_policy'] ) );
+		$this->package->setDeploymentPolicy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
 		$this->package->setSubdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}

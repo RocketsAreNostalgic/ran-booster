@@ -54,7 +54,7 @@ final readonly class DeploymentAttempt {
 			$resolvedRef           = self::nullableSafeText( $row['resolved_ref'] ?? null, 191 );
 			$deliveryId            = self::nullableSafeText( $row['delivery_id'] ?? null, 191 );
 			$deliveryDigest        = self::nullableHex( $row['delivery_digest'] ?? null, 64 );
-			$state                 = DeploymentState::fromDatabase( $row['state'] ?? null );
+			$state                 = DeploymentState::from_database( $row['state'] ?? null );
 			$mutationStartedAt     = self::nullableDate( $row['mutation_started_at'] ?? null );
 			$outcomeCode           = self::nullableIdentifier( $row['outcome_code'] ?? null, 64 );
 			$outcome               = null === $outcomeCode ? null : DeploymentOutcome::fromCode( $outcomeCode );
@@ -70,7 +70,7 @@ final readonly class DeploymentAttempt {
 			if ( $request->packageSlug !== $packageSlug ) {
 				throw new InvalidArgumentException( 'The stored request identity is inconsistent.' );
 			}
-			if ( $state->isTerminal() ) {
+			if ( $state->is_terminal() ) {
 				if ( null === $outcome || null === $finishedAt ) {
 					throw new InvalidArgumentException( 'The stored terminal state is incomplete.' );
 				}
@@ -84,7 +84,7 @@ final readonly class DeploymentAttempt {
 				throw new InvalidArgumentException( 'The stored outcome does not match the attempt state.' );
 			}
 			if ( ( null === $resolvedAt ) !== ( null === $resolvedBy )
-				|| ( null !== $resolvedAt && ! $state->requiresOperatorResolution() ) ) {
+				|| ( null !== $resolvedAt && ! $state->requires_operator_resolution() ) ) {
 				throw new InvalidArgumentException( 'The stored operator resolution is invalid.' );
 			}
 		} catch ( InvalidArgumentException ) {
@@ -138,7 +138,7 @@ final readonly class DeploymentAttempt {
 	}
 
 	public function requiresOperatorResolution(): bool {
-		return $this->state->requiresOperatorResolution() && null === $this->resolvedAt;
+		return $this->state->requires_operator_resolution() && null === $this->resolvedAt;
 	}
 
 	/** @return array<string, int|string|null> */

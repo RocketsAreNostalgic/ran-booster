@@ -141,7 +141,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function terminalAttempt(): DeploymentAttempt {
-		if ( ! $this->attempt->getState()->isTerminal() || null === $this->attempt->getOutcome() ) {
+		if ( ! $this->attempt->getState()->is_terminal() || null === $this->attempt->getOutcome() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 

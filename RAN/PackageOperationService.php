@@ -123,7 +123,7 @@ final readonly class PackageOperationService {
 		$this->applyRepository( $package, $operation );
 		$this->sourceGuard->assertAllowed( (string) $package->getProviderCode(), (string) $package->getProviderRepositoryId(), 'plugin' === $operation->packageType ? 1 : 2, (string) $package->getIdentifier(), PackageSource::BRANCH );
 		$adoption = $this->adopt( $operation->packageType, $package );
-		if ( 'ran_booster_storage_adoption_conflict' === $adoption->getDiagnosticId() ) {
+		if ( 'ran_booster_storage_adoption_conflict' === $adoption->get_diagnostic_id() ) {
 			$existing = $this->matchingExistingTarget( $operation, $package );
 			if ( $existing instanceof Package ) {
 				return array(
@@ -132,7 +132,7 @@ final readonly class PackageOperationService {
 				);
 			}
 		}
-		$adoption->requireSuccess();
+		$adoption->require_success();
 		$identifier = $package->getIdentifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
@@ -193,7 +193,7 @@ final readonly class PackageOperationService {
 		$result = 'plugin' === $operation->packageType
 			? $this->plugins->editPlugin( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) )
 			: $this->themes->editTheme( $identifier, $this->editInput( $operation, $repository, $existing, $releaseManaged ) );
-		$result->requireSuccess();
+		$result->require_success();
 
 		return array(
 			'status'  => 'edited',

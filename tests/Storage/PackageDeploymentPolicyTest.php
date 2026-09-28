@@ -50,7 +50,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 
 		$result = $this->storage()->storeForTest( $package );
 
-		self::assertTrue( $result->isSuccessful() );
+		self::assertTrue( $result->is_successful() );
 		self::assertSame( DeploymentPolicy::AUTOMATIC->value, $wpdb->inserts[0][1]['deployment_policy'] );
 		self::assertArrayNotHasKey( 'ptd', $wpdb->inserts[0][1] );
 		self::assertArrayNotHasKey( 'status', $wpdb->inserts[0][1] );

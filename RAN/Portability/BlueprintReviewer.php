@@ -49,13 +49,13 @@ final readonly class BlueprintReviewer {
 				: $this->themes->boosterThemeFromStylesheet( $blueprint->identifier );
 			$managedPackage = $package;
 		} catch ( PackageStorageFailure $failure ) {
-			if ( $failure->isDatabaseUnsupported() ) {
+			if ( $failure->is_database_unsupported() ) {
 				throw $failure;
 			}
 			return new BlueprintPlanItem(
 				$blueprint,
 				TargetPackageAction::PROTECTED,
-				'ran_booster_storage_duplicate_package' === $failure->getDiagnosticId()
+				'ran_booster_storage_duplicate_package' === $failure->get_diagnostic_id()
 					? TargetPackageReason::MANAGEMENT_CONFLICT
 					: TargetPackageReason::MALFORMED_MANAGEMENT
 			);

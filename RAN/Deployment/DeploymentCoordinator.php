@@ -180,7 +180,7 @@ class DeploymentCoordinator {
 			try {
 				$matches = $this->matchingPackages( $event );
 			} catch ( PackageStorageFailure $failure ) {
-				if ( $failure->isDatabaseUnsupported() ) {
+				if ( $failure->is_database_unsupported() ) {
 					throw DeploymentStorageFailure::unsupported_database();
 				}
 				throw $failure;

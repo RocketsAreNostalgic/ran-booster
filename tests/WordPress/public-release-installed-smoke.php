@@ -129,7 +129,7 @@ try {
 		$identifier = 'plugin' === $type ? $fixture['slug'] . '/' . $fixture['metadata'] : $fixture['slug'];
 		$assert( ! is_link( $fixture['directory'] ), 'Prospective cleanup refuses a replaced target.' );
 		if ( is_dir( $fixture['directory'] ) ) {
-			( 'plugin' === $type ? $plugins : $themes )->unlink( $identifier )->requireSuccess();
+			( 'plugin' === $type ? $plugins : $themes )->unlink( $identifier )->require_success();
 			$removed = 'plugin' === $type ? delete_plugins( array( $identifier ) ) : delete_theme( $identifier );
 			$assert( ! is_wp_error( $removed ) && false !== $removed && ! file_exists( $fixture['directory'] ), 'Prospective fixture cleanup failed.' );
 		}

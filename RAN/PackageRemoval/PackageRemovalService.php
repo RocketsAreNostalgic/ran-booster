@@ -152,7 +152,7 @@ final readonly class PackageRemovalService {
 		$result = 'plugin' === $type
 			? $this->plugins->disablePluginForRemoval( $package )
 			: $this->themes->disableThemeForRemoval( $package );
-		$result->requireSuccess();
+		$result->require_success();
 	}
 
 	private function deletionBlocker( string $type, string $identifier ): ?string {
@@ -188,7 +188,7 @@ final readonly class PackageRemovalService {
 		$result = 'plugin' === $type
 			? $this->plugins->unlink( $identifier )
 			: $this->themes->unlink( $identifier );
-		$result->requireSuccess();
+		$result->require_success();
 	}
 
 	private function isInstalled( string $type, string $identifier ): bool {

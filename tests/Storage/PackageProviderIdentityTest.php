@@ -40,7 +40,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		$package->setRepository( $repository );
 		$package->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
 
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 'gh', $wpdb->inserts[0][1]['provider'] );
 		self::assertSame( 'branch', $wpdb->inserts[0][1]['source'] );
 		self::assertSame( 1, $wpdb->inserts[0][1]['source_revision'] );
@@ -51,7 +51,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		$opaqueProviderId = '000%2F{opaque-repository}-value';
 		$package->setRepository( new ManagedRepository( 'gh', $opaqueLocator, $opaqueProviderId, 'release', false, 'credential-one' ) );
 
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 'gh', $wpdb->updates[0][1]['provider'] );
 		self::assertSame( 'branch', $wpdb->updates[0][1]['source'] );
 		self::assertSame( 2, $wpdb->updates[0][1]['source_revision'] );
@@ -158,8 +158,8 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 
 		$result = $this->storage()->storeForTest( $package );
 
-		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
-		self::assertSame( 'ran_booster_storage_source_conflict', $result->getDiagnosticId() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
+		self::assertSame( 'ran_booster_storage_source_conflict', $result->get_diagnostic_id() );
 		self::assertSame( array(), $wpdb->updates );
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->rows[0]['source'] );
 	}
@@ -197,7 +197,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			)
 		);
 
-		self::assertSame( PackageMutationStatus::CHANGED, $result->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $result->get_status() );
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][1]['source'] );
 		self::assertSame( 5, $wpdb->updates[0][1]['source_revision'] );
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][2]['source'] );
@@ -240,7 +240,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			)
 		);
 
-		self::assertSame( PackageMutationStatus::CHANGED, $result->getStatus() );
+		self::assertSame( PackageMutationStatus::CHANGED, $result->get_status() );
 		self::assertSame( '', $wpdb->updates[0][2]['subdirectory'] );
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->updates[0][2]['source'] );
 		self::assertSame( 4, $wpdb->updates[0][2]['source_revision'] );
@@ -280,8 +280,8 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			)
 		);
 
-		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
-		self::assertSame( 'ran_booster_storage_source_conflict', $result->getDiagnosticId() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
+		self::assertSame( 'ran_booster_storage_source_conflict', $result->get_diagnostic_id() );
 		self::assertSame( array(), $wpdb->updates );
 		self::assertSame( 'packages/example', $wpdb->rows[0]['subdirectory'] );
 	}
@@ -319,7 +319,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			)
 		);
 
-		self::assertSame( PackageMutationStatus::CONFLICT, $result->getStatus() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
 		self::assertSame( array(), $wpdb->updates );
 		self::assertSame( 'packages/example', $wpdb->rows[0]['subdirectory'] );
 	}
@@ -374,7 +374,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			$this->storage()->findForTest( 'example/example.php' );
 			self::fail( 'Expected invalid stored provider identity to fail closed.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
 			self::assertStringNotContainsString( 'INVALID', $failure->getMessage() );
 		}
 	}
@@ -400,7 +400,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			$this->storage()->findForTest( 'example/example.php' );
 			self::fail( 'Expected a legacy row without stable repository identity to fail closed.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
 			self::assertStringNotContainsString( 'owner/example', $failure->getMessage() );
 		}
 	}
@@ -463,8 +463,8 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			)
 		);
 
-		self::assertSame( PackageMutationStatus::FAILED, $result->getStatus() );
-		self::assertSame( 'ran_booster_storage_invalid_provider_identity', $result->getDiagnosticId() );
+		self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
+		self::assertSame( 'ran_booster_storage_invalid_provider_identity', $result->get_diagnostic_id() );
 		self::assertCount( 1, $wpdb->updates );
 	}
 

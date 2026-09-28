@@ -351,10 +351,10 @@ final class PortabilityControllerTest extends TestCase {
 	public function testApplyFailureKeepsTheSafeStorageFailureMessage(): void {
 		try {
 			PackageMutationResult::conflict(
-				PackageStorageOperation::INSERT,
-				'ran_booster_storage_adoption_conflict',
-				'Booster found existing package management data. No package changes were made.'
-			)->requireSuccess();
+				operation: PackageStorageOperation::INSERT,
+				diagnostic_id: 'ran_booster_storage_adoption_conflict',
+				message: 'Booster found existing package management data. No package changes were made.'
+			)->require_success();
 			self::fail( 'A failed storage mutation must throw.' );
 		} catch ( PackageStorageFailure $failure ) {
 			$result = $this->applyFailure( $failure );
@@ -365,7 +365,7 @@ final class PortabilityControllerTest extends TestCase {
 	}
 
 	public function testApplyFailureKeepsTheActionableDatabaseRequirement(): void {
-		$result = $this->applyFailure( PackageStorageFailure::unsupportedDatabase() );
+		$result = $this->applyFailure( PackageStorageFailure::unsupported_database() );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertStringContainsString( 'database requirements', $result['message'] );

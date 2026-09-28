@@ -297,7 +297,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function testLifecycleSafeStateBlocksAttemptReadsAndAdmissionsBeforeTableAccess(): void {
 		$lifecycle = $this->createStub( Database::class );
-		$lifecycle->method( 'requireReady' )->willThrowException( new DatabaseLifecycleFailure( 'schema_operation_failed' ) );
+		$lifecycle->method( 'requireReady' )->willThrowException( new DatabaseLifecycleFailure( failure_reason: 'schema_operation_failed' ) );
 		$this->database->failReads = true;
 		$this->database->queries   = array();
 		$this->repository          = $this->repositoryWithMaximum( databaseLifecycle: $lifecycle );

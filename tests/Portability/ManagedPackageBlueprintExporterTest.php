@@ -78,7 +78,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			$exporter->export();
 			self::fail( 'Portability must not bypass the package-storage safe state.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_database_unsupported', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_database_unsupported', $failure->get_diagnostic_id() );
 		}
 	}
 

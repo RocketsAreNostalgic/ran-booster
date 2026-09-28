@@ -38,7 +38,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	public function testInstallCommandsRequireAnExactProviderCode( array $input ): void {
 		$this->expectException( \InvalidArgumentException::class );
 
-		PackageOperation::fromInput(
+		PackageOperation::from_input(
 			'install-plugin',
 			array_merge(
 				array(
@@ -104,7 +104,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	}
 
 	public function testInstallCommandDerivesItsSlugFromTheConfiguredSubdirectory(): void {
-		$operation = PackageOperation::fromInput(
+		$operation = PackageOperation::from_input(
 			'install-plugin',
 			array(
 				'provider'     => 'gh',
@@ -116,7 +116,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 
 		self::assertSame( 'packages/example-plugin', $operation->subdirectory );
-		self::assertSame( 'example-plugin', $operation->packageSlug );
+		self::assertSame( 'example-plugin', $operation->package_slug );
 	}
 
 	public function testMixedCaseRepositoryNameBecomesOneDeployableInstallationSlug(): void {
@@ -140,12 +140,12 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'branch'     => '',
 			)
 		);
-		$operation = PackageOperation::fromInput( 'install-plugin', $result );
+		$operation = PackageOperation::from_input( 'install-plugin', $result );
 
 		self::assertSame( 'RocketsAreNostalgic/tnyGmaps', $result['repository'] );
 		self::assertSame( '565105478', $result['provider_repository_id'] );
 		self::assertSame( 'tnyGmaps', $result['package_slug'] );
-		self::assertSame( 'tnygmaps', $operation->packageSlug );
+		self::assertSame( 'tnygmaps', $operation->package_slug );
 	}
 
 	public function testNestedFixtureInstallUsesTheSameDirectoryWithOrWithoutATrailingSlash(): void {
@@ -163,11 +163,11 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 					'subdirectory' => $subdirectory,
 				)
 			);
-			$operation = PackageOperation::fromInput( 'install-plugin', $request );
+			$operation = PackageOperation::from_input( 'install-plugin', $request );
 
 			self::assertSame( 'branch-fixture', $operation->subdirectory );
-			self::assertSame( 'branch-fixture', $operation->packageSlug );
-			self::assertSame( '1315521150', $operation->providerRepositoryId );
+			self::assertSame( 'branch-fixture', $operation->package_slug );
+			self::assertSame( '1315521150', $operation->provider_repository_id );
 		}
 	}
 
@@ -292,7 +292,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( '', $result['credential_id'] );
 		self::assertSame( '0', $result['private'] );
 		self::assertArrayNotHasKey( 'public_lookup_profile_id', $result );
-		self::assertNull( PackageOperation::fromInput( 'install-plugin', $result )->credentialId );
+		self::assertNull( PackageOperation::from_input( 'install-plugin', $result )->credential_id );
 	}
 
 	public function testTransientLookupIdentityRejectsInvalidShapeAndDurableCredentialConflict(): void {

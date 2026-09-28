@@ -92,7 +92,7 @@ $assert( $adoption->is_successful(), 'root Release adoption succeeds: ' . $adopt
 global $wpdb;
 $attempt_table   = Database::attemptTableName();
 $before_attempts = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE provider_repository_id = %s', $attempt_table, '1315521150' ) );
-$operation       = PackageOperation::fromInput(
+$operation       = PackageOperation::from_input(
 	'install-plugin',
 	array(
 		'provider'               => 'gh',

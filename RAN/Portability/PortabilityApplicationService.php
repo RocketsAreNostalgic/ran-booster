@@ -221,7 +221,7 @@ final readonly class PortabilityApplicationService {
 			if ( null === $repositoryPrivate ) {
 				throw new InvalidArgumentException();
 			}
-			$operation = PackageOperation::fromInput(
+			$operation = PackageOperation::from_input(
 				'install-' . $item->package->type,
 				$this->operationInput( $item, $credentialId, $repositoryPrivate )
 			);

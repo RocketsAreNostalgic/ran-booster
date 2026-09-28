@@ -19,7 +19,7 @@ final class CorePackageExecutorTest extends TestCase {
 			array( $this->extra() )
 		);
 
-		self::assertTrue( $result->isSuccessful() );
+		self::assertTrue( $result->is_successful() );
 	}
 
 	public function testInstallationResultArrayWithoutOneExactCompletionFailsClosed(): void {
@@ -41,7 +41,7 @@ final class CorePackageExecutorTest extends TestCase {
 		foreach ( $cases as $case => $completions ) {
 			$result = $this->mapCoreResult( $this->wordpressInstallationResult(), $completions );
 
-			self::assertFalse( $result->isSuccessful(), $case );
+			self::assertFalse( $result->is_successful(), $case );
 		}
 	}
 

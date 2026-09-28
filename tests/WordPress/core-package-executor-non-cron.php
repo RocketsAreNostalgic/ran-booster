@@ -75,11 +75,11 @@ $executor = new CorePackageExecutor(
 
 try {
 	$result = $executor->updatePlugin( $artifact, 'example', null, 'example/example.php' );
-	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $result->getFailure() ) {
+	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $result->get_failure() ) {
 		throw new RuntimeException( 'The non-cron update did not return the core operation result.' );
 	}
 	$result = $executor->installPlugin( $artifact, 'example', null );
-	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $result->getFailure() ) {
+	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $result->get_failure() ) {
 		throw new RuntimeException( 'The non-cron install did not return the core operation result.' );
 	}
 	if ( array( array( 'update', 'plugin' ), array( 'install', 'plugin' ) ) !== $calls ) {

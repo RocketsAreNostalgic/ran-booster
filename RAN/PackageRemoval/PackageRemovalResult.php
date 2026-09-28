@@ -31,11 +31,11 @@ final readonly class PackageRemovalResult {
 
 	private function __construct(
 		public string $status,
-		public string $outcomeCode = ''
+		public string $outcome_code = ''
 	) {
 		if ( ! in_array( $status, self::STATUSES, true )
-			|| ( 'failed' === $status && ! in_array( $outcomeCode, self::OUTCOME_CODES, true ) )
-			|| ( 'failed' !== $status && '' !== $outcomeCode ) ) {
+			|| ( 'failed' === $status && ! in_array( $outcome_code, self::OUTCOME_CODES, true ) )
+			|| ( 'failed' !== $status && '' !== $outcome_code ) ) {
 			throw new InvalidArgumentException( 'The package removal result is invalid.' );
 		}
 	}
@@ -48,12 +48,12 @@ final readonly class PackageRemovalResult {
 		return new self( 'deleted' );
 	}
 
-	public static function failed( string $outcomeCode ): self {
-		return new self( 'failed', $outcomeCode );
+	public static function failed( string $outcome_code ): self {
+		return new self( 'failed', $outcome_code );
 	}
 
 	/** @return list<string> */
-	public static function outcomeCodes(): array {
+	public static function outcome_codes(): array {
 		return self::OUTCOME_CODES;
 	}
 }

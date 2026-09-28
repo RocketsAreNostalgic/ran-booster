@@ -2769,19 +2769,19 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 		++$this->calls;
 		$request  = new DeploymentRequest(
 			(string) $command->repository,
-			$command->credentialId,
-			$command->private,
+			$command->credential_id,
+			$command->is_private,
 			(string) $command->branch,
-			(string) $command->packageSlug,
+			(string) $command->package_slug,
 			$command->subdirectory,
-			$command->deploymentPolicy,
+			$command->deployment_policy,
 			7
 		);
 		$attempt  = $this->attempts->admitAndClaimManual(
 			$command->operation,
-			$command->packageType,
-			(string) $command->providerCode,
-			(string) $command->providerRepositoryId,
+			$command->package_type,
+			(string) $command->provider_code,
+			(string) $command->provider_repository_id,
 			$request,
 			(string) $command->branch,
 			'branch',

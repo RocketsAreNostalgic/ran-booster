@@ -10,7 +10,7 @@ enum PackageSource: string {
 	case BRANCH        = 'branch';
 	case RELEASE_ASSET = 'release_asset';
 
-	public static function fromDatabase( mixed $value ): self {
+	public static function from_database( mixed $value ): self {
 		if ( ! is_string( $value ) ) {
 			throw new InvalidArgumentException( 'The managed package source is invalid.' );
 		}

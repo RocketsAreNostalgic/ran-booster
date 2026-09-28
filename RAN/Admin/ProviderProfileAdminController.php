@@ -83,7 +83,7 @@ class ProviderProfileAdminController {
 			$result = $validator->validateCredential( $id );
 			if ( $result->isValid() ) {
 				if ( null !== $result->expiry ) {
-					$this->expiryObservations->recordProviderExpiry(
+					$this->expiryObservations->record_provider_expiry(
 						$provider->value,
 						$id,
 						$result->expiry,
@@ -272,7 +272,7 @@ class ProviderProfileAdminController {
 					$this->expiryObservations->clear( $provider->value, $savedId );
 				}
 				if ( $manualExpirySubmitted && ! $manualExpiryIsProviderFallback ) {
-					$this->expiryObservations->setManualExpiry( $provider->value, $savedId, $manualExpiry );
+					$this->expiryObservations->set_manual_expiry( $provider->value, $savedId, $manualExpiry );
 				}
 				return $selfDestruct
 						? __( 'Repository credential saved with automatic removal enabled.', 'ran-booster' )

@@ -66,10 +66,13 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Secrets/SecretsStorageUnavailable.php`,
 `RAN/Secrets/SecretsRuntimeAvailability.php`,
 `RAN/Webhook/SignedWebhookVerifier.php`, `RAN/Webhook/WebhookController.php`,
-`RAN/Webhook/WebhookProcessor.php` and `RAN/Webhook/WebhookResponse.php`.
+`RAN/Webhook/WebhookProcessor.php`, `RAN/Webhook/WebhookResponse.php`,
+`RAN/Admin/CredentialExpiryObservationStore.php`,
+`RAN/Admin/CredentialExpiryReminder.php`, `RAN/Admin/CredentialExpiryNotice.php` and
+`RAN/Admin/CredentialExpiryNoticeController.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This thirty-three-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This thirty-seven-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -130,3 +133,11 @@ variables. Raw-body signature verification, authentication and dispatch ordering
 route and callback strings, response keys, status codes and headers are unchanged.
 Repository-provider contracts, WordPress methods and other service receivers
 retain their existing names.
+
+The credential-expiry cohort enforces owned snake_case methods and variables in
+its observation store, reminder, notice and notice controller. Option schema and
+keys, provider-over-manual precedence, date cutoffs, fingerprints, AJAX and nonce
+actions, capability ordering, rendered HTML and translated strings are unchanged.
+`CredentialExpiryReport::isKnown()` and its `expiresAt` property retain their
+separately scoped provider contract; the single property read has a local naming
+exception. This migration does not change UI behavior.

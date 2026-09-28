@@ -64,7 +64,7 @@ final class PurgerSecretsFile extends SecretsFile {
 
 final class PurgerObservations extends CredentialExpiryObservationStore {
 
-	public function clear( string $provider, string $profileId ): void {
+	public function clear( string $provider, string $profile_id ): void {
 	}
 }
 

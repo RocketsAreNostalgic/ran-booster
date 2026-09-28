@@ -103,7 +103,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 	public function testProviderExpiryPrecedesManualDateAndMissingMetadataIsUnknown(): void {
 		$this->credential( 'precedence', 'Precedence' );
 		$this->credential( 'unknown', 'Unknown' );
-		$this->observations->setManualExpiry( 'gh', 'precedence', '2026-07-24' );
+		$this->observations->set_manual_expiry( provider: 'gh', profile_id: 'precedence', expires_on: '2026-07-24' );
 		$this->providerExpiry( 'precedence', $this->now->modify( '+40 days' ) );
 
 		$status = $this->reminders()->status( 'gh', $this->profile( 'precedence' ) );
@@ -148,20 +148,20 @@ final class CredentialExpiryReminderTest extends TestCase {
 			$fingerprint,
 			$GLOBALS['ran_booster_repository_admin_user_meta'][17][ CredentialExpiryNotice::USER_META_KEY ]
 		);
-		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->shouldRender() );
+		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 
 		$this->providerExpiry( 'dismiss_me', $this->now->modify( '+9 days' ) );
-		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->shouldRender() );
+		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 		self::assertNotSame( $fingerprint, $reminders->fingerprint() );
 
 		$this->providerExpiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
 		$controller->handle();
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 18;
-		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->shouldRender() );
+		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 17;
 		$this->advanceClockOneDay();
-		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->shouldRender() );
+		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 		self::assertNotSame( $fingerprint, $reminders->fingerprint() );
 	}
 
@@ -240,7 +240,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringNotContainsString( $this->directory, $html );
 		self::assertStringNotContainsString( 'could not be authenticated', $html );
 		self::assertStringNotContainsString( 'test-token-storage_failure', $html );
-		self::assertFalse( $notice->shouldLoadDismissalScript() );
+		self::assertFalse( $notice->should_load_dismissal_script() );
 		self::assertSame( $bytesBefore, is_file( $this->path ) ? file_get_contents( $this->path ) : null );
 		self::assertSame( $keyBefore, $keyStore->load() );
 	}
@@ -321,11 +321,11 @@ final class CredentialExpiryReminderTest extends TestCase {
 	}
 
 	private function providerExpiry( string $id, DateTimeImmutable $expiry ): void {
-		$this->observations->recordProviderExpiry(
-			'gh',
-			$id,
-			CredentialExpiryReport::known( $expiry->format( 'Y-m-d\TH:i:s\Z' ) ),
-			$this->now->format( 'Y-m-d\TH:i:s\Z' )
+		$this->observations->record_provider_expiry(
+			provider: 'gh',
+			profile_id: $id,
+			report: CredentialExpiryReport::known( $expiry->format( 'Y-m-d\TH:i:s\Z' ) ),
+			checked_at: $this->now->format( 'Y-m-d\TH:i:s\Z' )
 		);
 	}
 

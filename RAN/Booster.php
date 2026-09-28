@@ -711,7 +711,7 @@ class Booster {
 		unset( $hook );
 
 		$notice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
-		if ( ! $notice->shouldLoadDismissalScript() ) {
+		if ( ! $notice->should_load_dismissal_script() ) {
 			return;
 		}
 

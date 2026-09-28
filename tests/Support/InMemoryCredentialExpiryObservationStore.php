@@ -15,12 +15,12 @@ final class InMemoryCredentialExpiryObservationStore extends CredentialExpiryObs
 	public bool $lastAutoload = true;
 
 	/** @return array<string, mixed> */
-	protected function readOption(): array {
+	protected function read_option(): array {
 		return $this->document;
 	}
 
 	/** @param array<string, mixed> $document */
-	protected function writeOption( array $document ): bool {
+	protected function write_option( array $document ): bool {
 		$this->lastAutoload = false;
 		if ( $this->failWrites ) {
 			return false;

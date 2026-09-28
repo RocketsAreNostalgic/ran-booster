@@ -29,7 +29,7 @@ final class CredentialExpiryNoticeController {
 			);
 		}
 
-		$userId = get_current_user_id();
+		$user_id = get_current_user_id();
 		try {
 			$fingerprint = $this->reminders->fingerprint();
 		} catch ( SecretsStorageUnavailable ) {
@@ -43,15 +43,15 @@ final class CredentialExpiryNoticeController {
 				409
 			);
 		}
-		if ( $userId < 1 || null === $fingerprint ) {
+		if ( $user_id < 1 || null === $fingerprint ) {
 			return wp_send_json_error(
 				array( 'message' => __( 'RAN Booster could not identify an active credential reminder.', 'ran-booster' ) ),
 				409
 			);
 		}
 
-		update_user_meta( $userId, CredentialExpiryNotice::USER_META_KEY, $fingerprint );
-		if ( ! hash_equals( $fingerprint, (string) get_user_meta( $userId, CredentialExpiryNotice::USER_META_KEY, true ) ) ) {
+		update_user_meta( $user_id, CredentialExpiryNotice::USER_META_KEY, $fingerprint );
+		if ( ! hash_equals( $fingerprint, (string) get_user_meta( $user_id, CredentialExpiryNotice::USER_META_KEY, true ) ) ) {
 			return wp_send_json_error(
 				array( 'message' => __( 'RAN Booster could not remember the notice dismissal.', 'ran-booster' ) ),
 				500

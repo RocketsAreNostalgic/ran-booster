@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Admin/CredentialExpiryObservationStore.php</include-pattern>
+		<include-pattern>/RAN/Admin/CredentialExpiryReminder.php</include-pattern>
+		<include-pattern>/RAN/Admin/CredentialExpiryNotice.php</include-pattern>
+		<include-pattern>/RAN/Admin/CredentialExpiryNoticeController.php</include-pattern>
 		<include-pattern>/RAN/Webhook/SignedWebhookVerifier.php</include-pattern>
 		<include-pattern>/RAN/Webhook/WebhookController.php</include-pattern>
 		<include-pattern>/RAN/Webhook/WebhookProcessor.php</include-pattern>
@@ -63,6 +67,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Admin/CredentialExpiryObservationStore.php</include-pattern>
+		<include-pattern>/RAN/Admin/CredentialExpiryReminder.php</include-pattern>
+		<include-pattern>/RAN/Admin/CredentialExpiryNotice.php</include-pattern>
+		<include-pattern>/RAN/Admin/CredentialExpiryNoticeController.php</include-pattern>
 		<include-pattern>/RAN/Webhook/SignedWebhookVerifier.php</include-pattern>
 		<include-pattern>/RAN/Webhook/WebhookController.php</include-pattern>
 		<include-pattern>/RAN/Webhook/WebhookProcessor.php</include-pattern>

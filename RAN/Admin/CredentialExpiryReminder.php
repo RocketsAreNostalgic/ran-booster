@@ -52,17 +52,17 @@ final class CredentialExpiryReminder {
 			$source    = 'manual';
 		}
 
-		$metadata      = $this->providers->get( $provider )->getMetadata();
-		$providerLabel = $metadata->label;
-		$label         = is_string( $profile['label'] ?? null ) && '' !== trim( $profile['label'] )
+		$metadata       = $this->providers->get( $provider )->getMetadata();
+		$provider_label = $metadata->label;
+		$label          = is_string( $profile['label'] ?? null ) && '' !== trim( $profile['label'] )
 			? $profile['label']
 			: $id;
-		$editable      = empty( $profile['immutable'] ) && 'constant' !== ( $profile['source'] ?? null );
+		$editable       = empty( $profile['immutable'] ) && 'constant' !== ( $profile['source'] ?? null );
 
 		if ( null === $effective ) {
 			return array(
 				'provider'             => $provider,
-				'provider_label'       => $providerLabel,
+				'provider_label'       => $provider_label,
 				'id'                   => $id,
 				'label'                => $label,
 				'editable'             => $editable,
@@ -82,30 +82,30 @@ final class CredentialExpiryReminder {
 		$date      = $expires->format( 'Y-m-d' );
 
 		if ( $remaining <= 0 ) {
-			$stage      = 'expired';
-			$badgeClass = 'ran-booster-badge--error';
+			$stage       = 'expired';
+			$badge_class = 'ran-booster-badge--error';
 			/* translators: %s is the credential expiry date in YYYY-MM-DD format. */
-			$badgeLabel = sprintf( __( 'Expired %s', 'ran-booster' ), $date );
+			$badge_label = sprintf( __( 'Expired %s', 'ran-booster' ), $date );
 		} elseif ( $remaining <= self::URGENT_SECONDS ) {
-			$stage      = 'urgent';
-			$badgeClass = 'ran-booster-badge--error';
+			$stage       = 'urgent';
+			$badge_class = 'ran-booster-badge--error';
 			/* translators: %d is the number of days until the credential expires. */
-			$badgeLabel = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
+			$badge_label = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
 		} elseif ( $remaining <= self::WARNING_SECONDS ) {
-			$stage      = 'warning';
-			$badgeClass = 'ran-booster-badge--warning';
+			$stage       = 'warning';
+			$badge_class = 'ran-booster-badge--warning';
 			/* translators: %d is the number of days until the credential expires. */
-			$badgeLabel = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
+			$badge_label = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
 		} else {
-			$stage      = 'future';
-			$badgeClass = 'ran-booster-badge--neutral';
+			$stage       = 'future';
+			$badge_class = 'ran-booster-badge--neutral';
 			/* translators: %s is the credential expiry date in YYYY-MM-DD format. */
-			$badgeLabel = sprintf( __( 'Expires %s', 'ran-booster' ), $date );
+			$badge_label = sprintf( __( 'Expires %s', 'ran-booster' ), $date );
 		}
 
 		return array(
 			'provider'             => $provider,
-			'provider_label'       => $providerLabel,
+			'provider_label'       => $provider_label,
 			'id'                   => $id,
 			'label'                => $label,
 			'editable'             => $editable,
@@ -113,8 +113,8 @@ final class CredentialExpiryReminder {
 			'source'               => $source,
 			'stage'                => $stage,
 			'days'                 => $days,
-			'badge_class'          => $badgeClass,
-			'badge_label'          => $badgeLabel,
+			'badge_class'          => $badge_class,
+			'badge_label'          => $badge_label,
 		);
 	}
 
@@ -123,8 +123,8 @@ final class CredentialExpiryReminder {
 	 */
 	public function affected(): array {
 		$affected = array();
-		foreach ( $this->providers->all() as $provider => $repositoryProvider ) {
-			unset( $repositoryProvider );
+		foreach ( $this->providers->all() as $provider => $repository_provider ) {
+			unset( $repository_provider );
 			foreach ( $this->secrets->credentialProfiles( $provider ) as $profile ) {
 				$status = $this->status( $provider, $profile );
 				if ( in_array( $status['stage'], array( 'warning', 'urgent', 'expired' ), true ) ) {

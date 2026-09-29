@@ -27,10 +27,10 @@ final class AdminStatusSummaryRendererTest extends TestCase {
 	public function testItRendersTheSharedStructureForEverySupportedState( string $state ): void {
 		ob_start();
 		( new AdminStatusSummaryRenderer() )->render(
-			$state,
-			'Status <heading>',
-			'Status & description',
-			static function (): void {
+			state: $state,
+			heading: 'Status <heading>',
+			description: 'Status & description',
+			render_actions: static function (): void {
 				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed component-slot fixture.
 				echo '<button type="button" class="button">Act</button>';
 			}

@@ -78,11 +78,15 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/CredentialSelfDestructPurger.php`,
 `RAN/Admin/PackageRepositoryRequestResolver.php`, `RAN/Admin/BoosterNoticeScope.php`,
 `RAN/Admin/DevelopmentEnvironmentDetector.php`,
-`RAN/Admin/CoreSelfUpdateDevelopmentNotice.php` and
-`RAN/Admin/DevelopmentSafetyNoticeController.php`.
+`RAN/Admin/CoreSelfUpdateDevelopmentNotice.php`,
+`RAN/Admin/DevelopmentSafetyNoticeController.php`,
+`RAN/Admin/Component/AdminActionNormalizer.php`,
+`RAN/Admin/Component/AdminActionRenderer.php`,
+`RAN/Admin/Component/AdminPackageSourceChoiceNormalizer.php` and
+`RAN/Admin/Component/AdminStatusSummaryRenderer.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This forty-nine-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This fifty-three-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -172,3 +176,8 @@ development-safety dismissal controller. Screen selection, detection order,
 capability and nonce checks, action and metadata keys, HTML and translated strings
 are unchanged. WordPress hook event names stay fixed; method callback descriptors
 follow the renamed owned methods.
+
+The administration action, source-choice and status-summary component cohort
+enforces owned snake_case helper, variable and parameter names. Public normalize
+and render method names, structured array keys, URL validation and limits, HTML,
+escaping, ARIA attributes and callback invocation behavior are unchanged.

@@ -114,11 +114,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/RepositoryProvider/ProviderDiagnosticResult.php`,
 `RAN/Portability/BlueprintArchive.php`,
 `RAN/Portability/BlueprintCredential.php`,
-`RAN/Portability/BlueprintPackage.php` and
-`RAN/Portability/PackageBlueprint.php`.
+`RAN/Portability/BlueprintPackage.php`,
+`RAN/Portability/PackageBlueprint.php`,
+`RAN/RepositoryProvider/RepositoryReference.php`,
+`RAN/RepositoryProvider/RepositoryDescriptor.php` and
+`RAN/RepositoryProvider/RepositoryBrowseRequest.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-five-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-eight-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -177,6 +180,14 @@ schema and key ordering, credential associations and fingerprints, resource limi
 management equality, archive encryption and entry validation, error-handler
 restoration and failed-write cleanup remain unchanged. Reserved-parameter
 enforcement is unchanged.
+
+The repository input trio renames private helpers, private validator parameters
+and owned browse-request properties. Public methods, named parameters and DTO
+fields retain narrow documented exceptions. Opaque locator bytes, repository
+identity casing, slug normalization, array projections, browse scope validation,
+request deadlines, timeout and response-size limits, counters and failure codes
+remain unchanged. The browse test's private reflection reference follows the
+renamed property. Reserved-parameter enforcement is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

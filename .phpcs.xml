@@ -28,6 +28,9 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReference.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryDescriptor.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryBrowseRequest.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintArchive.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintCredential.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintPackage.php</include-pattern>
@@ -115,6 +118,9 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReference.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryDescriptor.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryBrowseRequest.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintArchive.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintCredential.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintPackage.php</include-pattern>

@@ -101,8 +101,9 @@ renames owned renderer and picker helpers and local variables; the public
 URL and form fields, accessibility attributes and rendered markup remain stable.
 The picker retains narrow exceptions for the connected repository metadata and
 browse-result property contracts pending their own audited cohorts.
-The WordPress updater quartet retains public WordPress hook methods, lock methods
-and their named-argument contracts. Private helpers and owned identifiers use
+The WordPress updater quartet retains public WordPress hook methods, the filter's
+constructor argument, lock methods and their named-argument contracts. Private
+helpers and owned identifiers use
 snake_case while updater status and diagnostic keys, WordPress.org request
 filtering, shared-lock SQL/cache behavior and external receiver contracts stay
 unchanged.

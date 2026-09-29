@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Admin/Interaction/CoreAdminInteractionFacade.php</include-pattern>
+		<include-pattern>/RAN/Admin/Interaction/SignedAdminInteractionFlow.php</include-pattern>
+		<include-pattern>/RAN/Admin/Interaction/AdminInteractionTarget.php</include-pattern>
+		<include-pattern>/RAN/Admin/Interaction/AdminInteractionRequest.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintReviewer.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintRepositoryVerifier.php</include-pattern>
 		<include-pattern>/RAN/Portability/ManagedPackageBlueprintExporter.php</include-pattern>
@@ -99,6 +103,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Admin/Interaction/CoreAdminInteractionFacade.php</include-pattern>
+		<include-pattern>/RAN/Admin/Interaction/SignedAdminInteractionFlow.php</include-pattern>
+		<include-pattern>/RAN/Admin/Interaction/AdminInteractionTarget.php</include-pattern>
+		<include-pattern>/RAN/Admin/Interaction/AdminInteractionRequest.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintReviewer.php</include-pattern>
 		<include-pattern>/RAN/Portability/BlueprintRepositoryVerifier.php</include-pattern>
 		<include-pattern>/RAN/Portability/ManagedPackageBlueprintExporter.php</include-pattern>

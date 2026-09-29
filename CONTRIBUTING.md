@@ -99,10 +99,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Portability/BlueprintReviewer.php`,
 `RAN/Portability/BlueprintRepositoryVerifier.php`,
 `RAN/Portability/ManagedPackageBlueprintExporter.php` and
-`RAN/AddOn/Portability/NativePortabilityFacade.php`.
+`RAN/AddOn/Portability/NativePortabilityFacade.php`,
+`RAN/Admin/Interaction/CoreAdminInteractionFacade.php`,
+`RAN/Admin/Interaction/SignedAdminInteractionFlow.php`,
+`RAN/Admin/Interaction/AdminInteractionTarget.php` and
+`RAN/Admin/Interaction/AdminInteractionRequest.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This sixty-nine-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This seventy-three-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -129,6 +133,13 @@ and inherited facade contracts, retain narrow documented exceptions. Foreign DTO
 properties, authorization and credential ordering, blueprint bytes and fingerprints,
 provider access and error classifications remain unchanged. Reserved-parameter
 enforcement is unchanged.
+
+The administration interaction quartet renames private helpers, private properties
+and owned variables. Public methods and named parameters, callback strings and
+foreign signed-request DTO fields retain their existing contracts through narrow
+documented exceptions. Nonce inputs, canonical URLs, route validation, response
+headers, fragment validation, rendered markup and error text remain unchanged.
+Reserved-parameter enforcement is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

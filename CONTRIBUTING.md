@@ -110,11 +110,15 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/WordPress/CorePackageExecutor.php`,
 `RAN/Logging/BoosterLogger.php`,
 `RAN/Logging/TemporaryDebugCapture.php`,
-`RAN/RepositoryProvider/ProviderDiagnosticRequest.php` and
-`RAN/RepositoryProvider/ProviderDiagnosticResult.php`.
+`RAN/RepositoryProvider/ProviderDiagnosticRequest.php`,
+`RAN/RepositoryProvider/ProviderDiagnosticResult.php`,
+`RAN/Portability/BlueprintArchive.php`,
+`RAN/Portability/BlueprintCredential.php`,
+`RAN/Portability/BlueprintPackage.php` and
+`RAN/Portability/PackageBlueprint.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-one-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-five-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -165,6 +169,14 @@ budgets, deadline ordering and sticky exhaustion reasons, result projections,
 log sanitization and exception redaction, capture bytes and limits, lock ordering,
 filesystem permissions, replacement and cleanup behavior remain unchanged.
 Reserved-parameter enforcement is unchanged.
+
+The blueprint format and archive quartet renames private helpers and owned locals.
+Public methods, named parameters, promoted fields and native ZipArchive properties
+retain narrow documented exceptions. SensitiveParameter attributes, canonical
+schema and key ordering, credential associations and fingerprints, resource limits,
+management equality, archive encryption and entry validation, error-handler
+restoration and failed-write cleanup remain unchanged. Reserved-parameter
+enforcement is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

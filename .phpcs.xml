@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Portability/BlueprintArchive.php</include-pattern>
+		<include-pattern>/RAN/Portability/BlueprintCredential.php</include-pattern>
+		<include-pattern>/RAN/Portability/BlueprintPackage.php</include-pattern>
+		<include-pattern>/RAN/Portability/PackageBlueprint.php</include-pattern>
 		<include-pattern>/RAN/Logging/BoosterLogger.php</include-pattern>
 		<include-pattern>/RAN/Logging/TemporaryDebugCapture.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/ProviderDiagnosticRequest.php</include-pattern>
@@ -111,6 +115,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Portability/BlueprintArchive.php</include-pattern>
+		<include-pattern>/RAN/Portability/BlueprintCredential.php</include-pattern>
+		<include-pattern>/RAN/Portability/BlueprintPackage.php</include-pattern>
+		<include-pattern>/RAN/Portability/PackageBlueprint.php</include-pattern>
 		<include-pattern>/RAN/Logging/BoosterLogger.php</include-pattern>
 		<include-pattern>/RAN/Logging/TemporaryDebugCapture.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/ProviderDiagnosticRequest.php</include-pattern>

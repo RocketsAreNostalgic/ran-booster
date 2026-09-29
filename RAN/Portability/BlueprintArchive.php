@@ -15,10 +15,11 @@ final class BlueprintArchive {
 	public const ENTRY     = 'blueprint.json';
 	public const MAX_BYTES = 1048576;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function writeTo( string $path, #[\SensitiveParameter] PackageBlueprint $blueprint, #[\SensitiveParameter] ?string $password ): void {
 		$password  = '' === $password ? null : $password;
 		$encrypted = array() !== $blueprint->credentials;
-		if ( $encrypted !== ( null !== $password ) || ( $encrypted && ! self::validPassword( $password ) ) || ! self::zipAvailable( $encrypted ) ) {
+		if ( $encrypted !== ( null !== $password ) || ( $encrypted && ! self::valid_password( $password ) ) || ! self::zip_available( $encrypted ) ) {
 			throw new InvalidArgumentException( 'The portability archive could not be written.' );
 		}
 
@@ -44,9 +45,10 @@ final class BlueprintArchive {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function readFrom( string $path, #[\SensitiveParameter] ?string $password ): PackageBlueprint {
 		$password = '' === $password ? null : $password;
-		if ( ! self::zipAvailable() || ! is_file( $path ) || 0 === filesize( $path ) || filesize( $path ) > self::MAX_BYTES ) {
+		if ( ! self::zip_available() || ! is_file( $path ) || 0 === filesize( $path ) || filesize( $path ) > self::MAX_BYTES ) {
 			throw new InvalidArgumentException( 'The portability archive is invalid.' );
 		}
 
@@ -54,6 +56,7 @@ final class BlueprintArchive {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Contains libzip warnings inside the normalized public error boundary.
 		set_error_handler( static fn(): bool => true );
 		try {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- ZipArchive retains its native public property contract.
 			if ( true !== $zip->open( $path, ZipArchive::RDONLY | ZipArchive::CHECKCONS ) || 1 !== $zip->numFiles ) {
 				throw new InvalidArgumentException();
 			}
@@ -62,7 +65,7 @@ final class BlueprintArchive {
 			if ( ! is_array( $stat ) || self::ENTRY !== $stat['name'] || str_ends_with( $stat['name'], '/' ) || $stat['size'] > self::MAX_BYTES
 				|| ! in_array( $encryption, array( ZipArchive::EM_NONE, ZipArchive::EM_AES_256 ), true )
 				|| ( ZipArchive::EM_NONE === $encryption && null !== $password )
-				|| ( ZipArchive::EM_AES_256 === $encryption && ( ! self::validPassword( $password ) || ! self::zipAvailable( true ) || ! $zip->setPassword( $password ) ) ) ) {
+				|| ( ZipArchive::EM_AES_256 === $encryption && ( ! self::valid_password( $password ) || ! self::zip_available( true ) || ! $zip->setPassword( $password ) ) ) ) {
 				throw new InvalidArgumentException();
 			}
 			$json = $zip->getFromIndex( 0, PackageBlueprint::MAX_BYTES + 1 );
@@ -82,11 +85,11 @@ final class BlueprintArchive {
 		}
 	}
 
-	private static function validPassword( ?string $password ): bool {
+	private static function valid_password( ?string $password ): bool {
 		return null !== $password && strlen( $password ) >= 20 && strlen( $password ) <= 256 && 1 === preg_match( '//u', $password ) && ! preg_match( '/[\x00-\x1F\x7F]/', $password );
 	}
 
-	private static function zipAvailable( bool $aes = false ): bool {
+	private static function zip_available( bool $aes = false ): bool {
 		return class_exists( ZipArchive::class ) && ( ! $aes || ( defined( ZipArchive::class . '::EM_AES_256' ) && method_exists( ZipArchive::class, 'isEncryptionMethodSupported' ) && ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, true ) && ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, false ) ) );
 	}
 }

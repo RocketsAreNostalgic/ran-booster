@@ -25,7 +25,7 @@ final readonly class BlueprintCredential {
 			|| array() === $packages || count( $packages ) > PackageBlueprint::MAX_PACKAGES ) {
 			throw new InvalidArgumentException( 'The portability credential record is invalid.' );
 		}
-		self::canonicalConfiguration( $configuration );
+		self::canonical_configuration( $configuration );
 		$identities = array();
 		foreach ( $packages as $package ) {
 			if ( ! is_array( $package ) || array_keys( $package ) !== array( 'type', 'identifier' )
@@ -39,6 +39,7 @@ final readonly class BlueprintCredential {
 	}
 
 	/** @param array<string, mixed> $record */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public static function fromArray( #[\SensitiveParameter] array $record ): self {
 		if ( array_keys( $record ) !== array( 'provider', 'label', 'kind', 'configuration', 'secret', 'packages' )
 			|| ! is_string( $record['provider'] ) || ! is_string( $record['label'] ) || ! is_string( $record['kind'] )
@@ -51,8 +52,9 @@ final readonly class BlueprintCredential {
 	}
 
 	/** @return array{provider:string,label:string,kind:string,configuration:array<string,mixed>|object,secret:string,packages:list<array{type:string,identifier:string}>} */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function toArray(): array {
-		$configuration = self::canonicalConfiguration( $this->configuration );
+		$configuration = self::canonical_configuration( $this->configuration );
 		$packages      = $this->packages;
 		usort( $packages, static fn( array $left, array $right ): int => array( $left['type'], $left['identifier'] ) <=> array( $right['type'], $right['identifier'] ) );
 
@@ -71,15 +73,15 @@ final readonly class BlueprintCredential {
 	}
 
 	/** @param array<string, mixed> $configuration @return array<string, mixed> */
-	private static function canonicalConfiguration( array $configuration ): array {
+	private static function canonical_configuration( array $configuration ): array {
 		$nodes = 0;
 		/** @var array<string, mixed> $result */
-		$result = self::canonicalValue( $configuration, 0, $nodes );
+		$result = self::canonical_value( $configuration, 0, $nodes );
 
 		return $result;
 	}
 
-	private static function canonicalValue( mixed $value, int $depth, int &$nodes ): mixed {
+	private static function canonical_value( mixed $value, int $depth, int &$nodes ): mixed {
 		if ( ++$nodes > 128 || $depth > 4 ) {
 			throw new InvalidArgumentException( 'The portability credential record is invalid.' );
 		}
@@ -101,7 +103,7 @@ final readonly class BlueprintCredential {
 			if ( ! $list && ( ! is_string( $key ) || ! self::text( $key, 64 ) ) ) {
 				throw new InvalidArgumentException( 'The portability credential record is invalid.' );
 			}
-			$result[ $key ] = self::canonicalValue( $item, $depth + 1, $nodes );
+			$result[ $key ] = self::canonical_value( $item, $depth + 1, $nodes );
 		}
 		if ( ! $list ) {
 			ksort( $result, SORT_STRING );

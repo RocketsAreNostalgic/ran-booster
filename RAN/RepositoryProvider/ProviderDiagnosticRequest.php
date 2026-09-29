@@ -16,21 +16,24 @@ final class ProviderDiagnosticRequest {
 	public const MAX_SECONDS             = 10.0;
 	public const MAX_CREDENTIAL_ID_BYTES = 128;
 
-	private readonly ?string $credentialId;
+	private readonly ?string $credential_id;
 	private readonly ?string $repository;
-	private readonly int $remoteCallLimit;
+	private readonly int $remote_call_limit;
 	private readonly float $deadline;
 	private readonly Closure $clock;
-	private int $remoteCalls          = 0;
-	private ?string $exhaustionReason = null;
+	private int $remote_calls          = 0;
+	private ?string $exhaustion_reason = null;
 
 	public function __construct(
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?string $credentialId = null,
 		?string $repository = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		int $remoteCallLimit = self::MAX_REMOTE_CALLS,
 		float $seconds = self::MAX_SECONDS,
 		?Closure $clock = null
 	) {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		if ( $remoteCallLimit < 1 || $remoteCallLimit > self::MAX_REMOTE_CALLS ) {
 			throw new InvalidArgumentException( 'Provider diagnostics allow between one and five remote calls.' );
 		}
@@ -39,17 +42,21 @@ final class ProviderDiagnosticRequest {
 			throw new InvalidArgumentException( 'Provider diagnostics allow a deadline of up to ten seconds.' );
 		}
 
-		$this->credentialId    = $this->optionalCredentialId( $credentialId );
-		$this->repository      = null === $repository ? null : RepositoryLocator::requireValid( $repository );
-		$this->remoteCallLimit = $remoteCallLimit;
-		$this->clock           = $clock ?? static fn(): float => hrtime( true ) / 1_000_000_000;
-		$this->deadline        = ( $this->clock )() + $seconds;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$this->credential_id = $this->optional_credential_id( $credentialId );
+		$this->repository    = null === $repository ? null : RepositoryLocator::requireValid( $repository );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$this->remote_call_limit = $remoteCallLimit;
+		$this->clock             = $clock ?? static fn(): float => hrtime( true ) / 1_000_000_000;
+		$this->deadline          = ( $this->clock )() + $seconds;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function getCredentialId(): ?string {
-		return $this->credentialId;
+		return $this->credential_id;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function getRepository(): ?string {
 		return $this->repository;
 	}
@@ -57,37 +64,41 @@ final class ProviderDiagnosticRequest {
 	/**
 	 * Claim one remote call and return its maximum remaining timeout in seconds.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function claimRemoteCall(): float {
 		$remaining = $this->remainingSeconds();
 
 		if ( $remaining <= 0.0 ) {
-			$this->exhaustionReason ??= ProviderDiagnosticBudgetExceeded::DEADLINE;
+			$this->exhaustion_reason ??= ProviderDiagnosticBudgetExceeded::DEADLINE;
 			throw ProviderDiagnosticBudgetExceeded::deadline();
 		}
 
-		if ( $this->remoteCalls >= $this->remoteCallLimit ) {
-			$this->exhaustionReason ??= ProviderDiagnosticBudgetExceeded::REMOTE_CALLS;
+		if ( $this->remote_calls >= $this->remote_call_limit ) {
+			$this->exhaustion_reason ??= ProviderDiagnosticBudgetExceeded::REMOTE_CALLS;
 			throw ProviderDiagnosticBudgetExceeded::remoteCalls();
 		}
 
-		++$this->remoteCalls;
+		++$this->remote_calls;
 
 		return $remaining;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function getRemoteCalls(): int {
-		return $this->remoteCalls;
+		return $this->remote_calls;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function getExhaustionReason(): ?string {
-		return $this->exhaustionReason;
+		return $this->exhaustion_reason;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function remainingSeconds(): float {
 		return max( 0.0, $this->deadline - ( $this->clock )() );
 	}
 
-	private function optionalCredentialId( ?string $value ): ?string {
+	private function optional_credential_id( ?string $value ): ?string {
 		if ( null === $value ) {
 			return null;
 		}

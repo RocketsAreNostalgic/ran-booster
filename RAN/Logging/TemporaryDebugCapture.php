@@ -33,8 +33,11 @@ final class TemporaryDebugCapture {
 	private ?string $path;
 	private Closure $clock;
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 	public function __construct( ?string $secretsPath, ?callable $clock = null ) {
-		$this->path  = is_string( $secretsPath ) && '' !== trim( $secretsPath )
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$this->path = is_string( $secretsPath ) && '' !== trim( $secretsPath )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 			? dirname( $secretsPath ) . DIRECTORY_SEPARATOR . self::FILE_NAME
 			: null;
 		$this->clock = null === $clock
@@ -48,11 +51,11 @@ final class TemporaryDebugCapture {
 	 * @return array<string, mixed>
 	 */
 	public function start(): array {
-		return $this->withExclusiveLock(
+		return $this->with_exclusive_lock(
 			function (): array {
-				$hadFile = $this->captureExists();
-				if ( $hadFile ) {
-					$this->readDocument();
+				$had_file = $this->capture_exists();
+				if ( $had_file ) {
+					$this->read_document();
 				}
 
 				$now      = $this->now();
@@ -64,9 +67,9 @@ final class TemporaryDebugCapture {
 					'entries'      => array(),
 				);
 
-				$this->writeDocument( $document, $hadFile );
+				$this->write_document( $document, $had_file );
 
-				return $this->snapshotFromDocument( $document, 'active' );
+				return $this->snapshot_from_document( $document, 'active' );
 			}
 		);
 	}
@@ -77,31 +80,31 @@ final class TemporaryDebugCapture {
 	 * @return array<string, mixed>
 	 */
 	public function stop(): array {
-		if ( ! $this->captureExists() ) {
-			return $this->emptySnapshot( 'inactive' );
+		if ( ! $this->capture_exists() ) {
+			return $this->empty_snapshot( 'inactive' );
 		}
 
-		return $this->withExclusiveLock(
+		return $this->with_exclusive_lock(
 			function (): array {
-				if ( ! $this->captureExists() ) {
-					return $this->emptySnapshot( 'inactive' );
+				if ( ! $this->capture_exists() ) {
+					return $this->empty_snapshot( 'inactive' );
 				}
 
-				$document = $this->readDocument();
+				$document = $this->read_document();
 				if ( $this->expired( $document ) ) {
-					$this->deleteOwnedFile();
+					$this->delete_owned_file();
 
-					return $this->emptySnapshot( 'inactive' );
+					return $this->empty_snapshot( 'inactive' );
 				}
 
 				if ( 'active' === $this->state( $document ) ) {
 					$now                      = $this->now();
 					$document['active_until'] = $this->timestamp( $now );
 					$document['expires_at']   = $this->timestamp( $now + self::RETENTION_SECONDS );
-					$this->writeDocument( $document, true );
+					$this->write_document( $document, true );
 				}
 
-				return $this->snapshotFromDocument( $document, 'retained' );
+				return $this->snapshot_from_document( $document, 'retained' );
 			}
 		);
 	}
@@ -110,18 +113,18 @@ final class TemporaryDebugCapture {
 	 * Delete only a valid capture owned by Booster.
 	 */
 	public function delete(): bool {
-		if ( ! $this->captureExists() ) {
+		if ( ! $this->capture_exists() ) {
 			return false;
 		}
 
-		return $this->withExclusiveLock(
+		return $this->with_exclusive_lock(
 			function (): bool {
-				if ( ! $this->captureExists() ) {
+				if ( ! $this->capture_exists() ) {
 					return false;
 				}
 
-				$this->readDocument();
-				$this->deleteOwnedFile();
+				$this->read_document();
+				$this->delete_owned_file();
 
 				return true;
 			}
@@ -131,31 +134,32 @@ final class TemporaryDebugCapture {
 	/**
 	 * Verify exact managed capture ownership without changing the filesystem.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function assertManagedStorageDeletable(): void {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return;
 		}
 
-		$lockPath = $this->path . self::LOCK_SUFFIX;
-		$hasFile  = $this->captureExists();
-		$hasLock  = file_exists( $lockPath ) || is_link( $lockPath );
-		if ( ! $hasFile && ! $hasLock ) {
+		$lock_path = $this->path . self::LOCK_SUFFIX;
+		$has_file  = $this->capture_exists();
+		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
+		if ( ! $has_file && ! $has_lock ) {
 			$directory = dirname( $this->path );
 			if ( file_exists( $directory ) || is_link( $directory ) ) {
-				$this->assertWritableLocation();
+				$this->assert_writable_location();
 			}
 
 			return;
 		}
-		if ( ! $hasLock ) {
+		if ( ! $has_lock ) {
 			throw new RuntimeException( 'The Booster debug capture is missing its lock.' );
 		}
 
-		$this->assertWritableLocation();
-		$this->withExclusiveLock(
+		$this->assert_writable_location();
+		$this->with_exclusive_lock(
 			function (): void {
-				if ( $this->captureExists() ) {
-					$this->readDocument();
+				if ( $this->capture_exists() ) {
+					$this->read_document();
 				}
 			},
 			false
@@ -168,39 +172,40 @@ final class TemporaryDebugCapture {
 	 * This uninstall-only seam is idempotent, but it never deletes malformed,
 	 * symlinked, insecure or foreign capture material.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function deleteManagedStorage(): void {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return;
 		}
 
-		$lockPath = $this->path . self::LOCK_SUFFIX;
-		$hasFile  = $this->captureExists();
-		$hasLock  = file_exists( $lockPath ) || is_link( $lockPath );
-		if ( ! $hasFile && ! $hasLock ) {
+		$lock_path = $this->path . self::LOCK_SUFFIX;
+		$has_file  = $this->capture_exists();
+		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
+		if ( ! $has_file && ! $has_lock ) {
 			$directory = dirname( $this->path );
 			if ( file_exists( $directory ) || is_link( $directory ) ) {
-				$this->assertWritableLocation();
+				$this->assert_writable_location();
 			}
 
 			return;
 		}
 
-		$this->assertWritableLocation();
-		$this->withExclusiveLock(
+		$this->assert_writable_location();
+		$this->with_exclusive_lock(
 			function (): void {
-				if ( $this->captureExists() ) {
-					$this->readDocument();
-					$this->deleteOwnedFile();
+				if ( $this->capture_exists() ) {
+					$this->read_document();
+					$this->delete_owned_file();
 				}
 
-				$lockPath = $this->path . self::LOCK_SUFFIX;
-				if ( is_link( $lockPath ) ) {
+				$lock_path = $this->path . self::LOCK_SUFFIX;
+				if ( is_link( $lock_path ) ) {
 					throw new RuntimeException( 'Refusing to delete an invalid Booster debug capture lock.' );
 				}
-				if ( ! unlink( $lockPath ) ) {
+				if ( ! unlink( $lock_path ) ) {
 					throw new RuntimeException( 'Could not delete the Booster debug capture lock safely.' );
 				}
-				clearstatcache( true, $lockPath );
+				clearstatcache( true, $lock_path );
 			},
 			false
 		);
@@ -212,38 +217,38 @@ final class TemporaryDebugCapture {
 	 * @return array<string, mixed>
 	 */
 	public function snapshot(): array {
-		if ( ! $this->locationAvailable() ) {
-			return $this->emptySnapshot( 'unavailable' );
+		if ( ! $this->location_available() ) {
+			return $this->empty_snapshot( 'unavailable' );
 		}
 
-		if ( ! $this->captureExists() ) {
-			return $this->emptySnapshot( 'inactive' );
+		if ( ! $this->capture_exists() ) {
+			return $this->empty_snapshot( 'inactive' );
 		}
 
 		try {
-			return $this->withExclusiveLock(
+			return $this->with_exclusive_lock(
 				function (): array {
-					if ( ! $this->captureExists() ) {
-						return $this->emptySnapshot( 'inactive' );
+					if ( ! $this->capture_exists() ) {
+						return $this->empty_snapshot( 'inactive' );
 					}
 
 					try {
-						$document = $this->readDocument();
+						$document = $this->read_document();
 					} catch ( RuntimeException ) {
-						return $this->emptySnapshot( 'malformed' );
+						return $this->empty_snapshot( 'malformed' );
 					}
 
 					if ( $this->expired( $document ) ) {
-						$this->deleteOwnedFile();
+						$this->delete_owned_file();
 
-						return $this->emptySnapshot( 'inactive' );
+						return $this->empty_snapshot( 'inactive' );
 					}
 
-					return $this->snapshotFromDocument( $document, $this->state( $document ) );
+					return $this->snapshot_from_document( $document, $this->state( $document ) );
 				}
 			);
 		} catch ( RuntimeException ) {
-			return $this->emptySnapshot( 'unavailable' );
+			return $this->empty_snapshot( 'unavailable' );
 		}
 	}
 
@@ -252,19 +257,19 @@ final class TemporaryDebugCapture {
 	 */
 	public function append( string $line ): bool {
 		try {
-			if ( ! $this->captureExists() ) {
+			if ( ! $this->capture_exists() ) {
 				return false;
 			}
 
-			return $this->withExclusiveLock(
+			return $this->with_exclusive_lock(
 				function () use ( $line ): bool {
-					if ( ! $this->captureExists() ) {
+					if ( ! $this->capture_exists() ) {
 						return false;
 					}
 
-					$document = $this->readDocument();
+					$document = $this->read_document();
 					if ( $this->expired( $document ) ) {
-						$this->deleteOwnedFile();
+						$this->delete_owned_file();
 
 						return false;
 					}
@@ -274,10 +279,10 @@ final class TemporaryDebugCapture {
 
 					$document['entries'][] = array(
 						'at'   => $this->timestamp( $this->now() ),
-						'line' => $this->oneLine( $line ),
+						'line' => $this->one_line( $line ),
 					);
 					$document['entries']   = array_slice( $document['entries'], -self::MAX_ENTRIES );
-					$this->writeDocument( $document, true );
+					$this->write_document( $document, true );
 
 					return true;
 				}
@@ -292,30 +297,30 @@ final class TemporaryDebugCapture {
 	 * @param callable(resource): TResult $operation
 	 * @return TResult
 	 */
-	private function withExclusiveLock( callable $operation, bool $repairExistingPermissions = true ): mixed {
-		$this->assertWritableLocation();
-		$lockPath = $this->path . self::LOCK_SUFFIX;
+	private function with_exclusive_lock( callable $operation, bool $repair_existing_permissions = true ): mixed {
+		$this->assert_writable_location();
+		$lock_path = $this->path . self::LOCK_SUFFIX;
 
-		if ( is_link( $lockPath ) ) {
+		if ( is_link( $lock_path ) ) {
 			throw new RuntimeException( 'Refusing to use an invalid Booster debug capture lock.' );
 		}
 
-		$hadLock = file_exists( $lockPath );
-		$lock    = fopen( $lockPath, 'c+b' );
+		$had_lock = file_exists( $lock_path );
+		$lock     = fopen( $lock_path, 'c+b' );
 		if ( false === $lock ) {
 			throw new RuntimeException( 'Could not open the Booster debug capture lock.' );
 		}
 
 		try {
-			$lockStat = fstat( $lock );
-			if ( false === $lockStat
-				|| 0100000 !== ( $lockStat['mode'] & 0170000 )
-				|| ! $this->ownedByProcess( $lockStat )
+			$lock_stat = fstat( $lock );
+			if ( false === $lock_stat
+				|| 0100000 !== ( $lock_stat['mode'] & 0170000 )
+				|| ! $this->owned_by_process( $lock_stat )
 			) {
 				throw new RuntimeException( 'Could not inspect the Booster debug capture lock.' );
 			}
-			if ( 0600 !== ( $lockStat['mode'] & 0777 )
-				&& ( ( $hadLock && ! $repairExistingPermissions ) || ! chmod( $lockPath, 0600 ) )
+			if ( 0600 !== ( $lock_stat['mode'] & 0777 )
+				&& ( ( $had_lock && ! $repair_existing_permissions ) || ! chmod( $lock_path, 0600 ) )
 			) {
 				throw new RuntimeException( 'Could not secure the Booster debug capture lock.' );
 			}
@@ -330,13 +335,13 @@ final class TemporaryDebugCapture {
 		}
 	}
 
-	private function assertWritableLocation(): void {
-		if ( ! $this->locationAvailable() ) {
+	private function assert_writable_location(): void {
+		if ( ! $this->location_available() ) {
 			throw new RuntimeException( 'The Booster debug capture location is not available.' );
 		}
 	}
 
-	private function locationAvailable(): bool {
+	private function location_available(): bool {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return false;
 		}
@@ -351,12 +356,12 @@ final class TemporaryDebugCapture {
 		return false !== $stat
 			&& 0040000 === ( $stat['mode'] & 0170000 )
 			&& 0700 === ( $stat['mode'] & 0777 )
-			&& $this->ownedByProcess( $stat )
+			&& $this->owned_by_process( $stat )
 			&& is_readable( $directory )
 			&& is_writable( $directory );
 	}
 
-	private function captureExists(): bool {
+	private function capture_exists(): bool {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return false;
 		}
@@ -371,7 +376,7 @@ final class TemporaryDebugCapture {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function readDocument(): array {
+	private function read_document(): array {
 		if ( ! is_string( $this->path ) || '' === $this->path || is_link( $this->path ) ) {
 			throw new RuntimeException( 'Refusing to read an invalid Booster debug capture.' );
 		}
@@ -411,19 +416,19 @@ final class TemporaryDebugCapture {
 			throw new RuntimeException( 'The Booster debug capture structure is invalid.' );
 		}
 
-		$metadata = $this->decodeLine( array_shift( $lines ) );
+		$metadata = $this->decode_line( array_shift( $lines ) );
 		if ( self::OWNER !== ( $metadata['owner'] ?? null ) || self::FORMAT_VERSION !== ( $metadata['format'] ?? null ) ) {
 			throw new RuntimeException( 'The Booster debug capture ownership marker is invalid.' );
 		}
 
-		$metadataKeys       = array_keys( $metadata );
-		$allowedMetadata    = array( 'owner', 'format', 'active_until', 'expires_at' );
-		$legacyMetadataKeys = array( 'owner', 'format', 'started_at', 'active_until', 'stopped_at', 'expires_at' );
-		if ( $allowedMetadata !== $metadataKeys && $legacyMetadataKeys !== $metadataKeys ) {
+		$metadata_keys        = array_keys( $metadata );
+		$allowed_metadata     = array( 'owner', 'format', 'active_until', 'expires_at' );
+		$legacy_metadata_keys = array( 'owner', 'format', 'started_at', 'active_until', 'stopped_at', 'expires_at' );
+		if ( $allowed_metadata !== $metadata_keys && $legacy_metadata_keys !== $metadata_keys ) {
 			throw new RuntimeException( 'The Booster debug capture metadata is invalid.' );
 		}
 
-		if ( $legacyMetadataKeys === $metadataKeys ) {
+		if ( $legacy_metadata_keys === $metadata_keys ) {
 			if ( ! is_string( $metadata['started_at'] ) || false === strtotime( $metadata['started_at'] ) ) {
 				throw new RuntimeException( 'The Booster debug capture timestamps are invalid.' );
 			}
@@ -447,7 +452,7 @@ final class TemporaryDebugCapture {
 			if ( strlen( $line ) > self::MAX_ENTRY_BYTES ) {
 				throw new RuntimeException( 'A Booster debug capture entry exceeds its size limit.' );
 			}
-			$entry = $this->decodeLine( $line );
+			$entry = $this->decode_line( $line );
 			if ( array( 'at', 'line' ) !== array_keys( $entry )
 				|| ! is_string( $entry['at'] )
 				|| false === strtotime( $entry['at'] )
@@ -468,7 +473,7 @@ final class TemporaryDebugCapture {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function decodeLine( string $line ): array {
+	private function decode_line( string $line ): array {
 		$decoded = json_decode( $line, true );
 		if ( ! is_array( $decoded ) || JSON_ERROR_NONE !== json_last_error() ) {
 			throw new RuntimeException( 'The Booster debug capture contains invalid JSON.' );
@@ -480,12 +485,12 @@ final class TemporaryDebugCapture {
 	/**
 	 * @param array<string, mixed> $document
 	 */
-	private function writeDocument( array $document, bool $expectedExisting ): void {
-		$contents = $this->encodeDocument( $document );
+	private function write_document( array $document, bool $expected_existing ): void {
+		$contents = $this->encode_document( $document );
 		$size     = strlen( $contents );
 		while ( $size > self::MAX_FILE_BYTES && array() !== $document['entries'] ) {
 			array_shift( $document['entries'] );
-			$contents = $this->encodeDocument( $document );
+			$contents = $this->encode_document( $document );
 			$size     = strlen( $contents );
 		}
 		if ( $size > self::MAX_FILE_BYTES ) {
@@ -503,22 +508,22 @@ final class TemporaryDebugCapture {
 				throw new RuntimeException( 'Could not secure the temporary Booster debug capture.' );
 			}
 
-			$temporaryHandle = fopen( $temporary, 'wb' );
-			if ( false === $temporaryHandle ) {
+			$temporary_handle = fopen( $temporary, 'wb' );
+			if ( false === $temporary_handle ) {
 				throw new RuntimeException( 'Could not open the temporary Booster debug capture.' );
 			}
 			try {
-				$written = fwrite( $temporaryHandle, $contents );
-				if ( false === $written || strlen( $contents ) !== $written || ! fflush( $temporaryHandle ) ) {
+				$written = fwrite( $temporary_handle, $contents );
+				if ( false === $written || strlen( $contents ) !== $written || ! fflush( $temporary_handle ) ) {
 					throw new RuntimeException( 'Could not write the temporary Booster debug capture.' );
 				}
 			} finally {
-				fclose( $temporaryHandle );
+				fclose( $temporary_handle );
 			}
 
-			if ( $expectedExisting ) {
-				$this->readDocument();
-			} elseif ( $this->captureExists() ) {
+			if ( $expected_existing ) {
+				$this->read_document();
+			} elseif ( $this->capture_exists() ) {
 				throw new RuntimeException( 'Refusing to replace an unexpected Booster debug capture.' );
 			}
 
@@ -537,14 +542,14 @@ final class TemporaryDebugCapture {
 	/**
 	 * @param array<string, mixed> $document
 	 */
-	private function encodeDocument( array $document ): string {
+	private function encode_document( array $document ): string {
 		$metadata = $document;
 		$entries  = $metadata['entries'];
 		unset( $metadata['entries'] );
 
-		$contents = self::HEADER . $this->encodeLine( $metadata ) . "\n";
+		$contents = self::HEADER . $this->encode_line( $metadata ) . "\n";
 		foreach ( $entries as $entry ) {
-			$encoded   = $this->encodeEntry( $entry );
+			$encoded   = $this->encode_entry( $entry );
 			$contents .= $encoded . "\n";
 		}
 
@@ -554,19 +559,19 @@ final class TemporaryDebugCapture {
 	/**
 	 * @param array<string, mixed> $entry
 	 */
-	private function encodeEntry( array $entry ): string {
-		$entry['line'] = $this->oneLine( (string) $entry['line'] );
-		$encoded       = $this->encodeLine( $entry );
-		$encodedSize   = strlen( $encoded );
+	private function encode_entry( array $entry ): string {
+		$entry['line'] = $this->one_line( (string) $entry['line'] );
+		$encoded       = $this->encode_line( $entry );
+		$encoded_size  = strlen( $encoded );
 
-		while ( $encodedSize > self::MAX_ENTRY_BYTES && '' !== $entry['line'] ) {
-			$overflow      = $encodedSize - self::MAX_ENTRY_BYTES;
-			$entry['line'] = $this->truncateUtf8( $entry['line'], max( 0, strlen( $entry['line'] ) - $overflow - 3 ) ) . '...';
-			$encoded       = $this->encodeLine( $entry );
-			$encodedSize   = strlen( $encoded );
+		while ( $encoded_size > self::MAX_ENTRY_BYTES && '' !== $entry['line'] ) {
+			$overflow      = $encoded_size - self::MAX_ENTRY_BYTES;
+			$entry['line'] = $this->truncate_utf8( $entry['line'], max( 0, strlen( $entry['line'] ) - $overflow - 3 ) ) . '...';
+			$encoded       = $this->encode_line( $entry );
+			$encoded_size  = strlen( $encoded );
 		}
 
-		if ( $encodedSize > self::MAX_ENTRY_BYTES ) {
+		if ( $encoded_size > self::MAX_ENTRY_BYTES ) {
 			throw new RuntimeException( 'A Booster debug capture entry could not be bounded.' );
 		}
 
@@ -576,7 +581,7 @@ final class TemporaryDebugCapture {
 	/**
 	 * @param array<string, mixed> $value
 	 */
-	private function encodeLine( array $value ): string {
+	private function encode_line( array $value ): string {
 		$encoded = wp_json_encode(
 			$value,
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
@@ -591,27 +596,27 @@ final class TemporaryDebugCapture {
 	/**
 	 * Delete the capture after its caller validates the ownership marker.
 	 */
-	private function deleteOwnedFile(): void {
+	private function delete_owned_file(): void {
 		if ( is_link( $this->path ) || ! unlink( $this->path ) ) {
 			throw new RuntimeException( 'Could not delete the Booster debug capture.' );
 		}
 	}
 
 	/** @param array<string, int> $stat */
-	private function ownedByProcess( array $stat ): bool {
-		$effectiveUserId = function_exists( 'posix_geteuid' ) ? posix_geteuid() : null;
+	private function owned_by_process( array $stat ): bool {
+		$effective_user_id = function_exists( 'posix_geteuid' ) ? posix_geteuid() : null;
 
-		return null !== $effectiveUserId
+		return null !== $effective_user_id
 			&& isset( $stat['uid'] )
-			&& $stat['uid'] === $effectiveUserId;
+			&& $stat['uid'] === $effective_user_id;
 	}
 
 	/**
 	 * @param array<string, mixed> $document
 	 */
 	private function state( array $document ): string {
-		$activeUntil = strtotime( $document['active_until'] );
-		if ( false === $activeUntil || $this->now() >= $activeUntil ) {
+		$active_until = strtotime( $document['active_until'] );
+		if ( false === $active_until || $this->now() >= $active_until ) {
 			return 'retained';
 		}
 
@@ -620,16 +625,16 @@ final class TemporaryDebugCapture {
 
 	/** @param array<string, mixed> $document */
 	private function expired( array $document ): bool {
-		$expiresAt = strtotime( $document['expires_at'] );
+		$expires_at = strtotime( $document['expires_at'] );
 
-		return false === $expiresAt || $this->now() >= $expiresAt;
+		return false === $expires_at || $this->now() >= $expires_at;
 	}
 
 	/**
 	 * @param array<string, mixed> $document
 	 * @return array<string, mixed>
 	 */
-	private function snapshotFromDocument( array $document, string $state ): array {
+	private function snapshot_from_document( array $document, string $state ): array {
 		return array(
 			'state'        => $state,
 			'filename'     => self::FILE_NAME,
@@ -642,7 +647,7 @@ final class TemporaryDebugCapture {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function emptySnapshot( string $state ): array {
+	private function empty_snapshot( string $state ): array {
 		return array(
 			'state'        => $state,
 			'filename'     => self::FILE_NAME,
@@ -652,7 +657,7 @@ final class TemporaryDebugCapture {
 		);
 	}
 
-	private function oneLine( string $value ): string {
+	private function one_line( string $value ): string {
 		$value      = trim( $value );
 		$normalized = preg_replace( '/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/u', ' ', $value );
 		if ( ! is_string( $normalized ) ) {
@@ -662,7 +667,7 @@ final class TemporaryDebugCapture {
 		return is_string( $normalized ) ? trim( $normalized ) : '';
 	}
 
-	private function truncateUtf8( string $value, int $bytes ): string {
+	private function truncate_utf8( string $value, int $bytes ): string {
 		$value = substr( $value, 0, $bytes );
 		while ( '' !== $value && 1 !== preg_match( '//u', $value ) ) {
 			$value = substr( $value, 0, -1 );

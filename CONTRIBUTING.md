@@ -106,11 +106,15 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/Interaction/AdminInteractionRequest.php`,
 `RAN/PackageOperationService.php`,
 `RAN/PackageRemoval/PackageRemovalService.php`,
-`RAN/PackageRemoval/WordPressPackageRemovalGateway.php` and
-`RAN/WordPress/CorePackageExecutor.php`.
+`RAN/PackageRemoval/WordPressPackageRemovalGateway.php`,
+`RAN/WordPress/CorePackageExecutor.php`,
+`RAN/Logging/BoosterLogger.php`,
+`RAN/Logging/TemporaryDebugCapture.php`,
+`RAN/RepositoryProvider/ProviderDiagnosticRequest.php` and
+`RAN/RepositoryProvider/ProviderDiagnosticResult.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This seventy-seven-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-one-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -153,6 +157,14 @@ ordering, WordPress hook installation and restoration, failure mapping and every
 PreparedArtifact custody contract remain unchanged. The executor test's private
 reflection reference follows its renamed helper. Reserved-parameter enforcement
 is unchanged.
+
+The diagnostic safety quartet renames private helpers, private request properties
+and owned variables. Public methods and named parameters retain narrow documented
+exceptions, and public diagnostic-result fields remain unchanged. Diagnostic
+budgets, deadline ordering and sticky exhaustion reasons, result projections,
+log sanitization and exception redaction, capture bytes and limits, lock ordering,
+filesystem permissions, replacement and cleanup behavior remain unchanged.
+Reserved-parameter enforcement is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

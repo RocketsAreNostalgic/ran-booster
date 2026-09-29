@@ -87,16 +87,25 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/Component/ProviderManagementTableRenderer.php`,
 `RAN/Admin/Component/RepositoryTableRenderer.php`,
 `RAN/Admin/Component/RepositoryDetailRenderer.php` and
-`RAN/Admin/RepositoryPickerController.php`.
+`RAN/Admin/RepositoryPickerController.php`,
+`RAN/WordPress/CoreSelfUpdateNativeTarget.php`,
+`RAN/WordPress/WordPressOrgUpdateRequestFilter.php`,
+`RAN/WordPress/WordPressUpdaterLock.php` and
+`RAN/Troubleshooting/CoreSelfUpdateStatus.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This fifty-seven-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This sixty-one-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
 URL and form fields, accessibility attributes and rendered markup remain stable.
 The picker retains narrow exceptions for the connected repository metadata and
 browse-result property contracts pending their own audited cohorts.
+The WordPress updater quartet retains public WordPress hook methods, lock methods
+and their named-argument contracts. Private helpers and owned identifiers use
+snake_case while updater status and diagnostic keys, WordPress.org request
+filtering, shared-lock SQL/cache behavior and external receiver contracts stay
+unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

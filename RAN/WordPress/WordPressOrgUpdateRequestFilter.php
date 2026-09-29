@@ -15,7 +15,7 @@ final class WordPressOrgUpdateRequestFilter {
 		private Database $database,
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
-		private string $boosterPlugin
+		private string $booster_plugin
 	) {
 	}
 
@@ -30,7 +30,7 @@ final class WordPressOrgUpdateRequestFilter {
 	private function filter( mixed $args, mixed $url, string $type ): mixed {
 		$key = $type . 's';
 		if ( ! is_string( $url )
-			|| ! $this->isUpdateEndpoint( $url, $key )
+			|| ! $this->is_update_endpoint( $url, $key )
 			|| ! is_array( $args )
 			|| ! is_array( $args['body'] ?? null )
 			|| ! is_string( $args['body'][ $key ] ?? null ) ) {
@@ -59,7 +59,7 @@ final class WordPressOrgUpdateRequestFilter {
 		}
 
 		if ( 'plugin' === $type ) {
-			$managed[] = $this->boosterPlugin;
+			$managed[] = $this->booster_plugin;
 			$removed   = false;
 			foreach ( $managed as $package ) {
 				$removed = $removed || isset( $payload['plugins'][ $package ] );
@@ -91,7 +91,7 @@ final class WordPressOrgUpdateRequestFilter {
 		return $args;
 	}
 
-	private function isUpdateEndpoint( string $url, string $key ): bool {
+	private function is_update_endpoint( string $url, string $key ): bool {
 		$parts = wp_parse_url( $url );
 		if ( false === $parts
 			|| ! isset( $parts['scheme'], $parts['host'], $parts['path'] )

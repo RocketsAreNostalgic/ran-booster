@@ -69,7 +69,7 @@ final class CorePackageExecutorTest extends TestCase {
 
 	/** @param list<array<string, mixed>> $completions */
 	private function mapCoreResult( mixed $coreResult, array $completions ): CorePackageExecutionResult {
-		$method = new ReflectionMethod( CorePackageExecutor::class, 'mapResult' );
+		$method = new ReflectionMethod( CorePackageExecutor::class, 'map_result' );
 
 		return $method->invoke( new CorePackageExecutor(), $coreResult, 'plugin', 'update', 'example/example.php', $completions );
 	}

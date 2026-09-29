@@ -102,11 +102,15 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/AddOn/Portability/NativePortabilityFacade.php`,
 `RAN/Admin/Interaction/CoreAdminInteractionFacade.php`,
 `RAN/Admin/Interaction/SignedAdminInteractionFlow.php`,
-`RAN/Admin/Interaction/AdminInteractionTarget.php` and
-`RAN/Admin/Interaction/AdminInteractionRequest.php`.
+`RAN/Admin/Interaction/AdminInteractionTarget.php`,
+`RAN/Admin/Interaction/AdminInteractionRequest.php`,
+`RAN/PackageOperationService.php`,
+`RAN/PackageRemoval/PackageRemovalService.php`,
+`RAN/PackageRemoval/WordPressPackageRemovalGateway.php` and
+`RAN/WordPress/CorePackageExecutor.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This seventy-three-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This seventy-seven-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -140,6 +144,15 @@ foreign signed-request DTO fields retain their existing contracts through narrow
 documented exceptions. Nonce inputs, canonical URLs, route validation, response
 headers, fragment validation, rendered markup and error text remain unchanged.
 Reserved-parameter enforcement is unchanged.
+
+The package-operation quartet renames private helpers, private properties and
+owned variables. Public methods, named parameters and promoted constructor
+properties retain their existing caller and gateway/executor override contracts
+through narrow documented exceptions. Operation results, lock/guard/removal
+ordering, WordPress hook installation and restoration, failure mapping and every
+PreparedArtifact custody contract remain unchanged. The executor test's private
+reflection reference follows its renamed helper. Reserved-parameter enforcement
+is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

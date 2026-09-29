@@ -1210,7 +1210,7 @@ msgid "Booster could not verify the managed package provider. No changes were ma
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:533
-#: RAN/Admin/RepositoryPickerController.php:123
+#: RAN/Admin/RepositoryPickerController.php:124
 msgid "The selected repository provider is not available."
 msgstr ""
 
@@ -1239,7 +1239,7 @@ msgid "The repository could not be found, or the selected credential cannot acce
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:545
-#: RAN/Admin/RepositoryPickerController.php:180
+#: RAN/Admin/RepositoryPickerController.php:181
 msgid "The repository provider rate limit has been reached. Try again later."
 msgstr ""
 
@@ -3501,64 +3501,64 @@ msgstr ""
 msgid "The repository picker session expired. Reload this page and try again."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:116
+#: RAN/Admin/RepositoryPickerController.php:117
 msgid "Encrypted credential storage is unavailable. Restore the matching sidecar and site key, then try again."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:129
+#: RAN/Admin/RepositoryPickerController.php:130
 msgid "The selected repository provider does not support authenticated public repository browsing."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:130
+#: RAN/Admin/RepositoryPickerController.php:131
 msgid "The selected repository provider does not support repository browsing."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:165
-#: RAN/Admin/RepositoryPickerController.php:182
+#: RAN/Admin/RepositoryPickerController.php:166
+#: RAN/Admin/RepositoryPickerController.php:183
 msgid "Repository browsing failed. Please try again."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:174
+#: RAN/Admin/RepositoryPickerController.php:175
 msgid "The repository request is invalid. Check the selected provider and repository details."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:175
+#: RAN/Admin/RepositoryPickerController.php:176
 msgid "The repository provider rejected the saved credentials."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:176
+#: RAN/Admin/RepositoryPickerController.php:177
 msgid "The repository provider denied this request. Check repository access and credential permissions."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:177
+#: RAN/Admin/RepositoryPickerController.php:178
 msgid "The requested repository owner could not be found."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:178
+#: RAN/Admin/RepositoryPickerController.php:179
 msgid "The repository provider returned too much data. Enter the repository manually or narrow the account."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:179
+#: RAN/Admin/RepositoryPickerController.php:180
 msgid "The repository provider returned an invalid response. Try again or enter the repository manually."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:181
+#: RAN/Admin/RepositoryPickerController.php:182
 msgid "Repository browsing took too long. Try again or enter the repository manually."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:246
+#: RAN/Admin/RepositoryPickerController.php:249
 msgid "Some repositories are shown, but the selected credential stopped authorizing the request."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:247
+#: RAN/Admin/RepositoryPickerController.php:250
 msgid "Some repositories are shown. The provider rate limit was reached; try again later for a complete list."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:248
+#: RAN/Admin/RepositoryPickerController.php:251
 msgid "The first available repositories are shown. Enter a repository manually if it is not listed."
 msgstr ""
 
-#: RAN/Admin/RepositoryPickerController.php:249
+#: RAN/Admin/RepositoryPickerController.php:252
 msgid "Some repositories are shown, but the provider could not complete the list."
 msgstr ""
 

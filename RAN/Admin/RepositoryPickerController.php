@@ -28,7 +28,7 @@ final class RepositoryPickerController {
 	public function __construct(
 		private ProviderRegistry $providers,
 		private SecretsFile $secrets,
-		private PublicRepositoryLookupProfileStore $publicLookupProfiles
+		private PublicRepositoryLookupProfileStore $public_lookup_profiles
 	) {
 	}
 
@@ -51,38 +51,38 @@ final class RepositoryPickerController {
 			);
 		}
 
-		$publicLookupRequested = false;
+		$public_lookup_requested = false;
 
 		try {
-			$providerInput = isset( $_POST['provider'] ) ? wp_unslash( $_POST['provider'] ) : '';
-			$providerCode  = ProviderCode::parse( is_string( $providerInput ) ? $providerInput : '' );
-			$modeInput     = isset( $_POST['mode'] ) ? wp_unslash( $_POST['mode'] ) : 'authenticated';
-			$mode          = is_string( $modeInput ) ? sanitize_key( $modeInput ) : '';
+			$provider_input = isset( $_POST['provider'] ) ? wp_unslash( $_POST['provider'] ) : '';
+			$provider_code  = ProviderCode::parse( is_string( $provider_input ) ? $provider_input : '' );
+			$mode_input     = isset( $_POST['mode'] ) ? wp_unslash( $_POST['mode'] ) : 'authenticated';
+			$mode           = is_string( $mode_input ) ? sanitize_key( $mode_input ) : '';
 
 			if ( $mode === 'public' ) {
-				$ownerInput            = isset( $_POST['owner'] ) ? wp_unslash( $_POST['owner'] ) : '';
-				$owner                 = is_string( $ownerInput ) ? $ownerInput : '';
-				$identityInput         = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
-				$publicLookupRequested = is_string( $identityInput ) && 'anonymous' !== sanitize_key( $identityInput );
-				$credentialId          = $this->publicLookupProfileId( $providerCode );
-				$browser               = $this->providers->requireCapability(
-					$providerCode,
-					null === $credentialId ? RepositoryBrowser::class : CredentialedPublicRepositoryBrowser::class
+				$owner_input             = isset( $_POST['owner'] ) ? wp_unslash( $_POST['owner'] ) : '';
+				$owner                   = is_string( $owner_input ) ? $owner_input : '';
+				$identity_input          = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
+				$public_lookup_requested = is_string( $identity_input ) && 'anonymous' !== sanitize_key( $identity_input );
+				$credential_id           = $this->public_lookup_profile_id( $provider_code );
+				$browser                 = $this->providers->requireCapability(
+					$provider_code,
+					null === $credential_id ? RepositoryBrowser::class : CredentialedPublicRepositoryBrowser::class
 				);
-				$result                = $browser->browseRepositories(
+				$result                  = $browser->browseRepositories(
 					RepositoryBrowseRequest::publicOwner(
 						$owner,
-						$credentialId
+						$credential_id
 					)
 				);
 			} elseif ( $mode === 'accessible' ) {
-				$browser         = $this->providers->requireCapability( $providerCode, RepositoryBrowser::class );
-				$credentialInput = isset( $_POST['credential_id'] ) ? wp_unslash( $_POST['credential_id'] ) : '';
-				$credentialId    = $this->credentialId( $credentialInput, false );
-				$this->secrets->credentialProfiles( $providerCode );
+				$browser          = $this->providers->requireCapability( $provider_code, RepositoryBrowser::class );
+				$credential_input = isset( $_POST['credential_id'] ) ? wp_unslash( $_POST['credential_id'] ) : '';
+				$credential_id    = $this->credential_id( $credential_input, false );
+				$this->secrets->credentialProfiles( $provider_code );
 				$result = $browser->browseRepositories(
 					RepositoryBrowseRequest::accessible(
-						$credentialId
+						$credential_id
 					)
 				);
 			} else {
@@ -91,9 +91,10 @@ final class RepositoryPickerController {
 
 			$repositories = $result->repositories;
 			foreach ( $repositories as $repository ) {
-				if ( ! $repository->provider->equals( $providerCode ) ) {
+				if ( ! $repository->provider->equals( $provider_code ) ) {
 					throw new RuntimeException( 'Repository provider returned mismatched repository identity.', 502 );
 				}
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryDescriptor property is a connected provider contract.
 				if ( 'public' === $mode && ( $repository->private || null !== $repository->credentialId ) ) {
 					throw new RuntimeException( 'Repository provider returned a non-public repository.', 502 );
 				}
@@ -106,8 +107,8 @@ final class RepositoryPickerController {
 						$repositories
 					),
 					'partial'                  => $result->isPartial(),
-					'message'                  => $this->partialMessage( $result ),
-					'public_lookup_profile_id' => 'public' === $mode ? $credentialId ?? '' : '',
+					'message'                  => $this->partial_message( $result ),
+					'public_lookup_profile_id' => 'public' === $mode ? $credential_id ?? '' : '',
 				)
 			);
 		} catch ( SecretsStorageUnavailable ) {
@@ -125,7 +126,7 @@ final class RepositoryPickerController {
 				400
 			);
 		} catch ( UnsupportedProviderCapability ) {
-			$message = 'public' === $mode && $publicLookupRequested
+			$message = 'public' === $mode && $public_lookup_requested
 				? __( 'The selected repository provider does not support authenticated public repository browsing.', 'ran-booster' )
 				: __( 'The selected repository provider does not support repository browsing.', 'ran-booster' );
 
@@ -143,7 +144,7 @@ final class RepositoryPickerController {
 
 			return wp_send_json_error(
 				array(
-					'message' => $this->errorMessageForStatus( $status ),
+					'message' => $this->error_message_for_status( $status ),
 				),
 				$status
 			);
@@ -155,7 +156,7 @@ final class RepositoryPickerController {
 
 			return wp_send_json_error(
 				array(
-					'message' => $this->errorMessageForStatus( $status ),
+					'message' => $this->error_message_for_status( $status ),
 				),
 				$status
 			);
@@ -169,7 +170,7 @@ final class RepositoryPickerController {
 		}
 	}
 
-	private function errorMessageForStatus( int $status ): string {
+	private function error_message_for_status( int $status ): string {
 		return match ( $status ) {
 			400 => __( 'The repository request is invalid. Check the selected provider and repository details.', 'ran-booster' ),
 			401 => __( 'The repository provider rejected the saved credentials.', 'ran-booster' ),
@@ -183,8 +184,8 @@ final class RepositoryPickerController {
 		};
 	}
 
-	private function credentialId( mixed $value, bool $allowAnonymous ): string {
-		if ( $allowAnonymous && '' === $value ) {
+	private function credential_id( mixed $value, bool $allow_anonymous ): string {
+		if ( $allow_anonymous && '' === $value ) {
 			return '';
 		}
 
@@ -195,17 +196,17 @@ final class RepositoryPickerController {
 		return $value;
 	}
 
-	private function publicLookupProfileId( ProviderCode $provider ): ?string {
+	private function public_lookup_profile_id( ProviderCode $provider ): ?string {
 		// The AJAX nonce is verified before this helper is called.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$identityInput = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
-		$identity      = is_string( $identityInput ) ? sanitize_key( $identityInput ) : '';
+		$identity_input = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
+		$identity       = is_string( $identity_input ) ? sanitize_key( $identity_input ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$profileInput = isset( $_POST['public_lookup_profile_id'] ) ? wp_unslash( $_POST['public_lookup_profile_id'] ) : '';
-		$profileId    = $this->credentialId( $profileInput, true );
+		$profile_input = isset( $_POST['public_lookup_profile_id'] ) ? wp_unslash( $_POST['public_lookup_profile_id'] ) : '';
+		$profile_id    = $this->credential_id( $profile_input, true );
 
 		if ( 'anonymous' === $identity ) {
-			if ( '' !== $profileId ) {
+			if ( '' !== $profile_id ) {
 				throw new InvalidArgumentException( 'Anonymous public lookup cannot include a profile.' );
 			}
 
@@ -216,16 +217,17 @@ final class RepositoryPickerController {
 		$metadata = $browser->getPublicRepositoryBrowseMetadata();
 
 		if ( 'default' === $identity ) {
-			if ( ! $metadata->supportsProviderDefaultProfile || '' !== $profileId ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Repository provider metadata property is a connected public contract.
+			if ( ! $metadata->supportsProviderDefaultProfile || '' !== $profile_id ) {
 				throw new InvalidArgumentException( 'The public lookup default request is invalid.' );
 			}
 
-			$profileId = $this->publicLookupProfiles->get( $provider->value ) ?? '';
-			if ( '' === $profileId ) {
+			$profile_id = $this->public_lookup_profiles->get( $provider->value ) ?? '';
+			if ( '' === $profile_id ) {
 				throw new InvalidArgumentException( 'No default public lookup profile is configured.' );
 			}
 		} elseif ( 'profile' === $identity ) {
-			if ( '' === $profileId ) {
+			if ( '' === $profile_id ) {
 				throw new InvalidArgumentException( 'The public lookup profile request is invalid.' );
 			}
 		} else {
@@ -233,15 +235,16 @@ final class RepositoryPickerController {
 		}
 
 		foreach ( $this->secrets->credentialProfiles( $provider ) as $profile ) {
-			if ( $profileId === ( $profile['id'] ?? null ) && ! empty( $profile['configured'] ) ) {
-				return $profileId;
+			if ( $profile_id === ( $profile['id'] ?? null ) && ! empty( $profile['configured'] ) ) {
+				return $profile_id;
 			}
 		}
 
 		throw new InvalidArgumentException( 'The public lookup profile is unavailable.' );
 	}
 
-	private function partialMessage( RepositoryBrowseResult $result ): ?string {
+	private function partial_message( RepositoryBrowseResult $result ): ?string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryBrowseResult property is a connected public contract.
 		return match ( $result->partialReason ) {
 			RepositoryBrowseResult::AUTHORIZATION => __( 'Some repositories are shown, but the selected credential stopped authorizing the request.', 'ran-booster' ),
 			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),

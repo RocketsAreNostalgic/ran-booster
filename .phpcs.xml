@@ -32,6 +32,10 @@
 		<include-pattern>/RAN/Admin/Component/AdminActionRenderer.php</include-pattern>
 		<include-pattern>/RAN/Admin/Component/AdminPackageSourceChoiceNormalizer.php</include-pattern>
 		<include-pattern>/RAN/Admin/Component/AdminStatusSummaryRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/Component/ProviderManagementTableRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/Component/RepositoryTableRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/Component/RepositoryDetailRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/RepositoryPickerController.php</include-pattern>
 		<include-pattern>/RAN/Admin/BoosterNoticeScope.php</include-pattern>
 		<include-pattern>/RAN/Admin/DevelopmentEnvironmentDetector.php</include-pattern>
 		<include-pattern>/RAN/Admin/CoreSelfUpdateDevelopmentNotice.php</include-pattern>
@@ -87,6 +91,10 @@
 		<include-pattern>/RAN/Admin/Component/AdminActionRenderer.php</include-pattern>
 		<include-pattern>/RAN/Admin/Component/AdminPackageSourceChoiceNormalizer.php</include-pattern>
 		<include-pattern>/RAN/Admin/Component/AdminStatusSummaryRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/Component/ProviderManagementTableRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/Component/RepositoryTableRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/Component/RepositoryDetailRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/RepositoryPickerController.php</include-pattern>
 		<include-pattern>/RAN/Admin/BoosterNoticeScope.php</include-pattern>
 		<include-pattern>/RAN/Admin/DevelopmentEnvironmentDetector.php</include-pattern>
 		<include-pattern>/RAN/Admin/CoreSelfUpdateDevelopmentNotice.php</include-pattern>

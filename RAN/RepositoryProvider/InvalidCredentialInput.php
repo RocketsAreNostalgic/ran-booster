@@ -24,12 +24,12 @@ final class InvalidCredentialInput extends RuntimeException {
 		if ( ! isset( self::REASONS[ $reason ] ) ) {
 			throw new InvalidArgumentException( 'Credential input failure reason is invalid.' );
 		}
-		$this->assertSafeText( $message );
+		$this->assert_safe_text( $message );
 
 		parent::__construct( $message );
 	}
 
-	private function assertSafeText( string $value ): void {
+	private function assert_safe_text( string $value ): void {
 		if ( '' === trim( $value )
 			|| strlen( $value ) > 512
 			|| 1 !== preg_match( '//u', $value )

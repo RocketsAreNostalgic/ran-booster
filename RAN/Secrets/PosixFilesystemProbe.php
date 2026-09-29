@@ -12,33 +12,36 @@ namespace RAN\Secrets;
  */
 final class PosixFilesystemProbe {
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
 	public function probe( string $candidateFile ): bool {
-		$probePath = '';
-		$handles   = array();
-		$passed    = false;
+		$probe_path = '';
+		$handles    = array();
+		$passed     = false;
 		try {
-			if ( 'Windows' === PHP_OS_FAMILY || ! $this->validCandidate( $candidateFile ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
+			if ( 'Windows' === PHP_OS_FAMILY || ! $this->valid_candidate( $candidateFile ) ) {
 				return false;
 			}
-			$siteDirectory = dirname( $candidateFile );
-			$rootDirectory = dirname( $siteDirectory );
-			if ( ! $this->safeDirectory( dirname( $rootDirectory ), false )
-				|| ! $this->ensurePrivateDirectory( $rootDirectory )
-				|| ! $this->ensurePrivateDirectory( $siteDirectory )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
+			$site_directory = dirname( $candidateFile );
+			$root_directory = dirname( $site_directory );
+			if ( ! $this->safe_directory( dirname( $root_directory ), false )
+				|| ! $this->ensure_private_directory( $root_directory )
+				|| ! $this->ensure_private_directory( $site_directory )
 			) {
 				return false;
 			}
 
-			$probePath = $siteDirectory . '/.probe-' . bin2hex( random_bytes( 12 ) );
-			$first     = fopen( $probePath, 'x+b' );
+			$probe_path = $site_directory . '/.probe-' . bin2hex( random_bytes( 12 ) );
+			$first      = fopen( $probe_path, 'x+b' );
 			if ( false === $first ) {
 				return false;
 			}
 			$handles[] = $first;
-			if ( ! chmod( $probePath, 0600 ) || ! $this->safeFile( $probePath, $first ) ) {
+			if ( ! chmod( $probe_path, 0600 ) || ! $this->safe_file( $probe_path, $first ) ) {
 				return false;
 			}
-			$second = fopen( $probePath, 'rb' );
+			$second = fopen( $probe_path, 'rb' );
 			if ( false === $second ) {
 				return false;
 			}
@@ -50,7 +53,7 @@ final class PosixFilesystemProbe {
 			foreach ( array_reverse( $handles ) as $handle ) {
 				fclose( $handle );
 			}
-			if ( '' !== $probePath && ( is_file( $probePath ) || is_link( $probePath ) ) && ! unlink( $probePath ) ) {
+			if ( '' !== $probe_path && ( is_file( $probe_path ) || is_link( $probe_path ) ) && ! unlink( $probe_path ) ) {
 				$passed = false;
 			}
 		}
@@ -58,7 +61,7 @@ final class PosixFilesystemProbe {
 		return $passed;
 	}
 
-	private function validCandidate( string $path ): bool {
+	private function valid_candidate( string $path ): bool {
 		return str_starts_with( $path, '/' )
 			&& 'secrets.json' === basename( $path )
 			&& '.ran-booster' === basename( dirname( dirname( $path ) ) )
@@ -68,7 +71,7 @@ final class PosixFilesystemProbe {
 			&& 0 === preg_match( '#(?:^|/)\.{1,2}(?:/|$)#', $path );
 	}
 
-	private function safeDirectory( string $path, bool $requirePrivateMode ): bool {
+	private function safe_directory( string $path, bool $require_private_mode ): bool {
 		clearstatcache( true, $path );
 		$stat = lstat( $path );
 
@@ -77,30 +80,30 @@ final class PosixFilesystemProbe {
 			&& ! is_link( $path )
 			&& is_writable( $path )
 			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $stat['uid'] )
-			&& ( ! $requirePrivateMode || 0700 === ( $stat['mode'] & 0777 ) )
-			&& ( $requirePrivateMode || 0 === ( $stat['mode'] & 0022 ) );
+			&& ( ! $require_private_mode || 0700 === ( $stat['mode'] & 0777 ) )
+			&& ( $require_private_mode || 0 === ( $stat['mode'] & 0022 ) );
 	}
 
-	private function ensurePrivateDirectory( string $path ): bool {
+	private function ensure_private_directory( string $path ): bool {
 		if ( file_exists( $path ) || is_link( $path ) ) {
-			return $this->safeDirectory( $path, true );
+			return $this->safe_directory( $path, true );
 		}
 
-		return mkdir( $path, 0700 ) && $this->safeDirectory( $path, true );
+		return mkdir( $path, 0700 ) && $this->safe_directory( $path, true );
 	}
 
 	/** @param resource $handle */
-	private function safeFile( string $path, mixed $handle ): bool {
-		$pathStat   = lstat( $path );
-		$handleStat = fstat( $handle );
+	private function safe_file( string $path, mixed $handle ): bool {
+		$path_stat   = lstat( $path );
+		$handle_stat = fstat( $handle );
 
-		return false !== $pathStat
-			&& false !== $handleStat
-			&& 0100000 === ( $pathStat['mode'] & 0170000 )
-			&& 1 === $pathStat['nlink']
-			&& 0600 === ( $pathStat['mode'] & 0777 )
-			&& $pathStat['dev'] === $handleStat['dev']
-			&& $pathStat['ino'] === $handleStat['ino']
-			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $pathStat['uid'] );
+		return false !== $path_stat
+			&& false !== $handle_stat
+			&& 0100000 === ( $path_stat['mode'] & 0170000 )
+			&& 1 === $path_stat['nlink']
+			&& 0600 === ( $path_stat['mode'] & 0777 )
+			&& $path_stat['dev'] === $handle_stat['dev']
+			&& $path_stat['ino'] === $handle_stat['ino']
+			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $path_stat['uid'] );
 	}
 }

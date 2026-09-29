@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Secrets/PosixFilesystemProbe.php</include-pattern>
+		<include-pattern>/RAN/Secrets/EncryptedSecretsEnvelopeCodec.php</include-pattern>
+		<include-pattern>/RAN/Storage/CredentialUsageReader.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/InvalidCredentialInput.php</include-pattern>
 		<include-pattern>/RAN/WordPress/CoreSelfUpdateNativeTarget.php</include-pattern>
 		<include-pattern>/RAN/WordPress/WordPressOrgUpdateRequestFilter.php</include-pattern>
 		<include-pattern>/RAN/WordPress/WordPressUpdaterLock.php</include-pattern>
@@ -91,6 +95,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Secrets/PosixFilesystemProbe.php</include-pattern>
+		<include-pattern>/RAN/Secrets/EncryptedSecretsEnvelopeCodec.php</include-pattern>
+		<include-pattern>/RAN/Storage/CredentialUsageReader.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/InvalidCredentialInput.php</include-pattern>
 		<include-pattern>/RAN/WordPress/CoreSelfUpdateNativeTarget.php</include-pattern>
 		<include-pattern>/RAN/WordPress/WordPressOrgUpdateRequestFilter.php</include-pattern>
 		<include-pattern>/RAN/WordPress/WordPressUpdaterLock.php</include-pattern>

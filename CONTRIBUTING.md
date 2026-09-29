@@ -91,10 +91,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/WordPress/CoreSelfUpdateNativeTarget.php`,
 `RAN/WordPress/WordPressOrgUpdateRequestFilter.php`,
 `RAN/WordPress/WordPressUpdaterLock.php` and
-`RAN/Troubleshooting/CoreSelfUpdateStatus.php`.
+`RAN/Troubleshooting/CoreSelfUpdateStatus.php`,
+`RAN/Secrets/PosixFilesystemProbe.php`,
+`RAN/Secrets/EncryptedSecretsEnvelopeCodec.php`,
+`RAN/Storage/CredentialUsageReader.php` and
+`RAN/RepositoryProvider/InvalidCredentialInput.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This sixty-one-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This sixty-five-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -107,6 +111,13 @@ helpers and owned identifiers use
 snake_case while updater status and diagnostic keys, WordPress.org request
 filtering, shared-lock SQL/cache behavior and external receiver contracts stay
 unchanged.
+
+The credential-support quartet renames private helpers and owned identifiers.
+Public parameter names, the promoted `tableName` property and inherited Throwable
+contracts retain narrow documented exceptions where required. Encrypted-envelope
+bytes and validation, Sodium calls and sensitive-parameter attributes, POSIX probe
+ordering and cleanup, credential-usage SQL and projections, and safe failure text
+remain unchanged. Reserved-parameter enforcement is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

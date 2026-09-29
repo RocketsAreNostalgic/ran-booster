@@ -75,11 +75,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/DeploymentOutcomeMessage.php`, `RAN/Admin/ManagedPluginFailureRows.php`,
 `RAN/Admin/PublicRepositoryLookupProfileStore.php`,
 `RAN/Admin/RepositoryBranchCheckEvidenceStore.php`,
-`RAN/Admin/CredentialSelfDestructPurger.php` and
-`RAN/Admin/PackageRepositoryRequestResolver.php`.
+`RAN/Admin/CredentialSelfDestructPurger.php`,
+`RAN/Admin/PackageRepositoryRequestResolver.php`, `RAN/Admin/BoosterNoticeScope.php`,
+`RAN/Admin/DevelopmentEnvironmentDetector.php`,
+`RAN/Admin/CoreSelfUpdateDevelopmentNotice.php` and
+`RAN/Admin/DevelopmentSafetyNoticeController.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This forty-five-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This forty-nine-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -162,3 +165,10 @@ and package repository request resolver. Persisted option keys, fingerprints,
 advisory locking, purge ordering, trusted lookup selection and provider-verified
 request projections are unchanged. Provider contract properties retain their
 existing names with narrowly scoped access exceptions.
+
+The development-notice cohort enforces owned snake_case methods and variables in
+notice scope, environment detection, the Core source-checkout notice and the
+development-safety dismissal controller. Screen selection, detection order,
+capability and nonce checks, action and metadata keys, HTML and translated strings
+are unchanged. WordPress hook event names stay fixed; method callback descriptors
+follow the renamed owned methods.

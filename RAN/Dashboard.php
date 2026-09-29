@@ -1015,7 +1015,7 @@ class Dashboard {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'ran-booster' ) );
 		}
 
-		$developmentEnvironmentDetected         = DevelopmentEnvironmentDetector::isLikely();
+		$developmentEnvironmentDetected         = DevelopmentEnvironmentDetector::is_likely();
 		$data['developmentEnvironmentDetected'] = $developmentEnvironmentDetected;
 		$data['developmentSafetyNotice']        = $this->shouldShowDevelopmentSafetyNotice( $view, $data, $developmentEnvironmentDetected );
 		$data['messages']                       = $this->messages;

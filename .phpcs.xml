@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Admin/BoosterNoticeScope.php</include-pattern>
+		<include-pattern>/RAN/Admin/DevelopmentEnvironmentDetector.php</include-pattern>
+		<include-pattern>/RAN/Admin/CoreSelfUpdateDevelopmentNotice.php</include-pattern>
+		<include-pattern>/RAN/Admin/DevelopmentSafetyNoticeController.php</include-pattern>
 		<include-pattern>/RAN/Admin/PublicRepositoryLookupProfileStore.php</include-pattern>
 		<include-pattern>/RAN/Admin/RepositoryBranchCheckEvidenceStore.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialSelfDestructPurger.php</include-pattern>
@@ -75,6 +79,10 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Admin/BoosterNoticeScope.php</include-pattern>
+		<include-pattern>/RAN/Admin/DevelopmentEnvironmentDetector.php</include-pattern>
+		<include-pattern>/RAN/Admin/CoreSelfUpdateDevelopmentNotice.php</include-pattern>
+		<include-pattern>/RAN/Admin/DevelopmentSafetyNoticeController.php</include-pattern>
 		<include-pattern>/RAN/Admin/PublicRepositoryLookupProfileStore.php</include-pattern>
 		<include-pattern>/RAN/Admin/RepositoryBranchCheckEvidenceStore.php</include-pattern>
 		<include-pattern>/RAN/Admin/CredentialSelfDestructPurger.php</include-pattern>

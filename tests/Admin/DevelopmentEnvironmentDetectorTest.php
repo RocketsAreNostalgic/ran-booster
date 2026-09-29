@@ -53,7 +53,7 @@ final class DevelopmentEnvironmentDetectorTest extends TestCase {
 		$GLOBALS['ran_booster_development_detector_environment_type'] = $environmentType;
 		$GLOBALS['ran_booster_development_detector_modes']            = $developmentModes;
 
-		self::assertSame( $expected, DevelopmentEnvironmentDetector::isLikely() );
+		self::assertSame( $expected, DevelopmentEnvironmentDetector::is_likely() );
 	}
 
 	#[RunInSeparateProcess]
@@ -61,6 +61,6 @@ final class DevelopmentEnvironmentDetectorTest extends TestCase {
 	public function testEnabledWpDebugIsADevelopmentSignal(): void {
 		define( 'WP_DEBUG', true );
 
-		self::assertTrue( DevelopmentEnvironmentDetector::isLikely() );
+		self::assertTrue( DevelopmentEnvironmentDetector::is_likely() );
 	}
 }

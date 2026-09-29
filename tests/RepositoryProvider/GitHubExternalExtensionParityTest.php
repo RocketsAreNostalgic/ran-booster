@@ -39,6 +39,7 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\Secrets\SecretsFile;
@@ -47,6 +48,41 @@ use RuntimeException;
 
 final class GitHubExternalExtensionParityTest extends TestCase {
 	private const ARTIFACT_LIMIT = 67_108_864;
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testV3StatusRejectsHistoricalUpdateEvidenceWithoutRewritingIt(): void {
+		require dirname( __DIR__ ) . '/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php';
+		$provider = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
+		self::assertInstanceOf( RepositoryReleaseWorkflowManagementV3::class, $provider );
+		$target  = new RepositoryReleaseWorkflowTarget( 'plugin', 'example/example.php', 3, '123456789' );
+		$current = array(
+			'operation'             => 'inspect',
+			'outcome_code'          => 'workflow_preflight_failed',
+			'failure_stage'         => 'release_preflight',
+			'package_type'          => 'plugin',
+			'package_identifier'    => 'example/example.php',
+			'source_revision'       => 3,
+			'repository_id'         => '123456789',
+			'diagnostic_code'       => 'provider_unavailable',
+			'diagnostic_available'  => false,
+			'correlation_reference' => str_repeat( 'a', 32 ),
+			'recorded_at'           => '2026-09-29T12:00:00Z',
+		);
+		$option  = 'ran_booster_github_provider_release_workflow_failure_history';
+		$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => array( $current ) );
+		self::assertCount( 1, $provider->workflowStatus( $target )->failureHistory() );
+		foreach ( array( 'update_inspect', 'update_setup' ) as $operation ) {
+			$obsolete              = $current;
+			$obsolete['operation'] = $operation;
+			foreach ( array( array( $obsolete ), array( $current, $obsolete ) ) as $history ) {
+				$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => $history );
+				$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
+				self::assertSame( array(), $provider->workflowStatus( $target )->failureHistory() );
+				self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ) );
+			}
+		}
+	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
@@ -307,7 +343,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	private function assertSelfUpdateIsProviderIndependent(): void {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
-		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allowsNativeDiscovery() )' );
+		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
 		$end   = strpos( $bootstrap, '$ran_booster_container->bind(', $start );
 		self::assertIsInt( $start );
 		self::assertIsInt( $end );

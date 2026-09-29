@@ -53,36 +53,36 @@ class DeploymentCoordinator {
 
 	/** @return array{status: 'succeeded'|'failed', correlation_id: string, outcome_code: string} */
 	public function executeManual( PackageOperation $command ): array {
-		PackageMutationGuard::assertFilesystemMutationAllowed();
+		PackageMutationGuard::assert_filesystem_mutation_allowed();
 		$userId = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
 
 		if ( 'install' === $command->operation ) {
-			$type       = $command->packageType;
-			$providerId = $command->providerRepositoryId;
+			$type       = $command->package_type;
+			$providerId = $command->provider_repository_id;
 			// The administrator's install request is the one-time authority; this
 			// policy governs the package only after installation.
 			if ( null === $providerId ) {
 				throw new RuntimeException( 'The package request is not eligible for deployment.' );
 			}
-			if ( null === $command->providerCode || null === $command->repository || null === $command->branch || null === $command->packageSlug ) {
+			if ( null === $command->provider_code || null === $command->repository || null === $command->branch || null === $command->package_slug ) {
 				throw new RuntimeException( 'The package request is incomplete.' );
 			}
-			$this->sourceGuard->assertAllowed( $command->providerCode, $providerId, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->packageSlug, PackageSource::BRANCH );
-			$this->providers->get( ProviderCode::parse( $command->providerCode ) );
+			$this->sourceGuard->assertAllowed( $command->provider_code, $providerId, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->package_slug, PackageSource::BRANCH );
+			$this->providers->get( ProviderCode::parse( $command->provider_code ) );
 			$request = new DeploymentRequest(
 				$command->repository,
-				$command->credentialId,
-				$command->private,
+				$command->credential_id,
+				$command->is_private,
 				$command->branch,
-				$command->packageSlug,
+				$command->package_slug,
 				$command->subdirectory,
-				$command->deploymentPolicy,
+				$command->deployment_policy,
 				$userId > 0 ? $userId : null
 			);
 			$attempt = $this->attempts->admitAndClaimManual(
 				'install',
 				$type,
-				$command->providerCode,
+				$command->provider_code,
 				$providerId,
 				$request,
 				(string) $command->branch,
@@ -90,16 +90,16 @@ class DeploymentCoordinator {
 				0
 			);
 		} elseif ( 'update' === $command->operation ) {
-			$type       = $command->packageType;
+			$type       = $command->package_type;
 			$identifier = $command->identifier ?? throw new RuntimeException( 'The package identity is unavailable.' );
 			$package    = $this->packageFromIdentifier( $type, $identifier );
 			$this->assertSubmittedSnapshot( $command, $package );
 			$this->assertBranchSource( $package );
-			if ( ! $package->getDeploymentPolicy()->allowsManualMutation() ) {
+			if ( ! $package->getDeploymentPolicy()->allows_manual_mutation() ) {
 				throw new RuntimeException( 'The package is disabled for Booster deployments.' );
 			}
 			$request      = $this->requestFromPackage( $package, $userId > 0 ? $userId : null );
-			$requestedRef = null !== $command->ref ? $command->ref : $request->configuredBranch;
+			$requestedRef = null !== $command->ref ? $command->ref : $request->configured_branch;
 			$attempt      = $this->attempts->admitAndClaimManual(
 				'update',
 				$type,
@@ -117,9 +117,9 @@ class DeploymentCoordinator {
 		$outcome = $this->executeRunning( $attempt );
 
 		return array(
-			'status'         => DeploymentState::SUCCEEDED === $outcome->getState() ? 'succeeded' : 'failed',
-			'correlation_id' => $attempt->getCorrelationId(),
-			'outcome_code'   => $outcome->getCode(),
+			'status'         => DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed',
+			'correlation_id' => $attempt->get_correlation_id(),
+			'outcome_code'   => $outcome->get_code(),
 		);
 	}
 
@@ -142,8 +142,8 @@ class DeploymentCoordinator {
 	}
 
 	private function assertSubmittedSnapshot( PackageOperation $command, Package $package ): void {
-		$expected = $command->expectedPackage;
-		if ( ! $command->hasExpectedPackage()
+		$expected = $command->expected_package;
+		if ( ! $command->has_expected_package()
 			|| $package->getProviderCode() !== $expected['provider']
 			|| ! hash_equals( (string) $package->getProviderRepositoryId(), (string) $expected['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->getRepository(), (string) $expected['repository'] )
@@ -164,7 +164,7 @@ class DeploymentCoordinator {
 	 * @return array{status: string, correlation_id: string, accepted_targets: int, runner_status: string}
 	 */
 	public function acceptWebhook( array $events, string $authenticatedBodyDigest ): array {
-		PackageMutationGuard::assertWebhookDispatchAllowed();
+		PackageMutationGuard::assert_webhook_dispatch_allowed();
 		if ( array() === $events || preg_match( '/^[a-f0-9]{64}$/D', $authenticatedBodyDigest ) !== 1 ) {
 			throw new RuntimeException( 'The authenticated webhook delivery is invalid.' );
 		}
@@ -180,8 +180,8 @@ class DeploymentCoordinator {
 			try {
 				$matches = $this->matchingPackages( $event );
 			} catch ( PackageStorageFailure $failure ) {
-				if ( $failure->isDatabaseUnsupported() ) {
-					throw DeploymentStorageFailure::unsupportedDatabase();
+				if ( $failure->is_database_unsupported() ) {
+					throw DeploymentStorageFailure::unsupported_database();
 				}
 				throw $failure;
 			}
@@ -201,7 +201,7 @@ class DeploymentCoordinator {
 				);
 			}
 		}
-		PackageMutationGuard::assertDeploymentTargetCount( count( $targets ) );
+		PackageMutationGuard::assert_deployment_target_count( count( $targets ) );
 		if ( array() === $targets ) {
 			$this->attempts->admitWebhookBatch( $provider, $deliveryId, $authenticatedBodyDigest, array() );
 			return $this->admission( 'accepted', substr( hash( 'sha256', $provider . "\0" . $deliveryId ), 0, 32 ), 0, 'not_required' );
@@ -211,8 +211,8 @@ class DeploymentCoordinator {
 		if ( array() === $attempts ) {
 			return $this->admission( 'duplicate', substr( hash( 'sha256', $provider . "\0" . $deliveryId ), 0, 32 ), 0, 'not_required' );
 		}
-		$status = count( array_filter( $attempts, static fn ( DeploymentAttempt $attempt ): bool => DeploymentState::QUEUED === $attempt->getState() ) ) > 0 ? 'accepted' : 'duplicate';
-		return $this->admission( $status, $attempts[0]->getCorrelationId(), count( $attempts ), $this->requestWorker() );
+		$status = count( array_filter( $attempts, static fn ( DeploymentAttempt $attempt ): bool => DeploymentState::QUEUED === $attempt->get_state() ) ) > 0 ? 'accepted' : 'duplicate';
+		return $this->admission( $status, $attempts[0]->get_correlation_id(), count( $attempts ), $this->requestWorker() );
 	}
 
 	/** Execute one queued row claimed by the real WordPress cron worker. */
@@ -226,11 +226,11 @@ class DeploymentCoordinator {
 
 	/** Execute one durably running row through the normalized admitted branch runner. */
 	private function executeRunning( DeploymentAttempt $attempt ): DeploymentOutcome {
-		if ( DeploymentState::RUNNING !== $attempt->getState() ) {
+		if ( DeploymentState::RUNNING !== $attempt->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
-		$context = $attempt->logContext();
+		$context = $attempt->log_context();
 		BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 		$host = new AdmittedBranchHostAdapter(
 			$attempt,
@@ -270,28 +270,28 @@ class DeploymentCoordinator {
 			);
 		$code       = $deployment->deploy();
 		$outcome    = $this->finishedOutcome( $host->terminalAttempt() );
-		if ( ! hash_equals( $code, $outcome->getCode() ) ) {
+		if ( ! hash_equals( $code, $outcome->get_code() ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 		return $outcome;
 	}
 
 	private function finishedOutcome( DeploymentAttempt $finished ): DeploymentOutcome {
-		if ( ! $finished->getState()->isTerminal() ) {
+		if ( ! $finished->get_state()->is_terminal() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		$outcome = $finished->getOutcome() ?? throw DeploymentStorageFailure::inconsistent();
+		$outcome = $finished->get_outcome() ?? throw DeploymentStorageFailure::inconsistent();
 		BoosterLogger::log(
 			'attempt finished',
-			$finished->logContext() + array(
+			$finished->log_context() + array(
 				'step'         => 'attempt_finished',
-				'outcome_code' => $outcome->getCode(),
+				'outcome_code' => $outcome->get_code(),
 			)
 		);
-		$data = $finished->safeData();
+		$data = $finished->safe_data();
 		if ( null !== $this->failureNotifier
 			&& 'webhook' === $data['source']
-			&& in_array( $finished->getState(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
+			&& in_array( $finished->get_state(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
 		) {
 			try {
 				$this->failureNotifier->notify( $finished );
@@ -299,7 +299,7 @@ class DeploymentCoordinator {
 				BoosterLogger::logException(
 					'background deployment failure notification unavailable',
 					$exception,
-					$finished->logContext() + array( 'step' => 'background_failure_notification' )
+					$finished->log_context() + array( 'step' => 'background_failure_notification' )
 				);
 			}
 		}
@@ -309,10 +309,10 @@ class DeploymentCoordinator {
 	/** Reconcile only after the protected controller confirms the worker stopped. */
 	public function reconcileConfirmedStopped( int $attemptId, string $correlationId ): DeploymentAttempt {
 		$attempt = $this->attempts->findExact( $attemptId );
-		if ( null === $attempt || ! hash_equals( $attempt->getCorrelationId(), $correlationId ) ) {
-			throw DeploymentStorageFailure::notFound();
+		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlationId ) ) {
+			throw DeploymentStorageFailure::not_found();
 		}
-		if ( DeploymentState::RUNNING !== $attempt->getState() ) {
+		if ( DeploymentState::RUNNING !== $attempt->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 		$result = $this->attempts->reconcileConfirmedStopped( $attemptId );
@@ -380,8 +380,8 @@ class DeploymentCoordinator {
 		) as $type => $packages ) {
 			foreach ( $packages as $package ) {
 				if ( PackageSource::BRANCH === $package->getSource()
-					&& $package->getDeploymentPolicy()->allowsWebhookMutation()
-					&& ! PackageMutationGuard::isBoosterPluginFile( $package->getIdentifier() )
+					&& $package->getDeploymentPolicy()->allows_webhook_mutation()
+					&& ! PackageMutationGuard::is_booster_plugin_file( $package->getIdentifier() )
 					&& $package->getProviderCode() === $event->provider->value
 					&& $policy->repositoryTargetMatches( $event->repository, (string) $package->getRepository() )
 					&& (string) $package->getBranch() === $event->branch

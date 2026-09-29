@@ -188,7 +188,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 
 	public function testEmailIsLimitedToBackgroundFailuresAndContainsOnlySafeActionableData(): void {
 		$email   = new BackgroundDeploymentFailureEmail();
-		$failure = DeploymentAttempt::fromDatabase(
+		$failure = DeploymentAttempt::from_database(
 			$this->row( 1, 'affected', 'example', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED )
 		);
 
@@ -202,10 +202,10 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertStringNotContainsString( 'profile_123', $sent['message'] );
 		self::assertStringNotContainsString( 'secret-canary', $sent['message'] );
 
-		$manual  = DeploymentAttempt::fromDatabase(
+		$manual  = DeploymentAttempt::from_database(
 			$this->row( 2, 'manual-failure', 'example', 'manual', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED )
 		);
-		$success = DeploymentAttempt::fromDatabase(
+		$success = DeploymentAttempt::from_database(
 			$this->row( 3, 'success', 'example', 'webhook', DeploymentOutcome::CODE_DEPLOYED )
 		);
 		self::assertFalse( $email->notify( $manual ) );
@@ -259,7 +259,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 			DeploymentPolicy::AUTOMATIC,
 			null
 		);
-		$state   = DeploymentOutcome::fromCode( $outcome )->getState()->value;
+		$state   = DeploymentOutcome::from_code( $outcome )->get_state()->value;
 
 		return array(
 			'id'                      => $id,
@@ -280,7 +280,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 			'state'                   => $state,
 			'mutation_started_at'     => null,
 			'outcome_code'            => $outcome,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => sprintf( '2026-07-23 12:%02d:00', $id ),
 			'finished_at'             => sprintf( '2026-07-23 12:%02d:30', $id ),
 		);

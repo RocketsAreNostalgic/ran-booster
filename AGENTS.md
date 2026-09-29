@@ -10,13 +10,14 @@ coding ancestry comes from `ran/coding-standards` through `RANWordPressPlugin`,
 and frontend ESLint/Prettier/Stylelint ancestry comes from
 `@rocketsarenostalgic/quality-config`.
 
-During the current proof, tracked lockfiles bind those shared packages to the
-reviewed candidates `0b03e61a4bb558deeb6bc6b6399f44c0ec95e5be` and
-`751edd097e3902efb93992bf47401a1a4f4b1fa8`. Do not replace those exact locked
-candidates with floating, unreviewed package state. After Starter and Booster
-have both proven the candidates and the shared packages receive versioned
-releases, move Booster to the released versions through a reviewed dependency
-change.
+The PHP standards dependency uses the released `ran/coding-standards` 1.x line;
+`composer.lock` binds v1.0.0 to
+`6af816a02b7d1108ad5c990e9d0fda0af0a13de7`. The frontend package remains locked
+to reviewed candidate `751edd097e3902efb93992bf47401a1a4f4b1fa8`; move it to a
+released version through a separate reviewed dependency change. Do not replace
+locked packages with floating, unreviewed state. The available opt-in
+`RANOwnedMethods` rule must be enabled only for audited naming cohorts under
+#167; adopting the package alone does not complete that migration.
 
 Booster remains the owner of its actual product contract and stronger gates:
 WordPress/PHP support, its established `RAN\` production namespace family,
@@ -25,6 +26,12 @@ localisation and generated-state checks, updater/release state contracts,
 admin-shell parity, race/hard-stop/runtime proofs, frontend source globs and
 globals, asset tests, and release verification. Shared-package adoption must
 never remove or silently weaken those local guarantees.
+
+PHPStan level 1 directly covers all Core PHP shipped by `release-files.txt`,
+including views and asset entrypoints. `ProductionAnalysisCoverageTest` checks
+the effective roots/exclusions against that manifest. Preserve accurate
+caller-supplied view PHPDoc and the generated Admin Shell bytes; see
+`CONTRIBUTING.md` for coverage and remaining #167 acceptance boundaries.
 
 - Work from an accepted public request or issue. Inspect the affected code and
   tests before editing, verify the result before declaring completion, and

@@ -140,7 +140,7 @@ final class RepositorySourceGuard {
 
 	public function assertAllowed( string $provider, string $repositoryId, int $type, string $identifier, PackageSource $source ): void {
 		if ( ! self::identityIsValid( $provider, $repositoryId, $type, $identifier ) ) {
-			throw PackageStorageFailure::invalidProviderIdentity();
+			throw PackageStorageFailure::invalid_provider_identity();
 		}
 
 		$result = $this->assess( $provider, $repositoryId, $type, $identifier, $source );
@@ -148,11 +148,11 @@ final class RepositorySourceGuard {
 			return;
 		}
 		if ( 'repository_source_unavailable' === $result['code'] ) {
-			throw PackageStorageFailure::queryFailed();
+			throw PackageStorageFailure::query_failed();
 		}
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The validated package identifier is rendered through the dashboard escape boundary.
-		throw PackageStorageFailure::repositorySourceConflict( $result['owner_package'] );
+		throw PackageStorageFailure::repository_source_conflict( $result['owner_package'] );
 	}
 
 	private static function identityIsValid( string $provider, string $providerRepositoryId, int $selfType, string $selfPackage ): bool {

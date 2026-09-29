@@ -40,7 +40,7 @@ final readonly class PackageRemovalService {
 
 		$identifier = $operation->identifier ?? throw new \RuntimeException( 'The package identity is unavailable.' );
 		if ( 'unlink-and-delete' === $operation->operation ) {
-			PackageMutationGuard::assertFilesystemMutationAllowed();
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
 		}
 		try {
 			$lockToken = $this->updaterLock->acquire();
@@ -51,25 +51,25 @@ final readonly class PackageRemovalService {
 
 		$result = PackageRemovalResult::failed( 'management_state_uncertain' );
 		try {
-			$package = $this->find( $operation->packageType, $identifier );
-			if ( $package->getSourceRevision() !== $operation->getExpectedSourceRevision() ) {
+			$package = $this->find( $operation->package_type, $identifier );
+			if ( $package->getSourceRevision() !== $operation->get_expected_source_revision() ) {
 				$result = PackageRemovalResult::failed( 'stale' );
 			} elseif ( 'unlink' === $operation->operation ) {
-				$this->unlink( $operation->packageType, $identifier, $package );
+				$this->unlink( $operation->package_type, $identifier, $package );
 				$result = PackageRemovalResult::unlinked();
 			} elseif ( null !== $this->attempts
 				&& $this->attempts->hasUnresolvedPackageAttempt(
-					$operation->packageType,
+					$operation->package_type,
 					(string) $package->getSlug()
 				) ) {
 				$result = PackageRemovalResult::failed( 'operation_in_progress' );
 			} else {
-				$blocker = $this->deletionBlocker( $operation->packageType, $identifier );
+				$blocker = $this->deletionBlocker( $operation->package_type, $identifier );
 				if ( null !== $blocker ) {
 					$result = PackageRemovalResult::failed( $blocker );
 				} else {
-					$this->disable( $operation->packageType, $package );
-					$result = 'plugin' === $operation->packageType
+					$this->disable( $operation->package_type, $package );
+					$result = 'plugin' === $operation->package_type
 						? $this->deletePlugin( $identifier, $package )
 						: $this->deleteTheme( $identifier, $package );
 				}
@@ -152,7 +152,7 @@ final readonly class PackageRemovalService {
 		$result = 'plugin' === $type
 			? $this->plugins->disablePluginForRemoval( $package )
 			: $this->themes->disableThemeForRemoval( $package );
-		$result->requireSuccess();
+		$result->require_success();
 	}
 
 	private function deletionBlocker( string $type, string $identifier ): ?string {
@@ -188,7 +188,7 @@ final readonly class PackageRemovalService {
 		$result = 'plugin' === $type
 			? $this->plugins->unlink( $identifier )
 			: $this->themes->unlink( $identifier );
-		$result->requireSuccess();
+		$result->require_success();
 	}
 
 	private function isInstalled( string $type, string $identifier ): bool {

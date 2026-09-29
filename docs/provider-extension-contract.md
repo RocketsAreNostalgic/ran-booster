@@ -153,29 +153,29 @@ HTML seam.
 
 ### Optional release workflow management
 
-`RepositoryReleaseWorkflowManagementV2` is the release-workflow management
-contract in the v1 baseline, with `RELEASE_WORKFLOW_API_VERSION = 2`. The earlier
+`RepositoryReleaseWorkflowManagementV3` is the release-workflow management
+contract in the v1 baseline, with `RELEASE_WORKFLOW_API_VERSION = 3`. The earlier
 Core-bound API 1 facet was retired before 1.0 after the maintained-repository
 audit found no current consumer.
 
-The current helper resolves `RepositoryReleaseWorkflowManagementV2` directly.
+The current helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
 Its provider-neutral contract does not load Core `ReleaseTrackingStatus` or
 `ReleaseTrackingPreflight` parameter types into an external provider runtime.
 
-API 2 keeps the same fixed workflow operation shape and accepts only neutral
+API 3 keeps the same fixed workflow operation shape and accepts only neutral
 inputs. `RepositoryReleaseWorkflowTarget` carries the bounded package identity,
 source revision, stable provider repository ID, package root, installed version
 and expected Update URI required by provider workflow logic. The expected Update
 URI may be empty; when present it must be an HTTPS URL with a host and no
 userinfo. Ordinary release tracking may retain a non-HTTPS canonical Update URI,
-but Core cannot project that value into an API 2 target, so that
+but Core cannot project that value into an API 3 target, so that
 provider/package is not eligible for current workflow-helper calls until the URI
 satisfies this stricter workflow boundary.
 `RepositoryReleaseWorkflowPreflight` carries only the bounded preflight machine
 code and reason code needed by inspection and setup. Core constructs fresh
 neutral values at the provider call boundary.
 
-A provider implementing API 2 must also implement all five release-consumption
+A provider implementing API 3 must also implement all five release-consumption
 contracts on the same registered aggregate: `RepositoryReleaseMetadata`,
 `RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
 `RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`. Current Core
@@ -189,16 +189,15 @@ assessed for release workflow setup before it switches to Releases. Package
 eligibility and repository exclusivity still apply; package source is not a
 substitute for provider capability.
 
-The API 2 interface exposes local `workflowStatus()` and validated
-`workflowPreview()` reads plus five operations: `workflowInspect()`,
-`workflowSetup()`, `workflowOutcome()`, `workflowInspectUpdate()` and
-`workflowSetupUpdate()`. Providers return bounded immutable status, preview and
+The API 3 interface exposes local `workflowStatus()` and validated
+`workflowPreview()` reads plus three operations: `workflowInspect()`,
+`workflowSetup()` and `workflowOutcome()`. There are no later template updates. Providers return bounded immutable status, preview and
 result values, not HTML, callbacks, clients or storage handles. Available
 releases, detected automation, verified configuration, recorded setup pull
 requests and latest outcomes remain separate evidence.
 
 See [Provider release-workflow capability](provider-release-workflow-api.md) for
-the v1 API 2 baseline and feature-detection boundary.
+the v1 API 3 baseline and feature-detection boundary.
 
 `RepositoryReleaseWorkflowResult::failureStage()` is a closed, Core-owned
 display category, never a provider-defined value. Successful results must use
@@ -211,7 +210,7 @@ Core admits one fixed workflow endpoint. It checks administrator permissions,
 provider dependencies, exact repository/package/source revision, repository
 admission, operation nonce, preview identity and credential-profile eligibility
 before calling the operation. Assessment and setup each receive fresh Core
-release preflight evidence projected into the neutral API 2 preflight value for
+release preflight evidence projected into the neutral API 3 preflight value for
 that exact target. Setup takes its channel from the provider's validated,
 current-user preview, never a submitted channel.
 
@@ -233,10 +232,11 @@ These optional workflow facets do not further widen Provider API 11's bounded
 registration context and introduce no repository settings object or shared
 workflow storage.
 
-Provider API 11 hosts publish `RepositoryReleaseWorkflowManagementV2` as the
-current workflow-management contract. Providers targeting API 11 may implement
-that optional facet directly; providers that do not adopt workflow management
-need no additional check.
+This is the initial-only V3 draft contract, not a qualified Provider API 11
+release promise. The previous API-11 baseline promised V2 to external providers;
+removing it requires explicit coordinator disposition under #81. See the
+[open outer API decision and candidate qualification boundary](provider-release-workflow-api.md#outer-provider-api-decision-remains-open).
+The bundled lock is still V2-only; do not independently adopt this draft.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to

@@ -21,7 +21,7 @@ final readonly class RepositoryDescriptor {
 		public ?string $credentialId
 	) {
 		$this->locator     = RepositoryLocator::requireValid( $locator );
-		$this->packageSlug = PackageSubdirectory::normalizeSlug( $packageSlug );
+		$this->packageSlug = PackageSubdirectory::normalize_slug( $packageSlug );
 		if ( strlen( $this->packageSlug ) > 191 ) {
 			throw new InvalidArgumentException( 'The provider package slug is invalid.' );
 		}

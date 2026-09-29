@@ -66,7 +66,7 @@ final readonly class PortabilityController {
 		} catch ( LocalSecretStoreUnavailable ) {
 			return $this->exportFailure( __( 'Encrypted credential storage is unavailable, so Booster did not export credentials.', 'ran-booster' ), 409 );
 		} catch ( PackageStorageFailure $failure ) {
-			return $this->exportFailure( $failure->getMessage(), $failure->isDatabaseUnsupported() ? 503 : 500 );
+			return $this->exportFailure( $failure->getMessage(), $failure->is_database_unsupported() ? 503 : 500 );
 		} catch ( UnsupportedBlueprintPackages $failure ) {
 			return $this->exportFailure( $this->exportValidationFailureMessage( $failure ), 400 );
 		} catch ( InvalidArgumentException ) {
@@ -150,7 +150,7 @@ final readonly class PortabilityController {
 			}
 			return $this->previewSuccess( $this->reviewBlueprint( $blueprint, $decisions, $this->targetCredentialIds() ) );
 		} catch ( PackageStorageFailure $failure ) {
-			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->isDatabaseUnsupported() ? 503 : 500 );
+			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->is_database_unsupported() ? 503 : 500 );
 		} catch ( Throwable ) {
 			return wp_send_json_error( array( 'message' => __( 'Booster could not read this Transporter Blueprint. If it includes credentials, enter its ZIP password and try again.', 'ran-booster' ) ), 400 );
 		}
@@ -187,7 +187,7 @@ final readonly class PortabilityController {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handleApply validates its purpose-specific nonce before reading adopt.
 			return wp_send_json_success( $this->application->apply( $blueprint, $row, $this->requestedAction(), $decisions, $targetCredentials[ $row ] ?? null, '1' === (string) ( $_POST['adopt'] ?? '' ), $canInstall ) );
 		} catch ( PackageStorageFailure $failure ) {
-			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->isDatabaseUnsupported() ? 503 : 500 );
+			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->is_database_unsupported() ? 503 : 500 );
 		} catch ( Throwable $failure ) {
 			return wp_send_json_success( $this->applyFailure( $failure ) );
 		}

@@ -55,9 +55,9 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		self::assertTrue( $result['success'] );
 		self::assertSame(
 			array(
-				(string) $attempt->getId() => array(
-					'attempt_id' => $attempt->getId(),
-					'reference'  => $attempt->getCorrelationId(),
+				(string) $attempt->get_id() => array(
+					'attempt_id' => $attempt->get_id(),
+					'reference'  => $attempt->get_correlation_id(),
 					'state'      => 'queued',
 				),
 			),
@@ -67,9 +67,9 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	}
 
 	public function testMismatchedReferenceDoesNotDiscloseTheAttempt(): void {
-		$attempt                                = $this->queuedAttempt();
-		$_POST                                  = $this->requestFor( $attempt );
-		$_POST['attempts'][ $attempt->getId() ] = str_repeat( 'f', 32 );
+		$attempt                                 = $this->queuedAttempt();
+		$_POST                                   = $this->requestFor( $attempt );
+		$_POST['attempts'][ $attempt->get_id() ] = str_repeat( 'f', 32 );
 
 		$result = ( new PackageUpdateProgressController( $this->repository ) )->handle();
 
@@ -162,7 +162,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	private function requestFor( DeploymentAttempt $attempt ): array {
 		return array(
 			'package_type' => 'plugin',
-			'attempts'     => array( $attempt->getId() => $attempt->getCorrelationId() ),
+			'attempts'     => array( $attempt->get_id() => $attempt->get_correlation_id() ),
 		);
 	}
 }

@@ -17,8 +17,8 @@ final readonly class WordPressWorkerWakeup {
 	/** @return 'scheduled'|'already_scheduled'|'unavailable'|'not_required' */
 	public function request(): string {
 		try {
-			$queuedAt = $this->attempts->earliestQueuedAt();
-			if ( null === $queuedAt ) {
+			$queued_at = $this->attempts->earliestQueuedAt();
+			if ( null === $queued_at ) {
 				return 'not_required';
 			}
 			if ( ! function_exists( 'wp_get_scheduled_event' ) || ! function_exists( 'wp_schedule_single_event' ) ) {
@@ -29,7 +29,7 @@ final readonly class WordPressWorkerWakeup {
 				return 'already_scheduled';
 			}
 
-			return true === wp_schedule_single_event( max( time() + 1, $queuedAt->getTimestamp() ), self::HOOK, array() )
+			return true === wp_schedule_single_event( max( time() + 1, $queued_at->getTimestamp() ), self::HOOK, array() )
 				? 'scheduled'
 				: 'unavailable';
 		} catch ( Throwable ) {

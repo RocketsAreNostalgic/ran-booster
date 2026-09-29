@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Public lookup fragment inputs from ProviderSettingsPresenter::build().
+ * Optional projection and error inputs retain their guarded fallbacks below.
+ *
+ * @var array<string, mixed> $provider
+ * @var list<array<string, mixed>> $credential_profiles
+ */
+
 defined( 'ABSPATH' ) || exit;
 
 // This Core-owned region is the only provider-settings fragment returned by

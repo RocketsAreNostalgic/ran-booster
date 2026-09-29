@@ -73,12 +73,12 @@ class PackageModel {
 
 			if ( 'deployment_policy' === $key ) {
 				$value      = is_string( $value ) ? $value : '';
-				$this->$key = DeploymentPolicy::fromDatabase( $value )->value;
+				$this->$key = DeploymentPolicy::from_database( $value )->value;
 				continue;
 			}
 
 			if ( 'source' === $key ) {
-				$this->$key = PackageSource::fromDatabase( $value )->value;
+				$this->$key = PackageSource::from_database( $value )->value;
 				continue;
 			}
 

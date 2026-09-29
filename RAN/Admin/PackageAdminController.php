@@ -65,7 +65,7 @@ final class PackageAdminController {
 			check_admin_referer( str_replace( 'edit-', 'update-', $action ), '_ran_booster_reinstall_nonce' );
 		}
 		try {
-			PackageMutationGuard::assertAdminActionAllowed( $action, $request );
+			PackageMutationGuard::assert_admin_action_allowed( $action, $request );
 		} catch ( RuntimeException $failure ) {
 			$dashboard->addFailureMessage(
 				new WP_Error( 'ran_booster_unsupported_package_operation', $failure->getMessage() ),
@@ -171,7 +171,7 @@ final class PackageAdminController {
 			if ( null === $this->operations ) {
 				throw new LogicException( 'Package operations are not configured.' );
 			}
-			$operation             = PackageOperation::fromInput( $action, $request );
+			$operation             = PackageOperation::from_input( $action, $request );
 			$reinstall             = 'edit' === $operation->operation
 				&& $this->enabled( $request, 'reinstall_after_save' );
 			$checkRepositoryBranch = 'edit' === $operation->operation
@@ -184,14 +184,14 @@ final class PackageAdminController {
 						'message' => __( 'Package settings were saved before the reinstall.', 'ran-booster' ),
 					)
 				);
-				$operation = PackageOperation::updateFromSavedPackage( $operation, $result['package'] );
-				$action    = 'update-' . $operation->packageType;
+				$operation = PackageOperation::update_from_saved_package( $operation, $result['package'] );
+				$action    = 'update-' . $operation->package_type;
 				$result    = $this->operations->execute( $operation );
 			}
 		} catch ( PackageStorageFailure $failure ) {
 			status_header( 400 );
 			$dashboard->addFailureMessage(
-				new WP_Error( $failure->getDiagnosticId(), $failure->getMessage(), array( 'recovery_required' => $failure->isRecoveryRequired() ) ),
+				new WP_Error( $failure->get_diagnostic_id(), $failure->getMessage(), array( 'recovery_required' => $failure->is_recovery_required() ) ),
 				$failure,
 				array(
 					'operation' => $action,
@@ -200,7 +200,7 @@ final class PackageAdminController {
 			);
 			return false;
 		} catch ( DeploymentStorageFailure $failure ) {
-			return null !== $failure->getActiveCorrelationId()
+			return null !== $failure->get_active_correlation_id()
 				? $this->activeDeployment( $dashboard, $failure, $action )
 				: $this->manualFailure( $dashboard, $addContextMessage, $failure, $action );
 		} catch ( Throwable $failure ) {
@@ -250,7 +250,7 @@ final class PackageAdminController {
 				new WP_Error( 'ran_booster_package_edit_conflict', $message ),
 				array(
 					'operation'    => $operation->operation,
-					'package_type' => $operation->packageType,
+					'package_type' => $operation->package_type,
 					'step'         => 'package_edit_conflict',
 				)
 			);
@@ -582,7 +582,7 @@ final class PackageAdminController {
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The deployed package identity is unavailable.' );
 		}
-		$type              = $operation->packageType;
+		$type              = $operation->package_type;
 		$resultOperation ??= $operation->operation;
 
 		$args = array(
@@ -592,7 +592,7 @@ final class PackageAdminController {
 			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $resultOperation . '|' . $identifier ),
 		);
 		if ( $installAnother ) {
-			$args['provider']    = (string) $operation->providerCode;
+			$args['provider']    = (string) $operation->provider_code;
 			$args['open_picker'] = '1';
 		} elseif ( in_array( $operation->operation, array( 'install', 'edit' ), true ) || $returnToSettings ) {
 			$args['package'] = $identifier;
@@ -608,7 +608,7 @@ final class PackageAdminController {
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The managed package identity is unavailable.' );
 		}
-		$type = $operation->packageType;
+		$type = $operation->package_type;
 		$args = array(
 			'page'                                 => 'ran-booster-' . $type . 's',
 			'package'                              => $identifier,
@@ -687,7 +687,7 @@ final class PackageAdminController {
 
 	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $addContextMessage */
 	private function removalFailure( PackageOperation $operation, string $code, \Closure $addContextMessage ): void {
-		$type    = 'plugin' === $operation->packageType
+		$type    = 'plugin' === $operation->package_type
 			? _x( 'Plugin', 'package type', 'ran-booster' )
 			: _x( 'Theme', 'package type', 'ran-booster' );
 		$message = match ( $code ) {
@@ -743,7 +743,7 @@ final class PackageAdminController {
 			new WP_Error( 'ran_booster_package_removal_' . $code, $message ),
 			array(
 				'operation'    => $operation->operation,
-				'package_type' => $operation->packageType,
+				'package_type' => $operation->package_type,
 				'step'         => 'package_removal',
 			)
 		);

@@ -92,7 +92,7 @@ final class BlockedExecutionBoundaryDatabase extends Database {
 final class ExecutionBoundaryWorker {
 	/** @param list<string> $calls */
 	public function __construct( private array &$calls ) {}
-	public function runOnce(): array {
+	public function run_once(): array {
 		$this->calls[] = 'worker';
 		return array(); }
 }

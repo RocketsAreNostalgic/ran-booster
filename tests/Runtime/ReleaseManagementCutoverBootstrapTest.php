@@ -29,7 +29,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$seal        = strpos( $bootstrap, '$providerRegistry->seal()' );
-		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allowsNativeDiscovery() )' );
+		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
 		$coreUpdater = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
 		$repository  = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
 		$adapter     = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $coreUpdater )' );
@@ -162,7 +162,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 
 		$proof = $this->source( 'tests/WordPress/release-capability-installed-smoke.php' );
 		self::assertStringContainsString( "RAN Booster disposable test site\\n", $proof );
-		self::assertSame( 2, substr_count( $proof, '->requireSuccess()' ) );
+		self::assertSame( 2, substr_count( $proof, '->require_success()' ) );
 
 		foreach ( array( 'native-lifecycle-installed-seed.php', 'native-lifecycle-installed-smoke.php', 'RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE', 'native-lifecycle-installed-cleanup.php' ) as $nativeContract ) {
 			self::assertStringContainsString( $nativeContract, $runner );

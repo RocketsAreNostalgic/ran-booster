@@ -44,24 +44,24 @@ BranchUpdaterBootstrap::register();
 $assert( class_exists( RAN\UpdaterSupport\V1\RepositoryRelativePath::class ), 'The shared updater-support runtime must autoload after dependency registration.' );
 
 $request = new DeploymentRequest( 'org/package', 'profile_1', true, 'main', 'package', 'wordpress', DeploymentPolicy::AUTOMATIC, 7 );
-$assert( $request->toJson() === DeploymentRequest::fromJson( $request->toJson() )->toJson(), 'Deployment requests must round-trip canonically.' );
-$assert( ! str_contains( $request->toJson(), 'Authorization' ), 'The durable request must not contain authorization material.' );
-$assert( DeploymentPolicy::MANUAL->allowsManualMutation(), 'Manual policy must allow administrator deployment.' );
-$assert( ! DeploymentPolicy::MANUAL->allowsWebhookMutation(), 'Manual policy must reject webhook deployment.' );
-$assert( DeploymentPolicy::AUTOMATIC->allowsWebhookMutation(), 'Automatic policy must allow webhook deployment.' );
-$assert( ! DeploymentPolicy::DISABLED->allowsManualMutation(), 'Disabled policy must reject deployment.' );
+$assert( $request->to_json() === DeploymentRequest::from_json( $request->to_json() )->to_json(), 'Deployment requests must round-trip canonically.' );
+$assert( ! str_contains( $request->to_json(), 'Authorization' ), 'The durable request must not contain authorization material.' );
+$assert( DeploymentPolicy::MANUAL->allows_manual_mutation(), 'Manual policy must allow administrator deployment.' );
+$assert( ! DeploymentPolicy::MANUAL->allows_webhook_mutation(), 'Manual policy must reject webhook deployment.' );
+$assert( DeploymentPolicy::AUTOMATIC->allows_webhook_mutation(), 'Automatic policy must allow webhook deployment.' );
+$assert( ! DeploymentPolicy::DISABLED->allows_manual_mutation(), 'Disabled policy must reject deployment.' );
 
 $browse = RepositoryBrowseRequest::accessible( 'profile_1' );
 $assert( 'profile_1' === $browse->getCredentialId(), 'Repository browsing must use one explicitly selected credential.' );
 $assert( 5 === RepositoryBrowseRequest::MAX_REMOTE_CALLS, 'Repository browsing must retain the five-call limit.' );
 $assert( ( new RepositoryBrowseResult( array(), RepositoryBrowseResult::LIMIT ) )->isPartial(), 'Bounded repository results must report truncation.' );
 
-$success = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED );
-$failed  = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED );
-$unsafe  = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_INTERRUPTED );
-$assert( DeploymentState::SUCCEEDED === $success->getState(), 'Deployed must be successful.' );
-$assert( DeploymentState::FAILED === $failed->getState(), 'Preflight failure must be terminal failure.' );
-$assert( DeploymentState::NEEDS_ATTENTION === $unsafe->getState(), 'Interrupted mutation must require attention.' );
+$success = DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED );
+$failed  = DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED );
+$unsafe  = DeploymentOutcome::from_code( DeploymentOutcome::CODE_INTERRUPTED );
+$assert( DeploymentState::SUCCEEDED === $success->get_state(), 'Deployed must be successful.' );
+$assert( DeploymentState::FAILED === $failed->get_state(), 'Preflight failure must be terminal failure.' );
+$assert( DeploymentState::NEEDS_ATTENTION === $unsafe->get_state(), 'Interrupted mutation must require attention.' );
 
 $source = file_get_contents( dirname( __DIR__ ) . '/ran-booster.php' );
 $assert( is_string( $source ) && ! str_contains( $source, 'WorkerCliCommand' ), 'Bootstrap must not expose a second executor.' );

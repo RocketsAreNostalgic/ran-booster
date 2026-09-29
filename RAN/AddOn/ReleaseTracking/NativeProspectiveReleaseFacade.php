@@ -220,7 +220,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 
 		try {
-			PackageMutationGuard::assertFilesystemMutationAllowed();
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
 			$repository   = $this->resolveRepository( $repositoryRequest );
 			$availability = $this->prospectiveReleaseSourceAvailable( $type, $repository );
 			if ( true !== $availability ) {
@@ -308,7 +308,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					|| $wasActive ) {
 					$outcome = ProspectiveReleaseResult::failure( 'package_already_exists' );
 				} else {
-					PackageMutationGuard::assertFilesystemMutationAllowed();
+					PackageMutationGuard::assert_filesystem_mutation_allowed();
 					$artifact            = ReleaseArtifactCustodian::claim( $release->handoffToCore() );
 					$result              = 'plugin' === $type
 						? $this->executor->installPlugin( $artifact, $release->packageRoot(), null )
@@ -324,7 +324,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						);
 					} elseif ( null !== $package ) {
 						$actualVersion = $package->getVersion();
-						if ( ! $result->isSuccessful()
+						if ( ! $result->is_successful()
 							|| ! hash_equals( $release->version(), $actualVersion )
 							|| ! $activationUnchanged ) {
 							$outcome = $this->installedButUnmanaged( $identifier, $actualVersion );
@@ -354,9 +354,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 							'management_state_uncertain',
 							array( 'identifier' => $identifier )
 						);
-					} elseif ( ! $result->isSuccessful() ) {
+					} elseif ( ! $result->is_successful() ) {
 						$outcome = ProspectiveReleaseResult::failure(
-							$result->getFailure()?->value ?? 'wordpress_failed'
+							$result->get_failure()?->value ?? 'wordpress_failed'
 						);
 					} else {
 						$outcome = ProspectiveReleaseResult::failure(
@@ -559,10 +559,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		int $userId
 	): bool {
 		if ( 'plugin' === $type && $package instanceof Plugin ) {
-			return $this->plugins->adoptRelease( $package, $configuration, $userId )->isSuccessful();
+			return $this->plugins->adoptRelease( $package, $configuration, $userId )->is_successful();
 		}
 		if ( 'theme' === $type && $package instanceof Theme ) {
-			return $this->themes->adoptRelease( $package, $configuration, $userId )->isSuccessful();
+			return $this->themes->adoptRelease( $package, $configuration, $userId )->is_successful();
 		}
 
 		return false;

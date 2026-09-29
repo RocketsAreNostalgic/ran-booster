@@ -56,7 +56,7 @@ final class BackgroundDeploymentFailureMonitor {
 			if ( ! $attempt instanceof DeploymentAttempt ) {
 				continue;
 			}
-			$data = $attempt->safeData();
+			$data = $attempt->safe_data();
 			$key  = (string) $data['package_type'] . "\0" . (string) $data['package_slug'];
 			if ( isset( $seen[ $key ] ) ) {
 				continue;
@@ -64,15 +64,15 @@ final class BackgroundDeploymentFailureMonitor {
 			$seen[ $key ] = true;
 
 			if ( 'webhook' !== $data['source']
-				|| ! in_array( $attempt->getState(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
-				|| ( DeploymentState::NEEDS_ATTENTION === $attempt->getState() && ! $attempt->requiresOperatorResolution() )
+				|| ! in_array( $attempt->get_state(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
+				|| ( DeploymentState::NEEDS_ATTENTION === $attempt->get_state() && ! $attempt->requires_operator_resolution() )
 				|| ! is_string( $data['outcome_code'] )
 				|| ! is_string( $data['finished_at'] )
 			) {
 				continue;
 			}
 
-			$request       = $attempt->getRequest();
+			$request       = $attempt->get_request();
 			$provider      = (string) $data['provider'];
 			$providerLabel = strtoupper( $provider );
 			try {
@@ -82,14 +82,14 @@ final class BackgroundDeploymentFailureMonitor {
 			}
 
 			$failures[] = array(
-				'attempt_id'     => $attempt->getId(),
-				'correlation_id' => $attempt->getCorrelationId(),
+				'attempt_id'     => $attempt->get_id(),
+				'correlation_id' => $attempt->get_correlation_id(),
 				'package_type'   => (string) $data['package_type'],
 				'package_slug'   => (string) $data['package_slug'],
 				'provider'       => $provider,
 				'provider_label' => $providerLabel,
-				'credential_id'  => $request->credentialId,
-				'state'          => $attempt->getState()->value,
+				'credential_id'  => $request->credential_id,
+				'state'          => $attempt->get_state()->value,
 				'outcome_code'   => (string) $data['outcome_code'],
 				'finished_at'    => (string) $data['finished_at'],
 			);

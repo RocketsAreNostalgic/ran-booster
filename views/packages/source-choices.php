@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var array<string, array<string, mixed>> $packageSourceChoices
+ * @var string $packageSourceView
+ * @var \RAN\Admin\PackagePagePresenter $packageView
+ */
+
 defined( 'WPINC' ) || die;
 
 $sourceChoiceMode = isset( $packageSourceMode ) && 'create' === $packageSourceMode ? 'create' : 'edit';

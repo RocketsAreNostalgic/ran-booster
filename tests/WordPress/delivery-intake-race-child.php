@@ -114,7 +114,7 @@ try {
 	if ( 1 !== count( $attempts ) ) {
 		throw new RuntimeException( 'The concurrent admission did not return one target.' );
 	}
-	$result = array( 'label' => $label, 'status' => 'winner', 'attempt_id' => $attempts[0]->getId(), 'correlation_id' => $attempts[0]->getCorrelationId() );
+	$result = array( 'label' => $label, 'status' => 'winner', 'attempt_id' => $attempts[0]->get_id(), 'correlation_id' => $attempts[0]->get_correlation_id() );
 } catch ( RAN\Deployment\DeploymentStorageFailure $failure ) {
 	// A database-selected loser is safe; provider redelivery is the retry.
 	fwrite( STDERR, 'Delivery-intake admission lost safely: ' . $failure->getMessage() . "\n" );

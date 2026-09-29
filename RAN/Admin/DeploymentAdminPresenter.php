@@ -76,7 +76,7 @@ final class DeploymentAdminPresenter {
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
 	public function activeDeployment( DeploymentStorageFailure $failure, string $operation ): ?array {
-		$attempt = $failure->getActiveAttempt();
+		$attempt = $failure->get_active_attempt();
 		if ( null === $attempt ) {
 			return null;
 		}
@@ -125,11 +125,11 @@ final class DeploymentAdminPresenter {
 			}
 			try {
 				$detail         = $this->attempts->findExact( $attemptId );
-				$base['detail'] = null !== $detail && hash_equals( $detail->getCorrelationId(), $reference ) ? $detail : null;
-				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->getOutcome()?->getCode() ) {
-					$data    = $base['detail']->safeData();
+				$base['detail'] = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
+				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {
+					$data    = $base['detail']->safe_data();
 					$summary = $this->attempts->packageActivitySummary( (string) $data['package_type'], (string) $data['package_slug'] );
-					if ( null !== $summary['last_successful'] && $summary['last_successful']->getId() > $base['detail']->getId() ) {
+					if ( null !== $summary['last_successful'] && $summary['last_successful']->get_id() > $base['detail']->get_id() ) {
 						$base['later_verified_attempt'] = $summary['last_successful'];
 					}
 				}
@@ -157,7 +157,7 @@ final class DeploymentAdminPresenter {
 			$items               = $hasMore ? array_slice( $items, 0, self::PAGE_SIZE ) : $items;
 			$last                = end( $items );
 			$base['items']       = $items;
-			$base['next_cursor'] = $hasMore && false !== $last ? $last->getId() : null;
+			$base['next_cursor'] = $hasMore && false !== $last ? $last->get_id() : null;
 			$base['unavailable'] = false;
 		} catch ( Throwable $failure ) {
 			$this->logReadFailure( 'deployment activity history unavailable', $failure, 'deployment_activity_history' );

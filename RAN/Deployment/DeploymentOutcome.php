@@ -155,7 +155,7 @@ final readonly class DeploymentOutcome {
 	private function __construct( private string $code, private DeploymentState $state ) {
 	}
 
-	public static function fromCode( string $code ): self {
+	public static function from_code( string $code ): self {
 		$state = self::STATES[ $code ] ?? null;
 		if ( null === $state ) {
 			throw new InvalidArgumentException( 'The deployment outcome code is not recognised.' );
@@ -169,9 +169,9 @@ final readonly class DeploymentOutcome {
 	 *
 	 * Provider messages and response bodies remain outside the attempt record.
 	 */
-	public static function fromProviderFailure( Throwable $failure ): self {
+	public static function from_provider_failure( Throwable $failure ): self {
 		if ( $failure instanceof StaleDeployment ) {
-			return self::fromCode( self::CODE_STALE_EVENT );
+			return self::from_code( self::CODE_STALE_EVENT );
 		}
 
 		$code = match ( (int) $failure->getCode() ) {
@@ -185,14 +185,14 @@ final readonly class DeploymentOutcome {
 			default       => self::CODE_PROVIDER_FAILED,
 		};
 
-		return self::fromCode( $code );
+		return self::from_code( $code );
 	}
 
-	public function getCode(): string {
+	public function get_code(): string {
 		return $this->code;
 	}
 
-	public function getState(): DeploymentState {
+	public function get_state(): DeploymentState {
 		return $this->state;
 	}
 }

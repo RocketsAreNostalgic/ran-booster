@@ -162,7 +162,7 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function testConflictingDeliveryReturns409(): void {
 		$processor = $this->eventProcessor(
-			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::deliveryConflict() )
+			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::delivery_conflict() )
 		);
 
 		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
@@ -174,7 +174,7 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function testUnsupportedDatabaseReturnsRetrySafeUnavailableResponse(): void {
 		$processor = $this->eventProcessor(
-			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::unsupportedDatabase() )
+			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::unsupported_database() )
 		);
 
 		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
@@ -186,7 +186,7 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function testExhaustedAttemptCapacityReturnsRetrySafeUnavailableResponse(): void {
 		$processor = $this->eventProcessor(
-			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::capacityExhausted() )
+			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::capacity_exhausted() )
 		);
 
 		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );

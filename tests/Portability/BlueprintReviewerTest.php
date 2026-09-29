@@ -41,7 +41,7 @@ final class BlueprintReviewerTest extends TestCase {
 		if ( $installed && $managed ) {
 			if ( null !== $failure ) {
 				$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willThrowException(
-					'duplicate' === $failure ? PackageStorageFailure::duplicatePackageRows() : PackageStorageFailure::invalidProviderIdentity()
+					'duplicate' === $failure ? PackageStorageFailure::duplicate_package_rows() : PackageStorageFailure::invalid_provider_identity()
 				);
 			} else {
 				$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $this->managedPackage( $managedRepositoryId ?? '' ) );
@@ -71,7 +71,7 @@ final class BlueprintReviewerTest extends TestCase {
 		$package = $this->blueprintPackage();
 		$plugins->method( 'isInstalled' )->willReturn( true );
 		$plugins->method( 'hasManagementRecord' )->willReturn( true );
-		$plugins->method( 'boosterPluginFromFile' )->willThrowException( PackageStorageFailure::unsupportedDatabase() );
+		$plugins->method( 'boosterPluginFromFile' )->willThrowException( PackageStorageFailure::unsupported_database() );
 
 		$this->expectException( PackageStorageFailure::class );
 		$this->expectExceptionMessage( 'database requirements' );

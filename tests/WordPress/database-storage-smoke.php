@@ -188,12 +188,12 @@ try {
 	$fixturePlugin = $packages->installedPluginFromFile( $identifier );
 	$fixturePlugin->setRepository( new ManagedRepository( 'gh', 'example/database-smoke', 'database-smoke', 'main' ) );
 	$fixturePlugin->setDeploymentPolicy( DeploymentPolicy::DISABLED );
-	$packages->store( $fixturePlugin )->requireSuccess();
+	$packages->store( $fixturePlugin )->require_success();
 	$stored = $packages->boosterPluginFromFile( $identifier );
 	if ( DeploymentPolicy::DISABLED !== $stored->getDeploymentPolicy() ) {
 		throw new RuntimeException( 'The database smoke could not verify its package record.' );
 	}
-	$packages->unlink( $identifier )->requireSuccess();
+	$packages->unlink( $identifier )->require_success();
 
 	$attempts = $container->make( DeploymentAttemptRepository::class );
 	$request  = new DeploymentRequest(
@@ -216,8 +216,8 @@ try {
 		'branch',
 		1
 	);
-	$finished = $attempts->finish( $attempt->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_NO_CHANGE ) );
-	if ( $finished->getId() !== $attempts->findExact( $attempt->getId() )?->getId() ) {
+	$finished = $attempts->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
+	if ( $finished->get_id() !== $attempts->findExact( $attempt->get_id() )?->get_id() ) {
 		throw new RuntimeException( 'The database smoke could not verify its attempt record.' );
 	}
 } finally {

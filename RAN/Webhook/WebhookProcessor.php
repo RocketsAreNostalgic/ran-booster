@@ -80,11 +80,11 @@ final readonly class WebhookProcessor {
 		} catch ( UnsupportedProviderCapability ) {
 			return $this->response( 404, 'Webhook provider not found.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			if ( $failure->isDeliveryConflict() ) {
+			if ( $failure->is_delivery_conflict() ) {
 				return $this->response( 409, 'Webhook delivery conflict.' );
 			}
 
-			return $failure->isDatabaseUnsupported() || $failure->isCapacityExhausted()
+			return $failure->is_database_unsupported() || $failure->is_capacity_exhausted()
 				? $this->response( 503, 'Webhook processing is temporarily unavailable.' )
 				: $this->response( 500, 'Webhook processing failed.' );
 		} catch ( InvalidArgumentException ) {

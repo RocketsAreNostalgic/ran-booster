@@ -1,5 +1,75 @@
 <?php
 
+/**
+ * Provider page inputs assembled by Dashboard::getIndex(), ProviderSettingsPresenter
+ * and ProviderRepositoryRowsNormalizer.
+ *
+ * @var string $activityUrl
+ * @var string $credentialManagementDescription
+ * @var string $credentialsUrl
+ * @var string $deleteWebhookInteractionValues
+ * @var string $emptyRepositoryDescription
+ * @var string $installPluginUrl
+ * @var string $installThemeUrl
+ * @var string $manualSetupDescription
+ * @var string $overviewUrl
+ * @var string $providerBackLabel
+ * @var string $providerInstructionsLabel
+ * @var string $providerListActionUrl
+ * @var string $providerReturnUrl
+ * @var string $providerTask
+ * @var string $providerView
+ * @var string $repositoryListUrl
+ * @var string $repositoryRowCountLabel
+ * @var string $repositoryView
+ * @var string $repositoryWebhookDescription
+ * @var string $requestedRepositoryId
+ * @var string $secretManagementDescription
+ * @var string $secretsUrl
+ * @var string $webhookEndpoint
+ * @var string $webhookOperationsUrl
+ * @var string $wordpressUrlsUrl
+ * @var bool $hasCredentialSettings
+ * @var bool $hasWebhookSettings
+ * @var bool $providerHasWebhookSettings
+ * @var bool $repositoryIntegrationAvailable
+ * @var bool $storageUnavailable
+ * @var bool $webhookAssistanceProviderCapable
+ * @var bool $webhookAssistanceSiteReady
+ * @var bool $webhookHasHardFailure
+ * @var int $credentialRowCount
+ * @var int $readyWebhookProfileCount
+ * @var int $webhookRowCount
+ * @var array<string, string> $credentialScopes
+ * @var array<string, string> $credentialSortUrls
+ * @var array<string, string> $packageTypeLabels
+ * @var array<string, string> $providerMutationFields
+ * @var array<string, string> $repositoryViewRequestUrls
+ * @var array<string, string> $repositoryViewUrls
+ * @var array<string, string> $taskRequestUrls
+ * @var array<string, string> $taskUrls
+ * @var array<string, string> $webhookSortUrls
+ * @var array<string, mixed> $credentialPagination
+ * @var array<string, mixed> $provider
+ * @var array<string, mixed> $providerListState
+ * @var array<string, mixed> $webhookPagination
+ * @var array{rows: list<array<string, mixed>>, total: int, pages: int, current: int} $credentialList
+ * @var array{rows: list<array<string, mixed>>, total: int, pages: int, current: int} $webhookList
+ * @var array{tone: string, heading: string, description: string} $credentialSummary
+ * @var array{tone: string, heading: string, description: string} $webhookSummary
+ * @var array<string, int|bool> $repositoryIntegrationSummary
+ * @var array<string, mixed>|null $selectedRepositoryRow
+ * @var array<string, mixed>|null $webhookSetup
+ * @var array{configured_id: string, stale: bool}|null $publicLookupProfile
+ * @var list<array<string, mixed>> $repositoryTableRows
+ * @var list<string> $webhookSiteReasons
+ * @var \RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls|null $webhookManagement
+ * @var \RAN\Admin\Component\AdminStatusSummaryRenderer $statusSummaryRenderer
+ * @var \RAN\Admin\Component\RepositoryDetailRenderer $repositoryDetailRenderer
+ * @var \RAN\Admin\Component\RepositoryTableRenderer $repositoryTableRenderer
+ * @var \RAN\Admin\Component\ProviderManagementTableRenderer $providerManagementTableRenderer
+ */
+
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;

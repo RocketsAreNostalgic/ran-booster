@@ -92,10 +92,10 @@ final class DeploymentAdminController {
 			throw new \RuntimeException( 'Explicit uncertainty-review confirmation is required.' );
 		}
 		$attempt = $this->attempts->findExact( $attemptId );
-		if ( null === $attempt || ! hash_equals( $attempt->getCorrelationId(), $correlationId ) ) {
+		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlationId ) ) {
 			throw new \RuntimeException( 'The deployment activity identity no longer matches.' );
 		}
-		$capability = 'plugin' === $attempt->safeData()['package_type'] ? 'update_plugins' : 'update_themes';
+		$capability = 'plugin' === $attempt->safe_data()['package_type'] ? 'update_plugins' : 'update_themes';
 		if ( ! current_user_can( $capability ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 		}

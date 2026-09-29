@@ -14,14 +14,14 @@ use RAN\Deployment\DeploymentStorageFailure;
 final class DeploymentAttemptTest extends TestCase {
 
 	public function testHydratesTheExactSafeProjectionWithoutDigestOrRequestJson(): void {
-		$attempt = DeploymentAttempt::fromDatabase( $this->row() );
+		$attempt = DeploymentAttempt::from_database( record: $this->row() );
 
-		self::assertSame( DeploymentState::QUEUED, $attempt->getState() );
-		self::assertSame( 'group/package', $attempt->getRequest()->repository );
-		self::assertArrayNotHasKey( 'delivery_digest', $attempt->safeData() );
-		self::assertArrayNotHasKey( 'request_json', $attempt->safeData() );
-		self::assertNull( $attempt->safeData()['resolved_at'] );
-		self::assertNull( $attempt->safeData()['resolved_by'] );
+		self::assertSame( DeploymentState::QUEUED, $attempt->get_state() );
+		self::assertSame( 'group/package', $attempt->get_request()->repository );
+		self::assertArrayNotHasKey( 'delivery_digest', $attempt->safe_data() );
+		self::assertArrayNotHasKey( 'request_json', $attempt->safe_data() );
+		self::assertNull( $attempt->safe_data()['resolved_at'] );
+		self::assertNull( $attempt->safe_data()['resolved_by'] );
 	}
 
 	public function testRejectsTerminalStateWithoutMatchingFixedOutcome(): void {
@@ -31,7 +31,7 @@ final class DeploymentAttemptTest extends TestCase {
 		$row['outcome_code'] = 'upgrader_failed';
 
 		$this->expectException( DeploymentStorageFailure::class );
-		DeploymentAttempt::fromDatabase( $row );
+		DeploymentAttempt::from_database( $row );
 	}
 
 	public function testResolvedNeedsAttentionRemainsHistoricalWithoutBlockingAdmission(): void {
@@ -43,11 +43,11 @@ final class DeploymentAttemptTest extends TestCase {
 		$row['resolved_at']         = '2026-07-19 00:02:00';
 		$row['resolved_by']         = 7;
 
-		$attempt = DeploymentAttempt::fromDatabase( $row );
+		$attempt = DeploymentAttempt::from_database( $row );
 
-		self::assertSame( '2026-07-19 00:02:00', $attempt->safeData()['resolved_at'] );
-		self::assertSame( 7, $attempt->safeData()['resolved_by'] );
-		self::assertFalse( $attempt->requiresOperatorResolution() );
+		self::assertSame( '2026-07-19 00:02:00', $attempt->safe_data()['resolved_at'] );
+		self::assertSame( 7, $attempt->safe_data()['resolved_by'] );
+		self::assertFalse( $attempt->requires_operator_resolution() );
 	}
 
 	public function testRejectsIncompleteOperatorResolutionMetadata(): void {
@@ -58,7 +58,7 @@ final class DeploymentAttemptTest extends TestCase {
 		$row['resolved_at']  = '2026-07-19 00:02:00';
 
 		$this->expectException( DeploymentStorageFailure::class );
-		DeploymentAttempt::fromDatabase( $row );
+		DeploymentAttempt::from_database( $row );
 	}
 
 	/** @return array<string, mixed> */
@@ -83,7 +83,7 @@ final class DeploymentAttemptTest extends TestCase {
 			'state'                   => 'queued',
 			'mutation_started_at'     => null,
 			'outcome_code'            => null,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => '2026-07-19 00:00:00',
 			'finished_at'             => null,
 			'resolved_at'             => null,

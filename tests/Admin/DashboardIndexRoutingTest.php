@@ -2285,7 +2285,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		)->getIndex()['data']['deploymentActivity'];
 
 		self::assertCount( 9, $data['items'] );
-		self::assertSame( 9, $data['items'][0]->getId() );
+		self::assertSame( 9, $data['items'][0]->get_id() );
 		self::assertNull( $data['next_cursor'] );
 		self::assertFalse( $data['has_cursor'] );
 	}
@@ -2340,7 +2340,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'other-example/plugin.php' => $this->managedPackage( 'other-example/plugin.php', 'Other Example Plugin', 'repository-2' ),
 			)
 		);
-		$themes->method( 'allDeploymentThemes' )->willThrowException( PackageStorageFailure::invalidProviderIdentity() );
+		$themes->method( 'allDeploymentThemes' )->willThrowException( PackageStorageFailure::invalid_provider_identity() );
 		$_GET = array(
 			'tab'   => 'troubleshooting',
 			'panel' => 'deployment-activity',
@@ -2373,15 +2373,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$firstPage = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->getIndex()['data']['deploymentActivity'];
 
 		self::assertCount( 50, $firstPage['items'] );
-		self::assertSame( 51, $firstPage['items'][0]->getId() );
-		self::assertSame( 2, $firstPage['items'][49]->getId() );
+		self::assertSame( 51, $firstPage['items'][0]->get_id() );
+		self::assertSame( 2, $firstPage['items'][49]->get_id() );
 		self::assertSame( 2, $firstPage['next_cursor'] );
 
 		$_GET['before'] = '2';
 		$lastPage       = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->getIndex()['data']['deploymentActivity'];
 
 		self::assertCount( 1, $lastPage['items'] );
-		self::assertSame( 1, $lastPage['items'][0]->getId() );
+		self::assertSame( 1, $lastPage['items'][0]->get_id() );
 		self::assertNull( $lastPage['next_cursor'] );
 		self::assertTrue( $lastPage['has_cursor'] );
 	}
@@ -2467,8 +2467,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$data = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->getIndex()['data']['deploymentActivity'];
 
 		self::assertFalse( $data['unavailable'] );
-		self::assertSame( 1, $data['detail']->getId() );
-		self::assertSame( 'deployed', $data['detail']->getOutcome()?->getCode() );
+		self::assertSame( 1, $data['detail']->get_id() );
+		self::assertSame( 'deployed', $data['detail']->get_outcome()?->get_code() );
 		self::assertArrayNotHasKey( 'actions', $data );
 	}
 
@@ -2548,8 +2548,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'reference' => $attempt['correlation_id'],
 		);
 		$activity = $dashboard->getIndex()['data']['deploymentActivity'];
-		self::assertSame( 43, $activity['detail']->getId() );
-		self::assertSame( $attempt['correlation_id'], $activity['detail']->getCorrelationId() );
+		self::assertSame( 43, $activity['detail']->get_id() );
+		self::assertSame( $attempt['correlation_id'], $activity['detail']->get_correlation_id() );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
@@ -2740,21 +2740,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 final class FailingDashboardPluginRepository extends PluginRepository {
 	public function allBoosterPlugins(): array {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
 	public function boosterPluginFromFile( $file ) {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 }
 
 final class FailingDashboardThemeRepository extends ThemeRepository {
 	public function allBoosterThemes(): array {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
 	public function boosterThemeFromStylesheet( $stylesheet ) {
-		throw PackageStorageFailure::invalidProviderIdentity();
+		throw PackageStorageFailure::invalid_provider_identity();
 	}
 }
 
@@ -2769,33 +2769,33 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 		++$this->calls;
 		$request  = new DeploymentRequest(
 			(string) $command->repository,
-			$command->credentialId,
-			$command->private,
+			$command->credential_id,
+			$command->is_private,
 			(string) $command->branch,
-			(string) $command->packageSlug,
+			(string) $command->package_slug,
 			$command->subdirectory,
-			$command->deploymentPolicy,
+			$command->deployment_policy,
 			7
 		);
 		$attempt  = $this->attempts->admitAndClaimManual(
 			$command->operation,
-			$command->packageType,
-			(string) $command->providerCode,
-			(string) $command->providerRepositoryId,
+			$command->package_type,
+			(string) $command->provider_code,
+			(string) $command->provider_repository_id,
 			$request,
 			(string) $command->branch,
 			'branch',
 			1
 		);
 		$finished = $this->attempts->finish(
-			$attempt->getId(),
-			DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED )
+			$attempt->get_id(),
+			DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED )
 		);
 
 		return array(
 			'status'         => 'failed',
-			'correlation_id' => $finished->getCorrelationId(),
-			'outcome_code'   => (string) $finished->getOutcome()?->getCode(),
+			'correlation_id' => $finished->get_correlation_id(),
+			'outcome_code'   => (string) $finished->get_outcome()?->get_code(),
 		);
 	}
 }

@@ -98,6 +98,6 @@ if ( 'release' === $action ) {
 	$wp_theme = wp_get_theme( $theme );
 	$managed = Theme::fromWpThemeObject( $wp_theme );
 	$managed->setRepository( new ManagedRepository( 'gh', 'example/exclusivity-fixture', 'race-' . $run_id, 'main' ) );
-	$ok = ( new ThemeRepository() )->adopt( $managed )->isSuccessful();
+	$ok = ( new ThemeRepository() )->adopt( $managed )->is_successful();
 }
 file_put_contents( $result, wp_json_encode( array( 'action' => $action, 'ok' => $ok ) ) );

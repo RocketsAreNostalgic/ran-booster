@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * View locals supplied by Dashboard::render().
+ *
+ * @var string $view
+ */
+
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;

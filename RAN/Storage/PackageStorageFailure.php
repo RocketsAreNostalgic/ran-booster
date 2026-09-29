@@ -10,14 +10,14 @@ final class PackageStorageFailure extends RuntimeException {
 
 	private function __construct(
 		private readonly PackageStorageOperation $operation,
-		private readonly string $diagnosticId,
+		private readonly string $diagnostic_id,
 		string $message,
-		private readonly bool $recoveryRequired = false
+		private readonly bool $recovery_required = false
 	) {
 		parent::__construct( $message );
 	}
 
-	public static function queryFailed(): self {
+	public static function query_failed(): self {
 		return new self(
 			PackageStorageOperation::QUERY,
 			'ran_booster_storage_query_failed',
@@ -25,7 +25,7 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
-	public static function writeFailed(): self {
+	public static function write_failed(): self {
 		return new self(
 			PackageStorageOperation::UPDATE,
 			'ran_booster_storage_write_failed',
@@ -33,7 +33,7 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
-	public static function transactionUnavailable(): self {
+	public static function transaction_unavailable(): self {
 		return new self(
 			PackageStorageOperation::UPDATE,
 			'ran_booster_storage_transaction_unavailable',
@@ -41,7 +41,7 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
-	public static function unsupportedDatabase( PackageStorageOperation $operation = PackageStorageOperation::QUERY ): self {
+	public static function unsupported_database( PackageStorageOperation $operation = PackageStorageOperation::QUERY ): self {
 		return new self(
 			$operation,
 			'ran_booster_storage_database_unsupported',
@@ -49,7 +49,7 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
-	public static function duplicatePackageRows(): self {
+	public static function duplicate_package_rows(): self {
 		return new self(
 			PackageStorageOperation::QUERY,
 			'ran_booster_storage_duplicate_package',
@@ -57,7 +57,7 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
-	public static function invalidProviderIdentity(): self {
+	public static function invalid_provider_identity(): self {
 		return new self(
 			PackageStorageOperation::QUERY,
 			'ran_booster_storage_invalid_provider_identity',
@@ -65,30 +65,30 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
-	public static function repositorySourceConflict( ?string $releaseOwner = null ): self {
+	public static function repository_source_conflict( ?string $release_owner = null ): self {
 		return new self(
 			PackageStorageOperation::QUERY,
 			'ran_booster_repository_source_conflict',
-			null === $releaseOwner
+			null === $release_owner
 				? __( 'This repository is shared by managed packages. Releases require a repository used by only one managed package. Review the repository’s package settings before changing source.', 'ran-booster' )
 				: sprintf(
 					/* translators: %s: identifier of the existing Release package. */
 					__( 'This repository already supplies releases to %s. Additional packages cannot use it. To use this repository for multiple Branch packages, switch that package to Branch first.', 'ran-booster' ),
-					$releaseOwner
+					$release_owner
 				)
 		);
 	}
 
-	public static function fromMutationResult( PackageMutationResult $result ): self {
+	public static function from_mutation_result( PackageMutationResult $result ): self {
 		return new self(
-			$result->getOperation(),
-			$result->getDiagnosticId(),
-			$result->getMessage(),
-			$result->isRecoveryRequired()
+			$result->get_operation(),
+			$result->get_diagnostic_id(),
+			$result->get_message(),
+			$result->is_recovery_required()
 		);
 	}
 
-	public static function afterWriteCouldNotBeVerified( PackageStorageOperation $operation ): self {
+	public static function after_write_could_not_be_verified( PackageStorageOperation $operation ): self {
 		return new self(
 			$operation,
 			'ran_booster_storage_verification_failed',
@@ -97,19 +97,19 @@ final class PackageStorageFailure extends RuntimeException {
 		);
 	}
 
-	public function getDiagnosticId(): string {
-		return $this->diagnosticId;
+	public function get_diagnostic_id(): string {
+		return $this->diagnostic_id;
 	}
 
-	public function getOperation(): PackageStorageOperation {
+	public function get_operation(): PackageStorageOperation {
 		return $this->operation;
 	}
 
-	public function isRecoveryRequired(): bool {
-		return $this->recoveryRequired;
+	public function is_recovery_required(): bool {
+		return $this->recovery_required;
 	}
 
-	public function isDatabaseUnsupported(): bool {
-		return 'ran_booster_storage_database_unsupported' === $this->diagnosticId;
+	public function is_database_unsupported(): bool {
+		return 'ran_booster_storage_database_unsupported' === $this->diagnostic_id;
 	}
 }

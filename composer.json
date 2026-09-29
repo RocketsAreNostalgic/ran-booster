@@ -49,9 +49,9 @@
         "php": "^8.2",
         "ext-sodium": "*",
         "ext-zip": "*",
-        "ran/booster-github-provider": "0.1.0-beta.5",
-        "ran/updater-support": "0.1.0-beta.3",
-        "ran/wp-branch-updater": "1.0.0-beta.5",
+        "ran/booster-github-provider": "1.0.0-beta.6",
+        "ran/updater-support": "1.0.0-beta.4",
+        "ran/wp-branch-updater": "1.0.0-beta.7",
         "ran/wp-release-updater": "0.1.0-beta.7"
     },
     "extra": {
@@ -103,7 +103,7 @@
     "require-dev": {
         "phpunit/phpunit": "^11.0",
         "ran/admin-shell": "dev-main",
-        "ran/coding-standards": "dev-main",
+        "ran/coding-standards": "^1.0",
         "phpcompatibility/php-compatibility": "10.0.0-alpha2",
         "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",
         "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",

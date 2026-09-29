@@ -139,13 +139,13 @@ try {
 	$cleanup = ! (bool) get_option( 'ran_booster_p2_keep_installed', false );
 	foreach ( $cleanup ? array_reverse( $installed, true ) : array() as $type => $identifier ) {
 		if ( 'plugin' === $type ) {
-			$plugins->unlink( $identifier )->requireSuccess();
+			$plugins->unlink( $identifier )->require_success();
 			if ( is_plugin_active( $identifier ) ) {
 				deactivate_plugins( $identifier, true );
 			}
 			$result = delete_plugins( array( $identifier ) );
 		} else {
-			$themes->unlink( $identifier )->requireSuccess();
+			$themes->unlink( $identifier )->require_success();
 			$result = delete_theme( $identifier );
 		}
 		if ( is_wp_error( $result ) || false === $result ) {

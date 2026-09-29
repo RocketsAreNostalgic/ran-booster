@@ -43,7 +43,7 @@ final class CoreSelfUpdateStatus {
 	/** @return array<string, mixed> */
 	private function targetDiagnostics(): array {
 		if ( null === $this->target ) {
-			return $this->policy->allowsNativeDiscovery()
+			return $this->policy->allows_native_discovery()
 				? array()
 				: array(
 					'state' => 'inactive',

@@ -19,7 +19,7 @@ final readonly class DeploymentWorker {
 	}
 
 	/** @return array{status: 'empty'|'processed'|'contended'|'unavailable', runner_status: string, correlation_id?: string} */
-	public function runOnce(): array {
+	public function run_once(): array {
 		if ( ! RuntimeSupport::current()->allowsManagedOperations()
 			|| WpPusherCoexistencePolicy::conflictActive()
 			|| ! wp_doing_cron() ) {
@@ -42,10 +42,10 @@ final readonly class DeploymentWorker {
 			return array(
 				'status'         => 'processed',
 				'runner_status'  => $this->wakeup->request(),
-				'correlation_id' => $attempt->getCorrelationId(),
+				'correlation_id' => $attempt->get_correlation_id(),
 			);
 		} catch ( DeploymentStorageFailure $failure ) {
-			$reference = $failure->getActiveCorrelationId();
+			$reference = $failure->get_active_correlation_id();
 			$result    = array(
 				'status'        => null === $reference ? 'unavailable' : 'contended',
 				'runner_status' => 'not_required',

@@ -143,11 +143,11 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		$this->artifact = new ParityAdmittedArtifact( $this );
 	}
 
-	public function recordResolvedRef( string $ref ): void {
+	public function record_resolved_ref( string $ref ): void {
 		$this->events[] = 'resolved';
 	}
 
-	public function markMutationStarted(): void {
+	public function mark_mutation_started(): void {
 		$this->events[] = 'mutation';
 		if ( $this->mutationStartFailure ) {
 			throw new AdmittedBranchDurabilityFailure( 'Unable to persist the mutation fence.' );

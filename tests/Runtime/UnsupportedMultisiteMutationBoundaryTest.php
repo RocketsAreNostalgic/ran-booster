@@ -88,8 +88,8 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 
 		foreach ( $results as $result ) {
-			self::assertFalse( $result->isSuccessful() );
-			self::assertSame( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED, $result->getFailure() );
+			self::assertFalse( $result->is_successful() );
+			self::assertSame( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED, $result->get_failure() );
 		}
 		self::assertSame( 0, $coreCalls );
 	}
@@ -260,7 +260,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 				'status'        => 'unavailable',
 				'runner_status' => 'not_required',
 			),
-			$worker->runOnce()
+			$worker->run_once()
 		);
 	}
 

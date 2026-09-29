@@ -18,52 +18,52 @@ final readonly class PackageOperation {
 
 	private function __construct(
 		public string $operation,
-		public string $packageType,
+		public string $package_type,
 		public ?string $identifier,
 		public ?string $repository,
 		public ?string $branch,
-		public ?string $providerCode,
-		public ?string $providerRepositoryId,
-		public string $providerRepositoryIdentitySource,
-		public ?string $credentialId,
-		public bool $private,
-		public DeploymentPolicy $deploymentPolicy,
-		public bool $linkOnly,
+		public ?string $provider_code,
+		public ?string $provider_repository_id,
+		public string $provider_repository_identity_source,
+		public ?string $credential_id,
+		public bool $is_private,
+		public DeploymentPolicy $deployment_policy,
+		public bool $link_only,
 		public ?string $subdirectory,
-		public ?string $packageSlug,
+		public ?string $package_slug,
 		public ?string $ref,
-		public array $expectedPackage
+		public array $expected_package
 	) {
 	}
 
 	/** @param array<string, mixed> $input */
-	public static function fromInput( string $action, array $input ): self {
-		$parts = self::actionParts( $action );
+	public static function from_input( string $action, array $input ): self {
+		$parts = self::action_parts( $action );
 		if ( null === $parts ) {
 			throw new InvalidArgumentException( 'Choose a valid package operation.' );
 		}
 
-		[$operation, $packageType] = $parts;
-		$linkOnly                  = 'install' === $operation && isset( $input['dry-run'] );
-		$identifier                = 'install' === $operation
-			? ( $linkOnly && '1' === (string) ( $input['exact_identifier'] ?? '' )
-				? self::nullableScalar( $input[ 'plugin' === $packageType ? 'file' : 'stylesheet' ] ?? null )
+		[$operation, $package_type] = $parts;
+		$link_only                  = 'install' === $operation && isset( $input['dry-run'] );
+		$identifier                 = 'install' === $operation
+			? ( $link_only && '1' === (string) ( $input['exact_identifier'] ?? '' )
+				? self::nullable_scalar( $input[ 'plugin' === $package_type ? 'file' : 'stylesheet' ] ?? null )
 				: null )
-			: self::requiredScalar( $input, 'plugin' === $packageType ? 'file' : 'stylesheet' );
+			: self::required_scalar( $input, 'plugin' === $package_type ? 'file' : 'stylesheet' );
 
 		if ( in_array( $operation, array( 'unlink', 'unlink-and-delete' ), true ) ) {
-			$identifier = self::removalIdentifier( $identifier, $packageType );
+			$identifier = self::removal_identifier( $identifier, $package_type );
 			if ( '1' !== (string) ( $input['confirm_package_removal'] ?? '' ) ) {
 				throw new InvalidArgumentException( 'Confirm the package removal before continuing.' );
 			}
-			$expectedSourceRevision = self::expectedNonNegativeInt( $input['expected_source_revision'] ?? null );
-			if ( null === $expectedSourceRevision || $expectedSourceRevision < 1 ) {
+			$expected_source_revision = self::expected_non_negative_int( $input['expected_source_revision'] ?? null );
+			if ( null === $expected_source_revision || $expected_source_revision < 1 ) {
 				throw new InvalidArgumentException( 'Refresh the package settings before continuing.' );
 			}
 
 			return new self(
 				$operation,
-				$packageType,
+				$package_type,
 				$identifier,
 				null,
 				null,
@@ -77,16 +77,16 @@ final readonly class PackageOperation {
 				null,
 				null,
 				null,
-				array( 'source_revision' => $expectedSourceRevision )
+				array( 'source_revision' => $expected_source_revision )
 			);
 		}
 
 		if ( 'update' === $operation ) {
 			return new self(
 				$operation,
-				$packageType,
+				$package_type,
 				$identifier,
-				self::requiredScalar( $input, 'repository' ),
+				self::required_scalar( $input, 'repository' ),
 				null,
 				null,
 				null,
@@ -97,60 +97,60 @@ final readonly class PackageOperation {
 				false,
 				null,
 				null,
-				self::nullableScalar( $input['ref'] ?? null ),
-				self::expectedPackage( $input )
+				self::nullable_scalar( $input['ref'] ?? null ),
+				self::expected_package( $input )
 			);
 		}
 
-		$providerInput = $input['provider'] ?? null;
-		if ( ! is_string( $providerInput ) ) {
+		$provider_input = $input['provider'] ?? null;
+		if ( ! is_string( $provider_input ) ) {
 			throw new InvalidArgumentException( 'Choose a repository provider.' );
 		}
 		try {
-			$providerCode = ProviderCode::parse( wp_unslash( $providerInput ) )->value;
+			$provider_code = ProviderCode::parse( wp_unslash( $provider_input ) )->value;
 		} catch ( \Throwable ) {
 			throw new InvalidArgumentException( 'Choose a repository provider.' );
 		}
 
-		$credentialId   = isset( $input['credential_id'] ) && is_scalar( $input['credential_id'] )
+		$credential_id   = isset( $input['credential_id'] ) && is_scalar( $input['credential_id'] )
 			? sanitize_text_field( (string) $input['credential_id'] )
 			: '';
-		$identitySource = isset( $input['provider_repository_identity_source'] ) && is_scalar( $input['provider_repository_identity_source'] )
+		$identity_source = isset( $input['provider_repository_identity_source'] ) && is_scalar( $input['provider_repository_identity_source'] )
 			? sanitize_key( wp_unslash( (string) $input['provider_repository_identity_source'] ) )
 			: '';
-		$providerId     = isset( $input['provider_repository_id'] ) && is_scalar( $input['provider_repository_id'] )
-			? self::providerRepositoryId( (string) $input['provider_repository_id'] )
+		$provider_id     = isset( $input['provider_repository_id'] ) && is_scalar( $input['provider_repository_id'] )
+			? self::provider_repository_id( (string) $input['provider_repository_id'] )
 			: null;
-		$subdirectory   = PackageSubdirectory::normalize( $input['subdirectory'] ?? null );
-		$packageSlug    = 'install' === $operation
-			? ( $linkOnly
-				? PackageSubdirectory::installationSlug( $input['package_slug'] ?? '', $subdirectory )
-				: PackageSubdirectory::deploymentSlug( $input['package_slug'] ?? '', $subdirectory ) )
+		$subdirectory    = PackageSubdirectory::normalize( $input['subdirectory'] ?? null );
+		$package_slug    = 'install' === $operation
+			? ( $link_only
+				? PackageSubdirectory::installation_slug( $input['package_slug'] ?? '', $subdirectory )
+				: PackageSubdirectory::deployment_slug( $input['package_slug'] ?? '', $subdirectory ) )
 			: null;
 
 		return new self(
 			$operation,
-			$packageType,
+			$package_type,
 			$identifier,
-			self::requiredScalar( $input, 'repository' ),
+			self::required_scalar( $input, 'repository' ),
 			'install' === $operation
-				? self::nullableScalar( $input['branch'] ?? null ) ?? ''
-				: self::requiredScalar( $input, 'branch' ),
-			$providerCode,
-			$providerId,
-			in_array( $identitySource, array( 'stored', 'picker', 'manual', 'resolved' ), true ) ? $identitySource : '',
-			'' === $credentialId ? null : $credentialId,
-			'1' === (string) ( $input['private'] ?? '0' ) || ( 'resolved' !== $identitySource && '' !== $credentialId ),
-			self::deploymentPolicy( $input ),
-			$linkOnly,
+				? self::nullable_scalar( $input['branch'] ?? null ) ?? ''
+				: self::required_scalar( $input, 'branch' ),
+			$provider_code,
+			$provider_id,
+			in_array( $identity_source, array( 'stored', 'picker', 'manual', 'resolved' ), true ) ? $identity_source : '',
+			'' === $credential_id ? null : $credential_id,
+			'1' === (string) ( $input['private'] ?? '0' ) || ( 'resolved' !== $identity_source && '' !== $credential_id ),
+			self::deployment_policy( $input ),
+			$link_only,
 			$subdirectory,
-			$packageSlug,
+			$package_slug,
 			null,
-			'edit' === $operation ? self::expectedPackage( $input ) : array()
+			'edit' === $operation ? self::expected_package( $input ) : array()
 		);
 	}
 
-	public static function updateFromSavedPackage( self $edit, Package $package ): self {
+	public static function update_from_saved_package( self $edit, Package $package ): self {
 		$identifier = $package->getIdentifier();
 		if ( 'edit' !== $edit->operation
 			|| ! is_string( $identifier )
@@ -160,10 +160,10 @@ final readonly class PackageOperation {
 			throw new InvalidArgumentException( 'The saved package cannot be reinstalled.' );
 		}
 
-		return self::fromInput(
-			'update-' . $edit->packageType,
+		return self::from_input(
+			'update-' . $edit->package_type,
 			array(
-				'plugin' === $edit->packageType ? 'file' : 'stylesheet' => $identifier,
+				'plugin' === $edit->package_type ? 'file' : 'stylesheet' => $identifier,
 				'repository'                      => (string) $package->getRepository(),
 				'expected_provider'               => $package->getProviderCode(),
 				'expected_provider_repository_id' => $package->getProviderRepositoryId(),
@@ -180,22 +180,22 @@ final readonly class PackageOperation {
 		);
 	}
 
-	public function isDeployment(): bool {
-		return 'update' === $this->operation || ( 'install' === $this->operation && ! $this->linkOnly );
+	public function is_deployment(): bool {
+		return 'update' === $this->operation || ( 'install' === $this->operation && ! $this->link_only );
 	}
 
-	public function hasExpectedPackage(): bool {
-		return 11 === count( $this->expectedPackage ) && ! in_array( null, $this->expectedPackage, true );
+	public function has_expected_package(): bool {
+		return 11 === count( $this->expected_package ) && ! in_array( null, $this->expected_package, true );
 	}
 
-	public function getExpectedSourceRevision(): ?int {
-		$revision = $this->expectedPackage['source_revision'] ?? null;
+	public function get_expected_source_revision(): ?int {
+		$revision = $this->expected_package['source_revision'] ?? null;
 
 		return is_int( $revision ) ? $revision : null;
 	}
 
 	/** @return array{string, string}|null */
-	private static function actionParts( string $action ): ?array {
+	private static function action_parts( string $action ): ?array {
 		if ( str_starts_with( $action, 'unlink-delete-' ) ) {
 			$type = substr( $action, strlen( 'unlink-delete-' ) );
 
@@ -214,40 +214,40 @@ final readonly class PackageOperation {
 	}
 
 	/** @param array<string, mixed> $input */
-	private static function deploymentPolicy( array $input ): DeploymentPolicy {
+	private static function deployment_policy( array $input ): DeploymentPolicy {
 		$policy = $input['deployment_policy'] ?? DeploymentPolicy::MANUAL->value;
 		if ( ! is_string( $policy ) ) {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}
 		try {
-			return DeploymentPolicy::fromDatabase( $policy );
+			return DeploymentPolicy::from_database( $policy );
 		} catch ( InvalidArgumentException ) {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}
 	}
 
 	/** @param array<string, mixed> $input */
-	private static function expectedPackage( array $input ): array {
+	private static function expected_package( array $input ): array {
 		return array(
-			'provider'               => self::nullableScalar( $input['expected_provider'] ?? null ),
-			'provider_repository_id' => self::nullableOpaqueScalar( $input['expected_provider_repository_id'] ?? null ),
-			'repository'             => self::nullableScalar( $input['expected_repository'] ?? null ),
-			'branch'                 => self::nullableScalar( $input['expected_branch'] ?? null ),
-			'credential_id'          => self::presentScalar( $input, 'expected_credential_id' ),
-			'subdirectory'           => self::presentScalar( $input, 'expected_subdirectory' ),
-			'private'                => self::expectedPrivate( $input ),
-			'package_slug'           => self::nullableScalar( $input['expected_package_slug'] ?? null ),
+			'provider'               => self::nullable_scalar( $input['expected_provider'] ?? null ),
+			'provider_repository_id' => self::nullable_opaque_scalar( $input['expected_provider_repository_id'] ?? null ),
+			'repository'             => self::nullable_scalar( $input['expected_repository'] ?? null ),
+			'branch'                 => self::nullable_scalar( $input['expected_branch'] ?? null ),
+			'credential_id'          => self::present_scalar( $input, 'expected_credential_id' ),
+			'subdirectory'           => self::present_scalar( $input, 'expected_subdirectory' ),
+			'private'                => self::expected_private( $input ),
+			'package_slug'           => self::nullable_scalar( $input['expected_package_slug'] ?? null ),
 			'deployment_policy'      => isset( $input['expected_deployment_policy'] ) && is_scalar( $input['expected_deployment_policy'] )
 				? DeploymentPolicy::tryFrom( trim( (string) $input['expected_deployment_policy'] ) )
 				: null,
 			'source'                 => isset( $input['expected_source'] ) && is_scalar( $input['expected_source'] )
 				? PackageSource::tryFrom( trim( (string) $input['expected_source'] ) )
 				: null,
-			'source_revision'        => self::expectedNonNegativeInt( $input['expected_source_revision'] ?? null ),
+			'source_revision'        => self::expected_non_negative_int( $input['expected_source_revision'] ?? null ),
 		);
 	}
 
-	private static function expectedNonNegativeInt( mixed $value ): ?int {
+	private static function expected_non_negative_int( mixed $value ): ?int {
 		if ( ! is_scalar( $value ) || 1 !== preg_match( '/^(?:0|[1-9][0-9]*)$/D', trim( (string) $value ) ) ) {
 			return null;
 		}
@@ -258,7 +258,7 @@ final readonly class PackageOperation {
 	}
 
 	/** @param array<string, mixed> $input */
-	private static function expectedPrivate( array $input ): ?bool {
+	private static function expected_private( array $input ): ?bool {
 		if ( ! array_key_exists( 'expected_private', $input ) ) {
 			return null;
 		}
@@ -270,40 +270,40 @@ final readonly class PackageOperation {
 	}
 
 	/** @param array<string, mixed> $input */
-	private static function requiredScalar( array $input, string $key ): string {
+	private static function required_scalar( array $input, string $key ): string {
 		if ( ! array_key_exists( $key, $input ) || ! is_scalar( $input[ $key ] ) ) {
 			throw new InvalidArgumentException( 'Complete every required package field.' );
 		}
 		return (string) $input[ $key ];
 	}
 
-	private static function nullableScalar( mixed $value ): ?string {
+	private static function nullable_scalar( mixed $value ): ?string {
 		$value = is_scalar( $value ) ? trim( (string) $value ) : '';
 
 		return '' === $value ? null : $value;
 	}
 
-	private static function nullableOpaqueScalar( mixed $value ): ?string {
+	private static function nullable_opaque_scalar( mixed $value ): ?string {
 		$value = is_scalar( $value ) ? (string) $value : '';
 
 		return '' === $value ? null : $value;
 	}
 
 	/** @param array<string, mixed> $input */
-	private static function presentScalar( array $input, string $key ): ?string {
+	private static function present_scalar( array $input, string $key ): ?string {
 		return array_key_exists( $key, $input ) && is_scalar( $input[ $key ] )
 			? trim( (string) $input[ $key ] )
 			: null;
 	}
 
-	private static function providerRepositoryId( string $value ): ?string {
+	private static function provider_repository_id( string $value ): ?string {
 		$value = wp_strip_all_tags( wp_unslash( $value ), true );
 		$value = (string) preg_replace( '/[\x00-\x1F\x7F]/u', '', $value );
 
 		return '' === $value ? null : $value;
 	}
 
-	private static function removalIdentifier( ?string $identifier, string $packageType ): string {
+	private static function removal_identifier( ?string $identifier, string $package_type ): string {
 		$identifier = null === $identifier ? '' : trim( $identifier );
 		if ( '' === $identifier
 			|| strlen( $identifier ) > 191
@@ -311,7 +311,7 @@ final readonly class PackageOperation {
 			|| str_contains( $identifier, '\\' )
 			|| preg_match( '/[\x00-\x1F\x7F]/', $identifier ) === 1
 			|| preg_match( '#(^|/)\.\.?(/|$)#', $identifier ) === 1
-			|| ( 'plugin' === $packageType && ! str_ends_with( strtolower( $identifier ), '.php' ) )
+			|| ( 'plugin' === $package_type && ! str_ends_with( strtolower( $identifier ), '.php' ) )
 		) {
 			throw new InvalidArgumentException( 'Choose a valid managed package.' );
 		}

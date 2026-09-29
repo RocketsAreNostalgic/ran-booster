@@ -46,10 +46,10 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	public function testManualAdmissionAndClaimAreOneAtomicTransaction(): void {
 		$attempt = $this->manual( 'example' );
 
-		self::assertSame( DeploymentState::RUNNING, $attempt->getState() );
-		self::assertSame( 'example', $attempt->getRequest()->packageSlug );
+		self::assertSame( DeploymentState::RUNNING, $attempt->get_state() );
+		self::assertSame( 'example', $attempt->get_request()->package_slug );
 		self::assertCount( 1, $this->database->rows );
-		self::assertSame( $attempt->getRequest()->toJson(), $this->database->rows[0]['request_json'] );
+		self::assertSame( $attempt->get_request()->to_json(), $this->database->rows[0]['request_json'] );
 		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $this->database->queries[0] );
 		self::assertSame( 'START TRANSACTION', $this->database->queries[1] );
 		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
@@ -61,8 +61,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 		self::assertTrue( $this->repository->hasUnresolvedPackageAttempt( 'plugin', 'example' ) );
 		$this->repository->finish(
-			$attempt->getId(),
-			DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED )
+			$attempt->get_id(),
+			DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED )
 		);
 		self::assertFalse( $this->repository->hasUnresolvedPackageAttempt( 'plugin', 'example' ) );
 	}
@@ -120,7 +120,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 		$attempt = $this->manual( 'new-attempt' );
 
-		self::assertSame( DeploymentState::RUNNING, $attempt->getState() );
+		self::assertSame( DeploymentState::RUNNING, $attempt->get_state() );
 		self::assertCount( 200, $this->database->rows );
 		self::assertSame( 7, min( array_column( $this->database->rows, 'id' ) ) );
 		self::assertStringContainsString(
@@ -152,7 +152,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->manual( 'new-attempt' );
 			self::fail( 'Protected deployment work must exhaust storage safely.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertTrue( $failure->isCapacityExhausted() );
+			self::assertTrue( $failure->is_capacity_exhausted() );
 			self::assertStringContainsString( 'Resolve queued, running, or needs-attention deployments', $failure->getMessage() );
 		}
 
@@ -178,7 +178,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertCount( 200, $this->database->rows );
 		self::assertNotContains( 1, array_column( $this->database->rows, 'id' ) );
 		self::assertContains( 2, array_column( $this->database->rows, 'id' ) );
-		self::assertSame( 'available', $result['admitted'][0]->getRequest()->packageSlug );
+		self::assertSame( 'available', $result['admitted'][0]->get_request()->package_slug );
 	}
 
 	public function testWebhookBatchAndZeroTargetAcknowledgementReserveTheirExactRows(): void {
@@ -263,14 +263,14 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->seedAttempts( array_fill( 0, 210, DeploymentState::SUCCEEDED->value ) );
 
 		$first  = $this->repository->recentHistory( 100 );
-		$second = $this->repository->recentHistory( 100, $first[ array_key_last( $first ) ]->getId() );
-		$third  = $this->repository->recentHistory( 100, $second[ array_key_last( $second ) ]->getId() );
+		$second = $this->repository->recentHistory( 100, $first[ array_key_last( $first ) ]->get_id() );
+		$third  = $this->repository->recentHistory( 100, $second[ array_key_last( $second ) ]->get_id() );
 
 		self::assertCount( 100, $first );
 		self::assertCount( 100, $second );
 		self::assertCount( 10, $third );
-		self::assertSame( 210, $first[0]->getId() );
-		self::assertSame( 1, $third[ array_key_last( $third ) ]->getId() );
+		self::assertSame( 210, $first[0]->get_id() );
+		self::assertSame( 1, $third[ array_key_last( $third ) ]->get_id() );
 	}
 
 	public function testUnsupportedDatabaseBlocksAttemptReadsAndAdmissionsBeforeTableAccess(): void {
@@ -281,14 +281,14 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->repository->recentHistory();
 			self::fail( 'Unsupported history reads must fail closed.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertTrue( $failure->isDatabaseUnsupported() );
+			self::assertTrue( $failure->is_database_unsupported() );
 		}
 
 		try {
 			$this->manual( 'unsupported' );
 			self::fail( 'Unsupported admissions must fail closed.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertTrue( $failure->isDatabaseUnsupported() );
+			self::assertTrue( $failure->is_database_unsupported() );
 		}
 
 		self::assertSame( array(), $this->database->queries );
@@ -297,7 +297,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function testLifecycleSafeStateBlocksAttemptReadsAndAdmissionsBeforeTableAccess(): void {
 		$lifecycle = $this->createStub( Database::class );
-		$lifecycle->method( 'requireReady' )->willThrowException( new DatabaseLifecycleFailure( 'schema_operation_failed' ) );
+		$lifecycle->method( 'requireReady' )->willThrowException( new DatabaseLifecycleFailure( failure_reason: 'schema_operation_failed' ) );
 		$this->database->failReads = true;
 		$this->database->queries   = array();
 		$this->repository          = $this->repositoryWithMaximum( databaseLifecycle: $lifecycle );
@@ -309,7 +309,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				$operation();
 				self::fail( 'Cached lifecycle failures must block deployment-attempt storage.' );
 			} catch ( DeploymentStorageFailure $failure ) {
-				self::assertTrue( $failure->isDatabaseUnsupported() );
+				self::assertTrue( $failure->is_database_unsupported() );
 			}
 		}
 
@@ -325,7 +325,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->manual( 'example' );
 			self::fail( 'A second manual mutation must not overlap an active attempt.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertSame( $active->getCorrelationId(), $failure->getActiveCorrelationId() );
+			self::assertSame( $active->get_correlation_id(), $failure->get_active_correlation_id() );
 			self::assertCount( 1, $this->database->rows );
 			self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
 		}
@@ -395,7 +395,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			array( $this->target( 'zeta', 'theme' ), $this->target( 'alpha', 'plugin' ) )
 		);
 
-		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->packageSlug, $attempts ) );
+		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->get_request()->package_slug, $attempts ) );
 		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
 		// The integration gate exercises this ordering with two real connections whose session default is READ COMMITTED.
 		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $this->database->queries[0] );
@@ -411,7 +411,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			)
 		);
 
-		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->packageSlug, $result['admitted'] ) );
+		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->get_request()->package_slug, $result['admitted'] ) );
 		self::assertSame( array(), $result['busy'] );
 		self::assertSame( array( 'manual', 'manual' ), array_column( $this->database->rows, 'source' ) );
 		self::assertSame( array( 'queued', 'queued' ), array_column( $this->database->rows, 'state' ) );
@@ -431,15 +431,15 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 
 		self::assertCount( 1, $result['busy'] );
-		self::assertSame( $active->getCorrelationId(), $result['busy'][0]['correlation_id'] );
+		self::assertSame( $active->get_correlation_id(), $result['busy'][0]['correlation_id'] );
 		self::assertCount( 1, $result['admitted'] );
-		self::assertSame( 'available', $result['admitted'][0]->getRequest()->packageSlug );
+		self::assertSame( 'available', $result['admitted'][0]->get_request()->package_slug );
 		self::assertCount( 2, $this->database->rows );
 	}
 
 	public function testTerminalManualHistoryDoesNotBlockANewBatchAttempt(): void {
 		$running = $this->manual( 'example' );
-		$this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
+		$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
 
 		$result = $this->repository->admitManualBatch( array( $this->manualTarget( 'example' ) ) );
 
@@ -449,7 +449,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function testNeedsAttentionHistoryBlocksANewBatchAttempt(): void {
 		$running = $this->manual( 'example' );
-		$this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_INTERRUPTED ) );
+		$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_INTERRUPTED ) );
 		$this->database->queries = array();
 
 		$result = $this->repository->admitManualBatch( array( $this->manualTarget( 'example' ) ) );
@@ -466,10 +466,10 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$third  = $this->manual( 'third' );
 		$before = count( $this->database->queries );
 
-		$found = $this->repository->findExactBatch( array( $third->getId(), $first->getId() ) );
+		$found = $this->repository->findExactBatch( array( $third->get_id(), $first->get_id() ) );
 
-		self::assertSame( array( $first->getId(), $third->getId() ), array_keys( $found ) );
-		self::assertArrayNotHasKey( $second->getId(), $found );
+		self::assertSame( array( $first->get_id(), $third->get_id() ), array_keys( $found ) );
+		self::assertArrayNotHasKey( $second->get_id(), $found );
 		self::assertCount( 1, array_slice( $this->database->queries, $before ) );
 	}
 
@@ -517,7 +517,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$first   = $this->repository->admitWebhookBatch( 'gh', 'delivery-1', str_repeat( 'd', 64 ), $targets );
 		$replay  = $this->repository->admitWebhookBatch( 'gh', 'delivery-1', str_repeat( 'd', 64 ), $targets );
 
-		self::assertSame( $first[0]->getId(), $replay[0]->getId() );
+		self::assertSame( $first[0]->get_id(), $replay[0]->get_id() );
 		self::assertCount( 1, $this->database->rows );
 	}
 
@@ -531,8 +531,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 
 		self::assertCount( 1, $replay );
-		self::assertSame( $first[0]->getId(), $replay[0]->getId() );
-		self::assertSame( 'original', $replay[0]->getRequest()->packageSlug );
+		self::assertSame( $first[0]->get_id(), $replay[0]->get_id() );
+		self::assertSame( 'original', $replay[0]->get_request()->package_slug );
 		self::assertCount( 1, $this->database->rows );
 	}
 
@@ -618,8 +618,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$running                 = $this->repository->claimNext();
 
 		self::assertNotNull( $running );
-		self::assertSame( $queued->getId(), $running->getId() );
-		self::assertSame( DeploymentState::RUNNING, $running->getState() );
+		self::assertSame( $queued->get_id(), $running->get_id() );
+		self::assertSame( DeploymentState::RUNNING, $running->get_state() );
 		self::assertSame( 'START TRANSACTION', $this->database->queries[0] );
 		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
 		self::assertStringNotContainsString( 'wp_options', implode( "\n", $this->database->queries ) );
@@ -632,9 +632,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$second = $this->repository->claimNext();
 
 		self::assertNotNull( $second );
-		self::assertSame( $waiting->getId(), $second->getId() );
-		self::assertSame( DeploymentState::RUNNING, $active->getState() );
-		self::assertSame( DeploymentState::RUNNING, $second->getState() );
+		self::assertSame( $waiting->get_id(), $second->get_id() );
+		self::assertSame( DeploymentState::RUNNING, $active->get_state() );
+		self::assertSame( DeploymentState::RUNNING, $second->get_state() );
 	}
 
 	public function testClaimTransitionFailureRollsBackItsStateChange(): void {
@@ -652,14 +652,14 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function testResolvedRefFenceAndTerminalOutcomeAreWrittenAndReadBack(): void {
 		$running  = $this->manual( 'example' );
-		$resolved = $this->repository->recordResolvedRef( $running->getId(), str_repeat( 'a', 40 ) );
-		$fenced   = $this->repository->markMutationStarted( $running->getId() );
-		$finished = $this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED ) );
+		$resolved = $this->repository->recordResolvedRef( $running->get_id(), str_repeat( 'a', 40 ) );
+		$fenced   = $this->repository->markMutationStarted( $running->get_id() );
+		$finished = $this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 
-		self::assertSame( str_repeat( 'a', 40 ), $resolved->safeData()['resolved_ref'] );
-		self::assertNotNull( $fenced->safeData()['mutation_started_at'] );
-		self::assertSame( DeploymentState::SUCCEEDED, $finished->getState() );
-		self::assertSame( 'deployed', $finished->getOutcome()?->getCode() );
+		self::assertSame( str_repeat( 'a', 40 ), $resolved->safe_data()['resolved_ref'] );
+		self::assertNotNull( $fenced->safe_data()['mutation_started_at'] );
+		self::assertSame( DeploymentState::SUCCEEDED, $finished->get_state() );
+		self::assertSame( 'deployed', $finished->get_outcome()?->get_code() );
 	}
 
 	public function testValidButDifferentTerminalTimestampFailsReadback(): void {
@@ -668,7 +668,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->database->tamperUpdateValue  = '2026-07-19 00:00:01';
 
 		$this->expectException( DeploymentStorageFailure::class );
-		$this->repository->finish( $running->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED ) );
+		$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 	}
 
 	public function testWriteFailuresAndEmptyQueryAreNotConflated(): void {
@@ -681,62 +681,62 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function testPreFenceReconciliationFailsTheRunningAttempt(): void {
 		$running = $this->manual( 'example' );
-		$result  = $this->repository->reconcileConfirmedStopped( $running->getId() );
+		$result  = $this->repository->reconcileConfirmedStopped( $running->get_id() );
 
-		self::assertSame( DeploymentState::FAILED, $result->getState() );
-		self::assertSame( 'worker_stopped', $result->getOutcome()?->getCode() );
+		self::assertSame( DeploymentState::FAILED, $result->get_state() );
+		self::assertSame( 'worker_stopped', $result->get_outcome()?->get_code() );
 	}
 
 	public function testPostFenceReconciliationRequiresAttention(): void {
 		$running = $this->manual( 'example' );
-		$this->repository->markMutationStarted( $running->getId() );
-		$result = $this->repository->reconcileConfirmedStopped( $running->getId() );
+		$this->repository->markMutationStarted( $running->get_id() );
+		$result = $this->repository->reconcileConfirmedStopped( $running->get_id() );
 
-		self::assertSame( DeploymentState::NEEDS_ATTENTION, $result->getState() );
-		self::assertSame( 'interrupted', $result->getOutcome()?->getCode() );
+		self::assertSame( DeploymentState::NEEDS_ATTENTION, $result->get_state() );
+		self::assertSame( 'interrupted', $result->get_outcome()?->get_code() );
 	}
 
 	public function testExactOperatorResolutionPreservesOutcomeAndAllowsRetry(): void {
 		$running = $this->manual( 'example' );
-		$this->repository->markMutationStarted( $running->getId() );
-		$attention = $this->repository->reconcileConfirmedStopped( $running->getId() );
+		$this->repository->markMutationStarted( $running->get_id() );
+		$attention = $this->repository->reconcileConfirmedStopped( $running->get_id() );
 
 		try {
 			$this->manual( 'example' );
 			self::fail( 'An unresolved needs-attention attempt must block admission.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			self::assertSame( $attention->safeData()['id'], $failure->getActiveAttempt()['id'] ?? null );
-			self::assertSame( 'needs_attention', $failure->getActiveAttempt()['state'] ?? null );
+			self::assertSame( $attention->safe_data()['id'], $failure->get_active_attempt()['id'] ?? null );
+			self::assertSame( 'needs_attention', $failure->get_active_attempt()['state'] ?? null );
 		}
 
 		$resolved = $this->repository->resolveNeedsAttention(
-			$attention->getId(),
-			$attention->getCorrelationId(),
+			$attention->get_id(),
+			$attention->get_correlation_id(),
 			7
 		);
 		$retry    = $this->manual( 'example' );
 
-		self::assertSame( DeploymentState::NEEDS_ATTENTION, $resolved->getState() );
-		self::assertSame( 'interrupted', $resolved->getOutcome()?->getCode() );
-		self::assertSame( '2026-07-19 00:00:00', $resolved->safeData()['resolved_at'] );
-		self::assertSame( 7, $resolved->safeData()['resolved_by'] );
-		self::assertFalse( $resolved->requiresOperatorResolution() );
+		self::assertSame( DeploymentState::NEEDS_ATTENTION, $resolved->get_state() );
+		self::assertSame( 'interrupted', $resolved->get_outcome()?->get_code() );
+		self::assertSame( '2026-07-19 00:00:00', $resolved->safe_data()['resolved_at'] );
+		self::assertSame( 7, $resolved->safe_data()['resolved_by'] );
+		self::assertFalse( $resolved->requires_operator_resolution() );
 		self::assertSame( 0, $this->repository->operationalSnapshot()['needs_attention'] );
-		self::assertSame( DeploymentState::RUNNING, $retry->getState() );
+		self::assertSame( DeploymentState::RUNNING, $retry->get_state() );
 	}
 
 	public function testOperatorResolutionRequiresTheExactCorrelationReference(): void {
 		$running = $this->manual( 'example' );
-		$this->repository->markMutationStarted( $running->getId() );
-		$attention = $this->repository->reconcileConfirmedStopped( $running->getId() );
+		$this->repository->markMutationStarted( $running->get_id() );
+		$attention = $this->repository->reconcileConfirmedStopped( $running->get_id() );
 
 		try {
-			$this->repository->resolveNeedsAttention( $attention->getId(), str_repeat( 'f', 32 ), 7 );
+			$this->repository->resolveNeedsAttention( $attention->get_id(), str_repeat( 'f', 32 ), 7 );
 			self::fail( 'A mismatched support reference must not resolve the attempt.' );
 		} catch ( DeploymentStorageFailure ) {
-			$stored = $this->repository->findExact( $attention->getId() );
-			self::assertTrue( $stored?->requiresOperatorResolution() );
-			self::assertNull( $stored?->safeData()['resolved_at'] );
+			$stored = $this->repository->findExact( $attention->get_id() );
+			self::assertTrue( $stored?->requires_operator_resolution() );
+			self::assertNull( $stored?->safe_data()['resolved_at'] );
 		}
 	}
 
@@ -757,7 +757,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->database->rows[0]['mutation_started_at'] = 'not-a-date';
 
 		$this->expectException( DeploymentStorageFailure::class );
-		$this->repository->reconcileConfirmedStopped( $running->getId() );
+		$this->repository->reconcileConfirmedStopped( $running->get_id() );
 	}
 
 	public function testReconciliationRollsBackATamperedTerminalTimestamp(): void {
@@ -766,10 +766,10 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->database->tamperUpdateValue  = '2026-07-19 00:00:01';
 
 		try {
-			$this->repository->reconcileConfirmedStopped( $running->getId() );
+			$this->repository->reconcileConfirmedStopped( $running->get_id() );
 			self::fail( 'A changed reconciliation result must fail readback.' );
 		} catch ( DeploymentStorageFailure ) {
-			self::assertSame( DeploymentState::RUNNING, $this->repository->findExact( $running->getId() )?->getState() );
+			self::assertSame( DeploymentState::RUNNING, $this->repository->findExact( $running->get_id() )?->get_state() );
 		}
 	}
 
@@ -779,25 +779,25 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->manual( 'third' );
 		$history = $this->repository->recentHistory( 2 );
 
-		self::assertSame( array( 'third', 'second' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->getRequest()->packageSlug, $history ) );
+		self::assertSame( array( 'third', 'second' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->get_request()->package_slug, $history ) );
 		foreach ( $history as $attempt ) {
-			self::assertArrayNotHasKey( 'request_json', $attempt->safeData() );
-			self::assertArrayNotHasKey( 'delivery_digest', $attempt->safeData() );
+			self::assertArrayNotHasKey( 'request_json', $attempt->safe_data() );
+			self::assertArrayNotHasKey( 'delivery_digest', $attempt->safe_data() );
 		}
 	}
 
 	public function testPackageActivitySummaryReadsLatestAndLastSuccessInOneBoundedQuery(): void {
 		$successful = $this->manual( 'example' );
-		$this->repository->recordResolvedRef( $successful->getId(), str_repeat( 'a', 40 ) );
-		$successful = $this->repository->finish( $successful->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED ) );
+		$this->repository->recordResolvedRef( $successful->get_id(), str_repeat( 'a', 40 ) );
+		$successful = $this->repository->finish( $successful->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 		$failed     = $this->manual( 'example' );
-		$failed     = $this->repository->finish( $failed->getId(), DeploymentOutcome::fromCode( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
+		$failed     = $this->repository->finish( $failed->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
 
 		$this->database->queries = array();
 		$summary                 = $this->repository->packageActivitySummary( 'plugin', 'example' );
 
-		self::assertSame( $failed->getId(), $summary['latest']?->getId() );
-		self::assertSame( $successful->getId(), $summary['last_successful']?->getId() );
+		self::assertSame( $failed->get_id(), $summary['latest']?->get_id() );
+		self::assertSame( $successful->get_id(), $summary['last_successful']?->get_id() );
 		self::assertCount( 1, $this->database->queries );
 		self::assertStringContainsString( 'ORDER BY attempts.id DESC LIMIT 2', $this->database->queries[0] );
 	}
@@ -858,7 +858,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				'state'                   => $state,
 				'mutation_started_at'     => null,
 				'outcome_code'            => $outcome,
-				'request_json'            => $this->request( $slug )->toJson(),
+				'request_json'            => $this->request( $slug )->to_json(),
 				'created_at'              => '2026-07-18 00:00:00',
 				'finished_at'             => null === $outcome ? null : '2026-07-18 00:01:00',
 				'resolved_at'             => null,

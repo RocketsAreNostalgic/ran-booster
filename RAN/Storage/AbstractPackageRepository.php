@@ -207,7 +207,7 @@ abstract class AbstractPackageRepository {
 		}
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
+			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
@@ -224,7 +224,7 @@ abstract class AbstractPackageRepository {
 			}
 			$result   = $wpdb->update( ran_booster_table_name(), $data, $where );
 			$verified = $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
-			if ( ! $verified->isSuccessful() ) {
+			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
@@ -236,7 +236,7 @@ abstract class AbstractPackageRepository {
 			return $verified;
 		} catch ( Throwable $exception ) {
 			$wpdb->query( 'ROLLBACK' );
-			return $this->failureResult( PackageStorageFailure::queryFailed() );
+			return $this->failureResult( PackageStorageFailure::query_failed() );
 		}
 	}
 
@@ -264,7 +264,7 @@ abstract class AbstractPackageRepository {
 				throw new InvalidArgumentException( 'The bulk package selection is invalid.' );
 			}
 			$snapshot['package']                    = (string) $model->package;
-			$snapshot['deployment_policy']          = DeploymentPolicy::fromDatabase(
+			$snapshot['deployment_policy']          = DeploymentPolicy::from_database(
 				is_string( $snapshot['deployment_policy'] ?? null )
 					? $snapshot['deployment_policy']
 					: ''
@@ -283,7 +283,7 @@ abstract class AbstractPackageRepository {
 
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			throw PackageStorageFailure::transactionUnavailable();
+			throw PackageStorageFailure::transaction_unavailable();
 		}
 
 		try {
@@ -291,16 +291,16 @@ abstract class AbstractPackageRepository {
 			foreach ( $normalized as $identifier => $snapshot ) {
 				$rows = $this->lockedPackageRows( $identifier );
 				if ( 1 !== count( $rows ) || ! $this->rowMatches( $rows[0], $snapshot ) ) {
-					throw PackageStorageFailure::duplicatePackageRows();
+					throw PackageStorageFailure::duplicate_package_rows();
 				}
 				try {
 					$subdirectory = PackageSubdirectory::normalize( $rows[0]->subdirectory ?? null );
 				} catch ( InvalidArgumentException ) {
-					throw PackageStorageFailure::writeFailed();
+					throw PackageStorageFailure::write_failed();
 				}
 				if ( PackageSource::RELEASE_ASSET->value === ( $rows[0]->source ?? null )
 					&& null !== $subdirectory ) {
-					throw PackageStorageFailure::writeFailed();
+					throw PackageStorageFailure::write_failed();
 				}
 
 				if ( $policy->value === (string) ( $rows[0]->deployment_policy ?? '' ) ) {
@@ -316,7 +316,7 @@ abstract class AbstractPackageRepository {
 					)
 				);
 				if ( 1 !== $result ) {
-					throw PackageStorageFailure::writeFailed();
+					throw PackageStorageFailure::write_failed();
 				}
 				++$changed;
 			}
@@ -324,12 +324,12 @@ abstract class AbstractPackageRepository {
 			foreach ( array_keys( $normalized ) as $identifier ) {
 				$rows = $this->lockedPackageRows( $identifier );
 				if ( 1 !== count( $rows ) || $policy->value !== (string) ( $rows[0]->deployment_policy ?? '' ) ) {
-					throw PackageStorageFailure::afterWriteCouldNotBeVerified( PackageStorageOperation::UPDATE );
+					throw PackageStorageFailure::after_write_could_not_be_verified( PackageStorageOperation::UPDATE );
 				}
 			}
 
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
-				throw PackageStorageFailure::afterWriteCouldNotBeVerified( PackageStorageOperation::UPDATE );
+				throw PackageStorageFailure::after_write_could_not_be_verified( PackageStorageOperation::UPDATE );
 			}
 
 			return array(
@@ -353,7 +353,7 @@ abstract class AbstractPackageRepository {
 		$rows  = $this->packageRows( $model->package );
 
 		if ( count( $rows ) > 1 ) {
-			throw PackageStorageFailure::duplicatePackageRows();
+			throw PackageStorageFailure::duplicate_package_rows();
 		}
 
 		$row = $rows[0] ?? null;
@@ -383,7 +383,7 @@ abstract class AbstractPackageRepository {
 		);
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
+			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
@@ -426,18 +426,18 @@ abstract class AbstractPackageRepository {
 				$result     = $wpdb->insert( $tableName, $insertData );
 				$verified   = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
 			}
-			if ( ! $verified->isSuccessful() ) {
+			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->postWriteVerificationFailure( $verified->getOperation() );
+				return $this->postWriteVerificationFailure( $verified->get_operation() );
 			}
 			return $verified;
 		} catch ( Throwable ) {
 			$wpdb->query( 'ROLLBACK' );
-			return $this->failureResult( PackageStorageFailure::queryFailed() );
+			return $this->failureResult( PackageStorageFailure::query_failed() );
 		}
 	}
 
@@ -460,7 +460,7 @@ abstract class AbstractPackageRepository {
 		}
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
+			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
@@ -511,7 +511,7 @@ abstract class AbstractPackageRepository {
 				);
 			}
 			$verified = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
-			if ( ! $verified->isSuccessful() ) {
+			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
@@ -557,7 +557,7 @@ abstract class AbstractPackageRepository {
 		}
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transactionUnavailable() );
+			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
@@ -612,7 +612,7 @@ abstract class AbstractPackageRepository {
 			}
 
 			$verified = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
-			if ( ! $verified->isSuccessful() ) {
+			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
@@ -724,7 +724,7 @@ abstract class AbstractPackageRepository {
 		$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
 
 		if ( '' !== $error || ! is_array( $rows ) || count( $rows ) !== count( array_filter( $rows, 'is_object' ) ) ) {
-			throw PackageStorageFailure::queryFailed();
+			throw PackageStorageFailure::query_failed();
 		}
 
 		return array_values( $rows );
@@ -748,7 +748,7 @@ abstract class AbstractPackageRepository {
 		$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
 
 		if ( '' !== $error || ! is_array( $rows ) || count( $rows ) !== count( array_filter( $rows, 'is_object' ) ) ) {
-			throw PackageStorageFailure::queryFailed();
+			throw PackageStorageFailure::query_failed();
 		}
 
 		return array_values( $rows );
@@ -828,18 +828,18 @@ abstract class AbstractPackageRepository {
 
 	private function failureResult( PackageStorageFailure $failure ): PackageMutationResult {
 		return PackageMutationResult::failed(
-			$failure->getOperation(),
-			$failure->getDiagnosticId(),
+			$failure->get_operation(),
+			$failure->get_diagnostic_id(),
 			$failure->getMessage()
 		);
 	}
 
 	private function postWriteVerificationFailure( PackageStorageOperation $operation ): PackageMutationResult {
-		$failure = PackageStorageFailure::afterWriteCouldNotBeVerified( $operation );
+		$failure = PackageStorageFailure::after_write_could_not_be_verified( $operation );
 
 		return PackageMutationResult::failed(
-			$failure->getOperation(),
-			$failure->getDiagnosticId(),
+			$failure->get_operation(),
+			$failure->get_diagnostic_id(),
 			$failure->getMessage(),
 			true
 		);
@@ -916,12 +916,12 @@ abstract class AbstractPackageRepository {
 				'' === $credential ? null : $credential
 			);
 		} catch ( InvalidArgumentException ) {
-			throw PackageStorageFailure::invalidProviderIdentity();
+			throw PackageStorageFailure::invalid_provider_identity();
 		}
 
 		$package->setRepository( $repository );
 		$package->setDeploymentPolicy(
-			DeploymentPolicy::fromDatabase( $this->valueFromRow( $row, 'deployment_policy', DeploymentPolicy::MANUAL->value ) )
+			DeploymentPolicy::from_database( $this->valueFromRow( $row, 'deployment_policy', DeploymentPolicy::MANUAL->value ) )
 		);
 		$source = new PackageModel(
 			array(
@@ -929,7 +929,7 @@ abstract class AbstractPackageRepository {
 				'source_revision' => $this->valueFromRow( $row, 'source_revision' ),
 			)
 		);
-		$package->setSource( PackageSource::fromDatabase( $source->source ), $source->source_revision );
+		$package->setSource( PackageSource::from_database( $source->source ), $source->source_revision );
 		$package->setSubdirectory( $this->valueFromRow( $row, 'subdirectory' ) );
 
 		return $package;
@@ -949,7 +949,7 @@ abstract class AbstractPackageRepository {
 			$this->databaseLifecycle->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The enum is converted into a display-safe typed storage failure.
-			throw PackageStorageFailure::unsupportedDatabase( $operation );
+			throw PackageStorageFailure::unsupported_database( $operation );
 		}
 	}
 

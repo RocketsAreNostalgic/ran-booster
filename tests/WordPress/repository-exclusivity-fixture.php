@@ -87,12 +87,12 @@ $root->setRepository( $repository );
 $root->setDeploymentPolicy( DeploymentPolicy::DISABLED );
 $root->setSource( PackageSource::RELEASE_ASSET, 1 );
 $adoption = $plugin_repository->adoptRelease( $root, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 );
-$assert( $adoption->isSuccessful(), 'root Release adoption succeeds: ' . $adoption->getDiagnosticId() );
+$assert( $adoption->is_successful(), 'root Release adoption succeeds: ' . $adoption->get_diagnostic_id() );
 
 global $wpdb;
 $attempt_table   = Database::attemptTableName();
 $before_attempts = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE provider_repository_id = %s', $attempt_table, '1315521150' ) );
-$operation       = PackageOperation::fromInput(
+$operation       = PackageOperation::from_input(
 	'install-plugin',
 	array(
 		'provider'               => 'gh',
@@ -115,13 +115,13 @@ $assert( $blocked && $before_attempts === $after_attempts && $root_hash === hash
 $nested = $plugin_repository->installedPluginFromFile( $nested_id );
 $nested->setRepository( $repository );
 $nested->setDeploymentPolicy( DeploymentPolicy::DISABLED );
-$assert( ! $plugin_repository->adopt( $nested )->isSuccessful(), 'installed nested Branch adoption is blocked by root Release' );
-$assert( $plugin_repository->unlink( $root_id )->isSuccessful(), 'ordinary unlink removes root Release record' );
+$assert( ! $plugin_repository->adopt( $nested )->is_successful(), 'installed nested Branch adoption is blocked by root Release' );
+$assert( $plugin_repository->unlink( $root_id )->is_successful(), 'ordinary unlink removes root Release record' );
 $root->setSource( PackageSource::BRANCH, 1 );
-$assert( $plugin_repository->adopt( $root )->isSuccessful() && $plugin_repository->adopt( $nested )->isSuccessful(), 'root and nested Branch adoption both succeed' );
+$assert( $plugin_repository->adopt( $root )->is_successful() && $plugin_repository->adopt( $nested )->is_successful(), 'root and nested Branch adoption both succeed' );
 $store = new ManagedReleaseStore();
 $assert( ! $store->transition( 'plugin', $root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 ), 'shared Branch repository refuses root Release transition' );
-$assert( $plugin_repository->unlink( $nested_id )->isSuccessful(), 'ordinary unlink removes nested Branch record' );
+$assert( $plugin_repository->unlink( $nested_id )->is_successful(), 'ordinary unlink removes nested Branch record' );
 $assert( $store->transition( 'plugin', $root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 ), 'sole root Branch transitions to Release' );
 $assert( $store->transition( 'plugin', $root_id, PackageSource::RELEASE_ASSET, 2, PackageSource::BRANCH, null, 1 ), 'sole root Release returns to Branch' );
 $assert( $root_hash === hash_file( 'sha256', $root_dir . '/booster-fixture-plugin.php' ), 'root fixture bytes remain unchanged' );

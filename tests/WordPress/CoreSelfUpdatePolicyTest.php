@@ -42,9 +42,9 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	}
 
 	public function testAutoModeFailsClosedWithoutAnOfficialReleaseMarker(): void {
-		$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
+		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
 
-		self::assertFalse( $policy->allowsNativeDiscovery() );
+		self::assertFalse( $policy->allows_native_discovery() );
 		self::assertSame( 'auto', $policy->diagnostics()['requested_mode'] );
 		self::assertSame( 'release_marker_missing_or_invalid', $policy->diagnostics()['reason'] );
 	}
@@ -52,9 +52,9 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	public function testAutoModeAllowsAValidOfficialReleaseMarker(): void {
 		$this->writeMarker( '1.2.3', str_repeat( 'a', 40 ) );
 
-		$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
+		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
 
-		self::assertTrue( $policy->allowsNativeDiscovery() );
+		self::assertTrue( $policy->allows_native_discovery() );
 		self::assertSame(
 			array(
 				'requested_mode' => 'auto',
@@ -72,9 +72,9 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $this->directory . '/.git', 0700 ) );
 
-		$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
+		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
 
-		self::assertFalse( $policy->allowsNativeDiscovery() );
+		self::assertFalse( $policy->allows_native_discovery() );
 		self::assertSame( 'source_checkout', $policy->diagnostics()['reason'] );
 	}
 
@@ -82,9 +82,9 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable focused fixture setup.
 		self::assertIsInt( file_put_contents( $this->directory . '/composer.json', "{}\n" ) );
 
-		$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
+		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
 
-		self::assertFalse( $policy->allowsNativeDiscovery() );
+		self::assertFalse( $policy->allows_native_discovery() );
 		self::assertSame( 'source_checkout', $policy->diagnostics()['reason'] );
 	}
 
@@ -120,8 +120,8 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 				)
 			);
 
-			$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
-			self::assertFalse( $policy->allowsNativeDiscovery() );
+			$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
+			self::assertFalse( $policy->allows_native_discovery() );
 		}
 	}
 
@@ -134,7 +134,7 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 			)
 		);
 		self::assertFalse(
-			CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' )->allowsNativeDiscovery()
+			CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' )->allows_native_discovery()
 		);
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable focused fixture setup.
@@ -144,7 +144,7 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 		self::assertIsInt( file_put_contents( $target, "{}\n" ) );
 		self::assertTrue( symlink( $target, $this->directory . '/ran-booster-release.json' ) );
 		self::assertFalse(
-			CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' )->allowsNativeDiscovery()
+			CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' )->allows_native_discovery()
 		);
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable focused fixture cleanup.
 		unlink( $target );
@@ -155,9 +155,9 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	public function testEnabledOverrideAllowsDisposableUpdateTestingWithoutAMarker(): void {
 		define( CoreSelfUpdatePolicy::CONFIGURATION, 'enabled' );
 
-		$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
+		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
 
-		self::assertTrue( $policy->allowsNativeDiscovery() );
+		self::assertTrue( $policy->allows_native_discovery() );
 		self::assertSame( 'configuration_enabled', $policy->diagnostics()['reason'] );
 	}
 
@@ -167,9 +167,9 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 		define( CoreSelfUpdatePolicy::CONFIGURATION, 'disabled' );
 		$this->writeMarker( '1.2.3', str_repeat( 'c', 40 ) );
 
-		$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
+		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
 
-		self::assertFalse( $policy->allowsNativeDiscovery() );
+		self::assertFalse( $policy->allows_native_discovery() );
 		self::assertSame( 'configuration_disabled', $policy->diagnostics()['reason'] );
 	}
 
@@ -178,9 +178,9 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	public function testInvalidOverrideFailsClosed(): void {
 		define( CoreSelfUpdatePolicy::CONFIGURATION, 'development' );
 
-		$policy = CoreSelfUpdatePolicy::detect( $this->pluginFile(), '1.2.3' );
+		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->pluginFile(), plugin_version: '1.2.3' );
 
-		self::assertFalse( $policy->allowsNativeDiscovery() );
+		self::assertFalse( $policy->allows_native_discovery() );
 		self::assertSame( 'invalid', $policy->diagnostics()['requested_mode'] );
 		self::assertSame( 'configuration_invalid', $policy->diagnostics()['reason'] );
 	}

@@ -92,7 +92,7 @@ final class RepositorySourceGuardTest extends TestCase {
 			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'A shared Branch repository must reject Release source.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_repository_source_conflict', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_repository_source_conflict', $failure->get_diagnostic_id() );
 			self::assertSame( 'This repository is shared by managed packages. Releases require a repository used by only one managed package. Review the repository’s package settings before changing source.', $failure->getMessage() );
 			self::assertStringNotContainsString( 'already supplies releases to', $failure->getMessage() );
 		}
@@ -105,7 +105,7 @@ final class RepositorySourceGuardTest extends TestCase {
 			$guard->assertAllowed( '', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'Expected invalid provider identity to throw storage invalid identity.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
 		}
 	}
 
@@ -119,7 +119,7 @@ final class RepositorySourceGuardTest extends TestCase {
 			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'Expected query failures to throw a storage query failure.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_query_failed', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
 		}
 	}
 
@@ -140,7 +140,7 @@ final class RepositorySourceGuardTest extends TestCase {
 			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'Expected malformed source rows to throw query failure.' );
 		} catch ( PackageStorageFailure $failure ) {
-			self::assertSame( 'ran_booster_storage_query_failed', $failure->getDiagnosticId() );
+			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
 		}
 	}
 

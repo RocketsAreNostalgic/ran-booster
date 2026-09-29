@@ -22,6 +22,7 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\PackageOperation;
 use RAN\PackageRemoval\PackageRemovalGateway;
+use RAN\PackageRemoval\PackageRemovalResult;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\PackageSource;
 use RAN\Plugin;
@@ -60,29 +61,30 @@ final class PackageRemovalServiceTest extends TestCase {
 			) as $override
 		) {
 			try {
-				PackageOperation::fromInput( 'unlink-plugin', array_merge( $this->input(), $override ) );
+				PackageOperation::from_input( 'unlink-plugin', array_merge( $this->input(), $override ) );
 				self::fail( 'Expected an invalid removal request.' );
 			} catch ( InvalidArgumentException ) {
 				self::assertTrue( true );
 			}
 		}
 
-		$operation = PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() );
+		$operation = PackageOperation::from_input( 'unlink-delete-plugin', $this->input() );
 		self::assertSame( 'unlink-and-delete', $operation->operation );
-		self::assertSame( 7, $operation->getExpectedSourceRevision() );
+		self::assertSame( 7, $operation->get_expected_source_revision() );
 	}
 
 	public function testStaleRevisionChangesNothing(): void {
 		$fixture = $this->fixture();
 		$result  = $fixture->service->execute(
-			PackageOperation::fromInput(
+			PackageOperation::from_input(
 				'unlink-delete-plugin',
 				$this->input( array( 'expected_source_revision' => '6' ) )
 			)
 		);
 
 		self::assertSame( 'failed', $result->status );
-		self::assertSame( 'stale', $result->outcomeCode );
+		self::assertSame( 'stale', $result->outcome_code );
+		self::assertEquals( PackageRemovalResult::failed( outcome_code: 'stale' ), $result );
 		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 		self::assertSame( array(), $fixture->gateway->events );
@@ -91,7 +93,7 @@ final class PackageRemovalServiceTest extends TestCase {
 	public function testConfirmedUnlinkLeavesPackageFilesInstalled(): void {
 		$fixture = $this->fixture();
 		$result  = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-plugin', $this->input() )
 		);
 
 		self::assertSame( 'unlinked', $result->status );
@@ -115,7 +117,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertNotNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
-		self::assertSame( 'unlinked', $service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) )->status );
+		self::assertSame( 'unlinked', $service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) )->status );
 		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
@@ -134,7 +136,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
 
 		try {
-			$service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) );
+			$service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) );
 			self::fail( 'Failed unlink should preserve the invalidated branch evidence state.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertSame( 'Fixture unlink failed.', $failure->getMessage() );
@@ -158,7 +160,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
 
 		try {
-			$service->execute( PackageOperation::fromInput( 'unlink-plugin', $this->input() ) );
+			$service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) );
 			self::fail( 'Failed branch evidence clear should not unlink the package.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertSame( 'Fixture evidence clear failed.', $failure->getMessage() );
@@ -179,7 +181,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		$result = $service->execute(
-			PackageOperation::fromInput( 'unlink-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-plugin', $this->input() )
 		);
 
 		self::assertSame( 'unlinked', $result->status );
@@ -199,11 +201,11 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		$result = $service->execute(
-			PackageOperation::fromInput( 'unlink-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-plugin', $this->input() )
 		);
 
 		self::assertSame( 'failed', $result->status );
-		self::assertSame( 'operation_in_progress', $result->outcomeCode );
+		self::assertSame( 'operation_in_progress', $result->outcome_code );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
@@ -220,11 +222,11 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		$result = $service->execute(
-			PackageOperation::fromInput( 'unlink-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-plugin', $this->input() )
 		);
 
 		self::assertSame( 'failed', $result->status );
-		self::assertSame( 'operation_lock_failed', $result->outcomeCode );
+		self::assertSame( 'operation_lock_failed', $result->outcome_code );
 		self::assertTrue( $fixture->plugins->unlinked );
 	}
 
@@ -237,7 +239,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		};
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
 		self::assertSame( 'deleted', $result->status );
@@ -266,7 +268,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		$result = $service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
 		self::assertSame( 'deleted', $result->status );
@@ -286,10 +288,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		$result = $service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
-		self::assertSame( 'operation_in_progress', $result->outcomeCode );
+		self::assertSame( 'operation_in_progress', $result->outcome_code );
 		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
 		self::assertSame( 7, $fixture->plugin->getSourceRevision() );
 		self::assertFalse( $fixture->plugins->unlinked );
@@ -300,10 +302,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		$fixture->gateway->pluginActiveDependents = true;
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
-		self::assertSame( 'active_dependents', $result->outcomeCode );
+		self::assertSame( 'active_dependents', $result->outcome_code );
 		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
 		self::assertSame( 7, $fixture->plugin->getSourceRevision() );
 		self::assertFalse( $fixture->plugins->unlinked );
@@ -321,10 +323,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		$fixture->gateway->pluginSharedDirectory = $sharedDirectory;
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
-		self::assertSame( $outcomeCode, $result->outcomeCode );
+		self::assertSame( $outcomeCode, $result->outcome_code );
 		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
 		self::assertSame( 7, $fixture->plugin->getSourceRevision() );
 		self::assertFalse( $fixture->plugins->unlinked );
@@ -344,10 +346,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		$fixture->gateway->deactivationStaysActive = true;
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
-		self::assertSame( 'deactivation_failed', $result->outcomeCode );
+		self::assertSame( 'deactivation_failed', $result->outcome_code );
 		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->getDeploymentPolicy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 		self::assertNotContains( 'plugin_delete', $fixture->gateway->events );
@@ -358,10 +360,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		$fixture->gateway->pluginDelete = static fn (): bool => true;
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
-		self::assertSame( 'files_still_present', $result->outcomeCode );
+		self::assertSame( 'files_still_present', $result->outcome_code );
 		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->getDeploymentPolicy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
@@ -374,7 +376,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		};
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
 		self::assertSame( 'deleted', $result->status );
@@ -390,10 +392,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		};
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
-		self::assertSame( 'management_state_uncertain', $result->outcomeCode );
+		self::assertSame( 'management_state_uncertain', $result->outcome_code );
 		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->getDeploymentPolicy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
@@ -413,10 +415,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		$fixture->gateway->themeBlocker = $blocker;
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-theme', $this->themeInput() )
+			PackageOperation::from_input( 'unlink-delete-theme', $this->themeInput() )
 		);
 
-		self::assertSame( $blocker, $result->outcomeCode );
+		self::assertSame( $blocker, $result->outcome_code );
 		self::assertSame( DeploymentPolicy::MANUAL, $fixture->theme->getDeploymentPolicy() );
 		self::assertSame( 7, $fixture->theme->getSourceRevision() );
 		self::assertFalse( $fixture->themes->unlinked );
@@ -431,7 +433,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		};
 
 		$result = $fixture->service->execute(
-			PackageOperation::fromInput( 'unlink-delete-theme', $this->themeInput() )
+			PackageOperation::from_input( 'unlink-delete-theme', $this->themeInput() )
 		);
 
 		self::assertSame( 'deleted', $result->status );
@@ -448,7 +450,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		$this->expectException( \RuntimeException::class );
 		try {
 			$fixture->service->execute(
-				PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() )
+				PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 			);
 		} finally {
 			self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
@@ -460,7 +462,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
 		$method     = new \ReflectionMethod( PackageAdminController::class, 'removalFailure' );
-		$operation  = PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() );
+		$operation  = PackageOperation::from_input( 'unlink-delete-plugin', $this->input() );
 
 		foreach (
 			array(
@@ -506,7 +508,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
 		$method     = new \ReflectionMethod( PackageAdminController::class, 'removalFailure' );
-		$operation  = PackageOperation::fromInput( 'unlink-delete-plugin', $this->input() );
+		$operation  = PackageOperation::from_input( 'unlink-delete-plugin', $this->input() );
 		$GLOBALS['ran_booster_repository_admin_translations'] = array(
 			'ran-booster' => array(
 				"package type\4Plugin" => 'Extension',
@@ -642,10 +644,10 @@ final class RemovalPluginRepository extends PluginRepository {
 		unset( $file );
 		if ( $this->unlinkFailure ) {
 			return PackageMutationResult::failed(
-				PackageStorageOperation::DELETE,
-				'fixture_unlink_failed',
-				'Fixture unlink failed.',
-				true
+				operation: PackageStorageOperation::DELETE,
+				diagnostic_id: 'fixture_unlink_failed',
+				message: 'Fixture unlink failed.',
+				recovery_required: true
 			);
 		}
 		$this->unlinked = true;

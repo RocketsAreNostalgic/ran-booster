@@ -80,22 +80,22 @@ final class PackageSubdirectoryTest extends TestCase {
 
 	public function testItDerivesOnlyValidatedSlugs(): void {
 		self::assertSame( 'example-plugin', PackageSubdirectory::slug( 'packages/example-plugin' ) );
-		self::assertSame( 'example-plugin', PackageSubdirectory::normalizeSlug( 'example-plugin' ) );
-		self::assertSame( 'repository', PackageSubdirectory::installationSlug( 'repository', null ) );
-		self::assertSame( 'example-plugin', PackageSubdirectory::installationSlug( 'repository', 'packages/example-plugin' ) );
-		self::assertSame( 'tnyGmaps', PackageSubdirectory::installationSlug( 'tnyGmaps', null ) );
-		self::assertSame( 'tnyGmaps', PackageSubdirectory::installationSlug( 'repository', 'packages/tnyGmaps' ) );
-		self::assertSame( 'tnygmaps', PackageSubdirectory::deploymentSlug( 'tnyGmaps', null ) );
-		self::assertSame( 'tnygmaps', PackageSubdirectory::deploymentSlug( 'repository', 'packages/tnyGmaps' ) );
+		self::assertSame( 'example-plugin', PackageSubdirectory::normalize_slug( value: 'example-plugin' ) );
+		self::assertSame( 'repository', PackageSubdirectory::installation_slug( 'repository', null ) );
+		self::assertSame( 'example-plugin', PackageSubdirectory::installation_slug( 'repository', 'packages/example-plugin' ) );
+		self::assertSame( 'tnyGmaps', PackageSubdirectory::installation_slug( provider_slug: 'tnyGmaps', subdirectory: null ) );
+		self::assertSame( 'tnyGmaps', PackageSubdirectory::installation_slug( 'repository', 'packages/tnyGmaps' ) );
+		self::assertSame( 'tnygmaps', PackageSubdirectory::deployment_slug( 'tnyGmaps', null ) );
+		self::assertSame( 'tnygmaps', PackageSubdirectory::deployment_slug( provider_slug: 'repository', subdirectory: 'packages/tnyGmaps' ) );
 
 		$this->expectException( InvalidArgumentException::class );
-		PackageSubdirectory::normalizeSlug( 'packages/example-plugin' );
+		PackageSubdirectory::normalize_slug( 'packages/example-plugin' );
 	}
 
 	public function testItRejectsTrailingSeparatorForProviderDestinationSlug(): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		PackageSubdirectory::normalizeSlug( 'foo/' );
+		PackageSubdirectory::normalize_slug( 'foo/' );
 	}
 
 	public function testItIsIdempotentAfterTrailingSeparatorCanonicalization(): void {

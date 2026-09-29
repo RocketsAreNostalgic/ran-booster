@@ -80,10 +80,10 @@ final class DeploymentAttemptRepository {
 
 		return $this->transaction(
 			function () use ( $operation, $packageType, $provider, $providerRepositoryId, $request, $requestedRef, $packageSource, $packageSourceRevision ): DeploymentAttempt {
-				$active = $this->activePackageAttempt( $packageType, $request->packageSlug );
+				$active = $this->activePackageAttempt( $packageType, $request->package_slug );
 				if ( null !== $active ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
-					throw DeploymentStorageFailure::contention( $active->safeData() );
+					throw DeploymentStorageFailure::contention( $active->safe_data() );
 				}
 
 				$this->reserveCapacity( 1 );
@@ -102,15 +102,15 @@ final class DeploymentAttemptRepository {
 						null
 					)
 				);
-				$query  = $this->updateQuery( $queued->getId(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
+				$query  = $this->updateQuery( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
 				if ( 1 !== $this->database->query( $query ) ) {
 					throw DeploymentStorageFailure::unavailable();
 				}
-				$running = $this->requireExact( $queued->getId() );
-				if ( DeploymentState::RUNNING !== $running->getState() ) {
+				$running = $this->requireExact( $queued->get_id() );
+				if ( DeploymentState::RUNNING !== $running->get_state() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
-				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->logContext() + array( 'transition' => 'queued->running' ) );
+				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->log_context() + array( 'transition' => 'queued->running' ) );
 
 				return $running;
 			},
@@ -128,7 +128,7 @@ final class DeploymentAttemptRepository {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		if ( array() === $targets || count( $targets ) > self::MAX_MANUAL_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		$normalized = array();
@@ -141,16 +141,16 @@ final class DeploymentAttemptRepository {
 				|| ! is_string( $target['package_source'] )
 				|| ! is_int( $target['package_source_revision'] )
 				|| ! $target['request'] instanceof DeploymentRequest ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$this->assertPackageType( $target['package_type'] );
 			$this->assertProvider( $target['provider'] );
 			$this->assertSafeText( $target['provider_repository_id'], 191 );
 			$this->assertSafeText( $target['requested_ref'], 255 );
 			$this->assertPackageSource( $target['package_source'], $target['package_source_revision'] );
-			$key = $target['package_type'] . "\0" . $target['request']->packageSlug;
+			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$normalized[ $key ] = $target;
 		}
@@ -163,9 +163,9 @@ final class DeploymentAttemptRepository {
 
 				foreach ( $normalized as $target ) {
 					$request = $target['request'];
-					$active  = $this->activePackageAttempt( $target['package_type'], $request->packageSlug );
+					$active  = $this->activePackageAttempt( $target['package_type'], $request->package_slug );
 					if ( null !== $active ) {
-						$busy[] = $active->safeData();
+						$busy[] = $active->safe_data();
 						continue;
 					}
 
@@ -202,7 +202,7 @@ final class DeploymentAttemptRepository {
 		);
 
 		foreach ( $result['admitted'] as $attempt ) {
-			BoosterLogger::log( 'attempt queued (manual batch)', $attempt->logContext() + array( 'transition' => 'new->queued' ) );
+			BoosterLogger::log( 'attempt queued (manual batch)', $attempt->log_context() + array( 'transition' => 'new->queued' ) );
 		}
 
 		return $result;
@@ -219,7 +219,7 @@ final class DeploymentAttemptRepository {
 		$this->assertSafeText( $deliveryId, 191 );
 		$this->assertHex( $deliveryDigest, 64 );
 		if ( count( $targets ) > self::MAX_WEBHOOK_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 		$normalized = array();
 		foreach ( $targets as $target ) {
@@ -231,16 +231,16 @@ final class DeploymentAttemptRepository {
 				|| ! is_string( $target['package_source'] )
 				|| ! is_int( $target['package_source_revision'] )
 				|| ! $target['request'] instanceof DeploymentRequest ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$this->assertOperation( $target['operation'] );
 			$this->assertPackageType( $target['package_type'] );
 			$this->assertSafeText( $target['provider_repository_id'], 191 );
 			$this->assertSafeText( $target['requested_ref'], 255 );
 			$this->assertPackageSource( $target['package_source'], $target['package_source_revision'] );
-			$key = $target['package_type'] . "\0" . $target['request']->packageSlug;
+			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$normalized[ $key ] = $target;
 		}
@@ -258,14 +258,14 @@ final class DeploymentAttemptRepository {
 				$existing = array();
 				foreach ( $rows as $row ) {
 					if ( ! hash_equals( $deliveryDigest, (string) ( $row->delivery_digest ?? '' ) ) ) {
-						throw DeploymentStorageFailure::deliveryConflict();
+						throw DeploymentStorageFailure::delivery_conflict();
 					}
 					if ( self::DELIVERY_ACK_TYPE === ( $row->package_type ?? null ) ) {
 						$this->assertDeliveryAcknowledgement( $row, $provider, $deliveryId, $deliveryDigest );
 						continue;
 					}
-					$attempt          = DeploymentAttempt::fromDatabase( $row );
-					$data             = $attempt->safeData();
+					$attempt          = DeploymentAttempt::from_database( $row );
+					$data             = $attempt->safe_data();
 					$key              = $data['package_type'] . "\0" . $data['package_slug'];
 					$existing[ $key ] = $attempt;
 				}
@@ -299,7 +299,7 @@ final class DeploymentAttemptRepository {
 					);
 				}
 				foreach ( $attempts as $attempt ) {
-					BoosterLogger::log( 'attempt queued (webhook)', $attempt->logContext() + array( 'transition' => 'new->queued' ) );
+					BoosterLogger::log( 'attempt queued (webhook)', $attempt->log_context() + array( 'transition' => 'new->queued' ) );
 				}
 
 				return $attempts;
@@ -342,8 +342,8 @@ final class DeploymentAttemptRepository {
 
 		$id    = $this->positiveId( $attemptId );
 		$data  = array(
-			'state'        => $outcome->getState()->value,
-			'outcome_code' => $outcome->getCode(),
+			'state'        => $outcome->get_state()->value,
+			'outcome_code' => $outcome->get_code(),
 			'finished_at'  => $this->timeString( $at ?? $this->now() ),
 		);
 		$query = $this->updateQuery( $id, DeploymentState::RUNNING, $data );
@@ -354,9 +354,9 @@ final class DeploymentAttemptRepository {
 		$this->assertAttemptData( $attempt, $data );
 		BoosterLogger::log(
 			'attempt finished',
-			$attempt->logContext() + array(
-				'transition'   => 'running->' . $outcome->getState()->value,
-				'outcome_code' => $outcome->getCode(),
+			$attempt->log_context() + array(
+				'transition'   => 'running->' . $outcome->get_state()->value,
+				'outcome_code' => $outcome->get_code(),
 			)
 		);
 
@@ -370,7 +370,7 @@ final class DeploymentAttemptRepository {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
-		return isset( $rows[0] ) ? DeploymentAttempt::fromDatabase( $rows[0] ) : null;
+		return isset( $rows[0] ) ? DeploymentAttempt::from_database( $rows[0] ) : null;
 	}
 
 	/**
@@ -381,14 +381,14 @@ final class DeploymentAttemptRepository {
 	 */
 	public function findExactBatch( array $attemptIds ): array {
 		if ( array() === $attemptIds || count( $attemptIds ) > self::MAX_MANUAL_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		$ids = array();
 		foreach ( $attemptIds as $attemptId ) {
 			$id = $this->positiveId( $attemptId );
 			if ( isset( $ids[ $id ] ) ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$ids[ $id ] = $id;
 		}
@@ -400,8 +400,8 @@ final class DeploymentAttemptRepository {
 		);
 		$found = array();
 		foreach ( $this->readRows( $query ) as $row ) {
-			$attempt = DeploymentAttempt::fromDatabase( $row );
-			$id      = $attempt->getId();
+			$attempt = DeploymentAttempt::from_database( $row );
+			$id      = $attempt->get_id();
 			if ( ! isset( $ids[ $id ] ) || isset( $found[ $id ] ) ) {
 				throw DeploymentStorageFailure::inconsistent();
 			}
@@ -551,7 +551,7 @@ final class DeploymentAttemptRepository {
 		}
 		$query .= $this->prepare( ' ORDER BY id DESC LIMIT %d', $limit );
 
-		return array_map( array( DeploymentAttempt::class, 'fromDatabase' ), $this->readRows( $query ) );
+		return array_map( array( DeploymentAttempt::class, 'from_database' ), $this->readRows( $query ) );
 	}
 
 	/**
@@ -582,10 +582,10 @@ final class DeploymentAttemptRepository {
 			$packageSlug,
 			DeploymentState::SUCCEEDED->value
 		);
-		$attempts = array_map( array( DeploymentAttempt::class, 'fromDatabase' ), $this->readRows( $query ) );
+		$attempts = array_map( array( DeploymentAttempt::class, 'from_database' ), $this->readRows( $query ) );
 		$success  = null;
 		foreach ( $attempts as $attempt ) {
-			if ( DeploymentState::SUCCEEDED === $attempt->getState() ) {
+			if ( DeploymentState::SUCCEEDED === $attempt->get_state() ) {
 				$success = $attempt;
 				break;
 			}
@@ -608,17 +608,17 @@ final class DeploymentAttemptRepository {
 		return $this->transaction(
 			function () use ( $id, $at ): DeploymentAttempt {
 				$row    = $this->lockedAttemptRow( $id );
-				$stored = DeploymentAttempt::fromDatabase( $row );
-				$safe   = $stored->safeData();
-				if ( DeploymentState::RUNNING !== $stored->getState() ) {
+				$stored = DeploymentAttempt::from_database( $row );
+				$safe   = $stored->safe_data();
+				if ( DeploymentState::RUNNING !== $stored->get_state() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				$outcome = null === $safe['mutation_started_at']
-					? DeploymentOutcome::fromCode( DeploymentOutcome::CODE_WORKER_STOPPED )
-					: DeploymentOutcome::fromCode( DeploymentOutcome::CODE_INTERRUPTED );
+					? DeploymentOutcome::from_code( DeploymentOutcome::CODE_WORKER_STOPPED )
+					: DeploymentOutcome::from_code( DeploymentOutcome::CODE_INTERRUPTED );
 				$data    = array(
-					'state'        => $outcome->getState()->value,
-					'outcome_code' => $outcome->getCode(),
+					'state'        => $outcome->get_state()->value,
+					'outcome_code' => $outcome->get_code(),
 					'finished_at'  => $this->timeString( $at ?? $this->now() ),
 				);
 				if ( 1 !== $this->database->query( $this->updateQuery( $id, DeploymentState::RUNNING, $data ) ) ) {
@@ -628,9 +628,9 @@ final class DeploymentAttemptRepository {
 				$this->assertAttemptData( $attempt, $data );
 				BoosterLogger::log(
 					'attempt reconciled as stopped',
-					$attempt->logContext() + array(
-						'transition'   => 'running->' . $outcome->getState()->value,
-						'outcome_code' => $outcome->getCode(),
+					$attempt->log_context() + array(
+						'transition'   => 'running->' . $outcome->get_state()->value,
+						'outcome_code' => $outcome->get_code(),
 					)
 				);
 				return $attempt;
@@ -653,8 +653,8 @@ final class DeploymentAttemptRepository {
 		return $this->transaction(
 			function () use ( $id, $correlationId, $userId, $at ): DeploymentAttempt {
 				$row    = $this->lockedAttemptRow( $id, $correlationId );
-				$stored = DeploymentAttempt::fromDatabase( $row );
-				if ( ! $stored->requiresOperatorResolution() ) {
+				$stored = DeploymentAttempt::from_database( $row );
+				if ( ! $stored->requires_operator_resolution() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				$data = array(
@@ -666,12 +666,12 @@ final class DeploymentAttemptRepository {
 				}
 				$attempt = $this->requireExact( $id );
 				$this->assertAttemptData( $attempt, $data );
-				if ( ! hash_equals( $correlationId, $attempt->getCorrelationId() ) || $attempt->requiresOperatorResolution() ) {
+				if ( ! hash_equals( $correlationId, $attempt->get_correlation_id() ) || $attempt->requires_operator_resolution() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				BoosterLogger::log(
 					'attempt operator resolution recorded',
-					$attempt->logContext() + array(
+					$attempt->log_context() + array(
 						'resolved_by' => $userId,
 						'transition'  => 'needs_attention->resolved',
 					)
@@ -690,16 +690,16 @@ final class DeploymentAttemptRepository {
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		$queued = DeploymentAttempt::fromDatabase( $rows[0] );
-		$query  = $this->updateQuery( $queued->getId(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
+		$queued = DeploymentAttempt::from_database( $rows[0] );
+		$query  = $this->updateQuery( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
 		if ( 1 !== $this->database->query( $query ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		$running = $this->requireExact( $queued->getId() );
-		if ( DeploymentState::RUNNING !== $running->getState() ) {
+		$running = $this->requireExact( $queued->get_id() );
+		if ( DeploymentState::RUNNING !== $running->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		BoosterLogger::log( 'attempt claimed from queue', $running->logContext() + array( 'transition' => 'queued->running' ) );
+		BoosterLogger::log( 'attempt claimed from queue', $running->log_context() + array( 'transition' => 'queued->running' ) );
 
 		return $running;
 	}
@@ -711,7 +711,7 @@ final class DeploymentAttemptRepository {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		$attempt = $this->requireExact( $id );
-		$safe    = $attempt->safeData();
+		$safe    = $attempt->safe_data();
 		foreach ( $data as $key => $value ) {
 			if ( (string) ( $safe[ $key ] ?? '' ) !== (string) $value ) {
 				throw DeploymentStorageFailure::inconsistent();
@@ -727,7 +727,7 @@ final class DeploymentAttemptRepository {
 		$arguments   = array( $this->tableName );
 		foreach ( $data as $column => $value ) {
 			if ( preg_match( '/^[a-z_]+$/D', $column ) !== 1 ) {
-				throw DeploymentStorageFailure::invalidRecord();
+				throw DeploymentStorageFailure::invalid_record();
 			}
 			$assignments[] = null === $value ? "$column = NULL" : "$column = %s";
 			if ( null !== $value ) {
@@ -762,7 +762,7 @@ final class DeploymentAttemptRepository {
 			'source'                  => $source,
 			'operation'               => $operation,
 			'package_type'            => $packageType,
-			'package_slug'            => $request->packageSlug,
+			'package_slug'            => $request->package_slug,
 			'package_source'          => $packageSource,
 			'package_source_revision' => $packageSourceRevision,
 			'provider'                => $provider,
@@ -774,7 +774,7 @@ final class DeploymentAttemptRepository {
 			'state'                   => DeploymentState::QUEUED->value,
 			'mutation_started_at'     => null,
 			'outcome_code'            => null,
-			'request_json'            => $request->toJson(),
+			'request_json'            => $request->to_json(),
 			'created_at'              => $this->timeString( $this->now() ),
 			'finished_at'             => null,
 			'resolved_at'             => null,
@@ -793,7 +793,7 @@ final class DeploymentAttemptRepository {
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		$attempt = DeploymentAttempt::fromDatabase( $rows[0] );
+		$attempt = DeploymentAttempt::from_database( $rows[0] );
 		$this->assertRowData( $rows[0], $data );
 
 		return $attempt;
@@ -899,7 +899,7 @@ final class DeploymentAttemptRepository {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
-		return isset( $rows[0] ) ? DeploymentAttempt::fromDatabase( $rows[0] ) : null;
+		return isset( $rows[0] ) ? DeploymentAttempt::from_database( $rows[0] ) : null;
 	}
 
 	private function reserveCapacity( int $incomingRows ): void {
@@ -907,7 +907,7 @@ final class DeploymentAttemptRepository {
 			return;
 		}
 		if ( $incomingRows < 0 || $incomingRows > self::MAX_WEBHOOK_TARGETS ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		$countRows = $this->readRows(
@@ -938,7 +938,7 @@ final class DeploymentAttemptRepository {
 			)
 		);
 		if ( count( $candidates ) !== $pruneRows ) {
-			throw DeploymentStorageFailure::capacityExhausted();
+			throw DeploymentStorageFailure::capacity_exhausted();
 		}
 
 		$ids = array();
@@ -970,7 +970,7 @@ final class DeploymentAttemptRepository {
 		try {
 			$result = $operation();
 			if ( false === $this->database->query( 'COMMIT' ) ) {
-				throw DeploymentStorageFailure::transactionCommitFailed();
+				throw DeploymentStorageFailure::transaction_commit_failed();
 			}
 
 			return $result;
@@ -991,7 +991,7 @@ final class DeploymentAttemptRepository {
 
 	/** @param array<string, string|null> $expected */
 	private function assertAttemptData( DeploymentAttempt $attempt, array $expected ): void {
-		$stored = $attempt->safeData();
+		$stored = $attempt->safe_data();
 		foreach ( $expected as $column => $value ) {
 			if ( ! array_key_exists( $column, $stored ) || ! $this->sameStoredValue( $stored[ $column ], $value ) ) {
 				throw DeploymentStorageFailure::inconsistent();
@@ -1029,7 +1029,7 @@ final class DeploymentAttemptRepository {
 		try {
 			$this->databaseLifecycle->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
-			throw DeploymentStorageFailure::unsupportedDatabase();
+			throw DeploymentStorageFailure::unsupported_database();
 		}
 	}
 
@@ -1045,7 +1045,7 @@ final class DeploymentAttemptRepository {
 
 	private function positiveId( int $id ): int {
 		if ( $id < 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		return $id;
@@ -1053,7 +1053,7 @@ final class DeploymentAttemptRepository {
 
 	private function historyLimit( int $limit ): int {
 		if ( $limit < 1 || $limit > self::MAX_HISTORY ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		return $limit;
@@ -1061,13 +1061,13 @@ final class DeploymentAttemptRepository {
 
 	private function assertOperation( string $operation ): void {
 		if ( ! in_array( $operation, array( 'install', 'update' ), true ) ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertPackageType( string $packageType ): void {
 		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true ) ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
@@ -1076,25 +1076,25 @@ final class DeploymentAttemptRepository {
 		int $packageSourceRevision
 	): void {
 		if ( 'branch' !== $packageSource || $packageSourceRevision < 0 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertPackageSlug( string $packageSlug ): void {
 		if ( preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $packageSlug ) !== 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertProvider( string $provider ): void {
 		if ( preg_match( '/^[a-z][a-z0-9-]{0,31}$/D', $provider ) !== 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
 	private function assertHex( string $value, int $length ): void {
 		if ( preg_match( sprintf( '/^[a-f0-9]{%d}$/D', $length ), $value ) !== 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 
@@ -1103,7 +1103,7 @@ final class DeploymentAttemptRepository {
 			|| preg_match( '/[[:cntrl:]]/', $value ) === 1
 			|| preg_match( '/(?:https?:\/\/|[A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s]*@/i', $value ) === 1
 			|| preg_match( '/\b(?:authorization|bearer|token|secret|password|signature)\b\s*[:=]/i', $value ) === 1 ) {
-			throw DeploymentStorageFailure::invalidRecord();
+			throw DeploymentStorageFailure::invalid_record();
 		}
 	}
 }

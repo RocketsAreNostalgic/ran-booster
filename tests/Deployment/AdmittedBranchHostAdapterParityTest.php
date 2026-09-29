@@ -292,7 +292,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 		$outcome = $coordinator->executeClaimed( $attempt );
 
-		self::assertSame( DeploymentOutcome::CODE_PACKAGE_SINGLE_FILE_UNSUPPORTED, $outcome->getCode() );
+		self::assertSame( DeploymentOutcome::CODE_PACKAGE_SINGLE_FILE_UNSUPPORTED, $outcome->get_code() );
 		self::assertSame( 0, $provider->prepareCalls );
 		self::assertSame( DeploymentState::FAILED->value, $this->database->rows[0]['state'] );
 	}
@@ -322,11 +322,11 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 		$outcome = $coordinator->executeClaimed( $attempt );
 
-		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $outcome->getCode() );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $outcome->get_code() );
 		self::assertCount( 1, $notifier->attempts );
 		self::assertSame( 'failed', $notifier->storedStates[0] );
-		self::assertSame( DeploymentState::FAILED, $notifier->attempts[0]->getState() );
-		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $notifier->attempts[0]->getOutcome()?->getCode() );
+		self::assertSame( DeploymentState::FAILED, $notifier->attempts[0]->get_state() );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $notifier->attempts[0]->get_outcome()?->get_code() );
 	}
 
 	private function adoptionConflictOutcome( bool $exact ): string {

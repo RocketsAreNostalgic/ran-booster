@@ -367,8 +367,8 @@ final class BulkPackageActionServiceTest extends TestCase {
 			$result->skippedByReason
 		);
 		self::assertCount( 1, $coordinator->targets );
-		self::assertSame( 'eligible', $coordinator->targets[0]['request']->packageSlug );
-		self::assertSame( 'manual', $coordinator->targets[0]['request']->deploymentPolicy->value );
+		self::assertSame( 'eligible', $coordinator->targets[0]['request']->package_slug );
+		self::assertSame( 'manual', $coordinator->targets[0]['request']->deployment_policy->value );
 	}
 
 	public function testQueueUpdatesDoesNotAdmitAnythingWhenEverySelectionIsIneligible(): void {

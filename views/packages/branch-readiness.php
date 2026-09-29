@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var string $branchValue
+ * @var string $deploymentPolicy
+ * @var array<string, mixed>|null $packageBranchReadiness
+ * @var string $providerCode
+ * @var bool $providerWebhookAvailable
+ * @var string $settingsUrl
+ */
+
 defined( 'WPINC' ) || die;
 
 $isPackageEdit                = true === ( $isPackageEdit ?? false );

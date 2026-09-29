@@ -17,29 +17,33 @@ final class DeploymentRequestTest extends TestCase {
 
 		self::assertSame(
 			array( 'repository', 'credential_id', 'private', 'configured_branch', 'package_slug', 'subdirectory', 'deployment_policy', 'initiating_user_id', 'maximum_artifact_bytes' ),
-			array_keys( $request->toArray() )
+			array_keys( $request->to_array() )
 		);
-		self::assertSame( $request->toJson(), DeploymentRequest::fromJson( $request->toJson() )->toJson() );
-		self::assertLessThanOrEqual( 4096, strlen( $request->toJson() ) );
+		self::assertSame( $request->to_json(), DeploymentRequest::from_json( json: $request->to_json() )->to_json() );
+		self::assertSame(
+			'{"repository":"group/subgroup/package","credential_id":"profile_1","private":true,"configured_branch":"main","package_slug":"example-package","subdirectory":"wordpress/plugin","deployment_policy":"automatic","initiating_user_id":7,"maximum_artifact_bytes":52428800}',
+			$request->to_json()
+		);
+		self::assertLessThanOrEqual( 4096, strlen( $request->to_json() ) );
 	}
 
 	public function testPreReleaseEightKeyRequestShapeIsRejected(): void {
-		$data = $this->request()->toArray();
+		$data = $this->request()->to_array();
 		unset( $data['maximum_artifact_bytes'] );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The unit test exercises the runtime JSON boundary.
 		$json = json_encode( $data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
 
 		$this->expectException( InvalidArgumentException::class );
-		DeploymentRequest::fromJson( $json );
+		DeploymentRequest::from_json( $json );
 	}
 
 	public function testNonCanonicalOrExtendedJsonIsRejected(): void {
-		$data          = $this->request()->toArray();
+		$data          = $this->request()->to_array();
 		$data['token'] = 'must-never-be-stored';
 
 		$this->expectException( InvalidArgumentException::class );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The unit test exercises the runtime JSON boundary.
-		DeploymentRequest::fromJson( json_encode( $data, JSON_THROW_ON_ERROR ) );
+		DeploymentRequest::from_json( json_encode( $data, JSON_THROW_ON_ERROR ) );
 	}
 
 	#[DataProvider( 'unsafeRequestProvider' )]
@@ -67,7 +71,7 @@ final class DeploymentRequestTest extends TestCase {
 		$request      = self::make( subdirectory: $subdirectory );
 
 		self::assertSame( $subdirectory, $request->subdirectory );
-		self::assertSame( $request->toJson(), DeploymentRequest::fromJson( $request->toJson() )->toJson() );
+		self::assertSame( $request->to_json(), DeploymentRequest::from_json( $request->to_json() )->to_json() );
 	}
 
 	private function request(): DeploymentRequest {
@@ -80,14 +84,15 @@ final class DeploymentRequestTest extends TestCase {
 		?string $subdirectory = 'wordpress/plugin'
 	): DeploymentRequest {
 		return new DeploymentRequest(
-			$repository,
-			'profile_1',
-			true,
-			$configuredBranch,
-			'example-package',
-			$subdirectory,
-			DeploymentPolicy::AUTOMATIC,
-			7
+			repository: $repository,
+			credential_id: 'profile_1',
+			is_private: true,
+			configured_branch: $configuredBranch,
+			package_slug: 'example-package',
+			subdirectory: $subdirectory,
+			deployment_policy: DeploymentPolicy::AUTOMATIC,
+			initiating_user_id: 7,
+			maximum_artifact_bytes: 52428800
 		);
 	}
 }

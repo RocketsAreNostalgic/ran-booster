@@ -37,7 +37,7 @@ final readonly class BulkPackageActionService {
 	}
 
 	public function execute( BulkPackageAction $action ): BulkPackageResult {
-		PackageMutationGuard::assertBulkAdminAllowed( $action->packageType, $action->identifiers );
+		PackageMutationGuard::assert_bulk_admin_allowed( $action->packageType, $action->identifiers );
 
 		if ( $action->isUpdateQueue() ) {
 			return $this->queueUpdates( $action );
@@ -102,7 +102,7 @@ final readonly class BulkPackageActionService {
 		}
 
 		foreach ( $action->identifiers as $identifier ) {
-			if ( ! $activate && PackageMutationGuard::isBoosterPluginFile( $identifier ) ) {
+			if ( ! $activate && PackageMutationGuard::is_booster_plugin_file( $identifier ) ) {
 				$this->increment( $skipped, 'self_deactivation' );
 				continue;
 			}
@@ -177,7 +177,7 @@ final readonly class BulkPackageActionService {
 		$snapshots = array();
 		foreach ( $action->identifiers as $identifier ) {
 			if ( 'plugin' === $action->packageType ) {
-				PackageMutationGuard::assertPluginFileAllowed( $identifier );
+				PackageMutationGuard::assert_plugin_file_allowed( $identifier );
 			}
 			$package = $this->find( $action->packageType, $identifier );
 			if ( DeploymentPolicy::DISABLED !== $policy ) {
@@ -203,7 +203,7 @@ final readonly class BulkPackageActionService {
 		$userId  = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
 
 		foreach ( $action->identifiers as $identifier ) {
-			if ( 'plugin' === $action->packageType && PackageMutationGuard::isBoosterPluginFile( $identifier ) ) {
+			if ( 'plugin' === $action->packageType && PackageMutationGuard::is_booster_plugin_file( $identifier ) ) {
 				$this->increment( $skipped, 'self_update' );
 				continue;
 			}
@@ -213,7 +213,7 @@ final readonly class BulkPackageActionService {
 				$this->increment( $skipped, $failure->reason );
 				continue;
 			}
-			if ( ! $package->getDeploymentPolicy()->allowsManualMutation() ) {
+			if ( ! $package->getDeploymentPolicy()->allows_manual_mutation() ) {
 				$this->increment( $skipped, 'disabled' );
 				continue;
 			}
@@ -243,7 +243,7 @@ final readonly class BulkPackageActionService {
 				'package_type'            => $action->packageType,
 				'provider'                => $providerCode,
 				'provider_repository_id'  => (string) $package->getProviderRepositoryId(),
-				'requested_ref'           => $request->configuredBranch,
+				'requested_ref'           => $request->configured_branch,
 				'package_source'          => $package->getSource()->value,
 				'package_source_revision' => $package->getSourceRevision(),
 				'request'                 => $request,

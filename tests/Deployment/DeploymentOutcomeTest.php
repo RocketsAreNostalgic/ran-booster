@@ -14,10 +14,10 @@ use RAN\RepositoryProvider\StaleDeployment;
 final class DeploymentOutcomeTest extends TestCase {
 
 	public function testFixedOutcomeMapsToSafeState(): void {
-		$outcome = DeploymentOutcome::fromCode( DeploymentOutcome::CODE_DEPLOYED );
+		$outcome = DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED );
 
-		self::assertSame( DeploymentState::SUCCEEDED, $outcome->getState() );
-		self::assertSame( 'deployed', $outcome->getCode() );
+		self::assertSame( DeploymentState::SUCCEEDED, $outcome->get_state() );
+		self::assertSame( 'deployed', $outcome->get_code() );
 	}
 
 	/** @return iterable<string, array{string}> */
@@ -30,20 +30,20 @@ final class DeploymentOutcomeTest extends TestCase {
 
 	#[DataProvider( 'archiveFailureCodes' )]
 	public function testArchiveLimitFailuresAreClosedFailedOutcomes( string $code ): void {
-		$outcome = DeploymentOutcome::fromCode( $code );
+		$outcome = DeploymentOutcome::from_code( $code );
 
-		self::assertSame( $code, $outcome->getCode() );
-		self::assertSame( DeploymentState::FAILED, $outcome->getState() );
+		self::assertSame( $code, $outcome->get_code() );
+		self::assertSame( DeploymentState::FAILED, $outcome->get_state() );
 	}
 
 	public function testArbitraryOutcomeCannotBeCreated(): void {
 		$this->expectException( InvalidArgumentException::class );
-		DeploymentOutcome::fromCode( 'provider said Authorization: bearer secret' );
+		DeploymentOutcome::from_code( 'provider said Authorization: bearer secret' );
 	}
 
 	public function testCheckFailureCannotRepresentSuccess(): void {
 		$this->expectException( InvalidArgumentException::class );
-		new \RAN\Deployment\DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYED, 'not a failure' );
+		new \RAN\Deployment\DeploymentCheckFailure( outcome_code: DeploymentOutcome::CODE_DEPLOYED, message: 'not a failure' );
 	}
 
 	/** @return list<array{int, string}> */
@@ -63,18 +63,23 @@ final class DeploymentOutcomeTest extends TestCase {
 
 	#[DataProvider( 'providerFailureProvider' )]
 	public function testProviderFailureCodesMapToClosedSafeOutcomes( int $status, string $expected ): void {
-		$outcome = DeploymentOutcome::fromProviderFailure(
+		$outcome = DeploymentOutcome::from_provider_failure(
 			new \RuntimeException( 'Authorization: Bearer secret-canary', $status )
 		);
 
-		self::assertSame( $expected, $outcome->getCode() );
-		self::assertSame( DeploymentState::FAILED, $outcome->getState() );
+		self::assertSame( $expected, $outcome->get_code() );
+		self::assertSame( DeploymentState::FAILED, $outcome->get_state() );
+
+		$failure = \RAN\Deployment\DeploymentCheckFailure::provider_status( status: $status, message: 'Provider check failed.' );
+		self::assertSame( $expected, $failure->outcome_code );
+		self::assertSame( 'Provider check failed.', $failure->getMessage() );
+		self::assertSame( 0, $failure->getCode() );
 	}
 
 	public function testStaleProviderFailureMapsToStaleEvent(): void {
-		$outcome = DeploymentOutcome::fromProviderFailure( new StaleDeployment( 'The admitted ref is stale.' ) );
+		$outcome = DeploymentOutcome::from_provider_failure( new StaleDeployment( 'The admitted ref is stale.' ) );
 
-		self::assertSame( DeploymentOutcome::CODE_STALE_EVENT, $outcome->getCode() );
-		self::assertSame( DeploymentState::FAILED, $outcome->getState() );
+		self::assertSame( DeploymentOutcome::CODE_STALE_EVENT, $outcome->get_code() );
+		self::assertSame( DeploymentState::FAILED, $outcome->get_state() );
 	}
 }

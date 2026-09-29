@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * View locals supplied by views/troubleshooting.php.
+ *
+ * @var array<string, mixed> $deploymentActivity
+ * @var string $troubleshootingBase
+ */
+
 use RAN\Admin\DeploymentOutcomeMessage;
 use RAN\Deployment\DeploymentAttempt;
 
@@ -8,7 +15,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 $items        = array_map(
-	static fn ( DeploymentAttempt $attempt ): array => $attempt->safeData(),
+	static fn ( DeploymentAttempt $attempt ): array => $attempt->safe_data(),
 	array_filter(
 		$deploymentActivity['items'] ?? array(),
 		static fn ( mixed $item ): bool => $item instanceof DeploymentAttempt

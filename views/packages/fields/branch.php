@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Inherited from the including package template.
+ *
+ * @var string $branchValue
+ */
+
 defined( 'WPINC' ) || die;
 
 $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayout;

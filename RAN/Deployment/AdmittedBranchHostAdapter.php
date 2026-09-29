@@ -78,8 +78,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	/** Construct the immutable package declaration from Booster's admitted snapshot. */
 	public function declaration(): BranchDeploymentDeclaration {
-		$data       = $this->attempt->safeData();
-		$request    = $this->attempt->getRequest();
+		$data       = $this->attempt->safe_data();
+		$request    = $this->attempt->get_request();
 		$identifier = null;
 
 		if ( PackageSource::BRANCH->value !== ( $data['package_source'] ?? null ) ) {
@@ -88,7 +88,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		if ( 'update' === $data['operation'] ) {
 			try {
-				$identifier = (string) $this->packageBySlug( (string) $data['package_type'], $request->packageSlug )->getIdentifier();
+				$identifier = (string) $this->packageBySlug( (string) $data['package_type'], $request->package_slug )->getIdentifier();
 			} catch ( PackageStorageFailure $failure ) {
 				$this->stagePackageStorageFailure( $failure );
 			} catch ( Throwable ) {
@@ -103,12 +103,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 
 		return new BranchDeploymentDeclaration(
-			(string) $this->attempt->getId(),
+			(string) $this->attempt->get_id(),
 			(string) $data['package_type'],
-			$request->packageSlug,
+			$request->package_slug,
 			$request->repository,
 			(string) $data['provider_repository_id'],
-			$request->configuredBranch,
+			$request->configured_branch,
 			'webhook' === $data['source'] ? (string) $data['requested_ref'] : null,
 			(string) $data['operation'],
 			$request->subdirectory,
@@ -116,17 +116,17 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		);
 	}
 
-	public function recordResolvedRef( string $ref ): void {
+	public function record_resolved_ref( string $ref ): void {
 		try {
-			$this->attempt = $this->attempts->recordResolvedRef( $this->attempt->getId(), $ref );
+			$this->attempt = $this->attempts->recordResolvedRef( $this->attempt->get_id(), $ref );
 		} catch ( DeploymentStorageFailure $failure ) {
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
 	}
 
-	public function markMutationStarted(): void {
+	public function mark_mutation_started(): void {
 		try {
-			$this->attempt = $this->attempts->markMutationStarted( $this->attempt->getId() );
+			$this->attempt = $this->attempts->markMutationStarted( $this->attempt->get_id() );
 		} catch ( DeploymentStorageFailure $failure ) {
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
@@ -134,14 +134,14 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function finish( string $code ): void {
 		try {
-			$this->attempt = $this->attempts->finish( $this->attempt->getId(), DeploymentOutcome::fromCode( $code ) );
+			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), DeploymentOutcome::from_code( $code ) );
 		} catch ( DeploymentStorageFailure $failure ) {
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
 	}
 
 	public function terminalAttempt(): DeploymentAttempt {
-		if ( ! $this->attempt->getState()->isTerminal() || null === $this->attempt->getOutcome() ) {
+		if ( ! $this->attempt->get_state()->is_terminal() || null === $this->attempt->get_outcome() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
@@ -154,15 +154,15 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			throw new RuntimeException( 'The admitted archive source is already consumed.' );
 		}
 
-		$data                 = $this->attempt->safeData();
-		$request              = $this->attempt->getRequest();
-		$maximumArtifactBytes = $request->maximumArtifactBytes;
+		$data                 = $this->attempt->safe_data();
+		$request              = $this->attempt->get_request();
+		$maximumArtifactBytes = $request->maximum_artifact_bytes;
 		$provider             = ProviderCode::parse( (string) $data['provider'] );
 		$reference            = new RepositoryReference(
 			$request->repository,
 			(string) $data['provider_repository_id'],
-			$request->private,
-			$request->credentialId
+			$request->is_private,
+			$request->credential_id
 		);
 
 		try {
@@ -170,11 +170,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				new ArchiveRequest(
 					$reference,
 					(string) $data['requested_ref'],
-					'webhook' === $data['source'] ? $request->configuredBranch : null
+					'webhook' === $data['source'] ? $request->configured_branch : null
 				)
 			);
 		} catch ( Throwable $failure ) {
-			$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );
+			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 
 		$providerArchive = $this->providerArchive;
@@ -191,7 +191,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			throw $failure;
 		} catch ( Throwable $failure ) {
 			$this->cleanupProviderArchive( $providerArchive );
-			$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );
+			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 
 		try {
@@ -251,23 +251,23 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function assertMutationAllowed(): void {
-		PackageMutationGuard::assertFilesystemMutationAllowed();
+		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 
 	public function frozenTarget( BranchDeploymentDeclaration $deployment, bool $deferExisting ): ?array {
 		$this->assertDeclaration( $deployment );
-		$data    = $this->attempt->safeData();
-		$request = $this->attempt->getRequest();
+		$data    = $this->attempt->safe_data();
+		$request = $this->attempt->get_request();
 
 		try {
 			if ( PackageSource::BRANCH->value !== ( $data['package_source'] ?? null ) ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
 			}
 			if ( 'install' === $data['operation'] ) {
-				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->packageSlug ) {
+				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->package_slug ) {
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED );
 				}
-				if ( $this->destinationExists( (string) $data['package_type'], $request->packageSlug ) ) {
+				if ( $this->destinationExists( (string) $data['package_type'], $request->package_slug ) ) {
 					if ( $this->existingManagementMatchesInstallTarget() ) {
 						if ( $deferExisting ) {
 							return null;
@@ -280,13 +280,13 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 					(string) $data['provider'],
 					(string) $data['provider_repository_id'],
 					'plugin' === $data['package_type'] ? 1 : 2,
-					$request->packageSlug,
+					$request->package_slug,
 					PackageSource::BRANCH
 				);
 				return null;
 			}
 
-			$package = $this->packageBySlug( (string) $data['package_type'], $request->packageSlug );
+			$package = $this->packageBySlug( (string) $data['package_type'], $request->package_slug );
 			$this->assertPackageSnapshot( $package, $data, $request );
 			$identifier = (string) $package->getIdentifier();
 			if ( null === $deployment->installedIdentifier || ! hash_equals( $deployment->installedIdentifier, $identifier ) ) {
@@ -304,10 +304,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function recheckManaged( BranchDeploymentDeclaration $deployment ): void {
 		$this->assertDeclaration( $deployment );
-		$data    = $this->attempt->safeData();
-		$request = $this->attempt->getRequest();
+		$data    = $this->attempt->safe_data();
+		$request = $this->attempt->get_request();
 		try {
-			$this->assertPackageSnapshot( $this->packageBySlug( (string) $data['package_type'], $request->packageSlug ), $data, $request );
+			$this->assertPackageSnapshot( $this->packageBySlug( (string) $data['package_type'], $request->package_slug ), $data, $request );
 		} catch ( PackageStorageFailure $failure ) {
 			$this->stagePackageStorageFailure( $failure );
 		}
@@ -335,24 +335,24 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	public function adopt( BranchDeploymentDeclaration $deployment ): bool {
 		$this->assertDeclaration( $deployment );
 		$installed  = $this->installedPackage( $deployment->packageType, $deployment->slug );
-		$request    = $this->attempt->getRequest();
-		$data       = $this->attempt->safeData();
+		$request    = $this->attempt->get_request();
+		$data       = $this->attempt->safe_data();
 		$repository = new ManagedRepository(
 			(string) $data['provider'],
 			$request->repository,
 			(string) $data['provider_repository_id'],
-			$request->configuredBranch,
-			$request->private,
-			$request->credentialId
+			$request->configured_branch,
+			$request->is_private,
+			$request->credential_id
 		);
 		$installed->setRepository( $repository );
 		$installed->setSubdirectory( $request->subdirectory );
-		$installed->setDeploymentPolicy( $request->deploymentPolicy );
+		$installed->setDeploymentPolicy( $request->deployment_policy );
 		$result = 'plugin' === $deployment->packageType ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
-		if ( $result->isSuccessful() ) {
+		if ( $result->is_successful() ) {
 			return true;
 		}
-		return 'ran_booster_storage_adoption_conflict' === $result->getDiagnosticId()
+		return 'ran_booster_storage_adoption_conflict' === $result->get_diagnostic_id()
 			&& $this->existingManagementMatchesInstalledTarget( $installed );
 	}
 
@@ -435,10 +435,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 					if ( $attempt < self::DOWNLOAD_ATTEMPTS ) {
 						continue;
 					}
-					$this->stage( DeploymentOutcome::fromProviderFailure( new RuntimeException( '', $status ) )->getCode() );
+					$this->stage( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code() );
 				}
 				if ( $status < 200 || $status >= 300 ) {
-					$this->stage( DeploymentOutcome::fromProviderFailure( new RuntimeException( '', $status ) )->getCode() );
+					$this->stage( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code() );
 				}
 				return;
 			}
@@ -453,7 +453,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		} catch ( StaleDeployment ) {
 			$this->stage( DeploymentOutcome::CODE_STALE_EVENT );
 		} catch ( Throwable $failure ) {
-			$this->stage( DeploymentOutcome::fromProviderFailure( $failure )->getCode() );
+			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 	}
 
@@ -542,9 +542,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function existingManagementMatchesInstallTarget(): bool {
 		try {
-			$data       = $this->attempt->safeData();
-			$request    = $this->attempt->getRequest();
-			$installed  = $this->installedPackage( (string) $data['package_type'], $request->packageSlug );
+			$data       = $this->attempt->safe_data();
+			$request    = $this->attempt->get_request();
+			$installed  = $this->installedPackage( (string) $data['package_type'], $request->package_slug );
 			$identifier = (string) $installed->getIdentifier();
 			if ( '' === $identifier ) {
 				return false;
@@ -555,7 +555,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 				&& hash_equals( (string) $existing->getRepository(), $request->repository )
 				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
-				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug );
+				&& hash_equals( (string) $existing->getSlug(), $request->package_slug );
 		} catch ( Throwable ) {
 			return false;
 		}
@@ -567,20 +567,20 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			return false;
 		}
 		try {
-			$data     = $this->attempt->safeData();
-			$request  = $this->attempt->getRequest();
+			$data     = $this->attempt->safe_data();
+			$request  = $this->attempt->get_request();
 			$existing = $this->packageFromIdentifier( (string) $data['package_type'], $identifier );
 			return hash_equals( $identifier, (string) $existing->getIdentifier() )
 				&& PackageSource::BRANCH === $existing->getSource()
 				&& $existing->getProviderCode() === $data['provider']
 				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 				&& hash_equals( (string) $existing->getRepository(), $request->repository )
-				&& hash_equals( (string) $existing->getBranch(), $request->configuredBranch )
-				&& hash_equals( $existing->getCredentialId(), (string) $request->credentialId )
+				&& hash_equals( (string) $existing->getBranch(), $request->configured_branch )
+				&& hash_equals( $existing->getCredentialId(), (string) $request->credential_id )
 				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
-				&& (bool) $existing->getPrivate() === $request->private
-				&& hash_equals( (string) $existing->getSlug(), $request->packageSlug )
-				&& $existing->getDeploymentPolicy() === $request->deploymentPolicy;
+				&& (bool) $existing->getPrivate() === $request->is_private
+				&& hash_equals( (string) $existing->getSlug(), $request->package_slug )
+				&& $existing->getDeploymentPolicy() === $request->deployment_policy;
 		} catch ( Throwable ) {
 			return false;
 		}
@@ -590,12 +590,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		if ( $package->getProviderCode() !== $data['provider']
 			|| ! hash_equals( (string) $package->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->getRepository(), $request->repository )
-			|| ! hash_equals( (string) $package->getBranch(), $request->configuredBranch )
-			|| ! hash_equals( $package->getCredentialId(), (string) $request->credentialId )
+			|| ! hash_equals( (string) $package->getBranch(), $request->configured_branch )
+			|| ! hash_equals( $package->getCredentialId(), (string) $request->credential_id )
 			|| ! hash_equals( (string) $package->getSubdirectory(), (string) $request->subdirectory )
-			|| (bool) $package->getPrivate() !== $request->private
-			|| ! hash_equals( (string) $package->getSlug(), $request->packageSlug )
-			|| $package->getDeploymentPolicy() !== $request->deploymentPolicy
+			|| (bool) $package->getPrivate() !== $request->is_private
+			|| ! hash_equals( (string) $package->getSlug(), $request->package_slug )
+			|| $package->getDeploymentPolicy() !== $request->deployment_policy
 			|| $package->getSource()->value !== ( $data['package_source'] ?? null )
 			|| $package->getSourceRevision() !== ( $data['package_source_revision'] ?? null ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
@@ -640,7 +640,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function stagePackageStorageFailure( PackageStorageFailure $failure ): never {
 		$this->stage(
-			'ran_booster_repository_source_conflict' === $failure->getDiagnosticId()
+			'ran_booster_repository_source_conflict' === $failure->get_diagnostic_id()
 				? DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT
 				: DeploymentOutcome::CODE_REPOSITORY_SOURCE_UNAVAILABLE
 		);

@@ -40,24 +40,24 @@ msgstr ""
 msgid "https://github.com/RocketsAreNostalgic"
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:44
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:77
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:50
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:84
 msgid "Portability is unavailable on WordPress Multisite."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:51
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:57
 msgid "The package could not be reviewed."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:63
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:69
 msgid "The package could not be reviewed safely."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:85
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:93
 msgid "The package could not be adopted."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:98
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:107
 msgid "The package could not be adopted safely."
 msgstr ""
 

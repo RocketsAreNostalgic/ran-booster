@@ -28,9 +28,12 @@ final readonly class BlueprintRepositoryVerifier {
 	 *
 	 * @return array{package:BlueprintPackage|null,private:bool|null,reason:TargetPackageReason}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method and named by-reference parameter contracts remain unchanged pending their connected-caller audit.
 	public function resolveCandidate( PortabilityCandidate $candidate ): array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 		if ( null !== $candidate->credentialId
-			&& ! $this->hasTargetCredential( $candidate->providerCode, $candidate->credentialId ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
+			&& ! $this->has_target_credential( $candidate->providerCode, $candidate->credentialId ) ) {
 			return array(
 				'package' => null,
 				'private' => null,
@@ -39,16 +42,21 @@ final readonly class BlueprintRepositoryVerifier {
 		}
 
 		try {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 			$provider   = ProviderCode::parse( $candidate->providerCode );
 			$descriptor = $this->providers->get( $provider )->resolveRepository(
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 				new RepositoryLookupRequest( $candidate->repository, $candidate->credentialId )
 			);
 			if ( ! $descriptor->provider->equals( $provider )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 				|| $descriptor->credentialId !== $candidate->credentialId
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 				|| ( $descriptor->private && null === $candidate->credentialId ) ) {
 				return array(
 					'package' => null,
 					'private' => null,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 					'reason'  => null === $candidate->credentialId
 						? TargetPackageReason::CREDENTIAL_REQUIRED
 						: TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH,
@@ -59,8 +67,11 @@ final readonly class BlueprintRepositoryVerifier {
 				'package' => new BlueprintPackage(
 					$candidate->type,
 					$candidate->identifier,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 					$candidate->displayName,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 					$candidate->providerCode,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 					$descriptor->providerRepositoryId,
 					$candidate->repository,
 					$candidate->branch,
@@ -73,7 +84,7 @@ final readonly class BlueprintRepositoryVerifier {
 			return array(
 				'package' => null,
 				'private' => null,
-				'reason'  => $this->failureReason( $failure, true ),
+				'reason'  => $this->failure_reason( $failure, true ),
 			);
 		}
 	}
@@ -81,29 +92,38 @@ final readonly class BlueprintRepositoryVerifier {
 	public function verify(
 		BlueprintPlanItem $item,
 		?BlueprintCredential $credential = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?BlueprintCredentialAction $credentialAction = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?string $targetCredentialId = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?bool &$repositoryPrivate = null
 	): BlueprintPlanItem {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		$repositoryPrivate = null;
-		$managedImport     = TargetPackageAction::MANAGED === $item->action
+		$managed_import    = TargetPackageAction::MANAGED === $item->action
 			&& null !== $credential
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 			&& BlueprintCredentialAction::IMPORT === $credentialAction;
-		if ( ! $managedImport && ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) {
+		if ( ! $managed_import && ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) {
 			return $item;
 		}
 
 		if ( null !== $credential ) {
-			if ( BlueprintCredentialAction::IMPORT !== $credentialAction || ! $this->canTransfer( $item, $credential ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+			if ( BlueprintCredentialAction::IMPORT !== $credentialAction || ! $this->can_transfer( $item, $credential ) ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 				if ( BlueprintCredentialAction::TARGET !== $credentialAction
-					|| ! $this->hasTargetCredential( $item->package->provider, $targetCredentialId ) ) {
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+					|| ! $this->has_target_credential( $item->package->provider, $targetCredentialId ) ) {
 					return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
 				}
 
 				try {
-					return $this->verifiedItem( $item, $targetCredentialId, $repositoryPrivate );
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+					return $this->verified_item( $item, $targetCredentialId, $repositoryPrivate );
 				} catch ( Throwable $failure ) {
-					return $this->blockedItem( $item, $failure );
+					return $this->blocked_item( $item, $failure );
 				}
 			}
 
@@ -116,41 +136,46 @@ final readonly class BlueprintRepositoryVerifier {
 						'configuration' => $credential->configuration,
 					),
 					$credential->secret,
-					function ( string $credentialId ) use ( $item, &$repositoryPrivate ): BlueprintPlanItem {
-						return $this->verifiedItem( $item, $credentialId, $repositoryPrivate );
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+					function ( string $credential_id ) use ( $item, &$repositoryPrivate ): BlueprintPlanItem {
+						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+						return $this->verified_item( $item, $credential_id, $repositoryPrivate );
 					}
 				);
 			} catch ( Throwable $failure ) {
-				return $this->requiresCredential( $failure )
+				return $this->requires_credential( $failure )
 					? new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED )
-					: $this->blockedItem( $item, $failure );
+					: $this->blocked_item( $item, $failure );
 			}
 		}
 
-		if ( $this->hasTargetCredential( $item->package->provider, $targetCredentialId ) ) {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		if ( $this->has_target_credential( $item->package->provider, $targetCredentialId ) ) {
 			try {
-				return $this->verifiedItem( $item, $targetCredentialId, $repositoryPrivate );
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+				return $this->verified_item( $item, $targetCredentialId, $repositoryPrivate );
 			} catch ( Throwable $failure ) {
-				return $this->blockedItem( $item, $failure );
+				return $this->blocked_item( $item, $failure );
 			}
 		}
 
 		try {
-			return $this->verifiedItem( $item, null, $repositoryPrivate );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+			return $this->verified_item( $item, null, $repositoryPrivate );
 		} catch ( Throwable $failure ) {
-			if ( ! $this->requiresCredential( $failure ) && 429 !== $failure->getCode() ) {
-				return $this->blockedItem( $item, $failure );
+			if ( ! $this->requires_credential( $failure ) && 429 !== $failure->getCode() ) {
+				return $this->blocked_item( $item, $failure );
 			}
 			if ( 429 === $failure->getCode()
 				&& array() === $this->secrets->credentialProfiles( $item->package->provider ) ) {
-				return $this->blockedItem( $item, $failure );
+				return $this->blocked_item( $item, $failure );
 			}
 		}
 
 		return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
 	}
 
-	private function canTransfer( BlueprintPlanItem $item, ?BlueprintCredential $credential ): bool {
+	private function can_transfer( BlueprintPlanItem $item, ?BlueprintCredential $credential ): bool {
 		return null !== $credential
 			&& $credential->provider === $item->package->provider
 			&& in_array(
@@ -163,20 +188,21 @@ final readonly class BlueprintRepositoryVerifier {
 			);
 	}
 
-	private function hasTargetCredential( string $provider, ?string $credentialId ): bool {
-		return null !== $credentialId
-			&& '' !== $credentialId
-			&& isset( $this->secrets->credentialProfiles( $provider )[ $credentialId ] );
+	private function has_target_credential( string $provider, ?string $credential_id ): bool {
+		return null !== $credential_id
+			&& '' !== $credential_id
+			&& isset( $this->secrets->credentialProfiles( $provider )[ $credential_id ] );
 	}
 
-	private function verifiedItem( BlueprintPlanItem $item, ?string $credentialId, ?bool &$repositoryPrivate ): BlueprintPlanItem {
-		$package           = $item->package;
-		$provider          = ProviderCode::parse( $package->provider );
-		$descriptor        = $this->providers->get( $provider )->resolveRepository(
-			new RepositoryLookupRequest( $package->repository, $credentialId )
+	private function verified_item( BlueprintPlanItem $item, ?string $credential_id, ?bool &$repository_private ): BlueprintPlanItem {
+		$package            = $item->package;
+		$provider           = ProviderCode::parse( $package->provider );
+		$descriptor         = $this->providers->get( $provider )->resolveRepository(
+			new RepositoryLookupRequest( $package->repository, $credential_id )
 		);
-		$repositoryPrivate = $descriptor->private;
-		$matches           = $descriptor->provider->equals( $provider )
+		$repository_private = $descriptor->private;
+		$matches            = $descriptor->provider->equals( $provider )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 			&& hash_equals( $package->providerRepositoryId, $descriptor->providerRepositoryId );
 
 		return $matches
@@ -184,19 +210,19 @@ final readonly class BlueprintRepositoryVerifier {
 			: new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH );
 	}
 
-	private function requiresCredential( Throwable $failure ): bool {
+	private function requires_credential( Throwable $failure ): bool {
 		return $failure instanceof InvalidCredentialInput
 			|| in_array( $failure->getCode(), array( 401, 403, 404 ), true );
 	}
 
-	private function blockedItem( BlueprintPlanItem $item, Throwable $failure ): BlueprintPlanItem {
-		return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, $this->failureReason( $failure ) );
+	private function blocked_item( BlueprintPlanItem $item, Throwable $failure ): BlueprintPlanItem {
+		return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, $this->failure_reason( $failure ) );
 	}
 
-	private function failureReason( Throwable $failure, bool $credentialRequired = false ): TargetPackageReason {
+	private function failure_reason( Throwable $failure, bool $credential_required = false ): TargetPackageReason {
 		return match ( true ) {
 			$failure instanceof UnknownProvider => TargetPackageReason::PROVIDER_UNAVAILABLE,
-			$credentialRequired && $this->requiresCredential( $failure ) => TargetPackageReason::CREDENTIAL_REQUIRED,
+			$credential_required && $this->requires_credential( $failure ) => TargetPackageReason::CREDENTIAL_REQUIRED,
 			429 === $failure->getCode(), $failure->getCode() >= 500 => TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE,
 			default => TargetPackageReason::REPOSITORY_ACCESS_FAILED,
 		};

@@ -95,10 +95,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Secrets/PosixFilesystemProbe.php`,
 `RAN/Secrets/EncryptedSecretsEnvelopeCodec.php`,
 `RAN/Storage/CredentialUsageReader.php` and
-`RAN/RepositoryProvider/InvalidCredentialInput.php`.
+`RAN/RepositoryProvider/InvalidCredentialInput.php`,
+`RAN/Portability/BlueprintReviewer.php`,
+`RAN/Portability/BlueprintRepositoryVerifier.php`,
+`RAN/Portability/ManagedPackageBlueprintExporter.php` and
+`RAN/AddOn/Portability/NativePortabilityFacade.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This sixty-five-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This sixty-nine-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -118,6 +122,13 @@ contracts retain narrow documented exceptions where required. Encrypted-envelope
 bytes and validation, Sodium calls and sensitive-parameter attributes, POSIX probe
 ordering and cleanup, credential-usage SQL and projections, and safe failure text
 remain unchanged. Reserved-parameter enforcement is unchanged.
+
+The portability quartet renames private helpers, private properties and owned
+variables. Public methods and named parameters, including by-reference outputs
+and inherited facade contracts, retain narrow documented exceptions. Foreign DTO
+properties, authorization and credential ordering, blueprint bytes and fingerprints,
+provider access and error classifications remain unchanged. Reserved-parameter
+enforcement is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

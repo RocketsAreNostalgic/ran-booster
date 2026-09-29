@@ -11,12 +11,14 @@ final class WpPusherCoexistencePolicy {
 
 	public const WP_PUSHER_PLUGIN = 'wppusher/wppusher.php';
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing caller and activation callback contracts.
 	public static function assertPackageMutationAllowed(): void {
 		if ( self::conflictActive() ) {
 			throw new RuntimeException( 'RAN Booster package mutations are unavailable while WP Pusher is active. Deactivate WP Pusher before continuing.' );
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing caller and activation callback contracts.
 	public static function blockWpPusherActivation( string $plugin ): void {
 		if ( self::WP_PUSHER_PLUGIN === $plugin ) {
 			wp_die(
@@ -28,21 +30,22 @@ final class WpPusherCoexistencePolicy {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing caller and activation callback contracts.
 	public static function conflictActive(): bool {
 		return self::active( self::WP_PUSHER_PLUGIN );
 	}
 
 	private static function active( string $plugin ): bool {
-		$siteActive    = self::siteActivePlugins();
-		$networkActive = self::networkActivePlugins();
-		if ( ! is_array( $siteActive ) || ! is_array( $networkActive ) ) {
+		$site_active    = self::site_active_plugins();
+		$network_active = self::network_active_plugins();
+		if ( ! is_array( $site_active ) || ! is_array( $network_active ) ) {
 			return true;
 		}
 
-		return in_array( $plugin, $siteActive, true ) || array_key_exists( $plugin, $networkActive );
+		return in_array( $plugin, $site_active, true ) || array_key_exists( $plugin, $network_active );
 	}
 
-	private static function siteActivePlugins(): mixed {
+	private static function site_active_plugins(): mixed {
 		if ( function_exists( __NAMESPACE__ . '\\get_option' ) ) {
 			return get_option( 'active_plugins', array() );
 		}
@@ -50,7 +53,7 @@ final class WpPusherCoexistencePolicy {
 		return function_exists( 'get_option' ) ? \get_option( 'active_plugins', array() ) : array();
 	}
 
-	private static function networkActivePlugins(): mixed {
+	private static function network_active_plugins(): mixed {
 		if ( function_exists( __NAMESPACE__ . '\\get_site_option' ) ) {
 			return get_site_option( 'active_sitewide_plugins', array() );
 		}

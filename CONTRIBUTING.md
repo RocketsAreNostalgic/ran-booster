@@ -117,11 +117,12 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Portability/BlueprintPackage.php`,
 `RAN/Portability/PackageBlueprint.php`,
 `RAN/RepositoryProvider/RepositoryReference.php`,
-`RAN/RepositoryProvider/RepositoryDescriptor.php` and
-`RAN/RepositoryProvider/RepositoryBrowseRequest.php`.
+`RAN/RepositoryProvider/RepositoryDescriptor.php`,
+`RAN/RepositoryProvider/RepositoryBrowseRequest.php` and
+`RAN/Portability/WpPusherCoexistencePolicy.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-eight-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-nine-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -188,6 +189,12 @@ identity casing, slug normalization, array projections, browse scope validation,
 request deadlines, timeout and response-size limits, counters and failure codes
 remain unchanged. The browse test's private reflection reference follows the
 renamed property. Reserved-parameter enforcement is unchanged.
+
+The WP Pusher coexistence policy renames private inventory helpers and owned locals.
+Its public methods and activation callback retain narrow documented exceptions;
+exact plugin identity, option lookup order, malformed-inventory rejection and
+localized activation failures remain unchanged. Reserved-parameter enforcement
+is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

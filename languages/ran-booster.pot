@@ -4607,7 +4607,7 @@ msgstr ""
 msgid "The repository provider is temporarily unavailable."
 msgstr ""
 
-#: RAN/Portability/WpPusherCoexistencePolicy.php:23
+#: RAN/Portability/WpPusherCoexistencePolicy.php:25
 msgid "WP Pusher cannot be activated while RAN Booster is active. Keep WP Pusher inactive and use the migration guidance in Booster."
 msgstr ""
 

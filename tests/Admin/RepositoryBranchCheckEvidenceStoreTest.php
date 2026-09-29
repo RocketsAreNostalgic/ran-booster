@@ -21,7 +21,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		self::assertSame( 'verified', $store->find( 'plugin', $package, 'profile-a' )['outcome'] );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-b' ) );
 
-		$store->bumpProfileGeneration( 'gh', 'profile-a' );
+		$store->bump_profile_generation( provider: 'gh', profile_id: 'profile-a' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 	}
 
@@ -39,14 +39,14 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 	public function testClearInvalidatesAnInFlightCheckBeforeItCanRecordStaleEvidence(): void {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
-		$stale   = $store->profileFingerprintFor( $package, 'profile-a' );
+		$stale   = $store->profile_fingerprint_for( $package, 'profile-a' );
 
 		$store->clear( 'plugin', $package );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $stale );
 
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 
-		$fresh = $store->profileFingerprintFor( $package, 'profile-a' );
+		$fresh = $store->profile_fingerprint_for( $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $fresh );
 
 		self::assertSame( 'verified', $store->find( 'plugin', $package, 'profile-a' )['outcome'] );
@@ -60,16 +60,16 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
-		$store->bumpProviderGeneration( 'gh' );
+		$store->bump_provider_generation( 'gh' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 	}
 
 	public function testEvidenceWrittenAfterProfileMutationRetainsTheOriginalProfileGeneration(): void {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
-		$profile = $store->profileFingerprintFor( $package, 'profile-a' );
+		$profile = $store->profile_fingerprint_for( $package, 'profile-a' );
 
-		$store->bumpProfileGeneration( 'gh', 'profile-a' );
+		$store->bump_profile_generation( 'gh', 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $profile );
 
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
@@ -102,8 +102,8 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 	public function testCredentialAndProviderMutationsUseOneBoundedGenerationValue(): void {
 		$store = new InMemoryRepositoryBranchCheckEvidenceStore();
-		$store->bumpProfileGeneration( 'gh', 'profile-a' );
-		$store->bumpProviderGeneration( 'gh' );
+		$store->bump_profile_generation( 'gh', 'profile-a' );
+		$store->bump_provider_generation( 'gh' );
 
 		self::assertSame( 2, $store->records['generation'] );
 		self::assertArrayNotHasKey( 'profile_generations', $store->records );
@@ -127,17 +127,17 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 			$locked = false;
 			if ( $queued && $store instanceof InMemoryRepositoryBranchCheckEvidenceStore ) {
 				$queued = false;
-				$store->bumpProfileGeneration( 'gh', 'profile-a' );
+				$store->bump_profile_generation( 'gh', 'profile-a' );
 			}
 
 			return true;
 		};
 		$store            = new InMemoryRepositoryBranchCheckEvidenceStore( $acquire, $release );
 		$package          = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
-		$profile          = $store->profileFingerprintFor( $package, 'profile-a' );
+		$profile          = $store->profile_fingerprint_for( $package, 'profile-a' );
 		$store->afterRead = static function () use ( $store ): void {
 			try {
-				$store->bumpProfileGeneration( 'gh', 'profile-a' );
+				$store->bump_profile_generation( 'gh', 'profile-a' );
 			} catch ( \RuntimeException $failure ) {
 				self::assertSame( 'Booster could not coordinate repository branch check evidence.', $failure->getMessage() );
 			}
@@ -184,7 +184,7 @@ final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchC
 		$this->releaseMutationLockCallback = \Closure::fromCallable( $releaseMutationLock ?? static fn (): bool => true );
 	}
 
-	protected function readOption(): array {
+	protected function read_option(): array {
 		$records = $this->records;
 		if ( null !== $this->afterRead ) {
 			$afterRead       = $this->afterRead;
@@ -195,16 +195,16 @@ final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchC
 		return $records;
 	}
 
-	protected function writeOption( array $records ): bool {
+	protected function write_option( array $records ): bool {
 		$this->records = $records;
 		return true;
 	}
 
-	protected function acquireMutationLock(): bool {
+	protected function acquire_mutation_lock(): bool {
 		return ( $this->acquireMutationLockCallback )();
 	}
 
-	protected function releaseMutationLock(): bool {
+	protected function release_mutation_lock(): bool {
 		return ( $this->releaseMutationLockCallback )();
 	}
 }

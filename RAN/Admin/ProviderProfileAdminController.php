@@ -149,7 +149,7 @@ class ProviderProfileAdminController {
 					throw new CredentialRequestException( __( 'Choose Anonymous or a saved repository credential.', 'ran-booster' ) );
 				}
 			}
-			$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
+			$this->branchCheckEvidence->bump_provider_generation( $provider->value );
 			$this->publicLookupProfiles->set( $provider->value, '' === $profileId ? null : $profileId );
 			$message = '' === $profileId
 				? __( 'Public repository lookup will use anonymous access.', 'ran-booster' )
@@ -242,7 +242,7 @@ class ProviderProfileAdminController {
 						|| ! is_array( $existingProfile['configuration'] ?? null )
 						|| $configuration !== $existingProfile['configuration'] );
 				if ( $accessChanged && null !== $id ) {
-					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
+					$this->branchCheckEvidence->bump_profile_generation( $provider->value, $id );
 				}
 				$savedId      = $this->secrets->saveCredential(
 					$provider,
@@ -362,9 +362,9 @@ class ProviderProfileAdminController {
 				}
 				$this->expiryObservations->clear( $provider->value, $id );
 				try {
-					$this->branchCheckEvidence->bumpProfileGeneration( $provider->value, $id );
+					$this->branchCheckEvidence->bump_profile_generation( $provider->value, $id );
 					if ( $clearedDefault ) {
-						$this->branchCheckEvidence->bumpProviderGeneration( $provider->value );
+						$this->branchCheckEvidence->bump_provider_generation( $provider->value );
 					}
 				} catch ( \Throwable $failure ) {
 					BoosterLogger::logException(

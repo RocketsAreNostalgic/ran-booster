@@ -16,14 +16,14 @@ final class InMemoryPublicRepositoryLookupProfileStore extends PublicRepositoryL
 	/**
 	 * @return array<string, mixed>
 	 */
-	protected function readOption(): array {
+	protected function read_option(): array {
 		return $this->profiles;
 	}
 
 	/**
 	 * @param array<string, string> $profiles Provider-to-profile mapping.
 	 */
-	protected function writeOption( array $profiles ): bool {
+	protected function write_option( array $profiles ): bool {
 		if ( $this->failWrites ) {
 			return false;
 		}

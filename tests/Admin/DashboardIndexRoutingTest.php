@@ -299,9 +299,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		$evidence->bumpProfileGeneration( 'gh', 'public-profile' );
+		$evidence->bump_profile_generation( 'gh', 'public-profile' );
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		$evidence->bumpProviderGeneration( 'gh' );
+		$evidence->bump_provider_generation( 'gh' );
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 3, $provider->prepareCalls );
 	}
@@ -3116,27 +3116,27 @@ final class DashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvide
 	/** @var array<string, mixed> */
 	private array $records = array();
 
-	protected function readOption(): array {
+	protected function read_option(): array {
 		return $this->records;
 	}
 
-	protected function writeOption( array $records ): bool {
+	protected function write_option( array $records ): bool {
 		$this->records = $records;
 		return true;
 	}
 
-	protected function acquireMutationLock(): bool {
+	protected function acquire_mutation_lock(): bool {
 		return true;
 	}
 
-	protected function releaseMutationLock(): bool {
+	protected function release_mutation_lock(): bool {
 		return true;
 	}
 }
 
 final class ThrowingDashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
-	public function record( string $type, \RAN\Package $package, ?string $profileId, string $outcome, ?string $profileFingerprint = null ): void {
+	public function record( string $type, \RAN\Package $package, ?string $profile_id, string $outcome, ?string $profile_fingerprint = null ): void {
 		throw new RuntimeException( 'evidence unavailable' );
 	}
 }

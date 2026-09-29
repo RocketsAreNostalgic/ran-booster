@@ -702,11 +702,11 @@ final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenc
 		parent::clear( $type, $package );
 	}
 
-	protected function readOption(): array {
+	protected function read_option(): array {
 		return $this->records;
 	}
 
-	protected function writeOption( array $records ): bool {
+	protected function write_option( array $records ): bool {
 		$this->records = $records;
 		return true;
 	}

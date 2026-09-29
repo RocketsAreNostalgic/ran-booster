@@ -524,7 +524,7 @@ final class PackageAdminController {
 	private function resolve( Dashboard $dashboard, array $request, ?array $trustedPublicLookup = null ): ?array {
 		try {
 			if ( null !== $trustedPublicLookup ) {
-				return $this->repositories?->resolveWithTrustedPublicLookupProfile( $request, $trustedPublicLookup['profile_id'] )
+				return $this->repositories?->resolve_with_trusted_public_lookup_profile( $request, $trustedPublicLookup['profile_id'] )
 					?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 			}
 

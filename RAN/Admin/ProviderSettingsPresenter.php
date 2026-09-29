@@ -318,7 +318,7 @@ final readonly class ProviderSettingsPresenter {
 	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
 	private function checkPackageRepositoryBranchWhileLocked( string $type, Package $package ): string {
 		$profileId          = $this->effectiveBranchCheckProfile( $package );
-		$profileFingerprint = $this->branchCheckEvidence->profileFingerprintFor( $package, $profileId );
+		$profileFingerprint = $this->branchCheckEvidence->profile_fingerprint_for( $package, $profileId );
 
 		try {
 			$provider = $this->providers->get( (string) $package->getProviderCode() );
@@ -409,7 +409,7 @@ final readonly class ProviderSettingsPresenter {
 	 * default public-profile changes must require a fresh remote check.
 	 */
 	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
-		return $this->branchCheckEvidence->profileFingerprintFor( $package, $this->effectiveBranchCheckProfile( $package ) );
+		return $this->branchCheckEvidence->profile_fingerprint_for( $package, $this->effectiveBranchCheckProfile( $package ) );
 	}
 
 	/** @return array{outcome: 'verified', checked_at: string}|null */

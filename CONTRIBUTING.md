@@ -72,10 +72,14 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/CredentialExpiryNoticeController.php`,
 `RAN/Admin/BackgroundDeploymentFailureMonitor.php`,
 `RAN/Admin/BackgroundDeploymentFailureEmail.php`,
-`RAN/Admin/DeploymentOutcomeMessage.php` and `RAN/Admin/ManagedPluginFailureRows.php`.
+`RAN/Admin/DeploymentOutcomeMessage.php`, `RAN/Admin/ManagedPluginFailureRows.php`,
+`RAN/Admin/PublicRepositoryLookupProfileStore.php`,
+`RAN/Admin/RepositoryBranchCheckEvidenceStore.php`,
+`RAN/Admin/CredentialSelfDestructPurger.php` and
+`RAN/Admin/PackageRepositoryRequestResolver.php`.
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This forty-one-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This forty-five-file scope does not
 complete Core naming, condition or exception acceptance.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
@@ -151,3 +155,10 @@ Newest-attempt selection, fingerprint inputs, closed outcome messages, email
 filters and payloads, capabilities, hook strings and rendered HTML are unchanged.
 `DeploymentFailureNotifier::notify()` and provider, WordPress and other service
 receiver contracts retain their existing names.
+
+The lookup and branch-evidence cohort enforces owned snake_case names in the
+public lookup profile store, branch-check evidence store, credential expiry purger
+and package repository request resolver. Persisted option keys, fingerprints,
+advisory locking, purge ordering, trusted lookup selection and provider-verified
+request projections are unchanged. Provider contract properties retain their
+existing names with narrowly scoped access exceptions.

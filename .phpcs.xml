@@ -28,6 +28,15 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/RepositoryProvider/Admin/ProviderAdminMetadata.php</include-pattern>
+		<include-pattern>/RAN/AddOn/WebhookAssistance/WebhookProfileMetadata.php</include-pattern>
+		<include-pattern>/RAN/AddOn/ReleaseTracking/ReleaseTrackingPreflight.php</include-pattern>
+		<include-pattern>/RAN/Internal/ReleaseManagement/ProspectiveReleaseCandidateReader.php</include-pattern>
+		<include-pattern>/RAN/AddOn/WebhookAssistance/AssistedWebhookFacade.php</include-pattern>
+		<include-pattern>/RAN/AddOn/WebhookAssistance/WebhookAssistanceReadinessEvaluator.php</include-pattern>
+		<include-pattern>/RAN/WordPress/ManagedReleaseStore.php</include-pattern>
+		<include-pattern>/RAN/WordPress/ManagedReleaseTargetRegistrar.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentCoordinator.php</include-pattern>
 		<include-pattern>/RAN/Portability/PortabilityApplicationService.php</include-pattern>
 		<include-pattern>/RAN/Troubleshooting/TroubleshootingService.php</include-pattern>
 		<include-pattern>/RAN/Troubleshooting/LocalTroubleshootingService.php</include-pattern>
@@ -139,6 +148,15 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/RepositoryProvider/Admin/ProviderAdminMetadata.php</include-pattern>
+		<include-pattern>/RAN/AddOn/WebhookAssistance/WebhookProfileMetadata.php</include-pattern>
+		<include-pattern>/RAN/AddOn/ReleaseTracking/ReleaseTrackingPreflight.php</include-pattern>
+		<include-pattern>/RAN/Internal/ReleaseManagement/ProspectiveReleaseCandidateReader.php</include-pattern>
+		<include-pattern>/RAN/AddOn/WebhookAssistance/AssistedWebhookFacade.php</include-pattern>
+		<include-pattern>/RAN/AddOn/WebhookAssistance/WebhookAssistanceReadinessEvaluator.php</include-pattern>
+		<include-pattern>/RAN/WordPress/ManagedReleaseStore.php</include-pattern>
+		<include-pattern>/RAN/WordPress/ManagedReleaseTargetRegistrar.php</include-pattern>
+		<include-pattern>/RAN/Deployment/DeploymentCoordinator.php</include-pattern>
 		<include-pattern>/RAN/Portability/PortabilityApplicationService.php</include-pattern>
 		<include-pattern>/RAN/Troubleshooting/TroubleshootingService.php</include-pattern>
 		<include-pattern>/RAN/Troubleshooting/LocalTroubleshootingService.php</include-pattern>

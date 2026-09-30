@@ -147,9 +147,21 @@ The backend five-slice cohort also includes:
 - `RAN/Secrets/WpConfigSecretsPathWriter.php`
 - `RAN/Secrets/SecretsStorageProvisioner.php`
 
+The release and deployment five-slice cohort also includes:
+
+- `RAN/RepositoryProvider/Admin/ProviderAdminMetadata.php`
+- `RAN/AddOn/WebhookAssistance/WebhookProfileMetadata.php`
+- `RAN/AddOn/ReleaseTracking/ReleaseTrackingPreflight.php`
+- `RAN/Internal/ReleaseManagement/ProspectiveReleaseCandidateReader.php`
+- `RAN/AddOn/WebhookAssistance/AssistedWebhookFacade.php`
+- `RAN/AddOn/WebhookAssistance/WebhookAssistanceReadinessEvaluator.php`
+- `RAN/WordPress/ManagedReleaseStore.php`
+- `RAN/WordPress/ManagedReleaseTargetRegistrar.php`
+- `RAN/Deployment/DeploymentCoordinator.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This 109-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This 118-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -242,6 +254,15 @@ Troubleshooting row order, provider budgets, safe reports and marker cleanup,
 repository SQL/transaction/write/read-back order, configuration file bytes and
 lock/replace/rollback behavior, and secrets recovery authority/revisions/order are
 preserved. Reserved-parameter scope is unchanged.
+
+The release and deployment cohort renames 61 private helpers, non-promoted
+private state and owned locals. Public/protected methods, named parameters,
+promoted constructor properties and external DTO fields retain narrow line-local
+exceptions. Metadata validation and projections, candidate ordering/failure mapping,
+webhook capability/nonce/target-lock and profile cleanup order, native authority
+snapshots and hook restoration, and deployment admission/recovery/cleanup remain
+unchanged. WordPress callback strings and every PreparedArtifact call retain their
+existing contracts. Test behavior and reserved-parameter enforcement are unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

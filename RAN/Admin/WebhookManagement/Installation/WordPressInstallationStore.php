@@ -58,13 +58,12 @@ final class WordPressInstallationStore implements InstallationStore {
 		return $records[ InstallationRecord::key( $providerCode, $repositoryId ) ] ?? null;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function saveIfCurrent( InstallationRecord $record, ?InstallationRecord $expected ): string {
+	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		return $this->write( $record, $expected );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
-	public function deleteIfCurrent( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain public named-parameter names.
+	public function delete_if_current( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		return $this->remove( $providerCode, $repositoryId, $expected );
 	}

@@ -98,13 +98,13 @@ final readonly class PackageRemovalService {
 	}
 
 	private function delete_plugin( string $identifier, Package $package ): PackageRemovalResult {
-		if ( $this->wordpress->pluginIsActive( $identifier ) ) {
+		if ( $this->wordpress->plugin_is_active( $identifier ) ) {
 			try {
-				$this->wordpress->deactivatePlugin( $identifier );
+				$this->wordpress->deactivate_plugin( $identifier );
 			} catch ( Throwable $failure ) {
 				$this->log_failure( $failure, 'plugin_deactivation' );
 			}
-			if ( $this->wordpress->pluginIsActive( $identifier ) ) {
+			if ( $this->wordpress->plugin_is_active( $identifier ) ) {
 				return PackageRemovalResult::failed( 'deactivation_failed' );
 			}
 		}
@@ -113,7 +113,7 @@ final readonly class PackageRemovalService {
 			'plugin',
 			$identifier,
 			$package,
-			fn (): bool => $this->wordpress->deletePlugin( $identifier )
+			fn (): bool => $this->wordpress->delete_plugin( $identifier )
 		);
 	}
 
@@ -122,7 +122,7 @@ final readonly class PackageRemovalService {
 			'theme',
 			$stylesheet,
 			$package,
-			fn (): bool => $this->wordpress->deleteTheme( $stylesheet )
+			fn (): bool => $this->wordpress->delete_theme( $stylesheet )
 		);
 	}
 
@@ -161,24 +161,24 @@ final readonly class PackageRemovalService {
 
 	private function deletion_blocker( string $type, string $identifier ): ?string {
 		if ( 'plugin' === $type ) {
-			if ( ! $this->wordpress->pluginPathIsSafe( $identifier ) ) {
+			if ( ! $this->wordpress->plugin_path_is_safe( $identifier ) ) {
 				return 'unsafe_path';
 			}
-			if ( $this->wordpress->pluginSharesDirectory( $identifier ) ) {
+			if ( $this->wordpress->plugin_shares_directory( $identifier ) ) {
 				return 'shared_plugin_directory';
 			}
-			if ( $this->wordpress->pluginHasActiveDependents( $identifier ) ) {
+			if ( $this->wordpress->plugin_has_active_dependents( $identifier ) ) {
 				return 'active_dependents';
 			}
 
 			return null;
 		}
 
-		if ( ! $this->wordpress->themePathIsSafe( $identifier ) ) {
+		if ( ! $this->wordpress->theme_path_is_safe( $identifier ) ) {
 			return 'unsafe_path';
 		}
 
-		return $this->wordpress->themeDeletionBlocker( $identifier );
+		return $this->wordpress->theme_deletion_blocker( $identifier );
 	}
 
 	private function find( string $type, string $identifier ): Package {

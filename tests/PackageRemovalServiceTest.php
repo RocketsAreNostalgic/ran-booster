@@ -727,31 +727,31 @@ final class RemovalGateway implements PackageRemovalGateway {
 	/** @var list<string> */
 	public array $events = array();
 
-	public function pluginIsActive( string $identifier ): bool {
+	public function plugin_is_active( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_active';
 		return $this->pluginActive;
 	}
 
-	public function pluginHasActiveDependents( string $identifier ): bool {
+	public function plugin_has_active_dependents( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_dependents';
 		return $this->pluginActiveDependents;
 	}
 
-	public function pluginSharesDirectory( string $identifier ): bool {
+	public function plugin_shares_directory( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_shared';
 		return $this->pluginSharedDirectory;
 	}
 
-	public function pluginPathIsSafe( string $identifier ): bool {
+	public function plugin_path_is_safe( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_path';
 		return $this->pluginSafePath;
 	}
 
-	public function deactivatePlugin( string $identifier ): void {
+	public function deactivate_plugin( string $identifier ): void {
 		unset( $identifier );
 		$this->events[] = 'plugin_deactivate';
 		if ( ! $this->deactivationStaysActive ) {
@@ -759,25 +759,25 @@ final class RemovalGateway implements PackageRemovalGateway {
 		}
 	}
 
-	public function deletePlugin( string $identifier ): bool {
+	public function delete_plugin( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_delete';
 		return null === $this->pluginDelete ? false : ( $this->pluginDelete )();
 	}
 
-	public function themeDeletionBlocker( string $stylesheet ): ?string {
+	public function theme_deletion_blocker( string $stylesheet ): ?string {
 		unset( $stylesheet );
 		$this->events[] = 'theme_blocker';
 		return $this->themeBlocker;
 	}
 
-	public function themePathIsSafe( string $stylesheet ): bool {
+	public function theme_path_is_safe( string $stylesheet ): bool {
 		unset( $stylesheet );
 		$this->events[] = 'theme_path';
 		return $this->themeSafePath;
 	}
 
-	public function deleteTheme( string $stylesheet ): bool {
+	public function delete_theme( string $stylesheet ): bool {
 		unset( $stylesheet );
 		$this->events[] = 'theme_delete';
 		return null === $this->themeDelete ? false : ( $this->themeDelete )();

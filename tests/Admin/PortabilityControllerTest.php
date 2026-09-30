@@ -411,7 +411,7 @@ final class PortabilityControllerTest extends TestCase {
 	}
 
 	public function testLocalStoreApplyFailureHasItsOwnCategoryAndMessage(): void {
-		$result = $this->applyFailure( LocalSecretStoreUnavailable::forPortability() );
+		$result = $this->applyFailure( LocalSecretStoreUnavailable::for_portability() );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertSame( 'local_secret_store_unavailable', $result['category'] );

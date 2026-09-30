@@ -79,78 +79,78 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 		return str_pad( (string) $this->suffixCounter, 32, '0', STR_PAD_LEFT );
 	}
 
-	protected function isMultisite(): bool {
+	protected function is_multisite(): bool {
 		return $this->multisite;
 	}
 
-	protected function phpVersion(): string {
+	protected function php_version(): string {
 		return $this->phpVersion;
 	}
 
-	protected function wordpressVersion(): string {
+	protected function wordpress_version(): string {
 		return $this->wordpressVersion;
 	}
 
-	protected function filesystemModificationAllowed(): bool {
+	protected function filesystem_modification_allowed(): bool {
 		++$this->filesystemReads;
 
 		return $this->fileModificationsAllowed;
 	}
 
-	protected function filesystemMethod(): ?string {
+	protected function filesystem_method(): ?string {
 		++$this->filesystemReads;
 
 		return $this->filesystemMethod;
 	}
 
-	protected function temporaryDirectory(): string {
+	protected function temporary_directory(): string {
 		++$this->filesystemReads;
 
 		return $this->temporaryDirectory;
 	}
 
-	protected function pluginDirectory(): string {
+	protected function plugin_directory(): string {
 		++$this->filesystemReads;
 
 		return $this->pluginDirectory;
 	}
 
-	protected function themeDirectory(): string {
+	protected function theme_directory(): string {
 		++$this->filesystemReads;
 
 		return $this->themeDirectory;
 	}
 
-	protected function randomSuffix(): string {
+	protected function random_suffix(): string {
 		$suffix = $this->nextSuffix();
 		++$this->suffixCounter;
 
 		return $suffix;
 	}
 
-	protected function deploymentSnapshot(): ?array {
+	protected function deployment_snapshot(): ?array {
 		++$this->deploymentSnapshotReads;
 		if ( $this->useDeploymentDependency ) {
-			return parent::deploymentSnapshot();
+			return parent::deployment_snapshot();
 		}
 
 		return $this->deploymentSnapshot;
 	}
 
-	protected function retentionConfiguration(): ?array {
+	protected function retention_configuration(): ?array {
 		return $this->retentionConfiguration;
 	}
 
-	protected function workerInspection(): ?array {
+	protected function worker_inspection(): ?array {
 		++$this->workerInspectionReads;
 		if ( $this->useWorkerDependency ) {
-			return parent::workerInspection();
+			return parent::worker_inspection();
 		}
 
 		return $this->workerInspection;
 	}
 
-	protected function openExclusive( string $path ): mixed {
+	protected function open_exclusive( string $path ): mixed {
 		++$this->markerOpens;
 		$this->openedPaths[] = $path;
 
@@ -163,7 +163,7 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 			$this->replaceDirectoryOnOpen = null;
 		}
 
-		$handle = parent::openExclusive( $path );
+		$handle = parent::open_exclusive( $path );
 		if ( is_resource( $handle ) && null !== $this->substituteBeforePermission ) {
 			unlink( $path );
 			symlink( $this->substituteBeforePermission, $path );
@@ -172,11 +172,11 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 		return $handle;
 	}
 
-	protected function creationMask(): int {
-		return $this->failPermission ? 0 : parent::creationMask();
+	protected function creation_mask(): int {
+		return $this->failPermission ? 0 : parent::creation_mask();
 	}
 
-	protected function promoteMarker( string $source, string $destination ): bool {
+	protected function promote_marker( string $source, string $destination ): bool {
 		if ( null !== $this->failPromotion && str_starts_with( $source, $this->failPromotion ) ) {
 			return false;
 		}
@@ -192,14 +192,14 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 		clearstatcache( true, $source );
 		$this->permissionsBeforePromotion[] = fileperms( $source ) & 0777;
 
-		return parent::promoteMarker( $source, $destination );
+		return parent::promote_marker( $source, $destination );
 	}
 
-	protected function removeMarker( string $path ): bool {
+	protected function remove_marker( string $path ): bool {
 		if ( null !== $this->failCleanup && str_starts_with( $path, $this->failCleanup ) ) {
 			return false;
 		}
 
-		return parent::removeMarker( $path );
+		return parent::remove_marker( $path );
 	}
 }

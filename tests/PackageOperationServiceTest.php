@@ -1565,46 +1565,46 @@ final class OperationTheme extends Theme {
 }
 
 final class OperationRemovalGateway implements PackageRemovalGateway {
-	public function pluginIsActive( string $identifier ): bool {
+	public function plugin_is_active( string $identifier ): bool {
 		unset( $identifier );
 		return false;
 	}
 
-	public function pluginHasActiveDependents( string $identifier ): bool {
+	public function plugin_has_active_dependents( string $identifier ): bool {
 		unset( $identifier );
 		return false;
 	}
 
-	public function pluginSharesDirectory( string $identifier ): bool {
+	public function plugin_shares_directory( string $identifier ): bool {
 		unset( $identifier );
 		return false;
 	}
 
-	public function pluginPathIsSafe( string $identifier ): bool {
+	public function plugin_path_is_safe( string $identifier ): bool {
 		unset( $identifier );
 		return true;
 	}
 
-	public function deactivatePlugin( string $identifier ): void {
+	public function deactivate_plugin( string $identifier ): void {
 		unset( $identifier );
 	}
 
-	public function deletePlugin( string $identifier ): bool {
+	public function delete_plugin( string $identifier ): bool {
 		unset( $identifier );
 		return true;
 	}
 
-	public function themeDeletionBlocker( string $stylesheet ): ?string {
+	public function theme_deletion_blocker( string $stylesheet ): ?string {
 		unset( $stylesheet );
 		return null;
 	}
 
-	public function themePathIsSafe( string $stylesheet ): bool {
+	public function theme_path_is_safe( string $stylesheet ): bool {
 		unset( $stylesheet );
 		return true;
 	}
 
-	public function deleteTheme( string $stylesheet ): bool {
+	public function delete_theme( string $stylesheet ): bool {
 		unset( $stylesheet );
 		return true;
 	}

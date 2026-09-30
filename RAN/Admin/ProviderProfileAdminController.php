@@ -129,7 +129,7 @@ class ProviderProfileAdminController {
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( $htmxRequest && $provider instanceof ProviderCode && is_string( $id ) ) {
-			$this->respondToHtmxCredentialValidation( $id, $message, $error, $status );
+			$this->respond_to_htmx_credential_validation( $id, $message, $error, $status );
 		}
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the existing public callback and caller contract. Retain the public named-parameter contract.
@@ -178,7 +178,7 @@ class ProviderProfileAdminController {
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( $htmxRequest && $provider instanceof ProviderCode ) {
-			$this->respondToHtmxPublicLookupProfile( $provider->value, $message, $error, $status );
+			$this->respond_to_htmx_public_lookup_profile( $provider->value, $message, $error, $status );
 		}
 	}
 	private function save_access_profile(
@@ -535,15 +535,14 @@ class ProviderProfileAdminController {
 		}
 		return $admin;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	protected function respondToHtmxPublicLookupProfile( string $provider, ?string $message, ?string $error, int $status ): never {
+	protected function respond_to_htmx_public_lookup_profile( string $provider, ?string $message, ?string $error, int $status ): never {
 		status_header( $status );
 		$this->emit_success_header( $message );
 		echo $this->dashboard->renderPublicLookupProfileRegion( $provider, $error ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
 		exit;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the existing public callback and caller contract. Retain the public named-parameter contract.
-	protected function respondToHtmxCredentialValidation( string $credentialId, ?string $message, ?string $error, int $status ): never {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	protected function respond_to_htmx_credential_validation( string $credentialId, ?string $message, ?string $error, int $status ): never {
 		status_header( $status );
 		$this->emit_success_header( $message );
 		echo '<div id="' . esc_attr( 'ran-booster-credential-validation-error-' . $credentialId ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"' . ( null === $error ? ' hidden' : '' ) . '><p>' . esc_html( $error ?? '' ) . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Core-owned escaped fragment. Retain the public named-parameter contract.

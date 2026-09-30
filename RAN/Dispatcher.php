@@ -208,7 +208,7 @@ class Dispatcher {
 					is_string( $request_method ) && 'POST' === strtoupper( $request_method )
 				);
 				if ( is_string( $redirect ) ) {
-					$this->redirectTo( $redirect );
+					$this->redirect_to( $redirect );
 				}
 
 				return;
@@ -237,13 +237,12 @@ class Dispatcher {
 				is_string( $request_method ) && 'POST' === strtoupper( $request_method )
 			);
 			if ( is_string( $redirect ) ) {
-				$this->redirectTo( $redirect );
+				$this->redirect_to( $redirect );
 			}
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	protected function redirectTo( string $url ): never {
+	protected function redirect_to( string $url ): never {
 		if ( $this->is_htmx_request() ) {
 			$location = wp_json_encode(
 				array(
@@ -307,7 +306,7 @@ class Dispatcher {
 			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirectTo( $admin_url . '?page=ran-booster&tab=overview' );
+			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
 		// Keep a failed attempt local to this protected POST response. Paths and
@@ -365,7 +364,7 @@ class Dispatcher {
 			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirectTo( $admin_url . '?page=ran-booster&tab=overview' );
+			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
 		$this->dashboard->setSecretsStorageProvisioningResult( $result );
@@ -421,7 +420,7 @@ class Dispatcher {
 			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirectTo( $admin_url . '?page=ran-booster&tab=overview' );
+			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
 		$this->dashboard->setSecretsStorageProvisioningResult( $result );
@@ -460,7 +459,7 @@ class Dispatcher {
 			};
 		} catch ( \Throwable $failure ) {
 			if ( $htmx_request ) {
-				$this->respondToHtmxDebugCapture(
+				$this->respond_to_htmx_debug_capture(
 					null,
 					__( 'Booster could not update the temporary logging capture. No deployment was interrupted.', 'ran-booster' ),
 					500
@@ -486,13 +485,13 @@ class Dispatcher {
 			$message = 'start' === $operation
 				? __( 'Temporary logging capture started.', 'ran-booster' )
 				: __( 'Temporary logging capture stopped.', 'ran-booster' );
-			$this->respondToHtmxDebugCapture( $message, null, 200 );
+			$this->respond_to_htmx_debug_capture( $message, null, 200 );
 		}
 
 		$admin_url = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$this->redirectTo( $admin_url . '?page=ran-booster&tab=troubleshooting&panel=debug-capture' );
+		$this->redirect_to( $admin_url . '?page=ran-booster&tab=troubleshooting&panel=debug-capture' );
 	}
 
 	/** @param array<string, mixed> $request */
@@ -545,7 +544,7 @@ class Dispatcher {
 		);
 
 		if ( $this->is_htmx_request() ) {
-			$this->respondToHtmxDiagnostics( $this->dashboard->troubleshootingSucceeded() );
+			$this->respond_to_htmx_diagnostics( $this->dashboard->troubleshootingSucceeded() );
 		}
 	}
 
@@ -559,8 +558,7 @@ class Dispatcher {
 	 * Respond to the explicit logging capture enhancement. The named event is
 	 * success-only; failures keep their explanation beside the capture controls.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	protected function respondToHtmxDebugCapture( ?string $message, ?string $error, int $status ): never {
+	protected function respond_to_htmx_debug_capture( ?string $message, ?string $error, int $status ): never {
 		status_header( $status );
 		if ( null !== $message ) {
 			header(
@@ -582,8 +580,7 @@ class Dispatcher {
 	 * Return the Core-owned diagnostics panel. A warning, partial, or failed
 	 * result remains visible in that panel and deliberately emits no toast.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	protected function respondToHtmxDiagnostics( bool $succeeded ): never {
+	protected function respond_to_htmx_diagnostics( bool $succeeded ): never {
 		if ( $succeeded ) {
 			header(
 				'HX-Trigger-After-Swap: ' . wp_json_encode(

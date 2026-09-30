@@ -548,7 +548,7 @@ final class DebugCaptureRedirect extends \RuntimeException {
 }
 
 class DebugCaptureTestDispatcher extends Dispatcher {
-	protected function redirectTo( string $url ): never {
+	protected function redirect_to( string $url ): never {
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The test spy preserves the fixed redirect URL for assertions.
 		throw new DebugCaptureRedirect( $url );
 	}
@@ -571,12 +571,12 @@ final class HtmxDiagnosticsResponse extends \RuntimeException {
 }
 
 final class HtmxDebugCaptureTestDispatcher extends DebugCaptureTestDispatcher {
-	protected function respondToHtmxDebugCapture( ?string $message, ?string $error, int $status ): never {
+	protected function respond_to_htmx_debug_capture( ?string $message, ?string $error, int $status ): never {
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The test spy captures fixed method arguments without output.
 		throw new HtmxDebugCaptureResponse( $message, $error, $status );
 	}
 
-	protected function respondToHtmxDiagnostics( bool $succeeded ): never {
+	protected function respond_to_htmx_diagnostics( bool $succeeded ): never {
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The test spy captures a fixed method argument without output.
 		throw new HtmxDiagnosticsResponse( $succeeded );
 	}

@@ -52,7 +52,7 @@ final class PluginRepositoryTest extends TestCase {
 	public function testPluginInstallationCheckRequiresAWordPressRegisteredPlugin(): void {
 		$repository = new class() extends PluginRepository {
 			public function packageExistsForTest( string $identifier ): bool {
-				return $this->packageExists( $identifier );
+				return $this->package_exists( $identifier );
 			}
 		};
 

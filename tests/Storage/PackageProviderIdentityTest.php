@@ -477,27 +477,27 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		return new class( $lifecycle ) extends AbstractPackageRepository {
 
 			public function storeForTest( Package $package ): PackageMutationResult {
-				return $this->storePackage( $package );
+				return $this->store_package( $package );
 			}
 
 			/** @param array<string, mixed> $input */
 			public function editForTest( string $identifier, array $input ): PackageMutationResult {
-				return $this->editPackage( $identifier, $input );
+				return $this->edit_package( $identifier, $input );
 			}
 
 			public function findForTest( string $identifier ): Package {
-				return $this->managedPackage( $identifier );
+				return $this->managed_package( $identifier );
 			}
 
-			protected function packageType(): int {
+			protected function package_type(): int {
 				return 1;
 			}
 
-			protected function packageExists( string $identifier ): bool {
+			protected function package_exists( string $identifier ): bool {
 				return true;
 			}
 
-			protected function packageFromInstallation( string $identifier ): Package {
+			protected function package_from_installation( string $identifier ): Package {
 				return new class( $identifier ) extends AbstractPackage {
 
 					public function __construct( private readonly string $identifier ) {
@@ -509,7 +509,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 				};
 			}
 
-			protected function notFoundException(): Throwable {
+			protected function not_found_exception(): Throwable {
 				return new RuntimeException( 'Package not found.' );
 			}
 		};

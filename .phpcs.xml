@@ -28,6 +28,10 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<!-- Runtime slug overrides: retained public contracts have declaration-local deferrals. -->
+		<include-pattern>/RAN/AbstractPackage.php</include-pattern>
+		<include-pattern>/RAN/Plugin.php</include-pattern>
+		<include-pattern>/RAN/Theme.php</include-pattern>
 		<!-- Secure-storage/uninstall/identity protected seams and configured-location callers are audited within the existing file scopes. -->
 		<!-- Connected public/protected naming: complete owned caller cohorts. -->
 		<include-pattern>/RAN/PackageRemoval/PackageRemovalGateway.php</include-pattern>

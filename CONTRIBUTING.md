@@ -44,13 +44,31 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The protected-contract cohort migrates 54 production declarations: five
+SecretsFile I/O and identity seams, 21 SecretsStorageProvisioner seams, 20
+AbstractPackageRepository/PluginRepository/ThemeRepository declarations, three
+AbstractPackage/Plugin/Theme runtime_slug declarations, and five Dispatcher and
+ProviderProfileAdminController response helpers. Connected callers and owned
+test overrides follow the new names. Parameter names, reference/default values,
+SensitiveParameter attributes, covariant and never return types, literals,
+SQL/transaction order, filesystem/crypto/rollback behavior and response output
+remain unchanged.
+
+The three runtime-slug files expand method enforcement to 164 files. Variable
+enforcement stays at 161 files. Their 26 retained mixed-case public declarations
+have individual deferred-contract annotations: the Package interface and dynamic
+getter dispatch still require a separate connected public migration. Magic
+methods retain their native names. All other files in this tranche were already
+scoped. This does not certify unknown external subclasses or complete the
+remaining public/private naming inventory.
+
 The secure-storage, uninstall and deployment-identity cohort under #167 migrates
 33 production declarations: seven protected LocalDataRemover helpers, eight
 protected SiteKeyStore storage seams, sixteen protected WpConfigSecretsPathWriter
 filesystem seams, PrivateLocationCandidateResolver::validate_configured and
 DeploymentAdminController::current_user_id. All connected callers and 28 owned
-test overrides follow those names. The seven affected production files were
-already included in both naming scopes; each scope remains 161 files.
+test overrides follow those names. Its seven affected production files were
+already included in both naming scopes.
 
 Only these method names change. Parameter names, types, defaults, visibility,
 SensitiveParameter attributes, retained public methods and serialized values are
@@ -74,7 +92,8 @@ retain their existing contracts. InstallationStore's retained camelCase named
 parameters have exact-line exceptions rather than broad suppression.
 
 Both naming scopes additionally include PackageRemovalGateway, InstallationStore
-and LocalSecretStoreUnavailable, bringing each scope to 161 files. Previously
+and LocalSecretStoreUnavailable. Those additions brought both scopes to 161 files;
+the runtime-slug additions above expand only method enforcement. Previously
 scoped implementations retain their audited enforcement. SQL/CAS/cache order,
 package deactivation/deletion and rollback, troubleshooting configuration reads,
 notice capability and once-only output, and exception messages/chaining are

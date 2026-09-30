@@ -777,7 +777,7 @@ final class FixedFacadePackage extends AbstractPackage {
 		return '101';
 	}
 
-	protected function runtimeSlug(): string {
+	protected function runtime_slug(): string {
 		return 'example';
 	}
 }

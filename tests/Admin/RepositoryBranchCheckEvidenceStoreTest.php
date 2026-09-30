@@ -219,7 +219,7 @@ final class BranchEvidencePackage extends AbstractPackage {
 		return $this->identifier;
 	}
 
-	protected function runtimeSlug(): string {
+	protected function runtime_slug(): string {
 		return 'example';
 	}
 }

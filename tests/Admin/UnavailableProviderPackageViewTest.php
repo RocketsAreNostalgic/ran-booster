@@ -689,7 +689,7 @@ final class UnavailableProviderPackage extends AbstractPackage {
 		return 'exact/exact.php';
 	}
 
-	protected function runtimeSlug(): string {
+	protected function runtime_slug(): string {
 		return 'exact';
 	}
 }

@@ -37,7 +37,7 @@ class SecretsStorageProvisioner {
 			return $environment;
 		}
 
-		$configured = $this->configuredPath();
+		$configured = $this->configured_path();
 		if ( false === $configured ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'configured_path_invalid',
@@ -45,7 +45,7 @@ class SecretsStorageProvisioner {
 			);
 		}
 		if ( is_string( $configured ) ) {
-			$path_is_safe = $this->validateConfiguredCandidate( $configured );
+			$path_is_safe = $this->validate_configured_candidate( $configured );
 			$source       = $this->configured_path_source( $configured, $path_is_safe );
 			if ( ! $path_is_safe ) {
 				return SecretsStorageProvisioningResult::storage_needs_attention(
@@ -67,7 +67,7 @@ class SecretsStorageProvisioner {
 			}
 
 			try {
-				return $this->managedStorageHealthy()
+				return $this->managed_storage_healthy()
 					? SecretsStorageProvisioningResult::storage_healthy( $configured, $source )
 					: SecretsStorageProvisioningResult::path_configured( $configured, $source );
 			} catch ( SecretsStorageUnavailable $failure ) {
@@ -93,7 +93,7 @@ class SecretsStorageProvisioner {
 
 		$discarded = array();
 		try {
-			$candidate = $this->resolveCandidate( $discarded );
+			$candidate = $this->resolve_candidate( $discarded );
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'location_unavailable',
@@ -139,7 +139,7 @@ class SecretsStorageProvisioner {
 		}
 
 		try {
-			$passed = $this->probeCandidate( $candidate );
+			$passed = $this->probe_candidate( $candidate );
 		} catch ( Throwable ) {
 			$passed = false;
 		}
@@ -150,7 +150,7 @@ class SecretsStorageProvisioner {
 				$candidate
 			);
 		}
-		if ( ! $this->validateConfiguredCandidate( $candidate ) ) {
+		if ( ! $this->validate_configured_candidate( $candidate ) ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'candidate_path_unsafe',
 				__( 'The private storage location changed or did not pass Booster\'s final path-safety check.', 'ran-booster' ),
@@ -167,7 +167,7 @@ class SecretsStorageProvisioner {
 		}
 
 		try {
-			$result = $this->writeConfiguration( $config, $candidate );
+			$result = $this->write_configuration( $config, $candidate );
 		} catch ( WpConfigPathWriteException $exception ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				$this->stable_code( $exception->reason(), 'wp_config_write_failed' ),
@@ -207,7 +207,7 @@ class SecretsStorageProvisioner {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function recoveryState( SecretsStorageProvisioningResult $status ): ?array {
 		$current            = $status->candidate_path();
-		$missing_ciphertext = null !== $current && $this->currentCiphertextIsAbsent( $current );
+		$missing_ciphertext = null !== $current && $this->current_ciphertext_is_absent( $current );
 		$missing_key        = 'storage_key_missing' === $status->code();
 		if ( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION !== $status->status()
 			|| null === $current
@@ -232,7 +232,7 @@ class SecretsStorageProvisioner {
 		}
 		if ( array() === $candidates ) {
 			try {
-				if ( $missing_key && $this->orphanedCiphertextResetAvailable( $current ) ) {
+				if ( $missing_key && $this->orphaned_ciphertext_reset_available( $current ) ) {
 					return array(
 						'state'          => 'reset_available',
 						'message'        => __(
@@ -244,7 +244,7 @@ class SecretsStorageProvisioner {
 						'confirmation'   => self::RESET_CONFIRMATION,
 					);
 				}
-				if ( $missing_ciphertext && $this->orphanedKeyResetAvailable( $current ) ) {
+				if ( $missing_ciphertext && $this->orphaned_key_reset_available( $current ) ) {
 					return array(
 						'state'          => 'reset_available',
 						'message'        => __(
@@ -343,9 +343,9 @@ class SecretsStorageProvisioner {
 
 		try {
 			if ( 'storage_key_missing' === $status->code() ) {
-				$this->resetOrphanedCiphertext( $current );
+				$this->reset_orphaned_ciphertext( $current );
 			} else {
-				$this->resetOrphanedKey( $current );
+				$this->reset_orphaned_key( $current );
 			}
 		} catch ( Throwable ) {
 			return $this->reset_failure( $status, 'storage_reset_failed', __( 'The incomplete credential storage could not be reset safely. No storage reset was confirmed.', 'ran-booster' ) );
@@ -378,7 +378,7 @@ class SecretsStorageProvisioner {
 		}
 
 		try {
-			$result = $this->retargetConfiguration( $config, $current, $offer['candidate_path'] );
+			$result = $this->retarget_configuration( $config, $current, $offer['candidate_path'] );
 		} catch ( WpConfigPathWriteException $exception ) {
 			return $this->recovery_failure(
 				$current,
@@ -395,40 +395,35 @@ class SecretsStorageProvisioner {
 	}
 
 	/** @param list<array{directory:string,code:string,reason:string,component:string|null}>|null $discarded */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function resolveCandidate( ?array &$discarded = null ): ?string {
+	protected function resolve_candidate( ?array &$discarded = null ): ?string {
 		return $this->resolver->resolve(
-			$this->wordpressRoot(),
-			$this->contentDirectory(),
-			$this->pluginDirectory(),
-			$this->documentRoot(),
+			$this->wordpress_root(),
+			$this->content_directory(),
+			$this->plugin_directory(),
+			$this->document_root(),
 			$discarded
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function validateConfiguredCandidate( string $candidate ): bool {
+	protected function validate_configured_candidate( string $candidate ): bool {
 		return $this->resolver->validate_configured(
 			$candidate,
-			$this->wordpressRoot(),
-			$this->contentDirectory(),
-			$this->pluginDirectory(),
-			$this->documentRoot()
+			$this->wordpress_root(),
+			$this->content_directory(),
+			$this->plugin_directory(),
+			$this->document_root()
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function probeCandidate( string $candidate ): bool {
+	protected function probe_candidate( string $candidate ): bool {
 		return $this->probe->probe( $candidate );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function writeConfiguration( string $config, string $candidate ): WpConfigPathWriteResult {
+	protected function write_configuration( string $config, string $candidate ): WpConfigPathWriteResult {
 		return $this->writer->write( $config, $candidate );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function retargetConfiguration(
+	protected function retarget_configuration(
 		string $config,
 		string $current,
 		string $replacement
@@ -436,8 +431,7 @@ class SecretsStorageProvisioner {
 		return $this->writer->retargetOwnedDefinition( $config, $current, $replacement );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function recoveryCredentialsFit( string $candidate ): bool {
+	protected function recovery_credentials_fit( string $candidate ): bool {
 		if ( null === $this->secrets ) {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
 		}
@@ -445,13 +439,11 @@ class SecretsStorageProvisioner {
 		return $this->secrets->recoveryCredentialsFitAt( $candidate );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function orphanedKeyResetAvailable( string $current ): bool {
+	protected function orphaned_key_reset_available( string $current ): bool {
 		return null !== $this->secrets && $this->secrets->canResetOrphanedKeyAt( $current );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function resetOrphanedKey( string $current ): void {
+	protected function reset_orphaned_key( string $current ): void {
 		if ( null === $this->secrets ) {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
 		}
@@ -459,13 +451,11 @@ class SecretsStorageProvisioner {
 		$this->secrets->resetOrphanedKeyAt( $current );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function orphanedCiphertextResetAvailable( string $current ): bool {
+	protected function orphaned_ciphertext_reset_available( string $current ): bool {
 		return null !== $this->secrets && $this->secrets->canResetOrphanedCiphertextAt( $current );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function resetOrphanedCiphertext( string $current ): void {
+	protected function reset_orphaned_ciphertext( string $current ): void {
 		if ( null === $this->secrets ) {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
 		}
@@ -473,39 +463,33 @@ class SecretsStorageProvisioner {
 		$this->secrets->resetOrphanedCiphertextAt( $current );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function wordpressRoot(): string {
+	protected function wordpress_root(): string {
 		return defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '';
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function contentDirectory(): string {
+	protected function content_directory(): string {
 		return defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '';
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function pluginDirectory(): string {
+	protected function plugin_directory(): string {
 		$path = realpath( dirname( __DIR__, 2 ) );
 
 		return false === $path ? dirname( __DIR__, 2 ) : $path;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function documentRoot(): ?string {
+	protected function document_root(): ?string {
 		$root = $_SERVER['DOCUMENT_ROOT'] ?? null;
 
 		return is_string( $root ) && '' !== trim( $root ) ? $root : null;
 	}
 
 	/** @return list<string> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function includedFiles(): array {
+	protected function included_files(): array {
 		return get_included_files();
 	}
 
 	/** @return string|false|null False means defined with an invalid value. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function configuredPath(): string|false|null {
+	protected function configured_path(): string|false|null {
 		if ( defined( self::UNSUPPORTED_FILE_CONSTANT_NAME ) ) {
 			return false;
 		}
@@ -523,20 +507,17 @@ class SecretsStorageProvisioner {
 		return null;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function isMultisiteInstallation(): bool {
+	protected function is_multisite_installation(): bool {
 		return function_exists( 'is_multisite' ) && is_multisite();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function sodiumAvailable(): bool {
+	protected function sodium_available(): bool {
 		return extension_loaded( 'sodium' )
 			&& function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt' )
 			&& function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_decrypt' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function supportedLocalPlatform(): bool {
+	protected function supported_local_platform(): bool {
 		if ( ! $this->supported_posix_platform() ) {
 			return false;
 		}
@@ -544,13 +525,12 @@ class SecretsStorageProvisioner {
 			return false;
 		}
 
-		$root = $this->wordpressRoot();
+		$root = $this->wordpress_root();
 
 		return '' !== $root && stream_is_local( $root );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function managedStorageHealthy(): bool {
+	protected function managed_storage_healthy(): bool {
 		return null !== $this->secrets && $this->secrets->hasHealthyManagedStorage();
 	}
 
@@ -567,17 +547,17 @@ class SecretsStorageProvisioner {
 	}
 
 	private function supported_automatic_platform(): bool {
-		return $this->supportedLocalPlatform();
+		return $this->supported_local_platform();
 	}
 
 	private function runtime_failure(): ?SecretsStorageProvisioningResult {
-		if ( ! $this->sodiumAvailable() ) {
+		if ( ! $this->sodium_available() ) {
 			return SecretsStorageProvisioningResult::unsupported(
 				'sodium_unavailable',
 				'The Sodium extension is required for encrypted secrets storage.'
 			);
 		}
-		if ( $this->isMultisiteInstallation() ) {
+		if ( $this->is_multisite_installation() ) {
 			return SecretsStorageProvisioningResult::unsupported(
 				'multisite_unsupported',
 				'Encrypted file-backed secrets storage is not available on multisite in this Beta release.'
@@ -599,7 +579,7 @@ class SecretsStorageProvisioner {
 			if ( null !== $config && $this->writer->hasOwnedDefinition( $config, $configured ) ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
-			if ( $path_is_safe && $configured === $this->resolveCandidate() ) {
+			if ( $path_is_safe && $configured === $this->resolve_candidate() ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
 		} catch ( Throwable ) {
@@ -659,7 +639,7 @@ class SecretsStorageProvisioner {
 
 					continue;
 				}
-				$fit      = $this->recoveryCredentialsFit( $candidate );
+				$fit      = $this->recovery_credentials_fit( $candidate );
 				$revision = $this->recovery_revision( $candidate );
 				if ( null === $revision ) {
 					$complete = false;
@@ -669,7 +649,7 @@ class SecretsStorageProvisioner {
 				$candidates[] = array(
 					'candidate_path' => $candidate,
 					'token'          => $revision,
-					'safe'           => $this->validateConfiguredCandidate( $candidate ),
+					'safe'           => $this->validate_configured_candidate( $candidate ),
 					'fit'            => $fit,
 				);
 			} catch ( Throwable ) {
@@ -693,8 +673,7 @@ class SecretsStorageProvisioner {
 			: null;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function currentCiphertextIsAbsent( string $current ): bool {
+	protected function current_ciphertext_is_absent( string $current ): bool {
 		if ( file_exists( $current ) || is_link( $current ) ) {
 			return false;
 		}
@@ -958,7 +937,7 @@ class SecretsStorageProvisioner {
 	}
 
 	private function loaded_wp_config_path(): ?string {
-		$root = $this->canonical_directory( $this->wordpressRoot() );
+		$root = $this->canonical_directory( $this->wordpress_root() );
 		if ( null === $root ) {
 			return null;
 		}
@@ -979,7 +958,7 @@ class SecretsStorageProvisioner {
 		$supported = array_values( array_unique( $supported ) );
 
 		$loaded = array();
-		foreach ( $this->includedFiles() as $included ) {
+		foreach ( $this->included_files() as $included ) {
 			if ( ! is_string( $included ) || 'wp-config.php' !== basename( $included ) ) {
 				continue;
 			}

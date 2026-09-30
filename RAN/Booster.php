@@ -55,8 +55,10 @@ class Booster {
 		'80-responsive.css',
 	);
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Retain the public property or external DTO contract.
 	public $boosterPath;
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Retain the public property or external DTO contract.
 	public $boosterUrl;
 
 	/** @internal Core constructs the live runtime with its request-local container. */
@@ -115,18 +117,18 @@ class Booster {
 		add_action( 'admin_enqueue_scripts', array( $this, 'loadScripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'loadCredentialExpiryNoticeScript' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'loadBackgroundDeploymentFailureNoticeScript' ) );
-		$expiryNotice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
-		add_action( 'admin_notices', array( $expiryNotice, 'render' ) );
-		add_action( 'network_admin_notices', array( $expiryNotice, 'render' ) );
-		$failureNotice = $this->service( \RAN\Admin\DeploymentAdminPresenter::class );
-		add_action( 'admin_notices', array( $failureNotice, 'render' ) );
-		add_action( 'network_admin_notices', array( $failureNotice, 'render' ) );
-		$runtimeNotice = $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class );
-		add_action( 'admin_notices', array( $runtimeNotice, 'render' ) );
-		add_action( 'network_admin_notices', array( $runtimeNotice, 'render' ) );
-		$databaseNotice = $this->service( \RAN\Admin\DatabaseCompatibilityNotice::class );
-		add_action( 'admin_notices', array( $databaseNotice, 'render' ) );
-		add_action( 'network_admin_notices', array( $databaseNotice, 'render' ) );
+		$expiry_notice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
+		add_action( 'admin_notices', array( $expiry_notice, 'render' ) );
+		add_action( 'network_admin_notices', array( $expiry_notice, 'render' ) );
+		$failure_notice = $this->service( \RAN\Admin\DeploymentAdminPresenter::class );
+		add_action( 'admin_notices', array( $failure_notice, 'render' ) );
+		add_action( 'network_admin_notices', array( $failure_notice, 'render' ) );
+		$runtime_notice = $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class );
+		add_action( 'admin_notices', array( $runtime_notice, 'render' ) );
+		add_action( 'network_admin_notices', array( $runtime_notice, 'render' ) );
+		$database_notice = $this->service( \RAN\Admin\DatabaseCompatibilityNotice::class );
+		add_action( 'admin_notices', array( $database_notice, 'render' ) );
+		add_action( 'network_admin_notices', array( $database_notice, 'render' ) );
 		add_action( 'load-plugins.php', array( $this->service( \RAN\Admin\ManagedPluginFailureRows::class ), 'register' ) );
 	}
 
@@ -246,10 +248,10 @@ class Booster {
 				require_once ABSPATH . 'wp-admin/includes/plugin.php';
 			}
 
-			$installedPlugins = get_plugins();
-			$extensions       = $this->extension_cards( is_array( $installedPlugins ) ? $installedPlugins : array() );
-			$pluginsUrl       = is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' );
-			$this->service( 'RAN\Dashboard' )->getExtensions( $extensions, $pluginsUrl );
+			$installed_plugins = get_plugins();
+			$extensions        = $this->extension_cards( is_array( $installed_plugins ) ? $installed_plugins : array() );
+			$plugins_url       = is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' );
+			$this->service( 'RAN\Dashboard' )->getExtensions( $extensions, $plugins_url );
 		} catch ( \Throwable $failure ) {
 			BoosterLogger::logException(
 				'Extensions page unavailable',
@@ -268,10 +270,10 @@ class Booster {
 		}
 	}
 
-	/** @param array<string, array<string, mixed>> $installedPlugins
+	/** @param array<string, array<string, mixed>> $installed_plugins
 	 *  @return list<array<string, mixed>>
 	 */
-	private function extension_cards( array $installedPlugins ): array {
+	private function extension_cards( array $installed_plugins ): array {
 		$catalogue = array(
 			array(
 				'id'            => 'ran-booster-bitbucket',
@@ -326,10 +328,10 @@ class Booster {
 		);
 
 		foreach ( $catalogue as &$extension ) {
-			$installed              = array_key_exists( $extension['plugin'], $installedPlugins );
-			$networkActiveAvailable = function_exists( __NAMESPACE__ . '\\is_plugin_active_for_network' ) || function_exists( 'is_plugin_active_for_network' );
-			$active                 = $installed && ( is_plugin_active( $extension['plugin'] ) || ( $networkActiveAvailable && is_plugin_active_for_network( $extension['plugin'] ) ) );
-			$compatible             = true;
+			$installed                = array_key_exists( $extension['plugin'], $installed_plugins );
+			$network_active_available = function_exists( __NAMESPACE__ . '\\is_plugin_active_for_network' ) || function_exists( 'is_plugin_active_for_network' );
+			$active                   = $installed && ( is_plugin_active( $extension['plugin'] ) || ( $network_active_available && is_plugin_active_for_network( $extension['plugin'] ) ) );
+			$compatible               = true;
 			foreach ( $extension['required_apis'] as $marker => $version ) {
 				if ( ! defined( $marker ) || constant( $marker ) !== $version ) {
 					$compatible = false;
@@ -337,6 +339,7 @@ class Booster {
 				}
 			}
 
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			$extension['image_url']  = trailingslashit( $this->boosterUrl ) . 'assets/extensions/' . $extension['image'];
 			$extension['compatible'] = $compatible;
 			$extension['state']      = ! $installed
@@ -434,15 +437,15 @@ class Booster {
 
 		// Read-only routing state; this guard prevents state access and performs no action.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$pageInput = $_GET['page'] ?? '';
+		$page_input = $_GET['page'] ?? '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tabInput = $_GET['tab'] ?? '';
-		if ( ! is_string( $pageInput ) || ! is_string( $tabInput ) ) {
+		$tab_input = $_GET['tab'] ?? '';
+		if ( ! is_string( $page_input ) || ! is_string( $tab_input ) ) {
 			return false;
 		}
 
-		if ( 'ran-booster' !== sanitize_key( wp_unslash( $pageInput ) )
-			|| 'troubleshooting' !== sanitize_key( wp_unslash( $tabInput ) ) ) {
+		if ( 'ran-booster' !== sanitize_key( wp_unslash( $page_input ) )
+			|| 'troubleshooting' !== sanitize_key( wp_unslash( $tab_input ) ) ) {
 			return false;
 		}
 
@@ -450,9 +453,9 @@ class Booster {
 		// defer sidecar validation during bootstrap; Logging reads
 		// only its bounded file when rendered.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$panelInput = $_GET['panel'] ?? 'diagnostics';
-		$panel      = is_string( $panelInput )
-			? sanitize_key( wp_unslash( $panelInput ) )
+		$panel_input = $_GET['panel'] ?? 'diagnostics';
+		$panel       = is_string( $panel_input )
+			? sanitize_key( wp_unslash( $panel_input ) )
 			: 'diagnostics';
 
 		return ! in_array( $panel, array( 'activity', 'deployment-activity' ), true );
@@ -464,151 +467,181 @@ class Booster {
 			return;
 		}
 
-		$scriptPath                    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster.js';
-		$secureInputsScriptPath        = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-secure-inputs.js';
-		$portabilityScriptPath         = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-portability.js';
-		$enhancedMutationScriptPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-enhanced-mutations.js';
-		$packageScriptPath             = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-packages.js';
-		$repositoryPickerScriptPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-repository-picker.js';
-		$scriptVersion                 = file_exists( $scriptPath ) ? filemtime( $scriptPath ) : null;
-		$secureInputsScriptVersion     = file_exists( $secureInputsScriptPath ) ? filemtime( $secureInputsScriptPath ) : null;
-		$portabilityScriptVersion      = file_exists( $portabilityScriptPath ) ? filemtime( $portabilityScriptPath ) : null;
-		$enhancedMutationScriptVersion = file_exists( $enhancedMutationScriptPath ) ? filemtime( $enhancedMutationScriptPath ) : null;
-		$packageScriptVersion          = file_exists( $packageScriptPath ) ? filemtime( $packageScriptPath ) : null;
-		$repositoryPickerScriptVersion = file_exists( $repositoryPickerScriptPath ) ? filemtime( $repositoryPickerScriptPath ) : null;
-		$scriptDependencies            = array();
-		$requestedTab                  = null;
-		$isTransporterPage             = 'ran-booster_page_ran-booster-transporter' === $hook;
-		$shouldEnqueuePortability      = false;
-		$shouldEnqueueHtmx             = $isTransporterPage || in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$script_path = trailingslashit( $this->boosterPath ) . 'assets/ran-booster.js';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$secure_inputs_script_path = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-secure-inputs.js';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$portability_script_path = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-portability.js';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$enhanced_mutation_script_path = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-enhanced-mutations.js';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$package_script_path = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-packages.js';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$repository_picker_script_path    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-repository-picker.js';
+		$script_version                   = file_exists( $script_path ) ? filemtime( $script_path ) : null;
+		$secure_inputs_script_version     = file_exists( $secure_inputs_script_path ) ? filemtime( $secure_inputs_script_path ) : null;
+		$portability_script_version       = file_exists( $portability_script_path ) ? filemtime( $portability_script_path ) : null;
+		$enhanced_mutation_script_version = file_exists( $enhanced_mutation_script_path ) ? filemtime( $enhanced_mutation_script_path ) : null;
+		$package_script_version           = file_exists( $package_script_path ) ? filemtime( $package_script_path ) : null;
+		$repository_picker_script_version = file_exists( $repository_picker_script_path ) ? filemtime( $repository_picker_script_path ) : null;
+		$script_dependencies              = array();
+		$requested_tab                    = null;
+		$is_transporter_page              = 'ran-booster_page_ran-booster-transporter' === $hook;
+		$should_enqueue_portability       = false;
+		$should_enqueue_htmx              = $is_transporter_page || in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
 
-		if ( 'toplevel_page_ran-booster' === $hook || $isTransporterPage ) {
+		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page ) {
 			// Read-only allowlisted navigation state; no action is performed from this value.
 			// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only navigation state.
-			if ( $isTransporterPage ) {
-				$requestedTab = 'portability';
+			if ( $is_transporter_page ) {
+				$requested_tab = 'portability';
 			} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
-					$requestedTab = sanitize_key( wp_unslash( $_GET['tab'] ) );
+					$requested_tab = sanitize_key( wp_unslash( $_GET['tab'] ) );
 			}
 			// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-			if ( $this->isProviderAdminTab( $requestedTab ) || in_array( $requestedTab, array( 'portability', 'troubleshooting' ), true ) ) {
-				$shouldEnqueueHtmx = true;
+			if ( $this->isProviderAdminTab( $requested_tab ) || in_array( $requested_tab, array( 'portability', 'troubleshooting' ), true ) ) {
+				$should_enqueue_htmx = true;
 			}
 		}
 
-		if ( $shouldEnqueueHtmx ) {
-			$htmxPath    = trailingslashit( $this->boosterPath ) . 'assets/lib/htmx/htmx.min.js';
-			$htmxVersion = file_exists( $htmxPath ) ? filemtime( $htmxPath ) : null;
+		if ( $should_enqueue_htmx ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+			$htmx_path    = trailingslashit( $this->boosterPath ) . 'assets/lib/htmx/htmx.min.js';
+			$htmx_version = file_exists( $htmx_path ) ? filemtime( $htmx_path ) : null;
 
 			wp_register_script(
 				'ran-booster-htmx',
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 				trailingslashit( $this->boosterUrl ) . 'assets/lib/htmx/htmx.min.js',
 				array(),
-				$htmxVersion,
+				$htmx_version,
 				true
 			);
 			wp_enqueue_script( 'ran-booster-htmx' );
-			$scriptDependencies[] = 'ran-booster-htmx';
+			$script_dependencies[] = 'ran-booster-htmx';
 		}
 
-		$styleDependencies   = array();
-		$adminShellStylePath = trailingslashit( $this->boosterPath ) . 'assets/ran-admin-shell.css';
+		$style_dependencies = array();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$admin_shell_style_path = trailingslashit( $this->boosterPath ) . 'assets/ran-admin-shell.css';
 		wp_register_style(
 			'ran-booster-admin-shell',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-admin-shell.css',
 			array(),
-			file_exists( $adminShellStylePath ) ? filemtime( $adminShellStylePath ) : null
+			file_exists( $admin_shell_style_path ) ? filemtime( $admin_shell_style_path ) : null
 		);
 		wp_enqueue_style( 'ran-booster-admin-shell' );
-		$styleDependencies[] = 'ran-booster-admin-shell';
-		foreach ( self::ADMIN_STYLE_COMPONENTS as $styleComponent ) {
-			$styleComponentPath = trailingslashit( $this->boosterPath ) . 'assets/ran-booster/' . $styleComponent;
-			$styleHandle        = '80-responsive.css' === $styleComponent
+		$style_dependencies[] = 'ran-booster-admin-shell';
+		foreach ( self::ADMIN_STYLE_COMPONENTS as $style_component ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+			$style_component_path = trailingslashit( $this->boosterPath ) . 'assets/ran-booster/' . $style_component;
+			$style_handle         = '80-responsive.css' === $style_component
 				? 'ran-booster-styles'
-				: 'ran-booster-' . basename( $styleComponent, '.css' );
+				: 'ran-booster-' . basename( $style_component, '.css' );
 
 			wp_register_style(
-				$styleHandle,
-				trailingslashit( $this->boosterUrl ) . 'assets/ran-booster/' . $styleComponent,
-				$styleDependencies,
-				file_exists( $styleComponentPath ) ? filemtime( $styleComponentPath ) : null
+				$style_handle,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+				trailingslashit( $this->boosterUrl ) . 'assets/ran-booster/' . $style_component,
+				$style_dependencies,
+				file_exists( $style_component_path ) ? filemtime( $style_component_path ) : null
 			);
-			$styleDependencies = array( $styleHandle );
+			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
-			$extensionDetailsPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-extension-details.js';
-			$extensionDetailsVersion = file_exists( $extensionDetailsPath ) ? filemtime( $extensionDetailsPath ) : null;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+			$extension_details_path    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-extension-details.js';
+			$extension_details_version = file_exists( $extension_details_path ) ? filemtime( $extension_details_path ) : null;
 
 			wp_enqueue_style( 'thickbox' );
 			wp_enqueue_script( 'thickbox' );
 			wp_register_script(
 				'ran-booster-extension-details',
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 				trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-extension-details.js',
 				array( 'jquery', 'thickbox' ),
-				$extensionDetailsVersion,
+				$extension_details_version,
 				true
 			);
 			wp_enqueue_script( 'ran-booster-extension-details' );
 			return;
 		}
-		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', array_merge( $scriptDependencies, array( 'wp-i18n' ) ), $scriptVersion, true );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		wp_register_script( 'ran-booster-js', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster.js', array_merge( $script_dependencies, array( 'wp-i18n' ) ), $script_version, true );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 		wp_set_script_translations( 'ran-booster-js', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-secure-inputs',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-secure-inputs.js',
 			array( 'ran-booster-js', 'wp-i18n' ),
-			$secureInputsScriptVersion,
+			$secure_inputs_script_version,
 			true
 		);
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 		wp_set_script_translations( 'ran-booster-secure-inputs', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-enhanced-mutations.js',
 			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
-			$enhancedMutationScriptVersion,
+			$enhanced_mutation_script_version,
 			true
 		);
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 		wp_set_script_translations( 'ran-booster-enhanced-mutations', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-packages',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-packages.js',
 			array( 'ran-booster-enhanced-mutations', 'wp-i18n' ),
-			$packageScriptVersion,
+			$package_script_version,
 			true
 		);
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 		wp_set_script_translations( 'ran-booster-packages', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 		wp_register_script(
 			'ran-booster-repository-picker',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-repository-picker.js',
 			array( 'ran-booster-js', 'wp-i18n' ),
-			$repositoryPickerScriptVersion,
+			$repository_picker_script_version,
 			true
 		);
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 		wp_set_script_translations( 'ran-booster-repository-picker', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 
-		if ( 'toplevel_page_ran-booster' === $hook || $isTransporterPage ) {
-			$onboardingPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-onboarding.css';
-			$onboardingVersion = file_exists( $onboardingPath ) ? filemtime( $onboardingPath ) : null;
-			wp_register_style( 'ran-booster-onboarding', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-onboarding.css', array( 'ran-booster-styles' ), $onboardingVersion );
+		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+			$onboarding_path    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-onboarding.css';
+			$onboarding_version = file_exists( $onboarding_path ) ? filemtime( $onboarding_path ) : null;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+			wp_register_style( 'ran-booster-onboarding', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-onboarding.css', array( 'ran-booster-styles' ), $onboarding_version );
 			wp_enqueue_style( 'ran-booster-onboarding' );
 
-			if ( 'documentation' === $requestedTab ) {
-				$documentationPath    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-documentation.css';
-				$documentationVersion = file_exists( $documentationPath ) ? filemtime( $documentationPath ) : null;
-				wp_register_style( 'ran-booster-documentation', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-documentation.css', array( 'ran-booster-styles' ), $documentationVersion );
+			if ( 'documentation' === $requested_tab ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+				$documentation_path    = trailingslashit( $this->boosterPath ) . 'assets/ran-booster-documentation.css';
+				$documentation_version = file_exists( $documentation_path ) ? filemtime( $documentation_path ) : null;
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+				wp_register_style( 'ran-booster-documentation', trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-documentation.css', array( 'ran-booster-styles' ), $documentation_version );
 				wp_enqueue_style( 'ran-booster-documentation' );
 			}
 
-			if ( 'portability' === $requestedTab ) {
+			if ( 'portability' === $requested_tab ) {
 				wp_register_script(
 					'ran-booster-portability',
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 					trailingslashit( $this->boosterUrl ) . 'assets/ran-booster-portability.js',
 					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'wp-i18n' ),
-					$portabilityScriptVersion,
+					$portability_script_version,
 					true
 				);
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 				wp_set_script_translations( 'ran-booster-portability', 'ran-booster', trailingslashit( $this->boosterPath ) . 'languages' );
 				wp_localize_script(
 					'ran-booster-portability',
@@ -617,12 +650,12 @@ class Booster {
 						'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 					)
 				);
-				$shouldEnqueuePortability = true;
+				$should_enqueue_portability = true;
 			}
 		}
 
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
-			$packageSettings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->buildPackageForm();
+			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->buildPackageForm();
 
 			wp_localize_script(
 				'ran-booster-packages',
@@ -640,8 +673,8 @@ class Booster {
 					'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
 					'action'          => \RAN\Admin\RepositoryPickerController::AJAX_ACTION,
 					'nonce'           => wp_create_nonce( \RAN\Admin\RepositoryPickerController::NONCE_ACTION ),
-					'defaultProvider' => $packageSettings['default_provider'],
-					'providers'       => $packageSettings['providers'],
+					'defaultProvider' => $package_settings['default_provider'],
+					'providers'       => $package_settings['providers'],
 				)
 			);
 		}
@@ -678,7 +711,7 @@ class Booster {
 		wp_enqueue_script( 'ran-booster-js' );
 		wp_enqueue_script( 'ran-booster-secure-inputs' );
 		wp_enqueue_script( 'ran-booster-enhanced-mutations' );
-		if ( $shouldEnqueuePortability ) {
+		if ( $should_enqueue_portability ) {
 			wp_enqueue_script( 'ran-booster-portability' );
 		}
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
@@ -728,13 +761,15 @@ class Booster {
 			return;
 		}
 
-		$scriptPath    = trailingslashit( $this->boosterPath ) . 'assets/credential-expiry-notice.js';
-		$scriptVersion = file_exists( $scriptPath ) ? filemtime( $scriptPath ) : null;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$script_path    = trailingslashit( $this->boosterPath ) . 'assets/credential-expiry-notice.js';
+		$script_version = file_exists( $script_path ) ? filemtime( $script_path ) : null;
 		wp_register_script(
 			'ran-booster-credential-expiry-notice',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			trailingslashit( $this->boosterUrl ) . 'assets/credential-expiry-notice.js',
 			array(),
-			$scriptVersion,
+			$script_version,
 			true
 		);
 		wp_localize_script(
@@ -761,13 +796,15 @@ class Booster {
 			return;
 		}
 
-		$scriptPath    = trailingslashit( $this->boosterPath ) . 'assets/background-deployment-failure-notice.js';
-		$scriptVersion = file_exists( $scriptPath ) ? filemtime( $scriptPath ) : null;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
+		$script_path    = trailingslashit( $this->boosterPath ) . 'assets/background-deployment-failure-notice.js';
+		$script_version = file_exists( $script_path ) ? filemtime( $script_path ) : null;
 		wp_register_script(
 			'ran-booster-background-deployment-failure-notice',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 			trailingslashit( $this->boosterUrl ) . 'assets/background-deployment-failure-notice.js',
 			array(),
-			$scriptVersion,
+			$script_version,
 			true
 		);
 		wp_localize_script(

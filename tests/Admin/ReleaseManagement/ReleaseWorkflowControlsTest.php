@@ -769,7 +769,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 	private function registryWithoutMetadata( RepositoryProvider $provider ): ProviderRegistry {
 		$providers = new ProviderRegistry( array( $provider ) );
-		( new \ReflectionProperty( ProviderRegistry::class, 'providerMetadata' ) )->setValue( $providers, array() );
+		( new \ReflectionProperty( ProviderRegistry::class, 'provider_metadata' ) )->setValue( $providers, array() );
 		return $providers;
 	}
 

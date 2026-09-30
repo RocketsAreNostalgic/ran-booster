@@ -259,16 +259,17 @@ class CorePackageExecutor {
 	}
 
 	private function pre_download_filter( string $type, string $action, PreparedArtifact $artifact, ?string $identifier ): Closure {
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- WordPress upgrader_pre_download supplies the upgrader in slot three before the required hook metadata.
 		return static function ( mixed $reply, mixed $package, mixed $upgrader, array $extra ) use ( $type, $action, $artifact, $identifier ): mixed {
 			if ( false !== $reply ) {
 				return $reply;
 			}
 			$archive_path         = $artifact->getPath();
-			$operation_identifier = null === $identifier || $identifier === ( $extra[ $type ] ?? null );
+			$operation_identifier = null === $identifier || ( $extra[ $type ] ?? null ) === $identifier;
 			if ( is_string( $package )
 				&& hash_equals( $archive_path, $package )
-				&& $type === ( $extra['type'] ?? null )
-				&& $action === ( $extra['action'] ?? null )
+				&& ( $extra['type'] ?? null ) === $type
+				&& ( $extra['action'] ?? null ) === $action
 				&& $operation_identifier
 			) {
 				$artifact->assertUnchanged();
@@ -285,6 +286,7 @@ class CorePackageExecutor {
 		if ( 'theme' === $type ) {
 			$theme_root = realpath( get_theme_root( $identifier ) );
 			if ( false === $theme_root || ! is_dir( $theme_root ) ) {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress automatic_updates_is_vcs_checkout supplies context even when the unavailable-root callback passes checkout through.
 				return static fn ( bool $checkout, string $context ): bool => $checkout;
 			}
 			$allowed_context = $theme_root;
@@ -308,10 +310,11 @@ class CorePackageExecutor {
 		string $action,
 		?string $identifier
 	): Closure {
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- WordPress upgrader_source_selection supplies the upgrader in slot three before the required hook metadata.
 		return static function ( mixed $source, mixed $remote_source, mixed $upgrader, array $extra ) use ( $slug, $subdirectory, $type, $action, $identifier ): mixed {
-			if ( $type !== ( $extra['type'] ?? null )
-				|| $action !== ( $extra['action'] ?? null )
-				|| ( null !== $identifier && $identifier !== ( $extra[ $type ] ?? null ) )
+			if ( ( $extra['type'] ?? null ) !== $type
+				|| ( $extra['action'] ?? null ) !== $action
+				|| ( null !== $identifier && ( $extra[ $type ] ?? null ) !== $identifier )
 			) {
 				return $source;
 			}
@@ -397,7 +400,7 @@ class CorePackageExecutor {
 				$segments = explode( '/', trim( $name, '/' ) );
 				if ( count( $segments ) !== count( $subdirectory_segments ) + 2
 					|| 'style.css' !== end( $segments )
-					|| $subdirectory_segments !== array_slice( $segments, 1, -1 )
+					|| array_slice( $segments, 1, -1 ) !== $subdirectory_segments
 				) {
 					continue;
 				}
@@ -430,6 +433,7 @@ class CorePackageExecutor {
 
 	/** @param list<array<string, mixed>> $completions */
 	private function completion_collector( array &$completions ): Closure {
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- WordPress upgrader_process_complete supplies the upgrader before the collected completion metadata.
 		return static function ( object $upgrader, array $extra ) use ( &$completions ): void {
 			$completions[] = $extra;
 		};
@@ -496,14 +500,14 @@ class CorePackageExecutor {
 
 	/** @param array<string, mixed> $completion */
 	private function completion_matches( array $completion, string $type, string $action, ?string $identifier ): bool {
-		if ( $type !== ( $completion['type'] ?? null ) || $action !== ( $completion['action'] ?? null ) ) {
+		if ( ( $completion['type'] ?? null ) !== $type || ( $completion['action'] ?? null ) !== $action ) {
 			return false;
 		}
 		if ( null === $identifier ) {
 			return true;
 		}
 
-		return $identifier === ( $completion[ $type ] ?? null );
+		return ( $completion[ $type ] ?? null ) === $identifier;
 	}
 
 	private function is_restored_plugin_failure( string $type, mixed $result ): bool {

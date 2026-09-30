@@ -11,7 +11,7 @@ final class GitReferenceSyntax {
 
 	public static function isValidNamedReference( string $reference ): bool {
 		if ( '' === $reference
-			|| $reference !== trim( $reference )
+			|| trim( $reference ) !== $reference
 			|| strlen( $reference ) > 255
 			|| '@' === $reference
 			|| str_starts_with( $reference, '-' )

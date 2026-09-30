@@ -85,9 +85,9 @@ class ManagedReleaseStore {
 				$this->assert_release_subdirectory( $before );
 			}
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			if ( $expectedSource->value !== ( $before->source ?? null )
+			if ( ( $before->source ?? null ) !== $expectedSource->value
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				|| $expectedRevision !== (int) ( $before->source_revision ?? 0 )
+				|| (int) ( $before->source_revision ?? 0 ) !== $expectedRevision
 				|| ! is_string( $before->provider ?? null )
 				|| ! is_string( $before->provider_repository_id ?? null ) ) {
 				$wpdb = $this->database;
@@ -146,13 +146,13 @@ class ManagedReleaseStore {
 			$after = $this->row( $type, $identifier, true );
 
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$verified = $newSource->value === ( $after->source ?? null )
+			$verified = ( $after->source ?? null ) === $newSource->value
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			&& $expectedRevision + 1 === (int) ( $after->source_revision ?? 0 )
+			&& (int) ( $after->source_revision ?? 0 ) === $expectedRevision + 1
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			&& $expectedSource->value === ( $after->source_previous ?? null )
-			&& $data['release_configuration'] === ( $after->release_configuration ?? null )
-				&& $next_policy === ( $after->deployment_policy ?? null );
+			&& ( $after->source_previous ?? null ) === $expectedSource->value
+			&& ( $after->release_configuration ?? null ) === $data['release_configuration']
+				&& ( $after->deployment_policy ?? null ) === $next_policy;
 			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
 				$this->database->query( 'ROLLBACK' );
 				return false;
@@ -226,7 +226,7 @@ class ManagedReleaseStore {
 			$this->assert_release_subdirectory( $before );
 			if ( PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| $expectedRevision !== (int) ( $before->source_revision ?? 0 )
+			|| (int) ( $before->source_revision ?? 0 ) !== $expectedRevision
 			|| ! is_string( $before->release_configuration ?? null ) ) {
 				$this->database->query( 'ROLLBACK' );
 				return false;
@@ -274,9 +274,9 @@ class ManagedReleaseStore {
 
 			$verified = PackageSource::RELEASE_ASSET->value === ( $after->source ?? null )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			&& $expectedRevision + 1 === (int) ( $after->source_revision ?? 0 )
+			&& (int) ( $after->source_revision ?? 0 ) === $expectedRevision + 1
 			&& $next->toJson() === ( $after->release_configuration ?? null )
-			&& $next_policy === ( $after->deployment_policy ?? null );
+			&& ( $after->deployment_policy ?? null ) === $next_policy;
 			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
 				$this->database->query( 'ROLLBACK' );
 				return false;

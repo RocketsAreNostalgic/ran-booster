@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Native local filesystem operations are required to verify inode, lock and atomic-replacement semantics.
-// phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use ParseError;
 use Throwable;
@@ -322,7 +322,7 @@ class WpConfigSecretsPathWriter {
 			) {
 				foreach ( array( "\n", "\r\n" ) as $line_ending ) {
 					$block = $this->owned_definition_block( $sidecar_path, $line_ending );
-					if ( $block === substr( $original, $offset, strlen( $block ) ) ) {
+					if ( substr( $original, $offset, strlen( $block ) ) === $block ) {
 						$matches[] = array( $offset, strlen( $block ) );
 					}
 				}
@@ -499,6 +499,7 @@ class WpConfigSecretsPathWriter {
 			throw new WpConfigPathWriteException(
 				'filesystem_failure',
 				'The WordPress configuration could not be updated safely.',
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The chained filesystem exception is retained for rollback diagnostics, not rendered.
 				$exception
 			);
 		} finally {
@@ -571,6 +572,7 @@ class WpConfigSecretsPathWriter {
 			throw new WpConfigPathWriteException(
 				'config_parse_failed',
 				'The WordPress configuration does not parse as supported PHP.',
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The chained filesystem exception is retained for rollback diagnostics, not rendered.
 				$exception
 			);
 		}

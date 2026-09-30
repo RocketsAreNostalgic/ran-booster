@@ -19,7 +19,7 @@ final class BlueprintArchive {
 	public function writeTo( string $path, #[\SensitiveParameter] PackageBlueprint $blueprint, #[\SensitiveParameter] ?string $password ): void {
 		$password  = '' === $password ? null : $password;
 		$encrypted = array() !== $blueprint->credentials;
-		if ( $encrypted !== ( null !== $password ) || ( $encrypted && ! self::valid_password( $password ) ) || ! self::zip_available( $encrypted ) ) {
+		if ( ( null !== $password ) !== $encrypted || ( $encrypted && ! self::valid_password( $password ) ) || ! self::zip_available( $encrypted ) ) {
 			throw new InvalidArgumentException( 'The portability archive could not be written.' );
 		}
 

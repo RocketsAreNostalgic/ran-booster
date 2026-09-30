@@ -204,7 +204,7 @@ final class ProviderRepositoryRowsNormalizer {
 				|| 1 !== preg_match( '/^[a-z][a-z0-9-]{0,63}:[a-z0-9:-]{1,127}$/', $key )
 				|| ! is_array( $row )
 				|| true !== ( $row['historical'] ?? false )
-				|| $providerCode !== ( $row['provider_code'] ?? null ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				|| ( $row['provider_code'] ?? null ) !== $providerCode ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 				throw new LogicException( 'Provider filters may append only namespaced historical rows.' );
 			}
 			$row_actions = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
@@ -409,7 +409,7 @@ final class ProviderRepositoryRowsNormalizer {
 				$consequence       = sprintf( /* translators: %d is the number of omitted package summaries. */ __( '%d package summary is not shown. Refresh the repository inventory before relying on aggregate deployment state or workflow controls.', 'ran-booster' ), $package_summaries_omitted );
 			}
 			$release_reason_id = ( $is_release || $source_conflict ) && '' !== $consequence ? $reason_id . '-release-source' : '';
-			$described_by      = array_filter( array( $release_reason_id, '' !== ( $issues[0] ?? '' ) ? $reason_id : '', ! $siteReady && ! $is_release ? $reason_id . '-site' : '' ) ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$described_by      = array_filter( array( $release_reason_id, ( '' !== ( $issues[0] ?? '' ) ) ? $reason_id : '', ! $siteReady && ! $is_release ? $reason_id . '-site' : '' ) ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 			$actions           = ! $inventory_incomplete && null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode ) && $has_branch && ! $historical // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 				? $this->webhook_management_action( $locator, $described_by )
 				: array();
@@ -537,7 +537,7 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 		$selected = null;
 		foreach ( $rows as $row ) {
-			if ( '' !== $requestedId && false === ( $row['historical'] ?? false ) && $requestedId === ( $row['repository_id'] ?? null ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			if ( '' !== $requestedId && false === ( $row['historical'] ?? false ) && ( $row['repository_id'] ?? null ) === $requestedId ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 				$selected = $row;
 				break; }
 		}
@@ -969,7 +969,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$by_id         = array();
 		$by_repository = array();
 		foreach ( is_array( $candidates ) ? $candidates : array() as $candidate ) {
-			if ( ! is_array( $candidate ) || $provider_code !== ( $candidate['provider_code'] ?? null ) ) {
+			if ( ! is_array( $candidate ) || ( $candidate['provider_code'] ?? null ) !== $provider_code ) {
 				continue;
 			}
 			$id         = is_string( $candidate['repository_id'] ?? null ) ? $candidate['repository_id'] : '';

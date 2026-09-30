@@ -29,9 +29,9 @@ final class RepositoryBrowseRequest {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		?string $credentialId = null
 	) {
-		$this->reject_empty_value( $owner, 'Repository owner' );
+		$this->reject_empty_value( $owner );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->reject_empty_value( $credentialId, 'Credential ID' );
+		$this->reject_empty_value( $credentialId );
 
 		if ( RepositoryBrowseMode::PUBLIC_OWNER === $mode && null === $owner ) {
 			throw new InvalidArgumentException( 'Public-owner repository browsing requires an owner.' );
@@ -124,7 +124,7 @@ final class RepositoryBrowseRequest {
 		return max( 0.0, self::DEADLINE_SECONDS - $elapsed );
 	}
 
-	private function reject_empty_value( ?string $value, string $label ): void {
+	private function reject_empty_value( ?string $value ): void {
 		if ( null !== $value && '' === trim( $value ) ) {
 			throw new InvalidArgumentException( 'Repository browse values cannot be empty.' );
 		}

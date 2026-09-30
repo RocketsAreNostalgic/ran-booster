@@ -308,7 +308,7 @@ final class ManagedReleaseTargetRegistrar {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
 	public function completeNativeMutation( object $upgrader, array $hookExtra ): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$target = $this->native_target( $hookExtra, true === ( $hookExtra['bulk'] ?? false ) );
+		$target = $this->native_target( $hookExtra, ( true === ( $hookExtra['bulk'] ?? false ) ) );
 		if ( null === $target ) {
 			return;
 		}

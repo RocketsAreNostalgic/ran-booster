@@ -132,6 +132,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			: \Closure::fromCallable( $invalidateNative );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$this->public_lookup_profile = null === $publicLookupProfile
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The public lookup resolver callback receives a provider code; the default resolver deliberately returns no profile.
 			? static fn ( string $provider ): ?string => null
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $publicLookupProfile );

@@ -59,7 +59,7 @@ final class RepositoryPickerController {
 			$mode_input     = isset( $_POST['mode'] ) ? wp_unslash( $_POST['mode'] ) : 'authenticated';
 			$mode           = is_string( $mode_input ) ? sanitize_key( $mode_input ) : '';
 
-			if ( $mode === 'public' ) {
+			if ( 'public' === $mode ) {
 				$owner_input             = isset( $_POST['owner'] ) ? wp_unslash( $_POST['owner'] ) : '';
 				$owner                   = is_string( $owner_input ) ? $owner_input : '';
 				$identity_input          = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
@@ -75,7 +75,7 @@ final class RepositoryPickerController {
 						$credential_id
 					)
 				);
-			} elseif ( $mode === 'accessible' ) {
+			} elseif ( 'accessible' === $mode ) {
 				$browser          = $this->providers->requireCapability( $provider_code, RepositoryBrowser::class );
 				$credential_input = isset( $_POST['credential_id'] ) ? wp_unslash( $_POST['credential_id'] ) : '';
 				$credential_id    = $this->credential_id( $credential_input, false );
@@ -235,7 +235,7 @@ final class RepositoryPickerController {
 		}
 
 		foreach ( $this->secrets->credentialProfiles( $provider ) as $profile ) {
-			if ( $profile_id === ( $profile['id'] ?? null ) && ! empty( $profile['configured'] ) ) {
+			if ( ( $profile['id'] ?? null ) === $profile_id && ! empty( $profile['configured'] ) ) {
 				return $profile_id;
 			}
 		}

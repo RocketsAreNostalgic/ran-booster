@@ -124,7 +124,7 @@ final readonly class PackageRepositoryRequestResolver {
 
 		if ( ! $repository->provider->equals( $provider )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
-			|| $repository->credentialId !== ( '' === $verification_credential_id ? null : $verification_credential_id )
+			|| ( '' === $verification_credential_id ? null : $verification_credential_id ) !== $repository->credentialId
 			|| ( $public_picker && $repository->private ) ) {
 			throw new RuntimeException( 'Repository provider returned mismatched repository identity.' );
 		}

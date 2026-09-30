@@ -310,7 +310,7 @@ abstract class AbstractPackageRepository {
 					throw PackageStorageFailure::write_failed();
 				}
 
-				if ( $policy->value === (string) ( $rows[0]->deployment_policy ?? '' ) ) {
+				if ( (string) ( $rows[0]->deployment_policy ?? '' ) === $policy->value ) {
 					continue;
 				}
 
@@ -330,7 +330,7 @@ abstract class AbstractPackageRepository {
 
 			foreach ( array_keys( $normalized ) as $identifier ) {
 				$rows = $this->locked_package_rows( $identifier );
-				if ( 1 !== count( $rows ) || $policy->value !== (string) ( $rows[0]->deployment_policy ?? '' ) ) {
+				if ( 1 !== count( $rows ) || (string) ( $rows[0]->deployment_policy ?? '' ) !== $policy->value ) {
 					throw PackageStorageFailure::after_write_could_not_be_verified( PackageStorageOperation::UPDATE );
 				}
 			}

@@ -191,10 +191,12 @@ class Database {
 		}
 
 		if ( ! update_option( self::VERSION_OPTION, self::$booster_db_version, false )
+			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Read the mutable expected version before get_option filters can run.
 			&& self::$booster_db_version !== get_option( self::VERSION_OPTION, false ) ) {
 			throw new DatabaseLifecycleFailure( 'version_write_failed' );
 		}
 
+		// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Read the mutable expected version before get_option filters can run.
 		if ( self::$booster_db_version !== get_option( self::VERSION_OPTION, false ) ) {
 			throw new DatabaseLifecycleFailure( 'version_verification_failed' );
 		}

@@ -111,7 +111,7 @@ final class ProspectiveReleaseOperations {
 			|| ( 'inspect' === $operation
 				&& $successful
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				&& ( $releaseId !== ( $data['release_id'] ?? null )
+				&& ( ( $data['release_id'] ?? null ) !== $releaseId
 					|| ! hash_equals( $tag, (string) ( $data['tag'] ?? '' ) ) ) ) ) {
 			return $outcome( 'operation_failed', false );
 		}

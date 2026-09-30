@@ -128,7 +128,7 @@ final class PrivateLocationCandidateResolver {
 			if ( false === $stat || is_link( $current ) ) {
 				return $this->failure( 'symlink_or_unreadable_component', 'A path component is a symbolic link or could not be inspected.', $current );
 			}
-			$is_target = $index === array_key_last( $parts );
+			$is_target = array_key_last( $parts ) === $index;
 			$file_type = $stat['mode'] & 0170000;
 			if ( $is_target ) {
 				if ( 0100000 !== $file_type ) {

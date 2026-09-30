@@ -879,7 +879,7 @@ class SecretsFile {
 			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expectedRevision ): array {
 				$record = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-				if ( ! is_array( $record ) || $expectedRevision !== (int) ( $record['revision'] ?? 0 ) ) {
+				if ( ! is_array( $record ) || (int) ( $record['revision'] ?? 0 ) !== $expectedRevision ) {
 					return array( $document, false, false );
 				}
 
@@ -937,7 +937,7 @@ class SecretsFile {
 			function ( mixed $lock ): void {
 				$key      = $this->load_key( false );
 				$has_file = $this->has_file();
-				if ( $has_file !== ( null !== $key ) ) {
+				if ( ( null !== $key ) !== $has_file ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
 					throw $this->incomplete_store( $key, $has_file );
 				}

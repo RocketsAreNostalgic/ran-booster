@@ -140,7 +140,7 @@ final readonly class PackageOperation {
 			$provider_id,
 			in_array( $identity_source, array( 'stored', 'picker', 'manual', 'resolved' ), true ) ? $identity_source : '',
 			'' === $credential_id ? null : $credential_id,
-			'1' === (string) ( $input['private'] ?? '0' ) || ( 'resolved' !== $identity_source && '' !== $credential_id ),
+			( '1' === (string) ( $input['private'] ?? '0' ) ) || ( 'resolved' !== $identity_source && '' !== $credential_id ),
 			self::deployment_policy( $input ),
 			$link_only,
 			$subdirectory,
@@ -254,7 +254,7 @@ final readonly class PackageOperation {
 
 		$revision = (int) $value;
 
-		return (string) $revision === trim( (string) $value ) ? $revision : null;
+		return trim( (string) $value ) === (string) $revision ? $revision : null;
 	}
 
 	/** @param array<string, mixed> $input */

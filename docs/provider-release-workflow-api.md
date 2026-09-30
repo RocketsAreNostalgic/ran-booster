@@ -4,7 +4,7 @@ Provider API 12 keeps release-workflow setup as an optional, separately versione
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
-## Initial-only draft contract
+## Initial-only contract
 
 `RepositoryReleaseWorkflowManagementV3` is the only release-workflow management
 facet in the v1 baseline and retains `RELEASE_WORKFLOW_API_VERSION = 3`.
@@ -44,13 +44,13 @@ tags. The five methods are `workflowStatus`, `workflowPreview`,
 `workflowInspect`, `workflowSetup` and `workflowOutcome`. Update operations
 are rejected before provider, credential or preflight access.
 
-The draft helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
+The helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
 The production lock selects immutable GitHub Provider `v1.0.0-beta.8`
 (`556f19923f6564f1bbd5cecee089d6b136afc5cd`), which implements V3 and preserves
 a valid bootstrap record's operation across source revisions. Core requires a
-`bootstrap` operation before exposing or invoking outcomes. Adoption of the
-corrected release still requires final locked, archive and installed qualification;
-isolated source testing does not qualify the installed composition.
+`bootstrap` operation before exposing or invoking outcomes. The locked composition passed repository quality, archive verification and the
+four supported WordPress/database installation jobs on merged Core #177. This
+installed candidate proof does not establish an immutable API-12 Core release.
 
 The API 3 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,
@@ -63,7 +63,7 @@ remains optional for ordinary provider registration and other capabilities.
 ## Provider API 12 compatibility boundary
 
 Provider API 12 identifies this breaking, initial-only V3 contract. API 11
-promised V2 and is no longer advertised by this candidate. External providers
+promised V2 and is no longer advertised by Core. External providers
 must check the exact outer API marker before loading their implementation:
 old API-11 providers remain unregistered on API 12, and API-12 providers remain
 unregistered on older or unknown future hosts. Tests cover both plugin load
@@ -85,10 +85,17 @@ update operations alone and mixed with a valid current row.
 
 ## Qualification and delivery boundary
 
-PR #177 remains draft, incomplete and unmerged. UI/presentation implementation
-and owner interactive/end-to-end acceptance remain deferred under #81/#85.
-Automated checks must identify the exact Core and Provider sources and distinguish
-source candidates, installed candidate archives and certified releases. Corrected
-immutable Provider adoption, final archive/installed proof and API-12 connected
-compatibility remain required before a coherent cutover. Do not alter certification
-pins or publish a bridge-only release to make this draft appear complete.
+PR #177 was squash-merged as `c335d6a1322db6dbb51dec4dee6c0fe2d026cc1e`
+on 30 September 2026. Exact merged-main Quality run
+[36776240469](https://github.com/RocketsAreNostalgic/ran-booster/actions/runs/36776240469)
+passed repository quality, runtime archive verification and all four supported
+WordPress/database installation jobs, including bundled Provider API-12/V3
+readback without the development Composer autoloader.
+
+UI/presentation implementation and owner interactive/end-to-end acceptance
+remain deferred under #81/#85. Automated checks must identify exact sources and
+distinguish source candidates, installed candidate archives and certified
+releases. An immutable API-12 Core release and Bitbucket qualification against
+that actual release remain pending. Keep certification pins tied to the actual
+certified release; do not publish a bridge-only release or claim full G1/G2
+acceptance from this candidate proof.

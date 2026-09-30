@@ -239,8 +239,10 @@ registration signature and Add-on API 16 are unchanged. See the
 [coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-12-compatibility-boundary).
 The bundled lock selects immutable GitHub Provider `v1.0.0-beta.8`
 (`556f19923f6564f1bbd5cecee089d6b136afc5cd`), which corrects valid bootstrap
-record operation projection across source revisions. Cutover remains held until
-the final locked composition passes archive and installed checks.
+record operation projection across source revisions. Merged Core #177 passed
+locked repository, archive and installed candidate checks. Immutable API-12 Core
+publication and Bitbucket certification against that release remain pending;
+see the [qualification boundary](provider-release-workflow-api.md#qualification-and-delivery-boundary).
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to

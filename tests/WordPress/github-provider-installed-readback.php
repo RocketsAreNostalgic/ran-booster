@@ -3,8 +3,12 @@
 // Executed by WP-CLI against the installed release ZIP in a disposable site.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 11 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'The installed runtime does not expose Provider API 11.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 12 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'The installed runtime does not expose Provider API 12.' );
+}
+
+if ( 3 !== RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::RELEASE_WORKFLOW_API_VERSION ) {
+	throw new RuntimeException( 'The installed runtime does not expose release workflow API 3.' );
 }
 
 $plugin_root = realpath( WP_PLUGIN_DIR . '/ran-booster' );
@@ -58,6 +62,7 @@ foreach (
 		RAN\RepositoryProvider\RepositoryReleaseInspector::class,
 		RAN\RepositoryProvider\RepositoryReleaseMetadata::class,
 		RAN\RepositoryProvider\RepositoryReleaseNativeTargets::class,
+		RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::class,
 	) as $capability
 ) {
 	if ( $provider !== $registry->requireCapability( 'gh', $capability ) ) {

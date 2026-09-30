@@ -7,7 +7,8 @@ artifact_directory="${repository_root}/build/test-artifacts/published-template-p
 php_binary="${PHP_BIN:-php}"
 provider_root="${repository_root}/vendor/ran/booster-github-provider"
 provider_bootstrap="${provider_root}/tests/Booster/GitHub/bootstrap.php"
-provider_test="${provider_root}/tests/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/TemplatePackApi2ContractTest.php"
+# The V3 archive contract retains rejection proofs for these immutable API 2/1 assets.
+provider_test="${provider_root}/tests/Booster/GitHub/ReleaseDeployments/WorkflowAssistance/TemplatePackArchiveContractTest.php"
 
 download_and_verify() {
 	local destination="$1"

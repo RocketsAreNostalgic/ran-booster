@@ -24,7 +24,7 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
@@ -32,7 +32,7 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RuntimeException;
 
-final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV2, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
+final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV3, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	/** @var list<array{operation:string,credential_id:?string,channel?:string,key?:string,confirmation?:string}> */
 	public array $calls           = array();
 	public int $statusReads       = 0;
@@ -112,19 +112,6 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 	public function workflowOutcome( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status );
 		return $this->result( 'outcome', $credentialId ); }
-	public function workflowInspectUpdate( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
-		unset( $status );
-		return $this->result( 'update_inspect', $credentialId ); }
-	public function workflowSetupUpdate( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, ?string $credentialId ): RepositoryReleaseWorkflowResult {
-		unset( $status );
-		return $this->result(
-			'update_setup',
-			$credentialId,
-			array(
-				'key'          => $key,
-				'confirmation' => $confirmation,
-			)
-		); }
 
 	/** @param array<string,string> $detail */
 	private function result( string $operation, ?string $credentialId, array $detail = array() ): RepositoryReleaseWorkflowResult {

@@ -61,7 +61,7 @@ final class ProviderRegistry {
 	 * The factory must construct its aggregate locally without network or other
 	 * side effects. Registration remains atomic after the aggregate is returned.
 	 *
-	 * Provider API 11 factories must declare a non-variadic, by-value third
+	 * Provider API 12 factories must declare a non-variadic, by-value third
 	 * parameter typed exactly ProviderRegistrationContext. The registry validates
 	 * that callable contract before invoking the factory.
 	 *

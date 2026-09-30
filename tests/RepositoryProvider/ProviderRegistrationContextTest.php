@@ -93,7 +93,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'bb',
@@ -112,7 +112,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'variadic',
@@ -132,7 +132,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'by-reference',
@@ -154,7 +154,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 11 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'nullable-context',

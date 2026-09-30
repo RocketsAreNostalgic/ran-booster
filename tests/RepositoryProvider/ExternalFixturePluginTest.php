@@ -11,6 +11,7 @@ require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 	// phpcs:disable WordPress.WP.AlternativeFunctions
 
 	use PHPUnit\Framework\Attributes\PreserveGlobalState;
+	use PHPUnit\Framework\Attributes\DataProvider;
 	use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 	use PHPUnit\Framework\TestCase;
 	use RAN\Admin\PackageRepositoryRequestResolver;
@@ -46,7 +47,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPresenterSuppressesManagementPresentationForAPartialCapabilityProvider(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 		$this->loadFixturePlugin();
 		list( $registry, , $path ) = $this->registry();
 
@@ -115,7 +116,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	public function testPluginLoadedBeforeTheApiMarkerRegistersOnTheLaterHook(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 
 		list( $registry, , $path ) = $this->registry();
 		$this->runRegistrationHook( $registry );
@@ -127,7 +128,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterTheApiMarkerExercisesTheCompleteProviderContract(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 		$this->loadFixturePlugin();
 		list( $registry, $secrets, $path ) = $this->registry();
 
@@ -333,8 +334,9 @@ final class ExternalFixturePluginTest extends TestCase {
 
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
-	public function testPluginDoesNotRegisterWithAnOlderProviderApi(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+	#[DataProvider( 'incompatibleProviderApis' )]
+	public function testPluginDoesNotRegisterWithAnIncompatibleProviderApi( int $api ): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', $api );
 		$this->loadFixturePlugin();
 		list( $registry, , $path ) = $this->registry();
 
@@ -344,6 +346,15 @@ final class ExternalFixturePluginTest extends TestCase {
 		} finally {
 			$this->cleanSidecar( $path );
 		}
+	}
+
+	/** @return array<string, array{int}> */
+	public static function incompatibleProviderApis(): array {
+		return array(
+			'older'    => array( 10 ),
+			'previous' => array( 11 ),
+			'future'   => array( 13 ),
+		);
 	}
 
 		#[RunInSeparateProcess]

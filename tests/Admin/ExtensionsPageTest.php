@@ -351,7 +351,7 @@ final class ExtensionsPageTest extends TestCase {
 	}
 
 	private function defineCompatibleApis(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );

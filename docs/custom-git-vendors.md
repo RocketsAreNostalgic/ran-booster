@@ -27,7 +27,7 @@ had a chance to run.
 ## Registration pattern
 
 A provider attaches its callback on `plugins_loaded` before Booster seals the
-registry. Provider API 11 uses one required three-argument credential-bearing
+registry. Provider API 12 uses one required three-argument credential-bearing
 factory contract:
 
 ```php
@@ -35,7 +35,7 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 11 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+      || 12 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
@@ -58,7 +58,7 @@ add_action(
 ```
 
 Use `registerWithCredentialStore()` when the provider reads stored credentials.
-Every API-11 factory receives the two provider-bound read-only values plus the
+Every API-12 factory receives the two provider-bound read-only values plus the
 bounded `ProviderRegistrationContext`. The third parameter must be
 non-variadic, by-value and typed exactly to that class; two-argument, variadic
 or by-reference context signatures are rejected before provider construction.
@@ -75,9 +75,9 @@ and call it only when the operation actually needs the archive ceiling, not
 while its registration factory is constructing the provider aggregate.
 
 The context is not a service locator and exposes no container, logger, database,
-sidecar, credential writer or other Core implementation service. Provider API 11
+sidecar, credential writer or other Core implementation service. Provider API 12
 guarantees this context as part of credential-bearing registration; providers
-targeting API 11 must not feature-detect or fall back to the retired
+targeting API 12 must not feature-detect or fall back to the retired
 two-argument factory shape.
 
 Neither provider-bound value accepts a provider argument, selects another
@@ -88,7 +88,7 @@ Activating a credential-bearing provider therefore trusts it with credentials
 saved under its code; registration order is not publisher authentication, and
 Core cannot control the provider's private code after authorized disclosure.
 
-Provider API 11 supplies no logger, service container or generic service
+Provider API 12 supplies no logger, service container or generic service
 resolver. The additive registration context does not change that marker or turn
 registration into generic dependency injection. An unexpected caught diagnostic
 failure may be attached only to a bounded request-local
@@ -133,7 +133,7 @@ constructor limits.
 
 Admin metadata remains optional for ordinary provider registration and other
 capabilities. A provider opting into the current
-`RepositoryReleaseWorkflowManagementV2` helper must expose non-null
+`RepositoryReleaseWorkflowManagementV3` helper must expose non-null
 `ProviderAdminMetadata` on its registered aggregate; otherwise Core does not
 expose workflow-helper controls or calls for that provider.
 
@@ -179,7 +179,7 @@ branch, credential selection, and package slug.
 a host, and must not contain user info or fragments. Providers must not place
 reusable secrets in archive URLs.
 
-Provider API 11 supplies `GitReferenceSyntax::isValidNamedReference()` for the
+Provider API 12 supplies `GitReferenceSyntax::isValidNamedReference()` for the
 generic bounded branch/ref syntax check and `AuthenticatedPreparedArchive` for
 the one-request archive authentication, redirect scrubbing, head verification
 and cleanup lifecycle. A vendor may impose stricter syntax or origin rules, but
@@ -244,10 +244,9 @@ them:
   eligible for managed published-release tracking. Core retains installed
   package enumeration, authority snapshots, mutation fences, locks and source
   transitions.
-- `RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV2` for optional
-  release workflow assessment, draft pull requests, outcome checks and template
-  updates. Current Core resolves this standalone workflow API 2 facet directly.
-  API 2 is the v1 release-workflow baseline; the earlier Core-bound API 1 facet
+- `RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3` for optional
+  release workflow assessment, initial draft setup pull requests and outcome checks. Current Core resolves this standalone workflow API 3 facet directly.
+  API 3 is the initial-only release-workflow baseline; the earlier Core-bound API 1 facet
   was retired before 1.0 after the maintained-repository audit found no current
   consumer. It requires all five release-consumption
   contracts and non-null `ProviderAdminMetadata` on the same provider aggregate.
@@ -259,10 +258,10 @@ them:
   operations. See the
   [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
-Provider API 11 hosts publish
-`RepositoryReleaseWorkflowManagementV2` as the current optional workflow
-management facet. Providers targeting API 11 may implement that interface
-directly; providers that do not adopt workflow API 2 need no additional feature
+Provider API 12 hosts publish
+`RepositoryReleaseWorkflowManagementV3` as the current optional workflow
+management facet. Providers targeting API 12 may implement that interface
+directly; providers that do not adopt workflow API 3 need no additional feature
 check. See the
 [dedicated workflow API contract](provider-release-workflow-api.md).
 
@@ -326,9 +325,9 @@ shape check.
    single-use `RepositoryReleaseArtifact`. Do not return a path, URL, archive
    bytes, provider result payload or reusable claim. Report a bounded cleanup
    failure when provider-owned bytes cannot be discarded before handoff.
-1. When targeting Provider API 11, `RepositoryReleaseWorkflowManagementV2` is
+1. When targeting Provider API 12, `RepositoryReleaseWorkflowManagementV3` is
    available as the current optional workflow facet; older Booster releases that
-   advertise Provider API 10 remain outside this API-11 contract.
+   advertise Provider API 10 remain outside this API-12 contract.
 1. Test registration from the main plugin file with the version guard in place.
 1. Verify the provider registers cleanly, seals cleanly, and surfaces the
    correct optional capabilities.

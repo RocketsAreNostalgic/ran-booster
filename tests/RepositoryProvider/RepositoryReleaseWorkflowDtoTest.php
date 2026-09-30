@@ -12,7 +12,7 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
 
 final class RepositoryReleaseWorkflowDtoTest extends TestCase {
-	public function testPreviewAllowsAnEmptyOldTemplateTagOnlyForBootstrap(): void {
+	public function testPreviewUsesOnlyInitialPackIdentity(): void {
 		$preview = new RepositoryReleaseWorkflowPreview(
 			str_repeat( 'a', 32 ),
 			'gh',
@@ -21,18 +21,50 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 			'stable',
 			'owner/example',
 			array(
-				'repository'       => 'owner/example',
-				'default_branch'   => 'main',
-				'base_sha'         => 'base',
-				'pack_version'     => '1.0.0',
-				'template_digest'  => str_repeat( 'b', 64 ),
-				'old_template_tag' => '',
-				'new_template_tag' => 'v1.0.0',
+				'repository'      => 'owner/example',
+				'default_branch'  => 'main',
+				'base_sha'        => 'base',
+				'pack_version'    => '1.0.0',
+				'template_digest' => str_repeat( 'b', 64 ),
 			),
 			array()
 		);
 
-		self::assertSame( '', $preview->summary()['old_template_tag'] );
+		self::assertSame( '1.0.0', $preview->summary()['pack_version'] );
+	}
+
+	#[DataProvider( 'retiredPreviewModes' )]
+	public function testPreviewRejectsRetiredUpdateAndPrereleaseModes( string $kind, string $channel ): void {
+		$this->expectException( InvalidArgumentException::class );
+		new RepositoryReleaseWorkflowPreview(
+			str_repeat( 'a', 32 ),
+			'gh',
+			'101',
+			$kind,
+			$channel,
+			'owner/example',
+			array(
+				'repository'      => 'owner/example',
+				'default_branch'  => 'main',
+				'base_sha'        => 'base',
+				'pack_version'    => '1.0.0',
+				'template_digest' => str_repeat( 'b', 64 ),
+			),
+			array()
+		);
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function retiredPreviewModes(): array {
+		return array(
+			'template-update' => array( 'template_update', '' ),
+			'prerelease'      => array( 'bootstrap', 'prerelease' ),
+		);
+	}
+
+	public function testStatusRejectsRetiredUpdateRecord(): void {
+		$this->expectException( InvalidArgumentException::class );
+		new RepositoryReleaseWorkflowStatus( 'gh', '101', true, true, recordOperation: 'template_update' );
 	}
 
 	public function testDtosRejectHtmlAndUnboundedRecords(): void {
@@ -131,13 +163,11 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 			'stable',
 			'owner/example',
 			array(
-				'repository'       => 'owner/example',
-				'default_branch'   => 'main',
-				'base_sha'         => 'base',
-				'pack_version'     => '1.0.0',
-				'template_digest'  => str_repeat( 'b', 64 ),
-				'old_template_tag' => '',
-				'new_template_tag' => 'v1.0.0',
+				'repository'      => 'owner/example',
+				'default_branch'  => 'main',
+				'base_sha'        => 'base',
+				'pack_version'    => '1.0.0',
+				'template_digest' => str_repeat( 'b', 64 ),
 			),
 			array(
 				array(

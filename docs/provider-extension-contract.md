@@ -1,6 +1,6 @@
 # Provider extension contract
 
-RAN Booster Provider API 11 accepts trusted repository providers through its late
+RAN Booster Provider API 12 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading. Credential-bearing providers use one required
 three-argument factory contract:
@@ -10,7 +10,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 11 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 12 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
@@ -33,11 +33,11 @@ add_action(
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 11.
+registration action can run. The callback must check for exact Provider API 12.
 `Requires Plugins: ran-booster` only tells WordPress about the package
 dependency; it does not replace this exact runtime marker check or make a
 mismatched provider contract safe.
-Provider API 11 publishes no logging facade, generic service resolver, Core
+Provider API 12 publishes no logging facade, generic service resolver, Core
 container, credential writer, sidecar path or database/deployment repository.
 Providers report bounded diagnostics and operation results. Core owns logging
 at its call boundaries and never supplies a logger to provider code.
@@ -75,9 +75,9 @@ returned provider uses the same requested code before atomic registration:
 A provider that retains the host artifact policy should retain the bounded
 supplier and invoke `maximumArtifactBytes()` only when the relevant archive or
 release operation needs the ceiling, not while its registration factory is
-constructing the aggregate. Provider API 11 guarantees that the registration
+constructing the aggregate. Provider API 12 guarantees that the registration
 context is part of the credential-bearing factory contract; providers targeting
-API 11 must not feature-detect or fall back to the retired two-argument shape.
+API 12 must not feature-detect or fall back to the retired two-argument shape.
 The context remains bounded and does not create a generic dependency-injection
 seam.
 
@@ -103,7 +103,7 @@ registration window.
 
 The current collision and same-vendor coexistence behavior is characterized in
 [Provider registration and coexistence](provider-registration-and-coexistence.md).
-Provider API 11 rejects an exact duplicate code but does not reserve vendor
+Provider API 12 rejects an exact duplicate code but does not reserve vendor
 aliases, identify two implementations of the same vendor, or merge their
 capabilities and state.
 
@@ -153,29 +153,29 @@ HTML seam.
 
 ### Optional release workflow management
 
-`RepositoryReleaseWorkflowManagementV2` is the release-workflow management
-contract in the v1 baseline, with `RELEASE_WORKFLOW_API_VERSION = 2`. The earlier
+`RepositoryReleaseWorkflowManagementV3` is the release-workflow management
+contract in the v1 baseline, with `RELEASE_WORKFLOW_API_VERSION = 3`. The earlier
 Core-bound API 1 facet was retired before 1.0 after the maintained-repository
 audit found no current consumer.
 
-The current helper resolves `RepositoryReleaseWorkflowManagementV2` directly.
+The current helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
 Its provider-neutral contract does not load Core `ReleaseTrackingStatus` or
 `ReleaseTrackingPreflight` parameter types into an external provider runtime.
 
-API 2 keeps the same fixed workflow operation shape and accepts only neutral
+API 3 keeps the same fixed workflow operation shape and accepts only neutral
 inputs. `RepositoryReleaseWorkflowTarget` carries the bounded package identity,
 source revision, stable provider repository ID, package root, installed version
 and expected Update URI required by provider workflow logic. The expected Update
 URI may be empty; when present it must be an HTTPS URL with a host and no
 userinfo. Ordinary release tracking may retain a non-HTTPS canonical Update URI,
-but Core cannot project that value into an API 2 target, so that
+but Core cannot project that value into an API 3 target, so that
 provider/package is not eligible for current workflow-helper calls until the URI
 satisfies this stricter workflow boundary.
 `RepositoryReleaseWorkflowPreflight` carries only the bounded preflight machine
 code and reason code needed by inspection and setup. Core constructs fresh
 neutral values at the provider call boundary.
 
-A provider implementing API 2 must also implement all five release-consumption
+A provider implementing API 3 must also implement all five release-consumption
 contracts on the same registered aggregate: `RepositoryReleaseMetadata`,
 `RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
 `RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`. Current Core
@@ -189,16 +189,15 @@ assessed for release workflow setup before it switches to Releases. Package
 eligibility and repository exclusivity still apply; package source is not a
 substitute for provider capability.
 
-The API 2 interface exposes local `workflowStatus()` and validated
-`workflowPreview()` reads plus five operations: `workflowInspect()`,
-`workflowSetup()`, `workflowOutcome()`, `workflowInspectUpdate()` and
-`workflowSetupUpdate()`. Providers return bounded immutable status, preview and
+The API 3 interface exposes local `workflowStatus()` and validated
+`workflowPreview()` reads plus three operations: `workflowInspect()`,
+`workflowSetup()` and `workflowOutcome()`. There are no later template updates. Providers return bounded immutable status, preview and
 result values, not HTML, callbacks, clients or storage handles. Available
 releases, detected automation, verified configuration, recorded setup pull
 requests and latest outcomes remain separate evidence.
 
 See [Provider release-workflow capability](provider-release-workflow-api.md) for
-the v1 API 2 baseline and feature-detection boundary.
+the v1 API 3 baseline and feature-detection boundary.
 
 `RepositoryReleaseWorkflowResult::failureStage()` is a closed, Core-owned
 display category, never a provider-defined value. Successful results must use
@@ -211,7 +210,7 @@ Core admits one fixed workflow endpoint. It checks administrator permissions,
 provider dependencies, exact repository/package/source revision, repository
 admission, operation nonce, preview identity and credential-profile eligibility
 before calling the operation. Assessment and setup each receive fresh Core
-release preflight evidence projected into the neutral API 2 preflight value for
+release preflight evidence projected into the neutral API 3 preflight value for
 that exact target. Setup takes its channel from the provider's validated,
 current-user preview, never a submitted channel.
 
@@ -229,14 +228,19 @@ Deployment tabs and independently supported release consumption remain usable.
 Remote inspection requires an explicit action. Outcomes return to the exact
 repository Releases tab, with diagnostics inside its notice area.
 
-These optional workflow facets do not further widen Provider API 11's bounded
+These optional workflow facets do not further widen Provider API 12's bounded
 registration context and introduce no repository settings object or shared
 workflow storage.
 
-Provider API 11 hosts publish `RepositoryReleaseWorkflowManagementV2` as the
-current workflow-management contract. Providers targeting API 11 may implement
-that optional facet directly; providers that do not adopt workflow management
-need no additional check.
+Provider API 12 identifies the breaking initial-only V3 contract. Providers must
+check this exact marker before loading their implementation. API-11 providers
+must remain unregistered on this host; there is no V2 compatibility shim. The
+registration signature and Add-on API 16 are unchanged. See the
+[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-12-compatibility-boundary).
+The bundled lock selects immutable GitHub Provider `v1.0.0-beta.8`
+(`556f19923f6564f1bbd5cecee089d6b136afc5cd`), which corrects valid bootstrap
+record operation projection across source revisions. Cutover remains held until
+the final locked composition passes archive and installed checks.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
@@ -365,7 +369,7 @@ archive into its private preflight file; WordPress receives only that verified
 local file. Providers remain responsible for any stricter origin, path and
 signed query policy required by their service.
 
-Provider API 11 owns two shared helpers for ordinary vendor implementations:
+Provider API 12 owns two shared helpers for ordinary vendor implementations:
 
 - `GitReferenceSyntax::isValidNamedReference()` applies Core's bounded generic
   branch/ref syntax check without assuming a particular hosting vendor.

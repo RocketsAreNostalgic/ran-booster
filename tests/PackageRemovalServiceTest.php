@@ -461,7 +461,7 @@ final class PackageRemovalServiceTest extends TestCase {
 	public function testDashboardMapsOnlyBoundedRemovalFailuresToSafeNotices(): void {
 		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
-		$method     = new \ReflectionMethod( PackageAdminController::class, 'removalFailure' );
+		$method     = new \ReflectionMethod( PackageAdminController::class, 'removal_failure' );
 		$operation  = PackageOperation::from_input( 'unlink-delete-plugin', $this->input() );
 
 		foreach (
@@ -507,7 +507,7 @@ final class PackageRemovalServiceTest extends TestCase {
 	public function testDashboardRemovalFailureUsesContextualPackageTypeTranslation(): void {
 		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
-		$method     = new \ReflectionMethod( PackageAdminController::class, 'removalFailure' );
+		$method     = new \ReflectionMethod( PackageAdminController::class, 'removal_failure' );
 		$operation  = PackageOperation::from_input( 'unlink-delete-plugin', $this->input() );
 		$GLOBALS['ran_booster_repository_admin_translations'] = array(
 			'ran-booster' => array(

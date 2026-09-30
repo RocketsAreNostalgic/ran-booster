@@ -32,11 +32,11 @@ class Dispatcher {
 	 */
 
 	private $dashboard;
-	private PackageAdminController $packageAdmin;
-	private ?TemporaryDebugCapture $debugCapture;
-	private ?SecretsStorageProvisioner $secretsStorage;
-	private ProviderProfileAdminController $providerProfiles;
-	private DeploymentAdminController $deploymentAdmin;
+	private PackageAdminController $package_admin;
+	private ?TemporaryDebugCapture $debug_capture;
+	private ?SecretsStorageProvisioner $secrets_storage;
+	private ProviderProfileAdminController $provider_profiles;
+	private DeploymentAdminController $deployment_admin;
 
 	/**
 	 * @param Dashboard             $dashboard Dashboard message target.
@@ -71,11 +71,11 @@ class Dispatcher {
 		// Retained for positional container and test compatibility; their owners are injected below.
 		unset( $packageRepositories, $bulkPackageActions );
 
-		$this->dashboard        = $dashboard;
-		$this->packageAdmin     = $packageAdmin;
-		$this->debugCapture     = $debugCapture;
-		$this->secretsStorage   = $secretsStorage;
-		$this->providerProfiles = $providerProfileInteraction ?? new ProviderProfileAdminController(
+		$this->dashboard         = $dashboard;
+		$this->package_admin     = $packageAdmin;
+		$this->debug_capture     = $debugCapture;
+		$this->secrets_storage   = $secretsStorage;
+		$this->provider_profiles = $providerProfileInteraction ?? new ProviderProfileAdminController(
 			$dashboard,
 			$providers,
 			$secrets,
@@ -85,13 +85,14 @@ class Dispatcher {
 			$publicLookupProfiles ?? new PublicRepositoryLookupProfileStore(),
 			$expiryObservations ?? new CredentialExpiryObservationStore()
 		);
-		$this->deploymentAdmin  = new DeploymentAdminController(
+		$this->deployment_admin  = new DeploymentAdminController(
 			$dashboard,
 			$deploymentCoordinator,
 			$deploymentAttempts
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public function dispatchPostRequests() {
 		// The selected action determines which nonce is verified before any mutation occurs.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -103,83 +104,83 @@ class Dispatcher {
 				: '';
 
 			if ( 'run-troubleshooting' === $action ) {
-				$this->runTroubleshooting( $request );
+				$this->run_troubleshooting( $request );
 
 				return;
 			}
 
 			if ( 'manage-debug-capture' === $action ) {
-				$this->manageDebugCapture( $request );
+				$this->manage_debug_capture( $request );
 
 				return;
 			}
 
 			if ( 'create-secure-storage' === $action ) {
-				$this->createSecureStorage();
+				$this->create_secure_storage();
 
 				return;
 			}
 
 			if ( 'adopt-secure-storage' === $action ) {
-				$this->adoptSecureStorage( $request );
+				$this->adopt_secure_storage( $request );
 
 				return;
 			}
 
 			if ( 'reset-empty-storage' === $action ) {
-				$this->resetEmptyStorage( $request );
+				$this->reset_empty_storage( $request );
 
 				return;
 			}
 
 			if ( 'save-public-lookup-profile' === $action ) {
-				$this->providerProfiles->managePublicLookupProfile( $request, $this->isHtmxRequest() );
+				$this->provider_profiles->managePublicLookupProfile( $request, $this->is_htmx_request() );
 
 				return;
 			}
 
 			if ( 'validate-access-profile' === $action ) {
-				$this->providerProfiles->manageCredentialValidation( $request, $this->isHtmxRequest() );
+				$this->provider_profiles->manageCredentialValidation( $request, $this->is_htmx_request() );
 
 				return;
 			}
 
-			$credentialActions = array(
+			$credential_actions = array(
 				'save-access-profile',
 				'delete-access-profile',
 				'save-webhook-profile',
 				'delete-webhook-profile',
 			);
 
-			if ( in_array( $action, $credentialActions, true ) ) {
-				$this->providerProfiles->manageCredentialProfiles( $request );
+			if ( in_array( $action, $credential_actions, true ) ) {
+				$this->provider_profiles->manageCredentialProfiles( $request );
 
 				return;
 			}
 
-			$deploymentActions = array(
+			$deployment_actions = array(
 				'reconcile-deployment-worker',
 				'request-deployment-runner',
 				'resolve-needs-attention',
 			);
-			if ( in_array( $action, $deploymentActions, true ) ) {
-				$requestMethod = $_SERVER['REQUEST_METHOD'] ?? null;
-				$this->deploymentAdmin->manageDeploymentAttempt(
+			if ( in_array( $action, $deployment_actions, true ) ) {
+				$request_method = $_SERVER['REQUEST_METHOD'] ?? null;
+				$this->deployment_admin->manageDeploymentAttempt(
 					$action,
 					$request,
-					is_string( $requestMethod ) && 'POST' === strtoupper( $requestMethod )
+					is_string( $request_method ) && 'POST' === strtoupper( $request_method )
 				);
 
 				return;
 			}
 
 			if ( in_array( $action, array( 'bulk-plugin', 'bulk-theme' ), true ) ) {
-				$requestMethod = $_SERVER['REQUEST_METHOD'] ?? null;
-				$redirect      = $this->packageAdmin->manageBulk(
+				$request_method = $_SERVER['REQUEST_METHOD'] ?? null;
+				$redirect       = $this->package_admin->manageBulk(
 					$this->dashboard,
 					$action,
 					$request,
-					is_string( $requestMethod ) && 'POST' === strtoupper( $requestMethod )
+					is_string( $request_method ) && 'POST' === strtoupper( $request_method )
 				);
 				if ( is_string( $redirect ) ) {
 					$this->redirectTo( $redirect );
@@ -188,7 +189,7 @@ class Dispatcher {
 				return;
 			}
 
-			$packageActions = array(
+			$package_actions = array(
 				'install-plugin',
 				'install-theme',
 				'edit-plugin',
@@ -200,15 +201,15 @@ class Dispatcher {
 				'unlink-delete-plugin',
 				'unlink-delete-theme',
 			);
-			if ( ! in_array( $action, $packageActions, true ) ) {
+			if ( ! in_array( $action, $package_actions, true ) ) {
 				return;
 			}
-			$requestMethod = $_SERVER['REQUEST_METHOD'] ?? null;
-			$redirect      = $this->packageAdmin->manage(
+			$request_method = $_SERVER['REQUEST_METHOD'] ?? null;
+			$redirect       = $this->package_admin->manage(
 				$this->dashboard,
 				$action,
 				$request,
-				is_string( $requestMethod ) && 'POST' === strtoupper( $requestMethod )
+				is_string( $request_method ) && 'POST' === strtoupper( $request_method )
 			);
 			if ( is_string( $redirect ) ) {
 				$this->redirectTo( $redirect );
@@ -216,8 +217,9 @@ class Dispatcher {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	protected function redirectTo( string $url ): never {
-		if ( $this->isHtmxRequest() ) {
+		if ( $this->is_htmx_request() ) {
 			$location = wp_json_encode(
 				array(
 					'path'   => wp_make_link_relative( $url ),
@@ -235,7 +237,7 @@ class Dispatcher {
 		exit;
 	}
 
-	private function createSecureStorage(): void {
+	private function create_secure_storage(): void {
 		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
 			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
 			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
@@ -250,12 +252,12 @@ class Dispatcher {
 		check_admin_referer( 'ran-booster-create-secure-storage' );
 
 		try {
-			$result = null === $this->secretsStorage
+			$result = null === $this->secrets_storage
 				? SecretsStorageProvisioningResult::manual_required(
 					'provisioner_unavailable',
 					__( 'Automatic secure storage setup is unavailable.', 'ran-booster' )
 				)
-				: $this->secretsStorage->provision();
+				: $this->secrets_storage->provision();
 		} catch ( \Throwable $failure ) {
 			\RAN\Logging\BoosterLogger::logException(
 				'secrets storage setup failed',
@@ -277,10 +279,10 @@ class Dispatcher {
 		}
 
 		if ( $result->requires_next_request_verification() ) {
-			$adminUrl = is_multisite()
+			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirectTo( $adminUrl . '?page=ran-booster&tab=overview' );
+			$this->redirectTo( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
 		// Keep a failed attempt local to this protected POST response. Paths and
@@ -289,7 +291,7 @@ class Dispatcher {
 	}
 
 	/** @param array<string, mixed> $request */
-	private function adoptSecureStorage( array $request ): void {
+	private function adopt_secure_storage( array $request ): void {
 		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
 			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
 			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
@@ -308,12 +310,12 @@ class Dispatcher {
 			: '';
 
 		try {
-			$result = null === $this->secretsStorage
+			$result = null === $this->secrets_storage
 				? SecretsStorageProvisioningResult::manual_required(
 					'provisioner_unavailable',
 					__( 'Automatic storage recovery is unavailable.', 'ran-booster' )
 				)
-				: $this->secretsStorage->adoptRecovery( $token );
+				: $this->secrets_storage->adoptRecovery( $token );
 		} catch ( \Throwable $failure ) {
 			\RAN\Logging\BoosterLogger::logException(
 				'secrets storage recovery failed',
@@ -335,17 +337,17 @@ class Dispatcher {
 		}
 
 		if ( $result->requires_next_request_verification() ) {
-			$adminUrl = is_multisite()
+			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirectTo( $adminUrl . '?page=ran-booster&tab=overview' );
+			$this->redirectTo( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
 		$this->dashboard->setSecretsStorageProvisioningResult( $result );
 	}
 
 	/** @param array<string, mixed> $request */
-	private function resetEmptyStorage( array $request ): void {
+	private function reset_empty_storage( array $request ): void {
 		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
 			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
 			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
@@ -364,12 +366,12 @@ class Dispatcher {
 			: '';
 
 		try {
-			$result = null === $this->secretsStorage
+			$result = null === $this->secrets_storage
 				? SecretsStorageProvisioningResult::manual_required(
 					'provisioner_unavailable',
 					__( 'Empty credential storage reset is unavailable.', 'ran-booster' )
 				)
-				: $this->secretsStorage->resetOrphanedStorage( $confirmation );
+				: $this->secrets_storage->resetOrphanedStorage( $confirmation );
 		} catch ( \Throwable $failure ) {
 			\RAN\Logging\BoosterLogger::logException(
 				'secrets storage reset failed',
@@ -391,17 +393,17 @@ class Dispatcher {
 		}
 
 		if ( 'storage_reset' === $result->code() ) {
-			$adminUrl = is_multisite()
+			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirectTo( $adminUrl . '?page=ran-booster&tab=overview' );
+			$this->redirectTo( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
 		$this->dashboard->setSecretsStorageProvisioningResult( $result );
 	}
 
 	/** @param array<string, mixed> $request */
-	private function manageDebugCapture( array $request ): void {
+	private function manage_debug_capture( array $request ): void {
 		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
 			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
 			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
@@ -419,20 +421,20 @@ class Dispatcher {
 		if ( ! in_array( $operation, array( 'start', 'stop', 'delete' ), true ) ) {
 			return;
 		}
-		$htmxRequest = $this->isHtmxRequest() && in_array( $operation, array( 'start', 'stop' ), true );
+		$htmx_request = $this->is_htmx_request() && in_array( $operation, array( 'start', 'stop' ), true );
 
 		try {
-			if ( null === $this->debugCapture ) {
+			if ( null === $this->debug_capture ) {
 				throw new \RuntimeException();
 			}
 
 			match ( $operation ) {
-				'start' => $this->debugCapture->start(),
-				'stop' => $this->debugCapture->stop(),
-				'delete' => $this->debugCapture->delete(),
+				'start' => $this->debug_capture->start(),
+				'stop' => $this->debug_capture->stop(),
+				'delete' => $this->debug_capture->delete(),
 			};
 		} catch ( \Throwable $failure ) {
-			if ( $htmxRequest ) {
+			if ( $htmx_request ) {
 				$this->respondToHtmxDebugCapture(
 					null,
 					__( 'Booster could not update the temporary logging capture. No deployment was interrupted.', 'ran-booster' ),
@@ -455,21 +457,21 @@ class Dispatcher {
 			return;
 		}
 
-		if ( $htmxRequest ) {
+		if ( $htmx_request ) {
 			$message = 'start' === $operation
 				? __( 'Temporary logging capture started.', 'ran-booster' )
 				: __( 'Temporary logging capture stopped.', 'ran-booster' );
 			$this->respondToHtmxDebugCapture( $message, null, 200 );
 		}
 
-		$adminUrl = is_multisite()
+		$admin_url = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$this->redirectTo( $adminUrl . '?page=ran-booster&tab=troubleshooting&panel=debug-capture' );
+		$this->redirectTo( $admin_url . '?page=ran-booster&tab=troubleshooting&panel=debug-capture' );
 	}
 
 	/** @param array<string, mixed> $request */
-	private function runTroubleshooting( array $request ): void {
+	private function run_troubleshooting( array $request ): void {
 		foreach ( array( 'manage_options', 'install_plugins', 'update_plugins', 'install_themes', 'update_themes' ) as $capability ) {
 			if ( ! current_user_can( $capability ) ) {
 				wp_die( esc_html__( 'You do not have sufficient permissions to run troubleshooting.', 'ran-booster' ) );
@@ -482,21 +484,21 @@ class Dispatcher {
 			return;
 		}
 
-		foreach ( array( 'credential_id', 'repository' ) as $optionalField ) {
-			if ( isset( $request[ $optionalField ] ) && ! is_string( $request[ $optionalField ] ) ) {
+		foreach ( array( 'credential_id', 'repository' ) as $optional_field ) {
+			if ( isset( $request[ $optional_field ] ) && ! is_string( $request[ $optional_field ] ) ) {
 				return;
 			}
 		}
 
-		$provider     = wp_unslash( $request['provider'] );
-		$credentialId = isset( $request['credential_id'] ) ? trim( wp_unslash( $request['credential_id'] ) ) : null;
-		$repository   = isset( $request['repository'] ) ? wp_unslash( $request['repository'] ) : null;
-		$credentialId = '' === $credentialId ? null : $credentialId;
-		$repository   = '' === $repository ? null : $repository;
+		$provider      = wp_unslash( $request['provider'] );
+		$credential_id = isset( $request['credential_id'] ) ? trim( wp_unslash( $request['credential_id'] ) ) : null;
+		$repository    = isset( $request['repository'] ) ? wp_unslash( $request['repository'] ) : null;
+		$credential_id = '' === $credential_id ? null : $credential_id;
+		$repository    = '' === $repository ? null : $repository;
 
 		if ( strlen( $provider ) > 32
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $provider )
-			|| ( null !== $credentialId && ( strlen( $credentialId ) > ProviderDiagnosticRequest::MAX_CREDENTIAL_ID_BYTES || 1 === preg_match( '/[\x00-\x1F\x7F]/', $credentialId ) ) )
+			|| ( null !== $credential_id && ( strlen( $credential_id ) > ProviderDiagnosticRequest::MAX_CREDENTIAL_ID_BYTES || 1 === preg_match( '/[\x00-\x1F\x7F]/', $credential_id ) ) )
 		) {
 			return;
 		}
@@ -512,17 +514,17 @@ class Dispatcher {
 		$this->dashboard->postRunTroubleshooting(
 			array(
 				'provider'      => $provider,
-				'credential_id' => $credentialId,
+				'credential_id' => $credential_id,
 				'repository'    => $repository,
 			)
 		);
 
-		if ( $this->isHtmxRequest() ) {
+		if ( $this->is_htmx_request() ) {
 			$this->respondToHtmxDiagnostics( $this->dashboard->troubleshootingSucceeded() );
 		}
 	}
 
-	private function isHtmxRequest(): bool {
+	private function is_htmx_request(): bool {
 		$header = $_SERVER['HTTP_HX_REQUEST'] ?? null;
 
 		return is_string( $header ) && 'true' === strtolower( trim( $header ) );
@@ -532,6 +534,7 @@ class Dispatcher {
 	 * Respond to the explicit logging capture enhancement. The named event is
 	 * success-only; failures keep their explanation beside the capture controls.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	protected function respondToHtmxDebugCapture( ?string $message, ?string $error, int $status ): never {
 		status_header( $status );
 		if ( null !== $message ) {
@@ -554,6 +557,7 @@ class Dispatcher {
 	 * Return the Core-owned diagnostics panel. A warning, partial, or failed
 	 * result remains visible in that panel and deliberately emits no toast.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	protected function respondToHtmxDiagnostics( bool $succeeded ): never {
 		if ( $succeeded ) {
 			header(

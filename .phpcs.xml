@@ -37,6 +37,11 @@
 		<include-pattern>/RAN/WordPress/ManagedReleaseStore.php</include-pattern>
 		<include-pattern>/RAN/WordPress/ManagedReleaseTargetRegistrar.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentCoordinator.php</include-pattern>
+		<include-pattern>/RAN/Dispatcher.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderProfileAdminController.php</include-pattern>
+		<include-pattern>/RAN/Admin/PackageAdminController.php</include-pattern>
+		<include-pattern>/RAN/Admin/PortabilityController.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Operation/WebhookOperationCoordinator.php</include-pattern>
 		<include-pattern>/RAN/Portability/PortabilityApplicationService.php</include-pattern>
 		<include-pattern>/RAN/Troubleshooting/TroubleshootingService.php</include-pattern>
 		<include-pattern>/RAN/Troubleshooting/LocalTroubleshootingService.php</include-pattern>

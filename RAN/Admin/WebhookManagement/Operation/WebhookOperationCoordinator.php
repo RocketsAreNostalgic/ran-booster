@@ -38,7 +38,7 @@ final class WebhookOperationCoordinator {
 		if ( ! $target instanceof AssistanceTarget
 			|| ! hash_equals( $providerCode, $target->providerCode() )
 			|| ! hash_equals( $repositoryId, $target->repositoryId() ) ) {
-			return $this->outcome( 'invalid_request', inlineSafe: true );
+			return $this->outcome( 'invalid_request', inline_safe: true );
 		}
 
 		$record = $this->records->find( $providerCode, $repositoryId );
@@ -49,7 +49,7 @@ final class WebhookOperationCoordinator {
 			|| ( 'setup' === $operation && null !== $record )
 			|| ( 'setup' !== $operation && ( null === $record
 				|| ! hash_equals( $target->repository(), $record->repository() ) ) ) ) {
-			return $this->outcome( 'invalid_token', inlineSafe: true );
+			return $this->outcome( 'invalid_token', inline_safe: true );
 		}
 		if ( 'setup' === $operation && null !== $selectedProfileId ) {
 			$selected = false;
@@ -64,7 +64,7 @@ final class WebhookOperationCoordinator {
 				$selected = false;
 			}
 			if ( ! $selected ) {
-				return $this->outcome( 'invalid_request', inlineSafe: true );
+				return $this->outcome( 'invalid_request', inline_safe: true );
 			}
 		}
 
@@ -83,14 +83,14 @@ final class WebhookOperationCoordinator {
 			return $this->outcome( 'operation_failed' );
 		}
 
-		return $this->applyResult( $operation, $target, $record, $credentialId, $result );
+		return $this->apply_result( $operation, $target, $record, $credentialId, $result );
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function applyResult( string $operation, AssistanceTarget $target, ?InstallationRecord $record, string $credentialId, RepositoryWebhookOperationResult $result ): array {
+	private function apply_result( string $operation, AssistanceTarget $target, ?InstallationRecord $record, string $credential_id, RepositoryWebhookOperationResult $result ): array {
 		$projection    = $result->toArray();
 		$state         = $projection['state'] ?? null;
-		$code          = $this->safeCode( $projection['code'] ?? null, 'operation_failed' );
+		$code          = $this->safe_code( $projection['code'] ?? null, 'operation_failed' );
 		$observed      = $projection['observed_at'] ?? null;
 		$delivery      = $projection['delivery'] ?? null;
 		$configuration = $projection['configuration'] ?? null;
@@ -108,20 +108,20 @@ final class WebhookOperationCoordinator {
 		}
 
 		if ( 'setup' === $operation ) {
-			$outcome    = $this->recordSetup( $target, $result, $credentialId, $state, $code, $observed, $delivery );
-			$successful = 'succeeded' === $state && $this->successfulCode( $outcome['code'] );
+			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed, $delivery );
+			$successful = 'succeeded' === $state && $this->successful_code( $outcome['code'] );
 
-			return $this->finalizeOutcome( $outcome, $remediation, $successful, $successful || 'failed' === $state );
+			return $this->finalize_outcome( $outcome, $remediation, $successful, $successful || 'failed' === $state );
 		}
 		if ( ! $record instanceof InstallationRecord ) {
 			return $this->outcome( 'invalid_request' );
 		}
 
 		$outcome = match ( $operation ) {
-			'check'       => $this->outcome( $this->recordCheck( $record, $credentialId, $state, $code, $observed, $target->endpoint(), $delivery, $configuration ) ),
-			'reconfigure' => $this->recordReconfigure( $record, $target, $result, $credentialId, $state, $code, $observed, $delivery ),
-			'remove'      => $this->outcome( $this->recordRemove( $record, $result, $state, $code, $observed ) ),
-			'test'        => $this->outcome( $this->recordTest( $record, $credentialId, $state, $code, $observed, $delivery, $configuration ) ),
+			'check'       => $this->outcome( $this->record_check( $record, $credential_id, $state, $code, $observed, $target->endpoint(), $delivery, $configuration ) ),
+			'reconfigure' => $this->record_reconfigure( $record, $target, $result, $credential_id, $state, $code, $observed, $delivery ),
+			'remove'      => $this->outcome( $this->record_remove( $record, $result, $state, $code, $observed ) ),
+			'test'        => $this->outcome( $this->record_test( $record, $credential_id, $state, $code, $observed, $delivery, $configuration ) ),
 		};
 
 		$successful = match ( $operation ) {
@@ -129,34 +129,34 @@ final class WebhookOperationCoordinator {
 				( 'verified' === $outcome['code'] && 'verified' === $delivery )
 				|| ( 'configured_pending_delivery' === $outcome['code'] && 'configured_pending_delivery' === $delivery )
 			),
-			'reconfigure' => 'succeeded' === $state && $this->successfulCode( $outcome['code'] ),
+			'reconfigure' => 'succeeded' === $state && $this->successful_code( $outcome['code'] ),
 			'remove' => $result->confirmsAbsence() && 'removed' === $outcome['code'],
 			'test' => false,
 		};
-		$inlineSafe = match ( $operation ) {
+		$inline_safe = match ( $operation ) {
 			'check', 'remove', 'test' => $successful || 'failed' === $state,
 			'reconfigure' => $successful || ( 'failed' === $state && 'absent' !== $delivery ),
 		};
 
-		return $this->finalizeOutcome( $outcome, $remediation, $successful, $inlineSafe );
+		return $this->finalize_outcome( $outcome, $remediation, $successful, $inline_safe );
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function recordSetup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $credentialId, string $state, string $code, string $observed, string $delivery ): array {
+	private function record_setup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $credential_id, string $state, string $code, string $observed, string $delivery ): array {
 		if ( 'failed' === $state ) {
 			return $this->outcome( $code );
 		}
 
-		$profile = $this->resultProfile( $result, $target->providerCode() );
-		$hookId  = $result->hookId();
+		$profile = $this->result_profile( $result, $target->providerCode() );
+		$hook_id = $result->hookId();
 		if ( null === $profile ) {
 			return $this->outcome( 'operation_failed' );
 		}
-		if ( ! is_string( $hookId ) || '' === trim( $hookId ) ) {
+		if ( ! is_string( $hook_id ) || '' === trim( $hook_id ) ) {
 			if ( ! in_array( $state, array( 'partial', 'ambiguous' ), true ) ) {
 				return $this->outcome( 'operation_failed' );
 			}
-			$hookId = InstallationRecord::unknownHookId();
+			$hook_id = InstallationRecord::unknownHookId();
 		}
 
 		$status = 'succeeded' === $state
@@ -166,8 +166,8 @@ final class WebhookOperationCoordinator {
 			$target->providerCode(),
 			$target->repositoryId(),
 			$target->repository(),
-			$hookId,
-			$credentialId,
+			$hook_id,
+			$credential_id,
 			$profile->id(),
 			$profile->scope(),
 			$profile->revision(),
@@ -180,14 +180,14 @@ final class WebhookOperationCoordinator {
 
 		$write = $this->records->saveIfCurrent( $record, null );
 		if ( InstallationStore::WRITE_CONFLICT === $write ) {
-			return $this->outcome( 'record_conflict', $hookId, $profile->id() );
+			return $this->outcome( 'record_conflict', $hook_id, $profile->id() );
 		}
-		if ( ! $this->writeSucceeded( $write ) ) {
-			$recoveryWrite = $this->records->saveIfCurrent( $record->withCheck( 'orphaned', $observed ), null );
-			if ( ! $this->writeSucceeded( $recoveryWrite ) ) {
+		if ( ! $this->write_succeeded( $write ) ) {
+			$recovery_write = $this->records->saveIfCurrent( $record->withCheck( 'orphaned', $observed ), null );
+			if ( ! $this->write_succeeded( $recovery_write ) ) {
 				return $this->outcome(
-					InstallationStore::WRITE_CONFLICT === $recoveryWrite ? 'record_conflict' : 'recovery_record_failed',
-					$hookId,
+					InstallationStore::WRITE_CONFLICT === $recovery_write ? 'record_conflict' : 'recovery_record_failed',
+					$hook_id,
 					$profile->id()
 				);
 			}
@@ -203,7 +203,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/** @param array<string, mixed> $configuration */
-	private function recordCheck( InstallationRecord $record, string $managementCredentialId, string $state, string $code, string $observed, string $endpoint, string $delivery, array $configuration ): string {
+	private function record_check( InstallationRecord $record, string $management_credential_id, string $state, string $code, string $observed, string $endpoint, string $delivery, array $configuration ): string {
 		if ( 'failed' === $state ) {
 			return $code;
 		}
@@ -217,38 +217,38 @@ final class WebhookOperationCoordinator {
 			'local_profile_missing' === $code => 'local_profile_missing',
 			default => 'needs_verification',
 		};
-		$next       = 'succeeded' === $state
-			? $record->withManagementCredential( $managementCredentialId, $status, $observed, $endpoint )
+		$next        = 'succeeded' === $state
+			? $record->withManagementCredential( $management_credential_id, $status, $observed, $endpoint )
 			: $record->withCheck( $status, $observed );
-		$resultCode = match ( true ) {
+		$result_code = match ( true ) {
 			'succeeded' === $state && 'absent' === $delivery => 'remote_missing',
 			'configuration_drift' === $status => 'configuration_drift',
 			'succeeded' === $state && 'verified' === $delivery => 'verified',
 			default => $code,
 		};
 
-		return $this->writeResultCode( $this->records->saveIfCurrent( $next, $record ), $resultCode );
+		return $this->write_result_code( $this->records->saveIfCurrent( $next, $record ), $result_code );
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function recordReconfigure( InstallationRecord $record, AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $managementCredentialId, string $state, string $code, string $observed, string $delivery ): array {
+	private function record_reconfigure( InstallationRecord $record, AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $management_credential_id, string $state, string $code, string $observed, string $delivery ): array {
 		if ( 'absent' === $delivery ) {
-			return $this->outcome( $this->writeResultCode( $this->records->saveIfCurrent( $record->withCheck( 'remote_missing', $observed ), $record ), 'remote_missing' ) );
+			return $this->outcome( $this->write_result_code( $this->records->saveIfCurrent( $record->withCheck( 'remote_missing', $observed ), $record ), 'remote_missing' ) );
 		}
 		if ( 'failed' === $state ) {
 			return $this->outcome( $code );
 		}
 		if ( 'succeeded' !== $state ) {
-			return $this->outcome( $this->writeResultCode( $this->records->saveIfCurrent( $record->withCheck( 'needs_verification', $observed ), $record ), $code ) );
+			return $this->outcome( $this->write_result_code( $this->records->saveIfCurrent( $record->withCheck( 'needs_verification', $observed ), $record ), $code ) );
 		}
 
-		$profile = $this->resultProfile( $result, $target->providerCode() );
-		$hookId  = $result->hookId();
-		if ( null === $profile || ! is_string( $hookId ) || ! hash_equals( $record->hookId(), $hookId ) ) {
+		$profile = $this->result_profile( $result, $target->providerCode() );
+		$hook_id = $result->hookId();
+		if ( null === $profile || ! is_string( $hook_id ) || ! hash_equals( $record->hookId(), $hook_id ) ) {
 			return $this->outcome( 'operation_failed' );
 		}
 		$next = $record->withProfile(
-			$managementCredentialId,
+			$management_credential_id,
 			$profile->id(),
 			$profile->scope(),
 			$profile->revision(),
@@ -261,13 +261,13 @@ final class WebhookOperationCoordinator {
 		$write = $this->records->saveIfCurrent( $next, $record );
 
 		return $this->outcome(
-			$this->writeResultCode( $write, 'verified' === $delivery ? 'verified' : 'configured_pending_delivery' ),
-			$this->writeSucceeded( $write ) ? null : $hookId,
-			$this->writeSucceeded( $write ) ? null : $profile->id()
+			$this->write_result_code( $write, 'verified' === $delivery ? 'verified' : 'configured_pending_delivery' ),
+			$this->write_succeeded( $write ) ? null : $hook_id,
+			$this->write_succeeded( $write ) ? null : $profile->id()
 		);
 	}
 
-	private function recordRemove( InstallationRecord $record, RepositoryWebhookOperationResult $result, string $state, string $code, string $observed ): string {
+	private function record_remove( InstallationRecord $record, RepositoryWebhookOperationResult $result, string $state, string $code, string $observed ): string {
 		if ( $result->confirmsAbsence() ) {
 			return match ( $this->records->deleteIfCurrent( $record->providerCode(), $record->repositoryId(), $record ) ) {
 				InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED => 'removed',
@@ -276,23 +276,23 @@ final class WebhookOperationCoordinator {
 			};
 		}
 		if ( in_array( $state, array( 'partial', 'ambiguous' ), true ) ) {
-			return $this->writeResultCode( $this->records->saveIfCurrent( $record->withCheck( 'removal_pending', $observed ), $record ), $code );
+			return $this->write_result_code( $this->records->saveIfCurrent( $record->withCheck( 'removal_pending', $observed ), $record ), $code );
 		}
 
 		return $code;
 	}
 
 	/** @param array<string, mixed> $configuration */
-	private function recordTest( InstallationRecord $record, string $managementCredentialId, string $state, string $code, string $observed, string $delivery, array $configuration ): string {
+	private function record_test( InstallationRecord $record, string $management_credential_id, string $state, string $code, string $observed, string $delivery, array $configuration ): string {
 		if ( 'absent' === $delivery ) {
-			return $this->writeResultCode(
-				$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, 'remote_missing', $observed ), $record ),
+			return $this->write_result_code(
+				$this->records->saveIfCurrent( $record->withManagementCredential( $management_credential_id, 'remote_missing', $observed ), $record ),
 				'remote_missing'
 			);
 		}
 		if ( in_array( 'mismatched', $configuration, true ) ) {
-			return $this->writeResultCode(
-				$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, 'configuration_drift', $observed ), $record ),
+			return $this->write_result_code(
+				$this->records->saveIfCurrent( $record->withManagementCredential( $management_credential_id, 'configuration_drift', $observed ), $record ),
 				'configuration_drift'
 			);
 		}
@@ -303,45 +303,45 @@ final class WebhookOperationCoordinator {
 		$status = 'needs_verification';
 		$code   = 'ping_verified' === $code ? 'ping_requested' : $code;
 
-		return $this->writeResultCode(
-			$this->records->saveIfCurrent( $record->withManagementCredential( $managementCredentialId, $status, $observed ), $record ),
+		return $this->write_result_code(
+			$this->records->saveIfCurrent( $record->withManagementCredential( $management_credential_id, $status, $observed ), $record ),
 			$code
 		);
 	}
 
-	private function resultProfile( RepositoryWebhookOperationResult $result, string $providerCode ): ?WebhookProfileMetadata {
+	private function result_profile( RepositoryWebhookOperationResult $result, string $provider_code ): ?WebhookProfileMetadata {
 		$profile = $result->profile();
 
-		return $profile instanceof WebhookProfileMetadata && hash_equals( $providerCode, $profile->providerCode() )
+		return $profile instanceof WebhookProfileMetadata && hash_equals( $provider_code, $profile->providerCode() )
 			? $profile
 			: null;
 	}
 
-	private function writeSucceeded( string $result ): bool {
+	private function write_succeeded( string $result ): bool {
 		return in_array( $result, array( InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED ), true );
 	}
 
-	private function writeResultCode( string $result, string $successCode ): string {
+	private function write_result_code( string $result, string $success_code ): string {
 		return match ( $result ) {
-			InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED => $successCode,
+			InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED => $success_code,
 			InstallationStore::WRITE_CONFLICT => 'record_conflict',
 			default => 'record_update_failed',
 		};
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function outcome( string $code, ?string $hookId = null, ?string $profileId = null, bool $successful = false, bool $inlineSafe = false ): array {
+	private function outcome( string $code, ?string $hook_id = null, ?string $profile_id = null, bool $successful = false, bool $inline_safe = false ): array {
 		return array(
 			'code'        => $code,
-			'recovery'    => null !== $hookId && null !== $profileId
+			'recovery'    => null !== $hook_id && null !== $profile_id
 				? array(
-					'hook_id'    => $hookId,
-					'profile_id' => $profileId,
+					'hook_id'    => $hook_id,
+					'profile_id' => $profile_id,
 				)
 					: null,
 			'remediation' => null,
 			'successful'  => $successful,
-			'inline_safe' => $inlineSafe,
+			'inline_safe' => $inline_safe,
 		);
 	}
 
@@ -349,22 +349,22 @@ final class WebhookOperationCoordinator {
 	 * @param array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} $outcome
 	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
 	 */
-	private function finalizeOutcome( array $outcome, string $remediation, bool $successful, bool $inlineSafe ): array {
-		if ( ! $successful && $this->successfulCode( $outcome['code'] ) ) {
+	private function finalize_outcome( array $outcome, string $remediation, bool $successful, bool $inline_safe ): array {
+		if ( ! $successful && $this->successful_code( $outcome['code'] ) ) {
 			$outcome['code'] = 'operation_failed';
 		}
 		$outcome['remediation'] = $remediation;
 		$outcome['successful']  = $successful;
-		$outcome['inline_safe'] = $inlineSafe;
+		$outcome['inline_safe'] = $inline_safe;
 
 		return $outcome;
 	}
 
-	private function successfulCode( string $code ): bool {
+	private function successful_code( string $code ): bool {
 		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
 	}
 
-	private function safeCode( mixed $code, string $fallback ): string {
+	private function safe_code( mixed $code, string $fallback ): string {
 		return is_string( $code ) && 1 === preg_match( '/^[a-z0-9][a-z0-9._-]{0,95}$/', $code ) ? $code : $fallback;
 	}
 }

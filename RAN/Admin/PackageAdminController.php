@@ -77,15 +77,15 @@ final class PackageAdminController {
 			);
 			return false;
 		}
-		$storedPackage = null;
+		$stored_package = null;
 		if ( in_array( $action, array( 'edit-plugin', 'edit-theme' ), true ) ) {
-			$storedPackage = $this->storedPackageWithAvailableProvider( $dashboard, $action, $request );
-			if ( ! $storedPackage instanceof Package ) {
+			$stored_package = $this->stored_package_with_available_provider( $dashboard, $action, $request );
+			if ( ! $stored_package instanceof Package ) {
 				return false;
 			}
 		}
 		if ( in_array( $action, array( 'install-plugin', 'install-theme', 'edit-plugin', 'edit-theme' ), true ) ) {
-			$request = $this->resolve( $dashboard, $request, $this->trustedPublicLookupProfile( $request, $storedPackage ) );
+			$request = $this->resolve( $dashboard, $request, $this->trusted_public_lookup_profile( $request, $stored_package ) );
 			if ( null === $request ) {
 				return false;
 			}
@@ -95,6 +95,7 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public function manageBulk(
 		Dashboard $dashboard,
 		string $action,
@@ -157,8 +158,8 @@ final class PackageAdminController {
 
 	/**
 	 * @param array<string, mixed>  $request
-	 * @param array<string, string> $listArguments
-	 * @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $addContextMessage
+	 * @param array<string, string> $list_arguments
+	 * @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message
 	 */
 	public function perform(
 		Dashboard $dashboard,
@@ -171,12 +172,12 @@ final class PackageAdminController {
 			if ( null === $this->operations ) {
 				throw new LogicException( 'Package operations are not configured.' );
 			}
-			$operation             = PackageOperation::from_input( $action, $request );
-			$reinstall             = 'edit' === $operation->operation
+			$operation               = PackageOperation::from_input( $action, $request );
+			$reinstall               = 'edit' === $operation->operation
 				&& $this->enabled( $request, 'reinstall_after_save' );
-			$checkRepositoryBranch = 'edit' === $operation->operation
+			$check_repository_branch = 'edit' === $operation->operation
 				&& $this->enabled( $request, 'check_repository_branch_after_save' );
-			$result                = $this->operations->execute( $operation );
+			$result                  = $this->operations->execute( $operation );
 			if ( $reinstall && 'edited' === ( $result['status'] ?? null ) && ( $result['package'] ?? null ) instanceof Package ) {
 				$dashboard->addMessage(
 					array(
@@ -201,15 +202,15 @@ final class PackageAdminController {
 			return false;
 		} catch ( DeploymentStorageFailure $failure ) {
 			return null !== $failure->get_active_correlation_id()
-				? $this->activeDeployment( $dashboard, $failure, $action )
-				: $this->manualFailure( $dashboard, $addContextMessage, $failure, $action );
+				? $this->active_deployment( $dashboard, $failure, $action )
+				: $this->manual_failure( $dashboard, $addContextMessage, $failure, $action );
 		} catch ( Throwable $failure ) {
-			return $this->manualFailure( $dashboard, $addContextMessage, $failure, $action );
+			return $this->manual_failure( $dashboard, $addContextMessage, $failure, $action );
 		}
 
-		$installAnother   = 'install' === $operation->operation && $this->enabled( $request, 'install_another' );
-		$returnToSettings = $reinstall || ( 'update' === $operation->operation && $this->enabled( $request, 'return_to_settings' ) );
-		$status           = $result['status'] ?? null;
+		$install_another    = 'install' === $operation->operation && $this->enabled( $request, 'install_another' );
+		$return_to_settings = $reinstall || ( 'update' === $operation->operation && $this->enabled( $request, 'return_to_settings' ) );
+		$status             = $result['status'] ?? null;
 		if ( 'edited' === $status && ( $result['package'] ?? null ) instanceof Package ) {
 			$package = $result['package'];
 			\RAN\Logging\BoosterLogger::log(
@@ -226,24 +227,24 @@ final class PackageAdminController {
 			);
 		}
 		if ( 'already-managed' === $status && ( $result['package'] ?? null ) instanceof Package ) {
-			return $this->successRedirect( $operation, $result['package'], $listArguments, false, true, 'already-managed' );
+			return $this->success_redirect( $operation, $result['package'], $listArguments, false, true, 'already-managed' );
 		}
-		if ( $checkRepositoryBranch
+		if ( $check_repository_branch
 			&& 'edited' === $status
 			&& ( $result['package'] ?? null ) instanceof Package
 			&& PackageSource::BRANCH === $result['package']->getSource()
 		) {
-			return $this->repositoryBranchCheckRedirect( $operation, $result['package'] );
+			return $this->repository_branch_check_redirect( $operation, $result['package'] );
 		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
-			return $this->successRedirect( $operation, $result['package'], $listArguments, $installAnother, $returnToSettings || 'edited' === $status );
+			return $this->success_redirect( $operation, $result['package'], $listArguments, $install_another, $return_to_settings || 'edited' === $status );
 		}
 		if ( in_array( $status, array( 'unlinked', 'deleted' ), true ) ) {
-			return $this->successRedirect( $operation, (string) $operation->identifier, $listArguments );
+			return $this->success_redirect( $operation, (string) $operation->identifier, $listArguments );
 		}
 		if ( 'conflict' === $status ) {
 			status_header( 409 );
-			$message = $checkRepositoryBranch
+			$message = $check_repository_branch
 				? __( 'Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again.', 'ran-booster' )
 				: __( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', 'ran-booster' );
 			$addContextMessage(
@@ -257,17 +258,18 @@ final class PackageAdminController {
 			return false;
 		}
 		if ( 'failed' === $status && array_key_exists( 'correlation_id', $result ) ) {
-			return $this->terminalDeploymentFailure( $dashboard, $addContextMessage, $result, $action );
+			return $this->terminal_deployment_failure( $dashboard, $addContextMessage, $result, $action );
 		}
 		if ( 'failed' === $status && is_string( $result['outcome_code'] ?? null ) ) {
-			$this->removalFailure( $operation, $result['outcome_code'], $addContextMessage );
+			$this->removal_failure( $operation, $result['outcome_code'], $addContextMessage );
 			return false;
 		}
 
-		return $this->manualFailure( $dashboard, $addContextMessage, null, $action );
+		return $this->manual_failure( $dashboard, $addContextMessage, null, $action );
 	}
 
 	/** @return array{operation: string, identifier: string}|null */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public function addSuccessNotice( Dashboard $dashboard, string $type ): ?array {
 		foreach ( array( 'ran_booster_result', 'ran_booster_package', '_ran_booster_notice_nonce' ) as $key ) {
 			if ( ! isset( $_GET[ $key ] ) || ! is_scalar( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
@@ -319,7 +321,8 @@ final class PackageAdminController {
 		return compact( 'operation', 'identifier' );
 	}
 
-	/** @param array<string, string> $listArguments */
+	/** @param array<string, string> $list_arguments */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public function bulkRedirect( string $type, BulkPackageResult $result, array $listArguments ): string {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ( 'theme' === $type && in_array( $result->operation, BulkPackageAction::plugin_activation_operations(), true ) ) ) {
@@ -330,10 +333,10 @@ final class PackageAdminController {
 		foreach ( $data as $key => $value ) {
 			$args[ 'ran_booster_bulk_' . $key ] = $value;
 		}
-		$args['_ran_booster_bulk_notice_nonce'] = wp_create_nonce( $this->bulkNoticeAction( $type, $data ) );
-		$adminUrl                               = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+		$args['_ran_booster_bulk_notice_nonce'] = wp_create_nonce( $this->bulk_notice_action( $type, $data ) );
+		$admin_url                              = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 
-		return $adminUrl . '?' . http_build_query(
+		return $admin_url . '?' . http_build_query(
 			array( 'page' => 'ran-booster-' . $type . 's' ) + $listArguments + $args,
 			'',
 			'&',
@@ -342,22 +345,23 @@ final class PackageAdminController {
 	}
 
 	/** @param \Closure(array<string, mixed>, array<string, string>): void $addContextMessage */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public function addBulkNotice( Dashboard $dashboard, string $type, \Closure $addContextMessage ): void {
 		$data = array();
 		foreach ( array( 'operation', 'selected', 'changed', 'unchanged', 'queued', 'skips', 'runner', 'error' ) as $key ) {
-			$queryKey = 'ran_booster_bulk_' . $key;
-			if ( ! isset( $_GET[ $queryKey ] ) || ! is_scalar( $_GET[ $queryKey ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
+			$query_key = 'ran_booster_bulk_' . $key;
+			if ( ! isset( $_GET[ $query_key ] ) || ! is_scalar( $_GET[ $query_key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
 				return;
 			}
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
-			$data[ $key ] = wp_unslash( (string) $_GET[ $queryKey ] );
+			$data[ $key ] = wp_unslash( (string) $_GET[ $query_key ] );
 		}
 		if ( ! isset( $_GET['_ran_booster_bulk_notice_nonce'] ) || ! is_scalar( $_GET['_ran_booster_bulk_notice_nonce'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
 			return;
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification is the purpose of this read.
 		$nonce = wp_unslash( (string) $_GET['_ran_booster_bulk_notice_nonce'] );
-		if ( false === wp_verify_nonce( $nonce, $this->bulkNoticeAction( $type, $data ) ) ) {
+		if ( false === wp_verify_nonce( $nonce, $this->bulk_notice_action( $type, $data ) ) ) {
 			return;
 		}
 		try {
@@ -398,7 +402,7 @@ final class PackageAdminController {
 				$plural,
 				$result->skipped()
 			);
-			$message = $this->appendBulkReasons(
+			$message = $this->append_bulk_reasons(
 				$message,
 				$result->skipped_by_reason,
 				array(
@@ -439,7 +443,7 @@ final class PackageAdminController {
 				$result->unchanged,
 				$result->skipped()
 			);
-			$message = $this->appendBulkReasons(
+			$message = $this->append_bulk_reasons(
 				$message,
 				$result->skipped_by_reason,
 				array(
@@ -465,7 +469,7 @@ final class PackageAdminController {
 			return;
 		}
 
-		$policyLabel = match ( $result->operation ) {
+		$policy_label = match ( $result->operation ) {
 			BulkPackageAction::POLICY_DISABLED => __( 'Disabled', 'ran-booster' ),
 			BulkPackageAction::POLICY_AUTOMATIC => __( 'Automatic', 'ran-booster' ),
 			default => __( 'Manual', 'ran-booster' ),
@@ -478,7 +482,7 @@ final class PackageAdminController {
 					__( 'Changed %1$d %2$s to %3$s. Already in that state: %4$d.', 'ran-booster' ),
 					$result->changed,
 					$plural,
-					$policyLabel,
+					$policy_label,
 					$result->unchanged
 				),
 			)
@@ -486,7 +490,7 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
-	private function storedPackageWithAvailableProvider( Dashboard $dashboard, string $action, array $request ): ?Package {
+	private function stored_package_with_available_provider( Dashboard $dashboard, string $action, array $request ): ?Package {
 		try {
 			$identifier = $request[ 'edit-plugin' === $action ? 'file' : 'stylesheet' ] ?? null;
 			if ( ! is_string( $identifier ) || '' === trim( $identifier ) ) {
@@ -520,11 +524,11 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, mixed> $request @return array<string, mixed>|null */
-	/** @param array{profile_id: string|null}|null $trustedPublicLookup */
-	private function resolve( Dashboard $dashboard, array $request, ?array $trustedPublicLookup = null ): ?array {
+	/** @param array{profile_id: string|null}|null $trusted_public_lookup */
+	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null ): ?array {
 		try {
-			if ( null !== $trustedPublicLookup ) {
-				return $this->repositories?->resolve_with_trusted_public_lookup_profile( $request, $trustedPublicLookup['profile_id'] )
+			if ( null !== $trusted_public_lookup ) {
+				return $this->repositories?->resolve_with_trusted_public_lookup_profile( $request, $trusted_public_lookup['profile_id'] )
 					?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 			}
 
@@ -561,7 +565,7 @@ final class PackageAdminController {
 
 	/** @param array<string, mixed> $request */
 	/** @return array{profile_id: string|null}|null */
-	private function trustedPublicLookupProfile( array $request, ?Package $package ): ?array {
+	private function trusted_public_lookup_profile( array $request, ?Package $package ): ?array {
 		if ( ! $package instanceof Package
 			|| ! $this->enabled( $request, 'check_repository_branch_after_save' )
 			|| PackageSource::BRANCH !== $package->getSource()
@@ -576,34 +580,34 @@ final class PackageAdminController {
 		);
 	}
 
-	/** @param array<string, string> $listArguments */
-	private function successRedirect( PackageOperation $operation, Package|string $package, array $listArguments, bool $installAnother = false, bool $returnToSettings = false, ?string $resultOperation = null ): string {
+	/** @param array<string, string> $list_arguments */
+	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null ): string {
 		$identifier = $package instanceof Package ? $package->getIdentifier() : $package;
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The deployed package identity is unavailable.' );
 		}
-		$type              = $operation->package_type;
-		$resultOperation ??= $operation->operation;
+		$type               = $operation->package_type;
+		$result_operation ??= $operation->operation;
 
 		$args = array(
-			'page'                      => $installAnother ? 'ran-booster-' . $type . 's-create' : 'ran-booster-' . $type . 's',
-			'ran_booster_result'        => $resultOperation,
+			'page'                      => $install_another ? 'ran-booster-' . $type . 's-create' : 'ran-booster-' . $type . 's',
+			'ran_booster_result'        => $result_operation,
 			'ran_booster_package'       => $identifier,
-			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $resultOperation . '|' . $identifier ),
+			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $result_operation . '|' . $identifier ),
 		);
-		if ( $installAnother ) {
+		if ( $install_another ) {
 			$args['provider']    = (string) $operation->provider_code;
 			$args['open_picker'] = '1';
-		} elseif ( in_array( $operation->operation, array( 'install', 'edit' ), true ) || $returnToSettings ) {
+		} elseif ( in_array( $operation->operation, array( 'install', 'edit' ), true ) || $return_to_settings ) {
 			$args['package'] = $identifier;
 		} elseif ( 'update' === $operation->operation ) {
-			$args = array_merge( $listArguments, $args );
+			$args = array_merge( $list_arguments, $args );
 		}
-		$adminUrl = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
-		return $adminUrl . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
+		$admin_url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+		return $admin_url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}
 
-	private function repositoryBranchCheckRedirect( PackageOperation $operation, Package $package ): string {
+	private function repository_branch_check_redirect( PackageOperation $operation, Package $package ): string {
 		$identifier = $package->getIdentifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The managed package identity is unavailable.' );
@@ -621,6 +625,7 @@ final class PackageAdminController {
 		return $url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public static function repositoryBranchCheckAction( Package $package, string $type ): string {
 		return 'ran-booster-repository-branch-check|'
 			. $type . '|' . (string) $package->getIdentifier() . '|'
@@ -632,7 +637,7 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, string> $data */
-	private function bulkNoticeAction( string $type, array $data ): string {
+	private function bulk_notice_action( string $type, array $data ): string {
 		ksort( $data, SORT_STRING );
 
 		return 'ran-booster-bulk-result|' . $type . '|' . hash(
@@ -642,7 +647,7 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, int> $reasons @param array<string, string> $labels */
-	private function appendBulkReasons( string $message, array $reasons, array $labels ): string {
+	private function append_bulk_reasons( string $message, array $reasons, array $labels ): string {
 		$details = array();
 		foreach ( $reasons as $reason => $count ) {
 			$details[] = ( $labels[ $reason ] ?? $reason ) . ': ' . $count;
@@ -651,26 +656,26 @@ final class PackageAdminController {
 		return array() === $details ? $message : $message . ' ' . implode( '; ', $details ) . '.';
 	}
 
-	private function activeDeployment( Dashboard $dashboard, DeploymentStorageFailure $failure, string $action ): bool {
+	private function active_deployment( Dashboard $dashboard, DeploymentStorageFailure $failure, string $action ): bool {
 		$notice = $this->deployments?->activeDeployment( $failure, $action );
 		if ( null === $notice ) {
-			return $this->manualFailure( $dashboard, static function (): void {}, $failure, $action );
+			return $this->manual_failure( $dashboard, static function (): void {}, $failure, $action );
 		}
 		$dashboard->addFailureMessage( $notice['message'], $failure, $notice['context'] );
 		return false;
 	}
 
-	private function terminalDeploymentFailure( Dashboard $dashboard, \Closure $addContextMessage, array $result, string $action ): bool {
+	private function terminal_deployment_failure( Dashboard $dashboard, \Closure $add_context_message, array $result, string $action ): bool {
 		$notice = $this->deployments?->deploymentFailure( $result['outcome_code'] ?? null, $result['correlation_id'], $action );
 		if ( null === $notice ) {
-			return $this->manualFailure( $dashboard, $addContextMessage, null, $action );
+			return $this->manual_failure( $dashboard, $add_context_message, null, $action );
 		}
-		$addContextMessage( $notice['message'], $notice['context'] );
+		$add_context_message( $notice['message'], $notice['context'] );
 		return false;
 	}
 
-	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $addContextMessage */
-	private function manualFailure( Dashboard $dashboard, \Closure $addContextMessage, ?Throwable $failure, string $action ): bool {
+	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message */
+	private function manual_failure( Dashboard $dashboard, \Closure $add_context_message, ?Throwable $failure, string $action ): bool {
 		status_header( 400 );
 		$message = new WP_Error( 'ran_booster_manual_action_failed', __( 'RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed.', 'ran-booster' ) );
 		$context = array(
@@ -678,15 +683,15 @@ final class PackageAdminController {
 			'step'      => 'manual_package_operation',
 		);
 		if ( null === $failure ) {
-			$addContextMessage( $message, $context );
+			$add_context_message( $message, $context );
 		} else {
 			$dashboard->addFailureMessage( $message, $failure, $context );
 		}
 		return false;
 	}
 
-	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $addContextMessage */
-	private function removalFailure( PackageOperation $operation, string $code, \Closure $addContextMessage ): void {
+	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message */
+	private function removal_failure( PackageOperation $operation, string $code, \Closure $add_context_message ): void {
 		$type    = 'plugin' === $operation->package_type
 			? _x( 'Plugin', 'package type', 'ran-booster' )
 			: _x( 'Theme', 'package type', 'ran-booster' );
@@ -739,7 +744,7 @@ final class PackageAdminController {
 			),
 		};
 		status_header( 400 );
-		$addContextMessage(
+		$add_context_message(
 			new WP_Error( 'ran_booster_package_removal_' . $code, $message ),
 			array(
 				'operation'    => $operation->operation,

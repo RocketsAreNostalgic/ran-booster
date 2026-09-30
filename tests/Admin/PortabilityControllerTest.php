@@ -538,7 +538,7 @@ final class PortabilityControllerTest extends TestCase {
 		$package   = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
 		$blueprint = new PackageBlueprint( array( $package ) );
 		$item      = new BlueprintPlanItem( $package, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
 		$result = $method->invoke( $this->application(), $blueprint, $item, null, null, null, null, false, false );
 
@@ -568,7 +568,7 @@ final class PortabilityControllerTest extends TestCase {
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$secrets
 		);
-		$method      = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
+		$method      = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
 		$result = $method->invoke( $application, $blueprint, $item, $credential, 'import', null, null, true, true );
 
@@ -634,7 +634,7 @@ final class PortabilityControllerTest extends TestCase {
 	public function testPublicRepositoryInputKeepsItsCredentialAssociation(): void {
 		$package = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
 		$item    = new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE );
-		$method  = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'operationInput' );
+		$method  = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'operation_input' );
 
 		$input = $method->invoke( $this->application(), $item, 'imported-pat', false );
 
@@ -646,7 +646,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testBlueprintSuccessRequiresAnExactDisabledReadBack(): void {
 		$blueprint = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assertDisabledResult' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assert_disabled_result' );
 
 		$method->invoke( $this->application(), array( 'package' => $this->managedPlugin( DeploymentPolicy::DISABLED ) ), $blueprint, null, false );
 		$method->invoke(
@@ -661,7 +661,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testExactTargetPredicateSupportsOnlyVerifiedManagedRetry(): void {
 		$blueprint = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'targetVerified' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'target_verified' );
 
 		self::assertTrue( $method->invoke( $this->application(), $this->managedPlugin( DeploymentPolicy::DISABLED ), $blueprint, null, false ) );
 		self::assertFalse( $method->invoke( $this->application(), $this->managedPlugin( DeploymentPolicy::MANUAL ), $blueprint, null, false ) );
@@ -670,7 +670,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testBlueprintSuccessRejectsAManualReadBack(): void {
 		$blueprint = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assertDisabledResult' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assert_disabled_result' );
 
 		$this->expectException( RuntimeException::class );
 		$method->invoke( $this->application(), array( 'package' => $this->managedPlugin( DeploymentPolicy::MANUAL ) ), $blueprint, null, false );
@@ -678,7 +678,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testBlueprintSuccessRejectsAnyMismatchedManagementField(): void {
 		$blueprint  = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method     = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assertDisabledResult' );
+		$method     = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assert_disabled_result' );
 		$mismatches = array(
 			'provider'     => $this->managedPlugin( DeploymentPolicy::DISABLED, private: true, credentialId: 'target-profile', provider: 'gitlab' ),
 			'type'         => $this->managedThemeWithPluginIdentifier(),
@@ -1023,7 +1023,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	/** @param array<string, mixed> $result @return array{status:string,message:string} */
 	private function deploymentResult( array $result ): array {
-		$method = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'deploymentResult' );
+		$method = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'deployment_result' );
 
 		return $method->invoke( $this->application(), $result );
 	}

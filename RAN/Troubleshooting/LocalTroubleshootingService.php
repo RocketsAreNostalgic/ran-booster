@@ -26,7 +26,9 @@ class LocalTroubleshootingService {
 
 	public function __construct(
 		private readonly SecretsFile $secrets,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		private readonly ?DeploymentAttemptRepository $deploymentAttempts = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		private readonly ?WordPressWorkerWakeup $workerWakeup = null,
 		private readonly ?Database $database = null
 	) {
@@ -36,7 +38,7 @@ class LocalTroubleshootingService {
 	 * @return array{results: list<ProviderDiagnosticResult>, partial: bool}
 	 */
 	public function diagnose(): array {
-		$runtime = $this->runtimeResult();
+		$runtime = $this->runtime_result();
 		if ( $this->isMultisite() ) {
 			return array(
 				'results' => array( $runtime ),
@@ -78,16 +80,16 @@ class LocalTroubleshootingService {
 		return array(
 			'results' => array(
 				$runtime,
-				$this->filesystemResult(),
-				$this->destinationResult(),
-				$this->deploymentAttemptsResult( $snapshot, $retention ),
-				$this->deploymentWorkerResult( $snapshot ),
+				$this->filesystem_result(),
+				$this->destination_result(),
+				$this->deployment_attempts_result( $snapshot, $retention ),
+				$this->deployment_worker_result( $snapshot ),
 			),
 			'partial' => false,
 		);
 	}
 
-	private function runtimeResult(): ProviderDiagnosticResult {
+	private function runtime_result(): ProviderDiagnosticResult {
 		if ( $this->isMultisite() ) {
 			return new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::FAILED,
@@ -116,7 +118,7 @@ class LocalTroubleshootingService {
 		);
 	}
 
-	private function filesystemResult(): ProviderDiagnosticResult {
+	private function filesystem_result(): ProviderDiagnosticResult {
 		try {
 			if ( ! $this->filesystemModificationAllowed() ) {
 				return new ProviderDiagnosticResult(
@@ -136,25 +138,25 @@ class LocalTroubleshootingService {
 				);
 			}
 
-			$secretsPath = $this->secrets->path();
-			if ( ! is_string( $secretsPath )
-				|| '' === trim( $secretsPath )
-				|| is_link( $secretsPath )
-				|| ( false !== $this->pathStat( $secretsPath ) && ! is_file( $secretsPath ) )
+			$secrets_path = $this->secrets->path();
+			if ( ! is_string( $secrets_path )
+				|| '' === trim( $secrets_path )
+				|| is_link( $secrets_path )
+				|| ( false !== $this->pathStat( $secrets_path ) && ! is_file( $secrets_path ) )
 			) {
-				return $this->filesystemFailure();
+				return $this->filesystem_failure();
 			}
 
 			$directories = array_unique(
 				array(
 					$this->temporaryDirectory(),
-					dirname( $secretsPath ),
+					dirname( $secrets_path ),
 				)
 			);
 
 			foreach ( $directories as $directory ) {
-				if ( ! $this->probeDirectory( $directory ) ) {
-					return $this->filesystemFailure();
+				if ( ! $this->probe_directory( $directory ) ) {
+					return $this->filesystem_failure();
 				}
 			}
 
@@ -165,11 +167,11 @@ class LocalTroubleshootingService {
 				'No action is required.'
 			);
 		} catch ( Throwable ) {
-			return $this->filesystemFailure();
+			return $this->filesystem_failure();
 		}
 	}
 
-	private function destinationResult(): ProviderDiagnosticResult {
+	private function destination_result(): ProviderDiagnosticResult {
 		try {
 			$directories = array_unique(
 				array(
@@ -179,8 +181,8 @@ class LocalTroubleshootingService {
 			);
 
 			foreach ( $directories as $directory ) {
-				if ( ! $this->probeDirectory( $directory ) ) {
-					return $this->destinationFailure();
+				if ( ! $this->probe_directory( $directory ) ) {
+					return $this->destination_failure();
 				}
 			}
 
@@ -191,12 +193,12 @@ class LocalTroubleshootingService {
 				'No action is required.'
 			);
 		} catch ( Throwable ) {
-			return $this->destinationFailure();
+			return $this->destination_failure();
 		}
 	}
 
 	/** Report the identity-free operational state of the durable journal. */
-	private function deploymentAttemptsResult( ?array $snapshot, ?array $retention ): ProviderDiagnosticResult {
+	private function deployment_attempts_result( ?array $snapshot, ?array $retention ): ProviderDiagnosticResult {
 		if ( null === $snapshot ) {
 			return new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::FAILED,
@@ -241,18 +243,18 @@ class LocalTroubleshootingService {
 	}
 
 	/** Report the read-only state of the sequential worker wake-up. */
-	private function deploymentWorkerResult( ?array $snapshot ): ProviderDiagnosticResult {
+	private function deployment_worker_result( ?array $snapshot ): ProviderDiagnosticResult {
 		if ( null === $snapshot ) {
-			return $this->workerUnavailable();
+			return $this->worker_unavailable();
 		}
 		$queued  = $snapshot['queued'];
 		$running = $snapshot['running'];
 		$wakeup  = $this->workerInspection();
 		if ( null === $wakeup ) {
-			return $this->workerUnavailable();
+			return $this->worker_unavailable();
 		}
 		if ( 'unavailable' === $wakeup['status'] ) {
-			return $this->workerUnavailable();
+			return $this->worker_unavailable();
 		}
 		if ( $queued > 0 && 0 === $running && 'scheduled' !== $wakeup['status'] ) {
 			return new ProviderDiagnosticResult(
@@ -272,11 +274,14 @@ class LocalTroubleshootingService {
 	}
 
 	/** @return array{queued: int, running: int, needs_attention: int, earliest_queued_at: string|null, latest_terminal_at: string|null}|null */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function deploymentSnapshot(): ?array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( null === $this->deploymentAttempts ) {
 			return null;
 		}
 		try {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			return $this->deploymentAttempts->operationalSnapshot();
 		} catch ( Throwable ) {
 			return null;
@@ -284,11 +289,14 @@ class LocalTroubleshootingService {
 	}
 
 	/** @return array{valid: bool, maximum_rows: int, source: 'configured'|'default'}|null */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function retentionConfiguration(): ?array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( null === $this->deploymentAttempts ) {
 			return null;
 		}
 		try {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			return $this->deploymentAttempts->retentionConfigurationStatus();
 		} catch ( Throwable ) {
 			return null;
@@ -296,18 +304,21 @@ class LocalTroubleshootingService {
 	}
 
 	/** @return array{status: 'scheduled'|'missing'|'unavailable', scheduled_at: int|null}|null */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function workerInspection(): ?array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( null === $this->workerWakeup ) {
 			return null;
 		}
 		try {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			return $this->workerWakeup->inspect();
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
-	private function workerUnavailable(): ProviderDiagnosticResult {
+	private function worker_unavailable(): ProviderDiagnosticResult {
 		return new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::FAILED,
 			'local.deployment_worker.unavailable',
@@ -316,7 +327,7 @@ class LocalTroubleshootingService {
 		);
 	}
 
-	private function filesystemFailure(): ProviderDiagnosticResult {
+	private function filesystem_failure(): ProviderDiagnosticResult {
 		return new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::FAILED,
 			'local.filesystem.unavailable',
@@ -325,7 +336,7 @@ class LocalTroubleshootingService {
 		);
 	}
 
-	private function destinationFailure(): ProviderDiagnosticResult {
+	private function destination_failure(): ProviderDiagnosticResult {
 		return new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::FAILED,
 			'local.destinations.unavailable',
@@ -334,21 +345,21 @@ class LocalTroubleshootingService {
 		);
 	}
 
-	private function probeDirectory( string $directory ): bool {
-		$directory = $this->canonicalDirectory( $directory );
+	private function probe_directory( string $directory ): bool {
+		$directory = $this->canonical_directory( $directory );
 		if ( null === $directory || ! is_writable( $directory ) ) {
 			return false;
 		}
 
-		$directoryStat = $this->pathStat( $directory );
-		if ( ! is_array( $directoryStat ) || 0040000 !== ( $directoryStat['mode'] & 0170000 ) ) {
+		$directory_stat = $this->pathStat( $directory );
+		if ( ! is_array( $directory_stat ) || 0040000 !== ( $directory_stat['mode'] & 0170000 ) ) {
 			return false;
 		}
 
-		$handle      = null;
-		$handleStat  = null;
-		$successful  = false;
-		$cleanupOkay = true;
+		$handle       = null;
+		$handle_stat  = null;
+		$successful   = false;
+		$cleanup_okay = true;
 
 		try {
 			$suffix = $this->randomSuffix();
@@ -368,13 +379,13 @@ class LocalTroubleshootingService {
 				return false;
 			}
 
-			$handleStat = fstat( $handle );
-			if ( ! is_array( $handleStat )
-				|| 0100000 !== ( $handleStat['mode'] & 0170000 )
-				|| 0600 !== ( $handleStat['mode'] & 0777 )
-				|| 1 !== $handleStat['nlink']
-				|| ! $this->sameDirectory( $directory, $directoryStat )
-				|| ! $this->handleMatchesPath( $handleStat, $source )
+			$handle_stat = fstat( $handle );
+			if ( ! is_array( $handle_stat )
+				|| 0100000 !== ( $handle_stat['mode'] & 0170000 )
+				|| 0600 !== ( $handle_stat['mode'] & 0777 )
+				|| 1 !== $handle_stat['nlink']
+				|| ! $this->same_directory( $directory, $directory_stat )
+				|| ! $this->handle_matches_path( $handle_stat, $source )
 			) {
 				return false;
 			}
@@ -384,8 +395,8 @@ class LocalTroubleshootingService {
 				|| ! $this->flushMarker( $handle )
 				|| false !== $this->pathStat( $destination )
 				|| ! $this->promoteMarker( $source, $destination )
-				|| ! $this->sameDirectory( $directory, $directoryStat )
-				|| ! $this->handleMatchesPromotedPaths( $handle, $source, $destination )
+				|| ! $this->same_directory( $directory, $directory_stat )
+				|| ! $this->handle_matches_promoted_paths( $handle, $source, $destination )
 			) {
 				return false;
 			}
@@ -394,9 +405,9 @@ class LocalTroubleshootingService {
 		} catch ( Throwable ) {
 			$successful = false;
 		} finally {
-			if ( is_resource( $handle ) && is_array( $handleStat ) ) {
-				$cleanupOkay = $this->cleanupMarker( $source ?? '', $handleStat ) && $cleanupOkay;
-				$cleanupOkay = $this->cleanupMarker( $destination ?? '', $handleStat ) && $cleanupOkay;
+			if ( is_resource( $handle ) && is_array( $handle_stat ) ) {
+				$cleanup_okay = $this->cleanup_marker( $source ?? '', $handle_stat ) && $cleanup_okay;
+				$cleanup_okay = $this->cleanup_marker( $destination ?? '', $handle_stat ) && $cleanup_okay;
 			}
 
 			if ( is_resource( $handle ) ) {
@@ -404,10 +415,10 @@ class LocalTroubleshootingService {
 			}
 		}
 
-		return $successful && $cleanupOkay;
+		return $successful && $cleanup_okay;
 	}
 
-	private function canonicalDirectory( string $directory ): ?string {
+	private function canonical_directory( string $directory ): ?string {
 		if ( '' === trim( $directory ) || str_contains( $directory, "\0" ) ) {
 			return null;
 		}
@@ -416,7 +427,7 @@ class LocalTroubleshootingService {
 		$canonical = @realpath( $directory );
 		if ( false === $canonical
 			|| ! is_dir( $canonical )
-			|| $this->hasSymlinkComponent( $canonical )
+			|| $this->has_symlink_component( $canonical )
 		) {
 			return null;
 		}
@@ -424,14 +435,14 @@ class LocalTroubleshootingService {
 		return $canonical;
 	}
 
-	private function normalizePath( string $path ): string {
+	private function normalize_path( string $path ): string {
 		$path = str_replace( '\\', '/', $path );
 
 		return '/' === $path ? $path : rtrim( $path, '/' );
 	}
 
-	private function hasSymlinkComponent( string $path ): bool {
-		$path = $this->normalizePath( $path );
+	private function has_symlink_component( string $path ): bool {
+		$path = $this->normalize_path( $path );
 		if ( 1 === preg_match( '/\A[A-Za-z]:\//', $path ) ) {
 			$current = substr( $path, 0, 3 );
 			$parts   = explode( '/', substr( $path, 3 ) );
@@ -456,46 +467,46 @@ class LocalTroubleshootingService {
 	}
 
 	/** @param resource $handle */
-	private function handleMatchesPromotedPaths( mixed $handle, string $source, string $destination ): bool {
-		$sourceStat      = $this->pathStat( $source );
-		$destinationStat = $this->pathStat( $destination );
-		$handleStat      = fstat( $handle );
+	private function handle_matches_promoted_paths( mixed $handle, string $source, string $destination ): bool {
+		$source_stat      = $this->pathStat( $source );
+		$destination_stat = $this->pathStat( $destination );
+		$handle_stat      = fstat( $handle );
 
-		return is_array( $sourceStat )
-			&& is_array( $destinationStat )
-			&& is_array( $handleStat )
-			&& 0100000 === ( $handleStat['mode'] & 0170000 )
-			&& 0600 === ( $handleStat['mode'] & 0777 )
-			&& 2 === $handleStat['nlink']
-			&& 2 === $sourceStat['nlink']
-			&& 2 === $destinationStat['nlink']
-			&& $this->sameFile( $sourceStat, $handleStat )
-			&& $this->sameFile( $destinationStat, $handleStat );
+		return is_array( $source_stat )
+			&& is_array( $destination_stat )
+			&& is_array( $handle_stat )
+			&& 0100000 === ( $handle_stat['mode'] & 0170000 )
+			&& 0600 === ( $handle_stat['mode'] & 0777 )
+			&& 2 === $handle_stat['nlink']
+			&& 2 === $source_stat['nlink']
+			&& 2 === $destination_stat['nlink']
+			&& $this->same_file( $source_stat, $handle_stat )
+			&& $this->same_file( $destination_stat, $handle_stat );
 	}
 
-	/** @param array<string|int, int> $handleStat */
-	private function handleMatchesPath( array $handleStat, string $path ): bool {
-		$pathStat = $this->pathStat( $path );
+	/** @param array<string|int, int> $handle_stat */
+	private function handle_matches_path( array $handle_stat, string $path ): bool {
+		$path_stat = $this->pathStat( $path );
 
-		return is_array( $pathStat )
-			&& 0100000 === ( $pathStat['mode'] & 0170000 )
-			&& 1 === $pathStat['nlink']
-			&& $pathStat['dev'] === $handleStat['dev']
-			&& $pathStat['ino'] === $handleStat['ino'];
+		return is_array( $path_stat )
+			&& 0100000 === ( $path_stat['mode'] & 0170000 )
+			&& 1 === $path_stat['nlink']
+			&& $path_stat['dev'] === $handle_stat['dev']
+			&& $path_stat['ino'] === $handle_stat['ino'];
 	}
 
-	/** @param array<string|int, int> $handleStat */
-	private function cleanupMarker( string $path, array $handleStat ): bool {
+	/** @param array<string|int, int> $handle_stat */
+	private function cleanup_marker( string $path, array $handle_stat ): bool {
 		if ( '' === $path ) {
 			return true;
 		}
 
-		$pathStat = $this->pathStat( $path );
-		if ( false === $pathStat ) {
+		$path_stat = $this->pathStat( $path );
+		if ( false === $path_stat ) {
 			return true;
 		}
 
-		if ( ! $this->sameFile( $pathStat, $handleStat ) ) {
+		if ( ! $this->same_file( $path_stat, $handle_stat ) ) {
 			return false;
 		}
 
@@ -506,33 +517,37 @@ class LocalTroubleshootingService {
 	 * @param array<string|int, int> $left
 	 * @param array<string|int, int> $right
 	 */
-	private function sameFile( array $left, array $right ): bool {
+	private function same_file( array $left, array $right ): bool {
 		return $left['dev'] === $right['dev'] && $left['ino'] === $right['ino'];
 	}
 
 	/** @param array<string|int, int> $expected */
-	private function sameDirectory( string $path, array $expected ): bool {
+	private function same_directory( string $path, array $expected ): bool {
 		$current = $this->pathStat( $path );
 
 		return is_array( $current )
 			&& 0040000 === ( $current['mode'] & 0170000 )
-			&& $this->sameFile( $current, $expected );
+			&& $this->same_file( $current, $expected );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function isMultisite(): bool {
 		return function_exists( 'is_multisite' ) && is_multisite();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function phpVersion(): string {
 		return PHP_VERSION;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function wordpressVersion(): string {
 		global $wp_version;
 
 		return is_string( $wp_version ) ? $wp_version : '';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function filesystemModificationAllowed(): bool {
 		if ( function_exists( 'wp_is_file_mod_allowed' ) ) {
 			return wp_is_file_mod_allowed( 'ran_booster_diagnostics' );
@@ -541,6 +556,7 @@ class LocalTroubleshootingService {
 		return ! ( defined( 'DISALLOW_FILE_MODS' ) && constant( 'DISALLOW_FILE_MODS' ) );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function filesystemMethod(): ?string {
 		if ( ! function_exists( 'get_filesystem_method' )
 			&& defined( 'ABSPATH' )
@@ -553,60 +569,71 @@ class LocalTroubleshootingService {
 		return function_exists( 'get_filesystem_method' ) ? get_filesystem_method() : null;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function temporaryDirectory(): string {
 		return function_exists( 'get_temp_dir' ) ? get_temp_dir() : sys_get_temp_dir();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function pluginDirectory(): string {
 		return defined( 'WP_PLUGIN_DIR' ) && is_string( WP_PLUGIN_DIR ) ? WP_PLUGIN_DIR : '';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function themeDirectory(): string {
 		return function_exists( 'get_theme_root' ) ? get_theme_root() : '';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function randomSuffix(): string {
 		return bin2hex( random_bytes( 16 ) );
 	}
 
 	/** @return resource|false */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function openExclusive( string $path ): mixed {
-		$previousMask = umask( $this->creationMask() );
+		$previous_mask = umask( $this->creationMask() );
 		try {
 			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
 			return @fopen( $path, 'x+b' );
 		} finally {
-			umask( $previousMask );
+			umask( $previous_mask );
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function creationMask(): int {
 		return 0177;
 	}
 
 	/** @param resource $handle */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function writeMarker( mixed $handle, string $contents ): int|false {
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
 		return @fwrite( $handle, $contents );
 	}
 
 	/** @param resource $handle */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function flushMarker( mixed $handle ): bool {
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
 		return @fflush( $handle );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function promoteMarker( string $source, string $destination ): bool {
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
 		return @link( $source, $destination );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function removeMarker( string $path ): bool {
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
 		return @unlink( $path );
 	}
 
 	/** @return array<string|int, int>|false */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function pathStat( string $path ): array|false {
 		clearstatcache( true, $path );
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.

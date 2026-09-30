@@ -32,7 +32,7 @@ class SecretsStorageProvisioner {
 	}
 
 	public function status(): SecretsStorageProvisioningResult {
-		$environment = $this->runtimeFailure();
+		$environment = $this->runtime_failure();
 		if ( null !== $environment ) {
 			return $environment;
 		}
@@ -45,9 +45,9 @@ class SecretsStorageProvisioner {
 			);
 		}
 		if ( is_string( $configured ) ) {
-			$pathIsSafe = $this->validateConfiguredCandidate( $configured );
-			$source     = $this->configuredPathSource( $configured, $pathIsSafe );
-			if ( ! $pathIsSafe ) {
+			$path_is_safe = $this->validateConfiguredCandidate( $configured );
+			$source       = $this->configured_path_source( $configured, $path_is_safe );
+			if ( ! $path_is_safe ) {
 				return SecretsStorageProvisioningResult::storage_needs_attention(
 					$configured,
 					$source,
@@ -56,13 +56,13 @@ class SecretsStorageProvisioner {
 				);
 			}
 
-			$pathFailure = $this->inspectReadyPath( $configured );
-			if ( null !== $pathFailure ) {
+			$path_failure = $this->inspect_ready_path( $configured );
+			if ( null !== $path_failure ) {
 				return SecretsStorageProvisioningResult::storage_needs_attention(
 					$configured,
 					$source,
-					$pathFailure['code'],
-					$pathFailure['message']
+					$path_failure['code'],
+					$path_failure['message']
 				);
 			}
 
@@ -71,7 +71,7 @@ class SecretsStorageProvisioner {
 					? SecretsStorageProvisioningResult::storage_healthy( $configured, $source )
 					: SecretsStorageProvisioningResult::path_configured( $configured, $source );
 			} catch ( SecretsStorageUnavailable $failure ) {
-				$diagnostic = $this->managedStorageDiagnostic( $failure );
+				$diagnostic = $this->managed_storage_diagnostic( $failure );
 
 				return SecretsStorageProvisioningResult::storage_needs_attention(
 					$configured,
@@ -84,7 +84,7 @@ class SecretsStorageProvisioner {
 			}
 		}
 
-		if ( ! $this->supportedAutomaticPlatform() ) {
+		if ( ! $this->supported_automatic_platform() ) {
 			return SecretsStorageProvisioningResult::unsupported(
 				'local_posix_unavailable',
 				__( 'Automatic secure storage setup requires a direct local POSIX filesystem.', 'ran-booster' )
@@ -111,7 +111,7 @@ class SecretsStorageProvisioner {
 			);
 		}
 
-		if ( null === $this->loadedWpConfigPath() ) {
+		if ( null === $this->loaded_wp_config_path() ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'wp_config_unavailable',
 				__( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ),
@@ -129,7 +129,7 @@ class SecretsStorageProvisioner {
 		}
 
 		$candidate = $status->candidate_path();
-		$config    = $this->loadedWpConfigPath();
+		$config    = $this->loaded_wp_config_path();
 		if ( null === $candidate || null === $config ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'wp_config_unavailable',
@@ -158,7 +158,7 @@ class SecretsStorageProvisioner {
 			);
 		}
 
-		if ( ! $this->sameFilesystemDevice( dirname( $candidate ), $config ) ) {
+		if ( ! $this->same_filesystem_device( dirname( $candidate ), $config ) ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'filesystem_device_mismatch',
 				__( 'The private storage location and WordPress configuration are not on one verified local filesystem.', 'ran-booster' ),
@@ -170,8 +170,8 @@ class SecretsStorageProvisioner {
 			$result = $this->writeConfiguration( $config, $candidate );
 		} catch ( WpConfigPathWriteException $exception ) {
 			return SecretsStorageProvisioningResult::manual_required(
-				$this->stableCode( $exception->reason(), 'wp_config_write_failed' ),
-				$this->wpConfigWriteFailureMessage( $exception->reason() ),
+				$this->stable_code( $exception->reason(), 'wp_config_write_failed' ),
+				$this->wp_config_write_failure_message( $exception->reason() ),
 				$candidate
 			);
 		} catch ( Throwable ) {
@@ -204,20 +204,21 @@ class SecretsStorageProvisioner {
 	 *     confirmation: string|null
 	 * }|null
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function recoveryState( SecretsStorageProvisioningResult $status ): ?array {
-		$current           = $status->candidate_path();
-		$missingCiphertext = null !== $current && $this->currentCiphertextIsAbsent( $current );
-		$missingKey        = 'storage_key_missing' === $status->code();
+		$current            = $status->candidate_path();
+		$missing_ciphertext = null !== $current && $this->currentCiphertextIsAbsent( $current );
+		$missing_key        = 'storage_key_missing' === $status->code();
 		if ( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION !== $status->status()
 			|| null === $current
-			|| ( ! $missingCiphertext && ! $missingKey )
+			|| ( ! $missing_ciphertext && ! $missing_key )
 		) {
 			return null;
 		}
 
-		$scanComplete = true;
-		$candidates   = $this->recoveryCandidates( $current, $scanComplete );
-		if ( ! $scanComplete ) {
+		$scan_complete = true;
+		$candidates    = $this->recovery_candidates( $current, $scan_complete );
+		if ( ! $scan_complete ) {
 			return array(
 				'state'          => 'blocked',
 				'message'        => __(
@@ -231,7 +232,7 @@ class SecretsStorageProvisioner {
 		}
 		if ( array() === $candidates ) {
 			try {
-				if ( $missingKey && $this->orphanedCiphertextResetAvailable( $current ) ) {
+				if ( $missing_key && $this->orphanedCiphertextResetAvailable( $current ) ) {
 					return array(
 						'state'          => 'reset_available',
 						'message'        => __(
@@ -243,7 +244,7 @@ class SecretsStorageProvisioner {
 						'confirmation'   => self::RESET_CONFIRMATION,
 					);
 				}
-				if ( $missingCiphertext && $this->orphanedKeyResetAvailable( $current ) ) {
+				if ( $missing_ciphertext && $this->orphanedKeyResetAvailable( $current ) ) {
 					return array(
 						'state'          => 'reset_available',
 						'message'        => __(
@@ -261,7 +262,7 @@ class SecretsStorageProvisioner {
 
 			return null;
 		}
-		if ( $missingKey ) {
+		if ( $missing_key ) {
 			return array(
 				'state'          => 'blocked',
 				'message'        => __(
@@ -286,18 +287,18 @@ class SecretsStorageProvisioner {
 			);
 		}
 
-		$candidate  = $candidates[0];
-		$config     = $this->loadedWpConfigPath();
-		$owned      = false;
-		$sameDevice = false;
+		$candidate   = $candidates[0];
+		$config      = $this->loaded_wp_config_path();
+		$owned       = false;
+		$same_device = false;
 		try {
-			$owned      = null !== $config && $this->writer->assertOwnedDefinitionRemovable( $config, $current );
-			$sameDevice = null !== $config && $this->sameFilesystemDevice( dirname( $candidate['candidate_path'] ), $config );
+			$owned       = null !== $config && $this->writer->assertOwnedDefinitionRemovable( $config, $current );
+			$same_device = null !== $config && $this->same_filesystem_device( dirname( $candidate['candidate_path'] ), $config );
 		} catch ( Throwable ) {
 			$owned = false;
 		}
 
-		if ( ! $candidate['safe'] || ! $candidate['fit'] || ! $owned || ! $sameDevice ) {
+		if ( ! $candidate['safe'] || ! $candidate['fit'] || ! $owned || ! $same_device ) {
 			$message = match ( true ) {
 				! $candidate['safe'] => __( 'Booster authenticated prior credential storage, but its location does not pass the current private-path policy. Move the matching storage set to a verified private location before using it.', 'ran-booster' ),
 				! $candidate['fit'] => __( 'Booster authenticated prior credential storage, but one or more credentials do not pass their current provider policy. Review or restore the matching storage set before using it.', 'ran-booster' ),
@@ -323,6 +324,7 @@ class SecretsStorageProvisioner {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function resetOrphanedStorage( string $confirmation ): SecretsStorageProvisioningResult {
 		$status  = $this->status();
 		$current = $status->candidate_path();
@@ -331,12 +333,12 @@ class SecretsStorageProvisioner {
 			|| null === $source
 			|| ! hash_equals( self::RESET_CONFIRMATION, $confirmation )
 		) {
-			return $this->resetFailure( $status, 'storage_reset_request_invalid', __( 'The empty-storage reset request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
+			return $this->reset_failure( $status, 'storage_reset_request_invalid', __( 'The empty-storage reset request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
 		}
 
 		$offer = $this->recoveryState( $status );
 		if ( null === $offer || 'reset_available' !== $offer['state'] ) {
-			return $this->resetFailure( $status, 'storage_reset_state_changed', __( 'The credential storage state changed and was not reset. Review it again before continuing.', 'ran-booster' ) );
+			return $this->reset_failure( $status, 'storage_reset_state_changed', __( 'The credential storage state changed and was not reset. Review it again before continuing.', 'ran-booster' ) );
 		}
 
 		try {
@@ -346,17 +348,18 @@ class SecretsStorageProvisioner {
 				$this->resetOrphanedKey( $current );
 			}
 		} catch ( Throwable ) {
-			return $this->resetFailure( $status, 'storage_reset_failed', __( 'The incomplete credential storage could not be reset safely. No storage reset was confirmed.', 'ran-booster' ) );
+			return $this->reset_failure( $status, 'storage_reset_failed', __( 'The incomplete credential storage could not be reset safely. No storage reset was confirmed.', 'ran-booster' ) );
 		}
 
 		return SecretsStorageProvisioningResult::storage_reset( $current, $source );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
 		$status  = $this->status();
 		$current = $status->candidate_path();
 		if ( 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $token ) || null === $current ) {
-			return $this->recoveryFailure( $current, 'recovery_request_invalid', __( 'The storage recovery request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
+			return $this->recovery_failure( $current, 'recovery_request_invalid', __( 'The storage recovery request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
 		}
 
 		$offer = $this->recoveryState( $status );
@@ -366,32 +369,33 @@ class SecretsStorageProvisioner {
 			|| ! is_string( $offer['token'] )
 			|| ! hash_equals( $offer['token'], $token )
 		) {
-			return $this->recoveryFailure( $current, 'recovery_candidate_changed', __( 'The recoverable storage candidate is no longer uniquely safe and authenticated. Review the current storage state again.', 'ran-booster' ) );
+			return $this->recovery_failure( $current, 'recovery_candidate_changed', __( 'The recoverable storage candidate is no longer uniquely safe and authenticated. Review the current storage state again.', 'ran-booster' ) );
 		}
 
-		$config = $this->loadedWpConfigPath();
+		$config = $this->loaded_wp_config_path();
 		if ( null === $config ) {
-			return $this->recoveryFailure( $current, 'wp_config_unavailable', __( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ) );
+			return $this->recovery_failure( $current, 'wp_config_unavailable', __( 'Booster could not safely identify the wp-config.php loaded by WordPress.', 'ran-booster' ) );
 		}
 
 		try {
 			$result = $this->retargetConfiguration( $config, $current, $offer['candidate_path'] );
 		} catch ( WpConfigPathWriteException $exception ) {
-			return $this->recoveryFailure(
+			return $this->recovery_failure(
 				$current,
-				$this->stableCode( $exception->reason(), 'recovery_write_failed' ),
-				$this->wpConfigWriteFailureMessage( $exception->reason() )
+				$this->stable_code( $exception->reason(), 'recovery_write_failed' ),
+				$this->wp_config_write_failure_message( $exception->reason() )
 			);
 		} catch ( Throwable ) {
-			return $this->recoveryFailure( $current, 'recovery_write_failed', __( 'The recoverable storage path could not be adopted safely.', 'ran-booster' ) );
+			return $this->recovery_failure( $current, 'recovery_write_failed', __( 'The recoverable storage path could not be adopted safely.', 'ran-booster' ) );
 		}
 
 		return false !== $result && $result->requires_next_request_verification()
 			? SecretsStorageProvisioningResult::pending_verification( $offer['candidate_path'] )
-			: $this->recoveryFailure( $current, 'wp_config_verification_unavailable', __( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ) );
+			: $this->recovery_failure( $current, 'wp_config_verification_unavailable', __( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ) );
 	}
 
 	/** @param list<array{directory:string,code:string,reason:string,component:string|null}>|null $discarded */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function resolveCandidate( ?array &$discarded = null ): ?string {
 		return $this->resolver->resolve(
 			$this->wordpressRoot(),
@@ -402,6 +406,7 @@ class SecretsStorageProvisioner {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function validateConfiguredCandidate( string $candidate ): bool {
 		return $this->resolver->validateConfigured(
 			$candidate,
@@ -412,14 +417,17 @@ class SecretsStorageProvisioner {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function probeCandidate( string $candidate ): bool {
 		return $this->probe->probe( $candidate );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function writeConfiguration( string $config, string $candidate ): WpConfigPathWriteResult {
 		return $this->writer->write( $config, $candidate );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function retargetConfiguration(
 		string $config,
 		string $current,
@@ -428,6 +436,7 @@ class SecretsStorageProvisioner {
 		return $this->writer->retargetOwnedDefinition( $config, $current, $replacement );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function recoveryCredentialsFit( string $candidate ): bool {
 		if ( null === $this->secrets ) {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
@@ -436,10 +445,12 @@ class SecretsStorageProvisioner {
 		return $this->secrets->recoveryCredentialsFitAt( $candidate );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function orphanedKeyResetAvailable( string $current ): bool {
 		return null !== $this->secrets && $this->secrets->canResetOrphanedKeyAt( $current );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function resetOrphanedKey( string $current ): void {
 		if ( null === $this->secrets ) {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
@@ -448,10 +459,12 @@ class SecretsStorageProvisioner {
 		$this->secrets->resetOrphanedKeyAt( $current );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function orphanedCiphertextResetAvailable( string $current ): bool {
 		return null !== $this->secrets && $this->secrets->canResetOrphanedCiphertextAt( $current );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function resetOrphanedCiphertext( string $current ): void {
 		if ( null === $this->secrets ) {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
@@ -460,20 +473,24 @@ class SecretsStorageProvisioner {
 		$this->secrets->resetOrphanedCiphertextAt( $current );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function wordpressRoot(): string {
 		return defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function contentDirectory(): string {
 		return defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function pluginDirectory(): string {
 		$path = realpath( dirname( __DIR__, 2 ) );
 
 		return false === $path ? dirname( __DIR__, 2 ) : $path;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function documentRoot(): ?string {
 		$root = $_SERVER['DOCUMENT_ROOT'] ?? null;
 
@@ -481,11 +498,13 @@ class SecretsStorageProvisioner {
 	}
 
 	/** @return list<string> */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function includedFiles(): array {
 		return get_included_files();
 	}
 
 	/** @return string|false|null False means defined with an invalid value. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function configuredPath(): string|false|null {
 		if ( defined( self::UNSUPPORTED_FILE_CONSTANT_NAME ) ) {
 			return false;
@@ -499,23 +518,26 @@ class SecretsStorageProvisioner {
 			$directory = '/' === $value ? '/' : rtrim( $value, '/' );
 			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'secrets.json';
 
-			return $this->absoluteCanonicalPath( $path ) ? $path : false;
+			return $this->absolute_canonical_path( $path ) ? $path : false;
 		}
 		return null;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function isMultisiteInstallation(): bool {
 		return function_exists( 'is_multisite' ) && is_multisite();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function sodiumAvailable(): bool {
 		return extension_loaded( 'sodium' )
 			&& function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt' )
 			&& function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_decrypt' );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function supportedLocalPlatform(): bool {
-		if ( ! $this->supportedPosixPlatform() ) {
+		if ( ! $this->supported_posix_platform() ) {
 			return false;
 		}
 		if ( defined( 'FS_METHOD' ) && 'direct' !== constant( 'FS_METHOD' ) ) {
@@ -527,11 +549,12 @@ class SecretsStorageProvisioner {
 		return '' !== $root && stream_is_local( $root );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function managedStorageHealthy(): bool {
 		return null !== $this->secrets && $this->secrets->hasHealthyManagedStorage();
 	}
 
-	private function supportedPosixPlatform(): bool {
+	private function supported_posix_platform(): bool {
 		if ( 'Windows' === PHP_OS_FAMILY
 			|| '\\' === DIRECTORY_SEPARATOR
 			|| ! function_exists( 'flock' )
@@ -543,11 +566,11 @@ class SecretsStorageProvisioner {
 		return true;
 	}
 
-	private function supportedAutomaticPlatform(): bool {
+	private function supported_automatic_platform(): bool {
 		return $this->supportedLocalPlatform();
 	}
 
-	private function runtimeFailure(): ?SecretsStorageProvisioningResult {
+	private function runtime_failure(): ?SecretsStorageProvisioningResult {
 		if ( ! $this->sodiumAvailable() ) {
 			return SecretsStorageProvisioningResult::unsupported(
 				'sodium_unavailable',
@@ -560,7 +583,7 @@ class SecretsStorageProvisioner {
 				'Encrypted file-backed secrets storage is not available on multisite in this Beta release.'
 			);
 		}
-		if ( ! $this->supportedPosixPlatform() ) {
+		if ( ! $this->supported_posix_platform() ) {
 			return SecretsStorageProvisioningResult::unsupported(
 				'local_posix_unavailable',
 				'Encrypted secrets storage requires a local POSIX environment.'
@@ -570,13 +593,13 @@ class SecretsStorageProvisioner {
 		return null;
 	}
 
-	private function configuredPathSource( string $configured, bool $pathIsSafe ): string {
+	private function configured_path_source( string $configured, bool $path_is_safe ): string {
 		try {
-			$config = $this->loadedWpConfigPath();
+			$config = $this->loaded_wp_config_path();
 			if ( null !== $config && $this->writer->hasOwnedDefinition( $config, $configured ) ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
-			if ( $pathIsSafe && $configured === $this->resolveCandidate() ) {
+			if ( $path_is_safe && $configured === $this->resolveCandidate() ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
 		} catch ( Throwable ) {
@@ -587,9 +610,9 @@ class SecretsStorageProvisioner {
 	}
 
 	/** @return list<array{candidate_path:string,token:string,safe:bool,fit:bool}> */
-	private function recoveryCandidates( string $current, ?bool &$complete = null ): array {
+	private function recovery_candidates( string $current, ?bool &$complete = null ): array {
 		$complete = true;
-		$base     = $this->automaticStorageBase( $current );
+		$base     = $this->automatic_storage_base( $current );
 		if ( null === $base ) {
 			return array();
 		}
@@ -631,13 +654,13 @@ class SecretsStorageProvisioner {
 				continue;
 			}
 			try {
-				if ( null !== $this->inspectReadyPath( $candidate ) ) {
+				if ( null !== $this->inspect_ready_path( $candidate ) ) {
 					$complete = false;
 
 					continue;
 				}
 				$fit      = $this->recoveryCredentialsFit( $candidate );
-				$revision = $this->recoveryRevision( $candidate );
+				$revision = $this->recovery_revision( $candidate );
 				if ( null === $revision ) {
 					$complete = false;
 
@@ -659,7 +682,7 @@ class SecretsStorageProvisioner {
 		return $candidates;
 	}
 
-	private function automaticStorageBase( string $current ): ?string {
+	private function automatic_storage_base( string $current ): ?string {
 		$directory = dirname( $current );
 		$base      = dirname( $directory );
 
@@ -670,6 +693,7 @@ class SecretsStorageProvisioner {
 			: null;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function currentCiphertextIsAbsent( string $current ): bool {
 		if ( file_exists( $current ) || is_link( $current ) ) {
 			return false;
@@ -685,7 +709,7 @@ class SecretsStorageProvisioner {
 		}
 	}
 
-	private function recoveryRevision( string $candidate ): ?string {
+	private function recovery_revision( string $candidate ): ?string {
 		$parts = array( $candidate );
 		foreach ( array( dirname( $candidate ), $candidate, $candidate . '.lock' ) as $path ) {
 			$stat = lstat( $path );
@@ -700,7 +724,7 @@ class SecretsStorageProvisioner {
 		return hash( 'sha256', implode( "\0", $parts ) );
 	}
 
-	private function recoveryFailure( ?string $current, string $code, string $message ): SecretsStorageProvisioningResult {
+	private function recovery_failure( ?string $current, string $code, string $message ): SecretsStorageProvisioningResult {
 		return null === $current
 			? SecretsStorageProvisioningResult::manual_required( $code, $message )
 			: SecretsStorageProvisioningResult::storage_needs_attention(
@@ -711,7 +735,7 @@ class SecretsStorageProvisioner {
 			);
 	}
 
-	private function resetFailure( SecretsStorageProvisioningResult $status, string $code, string $message ): SecretsStorageProvisioningResult {
+	private function reset_failure( SecretsStorageProvisioningResult $status, string $code, string $message ): SecretsStorageProvisioningResult {
 		$current = $status->candidate_path();
 		$source  = $status->path_source();
 
@@ -721,16 +745,16 @@ class SecretsStorageProvisioner {
 	}
 
 	/** @return array{code: string, message: string}|null */
-	private function inspectReadyPath( string $candidate ): ?array {
+	private function inspect_ready_path( string $candidate ): ?array {
 		$directory = dirname( $candidate );
 		if ( ! file_exists( $directory ) && ! is_link( $directory ) ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_directory_unavailable',
 				__( 'PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700.', 'ran-booster' )
 			);
 		}
 		if ( is_link( $directory ) || ! is_dir( $directory ) || ! stream_is_local( $directory ) ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_directory_invalid',
 				__( 'The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link.', 'ran-booster' )
 			);
@@ -738,14 +762,14 @@ class SecretsStorageProvisioner {
 
 		$stat = lstat( $directory );
 		if ( false === $stat || 0040000 !== ( $stat['mode'] & 0170000 ) ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_directory_inspection_failed',
 				__( 'Booster could not verify the configured secrets directory.', 'ran-booster' )
 			);
 		}
-		$issues = $this->accessIssues( $directory, $stat, 0700, 'directory' );
+		$issues = $this->access_issues( $directory, $stat, 0700, 'directory' );
 		if ( array() !== $issues ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_directory_unusable',
 				implode( ' ', $issues )
 			);
@@ -755,24 +779,24 @@ class SecretsStorageProvisioner {
 			return null;
 		}
 		if ( is_link( $candidate ) || ! is_file( $candidate ) ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_file_invalid',
 				__( 'The configured secrets file must be a regular file, not a symbolic link.', 'ran-booster' )
 			);
 		}
 		$file = lstat( $candidate );
 		if ( false === $file || 0100000 !== ( $file['mode'] & 0170000 ) ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_file_inspection_failed',
 				__( 'Booster could not verify the configured secrets file.', 'ran-booster' )
 			);
 		}
-		$issues = $this->accessIssues( $candidate, $file, 0600, 'file' );
+		$issues = $this->access_issues( $candidate, $file, 0600, 'file' );
 		if ( 1 !== $file['nlink'] ) {
 			$issues[] = __( 'The configured secrets file has additional hard links.', 'ran-booster' );
 		}
 		if ( array() !== $issues ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_file_unusable',
 				implode( ' ', $issues )
 			);
@@ -780,30 +804,30 @@ class SecretsStorageProvisioner {
 
 		$lock = $candidate . '.lock';
 		if ( ! file_exists( $lock ) && ! is_link( $lock ) ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_lock_missing',
 				__( 'The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup.', 'ran-booster' )
 			);
 		}
 		if ( is_link( $lock ) || ! is_file( $lock ) ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_lock_invalid',
 				__( 'The configured secrets lock must be a regular file, not a symbolic link.', 'ran-booster' )
 			);
 		}
-		$lockStat = lstat( $lock );
-		if ( false === $lockStat || 0100000 !== ( $lockStat['mode'] & 0170000 ) ) {
-			return $this->pathFailure(
+		$lock_stat = lstat( $lock );
+		if ( false === $lock_stat || 0100000 !== ( $lock_stat['mode'] & 0170000 ) ) {
+			return $this->path_failure(
 				'storage_lock_inspection_failed',
 				__( 'Booster could not verify the configured secrets lock file.', 'ran-booster' )
 			);
 		}
-		$issues = $this->accessIssues( $lock, $lockStat, 0600, 'lock file' );
-		if ( 1 !== $lockStat['nlink'] ) {
+		$issues = $this->access_issues( $lock, $lock_stat, 0600, 'lock file' );
+		if ( 1 !== $lock_stat['nlink'] ) {
 			$issues[] = __( 'The configured secrets lock file has additional hard links.', 'ran-booster' );
 		}
 		if ( array() !== $issues ) {
-			return $this->pathFailure(
+			return $this->path_failure(
 				'storage_lock_unusable',
 				implode( ' ', $issues )
 			);
@@ -816,8 +840,8 @@ class SecretsStorageProvisioner {
 	 * @param array{mode: int, uid: int} $stat
 	 * @return list<string>
 	 */
-	private function accessIssues( string $path, array $stat, int $requiredMode, string $label ): array {
-		$displayLabel = match ( $label ) {
+	private function access_issues( string $path, array $stat, int $required_mode, string $label ): array {
+		$display_label = match ( $label ) {
 			'directory' => _x( 'directory', 'Configured secrets storage item', 'ran-booster' ),
 			'file' => _x( 'file', 'Configured secrets storage item', 'ran-booster' ),
 			'lock file' => _x( 'lock file', 'Configured secrets storage item', 'ran-booster' ),
@@ -825,34 +849,34 @@ class SecretsStorageProvisioner {
 		};
 		$issues = array();
 		$mode   = $stat['mode'] & 0777;
-		if ( $requiredMode !== $mode ) {
+		if ( $required_mode !== $mode ) {
 			$issues[] = sprintf(
 				/* translators: 1: configured secrets storage item, 2: current octal mode, 3: required octal mode. */
 				__( 'The configured secrets %1$s uses mode %2$04o; mode %3$04o is required.', 'ran-booster' ),
-				$displayLabel,
+				$display_label,
 				$mode,
-				$requiredMode
+				$required_mode
 			);
 		}
 		if ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() !== $stat['uid'] ) {
 			$issues[] = sprintf(
 				/* translators: %s: configured secrets storage item. */
 				__( 'The configured secrets %s is not owned by the PHP process user.', 'ran-booster' ),
-				$displayLabel
+				$display_label
 			);
 		}
 		if ( ! is_readable( $path ) ) {
 			$issues[] = sprintf(
 				/* translators: %s: configured secrets storage item. */
 				__( 'The configured secrets %s is not readable by PHP.', 'ran-booster' ),
-				$displayLabel
+				$display_label
 			);
 		}
 		if ( ! is_writable( $path ) ) {
 			$issues[] = sprintf(
 				/* translators: %s: configured secrets storage item. */
 				__( 'The configured secrets %s is not writable by PHP.', 'ran-booster' ),
-				$displayLabel
+				$display_label
 			);
 		}
 
@@ -860,31 +884,31 @@ class SecretsStorageProvisioner {
 	}
 
 	/** @return array{code: string, message: string} */
-	private function pathFailure( string $code, string $message ): array {
+	private function path_failure( string $code, string $message ): array {
 		return compact( 'code', 'message' );
 	}
 
 	/** @return array{code: string, message: string} */
-	private function managedStorageDiagnostic( SecretsStorageUnavailable $failure ): array {
+	private function managed_storage_diagnostic( SecretsStorageUnavailable $failure ): array {
 		if ( SecretsStorageUnavailable::REASON_GENERIC !== $failure->reason() ) {
 			return match ( $failure->reason() ) {
-				'storage_key_missing' => $this->pathFailure(
+				'storage_key_missing' => $this->path_failure(
 					'storage_key_missing',
 					__( 'secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.', 'ran-booster' )
 				),
-				'storage_file_missing' => $this->pathFailure(
+				'storage_file_missing' => $this->path_failure(
 					'storage_file_missing',
 					__( 'The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.', 'ran-booster' )
 				),
-				'storage_orphan_lock' => $this->pathFailure(
+				'storage_orphan_lock' => $this->path_failure(
 					'storage_orphan_lock',
 					__( 'Only secrets.json.lock remains; no secrets file or database encryption key was found.', 'ran-booster' )
 				),
-				'storage_lock_missing' => $this->pathFailure(
+				'storage_lock_missing' => $this->path_failure(
 					'storage_lock_missing',
 					__( 'Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup.', 'ran-booster' )
 				),
-				default => $this->pathFailure(
+				default => $this->path_failure(
 					$failure->reason(),
 					__( 'Booster could not safely use the encrypted secrets store.', 'ran-booster' )
 				),
@@ -894,26 +918,26 @@ class SecretsStorageProvisioner {
 		return match ( $failure->getMessage() ) {
 			'The encrypted Booster secrets store is incomplete.',
 			'The encrypted Booster secrets store is incomplete because its lock is missing.',
-			'The encrypted Booster secrets store is missing its lock.' => $this->pathFailure(
+			'The encrypted Booster secrets store is missing its lock.' => $this->path_failure(
 				'storage_incomplete',
 				__( 'The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage.', 'ran-booster' )
 			),
-			'The encrypted Booster secrets document could not be authenticated.' => $this->pathFailure(
+			'The encrypted Booster secrets document could not be authenticated.' => $this->path_failure(
 				'storage_authentication_failed',
 				__( 'The secrets file could not be authenticated with this site\'s database key. Restore both from the same backup.', 'ran-booster' )
 			),
 			'The encrypted Booster secrets payload is invalid.',
-			'The encrypted Booster secrets payload is not canonical.' => $this->pathFailure(
+			'The encrypted Booster secrets payload is not canonical.' => $this->path_failure(
 				'storage_document_invalid',
 				__( 'The secrets file authenticated but its encrypted document is invalid.', 'ran-booster' )
 			),
-			'The Booster site key is unavailable.' => $this->pathFailure(
+			'The Booster site key is unavailable.' => $this->path_failure(
 				'storage_key_unavailable',
 				__( 'Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup.', 'ran-booster' )
 			),
 			'The encrypted Booster secrets file is not readable.',
 			'The encrypted Booster secrets file is not a secure bounded file.',
-			'The encrypted Booster secrets file could not be read safely.' => $this->pathFailure(
+			'The encrypted Booster secrets file could not be read safely.' => $this->path_failure(
 				'storage_file_unusable',
 				__( 'The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file.', 'ran-booster' )
 			),
@@ -921,34 +945,34 @@ class SecretsStorageProvisioner {
 			'Could not open the encrypted Booster secrets lock.',
 			'Could not inspect the encrypted Booster secrets lock.',
 			'Could not secure the encrypted Booster secrets lock.',
-			'Could not lock the encrypted Booster secrets store.' => $this->pathFailure(
+			'Could not lock the encrypted Booster secrets store.' => $this->path_failure(
 				'storage_lock_unusable',
 				__( 'The secrets lock file could not be used safely. Verify its ownership and mode 0600.', 'ran-booster' )
 			),
-			default => $this->pathFailure(
+			default => $this->path_failure(
 				'storage_unavailable',
 				__( 'Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600.', 'ran-booster' )
 			),
 		};
 	}
 
-	private function loadedWpConfigPath(): ?string {
-		$root = $this->canonicalDirectory( $this->wordpressRoot() );
+	private function loaded_wp_config_path(): ?string {
+		$root = $this->canonical_directory( $this->wordpressRoot() );
 		if ( null === $root ) {
 			return null;
 		}
 
 		$supported = array();
-		$inRoot    = $this->canonicalRegularFile( $root . '/wp-config.php' );
-		if ( null !== $inRoot ) {
-			$supported[] = $inRoot;
+		$in_root   = $this->canonical_regular_file( $root . '/wp-config.php' );
+		if ( null !== $in_root ) {
+			$supported[] = $in_root;
 		}
 
 		$parent = dirname( $root );
 		if ( ! is_file( $parent . '/wp-settings.php' ) ) {
-			$aboveRoot = $this->canonicalRegularFile( $parent . '/wp-config.php' );
-			if ( null !== $aboveRoot ) {
-				$supported[] = $aboveRoot;
+			$above_root = $this->canonical_regular_file( $parent . '/wp-config.php' );
+			if ( null !== $above_root ) {
+				$supported[] = $above_root;
 			}
 		}
 		$supported = array_values( array_unique( $supported ) );
@@ -958,7 +982,7 @@ class SecretsStorageProvisioner {
 			if ( ! is_string( $included ) || 'wp-config.php' !== basename( $included ) ) {
 				continue;
 			}
-			$canonical = $this->canonicalRegularFile( $included );
+			$canonical = $this->canonical_regular_file( $included );
 			if ( null === $canonical ) {
 				return null;
 			}
@@ -971,7 +995,7 @@ class SecretsStorageProvisioner {
 			: null;
 	}
 
-	private function canonicalDirectory( string $path ): ?string {
+	private function canonical_directory( string $path ): ?string {
 		if ( '' === trim( $path ) || ! stream_is_local( $path ) ) {
 			return null;
 		}
@@ -980,32 +1004,32 @@ class SecretsStorageProvisioner {
 		return false !== $real && is_dir( $real ) ? rtrim( $real, '/' ) : null;
 	}
 
-	private function canonicalRegularFile( string $path ): ?string {
+	private function canonical_regular_file( string $path ): ?string {
 		if ( is_link( $path ) || ! is_file( $path ) || ! stream_is_local( $path ) ) {
 			return null;
 		}
 		$real = realpath( $path );
-		if ( false === $real || $this->normalizePath( $path ) !== $this->normalizePath( $real ) ) {
+		if ( false === $real || $this->normalize_path( $path ) !== $this->normalize_path( $real ) ) {
 			return null;
 		}
 
 		return $real;
 	}
 
-	private function sameFilesystemDevice( string $candidateDirectory, string $config ): bool {
-		if ( ! is_dir( $candidateDirectory ) || ! is_file( $config ) ) {
+	private function same_filesystem_device( string $candidate_directory, string $config ): bool {
+		if ( ! is_dir( $candidate_directory ) || ! is_file( $config ) ) {
 			return false;
 		}
-		$directoryStat = stat( $candidateDirectory );
-		$configStat    = stat( $config );
+		$directory_stat = stat( $candidate_directory );
+		$config_stat    = stat( $config );
 
-		return false !== $directoryStat
-			&& false !== $configStat
-			&& isset( $directoryStat['dev'], $configStat['dev'] )
-			&& $directoryStat['dev'] === $configStat['dev'];
+		return false !== $directory_stat
+			&& false !== $config_stat
+			&& isset( $directory_stat['dev'], $config_stat['dev'] )
+			&& $directory_stat['dev'] === $config_stat['dev'];
 	}
 
-	private function absoluteCanonicalPath( string $path ): bool {
+	private function absolute_canonical_path( string $path ): bool {
 		return str_starts_with( $path, '/' )
 			&& ! str_ends_with( $path, '/' )
 			&& ! str_contains( $path, "\0" )
@@ -1015,17 +1039,17 @@ class SecretsStorageProvisioner {
 			&& ! str_contains( $path, '//' );
 	}
 
-	private function normalizePath( string $path ): string {
+	private function normalize_path( string $path ): string {
 		return rtrim( str_replace( '\\', '/', $path ), '/' );
 	}
 
-	private function stableCode( mixed $code, string $fallback ): string {
+	private function stable_code( mixed $code, string $fallback ): string {
 		return is_string( $code ) && preg_match( '/^[a-z][a-z0-9_]{0,63}$/D', $code ) === 1
 			? $code
 			: $fallback;
 	}
 
-	private function wpConfigWriteFailureMessage( string $reason ): string {
+	private function wp_config_write_failure_message( string $reason ): string {
 		return match ( $reason ) {
 			'sidecar_path_unchanged' => __( 'The encrypted secrets path is already configured.', 'ran-booster' ),
 			'config_directory_invalid' => __( 'The WordPress configuration directory is not safe and writable.', 'ran-booster' ),

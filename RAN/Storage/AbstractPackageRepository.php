@@ -16,10 +16,12 @@ use Throwable;
 
 abstract class AbstractPackageRepository {
 
-	private ?Database $databaseLifecycle = null;
+	private ?Database $database_lifecycle = null;
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	public function __construct( ?Database $databaseLifecycle = null ) {
-		$this->databaseLifecycle = $databaseLifecycle;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$this->database_lifecycle = $databaseLifecycle;
 	}
 
 	/**
@@ -27,18 +29,19 @@ abstract class AbstractPackageRepository {
 	 *
 	 * @return array<string, Package>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function allPackages( ?PackageSource $source = null ): array {
-		$rows     = $this->packageRows( null, $source );
+		$rows     = $this->package_rows( null, $source );
 		$packages = array();
 
 		foreach ( $rows as $row ) {
-			$identifier = $this->stringFromRow( $row, 'package' );
+			$identifier = $this->string_from_row( $row, 'package' );
 
 			if ( ! $this->packageExists( $identifier ) ) {
 				continue;
 			}
 
-			$packages[ $identifier ] = $this->hydratePackage( $row );
+			$packages[ $identifier ] = $this->hydrate_package( $row );
 		}
 
 		return $packages;
@@ -49,7 +52,7 @@ abstract class AbstractPackageRepository {
 
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::DELETE );
+		$this->require_storage_support( PackageStorageOperation::DELETE );
 		$model  = new PackageModel( array( 'package' => $identifier ) );
 		$result = $wpdb->delete(
 			ran_booster_table_name(),
@@ -59,7 +62,7 @@ abstract class AbstractPackageRepository {
 			)
 		);
 
-		return $this->verifyPackageDeletion( $model->package, $result );
+		return $this->verify_package_deletion( $model->package, $result );
 	}
 
 	/**
@@ -69,24 +72,26 @@ abstract class AbstractPackageRepository {
 	 * the managed package must still use their type-specific reader so malformed
 	 * and duplicate records remain distinguishable.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function hasManagementRecord( mixed $identifier ): bool {
 		$model = new PackageModel( array( 'package' => $identifier ) );
 
-		return array() !== $this->packageRows( $model->package );
+		return array() !== $this->package_rows( $model->package );
 	}
 
 	/**
 	 * Atomically fence every stale package command before destructive removal.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function disablePackageForRemoval( Package $package ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::UPDATE );
+		$this->require_storage_support( PackageStorageOperation::UPDATE );
 		$revision = $package->getSourceRevision();
 		if ( PHP_INT_MAX === $revision ) {
-			return $this->sourceConflictResult();
+			return $this->source_conflict_result();
 		}
 
 		$model  = new PackageModel( array( 'package' => (string) $package->getIdentifier() ) );
@@ -106,7 +111,7 @@ abstract class AbstractPackageRepository {
 			)
 		);
 
-		return $this->verifyPackageMutation(
+		return $this->verify_package_mutation(
 			(string) $model->package,
 			$data,
 			$result,
@@ -119,30 +124,31 @@ abstract class AbstractPackageRepository {
 	 *
 	 * @param array<string, mixed> $input Sanitized command input.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function editPackage( mixed $identifier, array $input ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::UPDATE );
+		$this->require_storage_support( PackageStorageOperation::UPDATE );
 		try {
-			$expectedSource = new PackageModel(
+			$expected_source = new PackageModel(
 				array(
 					'source'          => $input['expected_source'] ?? null,
 					'source_revision' => $input['expected_source_revision'] ?? null,
 				)
 			);
 		} catch ( InvalidArgumentException ) {
-			return $this->sourceConflictResult();
+			return $this->source_conflict_result();
 		}
-		if ( ! in_array( $expectedSource->source, array( PackageSource::BRANCH->value, PackageSource::RELEASE_ASSET->value ), true )
-			|| PHP_INT_MAX === $expectedSource->source_revision ) {
-			return $this->sourceConflictResult();
+		if ( ! in_array( $expected_source->source, array( PackageSource::BRANCH->value, PackageSource::RELEASE_ASSET->value ), true )
+			|| PHP_INT_MAX === $expected_source->source_revision ) {
+			return $this->source_conflict_result();
 		}
 
 		$repository = $input['repository'] instanceof ManagedRepository ? $input['repository'] : null;
 		if ( null === $repository ) {
-			return $this->invalidProviderIdentityResult( PackageStorageOperation::UPDATE );
+			return $this->invalid_provider_identity_result( PackageStorageOperation::UPDATE );
 		}
 
 		try {
@@ -160,13 +166,13 @@ abstract class AbstractPackageRepository {
 				)
 			);
 		} catch ( InvalidArgumentException ) {
-			return $this->invalidPackageIdentityResult( PackageStorageOperation::UPDATE );
+			return $this->invalid_package_identity_result( PackageStorageOperation::UPDATE );
 		}
 		if ( ! $this->packageExists( (string) $model->package ) ) {
-			return $this->invalidPackageIdentityResult( PackageStorageOperation::UPDATE );
+			return $this->invalid_package_identity_result( PackageStorageOperation::UPDATE );
 		}
-		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source && null !== $model->subdirectory ) {
-			return $this->sourceConflictResult();
+		if ( PackageSource::RELEASE_ASSET->value === $expected_source->source && null !== $model->subdirectory ) {
+			return $this->source_conflict_result();
 		}
 		$data = array(
 			'repository'        => $model->repository,
@@ -175,8 +181,8 @@ abstract class AbstractPackageRepository {
 			'subdirectory'      => $model->subdirectory,
 			'private'           => $model->private,
 			'credential_id'     => $model->credential_id,
-			'source'            => $expectedSource->source,
-			'source_revision'   => $expectedSource->source_revision + 1,
+			'source'            => $expected_source->source,
+			'source_revision'   => $expected_source->source_revision + 1,
 		);
 
 		$data['provider']               = $model->provider;
@@ -185,58 +191,58 @@ abstract class AbstractPackageRepository {
 		$where = array(
 			'package'         => $model->package,
 			'type'            => $this->packageType(),
-			'source'          => $expectedSource->source,
-			'source_revision' => $expectedSource->source_revision,
+			'source'          => $expected_source->source,
+			'source_revision' => $expected_source->source_revision,
 		);
-		if ( PackageSource::RELEASE_ASSET->value === $expectedSource->source ) {
+		if ( PackageSource::RELEASE_ASSET->value === $expected_source->source ) {
 			try {
-				$rows = $this->packageRows( $model->package );
+				$rows = $this->package_rows( $model->package );
 				if ( 1 !== count( $rows )
-					|| null !== PackageSubdirectory::normalize( $this->valueFromRow( $rows[0], 'subdirectory' ) ) ) {
-					return $this->sourceConflictResult();
+					|| null !== PackageSubdirectory::normalize( $this->value_from_row( $rows[0], 'subdirectory' ) ) ) {
+					return $this->source_conflict_result();
 				}
 			} catch ( InvalidArgumentException ) {
-				return $this->sourceConflictResult();
+				return $this->source_conflict_result();
 			} catch ( PackageStorageFailure $failure ) {
-				return $this->failureResult( $failure );
+				return $this->failure_result( $failure );
 			}
 
 			// Preserve the stored root representation in the CAS predicate. Legacy
 			// records may use either NULL or an empty string for the repository root.
-			$where['subdirectory'] = $this->valueFromRow( $rows[0], 'subdirectory' );
+			$where['subdirectory'] = $this->value_from_row( $rows[0], 'subdirectory' );
 		}
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
+			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
-			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
 				$this->packageType(),
 				$model->package,
-				PackageSource::from( $expectedSource->source ),
+				PackageSource::from( $expected_source->source ),
 				true
 			);
 			if ( ! $assessment['allowed'] ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->repositorySourceResult( $assessment, PackageStorageOperation::UPDATE );
+				return $this->repository_source_result( $assessment, PackageStorageOperation::UPDATE );
 			}
 			$result   = $wpdb->update( ran_booster_table_name(), $data, $where );
-			$verified = $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
+			$verified = $this->verify_package_mutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
 			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->postWriteVerificationFailure( PackageStorageOperation::UPDATE );
+				return $this->post_write_verification_failure( PackageStorageOperation::UPDATE );
 			}
 
 			return $verified;
 		} catch ( Throwable $exception ) {
 			$wpdb->query( 'ROLLBACK' );
-			return $this->failureResult( PackageStorageFailure::query_failed() );
+			return $this->failure_result( PackageStorageFailure::query_failed() );
 		}
 	}
 
@@ -246,12 +252,13 @@ abstract class AbstractPackageRepository {
 	 * @param list<array<string, mixed>> $snapshots Expected stored package rows.
 	 * @return array{selected: int, changed: int, unchanged: int}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function setDeploymentPolicies( array $snapshots, DeploymentPolicy $policy ): array {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::UPDATE );
+		$this->require_storage_support( PackageStorageOperation::UPDATE );
 		if ( array() === $snapshots || count( $snapshots ) > 20 ) {
 			throw new InvalidArgumentException( 'The bulk package selection is invalid.' );
 		}
@@ -289,8 +296,8 @@ abstract class AbstractPackageRepository {
 		try {
 			$changed = 0;
 			foreach ( $normalized as $identifier => $snapshot ) {
-				$rows = $this->lockedPackageRows( $identifier );
-				if ( 1 !== count( $rows ) || ! $this->rowMatches( $rows[0], $snapshot ) ) {
+				$rows = $this->locked_package_rows( $identifier );
+				if ( 1 !== count( $rows ) || ! $this->row_matches( $rows[0], $snapshot ) ) {
 					throw PackageStorageFailure::duplicate_package_rows();
 				}
 				try {
@@ -322,7 +329,7 @@ abstract class AbstractPackageRepository {
 			}
 
 			foreach ( array_keys( $normalized ) as $identifier ) {
-				$rows = $this->lockedPackageRows( $identifier );
+				$rows = $this->locked_package_rows( $identifier );
 				if ( 1 !== count( $rows ) || $policy->value !== (string) ( $rows[0]->deployment_policy ?? '' ) ) {
 					throw PackageStorageFailure::after_write_could_not_be_verified( PackageStorageOperation::UPDATE );
 				}
@@ -348,9 +355,10 @@ abstract class AbstractPackageRepository {
 	 *
 	 * @throws Throwable When the managed package cannot be found.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function managedPackage( mixed $identifier ): Package {
 		$model = new PackageModel( array( 'package' => $identifier ) );
-		$rows  = $this->packageRows( $model->package );
+		$rows  = $this->package_rows( $model->package );
 
 		if ( count( $rows ) > 1 ) {
 			throw PackageStorageFailure::duplicate_package_rows();
@@ -358,35 +366,36 @@ abstract class AbstractPackageRepository {
 
 		$row = $rows[0] ?? null;
 
-		if ( ! is_object( $row ) || ! $this->packageExists( $this->stringFromRow( $row, 'package' ) ) ) {
+		if ( ! is_object( $row ) || ! $this->packageExists( $this->string_from_row( $row, 'package' ) ) ) {
 			throw $this->notFoundException();
 		}
 
-		return $this->hydratePackage( $row );
+		return $this->hydrate_package( $row );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function storePackage( Package $package ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::INSERT );
+		$this->require_storage_support( PackageStorageOperation::INSERT );
 		try {
-			[$model, $data] = $this->packageRecord( $package );
+			[$model, $data] = $this->package_record( $package );
 		} catch ( InvalidArgumentException ) {
-			return $this->invalidPackageIdentityResult( PackageStorageOperation::INSERT );
+			return $this->invalid_package_identity_result( PackageStorageOperation::INSERT );
 		}
-		$tableName = ran_booster_table_name();
-		$where     = array(
+		$table_name = ran_booster_table_name();
+		$where      = array(
 			'package' => $model->package,
 			'type'    => $this->packageType(),
 		);
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
+			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
-			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
 				$this->packageType(),
@@ -396,35 +405,35 @@ abstract class AbstractPackageRepository {
 			);
 			if ( ! $assessment['allowed'] ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->repositorySourceResult( $assessment, PackageStorageOperation::INSERT );
+				return $this->repository_source_result( $assessment, PackageStorageOperation::INSERT );
 			}
-			$existingRows = $this->packageRows( $model->package );
-			if ( count( $existingRows ) > 1 ) {
+			$existing_rows = $this->package_rows( $model->package );
+			if ( count( $existing_rows ) > 1 ) {
 				$wpdb->query( 'ROLLBACK' );
 				return PackageMutationResult::conflict( PackageStorageOperation::QUERY, 'ran_booster_storage_duplicate_package', __( 'Booster found conflicting package management records. No package changes were made.', 'ran-booster' ) );
 			}
-			if ( array() !== $existingRows ) {
-				$storedSource = $this->sourceModelFromRow( $existingRows[0] );
-				if ( PackageSource::BRANCH->value !== $storedSource->source || PackageSource::BRANCH !== $package->getSource() || $storedSource->source_revision !== $package->getSourceRevision() || PHP_INT_MAX === $storedSource->source_revision ) {
+			if ( array() !== $existing_rows ) {
+				$stored_source = $this->source_model_from_row( $existing_rows[0] );
+				if ( PackageSource::BRANCH->value !== $stored_source->source || PackageSource::BRANCH !== $package->getSource() || $stored_source->source_revision !== $package->getSourceRevision() || PHP_INT_MAX === $stored_source->source_revision ) {
 					$wpdb->query( 'ROLLBACK' );
-					return $this->sourceConflictResult();
+					return $this->source_conflict_result();
 				}
 				$data['source']           = PackageSource::BRANCH->value;
-				$data['source_revision']  = $storedSource->source_revision + 1;
+				$data['source_revision']  = $stored_source->source_revision + 1;
 				$where['source']          = PackageSource::BRANCH->value;
-				$where['source_revision'] = $storedSource->source_revision;
-				$result                   = $wpdb->update( $tableName, $data, $where );
-				$verified                 = $this->verifyPackageMutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
+				$where['source_revision'] = $stored_source->source_revision;
+				$result                   = $wpdb->update( $table_name, $data, $where );
+				$verified                 = $this->verify_package_mutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
 			} else {
-				$insertData = array_merge(
+				$insert_data = array_merge(
 					array(
 						'package' => $model->package,
 						'type'    => $this->packageType(),
 					),
 					$data
 				);
-				$result     = $wpdb->insert( $tableName, $insertData );
-				$verified   = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
+				$result      = $wpdb->insert( $table_name, $insert_data );
+				$verified    = $this->verify_package_mutation( $model->package, $insert_data, $result, PackageStorageOperation::INSERT );
 			}
 			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
@@ -432,38 +441,39 @@ abstract class AbstractPackageRepository {
 			}
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->postWriteVerificationFailure( $verified->get_operation() );
+				return $this->post_write_verification_failure( $verified->get_operation() );
 			}
 			return $verified;
 		} catch ( Throwable ) {
 			$wpdb->query( 'ROLLBACK' );
-			return $this->failureResult( PackageStorageFailure::query_failed() );
+			return $this->failure_result( PackageStorageFailure::query_failed() );
 		}
 	}
 
 	/** Store an installed package only when no management row exists yet. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function adoptPackage( Package $package ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::INSERT );
+		$this->require_storage_support( PackageStorageOperation::INSERT );
 		if ( PackageSource::BRANCH !== $package->getSource()
 			|| 1 !== $package->getSourceRevision() ) {
-			return $this->sourceConflictResult();
+			return $this->source_conflict_result();
 		}
 
 		try {
-			[$model, $data] = $this->packageRecord( $package );
+			[$model, $data] = $this->package_record( $package );
 		} catch ( InvalidArgumentException ) {
-			return $this->invalidPackageIdentityResult( PackageStorageOperation::INSERT );
+			return $this->invalid_package_identity_result( PackageStorageOperation::INSERT );
 		}
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
+			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
-			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
 				$this->packageType(),
@@ -473,35 +483,35 @@ abstract class AbstractPackageRepository {
 			);
 			if ( ! $assessment['allowed'] ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->repositorySourceResult( $assessment, PackageStorageOperation::INSERT );
+				return $this->repository_source_result( $assessment, PackageStorageOperation::INSERT );
 			}
 			try {
-				if ( array() !== $this->packageRows( $model->package ) ) {
+				if ( array() !== $this->package_rows( $model->package ) ) {
 					$wpdb->query( 'ROLLBACK' );
-					return $this->adoptionConflict();
+					return $this->adoption_conflict();
 				}
 			} catch ( PackageStorageFailure $failure ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->failureResult( $failure );
+				return $this->failure_result( $failure );
 			}
 
-			$insertData = array_merge(
+			$insert_data = array_merge(
 				array(
 					'package' => $model->package,
 					'type'    => $this->packageType(),
 				),
 				$data
 			);
-			$result     = $wpdb->insert( ran_booster_table_name(), $insertData );
+			$result      = $wpdb->insert( ran_booster_table_name(), $insert_data );
 			if ( false === $result || 0 === $result ) {
 				try {
-					if ( array() !== $this->packageRows( $model->package ) ) {
+					if ( array() !== $this->package_rows( $model->package ) ) {
 						$wpdb->query( 'ROLLBACK' );
-						return $this->adoptionConflict();
+						return $this->adoption_conflict();
 					}
 				} catch ( PackageStorageFailure ) {
 					$wpdb->query( 'ROLLBACK' );
-					return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+					return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 				}
 				$wpdb->query( 'ROLLBACK' );
 				return PackageMutationResult::failed(
@@ -510,14 +520,14 @@ abstract class AbstractPackageRepository {
 					__( 'Booster could not save the package management record. No success was reported.', 'ran-booster' )
 				);
 			}
-			$verified = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
+			$verified = $this->verify_package_mutation( $model->package, $insert_data, $result, PackageStorageOperation::INSERT );
 			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
 			return $verified;
 		} catch ( Throwable $exception ) {
@@ -529,9 +539,11 @@ abstract class AbstractPackageRepository {
 	/**
 	 * Atomically create the initial management row for a release-installed package.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function adoptReleasePackage(
 		Package $package,
 		ManagedReleaseConfiguration $configuration,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		int $userId
 	): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
@@ -546,21 +558,22 @@ abstract class AbstractPackageRepository {
 			|| 1 !== $package->getSourceRevision()
 			|| null !== $package->getSubdirectory()
 			|| ! hash_equals( $expected, $identifier )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			|| $userId < 0 ) {
-			return $this->sourceConflictResult();
+			return $this->source_conflict_result();
 		}
 
 		try {
-			[$model, $data] = $this->packageRecord( $package );
+			[$model, $data] = $this->package_record( $package );
 		} catch ( InvalidArgumentException ) {
-			return $this->invalidPackageIdentityResult( PackageStorageOperation::INSERT );
+			return $this->invalid_package_identity_result( PackageStorageOperation::INSERT );
 		}
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
-			return $this->failureResult( PackageStorageFailure::transaction_unavailable() );
+			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
-			$assessment = ( new RepositorySourceGuard( $wpdb, $this->databaseLifecycle ) )->assess(
+			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
 				$this->packageType(),
@@ -570,38 +583,39 @@ abstract class AbstractPackageRepository {
 			);
 			if ( ! $assessment['allowed'] ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->repositorySourceResult( $assessment, PackageStorageOperation::INSERT );
+				return $this->repository_source_result( $assessment, PackageStorageOperation::INSERT );
 			}
 			try {
-				if ( array() !== $this->packageRows( $model->package ) ) {
+				if ( array() !== $this->package_rows( $model->package ) ) {
 					$wpdb->query( 'ROLLBACK' );
-					return $this->adoptionConflict();
+					return $this->adoption_conflict();
 				}
 			} catch ( PackageStorageFailure $failure ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->failureResult( $failure );
+				return $this->failure_result( $failure );
 			}
 
-			$insertData = array_merge(
+			$insert_data = array_merge(
 				array(
 					'package'               => $model->package,
 					'type'                  => $this->packageType(),
 					'source_previous'       => null,
 					'source_changed_at'     => current_time( 'mysql', true ),
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 					'source_changed_by'     => $userId > 0 ? $userId : null,
 					'release_configuration' => $configuration->toJson(),
 				),
 				$data
 			);
-			$result     = $wpdb->insert( ran_booster_table_name(), $insertData );
+			$result      = $wpdb->insert( ran_booster_table_name(), $insert_data );
 			if ( false === $result || 0 === $result ) {
 				$wpdb->query( 'ROLLBACK' );
 				try {
-					if ( array() !== $this->packageRows( $model->package ) ) {
-						return $this->adoptionConflict();
+					if ( array() !== $this->package_rows( $model->package ) ) {
+						return $this->adoption_conflict();
 					}
 				} catch ( PackageStorageFailure ) {
-					return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+					return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 				}
 
 				return PackageMutationResult::failed(
@@ -611,14 +625,14 @@ abstract class AbstractPackageRepository {
 				);
 			}
 
-			$verified = $this->verifyPackageMutation( $model->package, $insertData, $result, PackageStorageOperation::INSERT );
+			$verified = $this->verify_package_mutation( $model->package, $insert_data, $result, PackageStorageOperation::INSERT );
 			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
-				return $this->postWriteVerificationFailure( PackageStorageOperation::INSERT );
+				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
 			return $verified;
 		} catch ( Throwable $exception ) {
@@ -628,7 +642,7 @@ abstract class AbstractPackageRepository {
 	}
 
 	/** @return array{0: PackageModel, 1: array<string, mixed>} */
-	private function packageRecord( Package $package ): array {
+	private function package_record( Package $package ): array {
 		$repository = $package->getRepository();
 		$model      = new PackageModel(
 			array(
@@ -664,7 +678,7 @@ abstract class AbstractPackageRepository {
 		return array( $model, $data );
 	}
 
-	private function adoptionConflict(): PackageMutationResult {
+	private function adoption_conflict(): PackageMutationResult {
 		return PackageMutationResult::conflict(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_adoption_conflict',
@@ -675,7 +689,7 @@ abstract class AbstractPackageRepository {
 	/**
 	 * @param array{code: string} $assessment
 	 */
-	private function repositorySourceResult( array $assessment, PackageStorageOperation $operation ): PackageMutationResult {
+	private function repository_source_result( array $assessment, PackageStorageOperation $operation ): PackageMutationResult {
 		if ( 'repository_source_unavailable' === $assessment['code'] ) {
 			return PackageMutationResult::failed(
 				$operation,
@@ -694,10 +708,10 @@ abstract class AbstractPackageRepository {
 	/**
 	 * @return list<object>
 	 */
-	private function packageRows( ?string $identifier = null, ?PackageSource $source = null ): array {
+	private function package_rows( ?string $identifier = null, ?PackageSource $source = null ): array {
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::QUERY );
+		$this->require_storage_support( PackageStorageOperation::QUERY );
 		if ( null !== $identifier ) {
 			$query = $wpdb->prepare(
 				'SELECT * FROM %i WHERE type = %d AND package = %s',
@@ -733,10 +747,10 @@ abstract class AbstractPackageRepository {
 	/**
 	 * @return list<object>
 	 */
-	private function lockedPackageRows( string $identifier ): array {
+	private function locked_package_rows( string $identifier ): array {
 		global $wpdb;
 
-		$this->requireStorageSupport( PackageStorageOperation::QUERY );
+		$this->require_storage_support( PackageStorageOperation::QUERY );
 		$query = $wpdb->prepare(
 			'SELECT * FROM %i WHERE type = %d AND package = %s FOR UPDATE',
 			ran_booster_table_name(),
@@ -757,13 +771,13 @@ abstract class AbstractPackageRepository {
 	/**
 	 * @param array<string, mixed> $expected Expected stored fields.
 	 */
-	private function verifyPackageMutation(
+	private function verify_package_mutation(
 		string $identifier,
 		array $expected,
-		int|false $writeResult,
+		int|false $write_result,
 		PackageStorageOperation $operation
 	): PackageMutationResult {
-		if ( false === $writeResult ) {
+		if ( false === $write_result ) {
 			return PackageMutationResult::failed(
 				$operation,
 				'ran_booster_storage_write_failed',
@@ -772,12 +786,12 @@ abstract class AbstractPackageRepository {
 		}
 
 		try {
-			$rows = $this->packageRows( $identifier );
+			$rows = $this->package_rows( $identifier );
 		} catch ( PackageStorageFailure ) {
-			return $this->postWriteVerificationFailure( $operation );
+			return $this->post_write_verification_failure( $operation );
 		}
 
-		if ( 1 !== count( $rows ) || ! $this->rowMatches( $rows[0], $expected ) ) {
+		if ( 1 !== count( $rows ) || ! $this->row_matches( $rows[0], $expected ) ) {
 			return PackageMutationResult::conflict(
 				$operation,
 				'ran_booster_storage_verification_conflict',
@@ -785,32 +799,32 @@ abstract class AbstractPackageRepository {
 			);
 		}
 
-		return 0 === $writeResult
+		return 0 === $write_result
 			? PackageMutationResult::unchanged( $operation )
 			: PackageMutationResult::changed( $operation );
 	}
 
-	private function verifyPackageDeletion( string $identifier, int|false $writeResult ): PackageMutationResult {
-		if ( false === $writeResult ) {
-			return $this->deleteFailureResult();
+	private function verify_package_deletion( string $identifier, int|false $write_result ): PackageMutationResult {
+		if ( false === $write_result ) {
+			return $this->delete_failure_result();
 		}
 
 		try {
-			$rows = $this->packageRows( $identifier );
+			$rows = $this->package_rows( $identifier );
 		} catch ( PackageStorageFailure ) {
-			return $this->postWriteVerificationFailure( PackageStorageOperation::DELETE );
+			return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
 		}
 
 		if ( array() !== $rows ) {
-			return $this->deleteConflictResult();
+			return $this->delete_conflict_result();
 		}
 
-		return 0 === $writeResult
+		return 0 === $write_result
 			? PackageMutationResult::unchanged( PackageStorageOperation::DELETE )
 			: PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
 
-	private function deleteFailureResult(): PackageMutationResult {
+	private function delete_failure_result(): PackageMutationResult {
 		return PackageMutationResult::failed(
 			PackageStorageOperation::DELETE,
 			'ran_booster_storage_delete_failed',
@@ -818,7 +832,7 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function deleteConflictResult(): PackageMutationResult {
+	private function delete_conflict_result(): PackageMutationResult {
 		return PackageMutationResult::conflict(
 			PackageStorageOperation::DELETE,
 			'ran_booster_storage_delete_conflict',
@@ -826,7 +840,7 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function failureResult( PackageStorageFailure $failure ): PackageMutationResult {
+	private function failure_result( PackageStorageFailure $failure ): PackageMutationResult {
 		return PackageMutationResult::failed(
 			$failure->get_operation(),
 			$failure->get_diagnostic_id(),
@@ -834,7 +848,7 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function postWriteVerificationFailure( PackageStorageOperation $operation ): PackageMutationResult {
+	private function post_write_verification_failure( PackageStorageOperation $operation ): PackageMutationResult {
 		$failure = PackageStorageFailure::after_write_could_not_be_verified( $operation );
 
 		return PackageMutationResult::failed(
@@ -845,7 +859,7 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function sourceConflictResult(): PackageMutationResult {
+	private function source_conflict_result(): PackageMutationResult {
 		return PackageMutationResult::conflict(
 			PackageStorageOperation::UPDATE,
 			'ran_booster_storage_source_conflict',
@@ -853,16 +867,16 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function sourceModelFromRow( object $row ): PackageModel {
+	private function source_model_from_row( object $row ): PackageModel {
 		return new PackageModel(
 			array(
-				'source'          => $this->valueFromRow( $row, 'source' ),
-				'source_revision' => $this->valueFromRow( $row, 'source_revision' ),
+				'source'          => $this->value_from_row( $row, 'source' ),
+				'source_revision' => $this->value_from_row( $row, 'source_revision' ),
 			)
 		);
 	}
 
-	private function invalidProviderIdentityResult( PackageStorageOperation $operation ): PackageMutationResult {
+	private function invalid_provider_identity_result( PackageStorageOperation $operation ): PackageMutationResult {
 		return PackageMutationResult::failed(
 			$operation,
 			'ran_booster_storage_invalid_provider_identity',
@@ -870,7 +884,7 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function invalidPackageIdentityResult( PackageStorageOperation $operation ): PackageMutationResult {
+	private function invalid_package_identity_result( PackageStorageOperation $operation ): PackageMutationResult {
 		return PackageMutationResult::failed(
 			$operation,
 			'ran_booster_storage_invalid_package_identity',
@@ -881,9 +895,9 @@ abstract class AbstractPackageRepository {
 	/**
 	 * @param array<string, mixed> $expected Expected stored fields.
 	 */
-	private function rowMatches( object $row, array $expected ): bool {
+	private function row_matches( object $row, array $expected ): bool {
 		foreach ( $expected as $field => $value ) {
-			$actual = $this->valueFromRow( $row, $field );
+			$actual = $this->value_from_row( $row, $field );
 
 			if ( null === $value ) {
 				if ( null !== $actual && '' !== $actual ) {
@@ -900,19 +914,19 @@ abstract class AbstractPackageRepository {
 		return true;
 	}
 
-	private function hydratePackage( object $row ): Package {
-		$identifier = $this->stringFromRow( $row, 'package' );
+	private function hydrate_package( object $row ): Package {
+		$identifier = $this->string_from_row( $row, 'package' );
 		$package    = $this->packageFromInstallation( $identifier );
-		$provider   = $this->stringFromRow( $row, 'provider' );
-		$handle     = $this->stringFromRow( $row, 'repository' );
-		$credential = $this->stringFromRow( $row, 'credential_id' );
+		$provider   = $this->string_from_row( $row, 'provider' );
+		$handle     = $this->string_from_row( $row, 'repository' );
+		$credential = $this->string_from_row( $row, 'credential_id' );
 		try {
 			$repository = new ManagedRepository(
 				$provider,
 				$handle,
-				$this->stringFromRow( $row, 'provider_repository_id' ),
-				$this->stringFromRow( $row, 'branch' ),
-				(bool) $this->valueFromRow( $row, 'private', false ),
+				$this->string_from_row( $row, 'provider_repository_id' ),
+				$this->string_from_row( $row, 'branch' ),
+				(bool) $this->value_from_row( $row, 'private', false ),
 				'' === $credential ? null : $credential
 			);
 		} catch ( InvalidArgumentException ) {
@@ -921,43 +935,47 @@ abstract class AbstractPackageRepository {
 
 		$package->setRepository( $repository );
 		$package->setDeploymentPolicy(
-			DeploymentPolicy::from_database( $this->valueFromRow( $row, 'deployment_policy', DeploymentPolicy::MANUAL->value ) )
+			DeploymentPolicy::from_database( $this->value_from_row( $row, 'deployment_policy', DeploymentPolicy::MANUAL->value ) )
 		);
 		$source = new PackageModel(
 			array(
-				'source'          => $this->valueFromRow( $row, 'source' ),
-				'source_revision' => $this->valueFromRow( $row, 'source_revision' ),
+				'source'          => $this->value_from_row( $row, 'source' ),
+				'source_revision' => $this->value_from_row( $row, 'source_revision' ),
 			)
 		);
 		$package->setSource( PackageSource::from_database( $source->source ), $source->source_revision );
-		$package->setSubdirectory( $this->valueFromRow( $row, 'subdirectory' ) );
+		$package->setSubdirectory( $this->value_from_row( $row, 'subdirectory' ) );
 
 		return $package;
 	}
 
-	private function stringFromRow( object $row, string $field ): string {
-		return (string) $this->valueFromRow( $row, $field, '' );
+	private function string_from_row( object $row, string $field ): string {
+		return (string) $this->value_from_row( $row, $field, '' );
 	}
 
-	private function valueFromRow( object $row, string $field, mixed $default = null ): mixed {
+	private function value_from_row( object $row, string $field, mixed $default = null ): mixed {
 		return property_exists( $row, $field ) ? $row->$field : $default;
 	}
 
-	private function requireStorageSupport( PackageStorageOperation $operation ): void {
-		$this->databaseLifecycle ??= new Database();
+	private function require_storage_support( PackageStorageOperation $operation ): void {
+		$this->database_lifecycle ??= new Database();
 		try {
-			$this->databaseLifecycle->requireReady();
+			$this->database_lifecycle->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The enum is converted into a display-safe typed storage failure.
 			throw PackageStorageFailure::unsupported_database( $operation );
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	abstract protected function packageType(): int;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	abstract protected function packageExists( string $identifier ): bool;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	abstract protected function packageFromInstallation( string $identifier ): Package;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	abstract protected function notFoundException(): Throwable;
 }

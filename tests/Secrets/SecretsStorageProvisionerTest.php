@@ -153,7 +153,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 			'The configured secrets %s is not readable by PHP.' => 'PHP ne peut pas lire : %s.',
 			'The configured secrets %s is not writable by PHP.' => 'PHP ne peut pas écrire : %s.',
 		);
-		$method = new \ReflectionMethod( SecretsStorageProvisioner::class, 'accessIssues' );
+		$method = new \ReflectionMethod( SecretsStorageProvisioner::class, 'access_issues' );
 		$issues = $method->invoke(
 			$this->provisioner(),
 			$this->root . '/does-not-exist',

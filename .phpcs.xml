@@ -28,6 +28,14 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Portability/PortabilityApplicationService.php</include-pattern>
+		<include-pattern>/RAN/Troubleshooting/TroubleshootingService.php</include-pattern>
+		<include-pattern>/RAN/Troubleshooting/LocalTroubleshootingService.php</include-pattern>
+		<include-pattern>/RAN/Storage/AbstractPackageRepository.php</include-pattern>
+		<include-pattern>/RAN/Storage/PluginRepository.php</include-pattern>
+		<include-pattern>/RAN/Storage/ThemeRepository.php</include-pattern>
+		<include-pattern>/RAN/Secrets/WpConfigSecretsPathWriter.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsStorageProvisioner.php</include-pattern>
 		<include-pattern>/RAN/Secrets/SiteKeyStore.php</include-pattern>
 		<include-pattern>/RAN/Secrets/PrivateLocationCandidateResolver.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/CredentialValidationResult.php</include-pattern>
@@ -131,6 +139,14 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Portability/PortabilityApplicationService.php</include-pattern>
+		<include-pattern>/RAN/Troubleshooting/TroubleshootingService.php</include-pattern>
+		<include-pattern>/RAN/Troubleshooting/LocalTroubleshootingService.php</include-pattern>
+		<include-pattern>/RAN/Storage/AbstractPackageRepository.php</include-pattern>
+		<include-pattern>/RAN/Storage/PluginRepository.php</include-pattern>
+		<include-pattern>/RAN/Storage/ThemeRepository.php</include-pattern>
+		<include-pattern>/RAN/Secrets/WpConfigSecretsPathWriter.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsStorageProvisioner.php</include-pattern>
 		<include-pattern>/RAN/Secrets/SiteKeyStore.php</include-pattern>
 		<include-pattern>/RAN/Secrets/PrivateLocationCandidateResolver.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/CredentialValidationResult.php</include-pattern>

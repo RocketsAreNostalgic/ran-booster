@@ -136,9 +136,20 @@ also includes:
 - `RAN/RepositoryProvider/RepositoryReleaseNativeTargetStatus.php`
 - `RAN/Storage/Database.php`
 
+The backend five-slice cohort also includes:
+
+- `RAN/Portability/PortabilityApplicationService.php`
+- `RAN/Troubleshooting/TroubleshootingService.php`
+- `RAN/Troubleshooting/LocalTroubleshootingService.php`
+- `RAN/Storage/AbstractPackageRepository.php`
+- `RAN/Storage/PluginRepository.php`
+- `RAN/Storage/ThemeRepository.php`
+- `RAN/Secrets/WpConfigSecretsPathWriter.php`
+- `RAN/Secrets/SecretsStorageProvisioner.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This 101-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This 109-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -221,6 +232,16 @@ Credential and release timestamp rules, bounded failure messages, raw/normalized
 webhook headers, verification clones and result projections remain unchanged.
 Database SQL/DDL, migration ordering, capability caching, failure classification
 and wpdb error restoration are preserved. Reserved-parameter scope is unchanged.
+
+The backend five-slice cohort renames private helpers, private repository state
+and owned locals. Public methods, named/promoted constructor parameters and
+protected override seams retain narrow documented exceptions. Existing private
+reflection references follow their helper renames. Portability review fingerprints,
+credential decisions, disabled-package verification and retries remain unchanged.
+Troubleshooting row order, provider budgets, safe reports and marker cleanup,
+repository SQL/transaction/write/read-back order, configuration file bytes and
+lock/replace/rollback behavior, and secrets recovery authority/revisions/order are
+preserved. Reserved-parameter scope is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

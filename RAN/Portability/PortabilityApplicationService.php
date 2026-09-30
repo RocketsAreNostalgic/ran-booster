@@ -34,16 +34,18 @@ final readonly class PortabilityApplicationService {
 	 * @param array<int, string> $targetCredentialIds
 	 * @return list<BlueprintPlanItem>
 	 */
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	public function review( PackageBlueprint $blueprint, array $credentialDecisions = array(), array $targetCredentialIds = array() ): array {
 		$items    = $this->reviewer->review( $blueprint );
 		$verified = array();
 
 		foreach ( $items as $index => $item ) {
 			$ordinal    = null;
-			$credential = $this->credentialFor( $blueprint, $item, $ordinal );
+			$credential = $this->credential_for( $blueprint, $item, $ordinal );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			$decision   = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
 			$action     = $decision['action'] ?? null;
-			$verified[] = BlueprintCredentialAction::IMPORT === $action && $this->canImportCredential( $item ) && ! $this->credentialStorageReady()
+			$verified[] = BlueprintCredentialAction::IMPORT === $action && $this->can_import_credential( $item ) && ! $this->credential_storage_ready()
 				? new BlueprintPlanItem(
 					$item->package,
 					TargetPackageAction::BLOCKED,
@@ -53,6 +55,7 @@ final readonly class PortabilityApplicationService {
 					$item,
 					$credential,
 					$action,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 					$decision['target_id'] ?? ( null === $credential ? ( $targetCredentialIds[ $index ] ?? null ) : null )
 				);
 		}
@@ -60,16 +63,20 @@ final readonly class PortabilityApplicationService {
 		return $verified;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function reviewCandidate( PortabilityCandidate $candidate ): PortabilityReviewResult {
-		return $this->candidateContext( $candidate )['review'];
+		return $this->candidate_context( $candidate )['review'];
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function applyCandidate(
 		PortabilityCandidate $candidate,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		string $expectedFingerprint
 	): PortabilityApplyResult {
-		$context = $this->candidateContext( $candidate );
+		$context = $this->candidate_context( $candidate );
 		$review  = $context['review'];
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( ! hash_equals( $review->fingerprint, $expectedFingerprint ) ) {
 			return new PortabilityApplyResult(
 				PortabilityApplyResult::BLOCKED,
@@ -100,11 +107,13 @@ final readonly class PortabilityApplicationService {
 		$package   = $context['package'];
 		$blueprint = new PackageBlueprint( array( $package ) );
 		$item      = new BlueprintPlanItem( $package, TargetPackageAction::ADOPT, TargetPackageReason::NONE );
-		$result    = $this->applyItem(
+		$result    = $this->apply_item(
 			$blueprint,
 			$item,
 			null,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			null === $candidate->credentialId ? null : 'target',
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			$candidate->credentialId,
 			$context['private'],
 			true,
@@ -126,70 +135,81 @@ final readonly class PortabilityApplicationService {
 	public function apply(
 		PackageBlueprint $blueprint,
 		int $row,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		?string $expectedAction,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		array $credentialDecisions,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		?string $targetCredentialId,
 		bool $adopt,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		bool $canInstall
 	): array {
 		$item = $this->reviewer->review( $blueprint )[ $row ] ?? null;
 		if ( ! $item instanceof BlueprintPlanItem ) {
 			throw new InvalidArgumentException();
 		}
-		$ordinal            = null;
-		$credential         = $this->credentialFor( $blueprint, $item, $ordinal );
-		$decision           = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
-		$credentialAction   = $decision['action'] ?? null;
+		$ordinal    = null;
+		$credential = $this->credential_for( $blueprint, $item, $ordinal );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$decision          = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
+		$credential_action = $decision['action'] ?? null;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		$targetCredentialId = $decision['target_id'] ?? ( null === $credential ? $targetCredentialId : null );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( $expectedAction !== $item->action->value ) {
 			return $this->result( 'skipped', __( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ) );
 		}
-		if ( null !== $credential && ( null === $credentialAction || BlueprintCredentialAction::LEAVE === $credentialAction ) ) {
+		if ( null !== $credential && ( null === $credential_action || BlueprintCredentialAction::LEAVE === $credential_action ) ) {
 			return $this->result( 'skipped', __( 'This package was left unchanged by the repository credential decision.', 'ran-booster' ) );
 		}
-		$credentialOnly = TargetPackageAction::MANAGED === $item->action
+		$credential_only = TargetPackageAction::MANAGED === $item->action
 			&& null !== $credential
-			&& BlueprintCredentialAction::IMPORT === $credentialAction;
-		if ( ! $credentialOnly && ! $canInstall ) {
+			&& BlueprintCredentialAction::IMPORT === $credential_action;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		if ( ! $credential_only && ! $canInstall ) {
 			return $this->result( 'failed', __( 'You do not have permission to apply this package type.', 'ran-booster' ) );
 		}
 		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
 			return $this->result( 'skipped', __( 'This installed package was not selected for adoption.', 'ran-booster' ) );
 		}
-		if ( BlueprintCredentialAction::IMPORT === $credentialAction ) {
-			$this->assertLocalSecretStoreReady();
+		if ( BlueprintCredentialAction::IMPORT === $credential_action ) {
+			$this->assert_local_secret_store_ready();
 		}
-		$repositoryPrivate = null;
-		$item              = $this->verifier->verify( $item, $credential, $credentialAction, $targetCredentialId, $repositoryPrivate );
+		$repository_private = null;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$item = $this->verifier->verify( $item, $credential, $credential_action, $targetCredentialId, $repository_private );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( $expectedAction !== $item->action->value ) {
 			return $this->result(
 				'skipped',
 				__( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ),
-				null !== $credential && in_array( $credentialAction, array( BlueprintCredentialAction::IMPORT, BlueprintCredentialAction::TARGET ), true ) ? 'unavailable' : 'none'
+				null !== $credential && in_array( $credential_action, array( BlueprintCredentialAction::IMPORT, BlueprintCredentialAction::TARGET ), true ) ? 'unavailable' : 'none'
 			);
 		}
 
-		return $this->applyItem( $blueprint, $item, $credential, $credentialAction?->value, $targetCredentialId, $repositoryPrivate, $adopt, $canInstall );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		return $this->apply_item( $blueprint, $item, $credential, $credential_action?->value, $targetCredentialId, $repository_private, $adopt, $canInstall );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */
-	private function applyItem(
+	private function apply_item(
 		PackageBlueprint $blueprint,
 		BlueprintPlanItem $item,
 		?BlueprintCredential $credential,
 		?string $source,
-		?string $targetCredentialId,
-		?bool $repositoryPrivate,
+		?string $target_credential_id,
+		?bool $repository_private,
 		bool $adopt,
-		bool $canInstall
+		bool $can_install
 	): array {
 		if ( TargetPackageAction::MANAGED === $item->action ) {
-			if ( 'import' !== $source || null === $credential || ! is_bool( $repositoryPrivate ) ) {
+			if ( 'import' !== $source || null === $credential || ! is_bool( $repository_private ) ) {
 				return $this->result( 'unchanged', __( 'This package is already managed.', 'ran-booster' ) );
 			}
 
 			try {
-				$this->credentialId( $blueprint, $credential, $source, $targetCredentialId );
+				$this->credential_id( $blueprint, $credential, $source, $target_credential_id );
 
 				return $this->result(
 					'credential_available',
@@ -204,38 +224,38 @@ final readonly class PortabilityApplicationService {
 				);
 			}
 		}
-		if ( ! $this->isActionable( $item ) ) {
+		if ( ! $this->is_actionable( $item ) ) {
 			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Transporter Blueprint again.', 'ran-booster' ) );
 		}
-		if ( ! $canInstall ) {
+		if ( ! $can_install ) {
 			return $this->result( 'failed', __( 'You do not have permission to apply this package type.', 'ran-booster' ) );
 		}
 		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
 			return $this->result( 'skipped', __( 'This installed package was not selected for adoption.', 'ran-booster' ) );
 		}
 
-		$credentialState = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
+		$credential_state = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
 		try {
-			$credentialId    = $this->credentialId( $blueprint, $credential, $source, $targetCredentialId );
-			$credentialState = 'import' === $source ? 'transferred_available' : ( 'target' === $source ? 'target_selected' : 'none' );
-			if ( null === $repositoryPrivate ) {
+			$credential_id    = $this->credential_id( $blueprint, $credential, $source, $target_credential_id );
+			$credential_state = 'import' === $source ? 'transferred_available' : ( 'target' === $source ? 'target_selected' : 'none' );
+			if ( null === $repository_private ) {
 				throw new InvalidArgumentException();
 			}
 			$operation = PackageOperation::from_input(
 				'install-' . $item->package->type,
-				$this->operationInput( $item, $credentialId, $repositoryPrivate )
+				$this->operation_input( $item, $credential_id, $repository_private )
 			);
 			$result    = $this->operations->execute( $operation );
 			if ( TargetPackageAction::ADOPT === $item->action ) {
-				$this->assertDisabledResult( $result, $item->package, $credentialId, $repositoryPrivate );
+				$this->assert_disabled_result( $result, $item->package, $credential_id, $repository_private );
 
-				return $this->result( 'adopted', __( 'Adopted: deployment disabled', 'ran-booster' ), $credentialState );
+				return $this->result( 'adopted', __( 'Adopted: deployment disabled', 'ran-booster' ), $credential_state );
 			}
 			if ( 'succeeded' === ( $result['status'] ?? null ) ) {
-				$this->assertDisabledResult( $result, $item->package, $credentialId, $repositoryPrivate );
+				$this->assert_disabled_result( $result, $item->package, $credential_id, $repository_private );
 			}
 
-			return $this->deploymentResult( $result ) + array( 'credential_state' => $credentialState );
+			return $this->deployment_result( $result ) + array( 'credential_state' => $credential_state );
 		} catch ( Throwable $failure ) {
 			if ( null === $credential ) {
 				throw $failure;
@@ -243,7 +263,7 @@ final readonly class PortabilityApplicationService {
 			return $this->result(
 				'failed',
 				__( 'Booster could not apply this package. Review the Transporter Blueprint again and check repository access.', 'ran-booster' ),
-				$credentialState
+				$credential_state
 			);
 		}
 	}
@@ -251,38 +271,38 @@ final readonly class PortabilityApplicationService {
 	/**
 	 * @param array<string, mixed> $result
 	 */
-	private function assertDisabledResult(
+	private function assert_disabled_result(
 		array $result,
-		BlueprintPackage $blueprintPackage,
-		?string $credentialId,
-		bool $repositoryPrivate
+		BlueprintPackage $blueprint_package,
+		?string $credential_id,
+		bool $repository_private
 	): void {
 		$package = $result['package'] ?? null;
 		if ( ! $package instanceof Package
-			|| ! $this->targetVerified( $package, $blueprintPackage, $credentialId, $repositoryPrivate ) ) {
+			|| ! $this->target_verified( $package, $blueprint_package, $credential_id, $repository_private ) ) {
 			throw new \RuntimeException( 'The Blueprint package was not persisted with the expected disabled management configuration.' );
 		}
 	}
 
-	private function targetVerified(
+	private function target_verified(
 		Package $package,
-		BlueprintPackage $blueprintPackage,
-		?string $credentialId,
-		bool $repositoryPrivate
+		BlueprintPackage $blueprint_package,
+		?string $credential_id,
+		bool $repository_private
 	): bool {
-		return ! ( ( 'plugin' === $blueprintPackage->type && ! $package instanceof Plugin )
-			|| ( 'theme' === $blueprintPackage->type && ! $package instanceof Theme )
+		return ! ( ( 'plugin' === $blueprint_package->type && ! $package instanceof Plugin )
+			|| ( 'theme' === $blueprint_package->type && ! $package instanceof Theme )
 			|| PackageSource::BRANCH !== $package->getSource()
-			|| ! $blueprintPackage->sameManagementAs( BlueprintPackage::fromManagedPackage( $blueprintPackage->type, $package ) )
-			|| ( $credentialId ?? '' ) !== $package->getCredentialId()
-			|| $repositoryPrivate !== (bool) $package->isPrivate()
+			|| ! $blueprint_package->sameManagementAs( BlueprintPackage::fromManagedPackage( $blueprint_package->type, $package ) )
+			|| ( $credential_id ?? '' ) !== $package->getCredentialId()
+			|| $repository_private !== (bool) $package->isPrivate()
 			|| DeploymentPolicy::DISABLED !== $package->getDeploymentPolicy() );
 	}
 
 	/**
 	 * @return array{review:PortabilityReviewResult,package:BlueprintPackage|null,private:bool|null}
 	 */
-	private function candidateContext( PortabilityCandidate $candidate ): array {
+	private function candidate_context( PortabilityCandidate $candidate ): array {
 		$resolved = $this->verifier->resolveCandidate( $candidate );
 		$package  = $resolved['package'];
 		$private  = $resolved['private'];
@@ -309,7 +329,8 @@ final readonly class PortabilityApplicationService {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::DESTINATION_CONFLICT );
 		} elseif ( TargetPackageAction::MANAGED === $item->action
 			&& ( ! $managed instanceof Package
-				|| ! $this->targetVerified( $managed, $package, $candidate->credentialId, $private ) ) ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+				|| ! $this->target_verified( $managed, $package, $candidate->credentialId, $private ) ) ) {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT );
 		}
 
@@ -319,6 +340,7 @@ final readonly class PortabilityApplicationService {
 				$item->action->value,
 				$item->reason->value,
 				$item->reason->message(),
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 				$package->providerRepositoryId,
 				$private
 			),
@@ -331,7 +353,7 @@ final readonly class PortabilityApplicationService {
 	 * @param array<string, mixed> $result
 	 * @return array{status:string,message:string}
 	 */
-	private function deploymentResult( array $result ): array {
+	private function deployment_result( array $result ): array {
 		if ( 'succeeded' === ( $result['status'] ?? null ) ) {
 			return array(
 				'status'  => 'installed',
@@ -339,11 +361,11 @@ final readonly class PortabilityApplicationService {
 			);
 		}
 
-		$outcomeCode = is_string( $result['outcome_code'] ?? null ) ? $result['outcome_code'] : '';
-		$reference   = is_string( $result['correlation_id'] ?? null ) && 1 === preg_match( '/^[a-f0-9]{32}$/D', $result['correlation_id'] )
+		$outcome_code = is_string( $result['outcome_code'] ?? null ) ? $result['outcome_code'] : '';
+		$reference    = is_string( $result['correlation_id'] ?? null ) && 1 === preg_match( '/^[a-f0-9]{32}$/D', $result['correlation_id'] )
 			? $result['correlation_id']
 			: null;
-		$message     = \RAN\Admin\DeploymentOutcomeMessage::for_code( $outcomeCode );
+		$message      = \RAN\Admin\DeploymentOutcomeMessage::for_code( $outcome_code );
 		if ( null !== $reference ) {
 			$message = sprintf(
 				/* translators: 1: safe deployment failure reason, 2: random support reference. */
@@ -358,35 +380,36 @@ final readonly class PortabilityApplicationService {
 		);
 	}
 
-	private function credentialId(
+	private function credential_id(
 		PackageBlueprint $blueprint,
 		?BlueprintCredential $credential,
 		?string $source,
-		?string $targetCredentialId
+		?string $target_credential_id
 	): ?string {
 		if ( 'target' === $source ) {
-			return $targetCredentialId;
+			return $target_credential_id;
 		}
 		if ( 'import' !== $source || null === $credential ) {
 			return null;
 		}
 
-		$this->assertLocalSecretStoreReady();
+		$this->assert_local_secret_store_ready();
 
 		return $this->secrets->importCredentialsIfAbsent( $blueprint, $credential )[0] ?? throw new InvalidArgumentException();
 	}
 
 	/** @return array<string, string> */
-	private function operationInput( BlueprintPlanItem $item, ?string $credentialId, bool $repositoryPrivate ): array {
+	private function operation_input( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ): array {
 		$package = $item->package;
 		$input   = array(
 			'provider'                            => $package->provider,
 			'repository'                          => $package->repository,
 			'branch'                              => $package->branch,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			'provider_repository_id'              => $package->providerRepositoryId,
 			'provider_repository_identity_source' => 'resolved',
-			'credential_id'                       => $credentialId ?? '',
-			'private'                             => $repositoryPrivate ? '1' : '0',
+			'credential_id'                       => $credential_id ?? '',
+			'private'                             => $repository_private ? '1' : '0',
 			'deployment_policy'                   => DeploymentPolicy::DISABLED->value,
 			'package_slug'                        => 'plugin' === $package->type ? explode( '/', $package->identifier, 2 )[0] : $package->identifier,
 			'subdirectory'                        => $package->subdirectory ?? '',
@@ -400,7 +423,7 @@ final readonly class PortabilityApplicationService {
 		return $input;
 	}
 
-	private function credentialFor( PackageBlueprint $blueprint, BlueprintPlanItem $item, ?int &$ordinal = null ): ?BlueprintCredential {
+	private function credential_for( PackageBlueprint $blueprint, BlueprintPlanItem $item, ?int &$ordinal = null ): ?BlueprintCredential {
 		$ordinal = null;
 		foreach ( $blueprint->credentials as $index => $credential ) {
 			if ( $credential->provider === $item->package->provider
@@ -421,7 +444,7 @@ final readonly class PortabilityApplicationService {
 		return null;
 	}
 
-	private function credentialStorageReady(): bool {
+	private function credential_storage_ready(): bool {
 		try {
 			$this->secrets->assertManagedStorageReady();
 
@@ -431,7 +454,7 @@ final readonly class PortabilityApplicationService {
 		}
 	}
 
-	private function assertLocalSecretStoreReady(): void {
+	private function assert_local_secret_store_ready(): void {
 		try {
 			$this->secrets->assertManagedStorageReady();
 		} catch ( Throwable $failure ) {
@@ -440,20 +463,20 @@ final readonly class PortabilityApplicationService {
 		}
 	}
 
-	private function isActionable( BlueprintPlanItem $item ): bool {
+	private function is_actionable( BlueprintPlanItem $item ): bool {
 		return in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true );
 	}
 
-	private function canImportCredential( BlueprintPlanItem $item ): bool {
-		return TargetPackageAction::MANAGED === $item->action || $this->isActionable( $item );
+	private function can_import_credential( BlueprintPlanItem $item ): bool {
+		return TargetPackageAction::MANAGED === $item->action || $this->is_actionable( $item );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */
-	private function result( string $status, string $message, string $credentialState = 'none' ): array {
+	private function result( string $status, string $message, string $credential_state = 'none' ): array {
 		return array(
 			'status'           => $status,
 			'message'          => $message,
-			'credential_state' => $credentialState,
+			'credential_state' => $credential_state,
 		);
 	}
 }

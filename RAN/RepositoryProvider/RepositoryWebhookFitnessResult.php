@@ -8,38 +8,45 @@ final readonly class RepositoryWebhookFitnessResult {
 	public function __construct(
 		private string $support,
 		private string $suitability,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		private string $leastPrivilege,
 		private string $evidence,
 		private string $code,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		private string $checkedAt,
 		private string $remediation
 	) {
-		$this->assertValue( $support, array( 'supported', 'unsupported', 'unknown' ) );
-		$this->assertValue( $suitability, array( 'suitable', 'insufficient', 'unknown' ) );
-		$this->assertValue( $leastPrivilege, array( 'appropriate', 'overscoped', 'unknown' ) );
-		$this->assertValue( $evidence, array( 'observed', 'inferred', 'unknown_by_design', 'assessment_unavailable', 'stale' ) );
-		$this->assertText( $code, 96, '/\A[a-z0-9][a-z0-9._-]*\z/D' );
-		$this->assertText( $checkedAt, 32, '/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/D' );
-		$this->assertText( $remediation, 512 );
+		$this->assert_value( $support, array( 'supported', 'unsupported', 'unknown' ) );
+		$this->assert_value( $suitability, array( 'suitable', 'insufficient', 'unknown' ) );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+		$this->assert_value( $leastPrivilege, array( 'appropriate', 'overscoped', 'unknown' ) );
+		$this->assert_value( $evidence, array( 'observed', 'inferred', 'unknown_by_design', 'assessment_unavailable', 'stale' ) );
+		$this->assert_text( $code, 96, '/\A[a-z0-9][a-z0-9._-]*\z/D' );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+		$this->assert_text( $checkedAt, 32, '/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/D' );
+		$this->assert_text( $remediation, 512 );
 	}
 	/** @return array{support:string,suitability:string,least_privilege:string,evidence:string,code:string,checked_at:string,remediation:string} */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function toArray(): array {
 		return array(
 			'support'         => $this->support,
 			'suitability'     => $this->suitability,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			'least_privilege' => $this->leastPrivilege,
 			'evidence'        => $this->evidence,
 			'code'            => $this->code,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			'checked_at'      => $this->checkedAt,
 			'remediation'     => $this->remediation,
 		);
 	}
-	private function assertValue( string $value, array $allowed ): void {
+	private function assert_value( string $value, array $allowed ): void {
 		if ( ! in_array( $value, $allowed, true ) ) {
 			throw new InvalidArgumentException( 'Webhook fitness result is invalid.' );
 		}
 	}
-	private function assertText( string $value, int $limit, ?string $pattern = null ): void {
+	private function assert_text( string $value, int $limit, ?string $pattern = null ): void {
 		if ( '' === $value || strlen( $value ) > $limit || 1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) || ( null !== $pattern && 1 !== preg_match( $pattern, $value ) ) ) {
 			throw new InvalidArgumentException( 'Webhook fitness result is invalid.' );
 		}

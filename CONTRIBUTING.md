@@ -120,9 +120,25 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/RepositoryProvider/RepositoryDescriptor.php`,
 `RAN/RepositoryProvider/RepositoryBrowseRequest.php` and
 `RAN/Portability/WpPusherCoexistencePolicy.php`.
+The five-slice secrets, credential, webhook, release-evidence and database cohort
+also includes:
+
+- `RAN/Secrets/SiteKeyStore.php`
+- `RAN/Secrets/PrivateLocationCandidateResolver.php`
+- `RAN/RepositoryProvider/CredentialValidationResult.php`
+- `RAN/RepositoryProvider/CredentialExpiryReport.php`
+- `RAN/RepositoryProvider/WebhookRequest.php`
+- `RAN/RepositoryProvider/PushEvent.php`
+- `RAN/RepositoryProvider/RepositoryWebhookFitnessResult.php`
+- `RAN/RepositoryProvider/RepositoryWebhookOperationResult.php`
+- `RAN/RepositoryProvider/RepositoryReleaseInspection.php`
+- `RAN/RepositoryProvider/RepositoryReleaseCandidate.php`
+- `RAN/RepositoryProvider/RepositoryReleaseNativeTargetStatus.php`
+- `RAN/Storage/Database.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This eighty-nine-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This 101-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -195,6 +211,16 @@ Its public methods and activation callback retain narrow documented exceptions;
 exact plugin identity, option lookup order, malformed-inventory rejection and
 localized activation failures remain unchanged. Reserved-parameter enforcement
 is unchanged.
+
+The five-slice cohort renames private helpers, private state and owned locals.
+Public methods, named and promoted constructor parameters, serialized fields and
+protected override seams retain narrow documented exceptions. The private
+resolver callback follows its helper rename. Key encoding, autoload repair,
+option deletion/cache ordering, path fingerprints and permissions remain intact.
+Credential and release timestamp rules, bounded failure messages, raw/normalized
+webhook headers, verification clones and result projections remain unchanged.
+Database SQL/DDL, migration ordering, capability caching, failure classification
+and wpdb error restoration are preserved. Reserved-parameter scope is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

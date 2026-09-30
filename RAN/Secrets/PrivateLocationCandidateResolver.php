@@ -12,39 +12,47 @@ namespace RAN\Secrets;
  */
 final class PrivateLocationCandidateResolver {
 
-	private string $temporaryRoot;
+	private string $temporary_root;
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 	public function __construct( ?string $temporaryRoot = null ) {
-		$resolvedTemporary   = realpath( $temporaryRoot ?? sys_get_temp_dir() );
-		$this->temporaryRoot = false === $resolvedTemporary ? sys_get_temp_dir() : $resolvedTemporary;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+		$resolved_temporary   = realpath( $temporaryRoot ?? sys_get_temp_dir() );
+		$this->temporary_root = false === $resolved_temporary ? sys_get_temp_dir() : $resolved_temporary;
 	}
 
 	public function resolve(
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		string $wordpressRoot,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		string $contentDir,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		string $pluginDir,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		?string $documentRoot = null,
 		?array &$discarded = null
 	): ?string {
-		$discarded  = array();
-		$boundaries = $this->unsafeBoundaries( $wordpressRoot, $contentDir, $pluginDir, $documentRoot );
+		$discarded = array();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+		$boundaries = $this->unsafe_boundaries( $wordpressRoot, $contentDir, $pluginDir, $documentRoot );
 		if ( null === $boundaries ) {
 			return null;
 		}
 
-		$privateBase = $this->automaticPrivateBase( $boundaries );
-		if ( null === $privateBase ) {
+		$private_base = $this->automatic_private_base( $boundaries );
+		if ( null === $private_base ) {
 			return null;
 		}
 
 		$fingerprint = substr(
-			hash( 'sha256', implode( "\0", array_map( array( $this, 'canonicalDirectory' ), array( $wordpressRoot, $contentDir, $pluginDir ) ) ) ),
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+			hash( 'sha256', implode( "\0", array_map( array( $this, 'canonical_directory' ), array( $wordpressRoot, $contentDir, $pluginDir ) ) ) ),
 			0,
 			16
 		);
 
-		$candidate = $privateBase . '/.ran-booster/' . $fingerprint . '/secrets.json';
-		$failure   = $this->configuredPathFailure( $candidate, $boundaries, $privateBase );
+		$candidate = $private_base . '/.ran-booster/' . $fingerprint . '/secrets.json';
+		$failure   = $this->configured_path_failure( $candidate, $boundaries, $private_base );
 		if ( null !== $failure ) {
 			$discarded[] = array(
 				'directory' => dirname( $candidate ),
@@ -62,35 +70,41 @@ final class PrivateLocationCandidateResolver {
 	/**
 	 * Validate an operator-configured location without creating or modifying it.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function validateConfigured(
 		string $candidate,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		string $wordpressRoot,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		string $contentDir,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		string $pluginDir,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		?string $documentRoot = null
 	): bool {
-		$boundaries = $this->unsafeBoundaries( $wordpressRoot, $contentDir, $pluginDir, $documentRoot );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+		$boundaries = $this->unsafe_boundaries( $wordpressRoot, $contentDir, $pluginDir, $documentRoot );
 		if ( null === $boundaries ) {
 			return false;
 		}
 
-		$privateBase = $this->automaticPrivateBase( $boundaries );
-		$anchor      = null !== $privateBase && $this->contains( $privateBase, $candidate )
-			? $privateBase
+		$private_base = $this->automatic_private_base( $boundaries );
+		$anchor       = null !== $private_base && $this->contains( $private_base, $candidate )
+			? $private_base
 			: null;
 
-		return null === $this->configuredPathFailure( $candidate, $boundaries, $anchor );
+		return null === $this->configured_path_failure( $candidate, $boundaries, $anchor );
 	}
 
 	/**
 	 * @param list<string> $boundaries
 	 * @return array{code:string,message:string,component:string|null}|null
 	 */
-	private function configuredPathFailure( string $candidate, array $boundaries, ?string $privateBase ): ?array {
-		if ( ! $this->validAbsoluteFilePath( $candidate ) || 'secrets.json' !== basename( $candidate ) ) {
+	private function configured_path_failure( string $candidate, array $boundaries, ?string $private_base ): ?array {
+		if ( ! $this->valid_absolute_file_path( $candidate ) || 'secrets.json' !== basename( $candidate ) ) {
 			return $this->failure( 'invalid_candidate_path', 'The candidate is not a valid absolute secrets.json path.' );
 		}
-		if ( $this->isTemporaryDirectory( $candidate ) ) {
+		if ( $this->is_temporary_directory( $candidate ) ) {
 			return $this->failure( 'temporary_storage', 'The candidate is inside the operating system temporary directory.' );
 		}
 		foreach ( $boundaries as $boundary ) {
@@ -98,8 +112,8 @@ final class PrivateLocationCandidateResolver {
 				return $this->failure( 'inside_unsafe_boundary', 'The candidate is inside a public web or version-control directory.', $boundary );
 			}
 		}
-		if ( null !== $privateBase && ( ! is_dir( $privateBase ) || is_link( $privateBase ) ) ) {
-			return $this->failure( 'private_anchor_unavailable', 'The private account directory is missing, is not a directory or is a symbolic link.', $privateBase );
+		if ( null !== $private_base && ( ! is_dir( $private_base ) || is_link( $private_base ) ) ) {
+			return $this->failure( 'private_anchor_unavailable', 'The private account directory is missing, is not a directory or is a symbolic link.', $private_base );
 		}
 
 		$parts   = explode( '/', ltrim( $candidate, '/' ) );
@@ -114,10 +128,10 @@ final class PrivateLocationCandidateResolver {
 			if ( false === $stat || is_link( $current ) ) {
 				return $this->failure( 'symlink_or_unreadable_component', 'A path component is a symbolic link or could not be inspected.', $current );
 			}
-			$isTarget = $index === array_key_last( $parts );
-			$fileType = $stat['mode'] & 0170000;
-			if ( $isTarget ) {
-				if ( 0100000 !== $fileType ) {
+			$is_target = $index === array_key_last( $parts );
+			$file_type = $stat['mode'] & 0170000;
+			if ( $is_target ) {
+				if ( 0100000 !== $file_type ) {
 					return $this->failure( 'storage_file_not_regular', 'The existing storage target is not a regular file.', $current );
 				}
 				if ( 1 !== $stat['nlink'] ) {
@@ -125,16 +139,16 @@ final class PrivateLocationCandidateResolver {
 				}
 				continue;
 			}
-			if ( 0040000 !== $fileType ) {
+			if ( 0040000 !== $file_type ) {
 				return $this->failure( 'path_component_not_directory', 'A path component is not a directory.', $current );
 			}
 
-			$abovePrivateBase = null !== $privateBase && ! $this->contains( $privateBase, $current );
-			if ( $abovePrivateBase ) {
+			$above_private_base = null !== $private_base && ! $this->contains( $private_base, $current );
+			if ( $above_private_base ) {
 				if ( 0 !== ( $stat['mode'] & 0002 ) ) {
 					return $this->failure( 'world_writable_host_ancestor', 'A host directory is writable by every local user, so the private account path could be replaced.', $current );
 				}
-				if ( 0 !== ( $stat['mode'] & 0020 ) && ! $this->trustedHostGroupBoundary( $current, $stat ) ) {
+				if ( 0 !== ( $stat['mode'] & 0020 ) && ! $this->trusted_host_group_boundary( $current, $stat ) ) {
 					return $this->failure( 'php_accessible_group_writable_ancestor', 'A group-writable host directory is owned by, writable by or grouped with the PHP process, so the private account path could be replaced.', $current );
 				}
 				continue;
@@ -143,7 +157,7 @@ final class PrivateLocationCandidateResolver {
 			if ( 0 !== ( $stat['mode'] & 0022 ) ) {
 				return $this->failure( 'broad_private_path_permissions', 'A private path component is writable by its group or by other users.', $current );
 			}
-			if ( $current === $privateBase
+			if ( $current === $private_base
 				&& ( ! is_writable( $current ) || ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $stat['uid'] ) )
 			) {
 				return $this->failure( 'private_anchor_not_owned', 'The private account directory is not writable and owned by the PHP process user.', $current );
@@ -154,7 +168,7 @@ final class PrivateLocationCandidateResolver {
 	}
 
 	/** @param array<string|int,int> $stat */
-	private function trustedHostGroupBoundary( string $path, array $stat ): bool {
+	private function trusted_host_group_boundary( string $path, array $stat ): bool {
 		// A group outside PHP's identity is treated as the host control plane.
 		if ( ! function_exists( 'posix_geteuid' )
 			|| ! function_exists( 'posix_getegid' )
@@ -163,15 +177,15 @@ final class PrivateLocationCandidateResolver {
 			return false;
 		}
 
-		$effectiveUser  = posix_geteuid();
-		$effectiveGroup = posix_getegid();
-		$processGroups  = posix_getgroups();
+		$effective_user  = posix_geteuid();
+		$effective_group = posix_getegid();
+		$process_groups  = posix_getgroups();
 		clearstatcache( true, $path );
 
-		return $effectiveUser !== $stat['uid']
-			&& is_array( $processGroups )
-			&& $effectiveGroup !== $stat['gid']
-			&& ! in_array( $stat['gid'], $processGroups, true )
+		return $effective_user !== $stat['uid']
+			&& is_array( $process_groups )
+			&& $effective_group !== $stat['gid']
+			&& ! in_array( $stat['gid'], $process_groups, true )
 			&& ! is_writable( $path );
 	}
 
@@ -185,7 +199,7 @@ final class PrivateLocationCandidateResolver {
 	}
 
 	/** @param list<string> $boundaries */
-	private function automaticPrivateBase( array $boundaries ): ?string {
+	private function automatic_private_base( array $boundaries ): ?string {
 		usort( $boundaries, static fn ( string $left, string $right ): int => strlen( $left ) <=> strlen( $right ) );
 		$outermost = $boundaries[0] ?? null;
 		if ( null === $outermost ) {
@@ -197,25 +211,25 @@ final class PrivateLocationCandidateResolver {
 			}
 		}
 
-		$privateBase = dirname( $outermost );
+		$private_base = dirname( $outermost );
 
-		return '/' === $privateBase || $this->isTemporaryDirectory( $privateBase )
+		return '/' === $private_base || $this->is_temporary_directory( $private_base )
 			? null
-			: $privateBase;
+			: $private_base;
 	}
 
 	/**
 	 * @return list<string>|null
 	 */
-	private function unsafeBoundaries(
-		string $wordpressRoot,
-		string $contentDir,
-		string $pluginDir,
-		?string $documentRoot
+	private function unsafe_boundaries(
+		string $wordpress_root,
+		string $content_dir,
+		string $plugin_dir,
+		?string $document_root
 	): ?array {
 		$boundaries = array();
-		foreach ( array_filter( array( $wordpressRoot, $contentDir, $pluginDir, $documentRoot ) ) as $path ) {
-			$canonical = $this->canonicalDirectory( $path );
+		foreach ( array_filter( array( $wordpress_root, $content_dir, $plugin_dir, $document_root ) ) as $path ) {
+			$canonical = $this->canonical_directory( $path );
 			if ( null === $canonical ) {
 				return null;
 			}
@@ -236,7 +250,7 @@ final class PrivateLocationCandidateResolver {
 			: array_values( array_unique( $boundaries ) );
 	}
 
-	private function canonicalDirectory( string $path ): ?string {
+	private function canonical_directory( string $path ): ?string {
 		if ( '' === $path || str_contains( $path, "\0" ) ) {
 			return null;
 		}
@@ -254,7 +268,7 @@ final class PrivateLocationCandidateResolver {
 		return $directory === $path || str_starts_with( $path, rtrim( $directory, '/' ) . '/' );
 	}
 
-	private function validAbsoluteFilePath( string $path ): bool {
+	private function valid_absolute_file_path( string $path ): bool {
 		return str_starts_with( $path, '/' )
 			&& ! str_ends_with( $path, '/' )
 			&& ! str_contains( $path, "\0" )
@@ -264,7 +278,7 @@ final class PrivateLocationCandidateResolver {
 			&& 0 === preg_match( '#(?:^|/)\.{1,2}(?:/|$)#', $path );
 	}
 
-	private function isTemporaryDirectory( string $path ): bool {
-		return $this->contains( $this->temporaryRoot, $path );
+	private function is_temporary_directory( string $path ): bool {
+		return $this->contains( $this->temporary_root, $path );
 	}
 }

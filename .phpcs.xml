@@ -28,6 +28,18 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Secrets/SiteKeyStore.php</include-pattern>
+		<include-pattern>/RAN/Secrets/PrivateLocationCandidateResolver.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/CredentialValidationResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/CredentialExpiryReport.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/WebhookRequest.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/PushEvent.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryWebhookFitnessResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryWebhookOperationResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseInspection.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseCandidate.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseNativeTargetStatus.php</include-pattern>
+		<include-pattern>/RAN/Storage/Database.php</include-pattern>
 		<include-pattern>/RAN/Portability/WpPusherCoexistencePolicy.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/RepositoryReference.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/RepositoryDescriptor.php</include-pattern>
@@ -119,6 +131,18 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<include-pattern>/RAN/Secrets/SiteKeyStore.php</include-pattern>
+		<include-pattern>/RAN/Secrets/PrivateLocationCandidateResolver.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/CredentialValidationResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/CredentialExpiryReport.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/WebhookRequest.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/PushEvent.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryWebhookFitnessResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryWebhookOperationResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseInspection.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseCandidate.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseNativeTargetStatus.php</include-pattern>
+		<include-pattern>/RAN/Storage/Database.php</include-pattern>
 		<include-pattern>/RAN/Portability/WpPusherCoexistencePolicy.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/RepositoryReference.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/RepositoryDescriptor.php</include-pattern>

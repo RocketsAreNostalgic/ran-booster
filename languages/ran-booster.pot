@@ -569,7 +569,7 @@ msgid "Review %s credentials"
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNotice.php:100
-#: RAN/Admin/DeploymentAdminPresenter.php:55
+#: RAN/Admin/DeploymentAdminPresenter.php:56
 #: RAN/Admin/ManagedPluginFailureRows.php:70
 msgid "Replace credential"
 msgstr ""
@@ -659,62 +659,62 @@ msgstr ""
 msgid "RAN Booster could not identify an active deployment failure."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminController.php:50
+#: RAN/Admin/DeploymentAdminController.php:52
 msgid "You do not have sufficient permissions to manage Booster deployments."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminController.php:62
-#: RAN/Admin/DeploymentAdminController.php:100
+#: RAN/Admin/DeploymentAdminController.php:64
+#: RAN/Admin/DeploymentAdminController.php:102
 msgid "You do not have sufficient permissions to manage this package."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminController.php:66
+#: RAN/Admin/DeploymentAdminController.php:68
 msgid "The deployment runner was requested."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminController.php:75
+#: RAN/Admin/DeploymentAdminController.php:77
 msgid "The protected deployment action was accepted."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminController.php:79
+#: RAN/Admin/DeploymentAdminController.php:81
 msgid "Booster could not safely accept this deployment action. Refresh the activity record and try again."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminController.php:103
+#: RAN/Admin/DeploymentAdminController.php:105
 msgid "Retry is allowed. No package files or settings were changed."
 msgstr ""
 
 #. translators: %d is the number of managed packages with a current background deployment failure.
-#: RAN/Admin/DeploymentAdminPresenter.php:51
+#: RAN/Admin/DeploymentAdminPresenter.php:52
 #, php-format
 msgid "%d managed package needs attention."
 msgid_plural "%d managed packages need attention."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:58
+#: RAN/Admin/DeploymentAdminPresenter.php:59
 msgid "RAN Booster automatic deployment failed:"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:61
+#: RAN/Admin/DeploymentAdminPresenter.php:62
 #: RAN/Admin/ManagedPluginFailureRows.php:68
 msgid "Review deployment"
 msgstr ""
 
 #. translators: 1: safe deployment result, 2: random support reference, 3: activity page URL.
-#: RAN/Admin/DeploymentAdminPresenter.php:72
+#: RAN/Admin/DeploymentAdminPresenter.php:75
 #, php-format
 msgid "%1$s Reference: <code>%2$s</code>. <a href=\"%3$s\">View deployment activity</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:91
+#: RAN/Admin/DeploymentAdminPresenter.php:96
 #, php-format
 msgid "Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href=\"%3$s\">Check the package and allow another attempt</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:94
+#: RAN/Admin/DeploymentAdminPresenter.php:99
 #, php-format
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""

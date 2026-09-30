@@ -13,7 +13,7 @@ class PluginRepository extends AbstractPackageRepository {
 	public function allBoosterPlugins() {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
-		return $this->allPackages();
+		return $this->all_packages();
 	}
 
 	/**
@@ -25,12 +25,12 @@ class PluginRepository extends AbstractPackageRepository {
 	public function allDeploymentPlugins( ?PackageSource $source = null ): array {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
-		return $this->allPackages( $source );
+		return $this->all_packages( $source );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function editPlugin( $file, $input ): PackageMutationResult {
-		return $this->editPackage( $file, $input );
+		return $this->edit_package( $file, $input );
 	}
 
 	/**
@@ -39,12 +39,12 @@ class PluginRepository extends AbstractPackageRepository {
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function setPluginDeploymentPolicies( array $snapshots, \RAN\Deployment\DeploymentPolicy $policy ): array {
-		return $this->setDeploymentPolicies( $snapshots, $policy );
+		return $this->set_deployment_policies( $snapshots, $policy );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function disablePluginForRemoval( Plugin $plugin ): PackageMutationResult {
-		return $this->disablePackageForRemoval( $plugin );
+		return $this->disable_package_for_removal( $plugin );
 	}
 
 	/**
@@ -64,7 +64,7 @@ class PluginRepository extends AbstractPackageRepository {
 			}
 		}
 
-		throw $this->notFoundException();
+		throw $this->not_found_exception();
 	}
 
 	/**
@@ -76,26 +76,26 @@ class PluginRepository extends AbstractPackageRepository {
 	public function boosterPluginFromFile( $file ) {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
-		return $this->managedPackage( $file );
+		return $this->managed_package( $file );
 	}
 
 	/** @throws PluginNotFound */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function installedPluginFromFile( string $file ): Plugin {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
-		if ( ! $this->packageExists( $file ) ) {
-			throw $this->notFoundException();
+		if ( ! $this->package_exists( $file ) ) {
+			throw $this->not_found_exception();
 		}
 
-		return $this->packageFromInstallation( $file );
+		return $this->package_from_installation( $file );
 	}
 
 	public function store( Plugin $plugin ): PackageMutationResult {
-		return $this->storePackage( $plugin );
+		return $this->store_package( $plugin );
 	}
 
 	public function adopt( Plugin $plugin ): PackageMutationResult {
-		return $this->adoptPackage( $plugin );
+		return $this->adopt_package( $plugin );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
@@ -106,21 +106,19 @@ class PluginRepository extends AbstractPackageRepository {
 		int $userId
 	): PackageMutationResult {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		return $this->adoptReleasePackage( $plugin, $configuration, $userId );
+		return $this->adopt_release_package( $plugin, $configuration, $userId );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function isInstalled( string $identifier ): bool {
-		return $this->packageExists( $identifier );
+		return $this->package_exists( $identifier );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function packageType(): int {
+	protected function package_type(): int {
 		return 1;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function packageExists( string $identifier ): bool {
+	protected function package_exists( string $identifier ): bool {
 		if ( '' === trim( $identifier ) ) {
 			return false;
 		}
@@ -132,16 +130,14 @@ class PluginRepository extends AbstractPackageRepository {
 		return isset( get_plugins()[ $identifier ] );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function packageFromInstallation( string $identifier ): Package {
+	protected function package_from_installation( string $identifier ): Package {
 		return Plugin::fromWpArray(
 			$identifier,
 			get_plugin_data( WP_PLUGIN_DIR . '/' . $identifier, false, false )
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function notFoundException(): PluginNotFound {
+	protected function not_found_exception(): PluginNotFound {
 		return new PluginNotFound( 'Could not find plugin.' );
 	}
 }

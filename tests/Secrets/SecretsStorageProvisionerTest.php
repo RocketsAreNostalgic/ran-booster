@@ -1046,26 +1046,26 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		);
 	}
 
-	protected function resolveCandidate( ?array &$discarded = null ): ?string {
+	protected function resolve_candidate( ?array &$discarded = null ): ?string {
 		$this->resolverCalled = true;
 		$discarded            = $this->discardedCandidates;
 
 		return $this->resolverFails ? null : $this->candidate;
 	}
 
-	protected function probeCandidate( string $candidate ): bool {
+	protected function probe_candidate( string $candidate ): bool {
 		$this->probeCalled = true;
 
-		return ! $this->probeFails && parent::probeCandidate( $candidate );
+		return ! $this->probeFails && parent::probe_candidate( $candidate );
 	}
 
-	protected function validateConfiguredCandidate( string $candidate ): bool {
+	protected function validate_configured_candidate( string $candidate ): bool {
 		return ! $this->forceUnsafe
 			&& ! ( $this->unsafeAfterProbe && $this->probeCalled )
-			&& parent::validateConfiguredCandidate( $candidate );
+			&& parent::validate_configured_candidate( $candidate );
 	}
 
-	protected function recoveryCredentialsFit( string $candidate ): bool {
+	protected function recovery_credentials_fit( string $candidate ): bool {
 		$this->authenticatedCandidates[] = $candidate;
 		if ( $this->recoveryAuthenticationFails ) {
 			throw new \RuntimeException( 'Provider credential fitness failed.' );
@@ -1074,29 +1074,29 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		return $this->recoveryCredentialsFit;
 	}
 
-	protected function currentCiphertextIsAbsent( string $current ): bool {
+	protected function current_ciphertext_is_absent( string $current ): bool {
 		return ! file_exists( $current ) && ! is_link( $current );
 	}
 
-	protected function orphanedKeyResetAvailable( string $current ): bool {
+	protected function orphaned_key_reset_available( string $current ): bool {
 		return $this->orphanedResetAvailable;
 	}
 
-	protected function resetOrphanedKey( string $current ): void {
+	protected function reset_orphaned_key( string $current ): void {
 		$this->resetCandidates[]      = $current;
 		$this->orphanedResetAvailable = false;
 	}
 
-	protected function orphanedCiphertextResetAvailable( string $current ): bool {
+	protected function orphaned_ciphertext_reset_available( string $current ): bool {
 		return $this->orphanedCiphertextResetAvailable;
 	}
 
-	protected function resetOrphanedCiphertext( string $current ): void {
+	protected function reset_orphaned_ciphertext( string $current ): void {
 		$this->resetCiphertextCandidates[]      = $current;
 		$this->orphanedCiphertextResetAvailable = false;
 	}
 
-	protected function writeConfiguration( string $config, string $candidate ): WpConfigPathWriteResult {
+	protected function write_configuration( string $config, string $candidate ): WpConfigPathWriteResult {
 		$this->writerCalled = true;
 		if ( null !== $this->writerFailureCode ) {
 			throw new \RAN\Secrets\WpConfigPathWriteException(
@@ -1107,10 +1107,10 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 			);
 		}
 
-		return parent::writeConfiguration( $config, $candidate );
+		return parent::write_configuration( $config, $candidate );
 	}
 
-	protected function retargetConfiguration(
+	protected function retarget_configuration(
 		string $config,
 		string $current,
 		string $replacement
@@ -1125,46 +1125,46 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 			);
 		}
 
-		return parent::retargetConfiguration( $config, $current, $replacement );
+		return parent::retarget_configuration( $config, $current, $replacement );
 	}
 
-	protected function wordpressRoot(): string {
+	protected function wordpress_root(): string {
 		return $this->root;
 	}
 
-	protected function contentDirectory(): string {
+	protected function content_directory(): string {
 		return $this->root . '/wp-content';
 	}
 
-	protected function pluginDirectory(): string {
+	protected function plugin_directory(): string {
 		return $this->root . '/wp-content/plugins/ran-booster';
 	}
 
-	protected function documentRoot(): ?string {
+	protected function document_root(): ?string {
 		return $this->root;
 	}
 
-	protected function includedFiles(): array {
+	protected function included_files(): array {
 		return $this->included;
 	}
 
-	protected function configuredPath(): string|false|null {
-		return $this->readRuntimeConfiguration ? parent::configuredPath() : $this->configured;
+	protected function configured_path(): string|false|null {
+		return $this->readRuntimeConfiguration ? parent::configured_path() : $this->configured;
 	}
 
-	protected function isMultisiteInstallation(): bool {
+	protected function is_multisite_installation(): bool {
 		return $this->multisite;
 	}
 
-	protected function sodiumAvailable(): bool {
+	protected function sodium_available(): bool {
 		return $this->sodium;
 	}
 
-	protected function supportedLocalPlatform(): bool {
+	protected function supported_local_platform(): bool {
 		return $this->localPlatform;
 	}
 
-	protected function managedStorageHealthy(): bool {
+	protected function managed_storage_healthy(): bool {
 		if ( $this->healthFailure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only fixed fixture message.
 			throw new \RAN\Secrets\SecretsStorageUnavailable( $this->healthFailureMessage, $this->healthFailureReason );

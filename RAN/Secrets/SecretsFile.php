@@ -1022,7 +1022,7 @@ class SecretsFile {
 
 				$lock_path = $this->lock_path();
 				$this->assert_handle_matches_path( $lock, $lock_path, 'secrets lock' );
-				if ( ! $this->removeFile( $lock_path ) ) {
+				if ( ! $this->remove_file( $lock_path ) ) {
 					throw $this->unavailable( 'Could not remove the encrypted Booster secrets lock safely.' );
 				}
 				clearstatcache( true, $lock_path );
@@ -1935,7 +1935,7 @@ class SecretsFile {
 				throw $this->unavailable( 'Could not inspect the encrypted Booster secrets lock.' );
 			}
 			if ( 0600 !== ( $lock_stat['mode'] & 0777 ) ) {
-				if ( ! $create || ! $this->changePermissions( $lock_path, 0600 ) ) {
+				if ( ! $create || ! $this->change_permissions( $lock_path, 0600 ) ) {
 					throw $this->unavailable( 'Could not secure the encrypted Booster secrets lock.' );
 				}
 				$lock_stat = fstat( $lock );
@@ -2043,7 +2043,7 @@ class SecretsFile {
 			return false;
 		}
 
-		if ( ! $this->changePermissions( $this->path, 0600 ) ) {
+		if ( ! $this->change_permissions( $this->path, 0600 ) ) {
 			throw $this->unavailable( 'Could not secure the encrypted Booster secrets file.' );
 		}
 
@@ -2096,7 +2096,7 @@ class SecretsFile {
 		}
 
 		try {
-			if ( ! $this->changePermissions( $temporary, 0600 ) || 0600 !== ( fileperms( $temporary ) & 0777 ) ) {
+			if ( ! $this->change_permissions( $temporary, 0600 ) || 0600 !== ( fileperms( $temporary ) & 0777 ) ) {
 				throw $this->unavailable( 'Could not secure the temporary encrypted Booster secrets file.' );
 			}
 
@@ -2114,7 +2114,7 @@ class SecretsFile {
 				$length = strlen( $contents );
 				while ( $offset < $length ) {
 					$remaining = substr( $contents, $offset );
-					$written   = $this->writeHandle( $handle, $remaining );
+					$written   = $this->write_handle( $handle, $remaining );
 					if ( false === $written || 0 === $written || $written > strlen( $remaining ) ) {
 						throw $this->unavailable( 'Could not write the temporary encrypted Booster secrets file.' );
 					}
@@ -2129,7 +2129,7 @@ class SecretsFile {
 				fclose( $handle );
 			}
 
-			if ( ! $this->replaceFile( $temporary, $this->path ) ) {
+			if ( ! $this->replace_file( $temporary, $this->path ) ) {
 				throw $this->unavailable( 'Could not replace the encrypted Booster secrets file.' );
 			}
 			$temporary = '';
@@ -2177,23 +2177,21 @@ class SecretsFile {
 
 	/** @param array<string, int> $stat */
 	private function owned_by_process( array $stat ): bool {
-		$effective_user_id = $this->effectiveUserId();
+		$effective_user_id = $this->effective_user_id();
 
 		return null !== $effective_user_id
 			&& isset( $stat['uid'] )
 			&& $stat['uid'] === $effective_user_id;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	protected function effectiveUserId(): ?int {
+	protected function effective_user_id(): ?int {
 		return function_exists( 'posix_geteuid' ) ? posix_geteuid() : null;
 	}
 
 	/**
 	 * @param resource $handle
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	protected function writeHandle( mixed $handle, #[\SensitiveParameter] string $contents ): int|false {
+	protected function write_handle( mixed $handle, #[\SensitiveParameter] string $contents ): int|false {
 		return fwrite( $handle, $contents );
 	}
 
@@ -2232,7 +2230,7 @@ class SecretsFile {
 			|| $expected['mode'] !== $current['mode']
 			|| $expected['uid'] !== $current['uid']
 			|| $expected['nlink'] !== $current['nlink']
-			|| ! $this->removeFile( $path )
+			|| ! $this->remove_file( $path )
 		) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal filesystem failure messages are fixed at each call site.
 			throw $this->unavailable( $message );
@@ -2314,18 +2312,15 @@ class SecretsFile {
 	 * Small filesystem seams keep failure-path tests deterministic without
 	 * replacing the native sidecar implementation in production.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	protected function changePermissions( string $path, int $mode ): bool {
+	protected function change_permissions( string $path, int $mode ): bool {
 		return chmod( $path, $mode );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	protected function replaceFile( string $source, string $destination ): bool {
+	protected function replace_file( string $source, string $destination ): bool {
 		return rename( $source, $destination );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	protected function removeFile( string $path ): bool {
+	protected function remove_file( string $path ): bool {
 		return unlink( $path );
 	}
 }

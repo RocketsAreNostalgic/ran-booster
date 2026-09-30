@@ -38,7 +38,7 @@ final class ThemeRepositoryTest extends TestCase {
 	public function testThemeInstallationCheckRequiresAWordPressRecognizedTheme(): void {
 		$repository = new class() extends ThemeRepository {
 			public function packageExistsForTest( string $identifier ): bool {
-				return $this->packageExists( $identifier );
+				return $this->package_exists( $identifier );
 			}
 		};
 

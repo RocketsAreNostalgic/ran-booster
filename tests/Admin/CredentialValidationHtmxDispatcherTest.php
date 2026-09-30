@@ -189,7 +189,7 @@ final class HtmxCredentialValidationTestController extends ProviderProfileAdminC
 	/** @var array{id:string,message:?string,error:?string,status:int}|null */
 	public ?array $response = null;
 
-	protected function respondToHtmxCredentialValidation( string $credentialId, ?string $message, ?string $error, int $status ): never {
+	protected function respond_to_htmx_credential_validation( string $credentialId, ?string $message, ?string $error, int $status ): never {
 		$this->response = array(
 			'id'      => $credentialId,
 			'message' => $message,

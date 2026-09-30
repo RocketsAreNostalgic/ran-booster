@@ -29,15 +29,14 @@ abstract class AbstractPackageRepository {
 	 *
 	 * @return array<string, Package>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function allPackages( ?PackageSource $source = null ): array {
+	protected function all_packages( ?PackageSource $source = null ): array {
 		$rows     = $this->package_rows( null, $source );
 		$packages = array();
 
 		foreach ( $rows as $row ) {
 			$identifier = $this->string_from_row( $row, 'package' );
 
-			if ( ! $this->packageExists( $identifier ) ) {
+			if ( ! $this->package_exists( $identifier ) ) {
 				continue;
 			}
 
@@ -58,7 +57,7 @@ abstract class AbstractPackageRepository {
 			ran_booster_table_name(),
 			array(
 				'package' => $model->package,
-				'type'    => $this->packageType(),
+				'type'    => $this->package_type(),
 			)
 		);
 
@@ -82,8 +81,7 @@ abstract class AbstractPackageRepository {
 	/**
 	 * Atomically fence every stale package command before destructive removal.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function disablePackageForRemoval( Package $package ): PackageMutationResult {
+	protected function disable_package_for_removal( Package $package ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
@@ -104,7 +102,7 @@ abstract class AbstractPackageRepository {
 			$data,
 			array(
 				'package'           => $model->package,
-				'type'              => $this->packageType(),
+				'type'              => $this->package_type(),
 				'source'            => $package->getSource()->value,
 				'source_revision'   => $revision,
 				'deployment_policy' => $package->getDeploymentPolicy()->value,
@@ -124,8 +122,7 @@ abstract class AbstractPackageRepository {
 	 *
 	 * @param array<string, mixed> $input Sanitized command input.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function editPackage( mixed $identifier, array $input ): PackageMutationResult {
+	protected function edit_package( mixed $identifier, array $input ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
@@ -168,7 +165,7 @@ abstract class AbstractPackageRepository {
 		} catch ( InvalidArgumentException ) {
 			return $this->invalid_package_identity_result( PackageStorageOperation::UPDATE );
 		}
-		if ( ! $this->packageExists( (string) $model->package ) ) {
+		if ( ! $this->package_exists( (string) $model->package ) ) {
 			return $this->invalid_package_identity_result( PackageStorageOperation::UPDATE );
 		}
 		if ( PackageSource::RELEASE_ASSET->value === $expected_source->source && null !== $model->subdirectory ) {
@@ -190,7 +187,7 @@ abstract class AbstractPackageRepository {
 
 		$where = array(
 			'package'         => $model->package,
-			'type'            => $this->packageType(),
+			'type'            => $this->package_type(),
 			'source'          => $expected_source->source,
 			'source_revision' => $expected_source->source_revision,
 		);
@@ -219,7 +216,7 @@ abstract class AbstractPackageRepository {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
-				$this->packageType(),
+				$this->package_type(),
 				$model->package,
 				PackageSource::from( $expected_source->source ),
 				true
@@ -252,8 +249,7 @@ abstract class AbstractPackageRepository {
 	 * @param list<array<string, mixed>> $snapshots Expected stored package rows.
 	 * @return array{selected: int, changed: int, unchanged: int}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function setDeploymentPolicies( array $snapshots, DeploymentPolicy $policy ): array {
+	protected function set_deployment_policies( array $snapshots, DeploymentPolicy $policy ): array {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
@@ -319,7 +315,7 @@ abstract class AbstractPackageRepository {
 					array( 'deployment_policy' => $policy->value ),
 					array(
 						'package' => $identifier,
-						'type'    => $this->packageType(),
+						'type'    => $this->package_type(),
 					)
 				);
 				if ( 1 !== $result ) {
@@ -355,8 +351,7 @@ abstract class AbstractPackageRepository {
 	 *
 	 * @throws Throwable When the managed package cannot be found.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function managedPackage( mixed $identifier ): Package {
+	protected function managed_package( mixed $identifier ): Package {
 		$model = new PackageModel( array( 'package' => $identifier ) );
 		$rows  = $this->package_rows( $model->package );
 
@@ -366,15 +361,14 @@ abstract class AbstractPackageRepository {
 
 		$row = $rows[0] ?? null;
 
-		if ( ! is_object( $row ) || ! $this->packageExists( $this->string_from_row( $row, 'package' ) ) ) {
-			throw $this->notFoundException();
+		if ( ! is_object( $row ) || ! $this->package_exists( $this->string_from_row( $row, 'package' ) ) ) {
+			throw $this->not_found_exception();
 		}
 
 		return $this->hydrate_package( $row );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function storePackage( Package $package ): PackageMutationResult {
+	protected function store_package( Package $package ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
@@ -388,7 +382,7 @@ abstract class AbstractPackageRepository {
 		$table_name = ran_booster_table_name();
 		$where      = array(
 			'package' => $model->package,
-			'type'    => $this->packageType(),
+			'type'    => $this->package_type(),
 		);
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
@@ -398,7 +392,7 @@ abstract class AbstractPackageRepository {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
-				$this->packageType(),
+				$this->package_type(),
 				$model->package,
 				$package->getSource(),
 				true
@@ -428,7 +422,7 @@ abstract class AbstractPackageRepository {
 				$insert_data = array_merge(
 					array(
 						'package' => $model->package,
-						'type'    => $this->packageType(),
+						'type'    => $this->package_type(),
 					),
 					$data
 				);
@@ -451,8 +445,7 @@ abstract class AbstractPackageRepository {
 	}
 
 	/** Store an installed package only when no management row exists yet. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function adoptPackage( Package $package ): PackageMutationResult {
+	protected function adopt_package( Package $package ): PackageMutationResult {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		global $wpdb;
@@ -476,7 +469,7 @@ abstract class AbstractPackageRepository {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
-				$this->packageType(),
+				$this->package_type(),
 				$model->package,
 				PackageSource::BRANCH,
 				true
@@ -498,7 +491,7 @@ abstract class AbstractPackageRepository {
 			$insert_data = array_merge(
 				array(
 					'package' => $model->package,
-					'type'    => $this->packageType(),
+					'type'    => $this->package_type(),
 				),
 				$data
 			);
@@ -539,8 +532,7 @@ abstract class AbstractPackageRepository {
 	/**
 	 * Atomically create the initial management row for a release-installed package.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function adoptReleasePackage(
+	protected function adopt_release_package(
 		Package $package,
 		ManagedReleaseConfiguration $configuration,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
@@ -551,7 +543,7 @@ abstract class AbstractPackageRepository {
 		global $wpdb;
 
 		$identifier = (string) $package->getIdentifier();
-		$expected   = 1 === $this->packageType()
+		$expected   = 1 === $this->package_type()
 			? $configuration->packageRoot() . '/' . $configuration->metadataFile()
 			: $configuration->packageRoot();
 		if ( PackageSource::RELEASE_ASSET !== $package->getSource()
@@ -576,7 +568,7 @@ abstract class AbstractPackageRepository {
 			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
-				$this->packageType(),
+				$this->package_type(),
 				$model->package,
 				PackageSource::RELEASE_ASSET,
 				true
@@ -598,7 +590,7 @@ abstract class AbstractPackageRepository {
 			$insert_data = array_merge(
 				array(
 					'package'               => $model->package,
-					'type'                  => $this->packageType(),
+					'type'                  => $this->package_type(),
 					'source_previous'       => null,
 					'source_changed_at'     => current_time( 'mysql', true ),
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
@@ -659,7 +651,7 @@ abstract class AbstractPackageRepository {
 				'credential_id'          => $repository->reference->credentialId ?? '',
 			)
 		);
-		if ( ! $this->packageExists( (string) $model->package ) ) {
+		if ( ! $this->package_exists( (string) $model->package ) ) {
 			throw new InvalidArgumentException( 'The managed package identity is invalid.' );
 		}
 		$data = array(
@@ -716,21 +708,21 @@ abstract class AbstractPackageRepository {
 			$query = $wpdb->prepare(
 				'SELECT * FROM %i WHERE type = %d AND package = %s',
 				ran_booster_table_name(),
-				$this->packageType(),
+				$this->package_type(),
 				$identifier
 			);
 		} elseif ( null !== $source ) {
 			$query = $wpdb->prepare(
 				'SELECT * FROM %i WHERE type = %d AND source = %s',
 				ran_booster_table_name(),
-				$this->packageType(),
+				$this->package_type(),
 				$source->value
 			);
 		} else {
 			$query = $wpdb->prepare(
 				'SELECT * FROM %i WHERE type = %d',
 				ran_booster_table_name(),
-				$this->packageType()
+				$this->package_type()
 			);
 		}
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Every query variant is prepared immediately above.
@@ -754,7 +746,7 @@ abstract class AbstractPackageRepository {
 		$query = $wpdb->prepare(
 			'SELECT * FROM %i WHERE type = %d AND package = %s FOR UPDATE',
 			ran_booster_table_name(),
-			$this->packageType(),
+			$this->package_type(),
 			$identifier
 		);
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The query is prepared immediately above.
@@ -916,7 +908,7 @@ abstract class AbstractPackageRepository {
 
 	private function hydrate_package( object $row ): Package {
 		$identifier = $this->string_from_row( $row, 'package' );
-		$package    = $this->packageFromInstallation( $identifier );
+		$package    = $this->package_from_installation( $identifier );
 		$provider   = $this->string_from_row( $row, 'provider' );
 		$handle     = $this->string_from_row( $row, 'repository' );
 		$credential = $this->string_from_row( $row, 'credential_id' );
@@ -967,15 +959,11 @@ abstract class AbstractPackageRepository {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	abstract protected function packageType(): int;
+	abstract protected function package_type(): int;
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	abstract protected function packageExists( string $identifier ): bool;
+	abstract protected function package_exists( string $identifier ): bool;
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	abstract protected function packageFromInstallation( string $identifier ): Package;
+	abstract protected function package_from_installation( string $identifier ): Package;
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	abstract protected function notFoundException(): Throwable;
+	abstract protected function not_found_exception(): Throwable;
 }

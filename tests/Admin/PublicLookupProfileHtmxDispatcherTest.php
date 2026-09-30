@@ -205,7 +205,7 @@ final class HtmxPublicLookupTestController extends ProviderProfileAdminControlle
 	/** @var array{provider:string,message:?string,error:?string,status:int}|null */
 	public ?array $response = null;
 
-	protected function respondToHtmxPublicLookupProfile( string $provider, ?string $message, ?string $error, int $status ): never {
+	protected function respond_to_htmx_public_lookup_profile( string $provider, ?string $message, ?string $error, int $status ): never {
 		$this->response = array(
 			'provider' => $provider,
 			'message'  => $message,

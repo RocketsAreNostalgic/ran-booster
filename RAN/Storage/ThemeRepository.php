@@ -11,7 +11,7 @@ class ThemeRepository extends AbstractPackageRepository {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function allBoosterThemes() {
-		return $this->allPackages();
+		return $this->all_packages();
 	}
 
 	/**
@@ -21,12 +21,12 @@ class ThemeRepository extends AbstractPackageRepository {
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function allDeploymentThemes( ?PackageSource $source = null ): array {
-		return $this->allPackages( $source );
+		return $this->all_packages( $source );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function editTheme( $stylesheet, $input ): PackageMutationResult {
-		return $this->editPackage( $stylesheet, $input );
+		return $this->edit_package( $stylesheet, $input );
 	}
 
 	/**
@@ -35,12 +35,12 @@ class ThemeRepository extends AbstractPackageRepository {
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function setThemeDeploymentPolicies( array $snapshots, \RAN\Deployment\DeploymentPolicy $policy ): array {
-		return $this->setDeploymentPolicies( $snapshots, $policy );
+		return $this->set_deployment_policies( $snapshots, $policy );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function disableThemeForRemoval( Theme $theme ): PackageMutationResult {
-		return $this->disablePackageForRemoval( $theme );
+		return $this->disable_package_for_removal( $theme );
 	}
 
 	/**
@@ -51,7 +51,7 @@ class ThemeRepository extends AbstractPackageRepository {
 	public function fromSlug( $slug ) {
 		$wp_theme = wp_get_theme( $slug );
 		if ( ! $this->is_valid_theme( $wp_theme ) ) {
-			throw $this->notFoundException();
+			throw $this->not_found_exception();
 		}
 
 		return Theme::fromWpThemeObject( $wp_theme );
@@ -64,25 +64,25 @@ class ThemeRepository extends AbstractPackageRepository {
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function boosterThemeFromStylesheet( $stylesheet ) {
-		return $this->managedPackage( $stylesheet );
+		return $this->managed_package( $stylesheet );
 	}
 
 	/** @throws ThemeNotFound */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function installedThemeFromStylesheet( string $stylesheet ): Theme {
-		if ( ! $this->packageExists( $stylesheet ) ) {
-			throw $this->notFoundException();
+		if ( ! $this->package_exists( $stylesheet ) ) {
+			throw $this->not_found_exception();
 		}
 
-		return $this->packageFromInstallation( $stylesheet );
+		return $this->package_from_installation( $stylesheet );
 	}
 
 	public function store( Theme $theme ): PackageMutationResult {
-		return $this->storePackage( $theme );
+		return $this->store_package( $theme );
 	}
 
 	public function adopt( Theme $theme ): PackageMutationResult {
-		return $this->adoptPackage( $theme );
+		return $this->adopt_package( $theme );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
@@ -93,21 +93,19 @@ class ThemeRepository extends AbstractPackageRepository {
 		int $userId
 	): PackageMutationResult {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		return $this->adoptReleasePackage( $theme, $configuration, $userId );
+		return $this->adopt_release_package( $theme, $configuration, $userId );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function isInstalled( string $identifier ): bool {
-		return $this->packageExists( $identifier );
+		return $this->package_exists( $identifier );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function packageType(): int {
+	protected function package_type(): int {
 		return 2;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function packageExists( string $identifier ): bool {
+	protected function package_exists( string $identifier ): bool {
 		return '' !== trim( $identifier ) && $this->is_valid_theme( wp_get_theme( $identifier ) );
 	}
 
@@ -115,13 +113,11 @@ class ThemeRepository extends AbstractPackageRepository {
 		return $theme->exists() && false === $theme->errors();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function packageFromInstallation( string $identifier ): Package {
+	protected function package_from_installation( string $identifier ): Package {
 		return Theme::fromWpThemeObject( wp_get_theme( $identifier ) );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function notFoundException(): ThemeNotFound {
+	protected function not_found_exception(): ThemeNotFound {
 		return new ThemeNotFound( 'Couldn\'t find theme.' );
 	}
 }

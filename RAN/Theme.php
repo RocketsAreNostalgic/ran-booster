@@ -19,6 +19,7 @@ class Theme extends AbstractPackage {
 	protected $textDomain;
 	protected $domainPath;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
 	public static function fromWpThemeObject( WP_Theme $object ) {
 		$theme = new static();
 
@@ -38,11 +39,12 @@ class Theme extends AbstractPackage {
 		return $theme;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
 	public function getIdentifier(): mixed {
 		return $this->stylesheet;
 	}
 
-	protected function runtimeSlug(): string {
+	protected function runtime_slug(): string {
 		return (string) $this->getIdentifier();
 	}
 }

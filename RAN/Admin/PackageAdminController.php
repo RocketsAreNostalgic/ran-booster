@@ -158,8 +158,8 @@ final class PackageAdminController {
 
 	/**
 	 * @param array<string, mixed>  $request
-	 * @param array<string, string> $list_arguments
-	 * @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message
+	 * @param array<string, string> $listArguments
+	 * @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $addContextMessage
 	 */
 	public function perform(
 		Dashboard $dashboard,
@@ -321,7 +321,7 @@ final class PackageAdminController {
 		return compact( 'operation', 'identifier' );
 	}
 
-	/** @param array<string, string> $list_arguments */
+	/** @param array<string, string> $listArguments */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public function bulkRedirect( string $type, BulkPackageResult $result, array $listArguments ): string {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )

@@ -22,7 +22,7 @@ final class TestableLocalDataRemover extends LocalDataRemover {
 		parent::__construct( $secrets, $debugCapture, $configWriter, database: $database );
 	}
 
-	protected function loadedWpConfigPath(): string {
+	protected function loaded_wp_config_path(): string {
 		if ( null === $this->configPath ) {
 			throw new RuntimeException( 'No loaded configuration fixture.' );
 		}

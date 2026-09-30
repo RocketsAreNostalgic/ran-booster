@@ -87,7 +87,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			/** @var list<string> */
 			public array $invalidated = array();
 
-			protected function invalidateOpcodeCache( string $configPath ): void {
+			protected function invalidate_opcode_cache( string $configPath ): void {
 				$this->invalidated[] = $configPath;
 			}
 		};
@@ -332,7 +332,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	public function testItDetectsAConcurrentConfigChangeBeforeReplacement(): void {
 		$original = file_get_contents( $this->configPath );
 		$writer   = new class() extends WpConfigSecretsPathWriter {
-			protected function beforeFinalConfigCheck( string $configPath ): void {
+			protected function before_final_config_check( string $configPath ): void {
 				file_put_contents( $configPath, "\n// concurrent edit\n", FILE_APPEND );
 			}
 		};
@@ -347,7 +347,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	public function testRemovalDetectsAConcurrentConfigChangeBeforeReplacement(): void {
 		( new WpConfigSecretsPathWriter() )->write( $this->configPath, $this->sidecarPath );
 		$writer = new class() extends WpConfigSecretsPathWriter {
-			protected function beforeFinalConfigCheck( string $configPath ): void {
+			protected function before_final_config_check( string $configPath ): void {
 				file_put_contents( $configPath, "\n// concurrent edit\n", FILE_APPEND );
 			}
 		};
@@ -370,7 +370,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'lock' => array(
 			'lock_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
-				protected function acquireLock( mixed $lock ): bool {
+				protected function acquire_lock( mixed $lock ): bool {
 					return false;
 				}
 			},
@@ -378,7 +378,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'temporary creation' => array(
 			'temporary_create_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
-				protected function createTemporary( string $directory ): array {
+				protected function create_temporary( string $directory ): array {
 					throw new WpConfigPathWriteException( 'temporary_create_failed', 'Test temporary creation failure.' );
 				}
 			},
@@ -386,7 +386,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'write' => array(
 			'temporary_write_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
-				protected function writeHandle( mixed $handle, string $contents ): int|false {
+				protected function write_handle( mixed $handle, string $contents ): int|false {
 					return false;
 				}
 			},
@@ -394,7 +394,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'flush' => array(
 			'temporary_flush_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
-				protected function flushHandle( mixed $handle ): bool {
+				protected function flush_handle( mixed $handle ): bool {
 					return false;
 				}
 			},
@@ -402,7 +402,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'fsync' => array(
 			'temporary_sync_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
-				protected function syncHandle( mixed $handle ): bool {
+				protected function sync_handle( mixed $handle ): bool {
 					return false;
 				}
 			},
@@ -410,7 +410,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'temporary read-back' => array(
 			'temporary_readback_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
-				protected function readBack( string $path ): string|false {
+				protected function read_back( string $path ): string|false {
 					return false;
 				}
 			},
@@ -418,7 +418,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'atomic rename' => array(
 			'replace_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
-				protected function replacePath( string $source, string $destination ): bool {
+				protected function replace_path( string $source, string $destination ): bool {
 					return false;
 				}
 			},
@@ -461,8 +461,8 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer   = new class() extends WpConfigSecretsPathWriter {
 			private int $installedReads = 0;
 
-			protected function readInstalled( string $path ): array {
-				$snapshot = parent::readInstalled( $path );
+			protected function read_installed( string $path ): array {
+				$snapshot = parent::read_installed( $path );
 				if ( 0 === $this->installedReads++ ) {
 					$snapshot['contents'] .= '// mismatch';
 				}
@@ -484,8 +484,8 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer   = new class() extends WpConfigSecretsPathWriter {
 			private int $installedReads = 0;
 
-			protected function readInstalled( string $path ): array {
-				$snapshot = parent::readInstalled( $path );
+			protected function read_installed( string $path ): array {
+				$snapshot = parent::read_installed( $path );
 				if ( 0 === $this->installedReads++ ) {
 					$snapshot['contents'] .= '// mismatch';
 				}
@@ -506,8 +506,8 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$owner  = fileowner( $this->configPath );
 		$group  = filegroup( $this->configPath );
 		$writer = new class() extends WpConfigSecretsPathWriter {
-			protected function writeHandle( mixed $handle, string $contents ): int|false {
-				return parent::writeHandle( $handle, substr( $contents, 0, 7 ) );
+			protected function write_handle( mixed $handle, string $contents ): int|false {
+				return parent::write_handle( $handle, substr( $contents, 0, 7 ) );
 			}
 		};
 

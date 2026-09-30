@@ -44,6 +44,24 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The secure-storage, uninstall and deployment-identity cohort under #167 migrates
+33 production declarations: seven protected LocalDataRemover helpers, eight
+protected SiteKeyStore storage seams, sixteen protected WpConfigSecretsPathWriter
+filesystem seams, PrivateLocationCandidateResolver::validate_configured and
+DeploymentAdminController::current_user_id. All connected callers and 28 owned
+test overrides follow those names. The seven affected production files were
+already included in both naming scopes; each scope remains 161 files.
+
+Only these method names change. Parameter names, types, defaults, visibility,
+SensitiveParameter attributes, retained public methods and serialized values are
+preserved. Key election and exact deletion, cache/SQL ordering, configuration
+bytes and metadata, locking/replacement/rollback, path and permission rejection,
+uninstall cleanup ordering and deployment capability/nonce checks retain their
+contracts. Unknown external subclasses of the protected seams are not certified;
+this pre-release migration provides no compatibility aliases. API12 #177 is now
+part of the integrated baseline; its provider contracts and release work remain
+outside this cohort.
+
 The connected public/protected cohort under #167 migrates nine package-removal
 gateway methods with their interface, implementation and service callers; two
 installation-store compare-and-swap methods with their coordinator callers;

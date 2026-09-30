@@ -165,7 +165,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			self::assertTrue( $actual->recordOccupied(), $case );
 			self::assertFalse( $actual->recordExact(), $case );
 			foreach ( array( $controller, $presenter ) as $consumer ) {
-				$admission = new \ReflectionMethod( $consumer, 'recordMatchesPackageStatus' );
+				$admission = new \ReflectionMethod( $consumer, 'record_matches_package_status' );
 				self::assertSame( 'current_bootstrap' === $case, $admission->invoke( $consumer, $actual, $status ), $case . ': ' . $consumer::class );
 			}
 			self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ), $case );

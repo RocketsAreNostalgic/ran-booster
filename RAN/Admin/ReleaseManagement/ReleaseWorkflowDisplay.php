@@ -7,6 +7,7 @@ namespace RAN\Admin\ReleaseManagement;
 /** @internal Fixed Core presentation for optional provider release workflows. */
 final class ReleaseWorkflowDisplay {
 	/** @param array{result_view:?array<string,mixed>,url:string} $projection */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
 	public function packageAutomation( array $projection ): string {
 		$result = is_array( $projection['result_view'] ?? null ) ? $this->resultNotice( $projection['result_view'] ) : '';
 		$url    = is_string( $projection['url'] ?? null ) ? $projection['url'] : '';
@@ -17,6 +18,7 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** @param array<string,mixed> $projection */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
 	public function repositorySection( array $projection ): string {
 		$settingsUrl = is_string( $projection['settings_url'] ?? null ) ? $projection['settings_url'] : '';
 		$html        = '<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">'
@@ -56,8 +58,8 @@ final class ReleaseWorkflowDisplay {
 				. esc_html( (string) $projection['ineligible_message'] ) . '</p></div>';
 		}
 
-		$html .= $this->repositoryLifecycle( (array) ( $projection['lifecycle'] ?? array() ) );
-		$html .= $this->repositoryReadiness( (array) ( $projection['readiness'] ?? array() ) );
+		$html .= $this->repository_lifecycle( (array) ( $projection['lifecycle'] ?? array() ) );
+		$html .= $this->repository_readiness( (array) ( $projection['readiness'] ?? array() ) );
 		if ( true === ( $projection['show_automation'] ?? false ) ) {
 			$state  = (array) ( $projection['automation'] ?? array() );
 			$view   = (array) ( $projection['workflow_view'] ?? array() );
@@ -92,7 +94,7 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** @param list<array{label:string,message:string,state:string}> $items */
-	private function repositoryLifecycle( array $items ): string {
+	private function repository_lifecycle( array $items ): string {
 		$html = '<ol class="ran-booster-webhook-steps ran-booster-repository-webhook-lifecycle ran-booster-repository-release-lifecycle" aria-label="'
 			. esc_attr( __( 'Published release lifecycle', 'ran-booster' ) ) . '">';
 		foreach ( $items as $number => $item ) {
@@ -104,7 +106,7 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** @param array<string,mixed> $model */
-	private function repositoryReadiness( array $model ): string {
+	private function repository_readiness( array $model ): string {
 		$repository      = is_string( $model['repository'] ?? null ) ? $model['repository'] : '';
 		$relationships   = (int) ( $model['relationship_count'] ?? 0 );
 		$relationshipOk  = '' !== $repository && 0 < $relationships;
@@ -150,7 +152,7 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	public function workflow( array $view, bool $includeResultNotice = true ): string {
-		$model = $this->workflowModel( $view );
+		$model = $this->workflow_model( $view );
 		$html  = '<div class="ran-booster-release-workflow">';
 
 		if ( $includeResultNotice ) {
@@ -159,7 +161,7 @@ final class ReleaseWorkflowDisplay {
 		$html .= '<div class="ran-booster-release-workflow__body">';
 		$html .= '<p>' . esc_html__( 'Assess this repository before preparing a release-workflow pull request. Nothing is merged automatically.', 'ran-booster' ) . '</p>';
 		$html .= $model['inspect_form'] . $model['detail'];
-		$html .= '<hr><p><a href="' . esc_url( $this->documentationUrl() ) . '">'
+		$html .= '<hr><p><a href="' . esc_url( $this->documentation_url() ) . '">'
 			. esc_html__( 'Booster Releases docs', 'ran-booster' ) . '</a>';
 		foreach ( $view['documentation_links'] ?? array() as $link ) {
 			$html .= ' · <a href="' . esc_url( $link['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $link['label'] ) . '</a>';
@@ -169,14 +171,14 @@ final class ReleaseWorkflowDisplay {
 		return $html . '</div></div>';
 	}
 
-	private function documentationUrl(): string {
+	private function documentation_url(): string {
 		$path = 'admin.php?page=ran-booster&tab=documentation#ran-booster-documentation-published-releases';
 
 		return is_multisite() ? network_admin_url( $path ) : admin_url( $path );
 	}
 
 	/** @return array{notice:string,inspect_form:string,detail:string} */
-	private function workflowModel( array $view ): array {
+	private function workflow_model( array $view ): array {
 		$forms   = is_array( $view['forms'] ?? null ) ? $view['forms'] : array();
 		$preview = is_array( $view['preview'] ?? null ) ? $view['preview'] : null;
 		$record  = is_array( $view['record'] ?? null ) ? $view['record'] : null;
@@ -192,7 +194,7 @@ final class ReleaseWorkflowDisplay {
 			}
 			$detail .= $this->form( is_array( $forms['outcome'] ?? null ) ? $forms['outcome'] : array() );
 		} elseif ( null !== $legacy ) {
-			$detail = $this->legacyDetail( $legacy );
+			$detail = $this->legacy_detail( $legacy );
 		}
 
 		return array(
@@ -203,11 +205,12 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** @param array<string,mixed> $legacy */
-	private function legacyDetail( array $legacy ): string {
+	private function legacy_detail( array $legacy ): string {
 		return '<hr><p>' . esc_html__( 'An earlier workflow record does not match the current package. Review the repository before assessing setup again; Booster will not overwrite that record.', 'ran-booster' ) . '</p>';
 	}
 
 	/** Render the one state-specific notice for the stable workflow shell. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
 	public function stateNotice( array $view ): string {
 		$unavailable = true === ( $view['unavailable'] ?? false );
 		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
@@ -218,6 +221,7 @@ final class ReleaseWorkflowDisplay {
 		return $this->resultNotice( $view );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
 	public function resultNotice( array $view ): string {
 		$code                = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
 		$successful          = true === ( $view['result_successful'] ?? false );
@@ -239,13 +243,13 @@ final class ReleaseWorkflowDisplay {
 			. ' data-ran-booster-release-workflow-result><p>' . esc_html(
 				is_string( $view['result_message'] ?? null ) && '' !== $view['result_message']
 				? $view['result_message']
-				: $this->workflowMessage( $code )
+				: $this->workflow_message( $code )
 			) . '</p>';
 		$observation = in_array( $code, array( 'workflow_release_automation_conflict', 'workflow_release_automation_present', 'workflow_inspected' ), true );
 		if ( ! $successful && ! $observation && in_array( $stage, array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
-			$remediation = is_string( $view['result_remediation'] ?? null ) && '' !== $view['result_remediation'] ? $view['result_remediation'] : $this->failureDiagnosticMessage( $diagnostic, $stage );
+			$remediation = is_string( $view['result_remediation'] ?? null ) && '' !== $view['result_remediation'] ? $view['result_remediation'] : $this->failure_diagnostic_message( $diagnostic, $stage );
 			$html       .= '<details><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><p>' . esc_html( $remediation ) . '</p>';
-			if ( $this->validDiagnosticCode( $diagnostic ) ) {
+			if ( $this->valid_diagnostic_code( $diagnostic ) ) {
 				$html .= '<p>' . esc_html__( 'Diagnostic code:', 'ran-booster' ) . ' <code>' . esc_html( $diagnostic ) . '</code></p>';
 			}
 			if ( $diagnosticAvailable && 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $reference ) ) {
@@ -258,6 +262,7 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** Mark an already-persisted result so the client can consume its signed PRG query. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
 	public function resultMarker( array $view ): string {
 		$code = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
 
@@ -266,7 +271,7 @@ final class ReleaseWorkflowDisplay {
 			: '';
 	}
 
-	private function validDiagnosticCode( string $code ): bool {
+	private function valid_diagnostic_code( string $code ): bool {
 		if ( 'release_automation_detected' === $code ) {
 			return true;
 		}
@@ -353,7 +358,7 @@ final class ReleaseWorkflowDisplay {
 			. esc_html( $buttons[ $operation ] ) . '</button></p></form>';
 	}
 
-	private function workflowMessage( string $code ): string {
+	private function workflow_message( string $code ): string {
 		return match ( $code ) {
 			'workflow_inspected' => __( 'Source-ready assessment passed. Review the exact template identity and changed paths.', 'ran-booster' ),
 			'workflow_setup_open' => __( 'The atomic draft pull request is open. Booster did not merge or change the default branch.', 'ran-booster' ),
@@ -385,7 +390,7 @@ final class ReleaseWorkflowDisplay {
 		};
 	}
 
-	private function failureDiagnosticMessage( string $diagnostic, string $stage ): string {
+	private function failure_diagnostic_message( string $diagnostic, string $stage ): string {
 		return match ( $diagnostic ) {
 			'release_automation_detected' => __( 'Booster found a recognizable release workflow in the inspected repository. It did not verify that setup as Booster-managed or prove that it produced the available releases.', 'ran-booster' ),
 			'malformed_request' => __( 'The request was incomplete or malformed. Reload the release workflow page and try again.', 'ran-booster' ),
@@ -398,11 +403,11 @@ final class ReleaseWorkflowDisplay {
 			'repository_release_owner_exists' => __( 'Another managed package already uses this repository for releases. Return that package to Branch deployments or stop managing it before retrying.', 'ran-booster' ),
 			'preflight_contract_unavailable' => __( 'The page or request state expired or changed. Reload the page and retry.', 'ran-booster' ),
 			'package_compatibility_invalid' => __( 'Correct the package Requires PHP or Requires at least header, publish a compatible release ZIP, then assess it again.', 'ran-booster' ),
-			default => $this->failureStageMessage( $stage ),
+			default => $this->failure_stage_message( $stage ),
 		};
 	}
 
-	private function failureStageMessage( string $stage ): string {
+	private function failure_stage_message( string $stage ): string {
 		return match ( $stage ) {
 			'request_validation' => __( 'Booster refused the request before reading saved credentials or contacting the repository provider.', 'ran-booster' ),
 			'credential_authorisation' => __( 'Choose a saved repository credential with the required repository permissions, then retry.', 'ran-booster' ),

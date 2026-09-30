@@ -44,6 +44,22 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The private API12 cohort migrates 74 private declarations and their owned calls:
+two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
+26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in
+ReleaseWorkflowPresenter. Five reflection method references in the connected
+tests follow the renamed methods. Foreign methods with the same spelling,
+property reflection, parameters, properties, local variables, all public/protected
+signatures and production literals remain unchanged. Registration atomicity,
+provider admission, capability/nonce checks, signed results, projection and
+rendered output contracts are preserved; this is not a UI behavior change.
+
+These six files expand method enforcement from 164 to 170 files. Variable
+enforcement remains at 161 files. Fifty retained mixed-case public/protected
+declarations have individual deferred-contract annotations, pending their
+connected migration. Magic methods retain their native names. This cohort does
+not complete public contracts or variable/parameter naming in these files.
+
 The protected-contract cohort migrates 54 production declarations: five
 SecretsFile I/O and identity seams, 21 SecretsStorageProvisioner seams, 20
 AbstractPackageRepository/PluginRepository/ThemeRepository declarations, three
@@ -54,7 +70,7 @@ SensitiveParameter attributes, covariant and never return types, literals,
 SQL/transaction order, filesystem/crypto/rollback behavior and response output
 remain unchanged.
 
-The three runtime-slug files expand method enforcement to 164 files. Variable
+The three runtime-slug files expanded method enforcement to 164 files. Variable
 enforcement stays at 161 files. Their 26 retained mixed-case public declarations
 have individual deferred-contract annotations: the Package interface and dynamic
 getter dispatch still require a separate connected public migration. Magic

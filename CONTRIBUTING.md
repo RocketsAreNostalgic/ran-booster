@@ -44,6 +44,26 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The connected public/protected cohort under #167 migrates nine package-removal
+gateway methods with their interface, implementation and service callers; two
+installation-store compare-and-swap methods with their coordinator callers;
+19 troubleshooting protected methods with their owned fixture overrides; the
+multisite notice callback with its WordPress registration; and the portability
+exception factory with its callers. All 43 production declarations and connected
+test doubles follow the owned snake_case names. No compatibility aliases are
+introduced. Other public APIs, named/promoted parameters and serialized fields
+retain their existing contracts. InstallationStore's retained camelCase named
+parameters have exact-line exceptions rather than broad suppression.
+
+Both naming scopes additionally include PackageRemovalGateway, InstallationStore
+and LocalSecretStoreUnavailable, bringing each scope to 161 files. Previously
+scoped implementations retain their audited enforcement. SQL/CAS/cache order,
+package deactivation/deletion and rollback, troubleshooting configuration reads,
+notice capability and once-only output, and exception messages/chaining are
+unchanged. API12 #177 and connected external provider/updater contracts remain
+separately owned; this cohort does not certify the broader public inventory.
+
+
 Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Deployment/DeploymentPolicy.php`, `RAN/Deployment/DeploymentState.php`,
 `RAN/PackageSource.php`, `RAN/Deployment/DeploymentOutcome.php`,

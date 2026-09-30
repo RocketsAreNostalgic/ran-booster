@@ -14,7 +14,7 @@ final class LocalSecretStoreUnavailable extends RuntimeException {
 
 	public const CATEGORY = 'local_secret_store_unavailable';
 
-	public static function forPortability( ?Throwable $previous = null ): self {
+	public static function for_portability( ?Throwable $previous = null ): self {
 		return new self(
 			'The local encrypted credential store is unavailable for portability.',
 			0,

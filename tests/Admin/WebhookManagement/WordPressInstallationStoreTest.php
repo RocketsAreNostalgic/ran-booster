@@ -33,11 +33,11 @@ final class WordPressInstallationStoreTest extends TestCase {
 			'2026-07-23T16:00:00Z'
 		);
 
-		self::assertSame( InstallationStore::WRITE_APPLIED, $this->store()->saveIfCurrent( $record, null ) );
+		self::assertSame( InstallationStore::WRITE_APPLIED, $this->store()->save_if_current( $record, null ) );
 
 		$fresh = $this->store();
 		self::assertSame( $record->toArray(), $fresh->find( 'gh', '424242' )?->toArray() );
-		self::assertSame( InstallationStore::WRITE_UNCHANGED, $fresh->saveIfCurrent( $record, $record ) );
+		self::assertSame( InstallationStore::WRITE_UNCHANGED, $fresh->save_if_current( $record, $record ) );
 		self::assertSame( $record->toArray(), $this->store()->find( 'gh', '424242' )?->toArray() );
 	}
 
@@ -46,8 +46,8 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$other  = new InstallationRecord( 'fixture', 'same', 'workspace/repository', 'opaque-hook', 'credential_2', 'profile_2', 'owner', 1, 'reused', 'https://example.test/wp-json/ran-booster/webhook', 'configured', '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
 		$store  = $this->store();
 
-		self::assertSame( InstallationStore::WRITE_APPLIED, $store->saveIfCurrent( $github, null ) );
-		self::assertSame( InstallationStore::WRITE_APPLIED, $store->saveIfCurrent( $other, null ) );
+		self::assertSame( InstallationStore::WRITE_APPLIED, $store->save_if_current( $github, null ) );
+		self::assertSame( InstallationStore::WRITE_APPLIED, $store->save_if_current( $other, null ) );
 		self::assertSame( '99', $store->find( 'gh', 'same' )?->hookId() );
 		self::assertSame( 'opaque-hook', $store->find( 'fixture', 'same' )?->hookId() );
 	}
@@ -63,7 +63,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 			}
 		);
 
-		self::assertSame( InstallationStore::WRITE_APPLIED, $store->saveIfCurrent( $github, null ) );
+		self::assertSame( InstallationStore::WRITE_APPLIED, $store->save_if_current( $github, null ) );
 		self::assertSame( $github->toArray(), $store->find( 'gh', 'github' )?->toArray() );
 		self::assertSame( $other->toArray(), $store->find( 'fixture', 'other' )?->toArray() );
 	}
@@ -79,7 +79,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 			}
 		);
 
-		self::assertSame( InstallationStore::WRITE_CONFLICT, $store->saveIfCurrent( $recovery, null ) );
+		self::assertSame( InstallationStore::WRITE_CONFLICT, $store->save_if_current( $recovery, null ) );
 		self::assertSame( $known->toArray(), $store->find( 'gh', 'github' )?->toArray() );
 	}
 
@@ -94,7 +94,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 			}
 		);
 
-		self::assertSame( InstallationStore::WRITE_CONFLICT, $store->saveIfCurrent( $known, null ) );
+		self::assertSame( InstallationStore::WRITE_CONFLICT, $store->save_if_current( $known, null ) );
 		self::assertSame( $recovery->toArray(), $store->find( 'gh', 'github' )?->toArray() );
 	}
 
@@ -123,7 +123,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$raw = $this->incompleteRaw();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
 
-		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->saveIfCurrent( $this->record( 'gh', 'new', 'owner/new', '88' ), null ) );
+		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->save_if_current( $this->record( 'gh', 'new', 'owner/new', '88' ), null ) );
 		self::assertSame( $raw, $GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 
@@ -132,7 +132,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$raw    = $this->incompleteRaw();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
 
-		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->deleteIfCurrent( $record->providerCode(), $record->repositoryId(), $record ) );
+		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->delete_if_current( $record->providerCode(), $record->repositoryId(), $record ) );
 		self::assertSame( $raw, $GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 

@@ -1508,7 +1508,7 @@ final class OperationStoreFixture implements InstallationStore {
 			: null;
 	}
 
-	public function saveIfCurrent( InstallationRecord $record, ?InstallationRecord $expected ): string {
+	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		++$this->saveAttempts;
 		if ( null !== $this->beforeConditionalWrite ) {
 			$interleave                   = $this->beforeConditionalWrite;
@@ -1531,7 +1531,7 @@ final class OperationStoreFixture implements InstallationStore {
 		return self::WRITE_APPLIED;
 	}
 
-	public function deleteIfCurrent( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
+	public function delete_if_current( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
 		unset( $providerCode, $repositoryId );
 		++$this->saveAttempts;
 		if ( null !== $this->beforeConditionalWrite ) {

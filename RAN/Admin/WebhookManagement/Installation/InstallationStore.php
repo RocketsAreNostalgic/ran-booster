@@ -16,11 +16,13 @@ interface InstallationStore {
 	/** @return array<string, InstallationRecord> */
 	public function all(): array;
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve public named-parameter contracts.
 	public function find( string $providerCode, string $repositoryId ): ?InstallationRecord;
 
 	/** @return self::WRITE_APPLIED|self::WRITE_UNCHANGED|self::WRITE_CONFLICT|self::WRITE_FAILED */
-	public function saveIfCurrent( InstallationRecord $record, ?InstallationRecord $expected ): string;
+	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string;
 
 	/** @return self::WRITE_APPLIED|self::WRITE_UNCHANGED|self::WRITE_CONFLICT|self::WRITE_FAILED */
-	public function deleteIfCurrent( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string;
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve public named-parameter contracts.
+	public function delete_if_current( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string;
 }

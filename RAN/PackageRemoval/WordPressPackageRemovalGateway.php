@@ -9,23 +9,20 @@ namespace RAN\PackageRemoval;
  */
 final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function pluginIsActive( string $identifier ): bool {
+	public function plugin_is_active( string $identifier ): bool {
 		$this->load_plugin_functions();
 
 		return is_plugin_active( $identifier );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function pluginHasActiveDependents( string $identifier ): bool {
+	public function plugin_has_active_dependents( string $identifier ): bool {
 		$this->load_plugin_functions();
 		\WP_Plugin_Dependencies::initialize();
 
 		return \WP_Plugin_Dependencies::has_active_dependents( $identifier );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function pluginSharesDirectory( string $identifier ): bool {
+	public function plugin_shares_directory( string $identifier ): bool {
 		$this->load_plugin_functions();
 		$directory = dirname( $identifier );
 		if ( '.' === $directory ) {
@@ -41,22 +38,19 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		return false;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function pluginPathIsSafe( string $identifier ): bool {
+	public function plugin_path_is_safe( string $identifier ): bool {
 		$directory = dirname( $identifier );
 		$relative  = '.' === $directory ? $identifier : $directory;
 
 		return $this->bounded_installed_path( WP_PLUGIN_DIR, $relative );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function deactivatePlugin( string $identifier ): void {
+	public function deactivate_plugin( string $identifier ): void {
 		$this->load_plugin_functions();
 		deactivate_plugins( $identifier, false, false );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function deletePlugin( string $identifier ): bool {
+	public function delete_plugin( string $identifier ): bool {
 		$this->load_plugin_functions();
 
 		try {
@@ -66,8 +60,7 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function themeDeletionBlocker( string $stylesheet ): ?string {
+	public function theme_deletion_blocker( string $stylesheet ): ?string {
 		if ( get_stylesheet() === $stylesheet ) {
 			return 'theme_active';
 		}
@@ -84,13 +77,11 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		return null;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function themePathIsSafe( string $stylesheet ): bool {
+	public function theme_path_is_safe( string $stylesheet ): bool {
 		return $this->bounded_installed_path( get_theme_root( $stylesheet ), $stylesheet );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function deleteTheme( string $stylesheet ): bool {
+	public function delete_theme( string $stylesheet ): bool {
 		$this->load_theme_functions();
 
 		return true === delete_theme( $stylesheet );

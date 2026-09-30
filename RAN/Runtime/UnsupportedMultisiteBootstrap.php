@@ -24,7 +24,7 @@ final class UnsupportedMultisiteBootstrap {
 		register_activation_hook( $this->pluginFile, array( $this, 'activate' ) );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		register_deactivation_hook( $this->pluginFile, array( $this, 'deactivate' ) );
-		add_action( 'network_admin_notices', array( $this, 'renderNotice' ) );
+		add_action( 'network_admin_notices', array( $this, 'render_notice' ) );
 	}
 
 	public function activate(): void {
@@ -42,8 +42,7 @@ final class UnsupportedMultisiteBootstrap {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function renderNotice(): void {
+	public function render_notice(): void {
 		if ( ! current_user_can( 'manage_network_plugins' ) || $this->notice_rendered ) {
 			return;
 		}

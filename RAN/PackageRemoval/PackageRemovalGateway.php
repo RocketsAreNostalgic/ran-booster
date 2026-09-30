@@ -9,24 +9,24 @@ namespace RAN\PackageRemoval;
  */
 interface PackageRemovalGateway {
 
-	public function pluginIsActive( string $identifier ): bool;
+	public function plugin_is_active( string $identifier ): bool;
 
-	public function pluginHasActiveDependents( string $identifier ): bool;
+	public function plugin_has_active_dependents( string $identifier ): bool;
 
-	public function pluginSharesDirectory( string $identifier ): bool;
+	public function plugin_shares_directory( string $identifier ): bool;
 
-	public function pluginPathIsSafe( string $identifier ): bool;
+	public function plugin_path_is_safe( string $identifier ): bool;
 
-	public function deactivatePlugin( string $identifier ): void;
+	public function deactivate_plugin( string $identifier ): void;
 
-	public function deletePlugin( string $identifier ): bool;
+	public function delete_plugin( string $identifier ): bool;
 
 	/**
 	 * Return a bounded blocker code, or null when WordPress can delete the theme.
 	 */
-	public function themeDeletionBlocker( string $stylesheet ): ?string;
+	public function theme_deletion_blocker( string $stylesheet ): ?string;
 
-	public function themePathIsSafe( string $stylesheet ): bool;
+	public function theme_path_is_safe( string $stylesheet ): bool;
 
-	public function deleteTheme( string $stylesheet ): bool;
+	public function delete_theme( string $stylesheet ): bool;
 }

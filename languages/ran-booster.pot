@@ -4615,23 +4615,23 @@ msgstr ""
 msgid "RAN Booster does not support WordPress Multisite in this release. Use a single-site WordPress installation."
 msgstr ""
 
-#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:54
+#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:53
 msgid "RAN Booster does not support WordPress Multisite in this release."
 msgstr ""
 
-#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:57
+#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:56
 msgid "Package management and background deployments are paused. While this Multisite safety mode is active, Booster does not intentionally change shared plugin or theme files."
 msgstr ""
 
-#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:60
+#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:59
 msgid "Back up the database, WordPress configuration and Booster private storage before recovery. Deactivate Booster network-wide before changing or restoring the installation. Do not delete Booster tables, its encryption key or encrypted secrets file as a workaround."
 msgstr ""
 
-#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:63
+#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:62
 msgid "Booster itself may still be updated manually through WordPress Updates. Managed package updates remain paused until the site is restored to single-site WordPress or a future Multisite-compatible Booster release is installed."
 msgstr ""
 
-#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:67
+#: RAN/Runtime/UnsupportedMultisiteBootstrap.php:66
 msgid "Read the version-specific Multisite recovery guide"
 msgstr ""
 

@@ -161,7 +161,7 @@ final readonly class ManagedPackageBlueprintExporter {
 				$material = $materials[ $key ] ??= $this->secrets->credentialMaterial( $blueprint->provider, $credential_id );
 			} catch ( \Throwable $failure ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception is caught at the admin boundary.
-				throw LocalSecretStoreUnavailable::forPortability( $failure );
+				throw LocalSecretStoreUnavailable::for_portability( $failure );
 			}
 			if ( ! is_array( $material ) || 'file' !== ( $material['source'] ?? null )
 				|| ( $material['provider'] ?? null ) !== $blueprint->provider || true === ( $material['self_destruct'] ?? false ) ) {

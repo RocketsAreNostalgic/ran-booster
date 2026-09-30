@@ -43,12 +43,15 @@ class LocalDataRemover {
 	);
 
 	private object $database;
-	private ?string $verifiedTablePrefix = null;
+	private ?string $verified_table_prefix = null;
 
 	public function __construct(
 		private readonly SecretsFile $secrets,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly TemporaryDebugCapture $debugCapture,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly WpConfigSecretsPathWriter $configWriter,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly PrivateLocationCandidateResolver $locationResolver = new PrivateLocationCandidateResolver(),
 		?object $database = null
 	) {
@@ -58,27 +61,30 @@ class LocalDataRemover {
 	}
 
 	public function remove(): void {
-		$this->assertExactConvertedSiteScope();
+		$this->assert_exact_converted_site_scope();
 
-		$sidecarPath = $this->secrets->path();
-		$configPath  = null === $sidecarPath
-			? $this->loadedWpConfigPathForRetry()
+		$sidecar_path = $this->secrets->path();
+		$config_path  = null === $sidecar_path
+			? $this->loaded_wp_config_path_for_retry()
 			: $this->loadedWpConfigPath();
 
-		$this->assertCleanupCapabilities();
-		if ( null !== $configPath ) {
-			if ( null !== $sidecarPath ) {
-				$ownedDefinition = $this->configWriter->assertOwnedDefinitionRemovable( $configPath, $sidecarPath );
-				if ( function_exists( 'is_multisite' ) && is_multisite() && ! $ownedDefinition ) {
+		$this->assert_cleanup_capabilities();
+		if ( null !== $config_path ) {
+			if ( null !== $sidecar_path ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+				$owned_definition = $this->configWriter->assertOwnedDefinitionRemovable( $config_path, $sidecar_path );
+				if ( function_exists( 'is_multisite' ) && is_multisite() && ! $owned_definition ) {
 					throw new RuntimeException( 'Booster could not verify the converted installation configuration ownership.' );
 				}
 			}
-			$this->assertWpConfigLockRemovable( $configPath );
+			$this->assert_wp_config_lock_removable( $config_path );
 		}
 		$this->secrets->assertManagedStorageDeletable();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		$this->debugCapture->assertManagedStorageDeletable();
-		$this->assertAutomaticDirectoriesRemovable( $sidecarPath );
+		$this->assert_automatic_directories_removable( $sidecar_path );
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		$this->debugCapture->deleteManagedStorage();
 		$this->secrets->deleteManagedStorage();
 		$this->clearScheduledWork();
@@ -90,16 +96,18 @@ class LocalDataRemover {
 		$this->dropTables();
 		$this->deleteOptions();
 
-		if ( null !== $configPath ) {
-			if ( null !== $sidecarPath ) {
-				$this->configWriter->removeOwnedDefinition( $configPath, $sidecarPath );
+		if ( null !== $config_path ) {
+			if ( null !== $sidecar_path ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+				$this->configWriter->removeOwnedDefinition( $config_path, $sidecar_path );
 			}
-			$this->removeWpConfigLock( $configPath );
+			$this->remove_wp_config_lock( $config_path );
 		}
 
-		$this->removeEmptyAutomaticDirectories( $sidecarPath );
+		$this->remove_empty_automatic_directories( $sidecar_path );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function clearScheduledWork(): void {
 		if ( ! function_exists( 'wp_clear_scheduled_hook' ) ) {
 			throw new RuntimeException( 'Booster scheduled work could not be removed.' );
@@ -109,24 +117,26 @@ class LocalDataRemover {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function clearUpdaterState(): void {
 		if ( ! function_exists( 'delete_option' ) || ! function_exists( 'get_option' ) ) {
 			throw new RuntimeException( 'Booster updater state could not be removed.' );
 		}
 
 		$missing = new \stdClass();
-		$option  = $this->packageUpdaterAuthorityOption();
+		$option  = $this->package_updater_authority_option();
 		delete_option( $option );
 		if ( $missing !== get_option( $option, $missing ) ) {
 			throw new RuntimeException( 'Booster updater state could not be removed.' );
 		}
 	}
 
-	private function packageUpdaterAuthorityOption(): string {
+	private function package_updater_authority_option(): string {
 		$target = implode( "\0", array( 'plugin', 'ran-booster', 'ran-booster.php' ) );
 		return 'ran_wp_gh_op_v1_' . substr( hash( 'sha256', $target ), 0, 32 );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function clearUserMetadata(): void {
 		if ( ! isset( $this->database->usermeta )
 			|| ! is_string( $this->database->usermeta )
@@ -136,11 +146,11 @@ class LocalDataRemover {
 			throw new RuntimeException( 'Booster user notices could not be removed.' );
 		}
 
-		foreach ( self::USER_META_KEYS as $metaKey ) {
+		foreach ( self::USER_META_KEYS as $meta_key ) {
 			$query = $this->database->prepare(
 				'DELETE FROM %i WHERE meta_key = %s',
 				$this->database->usermeta,
-				$metaKey
+				$meta_key
 			);
 			if ( false === $this->database->query( $query ) ) {
 				throw new RuntimeException( 'Booster user notices could not be removed.' );
@@ -148,8 +158,9 @@ class LocalDataRemover {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function dropTables(): void {
-		if ( null === $this->verifiedTablePrefix
+		if ( null === $this->verified_table_prefix
 			|| ! method_exists( $this->database, 'prepare' )
 			|| ! method_exists( $this->database, 'query' )
 		) {
@@ -158,8 +169,8 @@ class LocalDataRemover {
 
 		foreach (
 			array(
-				$this->verifiedTablePrefix . 'ran_booster_packages',
-				$this->verifiedTablePrefix . 'ran_booster_deployment_attempts',
+				$this->verified_table_prefix . 'ran_booster_packages',
+				$this->verified_table_prefix . 'ran_booster_deployment_attempts',
 			) as $table
 		) {
 			$query = $this->database->prepare( 'DROP TABLE IF EXISTS %i', $table );
@@ -169,6 +180,7 @@ class LocalDataRemover {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function deleteOptions(): void {
 		if ( ! function_exists( 'delete_option' ) || ! function_exists( 'get_option' ) ) {
 			throw new RuntimeException( 'Booster options could not be removed.' );
@@ -183,7 +195,7 @@ class LocalDataRemover {
 		}
 	}
 
-	private function assertExactConvertedSiteScope(): void {
+	private function assert_exact_converted_site_scope(): void {
 		if ( ! function_exists( 'is_multisite' ) || ! is_multisite() ) {
 			return;
 		}
@@ -204,7 +216,7 @@ class LocalDataRemover {
 		}
 	}
 
-	private function assertCleanupCapabilities(): void {
+	private function assert_cleanup_capabilities(): void {
 		if ( ! function_exists( 'wp_clear_scheduled_hook' )
 			|| ! function_exists( 'delete_option' )
 			|| ! function_exists( 'get_option' )
@@ -219,26 +231,27 @@ class LocalDataRemover {
 			throw new RuntimeException( 'Booster could not verify the local cleanup capabilities.' );
 		}
 
-		$this->verifiedTablePrefix = $this->database->prefix;
+		$this->verified_table_prefix = $this->database->prefix;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function loadedWpConfigPath(): string {
-		$root = $this->canonicalDirectory( defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '' );
+		$root = $this->canonical_directory( defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '' );
 		if ( null === $root ) {
 			throw new RuntimeException( 'The loaded WordPress configuration could not be verified.' );
 		}
 
 		$supported = array();
-		$inRoot    = $this->canonicalRegularFile( $root . '/wp-config.php' );
-		if ( null !== $inRoot ) {
-			$supported[] = $inRoot;
+		$in_root   = $this->canonical_regular_file( $root . '/wp-config.php' );
+		if ( null !== $in_root ) {
+			$supported[] = $in_root;
 		}
 
 		$parent = dirname( $root );
 		if ( ! is_file( $parent . '/wp-settings.php' ) ) {
-			$aboveRoot = $this->canonicalRegularFile( $parent . '/wp-config.php' );
-			if ( null !== $aboveRoot ) {
-				$supported[] = $aboveRoot;
+			$above_root = $this->canonical_regular_file( $parent . '/wp-config.php' );
+			if ( null !== $above_root ) {
+				$supported[] = $above_root;
 			}
 		}
 
@@ -247,7 +260,7 @@ class LocalDataRemover {
 			if ( ! is_string( $included ) || 'wp-config.php' !== basename( $included ) ) {
 				continue;
 			}
-			$canonical = $this->canonicalRegularFile( $included );
+			$canonical = $this->canonical_regular_file( $included );
 			if ( null === $canonical ) {
 				throw new RuntimeException( 'The loaded WordPress configuration could not be verified.' );
 			}
@@ -270,7 +283,7 @@ class LocalDataRemover {
 		return $loaded[0];
 	}
 
-	private function loadedWpConfigPathForRetry(): ?string {
+	private function loaded_wp_config_path_for_retry(): ?string {
 		try {
 			return $this->loadedWpConfigPath();
 		} catch ( \Throwable ) {
@@ -278,40 +291,40 @@ class LocalDataRemover {
 		}
 	}
 
-	private function removeEmptyAutomaticDirectories( ?string $sidecarPath ): void {
-		$automaticPath = $this->automaticSidecarPath();
-		if ( null === $automaticPath
-			|| ( null !== $sidecarPath && $sidecarPath !== $automaticPath )
+	private function remove_empty_automatic_directories( ?string $sidecar_path ): void {
+		$automatic_path = $this->automaticSidecarPath();
+		if ( null === $automatic_path
+			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
 		) {
 			return;
 		}
 
-		$siteDirectory = dirname( $automaticPath );
-		$baseDirectory = dirname( $siteDirectory );
-		$this->removeDirectoryIfEmpty( $siteDirectory );
-		$this->removeDirectoryIfEmpty( $baseDirectory );
+		$site_directory = dirname( $automatic_path );
+		$base_directory = dirname( $site_directory );
+		$this->remove_directory_if_empty( $site_directory );
+		$this->remove_directory_if_empty( $base_directory );
 	}
 
-	private function removeWpConfigLock( string $configPath ): void {
-		$lockPath = $configPath . '.ran-booster.lock';
-		if ( ! file_exists( $lockPath ) && ! is_link( $lockPath ) ) {
+	private function remove_wp_config_lock( string $config_path ): void {
+		$lock_path = $config_path . '.ran-booster.lock';
+		if ( ! file_exists( $lock_path ) && ! is_link( $lock_path ) ) {
 			return;
 		}
 
-		$this->assertWpConfigLockRemovable( $configPath );
-		if ( ! unlink( $lockPath ) ) {
+		$this->assert_wp_config_lock_removable( $config_path );
+		if ( ! unlink( $lock_path ) ) {
 			throw new RuntimeException( 'The Booster WordPress configuration lock could not be removed safely.' );
 		}
 	}
 
-	private function assertWpConfigLockRemovable( string $configPath ): void {
-		$lockPath = $configPath . '.ran-booster.lock';
-		if ( ! file_exists( $lockPath ) && ! is_link( $lockPath ) ) {
+	private function assert_wp_config_lock_removable( string $config_path ): void {
+		$lock_path = $config_path . '.ran-booster.lock';
+		if ( ! file_exists( $lock_path ) && ! is_link( $lock_path ) ) {
 			return;
 		}
 
-		$stat = lstat( $lockPath );
-		if ( is_link( $lockPath )
+		$stat = lstat( $lock_path );
+		if ( is_link( $lock_path )
 			|| false === $stat
 			|| 0100000 !== ( $stat['mode'] & 0170000 )
 			|| 1 !== $stat['nlink']
@@ -324,8 +337,10 @@ class LocalDataRemover {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function automaticSidecarPath(): ?string {
 		try {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			return $this->locationResolver->resolve(
 				defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '',
 				defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '',
@@ -339,7 +354,7 @@ class LocalDataRemover {
 		}
 	}
 
-	private function removeDirectoryIfEmpty( string $directory ): void {
+	private function remove_directory_if_empty( string $directory ): void {
 		if ( ! is_dir( $directory ) || is_link( $directory ) ) {
 			return;
 		}
@@ -361,19 +376,19 @@ class LocalDataRemover {
 		}
 	}
 
-	private function assertAutomaticDirectoriesRemovable( ?string $sidecarPath ): void {
-		$automaticPath = $this->automaticSidecarPath();
-		if ( null === $automaticPath
-			|| ( null !== $sidecarPath && $sidecarPath !== $automaticPath )
+	private function assert_automatic_directories_removable( ?string $sidecar_path ): void {
+		$automatic_path = $this->automaticSidecarPath();
+		if ( null === $automatic_path
+			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
 		) {
 			return;
 		}
 
-		$this->assertDirectoryRemovalSafe( dirname( $automaticPath ) );
-		$this->assertDirectoryRemovalSafe( dirname( dirname( $automaticPath ) ) );
+		$this->assert_directory_removal_safe( dirname( $automatic_path ) );
+		$this->assert_directory_removal_safe( dirname( dirname( $automatic_path ) ) );
 	}
 
-	private function assertDirectoryRemovalSafe( string $directory ): void {
+	private function assert_directory_removal_safe( string $directory ): void {
 		if ( ! is_dir( $directory ) || is_link( $directory ) ) {
 			return;
 		}
@@ -393,7 +408,7 @@ class LocalDataRemover {
 		}
 	}
 
-	private function canonicalDirectory( string $path ): ?string {
+	private function canonical_directory( string $path ): ?string {
 		if ( '' === trim( $path ) || ! stream_is_local( $path ) ) {
 			return null;
 		}
@@ -402,19 +417,19 @@ class LocalDataRemover {
 		return false !== $real && is_dir( $real ) ? rtrim( $real, '/' ) : null;
 	}
 
-	private function canonicalRegularFile( string $path ): ?string {
+	private function canonical_regular_file( string $path ): ?string {
 		if ( is_link( $path ) || ! is_file( $path ) || ! stream_is_local( $path ) ) {
 			return null;
 		}
 		$real = realpath( $path );
-		if ( false === $real || $this->normalizePath( $path ) !== $this->normalizePath( $real ) ) {
+		if ( false === $real || $this->normalize_path( $path ) !== $this->normalize_path( $real ) ) {
 			return null;
 		}
 
 		return $real;
 	}
 
-	private function normalizePath( string $path ): string {
+	private function normalize_path( string $path ): string {
 		return rtrim( str_replace( '\\', '/', $path ), '/' );
 	}
 }

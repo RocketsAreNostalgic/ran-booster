@@ -159,9 +159,17 @@ The release and deployment five-slice cohort also includes:
 - `RAN/WordPress/ManagedReleaseTargetRegistrar.php`
 - `RAN/Deployment/DeploymentCoordinator.php`
 
+The lifecycle and release service five-slice cohort also includes:
+
+- `RAN/Uninstall/LocalDataRemover.php`
+- `RAN/Runtime/UnsupportedMultisiteBootstrap.php`
+- `RAN/Deployment/DeploymentAttemptRepository.php`
+- `RAN/AddOn/ReleaseTracking/NativeReleaseTrackingFacade.php`
+- `RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This 118-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This 123-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -263,6 +271,16 @@ webhook capability/nonce/target-lock and profile cleanup order, native authority
 snapshots and hook restoration, and deployment admission/recovery/cleanup remain
 unchanged. WordPress callback strings and every PreparedArtifact call retain their
 existing contracts. Test behavior and reserved-parameter enforcement are unchanged.
+
+The lifecycle and release service cohort renames 83 private helpers, non-promoted
+private state and owned locals. Public/protected methods, constructor and other
+public named parameters, promoted properties and external DTO fields retain narrow
+exceptions. Cleanup ownership, inode/permission checks and deletion order,
+Multisite hook registration and notice behavior, deployment SQL/transactions,
+retention and recovery, native release locking/cache/restoration, and prospective
+release acquisition/custody/cleanup/adoption order remain unchanged. Protected
+uninstall override seams and every PreparedArtifact call retain their contracts.
+Test sources and reserved-parameter enforcement are unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

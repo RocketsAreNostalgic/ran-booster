@@ -28,6 +28,12 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<include-pattern>/RAN/Admin/DeploymentAdminController.php</include-pattern>
+		<include-pattern>/RAN/Admin/DeploymentAdminPresenter.php</include-pattern>
+		<include-pattern>/RAN/Storage/RepositorySourceGuard.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookCleanupContext.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Installation/InstallationRecord.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Installation/WordPressInstallationStore.php</include-pattern>
 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentAttemptRepository.php</include-pattern>
@@ -163,6 +169,12 @@
 		<include-pattern>/RAN/Admin/PackageAdminController.php</include-pattern>
 		<include-pattern>/RAN/Admin/PortabilityController.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Operation/WebhookOperationCoordinator.php</include-pattern>
+		<include-pattern>/RAN/Admin/DeploymentAdminController.php</include-pattern>
+		<include-pattern>/RAN/Admin/DeploymentAdminPresenter.php</include-pattern>
+		<include-pattern>/RAN/Storage/RepositorySourceGuard.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookCleanupContext.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Installation/InstallationRecord.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Installation/WordPressInstallationStore.php</include-pattern>
 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentAttemptRepository.php</include-pattern>

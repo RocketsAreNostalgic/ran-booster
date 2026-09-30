@@ -28,13 +28,13 @@ final class DeploymentAdminController {
 		if ( ! check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
 			return wp_send_json_error( array( 'message' => __( 'The notice dismissal request expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
 		}
-		$userId      = $this->currentUserId();
+		$user_id     = $this->currentUserId();
 		$fingerprint = $this->monitor?->fingerprint();
-		if ( $userId < 1 || null === $fingerprint ) {
+		if ( $user_id < 1 || null === $fingerprint ) {
 			return wp_send_json_error( array( 'message' => __( 'RAN Booster could not identify an active deployment failure.', 'ran-booster' ) ), 409 );
 		}
-		update_user_meta( $userId, DeploymentAdminPresenter::USER_META_KEY, $fingerprint );
-		if ( ! hash_equals( $fingerprint, (string) get_user_meta( $userId, DeploymentAdminPresenter::USER_META_KEY, true ) ) ) {
+		update_user_meta( $user_id, DeploymentAdminPresenter::USER_META_KEY, $fingerprint );
+		if ( ! hash_equals( $fingerprint, (string) get_user_meta( $user_id, DeploymentAdminPresenter::USER_META_KEY, true ) ) ) {
 			return wp_send_json_error( array( 'message' => __( 'RAN Booster could not remember the notice dismissal.', 'ran-booster' ) ), 500 );
 		}
 
@@ -42,7 +42,9 @@ final class DeploymentAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
 	public function manageDeploymentAttempt( string $action, array $request, bool $postRequest ): void {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		if ( ! $postRequest ) {
 			return;
 		}
@@ -52,7 +54,7 @@ final class DeploymentAdminController {
 		check_admin_referer( 'ran-booster-' . $action );
 		try {
 			if ( 'resolve-needs-attention' === $action ) {
-				$this->resolveNeedsAttention( $request );
+				$this->resolve_needs_attention( $request );
 				return;
 			}
 			if ( null === $this->coordinator ) {
@@ -66,12 +68,12 @@ final class DeploymentAdminController {
 				$this->dashboard->addMessage( __( 'The deployment runner was requested.', 'ran-booster' ) );
 				return;
 			}
-			$attemptId     = $this->canonicalAttemptId( $request['attempt_id'] ?? null );
-			$correlationId = $this->canonicalCorrelationId( $request['correlation_id'] ?? null );
+			$attempt_id     = $this->canonical_attempt_id( $request['attempt_id'] ?? null );
+			$correlation_id = $this->canonical_correlation_id( $request['correlation_id'] ?? null );
 			if ( '1' !== ( $request['confirm_stopped'] ?? null ) ) {
 				throw new \RuntimeException( 'Explicit stopped-worker confirmation is required.' );
 			}
-			$this->coordinator->reconcileConfirmedStopped( $attemptId, $correlationId );
+			$this->coordinator->reconcileConfirmedStopped( $attempt_id, $correlation_id );
 			$this->dashboard->addMessage( __( 'The protected deployment action was accepted.', 'ran-booster' ) );
 		} catch ( \Throwable $exception ) {
 			$operation = $action;
@@ -82,40 +84,40 @@ final class DeploymentAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
-	private function resolveNeedsAttention( array $request ): void {
+	private function resolve_needs_attention( array $request ): void {
 		if ( null === $this->attempts ) {
 			throw new \RuntimeException( 'The deployment attempt repository is unavailable.' );
 		}
-		$attemptId     = $this->canonicalAttemptId( $request['attempt_id'] ?? null );
-		$correlationId = $this->canonicalCorrelationId( $request['correlation_id'] ?? null );
+		$attempt_id     = $this->canonical_attempt_id( $request['attempt_id'] ?? null );
+		$correlation_id = $this->canonical_correlation_id( $request['correlation_id'] ?? null );
 		if ( '1' !== ( $request['confirm_reviewed'] ?? null ) ) {
 			throw new \RuntimeException( 'Explicit uncertainty-review confirmation is required.' );
 		}
-		$attempt = $this->attempts->findExact( $attemptId );
-		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlationId ) ) {
+		$attempt = $this->attempts->findExact( $attempt_id );
+		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlation_id ) ) {
 			throw new \RuntimeException( 'The deployment activity identity no longer matches.' );
 		}
 		$capability = 'plugin' === $attempt->safe_data()['package_type'] ? 'update_plugins' : 'update_themes';
 		if ( ! current_user_can( $capability ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 		}
-		$this->attempts->resolveNeedsAttention( $attemptId, $correlationId, $this->currentUserId() );
+		$this->attempts->resolveNeedsAttention( $attempt_id, $correlation_id, $this->currentUserId() );
 		$this->dashboard->addMessage( __( 'Retry is allowed. No package files or settings were changed.', 'ran-booster' ) );
 	}
 
-	private function canonicalAttemptId( mixed $value ): int {
+	private function canonical_attempt_id( mixed $value ): int {
 		if ( ! is_string( $value ) || 1 !== preg_match( '/^[1-9][0-9]*$/D', $value ) || strlen( $value ) > strlen( (string) PHP_INT_MAX ) ) {
 			throw new \RuntimeException( 'The deployment attempt identity is invalid.' );
 		}
-		$attemptId = (int) $value;
-		if ( $attemptId <= 0 || (string) $attemptId !== $value ) {
+		$attempt_id = (int) $value;
+		if ( $attempt_id <= 0 || (string) $attempt_id !== $value ) {
 			throw new \RuntimeException( 'The deployment attempt identity is invalid.' );
 		}
 
-		return $attemptId;
+		return $attempt_id;
 	}
 
-	private function canonicalCorrelationId( mixed $value ): string {
+	private function canonical_correlation_id( mixed $value ): string {
 		if ( ! is_string( $value ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $value ) ) {
 			throw new \RuntimeException( 'The deployment activity reference is invalid.' );
 		}
@@ -123,6 +125,7 @@ final class DeploymentAdminController {
 		return $value;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
 	protected function currentUserId(): int {
 		return (int) get_current_user_id();
 	}
